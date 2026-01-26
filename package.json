@@ -1,0 +1,29 @@
+{
+  "name": "mermaid-ai-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered Mermaid diagram generator",
+  "scripts": {
+    "lint": "npm run lint --prefix frontend && npm run lint --prefix backend",
+    "lint:fix": "npm run lint:fix --prefix frontend && npm run lint:fix --prefix backend",
+    "format": "npm run format --prefix frontend && npm run format --prefix backend",
+    "format:check": "npm run format:check --prefix frontend && npm run format:check --prefix backend",
+    "type-check": "npm run type-check --prefix frontend && npm run type-check --prefix backend",
+    "test": "npm run test:run --prefix frontend && npm test --prefix backend",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0"
+  },
+  "lint-staged": {
+    "frontend/src/**/*.{ts,js,vue}": [
+      "npm run lint:fix --prefix frontend",
+      "npm run format --prefix frontend"
+    ],
+    "backend/src/**/*.{ts,js}": [
+      "npm run lint:fix --prefix backend",
+      "npm run format --prefix backend"
+    ]
+  }
+}
