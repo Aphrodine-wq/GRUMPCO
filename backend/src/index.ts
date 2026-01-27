@@ -23,6 +23,10 @@ import shipRoutes from './routes/ship.js';
 import healthRoutes from './routes/health.js';
 import authRoutes from './routes/auth.js';
 import githubRoutes from './routes/github.js';
+import analyzeRoutes from './features/codebase-analysis/routes.js';
+import securityRoutes from './features/security-compliance/routes.js';
+import infraRoutes from './features/infrastructure/routes.js';
+import testingRoutes from './features/testing-qa/routes.js';
 import { findAvailablePort } from './utils/portUtils.js';
 import type { Server } from 'http';
 
@@ -118,6 +122,10 @@ app.use('/api/spec', specRoutes);
 app.use('/api/ship', shipRoutes);
 app.use('/auth', authRoutes);
 app.use('/api/github', githubRoutes);
+app.use('/api/analyze', analyzeRoutes);
+app.use('/api/security', securityRoutes);
+app.use('/api/infra', infraRoutes);
+app.use('/api/testing', testingRoutes);
 app.use('/health', healthRoutes);
 
 // Metrics endpoint (should be protected in production)
