@@ -1,17 +1,28 @@
 // Intent Parser Service
-// Pre-processes user input to detect diagram type, C4 level, and constraints
+// Pre-processes user input to detect diagram type, C4 level, project type, and constraints
 
 import type { C4Level } from '../prompts/shared/c4-examples.js';
 
-export type DiagramType = 
+export type DiagramType =
   | 'flowchart' | 'sequence' | 'class' | 'er' | 'state' | 'gantt'
   | 'c4-context' | 'c4-container' | 'c4-component' | 'mindmap' | 'pie' | 'journey';
 
+export type ProjectType = 'web' | 'mobile' | 'api' | 'fullstack' | 'saas' | 'general';
+export type ProjectPhase = 'intent' | 'architecture' | 'coding';
+
 export interface Constraints {
-  complexity?: 'simple' | 'detailed';
+  complexity?: 'simple' | 'detailed' | 'mvp' | 'standard' | 'enterprise';
   focusAreas?: string[];
   excludeAreas?: string[];
   style?: 'technical' | 'business';
+}
+
+export interface ProjectAnalysis {
+  isProjectRequest: boolean;
+  projectType: ProjectType | null;
+  phase: ProjectPhase;
+  techStack: string[];
+  features: string[];
 }
 
 export interface IntentAnalysis {
@@ -22,6 +33,8 @@ export interface IntentAnalysis {
   constraints: Constraints;
   requiresClarification: boolean;
   clarificationContext?: string;
+  // Vibe coder additions
+  project?: ProjectAnalysis;
 }
 
 // Keyword patterns for diagram type detection
@@ -108,11 +121,61 @@ const ARCHITECTURE_KEYWORDS = /\b(architecture|system\s*design|infrastructure|te
 const COMPLEXITY_PATTERNS = {
   simple: /\b(simple|minimal|basic|quick|brief|just|only|overview)\b/i,
   detailed: /\b(detailed|comprehensive|complete|thorough|full|in-depth|elaborate)\b/i,
+  mvp: /\b(mvp|minimum\s*viable|prototype|quick|fast|basic\s*version)\b/i,
+  enterprise: /\b(enterprise|production|scalable|robust|secure|comprehensive)\b/i,
 };
 
 const STYLE_PATTERNS = {
   technical: /\b(technical|developer|engineer|code|implementation)\b/i,
   business: /\b(business|stakeholder|executive|non-technical|simple)\b/i,
+};
+
+// Project type detection patterns for vibe coder
+const PROJECT_PATTERNS: Record<ProjectType, RegExp[]> = {
+  'web': [
+    /\b(web\s*app|website|web\s*application|browser|spa|single\s*page)\b/i,
+    /\b(react|vue|angular|next\.?js|nuxt|svelte)\b/i,
+  ],
+  'mobile': [
+    /\b(mobile\s*app|ios|android|react\s*native|flutter|phone|tablet)\b/i,
+    /\b(app\s*store|play\s*store|native\s*app)\b/i,
+  ],
+  'api': [
+    /\b(api|rest|graphql|backend\s*service|microservice|endpoint)\b/i,
+    /\b(server|express|fastapi|django|rails)\b/i,
+  ],
+  'fullstack': [
+    /\b(full\s*stack|fullstack|end\s*to\s*end|complete\s*app)\b/i,
+    /\b(frontend\s*and\s*backend|front\s*end.*back\s*end)\b/i,
+  ],
+  'saas': [
+    /\b(saas|software\s*as\s*a\s*service|subscription|platform|multi-tenant)\b/i,
+    /\b(billing|subscription|tenant|pricing\s*plan)\b/i,
+  ],
+  'general': [], // fallback
+};
+
+// Project intent indicators
+const BUILD_VERBS = /\b(build|create|make|develop|implement|design|architect)\b/i;
+
+// Tech stack detection patterns
+const TECH_STACK_PATTERNS: Record<string, RegExp> = {
+  'react': /\breact\b/i,
+  'vue': /\bvue(\.?js)?\b/i,
+  'angular': /\bangular\b/i,
+  'next.js': /\bnext\.?js\b/i,
+  'node.js': /\bnode(\.?js)?\b/i,
+  'express': /\bexpress(\.?js)?\b/i,
+  'python': /\bpython\b/i,
+  'fastapi': /\bfastapi\b/i,
+  'django': /\bdjango\b/i,
+  'postgresql': /\b(postgres|postgresql|psql)\b/i,
+  'mongodb': /\bmongo(db)?\b/i,
+  'supabase': /\bsupabase\b/i,
+  'firebase': /\bfirebase\b/i,
+  'typescript': /\btypescript\b/i,
+  'tailwind': /\btailwind(\s*css)?\b/i,
+  'prisma': /\bprisma\b/i,
 };
 
 /**
@@ -241,8 +304,138 @@ export function extractConstraints(message: string): Constraints {
 export function isDiagramRequest(message: string): boolean {
   const diagramIndicators = /\b(diagram|chart|visual|draw|create|show|generate|make|build|map|model)\b/i;
   const contextIndicators = /\b(architecture|flow|process|system|database|class|sequence|state)\b/i;
-  
+
   return diagramIndicators.test(message) || contextIndicators.test(message);
+}
+
+/**
+ * Detect project type from message
+ */
+export function detectProjectType(message: string): { type: ProjectType | null; confidence: number } {
+  const lowerMessage = message.toLowerCase();
+  const scores: Record<string, number> = {};
+
+  for (const [type, patterns] of Object.entries(PROJECT_PATTERNS)) {
+    if (type === 'general') continue;
+    let matchCount = 0;
+    for (const pattern of patterns) {
+      if (pattern.test(lowerMessage)) {
+        matchCount++;
+      }
+    }
+    if (matchCount > 0) {
+      scores[type] = matchCount / patterns.length;
+    }
+  }
+
+  const entries = Object.entries(scores);
+  if (entries.length === 0) {
+    // Check if it's a general build request
+    if (BUILD_VERBS.test(lowerMessage)) {
+      return { type: 'general', confidence: 0.3 };
+    }
+    return { type: null, confidence: 0 };
+  }
+
+  entries.sort((a, b) => b[1] - a[1]);
+  const [bestType, bestScore] = entries[0];
+
+  return {
+    type: bestType as ProjectType,
+    confidence: Math.min(bestScore, 1.0),
+  };
+}
+
+/**
+ * Detect tech stack mentioned in message
+ */
+export function detectTechStack(message: string): string[] {
+  const detected: string[] = [];
+  const lowerMessage = message.toLowerCase();
+
+  for (const [tech, pattern] of Object.entries(TECH_STACK_PATTERNS)) {
+    if (pattern.test(lowerMessage)) {
+      detected.push(tech);
+    }
+  }
+
+  return detected;
+}
+
+/**
+ * Detect current phase from message context
+ */
+export function detectPhase(message: string): ProjectPhase {
+  const lowerMessage = message.toLowerCase();
+
+  // Check for coding phase indicators
+  if (/\b(code|implement|write|create\s*the|build\s*the|start\s*coding)\b/i.test(lowerMessage) &&
+      /\b(frontend|backend|database|api|auth|component|service)\b/i.test(lowerMessage)) {
+    return 'coding';
+  }
+
+  // Check for architecture phase indicators
+  if (/\b(architect|design|plan|structure|diagram|flow|overview)\b/i.test(lowerMessage)) {
+    return 'architecture';
+  }
+
+  // Default to intent phase for new requests
+  return 'intent';
+}
+
+/**
+ * Check if this is a software project build request
+ */
+export function isProjectRequest(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+
+  // Must have a build verb
+  if (!BUILD_VERBS.test(lowerMessage)) {
+    return false;
+  }
+
+  // Check for project indicators
+  const projectIndicators = /\b(app|application|platform|system|service|website|site|tool|product|software)\b/i;
+  return projectIndicators.test(lowerMessage);
+}
+
+/**
+ * Analyze project intent for vibe coder mode
+ */
+export function analyzeProjectIntent(message: string): ProjectAnalysis {
+  const isProject = isProjectRequest(message);
+  const { type: projectType } = detectProjectType(message);
+  const techStack = detectTechStack(message);
+  const phase = detectPhase(message);
+
+  // Extract potential features from message
+  const features: string[] = [];
+  const featurePatterns = [
+    /\b(authentication|auth|login|signup)\b/i,
+    /\b(dashboard|analytics)\b/i,
+    /\b(payment|billing|subscription)\b/i,
+    /\b(user\s*management|users)\b/i,
+    /\b(notification|email|sms)\b/i,
+    /\b(search|filter)\b/i,
+    /\b(upload|storage|files?)\b/i,
+    /\b(chat|messaging|real-?time)\b/i,
+    /\b(admin|management)\b/i,
+  ];
+
+  for (const pattern of featurePatterns) {
+    const match = message.match(pattern);
+    if (match) {
+      features.push(match[0].toLowerCase());
+    }
+  }
+
+  return {
+    isProjectRequest: isProject,
+    projectType,
+    phase,
+    techStack,
+    features,
+  };
 }
 
 /**
@@ -259,24 +452,39 @@ export function analyzeIntent(message: string): IntentAnalysis {
       clarificationContext: 'Empty or invalid input',
     };
   }
-  
+
   const trimmedMessage = message.trim();
-  
-  // Check if this is even a diagram request
-  const isValid = isDiagramRequest(trimmedMessage);
-  
+
+  // Analyze project intent for vibe coder mode
+  const project = analyzeProjectIntent(trimmedMessage);
+
+  // Check if this is a diagram request OR a project request
+  const isDiagram = isDiagramRequest(trimmedMessage);
+  const isValid = isDiagram || project.isProjectRequest;
+
   // Detect diagram type
   const { type, confidence } = detectDiagramType(trimmedMessage);
-  
+
   // Detect C4 level
   const c4Level = detectC4Level(trimmedMessage);
-  
+
   // Extract constraints
   const constraints = extractConstraints(trimmedMessage);
-  
-  // Determine if clarification is needed
-  const requiresClarification = confidence < 0.6 && isValid;
-  
+
+  // Add complexity from project context
+  if (project.isProjectRequest && !constraints.complexity) {
+    if (COMPLEXITY_PATTERNS.mvp.test(trimmedMessage)) {
+      constraints.complexity = 'mvp';
+    } else if (COMPLEXITY_PATTERNS.enterprise.test(trimmedMessage)) {
+      constraints.complexity = 'enterprise';
+    } else {
+      constraints.complexity = 'standard';
+    }
+  }
+
+  // Determine if clarification is needed (less aggressive for project requests)
+  const requiresClarification = !project.isProjectRequest && confidence < 0.6 && isValid;
+
   // Generate clarification context
   let clarificationContext: string | undefined;
   if (requiresClarification) {
@@ -288,15 +496,16 @@ export function analyzeIntent(message: string): IntentAnalysis {
       clarificationContext = 'Multiple diagram types could work for this request';
     }
   }
-  
+
   return {
     isValid,
-    confidence,
+    confidence: project.isProjectRequest ? Math.max(confidence, 0.7) : confidence,
     suggestedType: type,
     c4Level: c4Level ?? undefined,
     constraints,
     requiresClarification,
     clarificationContext,
+    project,
   };
 }
 

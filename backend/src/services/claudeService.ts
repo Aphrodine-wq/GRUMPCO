@@ -19,6 +19,14 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// Create resilient wrapper for streaming
+const resilientClaudeStream = withResilience(
+  async (params: Parameters<typeof client.messages.stream>[0]) => {
+    return await client.messages.stream(params);
+  },
+  'claude-diagram-stream'
+);
+
 // Re-export UserPreferences type for external use
 export type { UserPreferences } from '../prompts/index.js';
 export type { ConversationMessage, RefinementContext } from '../types/index.js';
@@ -214,7 +222,7 @@ export async function* generateDiagramStream(
       refinementContext
     );
     
-    const stream = client.messages.stream({
+    const stream = await resilientClaudeStream({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       system: getSystemPrompt(enrichedPreferences),

@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Mermaid Generator",
+  "productName": "G-Rump",
   "version": "0.1.0",
-  "identifier": "com.mermaid.generator",
+  "identifier": "com.grump.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5178",
@@ -12,7 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "Mermaid Diagram Generator",
+        "label": "main",
+        "title": "G-Rump",
+        "url": "/",
+        "visible": false,
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -20,10 +23,22 @@
         "resizable": true,
         "fullscreen": false,
         "center": true
+      },
+      {
+        "label": "splashscreen",
+        "title": "G-Rump",
+        "url": "/splashscreen.html",
+        "visible": true,
+        "width": 420,
+        "height": 280,
+        "resizable": false,
+        "fullscreen": false,
+        "center": true,
+        "decorations": true
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://localhost:3000 https://api.anthropic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; script-src 'self' 'unsafe-inline'"
+      "csp": "default-src 'self'; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https://api.anthropic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; script-src 'self' 'unsafe-inline'"
     }
   },
   "bundle": {
@@ -33,13 +48,19 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
-      "icons/icon.icns",
       "icons/icon.ico"
+    ],
+    "resources": [
+      "../../backend/dist-bundle/grump-backend.exe",
+      "../../intent-compiler/target/x86_64-pc-windows-msvc/release/grump-intent.exe"
     ],
     "windows": {
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
-      }
+      },
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
     }
   }
 }

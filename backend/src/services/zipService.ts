@@ -1,6 +1,7 @@
 import archiver from 'archiver';
 import { PassThrough } from 'stream';
 import type { FileDefinition, TechStack } from '../types/index.js';
+import type { GeneratedFile } from '../types/agents.js';
 
 function generateReadme(files: FileDefinition[], projectName: string, techStack: TechStack): string {
   const stackInstructions: Record<TechStack, string> = {
@@ -150,5 +151,21 @@ export function createProjectZip(
   // Finalize the archive
   archive.finalize();
 
+  return passThrough;
+}
+
+/**
+ * Create ZIP from codegen GeneratedFile[]. Stream-only; no README.
+ */
+export function createCodegenZip(files: GeneratedFile[], projectName: string): PassThrough {
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  const passThrough = new PassThrough();
+  archive.pipe(passThrough);
+
+  for (const f of files) {
+    archive.append(f.content, { name: `${projectName}/${f.path}` });
+  }
+
+  archive.finalize();
   return passThrough;
 }

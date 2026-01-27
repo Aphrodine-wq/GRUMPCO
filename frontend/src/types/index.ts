@@ -1,24 +1,62 @@
-// Screen types
-export const SCREENS = {
-  SPLASH: 'splash',
-  AUTH: 'auth',
-  SETUP: 'setup',
-  RESUME: 'resume',
-  MAIN: 'main'
-} as const;
-
-export type ScreenType = typeof SCREENS[keyof typeof SCREENS];
-
 // User preferences
 export interface UserPreferences {
   diagramType: 'flowchart' | 'sequence' | 'erd' | 'class';
   complexity: 'simple' | 'medium' | 'detailed';
 }
 
+// ============================================================================
+// CONTENT BLOCKS (for structured message content)
+// ============================================================================
+
+export interface TextBlock {
+  type: 'text';
+  content: string;
+}
+
+export interface CodeBlockType {
+  type: 'code';
+  language: string;
+  code: string;
+  fileName?: string;
+}
+
+export interface MermaidBlock {
+  type: 'mermaid';
+  content: string;
+}
+
+export interface ToolCallBlock {
+  type: 'tool_call';
+  id: string;
+  name: string;
+  input: Record<string, any>;
+  status: 'pending' | 'executing' | 'success' | 'error';
+}
+
+export interface FileDiff {
+  filePath: string;
+  beforeContent: string;
+  afterContent: string;
+  changeType: 'created' | 'modified' | 'deleted';
+  operations?: Array<{ type: string; lineStart: number; lineEnd?: number }>;
+}
+
+export interface ToolResultBlock {
+  type: 'tool_result';
+  id: string;
+  toolName: string;
+  output: string;
+  success: boolean;
+  executionTime?: number;
+  diff?: FileDiff;
+}
+
+export type ContentBlock = TextBlock | CodeBlockType | MermaidBlock | ToolCallBlock | ToolResultBlock;
+
 // Message types
 export interface Message {
   role: 'user' | 'assistant';
-  content: string;
+  content: string | ContentBlock[];
   diagramCode?: string;
   timestamp?: number;
 }
@@ -54,16 +92,6 @@ export interface Session {
 export interface LegacySession {
   messages: Message[];
   timestamp: number;
-}
-
-// App state types
-export interface AppState {
-  hasCompletedSetup: boolean;
-  lastSession: Session | LegacySession | null;
-  sessions?: Session[];
-  currentSessionId?: string;
-  apiKeyValid: boolean;
-  preferences?: UserPreferences;
 }
 
 // Mermaid types

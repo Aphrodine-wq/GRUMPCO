@@ -1,11 +1,13 @@
 {
-  "name": "mermaid-ai-backend",
+  "name": "grump-backend",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node dist/index.js",
-    "dev": "tsc && node --watch dist/index.js",
+    "start": "node --import tsx src/index.ts",
+    "start:prod": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "bundle": "npm run build && pkg . --out-path dist-bundle",
     "type-check": "tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
@@ -13,16 +15,33 @@
     "format:check": "prettier --check \"src/**/*.{ts,js,json}\"",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:report": "vitest run --coverage && open coverage/index.html",
+    "test:coverage:ci": "vitest run --coverage --reporter=json --outputFile=coverage/test-results.json",
+    "load-test": "k6 run tests/load/k6-scenarios.js"
+  },
+  "pkg": {
+    "scripts": [
+      "dist/**/*.js"
+    ],
+    "assets": [
+      "dist/**/*"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist-bundle"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.24.0",
+    "@anthropic-ai/sdk": "^0.71.2",
     "@supabase/supabase-js": "^2.91.1",
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1",
     "async-retry": "^1.3.3",
+    "better-sqlite3": "^11.7.0",
     "cls-rtracer": "^2.6.3",
     "cors": "^2.8.5",
+    "dockerode": "^4.0.2",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "express-rate-limit": "^8.2.1",
@@ -31,14 +50,19 @@
     "opossum": "^5.0.1",
     "pino": "^10.3.0",
     "pino-http": "^11.0.0",
-    "prom-client": "^15.1.3"
+    "prom-client": "^15.1.3",
+    "zod": "^3.22.4",
+    "ioredis": "^5.3.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@types/async-retry": "^1.4.8",
+    "@types/better-sqlite3": "^7.6.11",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^20.11.0",
+    "@types/opossum": "^8.1.9",
+    "@types/ioredis": "^5.0.0",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
     "eslint": "^9.39.2",
@@ -46,9 +70,11 @@
     "globals": "^17.1.0",
     "pino-pretty": "^13.1.3",
     "prettier": "^3.8.1",
+    "pkg": "^5.8.0",
     "supertest": "^7.2.2",
-    "tsx": "^4.7.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.3.0",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "@vitest/coverage-v8": "^1.6.0"
   }
 }

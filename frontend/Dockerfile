@@ -12,6 +12,11 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Set API URL for Docker (nginx proxies /api/ to backend)
+# If VITE_API_URL is not set in .env, use relative path for nginx proxy
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=${VITE_API_URL}
+
 # Build the application
 RUN npm run build
 

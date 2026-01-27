@@ -1,8 +1,6 @@
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
-import vuePlugin from 'eslint-plugin-vue';
-import vueParser from 'vue-eslint-parser';
 
 // Browser globals
 const browserGlobals = {
@@ -48,13 +46,6 @@ const browserGlobals = {
   prompt: 'readonly',
 };
 
-// Vue compiler macros
-const vueGlobals = {
-  defineProps: 'readonly',
-  defineEmits: 'readonly',
-  defineExpose: 'readonly',
-  withDefaults: 'readonly',
-};
 
 export default [
   js.configs.recommended,
@@ -86,38 +77,26 @@ export default [
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
-  // Vue files
+  // Svelte files
   {
-    files: ['src/**/*.vue'],
+    files: ['src/**/*.svelte'],
     languageOptions: {
-      parser: vueParser,
+      parser: tsparser,
       parserOptions: {
-        parser: tsparser,
         ecmaVersion: 'latest',
         sourceType: 'module',
-        extraFileExtensions: ['.vue'],
       },
-      globals: { ...browserGlobals, ...vueGlobals },
+      globals: browserGlobals,
     },
     plugins: {
-      vue: vuePlugin,
       '@typescript-eslint': tseslint,
     },
     rules: {
-      // Vue rules
-      'vue/multi-word-component-names': 'off',
-      'vue/no-v-html': 'warn',
-      'vue/require-default-prop': 'off',
-      'vue/html-indent': ['error', 2],
-      'vue/max-attributes-per-line': 'off',
-      'vue/singleline-html-element-content-newline': 'off',
-      // TypeScript rules
       ...tseslint.configs.recommended.rules,
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
       '@typescript-eslint/no-empty-object-type': 'off',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
-      'no-case-declarations': 'off',
     },
   },
   // JavaScript files

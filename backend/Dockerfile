@@ -5,9 +5,16 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY tsconfig.json ./
 
-# Install production dependencies only
-RUN npm ci --only=production
+# Install all dependencies (needed for TypeScript compilation)
+RUN npm ci
+
+# Copy source code
+COPY src ./src
+
+# Build TypeScript
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine
@@ -18,12 +25,14 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-# Copy dependencies from builder
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+# Copy package files
+COPY package*.json ./
 
-# Copy application code
-COPY --chown=nodejs:nodejs package*.json ./
-COPY --chown=nodejs:nodejs src ./src
+# Install production dependencies only
+RUN npm ci --only=production
+
+# Copy built application from builder
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 
 # Set environment
 ENV NODE_ENV=production
@@ -40,4 +49,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
 # Start the application
-CMD ["node", "src/index.js"]
+CMD ["node", "dist/index.js"]

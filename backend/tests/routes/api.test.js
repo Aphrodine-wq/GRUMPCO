@@ -6,7 +6,7 @@ process.env.ANTHROPIC_API_KEY = 'test_api_key_for_testing';
 process.env.NODE_ENV = 'test';
 
 // Import app after setting env
-const { default: app } = await import('../../src/index.js');
+const { default: app } = await import('../../src/index.ts');
 
 describe('Health Routes', () => {
   describe('GET /health', () => {

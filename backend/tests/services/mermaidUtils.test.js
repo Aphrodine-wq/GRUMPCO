@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractMermaidCode, validateMermaidCode } from '../../src/services/mermaidUtils.js';
+import { extractMermaidCode, validateMermaidCode } from '../../src/services/mermaidUtils.ts';
 
 describe('validateMermaidCode', () => {
   it('should validate flowchart syntax', () => {

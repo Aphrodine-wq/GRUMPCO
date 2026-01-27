@@ -1,12 +1,32 @@
 # Dependencies
 node_modules/
 
-# Environment files
+# Environment files (NEVER commit these)
 .env
 .env.local
+.env.*.local
+backend/.env
+frontend/.env
+.github-token
+*.pem
+*.key
 
 # Build outputs
 dist/
+dist-bundle/
+*.js.map
+
+# Rust build artifacts
+intent-compiler/target/
+target/
+
+# Temp files
+.tmp.driveupload/
+nul
+*.tmp
+
+# Claude Code
+.claude/
 
 # IDE
 .vscode/

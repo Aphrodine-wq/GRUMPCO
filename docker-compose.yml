@@ -1,24 +1,118 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: grump-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - mermaid-network
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: mermaid-backend
     env_file:
-      - .env
+      - ./backend/.env
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SESSION_STORAGE=redis
     expose:
       - "3000"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health/quick"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - mermaid-network
+    deploy:
+      replicas: 2
+
+  backend-1:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: grump-backend-1
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SESSION_STORAGE=redis
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health/quick"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - mermaid-network
+
+  backend-2:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: grump-backend-2
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SESSION_STORAGE=redis
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health/quick"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - mermaid-network
+
+  loadbalancer:
+    image: nginx:alpine
+    container_name: grump-loadbalancer
+    ports:
+      - "3000:80"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend-1
+      - backend-2
     restart: unless-stopped
     networks:
       - mermaid-network
@@ -31,8 +125,7 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      backend:
-        condition: service_healthy
+      - loadbalancer
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
       interval: 30s
@@ -42,6 +135,9 @@ services:
     restart: unless-stopped
     networks:
       - mermaid-network
+
+volumes:
+  redis-data:
 
 networks:
   mermaid-network:
