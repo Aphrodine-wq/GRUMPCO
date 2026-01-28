@@ -50,17 +50,8 @@
   aria-label={ariaLabel}
 >
   <div class="blob-outer">
-    <div class="blob-inner">
-      {#if blobState === 'thinking'}
-        <div class="thinking-dots">
-          <span></span><span></span><span></span>
-        </div>
-      {:else if blobState === 'idle'}
-        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-      {/if}
-    </div>
+      <div class="blob-inner">
+      </div>
   </div>
 </div>
 

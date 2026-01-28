@@ -589,12 +589,10 @@
         <div class="messages-scroll" bind:this={messagesRef}>
           <div class="messages-inner">
             {#if messages.length <= 1 && !streaming}
-              <div class="empty-state">
-                <GRumpBlob size="lg" state="idle" animated={true} />
-                <h1 class="empty-title">What are we building?</h1>
-                <p class="empty-text">Describe your idea, and I'll help you design and build it.</p>
-                <SuggestionChips on:select={handleTemplateSelect} />
-              </div>
+                <div class="empty-state">
+                  <GRumpBlob size="lg" state="idle" animated={true} />
+                  <h1 class="empty-title">What are we building?</h1>
+                </div>
             {/if}
 
             {#each messages as msg, index}
