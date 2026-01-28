@@ -54,7 +54,7 @@
         {@render footer()}
       </div>
     {:else}
-       <div class="sidebar-footer-spacer"></div>
+      <div class="sidebar-footer-spacer"></div>
     {/if}
   </div>
 
@@ -63,14 +63,14 @@
     onclick={toggleCollapse}
     aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
   >
-    <svg 
-      viewBox="0 0 24 24" 
-      width="14" 
-      height="14" 
-      fill="none" 
-      stroke="currentColor" 
-      stroke-width="2.5" 
-      stroke-linecap="round" 
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      stroke-linecap="round"
       stroke-linejoin="round"
       class="toggle-icon"
       class:is-collapsed={collapsed}
@@ -91,6 +91,7 @@
     position: relative;
     font-family: inherit;
     z-index: 20;
+    backdrop-filter: blur(20px);
   }
 
   .sidebar-inner {
@@ -103,6 +104,7 @@
   .sidebar-header {
     padding: 16px;
     border-bottom: 1px solid var(--border-color);
+    background-color: rgba(255, 255, 255, 0.5); /* Subtle transparency */
   }
 
   .sidebar-content {
@@ -121,12 +123,13 @@
     border-radius: 4px;
   }
   .sidebar-content:hover::-webkit-scrollbar-thumb {
-    background: var(--border-color);
+    background: #c7c7cc;
   }
 
   .sidebar-footer {
     padding: 16px;
     border-top: 1px solid var(--border-color);
+    background-color: rgba(255, 255, 255, 0.5);
   }
 
   .sidebar-footer-spacer {
@@ -139,7 +142,7 @@
     top: 32px;
     width: 24px;
     height: 24px;
-    background-color: #fff;
+    background-color: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: 50%;
     cursor: pointer;
@@ -149,14 +152,14 @@
     color: var(--text-muted);
     z-index: 10;
     transition: all 150ms ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* iOS soft shadow */
   }
 
   .collapse-toggle:hover {
     background-color: var(--primary-color);
-    color: #fff;
+    color: #ffffff;
     border-color: var(--primary-color);
-    transform: scale(1.1);
+    transform: scale(1.05); /* Subtle scale */
   }
 
   .toggle-icon {

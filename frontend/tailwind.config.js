@@ -9,7 +9,8 @@ export default {
       colors: {
         // Core
         background: 'var(--color-bg-app)',
-        surface: 'var(--glass-bg)',
+        surface: 'var(--color-bg-card)',
+        subtle: 'var(--color-bg-subtle)',
 
         // Text
         primary: 'var(--color-text)',
@@ -28,6 +29,7 @@ export default {
 
         // Boarders
         border: 'var(--color-border)',
+        'border-light': 'var(--color-border-light)',
       },
       boxShadow: {
         glow: 'var(--shadow-glow)',
@@ -36,8 +38,8 @@ export default {
         lg: 'var(--shadow-lg)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: ['"SF Pro Text"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['"SF Mono"', 'Menlo', 'monospace'],
       },
       borderRadius: {
         sm: 'var(--radius-sm)',

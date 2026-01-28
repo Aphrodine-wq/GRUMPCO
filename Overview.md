@@ -61,17 +61,19 @@ The application operates in distinct "Modes" managed by `chatModeStore`:
 
 ---
 
-## 4. Design System & Aesthetics (New v2)
-The UI has been completely overhauled to a **Premium Dark Theme** to match modern developer tool aesthetics (e.g., Linear, Vercel).
+## 4. Design System & Aesthetics (v3 - Modern iOS)
+The UI has been redesigned to a **White/Black Modern iOS-inspired Theme**, focusing on clarity, minimalism, and content.
 
 *   **Color Palette**:
-    *   Background: Deep Space Blue/Black (`#030014`) with subtle Aurora Borealis gradients (Cyan/Purple/Emerald).
-    *   Primary Accent: Electric Blue (`#3B82F6`) with glowing shadows.
-    *   Text: High-contrast Slate (`#E2E8F0`) for readability.
+    *   Background: Pure White (`#FFFFFF`) with iOS System Gray (`#F5F5F7`) for grouped content/sidebars.
+    *   Primary Accent: System Blue (`#007AFF`).
+    *   Text: High-contrast Black (`#000000`) and San Francisco Gray (`#86868B`).
+*   **Typography**: `SF Pro Text` / `-apple-system` for that native Apple feel.
 *   **Components**:
-    *   **Glass Panels**: Sidebar and Modals use `rgba(15, 23, 42, 0.6)` with `backdrop-filter: blur(12px)`.
-    *   **Sessions Sidebar**: Collapsible, virtualized list with hover states and delete actions.
-    *   **Chat Interface**: Fluid message stream with distinct User/AI bubbles, "Thinking" indicators, and tool execution cards.
+    *   **Glassmorphism**: Sidebars use `backdrop-filter: blur(20px)` with high transparency.
+    *   **Shapes**: Large, continuous curvature radii (20px-32px).
+    *   **Shadows**: Soft, diffuse ambient shadows instead of harsh borders.
+    *   **Grump Blob**: The signature mascot remains central to the experience.
 
 ---
 
