@@ -1,9 +1,10 @@
 <script lang="ts">
   /**
    * G-Rump Design System - Button Component
-   * Dark terminal/Claude Code aesthetic
+   * Professional, consistent light theme
    */
   import type { Snippet } from 'svelte';
+  import { colors } from '../../tokens/colors';
 
   interface Props {
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -37,6 +38,13 @@
   class:btn-loading={loading}
   disabled={isDisabled}
   onclick={onclick}
+  style:--primary-color={colors.accent.primary}
+  style:--primary-hover={colors.accent.primaryHover}
+  style:--text-primary={colors.text.primary}
+  style:--text-inverse={colors.text.inverse}
+  style:--border-default={colors.border.default}
+  style:--error-color={colors.status.error}
+  style:--radius-md={colors.shadow.md ? '6px' : '4px'} 
 >
   {#if loading}
     <span class="btn-spinner"></span>
@@ -52,111 +60,98 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-family: inherit;
+    font-weight: 500;
     border: 1px solid transparent;
-    border-radius: 0; /* Square corners for terminal feel */
+    border-radius: 6px;
     cursor: pointer;
-    transition: all 100ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 150ms ease;
     position: relative;
     white-space: nowrap;
+    user-select: none;
   }
 
   .btn:focus-visible {
-    outline: 2px solid var(--color-accent-primary, #00FF41);
+    outline: 2px solid var(--primary-color);
     outline-offset: 2px;
   }
 
   .btn:disabled {
-    opacity: 0.3;
+    opacity: 0.5;
     cursor: not-allowed;
-    border-color: #333;
-    background-color: transparent;
-    color: #666;
   }
 
   /* Variants */
   .btn-primary {
-    background-color: var(--color-accent-primary, #00FF41);
-    color: #000000;
-    border-color: var(--color-accent-primary, #00FF41);
+    background-color: var(--primary-color);
+    color: var(--text-inverse);
+    border-color: var(--primary-color);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: transparent;
-    color: var(--color-accent-primary, #00FF41);
-    box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
   }
 
   .btn-secondary {
-    background-color: transparent;
-    color: var(--color-text-primary, #D4D4D4);
-    border-color: #333;
+    background-color: #fff;
+    color: var(--text-primary);
+    border-color: var(--border-default);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    border-color: var(--color-accent-secondary, #00E5FF);
-    color: var(--color-accent-secondary, #00E5FF);
-    background-color: rgba(0, 229, 255, 0.05);
+    background-color: #f9fafb;
+    border-color: #d1d5db;
   }
 
   .btn-ghost {
     background-color: transparent;
-    color: #666;
-    border-color: transparent;
+    color: #4b5563;
   }
 
   .btn-ghost:hover:not(:disabled) {
-    color: var(--color-text-primary, #D4D4D4);
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: #f3f4f6;
+    color: var(--text-primary);
   }
 
   .btn-danger {
-    background-color: transparent;
-    color: #FF3131;
-    border-color: #FF3131;
+    background-color: #fff;
+    color: var(--error-color);
+    border-color: #fee2e2;
   }
 
   .btn-danger:hover:not(:disabled) {
-    background-color: #FF3131;
-    color: #000;
+    background-color: #fef2f2;
+    border-color: var(--error-color);
   }
 
   /* Sizes */
   .btn-sm {
     height: 32px;
     padding: 0 12px;
-    font-size: 11px;
+    font-size: 13px;
   }
 
   .btn-md {
     height: 40px;
     padding: 0 16px;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .btn-lg {
     height: 48px;
     padding: 0 24px;
-    font-size: 15px;
+    font-size: 16px;
   }
 
-  /* Full width */
   .btn-full-width {
     width: 100%;
   }
 
-  /* Loading state */
-  .btn-loading {
-    pointer-events: none;
-  }
-
   .btn-spinner {
     position: absolute;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border: 2px solid currentColor;
     border-top-color: transparent;
     border-radius: 50%;

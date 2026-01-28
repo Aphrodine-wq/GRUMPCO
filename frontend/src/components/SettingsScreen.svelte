@@ -1,10 +1,15 @@
 <script lang="ts">
+  /**
+   * SettingsScreen - Professional light theme
+   */
   import { onMount } from 'svelte';
   import { settingsStore } from '../stores/settingsStore';
   import { showToast } from '../stores/toastStore';
   import { fetchApi } from '../lib/api.js';
   import type { Settings, ModelsSettings, AccessibilitySettings, GuardRailsSettings } from '../types/settings';
   import RecommendedExtensions from './RecommendedExtensions.svelte';
+  import { Button, Card, Input, Badge } from '../lib/design-system';
+  import { colors } from '../lib/design-system/tokens/colors';
 
   interface Tier {
     id: string;
@@ -24,7 +29,6 @@
 
   interface Props {
     onBack?: () => void;
-    /** URL for "Manage billing" / pricing (e.g. web app or marketing). */
     billingUrl?: string;
   }
 
@@ -90,17 +94,13 @@
   }
 
   function parseAllowedDirs(s: string): string[] {
-    return s
-      .split(/[\n,]/)
-      .map((p) => p.trim())
-      .filter(Boolean);
+    return s.split(/[\n,]/).map((p) => p.trim()).filter(Boolean);
   }
 
   function modelValue(): string {
     const m = settings?.models;
-    if (!m?.defaultModelId) return 'claude-sonnet-4-20250514';
-    const opt = modelOptions.find((o) => o.modelId === m.defaultModelId && o.provider === (m.defaultProvider ?? 'anthropic'));
-    return opt ? `${opt.provider}:${opt.modelId}` : `${m.defaultProvider ?? 'anthropic'}:${m.defaultModelId}`;
+    if (!m?.defaultModelId) return 'anthropic:claude-sonnet-4-20250514';
+    return `${m.defaultProvider ?? 'anthropic'}:${m.defaultModelId}`;
   }
 
   function handleModelChange(e: Event) {
@@ -108,100 +108,50 @@
     const [provider, modelId] = v.includes(':') ? v.split(':') : ['anthropic', v];
     saveModels({
       ...settings?.models,
-      defaultProvider: provider as 'anthropic' | 'zhipu' | 'copilot' | 'openrouter',
+      defaultProvider: provider as any,
       defaultModelId: modelId,
     });
   }
 </script>
 
-<div class="settings-screen">
-  <header class="settings-header">
-    <button type="button" class="back-btn" onclick={onBack} aria-label="Back">← Back</button>
-    <h1 class="settings-title">Settings</h1>
+<div class="settings-screen" style:--bg-primary={colors.background.primary}>
+  <header class="settings-header" style:--border-color={colors.border.default}>
+    <div class="header-left">
+      <Button variant="ghost" size="sm" onclick={onBack}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        Back
+      </Button>
+      <h1 class="settings-title">Settings</h1>
+    </div>
   </header>
 
-  <div class="settings-body">
-    <section class="settings-section">
-      <h2 class="section-title">User</h2>
-      <p class="section-desc">Profile and identity (sync from backend when signed in).</p>
-      <div class="section-fields">
-        <label>
-          <span>Display name</span>
-          <input type="text" placeholder="Optional" value={settings?.user?.displayName ?? ''} disabled />
-        </label>
-      </div>
-    </section>
-
-    <section class="settings-section">
-      <h2 class="section-title">Pricing</h2>
-      <p class="section-desc">Current tier and usage; manage billing on the web.</p>
-      <div class="section-fields">
-        {#if billingMe?.tier}
-          <p class="muted">Current tier: <strong>{billingMe.tier}</strong>. Usage: {billingMe.usage ?? '—'} / {billingMe.limit ?? '—'} this month.</p>
-          <a href={billingUrl} target="_blank" rel="noopener noreferrer" class="link">Manage billing</a>
-        {:else}
-          <p class="muted">{billingMe?.message ?? 'Sign in to see usage and manage billing.'}</p>
-          <a href={billingUrl} target="_blank" rel="noopener noreferrer" class="link">View pricing</a>
-        {/if}
-        <div class="tier-list">
-          {#each tiers as t}
-            <div class="tier-row">
-              <span class="tier-name">{t.name}</span>
-              <span class="tier-price">
-                {#if t.priceMonthlyCents === 0}
-                  Free
-                {:else}
-                  ${(t.priceMonthlyCents / 100).toFixed(0)}/mo
-                {/if}
-              </span>
-              <span class="tier-calls">{t.apiCallsPerMonth < 1e6 ? t.apiCallsPerMonth.toLocaleString() : 'Unlimited'} API calls/mo</span>
-            </div>
-          {/each}
-        </div>
-      </div>
-    </section>
-
-    <section class="settings-section">
-      <h2 class="section-title">Models</h2>
-      <p class="section-desc">Default LLM for chat. Can override per request later.</p>
-      <div class="section-fields">
-        <label>
-          <span>Default model</span>
-          <select value={modelValue()} onchange={handleModelChange} disabled={saving}>
+  <div class="settings-container">
+    <div class="settings-grid">
+      <!-- Models Section -->
+      <Card title="Models" padding="md">
+        <p class="section-desc">Default AI model for code generation and chat.</p>
+        <div class="field-group">
+          <label class="field-label" for="model-select">AI Model</label>
+          <select id="model-select" class="custom-select" value={modelValue()} onchange={handleModelChange} disabled={saving}>
             {#each modelOptions as opt}
               <option value="{opt.provider}:{opt.modelId}">{opt.label}</option>
             {/each}
           </select>
-        </label>
-      </div>
-    </section>
+        </div>
+      </Card>
 
-    <section class="settings-section">
-      <h2 class="section-title">MCP</h2>
-      <p class="section-desc">Model Context Protocol servers (add/edit in a future update).</p>
-      <div class="section-fields">
-        <p class="muted">No servers configured.</p>
-      </div>
-    </section>
-
-    <section class="settings-section">
-      <h2 class="section-title">Skills</h2>
-      <p class="section-desc">Enabled skills (backend-controlled allowlist).</p>
-      <div class="section-fields">
-        <p class="muted">Configured on the server.</p>
-      </div>
-    </section>
-
-    <section class="settings-section">
-      <h2 class="section-title">Guard rails</h2>
-      <p class="section-desc">Local file access: workspace-only by default; add allowed dirs; optionally confirm each write.</p>
-      <div class="section-fields">
-        <label>
-          <span>Allowed directories (one per line or comma-separated)</span>
+      <!-- Guard Rails -->
+      <Card title="Security & Guard Rails" padding="md">
+        <p class="section-desc">Control file access and safety checks.</p>
+        <div class="field-group">
+          <label class="field-label" for="allowed-dirs">Allowed Directories</label>
           <textarea
-            placeholder="C:\other\repo"
-            rows="3"
-            class="textarea-field"
+            id="allowed-dirs"
+            class="custom-textarea"
+            placeholder="C:\projects\my-app"
             bind:value={allowedDirsText}
             onblur={() => {
               const dirs = parseAllowedDirs(allowedDirsText);
@@ -209,52 +159,70 @@
             }}
             disabled={saving}
           ></textarea>
-        </label>
-        <label class="checkbox-label">
-          <input
-            type="checkbox"
-            checked={settings?.guardRails?.confirmEveryWrite !== false}
-            onchange={(e) => saveGuardRails({ ...settings?.guardRails, confirmEveryWrite: (e.target as HTMLInputElement).checked })}
-          />
-          <span>Confirm every write/delete (recommended)</span>
-        </label>
-      </div>
-    </section>
+          <p class="field-hint">One path per line. Only these directories will be accessible.</p>
+        </div>
+        <div class="field-group">
+          <label class="checkbox-field">
+            <input
+              type="checkbox"
+              checked={settings?.guardRails?.confirmEveryWrite !== false}
+              onchange={(e) => saveGuardRails({ ...settings?.guardRails, confirmEveryWrite: (e.target as HTMLInputElement).checked })}
+            />
+            <span class="checkbox-label-text">Confirm every file write</span>
+          </label>
+        </div>
+      </Card>
 
-    <section class="settings-section">
-      <RecommendedExtensions />
-    </section>
+      <!-- Billing Section -->
+      <Card title="Subscription & Billing" padding="md">
+        <div class="billing-status">
+          {#if billingMe?.tier}
+            <div class="status-row">
+              <span class="status-label">Current Tier</span>
+              <Badge variant="primary">{billingMe.tier}</Badge>
+            </div>
+            <div class="status-row">
+              <span class="status-label">Usage</span>
+              <span class="status-value">{billingMe.usage ?? 0} / {billingMe.limit ?? '∞'} calls</span>
+            </div>
+            <div class="billing-actions">
+              <Button variant="secondary" size="sm" onclick={() => window.open(billingUrl, '_blank')}>Manage Billing</Button>
+            </div>
+          {:else}
+            <p class="billing-empty">Sign in to view your subscription details.</p>
+            <Button variant="primary" size="sm" onclick={() => window.open(billingUrl, '_blank')}>View Pricing</Button>
+          {/if}
+        </div>
+      </Card>
 
-    <section class="settings-section">
-      <h2 class="section-title">Accessibility</h2>
-      <p class="section-desc">Reduced motion, contrast, font size.</p>
-      <div class="section-fields">
-        <label class="checkbox-label">
-          <input
-            type="checkbox"
-            checked={settings?.accessibility?.reducedMotion ?? false}
-            onchange={(e) => saveAccessibility({ ...settings?.accessibility, reducedMotion: (e.target as HTMLInputElement).checked })}
-          />
-          <span>Reduced motion</span>
-        </label>
-        <label class="checkbox-label">
-          <input
-            type="checkbox"
-            checked={settings?.accessibility?.highContrast ?? false}
-            onchange={(e) => saveAccessibility({ ...settings?.accessibility, highContrast: (e.target as HTMLInputElement).checked })}
-          />
-          <span>High contrast</span>
-        </label>
-      </div>
-    </section>
+      <!-- Accessibility -->
+      <Card title="Accessibility" padding="md">
+        <div class="field-group">
+          <label class="checkbox-field">
+            <input
+              type="checkbox"
+              checked={settings?.accessibility?.reducedMotion ?? false}
+              onchange={(e) => saveAccessibility({ ...settings?.accessibility, reducedMotion: (e.target as HTMLInputElement).checked })}
+            />
+            <span class="checkbox-label-text">Reduced Motion</span>
+          </label>
+        </div>
+        <div class="field-group">
+          <label class="checkbox-field">
+            <input
+              type="checkbox"
+              checked={settings?.accessibility?.highContrast ?? false}
+              onchange={(e) => saveAccessibility({ ...settings?.accessibility, highContrast: (e.target as HTMLInputElement).checked })}
+            />
+            <span class="checkbox-label-text">High Contrast Mode</span>
+          </label>
+        </div>
+      </Card>
 
-    <section class="settings-section">
-      <h2 class="section-title">Integrations</h2>
-      <p class="section-desc">GitHub, Twilio (text/call G-Rump), etc.</p>
-      <div class="section-fields">
-        <p class="muted">GitHub OAuth and Twilio are configured via backend env.</p>
-      </div>
-    </section>
+      <Card title="Tools & Extensions" padding="md">
+        <RecommendedExtensions />
+      </Card>
+    </div>
   </div>
 </div>
 
@@ -263,121 +231,150 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #fafafa;
-    overflow: auto;
+    background-color: var(--bg-primary);
+    overflow: hidden;
   }
+
   .settings-header {
+    background-color: white;
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 24px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px 24px;
-    background: #fff;
-    border-bottom: 1px solid #e5e5e5;
-    flex-shrink: 0;
+    justify-content: space-between;
+    z-index: 10;
   }
-  .back-btn {
-    padding: 8px 12px;
-    font-size: 14px;
-    color: #555;
-    background: transparent;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    cursor: pointer;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
   }
-  .back-btn:hover {
-    background: #f0f0f0;
-    color: #333;
-  }
+
   .settings-title {
+    font-size: 18px;
+    font-weight: 700;
     margin: 0;
-    font-size: 20px;
-    font-weight: 600;
-    color: #1a1a1a;
   }
-  .settings-body {
+
+  .settings-container {
     flex: 1;
-    padding: 24px;
-    max-width: 640px;
+    overflow-y: auto;
+    padding: 32px 24px;
   }
-  .settings-section {
-    margin-bottom: 28px;
-    padding: 20px;
-    background: #fff;
-    border-radius: 10px;
-    border: 1px solid #e8e8e8;
-  }
-  .section-title {
-    margin: 0 0 6px 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-  }
-  .section-desc {
-    margin: 0 0 14px 0;
-    font-size: 13px;
-    color: #666;
-  }
-  .section-fields label {
-    display: block;
-    margin-bottom: 12px;
-  }
-  .section-fields label > span {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: #444;
-    margin-bottom: 4px;
-  }
-  .section-fields input[type='text'],
-  .section-fields select {
-    width: 100%;
-    max-width: 320px;
-    padding: 8px 12px;
-    font-size: 14px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-  }
-  .checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-  }
-  .checkbox-label input { width: auto; max-width: none; }
-  .textarea-field {
-    width: 100%;
-    max-width: 400px;
-    padding: 8px 12px;
-    font-size: 13px;
-    font-family: inherit;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    resize: vertical;
-  }
-  .muted {
-    margin: 0;
-    font-size: 13px;
-    color: #888;
-  }
-  .link {
-    font-size: 14px;
-    color: #0066cc;
-    text-decoration: none;
-  }
-  .link:hover { text-decoration: underline; }
-  .tier-list {
-    margin-top: 12px;
+
+  .settings-grid {
+    max-width: 800px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 24px;
   }
-  .tier-row {
+
+  .section-desc {
+    font-size: 14px;
+    color: #71717a;
+    margin-bottom: 20px;
+  }
+
+  .field-group {
+    margin-bottom: 20px;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #3f3f46;
+    margin-bottom: 8px;
+  }
+
+  .field-hint {
+    font-size: 12px;
+    color: #a1a1aa;
+    margin-top: 6px;
+  }
+
+  .custom-select {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    background-color: white;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 150ms;
+  }
+
+  .custom-select:focus {
+    border-color: #2563eb;
+  }
+
+  .custom-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    resize: vertical;
+  }
+
+  .custom-textarea:focus {
+    border-color: #2563eb;
+  }
+
+  .checkbox-field {
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 13px;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
   }
-  .tier-name { font-weight: 600; min-width: 80px; }
-  .tier-price { color: #333; min-width: 60px; }
-  .tier-calls { color: #666; }
+
+  .checkbox-label-text {
+    font-size: 14px;
+    color: #3f3f46;
+  }
+
+  .billing-status {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background-color: #f9fafb;
+    border-radius: 8px;
+  }
+
+  .status-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #71717a;
+  }
+
+  .status-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #18181b;
+  }
+
+  .billing-empty {
+    font-size: 14px;
+    color: #71717a;
+    font-style: italic;
+  }
+
+  .billing-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
 </style>

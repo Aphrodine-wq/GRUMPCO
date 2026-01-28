@@ -1,8 +1,9 @@
 <script lang="ts">
   /**
    * G-Rump Design System - Input Component
-   * Dark terminal/Claude Code aesthetic - Command prompt style
+   * Clean, professional light theme
    */
+  import { colors } from '../../tokens/colors';
 
   interface Props {
     value?: string;
@@ -50,15 +51,25 @@
   }
 </script>
 
-<div class="input-wrapper" class:input-full-width={fullWidth} class:is-focused={isFocused}>
+<div 
+  class="input-wrapper" 
+  class:input-full-width={fullWidth} 
+  class:is-focused={isFocused}
+  style:--primary-color={colors.accent.primary}
+  style:--text-primary={colors.text.primary}
+  style:--text-secondary={colors.text.secondary}
+  style:--text-muted={colors.text.muted}
+  style:--border-default={colors.border.default}
+  style:--error-color={colors.status.error}
+  style:--bg-input={colors.background.input}
+>
   {#if label}
     <label class="input-label" for={inputId}>
-      <span class="label-prefix">#</span> {label}
+      {label}
     </label>
   {/if}
 
   <div class="input-container" class:has-error={!!error}>
-    <span class="prompt-arrow">&gt;</span>
     <input
       id={inputId}
       {type}
@@ -71,15 +82,12 @@
       onfocus={handleFocus}
       onblur={handleBlur}
     />
-    {#if isFocused}
-      <span class="terminal-cursor"></span>
-    {/if}
   </div>
 
   {#if error}
-    <span class="input-error-text">! ERROR: {error}</span>
+    <span class="input-error-text">{error}</span>
   {:else if hint}
-    <span class="input-hint">// {hint}</span>
+    <span class="input-hint">{hint}</span>
   {/if}
 </div>
 
@@ -87,8 +95,8 @@
   .input-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    font-family: 'JetBrains Mono', monospace;
+    gap: 6px;
+    font-family: inherit;
   }
 
   .input-full-width {
@@ -96,46 +104,33 @@
   }
 
   .input-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--color-accent-secondary, #00E5FF);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .label-prefix {
-    opacity: 0.5;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
   }
 
   .input-container {
     display: flex;
     align-items: center;
-    background-color: #000;
-    border: 1px solid #333;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
     padding: 0 12px;
-    position: relative;
-    transition: border-color 100ms ease;
+    transition: all 150ms ease;
   }
 
-  .input-wrapper.is-focused .input-container {
-    border-color: var(--color-accent-primary, #00FF41);
-    box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
+  .is-focused .input-container {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
   }
 
   .has-error {
-    border-color: #FF3131 !important;
-  }
-
-  .prompt-arrow {
-    color: var(--color-accent-primary, #00FF41);
-    margin-right: 8px;
-    font-weight: bold;
-    user-select: none;
+    border-color: var(--error-color) !important;
   }
 
   .input {
     background: transparent;
-    color: #E5E5E5;
+    color: var(--text-primary);
     border: none;
     width: 100%;
     outline: none;
@@ -143,32 +138,18 @@
   }
 
   .input::placeholder {
-    color: #444;
+    color: var(--text-muted);
   }
 
   .input:disabled {
-    opacity: 0.5;
+    background-color: #f9fafb;
     cursor: not-allowed;
-  }
-
-  .terminal-cursor {
-    width: 8px;
-    height: 1.2em;
-    background-color: var(--color-accent-primary, #00FF41);
-    display: inline-block;
-    animation: blink 1s step-end infinite;
-    margin-left: 2px;
-  }
-
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
   }
 
   /* Sizes */
   .input-sm {
     height: 32px;
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .input-md {
@@ -182,14 +163,12 @@
   }
 
   .input-error-text {
-    font-size: 11px;
-    color: #FF3131;
-    font-weight: 600;
+    font-size: 13px;
+    color: var(--error-color);
   }
 
   .input-hint {
-    font-size: 11px;
-    color: #666;
-    font-style: italic;
+    font-size: 13px;
+    color: var(--text-muted);
   }
 </style>

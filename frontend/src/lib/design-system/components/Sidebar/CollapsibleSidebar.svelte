@@ -1,5 +1,10 @@
 <script lang="ts">
+  /**
+   * G-Rump Design System - CollapsibleSidebar Component
+   * Professional, consistent light theme
+   */
   import type { Snippet } from 'svelte';
+  import { colors } from '../../tokens/colors';
 
   interface Props {
     collapsed?: boolean;
@@ -13,7 +18,7 @@
   let {
     collapsed = $bindable(false),
     width = 260,
-    collapsedWidth = 56,
+    collapsedWidth = 64,
     children,
     header,
     footer,
@@ -27,6 +32,11 @@
 <aside
   class="sidebar"
   style="width: {collapsed ? collapsedWidth : width}px"
+  style:--bg-sidebar={colors.background.sidebar}
+  style:--border-color={colors.border.default}
+  style:--bg-header={colors.background.tertiary}
+  style:--primary-color={colors.accent.primary}
+  style:--text-muted={colors.text.muted}
 >
   <div class="sidebar-inner">
     {#if header}
@@ -43,6 +53,8 @@
       <div class="sidebar-footer">
         {@render footer()}
       </div>
+    {#else}
+       <div class="sidebar-footer-spacer"></div>
     {/if}
   </div>
 
@@ -51,7 +63,20 @@
     onclick={toggleCollapse}
     aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
   >
-    <span class="toggle-icon">{collapsed ? '»' : '«'}</span>
+    <svg 
+      viewBox="0 0 24 24" 
+      width="14" 
+      height="14" 
+      fill="none" 
+      stroke="currentColor" 
+      stroke-width="2.5" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+      class="toggle-icon"
+      class:is-collapsed={collapsed}
+    >
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
   </button>
 </aside>
 
@@ -60,11 +85,12 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background-color: #0D0D0D;
-    border-right: 1px solid #222;
-    transition: width 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    background-color: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: inherit;
+    z-index: 20;
   }
 
   .sidebar-inner {
@@ -75,51 +101,69 @@
   }
 
   .sidebar-header {
-    padding: 12px;
-    border-bottom: 1px solid #222;
-    background-color: #0A0A0A;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .sidebar-content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 8px;
+    padding: 12px 8px;
+  }
+
+  /* Custom scrollbar for sidebar */
+  .sidebar-content::-webkit-scrollbar {
+    width: 4px;
+  }
+  .sidebar-content::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+  }
+  .sidebar-content:hover::-webkit-scrollbar-thumb {
+    background: var(--border-color);
   }
 
   .sidebar-footer {
-    padding: 12px;
-    border-top: 1px solid #222;
-    background-color: #0A0A0A;
+    padding: 16px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .sidebar-footer-spacer {
+    height: 16px;
   }
 
   .collapse-toggle {
     position: absolute;
     right: -12px;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 32px;
     width: 24px;
-    height: 48px;
-    background-color: #1A1A1A;
-    border: 1px solid #333;
-    border-radius: 0;
+    height: 24px;
+    background-color: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #666;
-    font-size: 12px;
+    color: var(--text-muted);
     z-index: 10;
-    transition: all 100ms ease;
+    transition: all 150ms ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
 
   .collapse-toggle:hover {
-    background-color: #262626;
-    color: var(--color-accent-primary, #00FF41);
-    border-color: var(--color-accent-primary, #00FF41);
+    background-color: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+    transform: scale(1.1);
   }
 
   .toggle-icon {
-    font-weight: bold;
+    transition: transform 200ms ease;
+  }
+
+  .toggle-icon.is-collapsed {
+    transform: rotate(180deg);
   }
 </style>

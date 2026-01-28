@@ -1,4 +1,10 @@
 <script lang="ts">
+  /**
+   * ToolCallCard - Professional light theme
+   */
+  import { Badge } from '../lib/design-system';
+  import { colors } from '../lib/design-system/tokens/colors';
+
   interface Props {
     toolCall?: {
       type: 'tool_call';
@@ -10,85 +16,108 @@
   }
 
   let { toolCall }: Props = $props();
+
+  function formatStatus(status?: string) {
+    if (status === 'executing') return 'Running';
+    if (status === 'success') return 'Completed';
+    if (status === 'error') return 'Failed';
+    return status;
+  }
+
+  function getStatusVariant(status?: string): 'info' | 'success' | 'error' | 'warning' | 'default' {
+    if (status === 'executing') return 'info';
+    if (status === 'success') return 'success';
+    if (status === 'error') return 'error';
+    return 'default';
+  }
 </script>
 
 {#if toolCall}
-  <div class="tool-call-card">
+  <div 
+    class="tool-call-card"
+    style:--border-color={colors.border.default}
+    style:--bg-header={colors.background.tertiary}
+    style:--bg-content={colors.background.secondary}
+    style:--text-primary={colors.text.primary}
+    style:--text-secondary={colors.text.secondary}
+    style:--accent-color={colors.accent.primary}
+  >
     <div class="tool-call-header">
-      <span class="tool-icon">⏺</span>
-      <span class="tool-call-name">{toolCall.name}</span>
-      {#if toolCall.status}
-        <span class="tool-call-status" class:success={toolCall.status === 'success'} class:error={toolCall.status === 'error'} class:executing={toolCall.status === 'executing'}>
-          {toolCall.status === 'executing' ? 'RUNNING' : toolCall.status.toUpperCase()}
+      <div class="tool-info">
+        <span class="tool-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
         </span>
+        <span class="tool-name">{toolCall.name}</span>
+      </div>
+      {#if toolCall.status}
+        <Badge variant={getStatusVariant(toolCall.status)} size="sm" dot={toolCall.status === 'executing'}>
+          {formatStatus(toolCall.status)}
+        </Badge>
       {/if}
     </div>
     {#if toolCall.input && Object.keys(toolCall.input).length > 0}
-      <pre class="tool-call-input">{JSON.stringify(toolCall.input, null, 2)}</pre>
+      <div class="tool-input-container">
+        <pre class="tool-input"><code>{JSON.stringify(toolCall.input, null, 2)}</code></pre>
+      </div>
     {/if}
   </div>
 {/if}
 
 <style>
   .tool-call-card {
-    padding: 0.75rem 1rem;
-    background: #121212;
-    border: 1px solid #333;
-    border-left: 3px solid #00E5FF;
-    border-radius: 0;
-    margin: 0.5rem 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 12px 0;
+    background: var(--bg-content);
+    font-family: inherit;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
+
   .tool-call-header {
+    background-color: var(--bg-header);
+    padding: 10px 14px;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.25rem;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
   }
+
+  .tool-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .tool-icon {
-    color: #00E5FF;
-    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-color);
   }
-  .tool-call-name {
+
+  .tool-name {
+    font-size: 13px;
     font-weight: 600;
-    color: #00E5FF;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    color: var(--text-primary);
   }
-  .tool-call-status {
-    font-size: 0.65rem;
-    color: #525252;
-    padding: 0.1rem 0.4rem;
-    border: 1px solid #333;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+
+  .tool-input-container {
+    padding: 12px 14px;
+    max-height: 200px;
+    overflow-y: auto;
   }
-  .tool-call-status.success { 
-    color: #00FF41; 
-    border-color: #00FF41;
-  }
-  .tool-call-status.error { 
-    color: #FF3131; 
-    border-color: #FF3131;
-  }
-  .tool-call-status.executing {
-    color: #FFD700;
-    border-color: #FFD700;
-    animation: pulse-border 1s ease-in-out infinite;
-  }
-  @keyframes pulse-border {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-  .tool-call-input {
-    margin: 0.5rem 0 0 0;
-    padding: 0.5rem;
+
+  .tool-input {
+    margin: 0;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
     white-space: pre-wrap;
     word-break: break-all;
-    color: #A3A3A3;
-    font-size: 0.7rem;
-    background: #0A0A0A;
-    border: 1px solid #222;
   }
 </style>

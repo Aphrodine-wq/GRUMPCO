@@ -1,5 +1,10 @@
 <script lang="ts">
+  /**
+   * ToolResultCard - Professional light theme
+   */
   import CodeDiffViewer from './CodeDiffViewer.svelte';
+  import { Badge } from '../lib/design-system';
+  import { colors } from '../lib/design-system/tokens/colors';
   import type { FileDiff } from '../types';
 
   interface Props {
@@ -17,98 +22,136 @@
   let { toolResult }: Props = $props();
 
   const isFileOperation = (toolName: string): boolean => {
-    return toolName === 'file_write' || toolName === 'file_edit';
+    return toolName === 'file_write' || toolName === 'file_edit' || toolName === 'write_file' || toolName === 'edit_file';
   };
 </script>
 
 {#if toolResult}
-  <div class="tool-result-card" class:success={toolResult.success} class:error={!toolResult.success}>
+  <div 
+    class="tool-result-card" 
+    class:is-error={!toolResult.success}
+    style:--border-color={colors.border.default}
+    style:--bg-header={colors.background.tertiary}
+    style:--bg-content={colors.background.secondary}
+    style:--text-primary={colors.text.primary}
+    style:--text-secondary={colors.text.secondary}
+    style:--success-color={colors.status.success}
+    style:--error-color={colors.status.error}
+  >
     <div class="tool-result-header">
-      <span class="result-icon">{toolResult.success ? '✓' : '✗'}</span>
-      <span class="tool-result-name">{toolResult.toolName}</span>
-      {#if toolResult.executionTime != null}
-        <span class="tool-result-time">{toolResult.executionTime}ms</span>
-      {/if}
-      <span class="tool-result-badge">{toolResult.success ? 'OK' : 'ERR'}</span>
-    </div>
-    {#if toolResult.diff && isFileOperation(toolResult.toolName)}
-      <div class="diff-container">
-        <CodeDiffViewer diff={toolResult.diff} />
+      <div class="tool-info">
+        <span class="result-icon">
+          {#if toolResult.success}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          {:else}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          {/if}
+        </span>
+        <span class="tool-name">{toolResult.toolName}</span>
       </div>
-    {:else if toolResult.output}
-      <pre class="tool-result-output">{toolResult.output}</pre>
-    {/if}
+      <div class="header-meta">
+        {#if toolResult.executionTime != null}
+          <span class="execution-time">{toolResult.executionTime}ms</span>
+        {/if}
+        <Badge variant={toolResult.success ? 'success' : 'error'} size="sm">
+          {toolResult.success ? 'Success' : 'Error'}
+        </Badge>
+      </div>
+    </div>
+
+    <div class="tool-result-content">
+      {#if toolResult.diff && isFileOperation(toolResult.toolName)}
+        <div class="diff-viewer-wrapper">
+          <CodeDiffViewer diff={toolResult.diff} />
+        </div>
+      {:else if toolResult.output}
+        <div class="output-wrapper">
+          <pre class="tool-output"><code>{toolResult.output}</code></pre>
+        </div>
+      {/if}
+    </div>
   </div>
 {/if}
 
 <style>
   .tool-result-card {
-    padding: 0.75rem 1rem;
-    background: #0A0A0A;
-    border: 1px solid #333;
-    border-left: 3px solid #00FF41;
-    border-radius: 0;
-    margin: 0.5rem 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-  }
-  .tool-result-card.error {
-    border-left-color: #FF3131;
-  }
-  .tool-result-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.25rem;
-  }
-  .result-icon {
-    font-size: 0.8rem;
-    color: #00FF41;
-    font-weight: bold;
-  }
-  .tool-result-card.error .result-icon {
-    color: #FF3131;
-  }
-  .tool-result-name {
-    font-weight: 600;
-    color: #00FF41;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
-  .tool-result-card.error .tool-result-name { 
-    color: #FF3131; 
-  }
-  .tool-result-time {
-    font-size: 0.65rem;
-    color: #525252;
-    margin-left: auto;
-  }
-  .tool-result-badge {
-    font-size: 0.6rem;
-    padding: 0.1rem 0.35rem;
-    border: 1px solid #00FF41;
-    color: #00FF41;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .tool-result-card.error .tool-result-badge {
-    border-color: #FF3131;
-    color: #FF3131;
-  }
-  .tool-result-output {
-    margin: 0.5rem 0 0 0;
-    padding: 0.5rem;
-    white-space: pre-wrap;
-    word-break: break-word;
-    color: #A3A3A3;
-    font-size: 0.7rem;
-    max-height: 12rem;
-    overflow-y: auto;
-    background: #000;
-    border: 1px solid #222;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 12px 0;
+    background: var(--bg-content);
+    font-family: inherit;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 
-  .diff-container {
-    margin-top: 0.5rem;
+  .tool-result-header {
+    background-color: var(--bg-header);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .tool-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .result-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tool-result-card:not(.is-error) .result-icon { color: var(--success-color); }
+  .tool-result-card.is-error .result-icon { color: var(--error-color); }
+
+  .tool-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .execution-time {
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+  }
+
+  .tool-result-content {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .output-wrapper {
+    padding: 12px 14px;
+    background-color: #f9fafb;
+  }
+
+  .tool-output {
+    margin: 0;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .diff-viewer-wrapper {
+    padding: 0;
   }
 </style>

@@ -1,5 +1,9 @@
 <script lang="ts">
+  /**
+   * GRumpBlob - Professional light theme avatar
+   */
   import { onMount } from 'svelte';
+  import { colors } from '../lib/design-system/tokens/colors';
 
   type BlobState = 'idle' | 'thinking' | 'speaking' | 'success' | 'error';
   type BlobSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -16,14 +20,12 @@
     animated = $bindable(true)
   }: Props = $props();
 
-  let blinking = $state(false);
-
   const sizeMap: Record<BlobSize, number> = {
     xs: 16,
-    sm: 24,
-    md: 40,
-    lg: 48,
-    xl: 64
+    sm: 32,
+    md: 48,
+    lg: 64,
+    xl: 96
   };
 
   const ariaLabel =
@@ -36,155 +38,133 @@
           : blobState === 'error'
             ? 'G-Rump encountered an error'
             : 'G-Rump';
-
-  onMount(() => {
-    let cancelled = false;
-    let blinkTimerId: ReturnType<typeof setInterval> | undefined;
-
-    function scheduleBlink() {
-      const ms = 60_000 + Math.random() * 120_000;
-      const id = setTimeout(() => {
-        if (cancelled) return;
-        blinking = true;
-        window.setTimeout(() => {
-          if (cancelled) return;
-          blinking = false;
-          blinkTimerId = scheduleBlink();
-        }, 300);
-      }, ms);
-      return id;
-    }
-
-    blinkTimerId = scheduleBlink();
-    return () => {
-      cancelled = true;
-      if (blinkTimerId != null) clearTimeout(blinkTimerId);
-    };
-  });
 </script>
 
 <div 
-  class="grump-blob grump-blob--{size} grump-blob--{blobState}"
-  class:blob-animated={animated}
-  class:blinking
-  style="--blob-size: {sizeMap[size]}px"
+  class="grump-avatar grump-avatar--{size} grump-avatar--{blobState}"
+  class:is-animated={animated}
+  style="--avatar-size: {sizeMap[size]}px"
+  style:--primary-color={colors.accent.primary}
+  style:--success-color={colors.status.success}
+  style:--error-color={colors.status.error}
   role="img"
   aria-label={ariaLabel}
 >
-  <div class="blob-inner">
-    <span class="blob-symbol">&gt;_</span>
+  <div class="avatar-ring"></div>
+  <div class="avatar-circle">
+    {#if blobState === 'thinking'}
+      <div class="thinking-dots">
+        <span></span><span></span><span></span>
+      </div>
+    {:else}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+    {/if}
   </div>
 </div>
 
 <style>
-  .grump-blob {
-    width: var(--blob-size);
-    height: var(--blob-size);
+  .grump-avatar {
+    width: var(--avatar-size);
+    height: var(--avatar-size);
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
   }
 
-  .blob-inner {
+  .avatar-ring {
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    transition: all 300ms ease;
+  }
+
+  .grump-avatar--thinking .avatar-ring {
+    border-color: var(--primary-color);
+    border-top-color: transparent;
+    animation: rotate 1s linear infinite;
+  }
+
+  .grump-avatar--success .avatar-ring {
+    border-color: var(--success-color);
+    transform: scale(1.1);
+    opacity: 0;
+    animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  .grump-avatar--error .avatar-ring {
+    border-color: var(--error-color);
+  }
+
+  .avatar-circle {
     width: 100%;
     height: 100%;
-    background-color: #000000;
-    border: 1px solid #00FF41;
-    border-radius: 0;
-    position: relative;
-    box-shadow: 0 0 10px rgba(0, 255, 65, 0.3), 0 0 20px rgba(0, 255, 65, 0.2);
+    background-color: var(--primary-color);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: white;
+    z-index: 1;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: all 300ms ease;
   }
 
-  .blob-symbol {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: calc(var(--blob-size) * 0.4);
-    color: #00FF41;
-    font-weight: bold;
-    animation: cursor-blink 1s step-end infinite;
+  .grump-avatar--success .avatar-circle {
+    background-color: var(--success-color);
   }
 
-  @keyframes cursor-blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+  .grump-avatar--error .avatar-circle {
+    background-color: var(--error-color);
   }
 
-  .grump-blob--sm .blob-inner {
-    box-shadow: 0 0 6px rgba(0, 255, 65, 0.3), 0 0 12px rgba(0, 255, 65, 0.2);
+  .avatar-circle svg {
+    width: 50%;
+    height: 50%;
   }
 
-  .grump-blob--lg .blob-inner {
-    box-shadow: 0 0 10px rgba(0, 255, 65, 0.35), 0 0 20px rgba(0, 255, 65, 0.2);
+  .thinking-dots {
+    display: flex;
+    gap: 3px;
   }
 
-  .grump-blob--idle.blob-animated .blob-inner {
-    animation: none;
+  .thinking-dots span {
+    width: 4px;
+    height: 4px;
+    background-color: currentColor;
+    border-radius: 50%;
+    animation: bounce 0.6s infinite alternate;
   }
 
-  .grump-blob--thinking.blob-animated .blob-inner {
-    animation: terminal-pulse 1.5s ease-in-out infinite;
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes rotate {
+    to { transform: rotate(360deg); }
   }
 
-  .grump-blob--thinking .blob-symbol {
-    animation: cursor-blink 0.5s step-end infinite;
+  @keyframes bounce {
+    to { transform: translateY(-4px); }
   }
 
-  .grump-blob--speaking.blob-animated .blob-inner {
-    animation: terminal-pulse 1s ease-in-out infinite;
-  }
-
-  .grump-blob--success .blob-inner {
-    border-color: #00FF41;
-    box-shadow: 0 0 12px rgba(0, 255, 65, 0.5), 0 0 24px rgba(0, 255, 65, 0.25);
-  }
-
-  .grump-blob--success .blob-symbol {
-    color: #00FF41;
-  }
-
-  .grump-blob--error .blob-inner {
-    border-color: #FF3131;
-    box-shadow: 0 0 12px rgba(255, 49, 49, 0.5), 0 0 24px rgba(255, 49, 49, 0.25);
-  }
-
-  .grump-blob--error .blob-symbol {
-    color: #FF3131;
-  }
-
-  .grump-blob--error.blob-animated .blob-inner {
-    animation: terminal-error 0.4s ease-out;
-  }
-
-  @keyframes terminal-pulse {
-    0%, 100% { 
-      box-shadow: 0 0 10px rgba(0, 255, 65, 0.3), 0 0 20px rgba(0, 255, 65, 0.2);
-    }
-    50% { 
-      box-shadow: 0 0 15px rgba(0, 255, 65, 0.5), 0 0 30px rgba(0, 255, 65, 0.3);
+  @keyframes ping {
+    75%, 100% {
+      transform: scale(1.5);
+      opacity: 0;
     }
   }
 
-  @keyframes terminal-error {
-    0% { transform: translateX(0); }
-    25% { transform: translateX(-2px); }
-    50% { transform: translateX(2px); }
-    75% { transform: translateX(-2px); }
-    100% { transform: translateX(0); }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
   }
 
-  .grump-blob:not(.blob-animated) .blob-inner {
-    animation: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .blob-inner {
-      animation: none !important;
-    }
-    .blob-symbol {
-      animation: none !important;
-    }
+  .grump-avatar--error.is-animated .avatar-circle {
+    animation: shake 0.2s ease-in-out 0s 2;
   }
 </style>
