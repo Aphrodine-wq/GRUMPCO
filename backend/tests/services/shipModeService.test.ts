@@ -2,12 +2,21 @@
  * SHIP Mode Service Tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { startShipMode, getShipSession, executeShipMode } from '../../src/services/shipModeService.js';
+import { initializeDatabase, closeDatabase } from '../../src/db/database.js';
 
 describe('SHIP Mode Service', () => {
+  beforeAll(async () => {
+    await initializeDatabase();
+  });
+
+  afterAll(async () => {
+    await closeDatabase();
+  });
+
   describe('startShipMode', () => {
-    it('should create a new SHIP mode session', () => {
+    it('should create a new SHIP mode session', async () => {
       const request = {
         projectDescription: 'A test project',
         preferences: {
@@ -16,7 +25,7 @@ describe('SHIP Mode Service', () => {
         },
       };
       
-      const session = startShipMode(request);
+      const session = await startShipMode(request);
       
       expect(session).toBeDefined();
       expect(session.id).toBeDefined();
@@ -28,20 +37,20 @@ describe('SHIP Mode Service', () => {
   });
   
   describe('getShipSession', () => {
-    it('should retrieve a session by ID', () => {
+    it('should retrieve a session by ID', async () => {
       const request = {
         projectDescription: 'Test project',
       };
       
-      const session = startShipMode(request);
-      const retrieved = getShipSession(session.id);
+      const session = await startShipMode(request);
+      const retrieved = await getShipSession(session.id);
       
       expect(retrieved).toBeDefined();
       expect(retrieved?.id).toBe(session.id);
     });
     
-    it('should return null for non-existent session', () => {
-      const retrieved = getShipSession('non-existent-id');
+    it('should return null for non-existent session', async () => {
+      const retrieved = await getShipSession('non-existent-id');
       expect(retrieved).toBeNull();
     });
   });
@@ -52,7 +61,7 @@ describe('SHIP Mode Service', () => {
         projectDescription: 'A simple todo app',
       };
       
-      const session = startShipMode(request);
+      const session = await startShipMode(request);
       
       // Note: This test requires API key and will make actual API calls
       // In a real test environment, you'd mock the API calls

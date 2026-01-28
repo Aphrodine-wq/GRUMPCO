@@ -242,7 +242,11 @@ export function recordSessionCompleted(type: string, status: string, duration: n
 
 // Get metrics endpoint handler
 export async function getMetrics(_req: Request, res: Response): Promise<void> {
-  res.set('Content-Type', register.contentType);
+  if (typeof res.set === 'function') {
+    res.set('Content-Type', register.contentType);
+  } else if (typeof res.setHeader === 'function') {
+    res.setHeader('Content-Type', register.contentType);
+  }
   res.end(await register.metrics());
 }
 

@@ -1,28 +1,38 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import request from 'supertest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import supertest from 'supertest';
+
+const request = supertest as unknown as (app: any) => any;
 
 // Set up environment before importing app
 process.env.ANTHROPIC_API_KEY = 'test_api_key_for_testing';
 process.env.NODE_ENV = 'test';
 
+const mockClaudeClient = vi.hoisted(() => ({
+  messages: {
+    create: vi.fn(),
+    stream: vi.fn(),
+  },
+}));
+
 // Mock Anthropic SDK before importing services
 vi.mock('@anthropic-ai/sdk', () => {
   return {
-    default: vi.fn().mockImplementation(() => ({
-      messages: {
-        create: vi.fn(),
-        stream: vi.fn(),
-      },
-    })),
+    default: vi.fn(() => mockClaudeClient),
   };
 });
 
 // Import app after mocks are set up
-const { default: app } = await import('../../src/index.ts');
+const { default: app, appReady } = await import('../../src/index.ts');
 
 describe('Diagram Flow Integration', () => {
+  beforeAll(async () => {
+    await appReady;
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockClaudeClient.messages.create.mockReset();
+    mockClaudeClient.messages.stream.mockReset();
   });
 
   describe('POST /api/generate-diagram', () => {

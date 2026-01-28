@@ -3,7 +3,20 @@
  * Provides configurable mock responses for Claude API calls
  */
 
-import type { MessageStreamEvent } from '@anthropic-ai/sdk';
+type MessageStreamEvent = {
+  type: string;
+  delta?: {
+    type?: string;
+    text?: string;
+  };
+  content_block?: {
+    type: string;
+    id?: string;
+    name?: string;
+    input?: Record<string, any>;
+  };
+  index?: number;
+};
 
 export interface MockClaudeResponse {
   content?: string;
@@ -70,7 +83,7 @@ export class MockAnthropicClient {
   /**
    * Mock messages.create
    */
-  async messages = {
+  messages = {
     create: async (params: any): Promise<any> => {
       this.callCount++;
       

@@ -1,6 +1,6 @@
 import express, { Request, Response, Router } from 'express';
 import { body, validationResult, ValidationChain } from 'express-validator';
-import { auth } from '../services/supabaseClient.js';
+import { auth, isMockMode } from '../services/supabaseClient.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 import { getRequestLogger } from '../middleware/logger.js';
 import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
@@ -196,6 +196,7 @@ router.get('/me', requireAuth, (req: AuthenticatedRequest, res: Response) => {
 router.get('/status', (_req: Request, res: Response) => {
   res.json({
     configured: true,
+    mock: isMockMode,
     providers: ['email', 'google', 'github'],
   });
 });

@@ -1,5 +1,14 @@
 import type { FileDefinition, TechStack } from '../types/index.js';
 
+function sanitizeProjectName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .substring(0, 50) || 'generated-project';
+}
+
 const reactExpressPrismaBase: FileDefinition[] = [
   {
     path: '.gitignore',
@@ -151,8 +160,9 @@ export function getPackageJson(projectName: string, techStack: TechStack): FileD
     return null; // Python uses requirements.txt
   }
 
+  const sanitizedName = sanitizeProjectName(projectName);
   const basePackage = {
-    name: projectName,
+    name: sanitizedName,
     version: '0.1.0',
     private: true
   };

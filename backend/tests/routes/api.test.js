@@ -1,14 +1,19 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import request from 'supertest';
+import { describe, it, expect, beforeAll } from 'vitest';
+import supertest from 'supertest';
+
+const request = supertest;
 
 // We need to set up the environment before importing the app
 process.env.ANTHROPIC_API_KEY = 'test_api_key_for_testing';
 process.env.NODE_ENV = 'test';
 
 // Import app after setting env
-const { default: app } = await import('../../src/index.ts');
+const { default: app, appReady } = await import('../../src/index.ts');
 
 describe('Health Routes', () => {
+  beforeAll(async () => {
+    await appReady;
+  });
   describe('GET /health', () => {
     it('should return ok status', async () => {
       const response = await request(app)

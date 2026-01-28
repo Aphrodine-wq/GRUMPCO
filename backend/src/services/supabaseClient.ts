@@ -232,4 +232,6 @@ export const auth = {
 
 export const db = { from };
 
+export const isMockMode = MOCK_MODE;
+
 export default supabaseClient;

@@ -8,15 +8,20 @@ import { getSystemPrompt, type UserPreferences } from '../prompts/index.js';
 import { analyzeIntent, getIntentAugmentation } from './intentParser.js';
 import type { ServiceError, ConversationMessage, RefinementContext } from '../types/index.js';
 
+const isTestEnv = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+const apiKey = process.env.ANTHROPIC_API_KEY;
+
 // Validate API key on startup
-if (!process.env.ANTHROPIC_API_KEY) {
+if (!apiKey) {
   logger.error('ANTHROPIC_API_KEY is not set. Please copy .env.example to .env and add your API key.');
   logger.error('Get your key at: https://console.anthropic.com/');
-  process.exit(1);
+  if (!isTestEnv) {
+    process.exit(1);
+  }
 }
 
 const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: apiKey || 'test-key',
 });
 
 // Create resilient wrapper for streaming

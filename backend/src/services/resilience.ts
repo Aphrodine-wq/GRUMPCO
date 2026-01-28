@@ -11,11 +11,13 @@ export const CIRCUIT_BREAKER_OPTIONS = {
   volumeThreshold: 5, // Minimum requests before circuit can trip
 };
 
+const isTestEnv = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+
 // Retry configuration
 const RETRY_OPTIONS: retry.Options = {
   retries: 3,
-  minTimeout: 1000,
-  maxTimeout: 10000,
+  minTimeout: isTestEnv ? 10 : 1000,
+  maxTimeout: isTestEnv ? 50 : 10000,
   factor: 2,
   onRetry: (error: unknown, attempt: number) => {
     const err = error instanceof Error ? error : new Error(String(error));
@@ -52,6 +54,17 @@ export function createCircuitBreaker<T extends unknown[], R>(
 ): CircuitBreaker<T, R> {
   const breaker = new CircuitBreaker(fn, {
     ...CIRCUIT_BREAKER_OPTIONS,
+    errorFilter: (error: ErrorWithStatus) => {
+      const status = error.status || error.statusCode;
+      return status !== undefined && status >= 400 && status < 500 && status !== 429;
+    },
+    ...(isTestEnv
+      ? {
+          timeout: Math.min(CIRCUIT_BREAKER_OPTIONS.timeout, 2000),
+          resetTimeout: Math.min(CIRCUIT_BREAKER_OPTIONS.resetTimeout, 2000),
+          volumeThreshold: Math.min(CIRCUIT_BREAKER_OPTIONS.volumeThreshold, 2),
+        }
+      : {}),
     name,
   });
 

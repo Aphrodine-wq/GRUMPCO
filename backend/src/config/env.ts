@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const isTestEnv = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
 
 // Try multiple paths for .env file
 const possiblePaths = [
@@ -42,7 +43,7 @@ if (envPath) {
 const envSchema = z.object({
   // Required
   ANTHROPIC_API_KEY: z.string().min(1, 'ANTHROPIC_API_KEY is required').refine(
-    (key) => key.startsWith('sk-') || key === 'test-key',
+    (key) => isTestEnv || key.startsWith('sk-') || key === 'test-key',
     'ANTHROPIC_API_KEY must start with "sk-"'
   ),
 

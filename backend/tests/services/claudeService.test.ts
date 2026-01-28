@@ -3,15 +3,17 @@ import { generateDiagram, generateDiagramStream } from '../../src/services/claud
 import * as mermaidUtils from '../../src/services/mermaidUtils.ts';
 import * as intentParser from '../../src/services/intentParser.ts';
 
+const mockClaudeClient = vi.hoisted(() => ({
+  messages: {
+    create: vi.fn(),
+    stream: vi.fn(),
+  },
+}));
+
 // Mock dependencies
 vi.mock('@anthropic-ai/sdk', () => {
   return {
-    default: vi.fn().mockImplementation(() => ({
-      messages: {
-        create: vi.fn(),
-        stream: vi.fn(),
-      },
-    })),
+    default: vi.fn(() => mockClaudeClient),
   };
 });
 
@@ -52,6 +54,8 @@ vi.mock('../../src/prompts/index.ts', () => ({
 describe('claudeService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockClaudeClient.messages.create.mockReset();
+    mockClaudeClient.messages.stream.mockReset();
     // Set required env var
     process.env.ANTHROPIC_API_KEY = 'test-key';
   });

@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createProjectZip } from '../../src/services/zipService.ts';
 import type { FileDefinition, TechStack } from '../../src/types/index.js';
-import { Readable } from 'stream';
 
 describe('zipService', () => {
   const mockFiles: FileDefinition[] = [
@@ -17,43 +16,47 @@ describe('zipService', () => {
       expect(zipStream.readable).toBe(true);
     });
 
-    it('should include all files in the archive', (done) => {
+    it('should include all files in the archive', async () => {
       const zipStream = createProjectZip(mockFiles, 'test-project', 'react-express-prisma');
       const chunks: Buffer[] = [];
 
-      zipStream.on('data', (chunk: Buffer) => {
-        chunks.push(chunk);
-      });
+      await new Promise<void>((resolve, reject) => {
+        zipStream.on('data', (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
 
-      zipStream.on('end', () => {
-        const zipBuffer = Buffer.concat(chunks);
-        // ZIP files start with PK (0x504B)
-        expect(zipBuffer[0]).toBe(0x50);
-        expect(zipBuffer[1]).toBe(0x4B);
-        done();
-      });
+        zipStream.on('end', () => {
+          const zipBuffer = Buffer.concat(chunks);
+          // ZIP files start with PK (0x504B)
+          expect(zipBuffer[0]).toBe(0x50);
+          expect(zipBuffer[1]).toBe(0x4B);
+          resolve();
+        });
 
-      zipStream.on('error', done);
+        zipStream.on('error', reject);
+      });
     });
 
-    it('should include README.md in the archive', (done) => {
+    it('should include README.md in the archive', async () => {
       const zipStream = createProjectZip(mockFiles, 'test-project', 'react-express-prisma');
       const chunks: Buffer[] = [];
 
-      zipStream.on('data', (chunk: Buffer) => {
-        chunks.push(chunk);
-      });
+      await new Promise<void>((resolve, reject) => {
+        zipStream.on('data', (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
 
-      zipStream.on('end', () => {
-        const zipBuffer = Buffer.concat(chunks);
-        const zipString = zipBuffer.toString('binary');
-        // README should be included
-        expect(zipString).toContain('README.md');
-        expect(zipString).toContain('test-project');
-        done();
-      });
+        zipStream.on('end', () => {
+          const zipBuffer = Buffer.concat(chunks);
+          const zipString = zipBuffer.toString('binary');
+          // README should be included
+          expect(zipString).toContain('README.md');
+          expect(zipString).toContain('test-project');
+          resolve();
+        });
 
-      zipStream.on('error', done);
+        zipStream.on('error', reject);
+      });
     });
 
     it('should work with different tech stacks', () => {
@@ -65,41 +68,45 @@ describe('zipService', () => {
       });
     });
 
-    it('should handle empty file list', (done) => {
+    it('should handle empty file list', async () => {
       const zipStream = createProjectZip([], 'test-project', 'react-express-prisma');
       const chunks: Buffer[] = [];
 
-      zipStream.on('data', (chunk: Buffer) => {
-        chunks.push(chunk);
-      });
+      await new Promise<void>((resolve, reject) => {
+        zipStream.on('data', (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
 
-      zipStream.on('end', () => {
-        // Should still create a valid ZIP (with just README)
-        const zipBuffer = Buffer.concat(chunks);
-        expect(zipBuffer.length).toBeGreaterThan(0);
-        done();
-      });
+        zipStream.on('end', () => {
+          // Should still create a valid ZIP (with just README)
+          const zipBuffer = Buffer.concat(chunks);
+          expect(zipBuffer.length).toBeGreaterThan(0);
+          resolve();
+        });
 
-      zipStream.on('error', done);
+        zipStream.on('error', reject);
+      });
     });
 
-    it('should prefix files with project name', (done) => {
+    it('should prefix files with project name', async () => {
       const zipStream = createProjectZip(mockFiles, 'my-project', 'react-express-prisma');
       const chunks: Buffer[] = [];
 
-      zipStream.on('data', (chunk: Buffer) => {
-        chunks.push(chunk);
-      });
+      await new Promise<void>((resolve, reject) => {
+        zipStream.on('data', (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
 
-      zipStream.on('end', () => {
-        const zipBuffer = Buffer.concat(chunks);
-        const zipString = zipBuffer.toString('binary');
-        // Files should be prefixed with project name
-        expect(zipString).toContain('my-project/');
-        done();
-      });
+        zipStream.on('end', () => {
+          const zipBuffer = Buffer.concat(chunks);
+          const zipString = zipBuffer.toString('binary');
+          // Files should be prefixed with project name
+          expect(zipString).toContain('my-project/');
+          resolve();
+        });
 
-      zipStream.on('error', done);
+        zipStream.on('error', reject);
+      });
     });
   });
 });

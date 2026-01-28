@@ -1,5 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import request from 'supertest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import supertest from 'supertest';
+import { PassThrough } from 'stream';
+
+const request = supertest as unknown as (app: any) => any;
 
 // Set up environment
 process.env.ANTHROPIC_API_KEY = 'test_api_key_for_testing';
@@ -20,12 +23,22 @@ vi.mock('../../src/services/zipService.ts', () => ({
 }));
 
 // Import after mocks
-const { default: app } = await import('../../src/index.ts');
+const { default: app, appReady } = await import('../../src/index.ts');
 const claudeCodeService = await import('../../src/services/claudeCodeService.ts');
 const projectTemplates = await import('../../src/services/projectTemplates.ts');
 const zipService = await import('../../src/services/zipService.ts');
 
+function createMockZipStream(): PassThrough {
+  const stream = new PassThrough();
+  setImmediate(() => stream.end('zip'));
+  return stream;
+}
+
 describe('Code Generation Flow Integration', () => {
+  beforeAll(async () => {
+    await appReady;
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -47,10 +60,7 @@ describe('Code Generation Flow Integration', () => {
         content: JSON.stringify({ name: 'test-project', version: '1.0.0' }),
       };
 
-      const mockZipStream = {
-        pipe: vi.fn(),
-        on: vi.fn(),
-      };
+      const mockZipStream = createMockZipStream();
 
       vi.mocked(claudeCodeService.generateCodeFromDiagram).mockResolvedValue({
         files: mockAiFiles,
@@ -122,10 +132,7 @@ describe('Code Generation Flow Integration', () => {
     });
 
     it('should sanitize project name', async () => {
-      const mockZipStream = {
-        pipe: vi.fn(),
-        on: vi.fn(),
-      };
+      const mockZipStream = createMockZipStream();
 
       vi.mocked(claudeCodeService.generateCodeFromDiagram).mockResolvedValue({
         files: [],
@@ -176,10 +183,7 @@ describe('Code Generation Flow Integration', () => {
       for (const stack of stacks) {
         vi.clearAllMocks();
 
-        const mockZipStream = {
-          pipe: vi.fn(),
-          on: vi.fn(),
-        };
+        const mockZipStream = createMockZipStream();
 
         vi.mocked(claudeCodeService.generateCodeFromDiagram).mockResolvedValue({
           files: [],

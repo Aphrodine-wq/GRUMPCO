@@ -42,10 +42,11 @@ const DIAGRAM_PATTERNS: Record<DiagramType, RegExp[]> = {
   'flowchart': [
     /\b(flow|process|workflow|steps?|procedure|algorithm|decision\s*tree)\b/i,
     /\b(if|then|else|branch|path|route)\b/i,
+    /\b(flow\s*chart|flowchart)\b/i,
   ],
   'sequence': [
     /\b(sequence|interaction|call|request|response|message|communicate)\b/i,
-    /\b(api\s*call|http|rest|endpoint|service\s*call)\b/i,
+    /\b(api\s*calls?|http|rest|endpoint|service\s*calls?)\b/i,
     /\b(actor|user\s*journey|step\s*by\s*step)\b/i,
   ],
   'class': [
@@ -222,14 +223,7 @@ export function detectDiagramType(message: string): { type: DiagramType | null; 
  */
 export function detectC4Level(message: string): C4Level | null {
   const lowerMessage = message.toLowerCase();
-  
-  // Check if this is even an architecture request
-  if (!ARCHITECTURE_KEYWORDS.test(lowerMessage) && 
-      !lowerMessage.includes('c4') &&
-      !/(container|component|context)\s*(diagram|view|level)/i.test(lowerMessage)) {
-    return null;
-  }
-  
+
   // Score each C4 level
   const scores: Record<C4Level, number> = {
     context: 0,
@@ -253,9 +247,14 @@ export function detectC4Level(message: string): C4Level | null {
   if (entries[0][1] > 0) {
     return entries[0][0];
   }
-  
+
+  const isArchitectureRequest =
+    ARCHITECTURE_KEYWORDS.test(lowerMessage) ||
+    lowerMessage.includes('c4') ||
+    /(container|component|context)\s*(diagram|view|level)/i.test(lowerMessage);
+
   // Default to container for general architecture requests
-  if (ARCHITECTURE_KEYWORDS.test(lowerMessage)) {
+  if (isArchitectureRequest) {
     return 'container';
   }
   

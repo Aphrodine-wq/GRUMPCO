@@ -2,7 +2,7 @@
  * Metrics Middleware Tests
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   httpRequestDuration,
   httpRequestsTotal,
@@ -87,10 +87,17 @@ describe('Metrics', () => {
 
   describe('getMetrics', () => {
     it('should return metrics as string', async () => {
-      const metrics = await getMetrics({} as Request, {} as Response);
-      
-      // Should return metrics (promise resolves)
-      expect(metrics).toBeDefined();
+      const res = {
+        set: vi.fn(),
+        setHeader: vi.fn(),
+        end: vi.fn(),
+      } as unknown as Response;
+
+      await getMetrics({} as Request, res);
+
+      expect(res.end).toHaveBeenCalled();
+      const [payload] = vi.mocked(res.end).mock.calls[0] || [];
+      expect(typeof payload).toBe('string');
     });
   });
 });

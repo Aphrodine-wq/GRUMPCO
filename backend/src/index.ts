@@ -49,6 +49,10 @@ import type { Server } from 'http';
 const app: Express = express();
 const PREFERRED_PORT = parseInt(process.env.PORT || '3000', 10) || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
+let resolveAppReady: (() => void) | null = null;
+export const appReady = new Promise<void>((resolve) => {
+  resolveAppReady = resolve;
+});
 
 // Determine allowed origins (production: require CORS_ORIGINS or use minimal default)
 const allowedOrigins = process.env.CORS_ORIGINS
@@ -217,6 +221,8 @@ let server: Server | undefined;
       });
     });
 
+    resolveAppReady?.();
+
     // Initialize alerting
     initializeAlerting(60000); // Check every minute
     logger.info('Alerting service initialized');
@@ -227,14 +233,16 @@ let server: Server | undefined;
     skillRegistry.mountRoutes(app);
     logger.info({ skillCount: skillRegistry.count }, 'Skills system initialized');
 
-    const PORT = await findAvailablePort(PREFERRED_PORT);
-    const host = process.env.HOST ?? (isProduction ? '127.0.0.1' : '0.0.0.0');
-    server = app.listen(PORT, host, () => {
-      logger.info(
-        { port: PORT, host, env: process.env.NODE_ENV || 'development' },
-        'Server started'
-      );
-    });
+    if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+      const PORT = await findAvailablePort(PREFERRED_PORT);
+      const host = process.env.HOST ?? (isProduction ? '127.0.0.1' : '0.0.0.0');
+      server = app.listen(PORT, host, () => {
+        logger.info(
+          { port: PORT, host, env: process.env.NODE_ENV || 'development' },
+          'Server started'
+        );
+      });
+    }
 
     process.on('SIGTERM', async () => {
       logger.info('SIGTERM received, shutting down gracefully');

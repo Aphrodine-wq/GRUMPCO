@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import request from 'supertest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import supertest from 'supertest';
+
+const request = supertest as unknown as (app: any) => any;
 
 // Set up environment
 process.env.ANTHROPIC_API_KEY = 'test_api_key_for_testing';
@@ -22,10 +24,14 @@ vi.mock('../../src/services/supabaseClient.ts', async () => {
 });
 
 // Import app after mocks
-const { default: app } = await import('../../src/index.ts');
+const { default: app, appReady } = await import('../../src/index.ts');
 const { auth } = await import('../../src/services/supabaseClient.ts');
 
 describe('Auth Flow Integration', () => {
+  beforeAll(async () => {
+    await appReady;
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -37,7 +43,7 @@ describe('Auth Flow Integration', () => {
         email: 'test@example.com',
         user_metadata: { name: 'Test User' },
         created_at: new Date().toISOString(),
-      };
+      } as any;
 
       const mockSession = {
         access_token: 'token-123',
@@ -123,7 +129,7 @@ describe('Auth Flow Integration', () => {
         id: 'user-123',
         email: 'test@example.com',
         user_metadata: { name: 'Test User' },
-      };
+      } as any;
 
       const mockSession = {
         access_token: 'token-123',
@@ -180,7 +186,7 @@ describe('Auth Flow Integration', () => {
         id: 'user-123',
         email: 'test@example.com',
         user_metadata: {},
-      };
+      } as any;
 
       vi.mocked(auth.getUser).mockResolvedValue({
         data: { user: mockUser },
@@ -216,7 +222,7 @@ describe('Auth Flow Integration', () => {
         email: 'test@example.com',
         user_metadata: { name: 'Test User' },
         created_at: new Date().toISOString(),
-      };
+      } as any;
 
       vi.mocked(auth.getUser).mockResolvedValue({
         data: { user: mockUser },

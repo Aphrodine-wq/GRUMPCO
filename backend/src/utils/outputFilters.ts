@@ -8,7 +8,7 @@ const REDACTED = '[REDACTED]';
 // Common secret patterns (heuristic; may have false positives)
 const SECRET_PATTERNS: Array<{ pattern: RegExp; replace: string }> = [
   { pattern: /sk-[a-zA-Z0-9]{20,}/g, replace: REDACTED },
-  { pattern: /sk-ant-[a-zA-Z0-9\-]{20,}/g, replace: REDACTED },
+  { pattern: /sk-ant-[a-zA-Z0-9\-]{10,}/g, replace: REDACTED },
   { pattern: /api[_-]?key['\"]?\s*[:=]\s*['\"]?[a-zA-Z0-9_\-]{20,}/gi, replace: `api_key=${REDACTED}` },
   { pattern: /bearer\s+[a-zA-Z0-9_\-.]{20,}/gi, replace: `Bearer ${REDACTED}` },
   { pattern: /['\"]?password['\"]?\s*[:=]\s*['\"]?[^\s'"]{8,}['\"]?/gi, replace: `password=${REDACTED}` },

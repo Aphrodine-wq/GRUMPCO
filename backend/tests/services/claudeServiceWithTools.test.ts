@@ -2,17 +2,50 @@
  * Claude Service With Tools Tests
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ClaudeServiceWithTools } from '../../src/services/claudeServiceWithTools.js';
-import { createMockAnthropicClient } from '../mocks/claudeSDK.mock.js';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+
+const mockClaudeClient = vi.hoisted(() => ({
+  messages: {
+    create: vi.fn(),
+    stream: vi.fn(async () => ({
+      async *[Symbol.asyncIterator]() {
+        yield {
+          type: 'content_block_delta',
+          delta: { type: 'text_delta', text: 'Hello ' },
+        };
+        yield { type: 'message_stop' };
+      },
+    })),
+  },
+}));
+
+vi.mock('@anthropic-ai/sdk', () => ({
+  default: vi.fn(() => mockClaudeClient),
+}));
+
+type ClaudeServiceWithToolsType = typeof import('../../src/services/claudeServiceWithTools.js').ClaudeServiceWithTools;
+let ClaudeServiceWithTools: ClaudeServiceWithToolsType;
 
 describe('ClaudeServiceWithTools', () => {
-  let service: ClaudeServiceWithTools;
-  let mockClient: ReturnType<typeof createMockAnthropicClient>;
+  let service: InstanceType<ClaudeServiceWithToolsType>;
+
+  beforeAll(async () => {
+    ({ ClaudeServiceWithTools } = await import('../../src/services/claudeServiceWithTools.js'));
+  });
 
   beforeEach(() => {
     service = new ClaudeServiceWithTools();
-    mockClient = createMockAnthropicClient();
+    mockClaudeClient.messages.create.mockReset();
+    mockClaudeClient.messages.stream.mockReset();
+    mockClaudeClient.messages.stream.mockResolvedValue({
+      async *[Symbol.asyncIterator]() {
+        yield {
+          type: 'content_block_delta',
+          delta: { type: 'text_delta', text: 'Hello ' },
+        };
+        yield { type: 'message_stop' };
+      },
+    });
   });
 
   describe('generateChatStream', () => {
