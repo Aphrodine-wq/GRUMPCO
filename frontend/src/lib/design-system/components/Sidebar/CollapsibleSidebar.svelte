@@ -33,7 +33,7 @@
   class="sidebar"
   style="width: {collapsed ? collapsedWidth : width}px"
   style:--bg-sidebar={colors.background.sidebar}
-  style:--border-color={colors.border.default}
+  style:--border-color={colors.diff.lineNumber.border}
   style:--bg-header={colors.background.tertiary}
   style:--primary-color={colors.accent.primary}
   style:--text-muted={colors.text.muted}

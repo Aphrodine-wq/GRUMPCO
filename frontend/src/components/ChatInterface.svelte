@@ -5,15 +5,12 @@
 
   import DiagramRenderer from './DiagramRenderer.svelte';
   import SuggestionChips from './SuggestionChips.svelte';
-  import RefinementActions from './RefinementActions.svelte';
   import GRumpBlob from './GRumpBlob.svelte';
-  import CodeGenPanel from './CodeGenPanel.svelte';
-  import MermaidToCodePanel from './MermaidToCodePanel.svelte';
-  import WorkflowPhaseBar from './WorkflowPhaseBar.svelte';
-  import WorkflowActions from './WorkflowActions.svelte';
   import ToolCallCard from './ToolCallCard.svelte';
   import ToolResultCard from './ToolResultCard.svelte';
-  import { Badge, Button, Input } from '../lib/design-system';
+  import ShipMode from './ShipMode.svelte';
+  import SettingsScreen from './SettingsScreen.svelte';
+  import { Badge, Button } from '../lib/design-system';
   import { exportAsSvg } from '../lib/mermaid';
   import {
     trackMessageSent,
@@ -23,34 +20,23 @@
   } from '../lib/analytics';
   import { showToast } from '../stores/toastStore';
   import { processError, logError } from '../utils/errorHandler';
-  import { sessionsStore, currentSession, sortedSessions } from '../stores/sessionsStore';
+  import { sessionsStore, currentSession } from '../stores/sessionsStore';
   import { getCurrentProjectId } from '../stores/projectStore';
   import { chatModeStore } from '../stores/chatModeStore';
   import { workspaceStore } from '../stores/workspaceStore';
   import { codeSessionsStore } from '../stores/codeSessionsStore';
   import { openModal } from '../stores/clarificationStore';
   import {
-    phase,
-    canProceedToPrd,
-    canProceedToCodegen,
-    canDownload,
     streamPrd,
     startCodeGeneration,
     downloadProject,
     reset as resetWorkflow,
-    architecture,
     codegenSession,
   } from '../stores/workflowStore';
   import { parseAssistantResponse } from '../utils/responseParser';
   import { flattenTextContent } from '../utils/contentParser';
-  import { generatePlan, currentPlan } from '../stores/planStore';
-  import { startSpecSession, currentSession as currentSpecSession } from '../stores/specStore';
-  import PlanViewer from './PlanViewer.svelte';
-  import SpecMode from './SpecMode.svelte';
-  import ShipMode from './ShipMode.svelte';
-  import CommandPalette from './CommandPalette.svelte';
-  import LoadSessionModal from './LoadSessionModal.svelte';
-  import SettingsScreen from './SettingsScreen.svelte';
+  import { generatePlan } from '../stores/planStore';
+  import { startSpecSession } from '../stores/specStore';
   import { fetchApi } from '../lib/api.js';
   import { settingsStore } from '../stores/settingsStore';
   import { colors } from '../lib/design-system/tokens/colors';
@@ -76,7 +62,6 @@
   let streamingContent = $state('');
   let streamingBlocks = $state<ContentBlock[]>([]);
   let diagramRefs: Record<string, HTMLElement> = $state({});
-  let lastError = $state(false);
   let lastUserMessage = $state('');
   let activeController: AbortController | null = $state(null);
   let workspaceInput = $state('');
@@ -84,8 +69,6 @@
   let currentPlanId = $state<string | null>(null);
   let currentSpecSessionId = $state<string | null>(null);
   let commandPaletteOpen = $state(false);
-  let loadSessionModalOpen = $state(false);
-  let isTyping = $state(false);
   let typingTimeout: ReturnType<typeof setTimeout> | null = null;
   let editingMessageIndex = $state<number | null>(null);
   let showSettings = $state(false);
@@ -355,6 +338,8 @@
     const s = settingsStore.getCurrent();
     if (s?.models?.defaultProvider) body.provider = s.models.defaultProvider;
     if (s?.models?.defaultModelId) body.modelId = s.models.defaultModelId;
+    if (s?.guardRails?.autonomousMode) body.autonomous = true;
+    if (s?.guardRails?.useLargeContext) body.largeContext = true;
     const response = await fetchApi('/api/chat/stream', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -376,7 +361,9 @@
         const raw = line.slice(6);
         try {
           const ev = JSON.parse(raw);
-          if (ev.type === 'text' && ev.text) {
+          if (ev.type === 'autonomous' && ev.value) {
+            /* Yolo mode: backend signaled autonomous; confirmations are skipped by backend. */
+          } else if (ev.type === 'text' && ev.text) {
             const last = streamingBlocks[streamingBlocks.length - 1];
             if (last?.type === 'text') {
               streamingBlocks = [
@@ -460,6 +447,11 @@
   }
 
   function handleTemplateSelect(event: CustomEvent) {
+    if (event.detail.id === 'ship-mode') {
+      chatMode = 'ship';
+      trackTemplateUsed('ship-mode');
+      return;
+    }
     inputText = event.detail.prompt;
     trackTemplateUsed(event.detail.id || 'unknown');
     inputRef?.focus();
@@ -570,7 +562,12 @@
     const w = get(workspaceStore);
     if (w) workspaceInput = w;
     document.addEventListener('keydown', handleGlobalKeydown);
-    return () => document.removeEventListener('keydown', handleGlobalKeydown);
+    const handleOpenShipMode = () => { chatMode = 'ship'; };
+    window.addEventListener('open-ship-mode', handleOpenShipMode);
+    return () => {
+      document.removeEventListener('keydown', handleGlobalKeydown);
+      window.removeEventListener('open-ship-mode', handleOpenShipMode);
+    };
   });
 </script>
 
@@ -584,6 +581,11 @@
   {:else}
     <div class="chat-root">
       <div class="chat-viewport">
+        {#if chatMode === 'ship'}
+          <div class="ship-mode-viewport">
+            <ShipMode />
+          </div>
+        {:else}
         <div class="messages-scroll" bind:this={messagesRef}>
           <div class="messages-inner">
             {#if messages.length <= 1 && !streaming}
@@ -684,9 +686,11 @@
             {/if}
           </div>
         </div>
+        {/if}
 
         <div class="chat-controls">
           <div class="controls-inner">
+            {#if chatMode !== 'ship'}
             <form
               class="input-container"
               onsubmit={(e) => {
@@ -713,6 +717,7 @@
                 {/if}
               </button>
             </form>
+            {/if}
 
             <div class="mode-selector">
               <Button
@@ -745,6 +750,19 @@
                   chatModeStore.setMode('code');
                   chatMode = 'spec';
                 }}>Spec</Button
+              >
+              <Button
+                variant={$chatModeStore === 'code' && chatMode === 'execute' ? 'primary' : 'secondary'}
+                size="sm"
+                onclick={() => {
+                  chatModeStore.setMode('code');
+                  chatMode = 'execute';
+                }}>Execute</Button
+              >
+              <Button
+                variant={chatMode === 'ship' ? 'primary' : 'secondary'}
+                size="sm"
+                onclick={() => { chatMode = 'ship'; }}>SHIP</Button
               >
               <Button
                 variant={$chatModeStore === 'argument' ? 'primary' : 'secondary'}
@@ -807,6 +825,13 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
+  }
+
+  .ship-mode-viewport {
+    flex: 1;
+    overflow: auto;
+    width: 100%;
+    min-height: 0;
   }
 
   .messages-scroll {
@@ -999,16 +1024,18 @@
     align-items: center;
     gap: 12px;
     background-color: white;
-    border: none;
-    border-radius: 12px;
-    padding: 14px 16px;
-    transition: all 150ms ease;
+    border: 1px solid #e2e8f0; /* Slate-200 */
+    border-radius: 16px;
+    padding: 16px 20px;
+    transition: all 200ms ease;
     width: 100%;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   }
 
   .input-container:focus-within {
-    box-shadow: 0 14px 56px rgba(0, 0, 0, 0.14);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    border-color: #cbd5e1; /* Slate-300 */
+    transform: translateY(-1px);
   }
 
   .input-prompt {
@@ -1080,6 +1107,17 @@
     gap: 8px;
     flex-wrap: wrap;
     justify-content: flex-start;
+    align-items: center;
+    background: #f8fafc;
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .mode-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
   }
 
   .workspace-bar {

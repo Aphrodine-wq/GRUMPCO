@@ -8,8 +8,11 @@
   import { fetchApi } from '../lib/api.js';
   import type { Settings, ModelsSettings, AccessibilitySettings, GuardRailsSettings } from '../types/settings';
   import RecommendedExtensions from './RecommendedExtensions.svelte';
-  import { Button, Card, Input, Badge } from '../lib/design-system';
+  import ScheduledAgents from './ScheduledAgents.svelte';
+  import { Button, Card, Badge } from '../lib/design-system';
   import { colors } from '../lib/design-system/tokens/colors';
+  import { workspaceStore } from '../stores/workspaceStore';
+  import { analyzeArchitecture } from '../stores/featuresStore';
 
   interface Tier {
     id: string;
@@ -39,6 +42,10 @@
   let allowedDirsText = $state('');
   let tiers = $state<Tier[]>([]);
   let billingMe = $state<BillingMe | null>(null);
+  let workspaceRoot = $state<string | null>(null);
+  let analyzingArchitecture = $state(false);
+  let architectureSummary = $state<string | null>(null);
+  let architectureDiagram = $state<string | null>(null);
 
   const modelOptions = [
     { provider: 'anthropic' as const, modelId: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
@@ -51,6 +58,10 @@
   ];
 
   onMount(() => {
+    const unsubWorkspace = workspaceStore.subscribe((path) => {
+      workspaceRoot = path;
+    });
+
     settingsStore.load().then((s) => {
       settings = s;
       allowedDirsText = (s?.guardRails?.allowedDirs ?? []).join('\n');
@@ -63,10 +74,15 @@
       .then((r) => r.json())
       .then((d: BillingMe) => { billingMe = d; })
       .catch(() => { billingMe = null; });
-    return settingsStore.subscribe((v) => {
+    const unsubSettings = settingsStore.subscribe((v) => {
       settings = v ?? null;
       if (v?.guardRails?.allowedDirs) allowedDirsText = v.guardRails.allowedDirs.join('\n');
     });
+
+    return () => {
+      unsubWorkspace();
+      unsubSettings();
+    };
   });
 
   async function saveModels(next: ModelsSettings) {
@@ -112,10 +128,30 @@
       defaultModelId: modelId,
     });
   }
+
+  async function handleAnalyzeArchitectureClick() {
+    if (!workspaceRoot) {
+      showToast('Set a workspace root in Code mode before analyzing the codebase.', 'error');
+      return;
+    }
+    analyzingArchitecture = true;
+    architectureSummary = null;
+    architectureDiagram = null;
+    try {
+      const result = await analyzeArchitecture(workspaceRoot);
+      architectureSummary = result.summary;
+      architectureDiagram = result.mermaidDiagram;
+      showToast('Codebase architecture diagram generated from workspace.', 'success');
+    } catch (err) {
+      showToast('Failed to analyze workspace architecture', 'error');
+    } finally {
+      analyzingArchitecture = false;
+    }
+  }
 </script>
 
 <div class="settings-screen" style:--bg-primary={colors.background.primary}>
-  <header class="settings-header" style:--border-color={colors.border.default}>
+  <header class="settings-header">
     <div class="header-left">
       <Button variant="ghost" size="sm" onclick={onBack}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -171,7 +207,32 @@
             <span class="checkbox-label-text">Confirm every file write</span>
           </label>
         </div>
+        <div class="field-group">
+          <label class="checkbox-field">
+            <input
+              type="checkbox"
+              checked={settings?.guardRails?.autonomousMode ?? false}
+              onchange={(e) => saveGuardRails({ ...settings?.guardRails, autonomousMode: (e.target as HTMLInputElement).checked })}
+            />
+            <span class="checkbox-label-text">Autonomous (Yolo) mode</span>
+          </label>
+          <p class="field-hint">Skip tool confirmations; tools run without per-step approval. Use with care.</p>
+        </div>
+        <div class="field-group">
+          <label class="checkbox-field">
+            <input
+              type="checkbox"
+              checked={settings?.guardRails?.useLargeContext ?? false}
+              onchange={(e) => saveGuardRails({ ...settings?.guardRails, useLargeContext: (e.target as HTMLInputElement).checked })}
+            />
+            <span class="checkbox-label-text">Large context (200K+)</span>
+          </label>
+          <p class="field-hint">Allow longer messages for chat when using models that support large context.</p>
+        </div>
       </Card>
+
+      <!-- Scheduled agents (24/7) -->
+      <ScheduledAgents />
 
       <!-- Billing Section -->
       <Card title="Subscription & Billing" padding="md">
@@ -188,6 +249,12 @@
             <div class="billing-actions">
               <Button variant="secondary" size="sm" onclick={() => window.open(billingUrl, '_blank')}>Manage Billing</Button>
             </div>
+            {#if tiers.length}
+              <div class="status-row">
+                <span class="status-label">Available tiers</span>
+                <span class="status-value">{tiers.length}</span>
+              </div>
+            {/if}
           {:else}
             <p class="billing-empty">Sign in to view your subscription details.</p>
             <Button variant="primary" size="sm" onclick={() => window.open(billingUrl, '_blank')}>View Pricing</Button>
@@ -221,6 +288,39 @@
 
       <Card title="Tools & Extensions" padding="md">
         <RecommendedExtensions />
+      </Card>
+
+      <Card title="Codebase Architecture (Mermaid)" padding="md">
+        <p class="section-desc">
+          Scan your current workspace and generate a Mermaid architecture diagram from the existing codebase.
+        </p>
+        <div class="field-group">
+          <Button variant="primary" size="sm" onclick={handleAnalyzeArchitectureClick} disabled={analyzingArchitecture}>
+            {#if analyzingArchitecture}
+              Analyzing workspace…
+            {:else}
+              Generate diagram from workspace
+            {/if}
+          </Button>
+          <p class="field-hint">
+            Uses the workspace root from Code mode. The diagram and summary are generated using the codebase analysis service.
+          </p>
+        </div>
+        {#if architectureSummary || architectureDiagram}
+          {#if architectureSummary}
+            <div class="field-group">
+              <p class="field-label">Summary</p>
+              <p class="architecture-summary">{architectureSummary}</p>
+            </div>
+          {/if}
+          {#if architectureDiagram}
+            <div class="field-group">
+              <p class="field-label">Mermaid diagram</p>
+              <pre class="mermaid-output"><code>{architectureDiagram}</code></pre>
+              <p class="field-hint">Copy this into Architecture mode or any Mermaid viewer to visualize.</p>
+            </div>
+          {/if}
+        {/if}
       </Card>
     </div>
   </div>

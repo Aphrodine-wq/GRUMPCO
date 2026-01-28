@@ -4,12 +4,9 @@
  */
 
 import Redis from 'ioredis';
-import type { Redis as RedisInstance } from 'ioredis';
-
-type RedisType = RedisInstance;
 import logger from '../middleware/logger.js';
 
-let redisClient: RedisType | null = null;
+let redisClient: Redis | null = null;
 let isConnected = false;
 
 export interface RedisConfig {
@@ -40,7 +37,7 @@ const DEFAULT_CONFIG: RedisConfig = {
 /**
  * Initialize Redis connection
  */
-export function initializeRedis(config?: RedisConfig): RedisType {
+export function initializeRedis(config?: RedisConfig): Redis {
   if (redisClient && isConnected) {
     return redisClient;
   }
@@ -87,7 +84,7 @@ export function initializeRedis(config?: RedisConfig): RedisType {
 /**
  * Get Redis client instance
  */
-export function getRedisClient(): RedisType {
+export function getRedisClient(): Redis {
   if (!redisClient) {
     return initializeRedis();
   }

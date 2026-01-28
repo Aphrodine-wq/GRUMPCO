@@ -42,7 +42,7 @@
   style:--primary-hover={colors.accent.primaryHover}
   style:--text-primary={colors.text.primary}
   style:--text-inverse={colors.text.inverse}
-  style:--border-default={colors.border.default}
+  style:--border-default={colors.diff.lineNumber.border}
   style:--error-color={colors.status.error}
   style:--radius-md={colors.shadow.md ? '6px' : '4px'} 
 >

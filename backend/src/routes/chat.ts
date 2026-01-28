@@ -6,7 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { claudeServiceWithTools } from '../services/claudeServiceWithTools.js';
 import { logger } from '../utils/logger.js';
-import { MAX_CHAT_MESSAGE_LENGTH, MAX_CHAT_MESSAGES } from '../middleware/validator.js';
+import { MAX_CHAT_MESSAGE_LENGTH, MAX_CHAT_MESSAGES, MAX_CHAT_MESSAGE_LENGTH_LARGE, MAX_CHAT_MESSAGES_LARGE } from '../middleware/validator.js';
 
 const router = Router();
 
@@ -28,10 +28,11 @@ const router = Router();
  *   modelKey?: string,      // Alternative: single key (provider inferred from prefix, e.g. openrouter:...)
  *   guardRailOptions?: { allowedDirs?: string[] }  // Path policy allowlist; confirmEveryWrite is UX-only
  *   tier?: 'free' | 'pro' | 'team' | 'enterprise'  // For capability list and feature flags in prompt
+ *   autonomous?: boolean  // Yolo mode: skip tool confirmations; backend emits { type: 'autonomous', value: true }
  * }
  */
 router.post('/stream', async (req: Request, res: Response) => {
-  const { messages, workspaceRoot, mode, planMode, planId, specSessionId, agentProfile, provider, modelId, modelKey, guardRailOptions, tier } = req.body;
+  const { messages, workspaceRoot, mode, planMode, planId, specSessionId, agentProfile, provider, modelId, modelKey, guardRailOptions, tier, autonomous, largeContext } = req.body;
 
   // Validate request
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -41,10 +42,14 @@ router.post('/stream', async (req: Request, res: Response) => {
     });
   }
 
-  if (messages.length > MAX_CHAT_MESSAGES) {
+  const useLargeContext = Boolean(largeContext);
+  const maxMessages = useLargeContext ? MAX_CHAT_MESSAGES_LARGE : MAX_CHAT_MESSAGES;
+  const maxMessageLength = useLargeContext ? MAX_CHAT_MESSAGE_LENGTH_LARGE : MAX_CHAT_MESSAGE_LENGTH;
+
+  if (messages.length > maxMessages) {
     return res.status(400).json({
       error: 'Invalid request',
-      message: `Too many messages. Maximum ${MAX_CHAT_MESSAGES} messages per request.`,
+      message: `Too many messages. Maximum ${maxMessages} messages per request.`,
       type: 'validation_error',
     });
   }
@@ -59,10 +64,10 @@ router.post('/stream', async (req: Request, res: Response) => {
       });
     }
     const content = typeof msg.content === 'string' ? msg.content : String(msg.content);
-    if (content.length > MAX_CHAT_MESSAGE_LENGTH) {
+    if (content.length > maxMessageLength) {
       return res.status(400).json({
         error: 'Invalid request',
-        message: `Message content exceeds maximum length of ${MAX_CHAT_MESSAGE_LENGTH} characters.`,
+        message: `Message content exceeds maximum length of ${maxMessageLength} characters.`,
         type: 'validation_error',
       });
     }
@@ -136,7 +141,8 @@ router.post('/stream', async (req: Request, res: Response) => {
       reqProvider,
       reqModelId,
       guardOpts,
-      tierOverride
+      tierOverride,
+      Boolean(autonomous)
     );
 
       // Stream events to client

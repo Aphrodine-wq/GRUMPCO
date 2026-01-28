@@ -20,7 +20,9 @@
     "test:coverage": "vitest run --coverage",
     "test:coverage:report": "vitest run --coverage && open coverage/index.html",
     "test:coverage:ci": "vitest run --coverage --reporter=json --outputFile=coverage/test-results.json",
-    "load-test": "k6 run tests/load/k6-scenarios.js"
+    "load-test": "k6 run tests/load/k6-scenarios.js",
+    "evals": "node --import tsx tests/evals/runEvals.ts",
+    "mcp-server": "tsx src/mcp/grump-server.ts"
   },
   "pkg": {
     "scripts": [
@@ -55,6 +57,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "express-rate-limit": "^8.2.1",
+    "node-cron": "^3.0.3",
     "express-validator": "^7.3.1",
     "helmet": "^8.1.0",
     "ioredis": "^5.3.2",
@@ -74,7 +77,9 @@
     "@types/express": "^4.17.21",
     "@types/ioredis": "^5.0.0",
     "@types/node": "^20.11.0",
+    "@types/node-cron": "^3.0.11",
     "@types/opossum": "^8.1.9",
+    "@types/serve-static": "^1.15.5",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
     "@vitest/coverage-v8": "^1.6.0",

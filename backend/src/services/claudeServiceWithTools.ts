@@ -104,6 +104,7 @@ export type ChatStreamEvent =
     };
   }
   | { type: 'skill_activated'; skillId: string; skillName: string }
+  | { type: 'autonomous'; value: boolean }
   | { type: 'done' }
   | {
     type: 'error';
@@ -236,6 +237,7 @@ export class ClaudeServiceWithTools {
    * specSessionId: For spec mode, the spec session ID
    * guardRailOptions: allowedDirs for path policy; confirmEveryWrite drives UX (backend uses path policy only).
    * tierOverride: used for feature-flags and capability list in head prompt.
+   * autonomous: when true (Yolo mode), emit { type: 'autonomous', value: true } so client can skip tool confirmations.
    */
   async *generateChatStream(
     messages: Array<{ role: 'user' | 'assistant'; content: string }>,
@@ -248,7 +250,8 @@ export class ClaudeServiceWithTools {
     provider?: LLMProvider,
     modelId?: string,
     guardRailOptions?: { allowedDirs?: string[] },
-    tierOverride?: 'free' | 'pro' | 'team' | 'enterprise'
+    tierOverride?: 'free' | 'pro' | 'team' | 'enterprise',
+    autonomous?: boolean
   ): AsyncGenerator<ChatStreamEvent, void, unknown> {
     // Handle execute mode - load plan and execute it
     if (mode === 'execute' && planId) {
@@ -299,7 +302,10 @@ export class ClaudeServiceWithTools {
       });
     }
     try {
-      logger.debug({ messageCount: messages.length, workspaceRoot, mode, agentProfile, planId, specSessionId }, 'Starting chat stream');
+      if (autonomous) {
+        yield { type: 'autonomous', value: true };
+      }
+      logger.debug({ messageCount: messages.length, workspaceRoot, mode, agentProfile, planId, specSessionId, autonomous }, 'Starting chat stream');
 
       const chatMode: ChatModeName = mode === 'execute' ? 'execute' : (mode as ChatModeName);
       const specialist: CodeSpecialist | undefined =

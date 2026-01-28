@@ -137,7 +137,7 @@ class RedisSessionStorage implements SessionStorage {
   }
 
   async saveShipSession(session: ShipSession): Promise<void> {
-    const key = this.getShipSessionKey(session.sessionId);
+    const key = this.getShipSessionKey(session.id);
     await this.redis.setex(key, this.SESSION_TTL, JSON.stringify(session));
   }
 
@@ -165,7 +165,7 @@ class RedisSessionStorage implements SessionStorage {
   }
 
   async saveSpecSession(session: SpecSession): Promise<void> {
-    const key = this.getSpecSessionKey(session.sessionId);
+    const key = this.getSpecSessionKey(session.id);
     await this.redis.setex(key, this.SESSION_TTL, JSON.stringify(session));
   }
 

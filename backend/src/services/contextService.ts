@@ -14,7 +14,7 @@ import type { PRD } from '../types/prd.js';
 import type { AgentType } from '../types/agents.js';
 import { generateArchitecture } from './architectureService.js';
 import { generatePRD } from './prdGeneratorService.js';
-import { parseAndEnrichIntent } from './intentCompilerService.js';
+import { optimizeEnrichedIntent, parseAndEnrichIntent } from './intentCompilerService.js';
 import { getCachedContext, cacheContext } from './contextCache.js';
 import { withResilience } from './resilience.js';
 import { recordContextGeneration, recordContextCacheHit } from '../middleware/metrics.js';
@@ -266,7 +266,7 @@ export async function generateMasterContext(
       const unifiedData = JSON.parse(jsonText);
 
       // Extract all components from unified response
-      const enrichedIntent = unifiedData.enrichedIntent as EnrichedIntent;
+      const enrichedIntent = optimizeEnrichedIntent(unifiedData.enrichedIntent as EnrichedIntent);
       const architecture = unifiedData.architecture as SystemArchitecture;
       const prd = unifiedData.prd as PRD;
       const masterContextData = unifiedData.masterContext;
@@ -306,7 +306,7 @@ export async function generateMasterContext(
     // Step 1: Parse and enrich intent if not provided
     let enrichedIntent: EnrichedIntent;
     if (request.enrichedIntent) {
-      enrichedIntent = request.enrichedIntent;
+      enrichedIntent = optimizeEnrichedIntent(request.enrichedIntent);
     } else {
       log.info({}, 'Parsing and enriching intent');
       enrichedIntent = await parseAndEnrichIntent(request.projectDescription);
@@ -652,7 +652,7 @@ export function generateContextSummary(agentContext: AgentContext): string {
     ).join('\n') + '\n\n';
   }
   
-  summary += agentSpecificContext.contextSummary;
+  summary += agentContext.contextSummary;
   
   return summary;
 }

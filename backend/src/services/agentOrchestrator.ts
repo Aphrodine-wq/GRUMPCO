@@ -1040,7 +1040,8 @@ Generate a comprehensive work report documenting what this agent accomplished, d
 
     // Store in session
     if (!session.workReports) {
-      session.workReports = {};
+      // initialize with partial record; cast satisfies full Record type while we progressively fill it
+      session.workReports = {} as Record<AgentType, AgentWorkReport>;
     }
     session.workReports[agentType] = workReport;
 
@@ -1288,30 +1289,52 @@ export async function executeCodeGeneration(
     const systemPromptPrefix = options?.systemPromptPrefix;
     const architecturePlan = await runArchitectAgent(session, prd, undefined, masterContext, options?.creativeDesignDoc, systemPromptPrefix);
 
+    // Run frontend and backend agents in parallel when both are enabled
+    const parallelAgentPromises: Promise<void>[] = [];
+
     if (session.preferences.frontendFramework) {
-      log.info({}, 'Running frontend agent');
-      const specUiContext = options?.specification
-        ? { uiComponents: options.specification.sections.uiComponents, overview: options.specification.sections.overview }
-        : undefined;
-      const frontendFiles = await runFrontendAgent(
-        session,
-        prd,
-        architecturePlan,
-        undefined,
-        undefined,
-        masterContext,
-        options?.creativeDesignDoc,
-        specUiContext,
-        systemPromptPrefix
+      parallelAgentPromises.push(
+        (async () => {
+          log.info({}, 'Running frontend agent');
+          const specUiContext = options?.specification
+            ? { uiComponents: options.specification.sections.uiComponents, overview: options.specification.sections.overview }
+            : undefined;
+          const frontendFiles = await runFrontendAgent(
+            session,
+            prd,
+            architecturePlan,
+            undefined,
+            undefined,
+            masterContext,
+            options?.creativeDesignDoc,
+            specUiContext,
+            systemPromptPrefix
+          );
+          session.generatedFiles!.push(...frontendFiles);
+        })()
       );
-      session.generatedFiles!.push(...frontendFiles);
-      await db.saveSession(session);
     }
 
     if (session.preferences.backendRuntime) {
-      log.info({}, 'Running backend agent');
-      const backendFiles = await runBackendAgent(session, prd, architecturePlan, undefined, undefined, masterContext, systemPromptPrefix);
-      session.generatedFiles!.push(...backendFiles);
+      parallelAgentPromises.push(
+        (async () => {
+          log.info({}, 'Running backend agent');
+          const backendFiles = await runBackendAgent(
+            session,
+            prd,
+            architecturePlan,
+            undefined,
+            undefined,
+            masterContext,
+            systemPromptPrefix
+          );
+          session.generatedFiles!.push(...backendFiles);
+        })()
+      );
+    }
+
+    if (parallelAgentPromises.length > 0) {
+      await Promise.all(parallelAgentPromises);
       await db.saveSession(session);
     }
 
@@ -1425,33 +1448,46 @@ export async function executeCodeGenerationMulti(session: GenerationSession): Pr
 
     const architecturePlan = await runArchitectAgent(session, prds[0], prds, masterContext);
 
+    const parallelAgentPromises: Promise<void>[] = [];
+
     const { prds: fePrds, subTasks: feSubTasks } = getPrdsAndSubTasksForAgent(session, 'frontend');
     if (session.preferences.frontendFramework && (fePrds.length || prds.length)) {
-      log.info({}, 'Running frontend agent');
-      const frontendFiles = await runFrontendAgent(
-        session,
-        fePrds[0] ?? prds[0],
-        architecturePlan,
-        fePrds.length ? fePrds : undefined,
-        feSubTasks.length ? feSubTasks : undefined,
-        masterContext
+      parallelAgentPromises.push(
+        (async () => {
+          log.info({}, 'Running frontend agent');
+          const frontendFiles = await runFrontendAgent(
+            session,
+            fePrds[0] ?? prds[0],
+            architecturePlan,
+            fePrds.length ? fePrds : undefined,
+            feSubTasks.length ? feSubTasks : undefined,
+            masterContext
+          );
+          session.generatedFiles!.push(...frontendFiles);
+        })()
       );
-      session.generatedFiles!.push(...frontendFiles);
-      await db.saveSession(session);
     }
 
     const { prds: bePrds, subTasks: beSubTasks } = getPrdsAndSubTasksForAgent(session, 'backend');
     if (session.preferences.backendRuntime && (bePrds.length || prds.length)) {
-      log.info({}, 'Running backend agent');
-      const backendFiles = await runBackendAgent(
-        session,
-        bePrds[0] ?? prds[0],
-        architecturePlan,
-        bePrds.length ? bePrds : undefined,
-        beSubTasks.length ? beSubTasks : undefined,
-        masterContext
+      parallelAgentPromises.push(
+        (async () => {
+          log.info({}, 'Running backend agent');
+          const backendFiles = await runBackendAgent(
+            session,
+            bePrds[0] ?? prds[0],
+            architecturePlan,
+            bePrds.length ? bePrds : undefined,
+            beSubTasks.length ? beSubTasks : undefined,
+            masterContext
+          );
+          session.generatedFiles!.push(...backendFiles);
+        })()
       );
-      session.generatedFiles!.push(...backendFiles);
+    }
+
+    if (parallelAgentPromises.length > 0) {
+      await Promise.all(parallelAgentPromises);
       await db.saveSession(session);
     }
 

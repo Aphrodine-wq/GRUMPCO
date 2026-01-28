@@ -1,6 +1,14 @@
 # Mermaid AI Diagram Generator - System Architecture
 
-> Comprehensive architectural documentation with visual diagrams covering current state and planned enhancements.
+> Legacy architecture documentation for the original Mermaid AI / Vue system.
+> For the current G-Rump architecture (Tauri + Svelte frontend, single grump-backend, Intent Compiler, SHIP, scheduled agents, MCP), see:
+> - [docs/OVERVIEW.md](../docs/OVERVIEW.md)
+> - [docs/ARCHITECTURE_AS_CODE.md](../docs/ARCHITECTURE_AS_CODE.md)
+> - [ARCHITECTURE.md](../ARCHITECTURE.md)
+
+> This file is kept for historical reference and does **not** describe the current system in production.
+
+> Comprehensive architectural documentation with visual diagrams covering the legacy system and planned enhancements at that time.
 
 ---
 

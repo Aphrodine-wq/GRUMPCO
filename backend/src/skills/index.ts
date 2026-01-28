@@ -377,15 +377,6 @@ class SkillRegistry {
           events.push(event);
         }
 
-        // Generator should return the final result
-        const iterResult = await generator.return(undefined as unknown);
-        const returnValue = iterResult.value as SkillExecutionResult | SkillEvent | undefined;
-
-        // Check if it's a SkillExecutionResult (has 'success' property)
-        if (returnValue && 'success' in returnValue) {
-          finalResult = returnValue as SkillExecutionResult;
-        }
-
         result = finalResult || {
           success: true,
           output: '',

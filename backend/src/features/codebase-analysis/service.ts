@@ -368,13 +368,16 @@ export async function analyzeCodebase(request: AnalysisRequest): Promise<Codebas
 
 /**
  * Generate architecture diagram
+ *
+ * Returns both the Mermaid diagram and a short summary so callers
+ * (frontend, API) can display context alongside the diagram.
  */
 export async function generateArchitectureDiagram(
   request: ArchitectureDiagramRequest
-): Promise<string> {
+): Promise<{ mermaidDiagram: string; summary: string; diagramType: string }> {
   const { workspacePath, diagramType = 'component' } = request;
 
-  // First, get a quick analysis
+  // First, get a quick analysis so we have a summary + components
   const analysis = await analyzeCodebase({
     workspacePath,
     options: { analysisDepth: 'quick' },
@@ -401,9 +404,15 @@ export async function generateArchitectureDiagram(
   const textContent = response.content.find((c) => c.type === 'text');
   const responseText = textContent?.type === 'text' ? textContent.text : '';
 
-  // Extract Mermaid diagram
+  // Extract Mermaid diagram (fallback to empty string if not found)
   const mermaidMatch = responseText.match(/```mermaid\n?([\s\S]*?)\n?```/);
-  return mermaidMatch ? mermaidMatch[1].trim() : '';
+  const mermaidDiagram = mermaidMatch ? mermaidMatch[1].trim() : '';
+
+  return {
+    mermaidDiagram,
+    summary: analysis.summary,
+    diagramType,
+  };
 }
 
 /**

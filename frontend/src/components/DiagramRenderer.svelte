@@ -443,32 +443,32 @@
         {/if}
       </div>
       <div class="diagram-actions">
-        <button class="action-btn" on:click={copyDiagramCode} title="Copy diagram code">
+        <button class="action-btn" onclick={copyDiagramCode} title="Copy diagram code">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
         </button>
-        <button class="action-btn" on:click={exportAsSvgFile} title="Export as SVG">
+        <button class="action-btn" onclick={exportAsSvgFile} title="Export as SVG">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
         </button>
-        <button class="action-btn" on:click={exportAsPngFile} title="Export as PNG">
+        <button class="action-btn" onclick={exportAsPngFile} title="Export as PNG">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
             <circle cx="8.5" cy="8.5" r="1.5"></circle>
             <polyline points="21 15 16 10 5 21"></polyline>
           </svg>
         </button>
-        <button class="action-btn" on:click={zoomToFit} title="Zoom to fit">
+        <button class="action-btn" onclick={zoomToFit} title="Zoom to fit">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"></path>
           </svg>
         </button>
-        <button class="action-btn generate-code-btn" on:click={handleGenerateCode} title="Generate code from this diagram">
+        <button class="action-btn generate-code-btn" onclick={handleGenerateCode} title="Generate code from this diagram">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="16 18 22 12 16 6"></polyline>
             <polyline points="8 6 2 12 8 18"></polyline>
@@ -487,7 +487,7 @@
       <div class="error-icon">!</div>
       <div class="error-message">{error}</div>
       {#if code}
-        <button class="retry-btn" on:click={retryRender}>
+        <button class="retry-btn" onclick={retryRender}>
           Retry
         </button>
       {/if}
@@ -502,7 +502,7 @@
       class="diagram-output" 
       class:success-animation={showSuccessAnimation} 
       class:has-metadata={!!architectureMetadata}
-      on:click={(e) => {
+      onclick={(e) => {
         // Close panel if clicking outside the panel itself
         if (selectedComponent && !(e.target as HTMLElement).closest('.component-info-panel')) {
           closeComponentPanel();

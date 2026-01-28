@@ -287,7 +287,7 @@ export async function rejectPlan(planId: string, comments?: string): Promise<Pla
   plan.updatedAt = new Date().toISOString();
   if (comments) {
     plan.metadata = plan.metadata || {};
-    plan.metadata.rejectionComments = comments;
+    (plan.metadata as any).rejectionComments = comments;
   }
 
   await db.savePlan(plan);

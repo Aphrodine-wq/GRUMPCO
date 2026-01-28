@@ -90,12 +90,6 @@ export function getCircuitBreaker<T extends unknown[], R>(
     const config = SERVICE_CONFIGS[serviceType];
     const breaker = createCircuitBreaker(fn, serviceType);
     
-    // Configure bulkhead pattern with max concurrent requests
-    breaker.options = {
-      ...CIRCUIT_BREAKER_OPTIONS,
-      ...breaker.options,
-    };
-    
     circuitBreakers.set(serviceType, breaker);
     logger.info({ serviceType }, 'Circuit breaker created for service');
     return breaker;
@@ -167,7 +161,7 @@ export function getServiceState(serviceType: ServiceType): {
     ? (breaker.opened ? 'open' : breaker.halfOpen ? 'half-open' : 'closed')
     : 'closed';
 
-  const stats = breaker?.stats || {};
+  const stats = breaker ? (breaker as any).stats ?? {} : {};
 
   const rateLimit = {
     current: rateLimitState?.requests.length || 0,

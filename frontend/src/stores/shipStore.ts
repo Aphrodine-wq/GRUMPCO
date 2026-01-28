@@ -2,6 +2,10 @@ import { writable } from 'svelte/store';
 import { fetchApi } from '../lib/api.js';
 import type { ShipSession, ShipPhase, ShipStartRequest } from '../types/ship.js';
 
+export interface ExecuteStreamOptions {
+  resumeFromPhase?: ShipPhase;
+}
+
 interface ShipState {
   session: ShipSession | null;
   phase: ShipPhase;
@@ -124,12 +128,13 @@ export const shipStore = {
   
   /**
    * Execute SHIP mode workflow with streaming
+   * @param options.resumeFromPhase - Optional phase to resume from (design, spec, plan, code)
    */
-  async executeStream(sessionId: string, onUpdate: (data: any) => void): Promise<void> {
+  async executeStream(sessionId: string, onUpdate: (data: any) => void, options?: ExecuteStreamOptions): Promise<void> {
     try {
       state.update(s => ({ ...s, status: 'running', isStreaming: true, error: null }));
-      
-      const response = await fetchApi(`/api/ship/${sessionId}/execute/stream`, {
+      const query = options?.resumeFromPhase ? `?resumeFromPhase=${encodeURIComponent(options.resumeFromPhase)}` : '';
+      const response = await fetchApi(`/api/ship/${sessionId}/execute/stream${query}`, {
         method: 'POST',
       });
       
@@ -181,7 +186,13 @@ export const shipStore = {
               } else if (data.type === 'complete') {
                 state.update(s => ({ ...s, status: 'completed', isStreaming: false }));
               } else if (data.type === 'error') {
-                state.update(s => ({ ...s, status: 'failed', error: data.error, isStreaming: false }));
+                state.update(s => ({
+                  ...s,
+                  status: 'failed',
+                  error: data.error,
+                  isStreaming: false,
+                  ...(data.phase && { phase: data.phase }),
+                }));
               }
             } catch (e) {
               console.error('Failed to parse SSE data:', e);

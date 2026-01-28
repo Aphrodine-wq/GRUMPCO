@@ -5,7 +5,7 @@
   "identifier": "com.grump.app",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5178",
+    "devUrl": "http://localhost:5173",
     "beforeDevCommand": "",
     "beforeBuildCommand": "npm run build"
   },

@@ -64,6 +64,9 @@ export interface EnrichedIntent extends StructuredIntent {
   };
 }
 
+// Version tag for intent caching/normalization so we can safely evolve the schema
+const INTENT_CACHE_VERSION = 'v1';
+
 function getIntentCompilerPath(): string {
   const override = process.env.GRUMP_INTENT_PATH;
   if (override) return override;
@@ -118,6 +121,25 @@ export async function parseIntent(
 
     let stdout = '';
     let stderr = '';
+    let settled = false;
+
+    const killAndReject = (reason: string) => {
+      if (settled) return;
+      settled = true;
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        // ignore
+      }
+      rejectPromise(new Error(reason));
+    };
+
+    // Hard timeout to avoid hanging processes
+    const timeoutMs = 20_000;
+    const timer = setTimeout(() => {
+      logger.warn({ timeoutMs }, 'Intent compiler timed out, killing process');
+      killAndReject(`Intent compiler timed out after ${timeoutMs}ms`);
+    }, timeoutMs);
 
     child.stdout?.on('data', (chunk: Buffer) => {
       stdout += chunk.toString('utf8');
@@ -127,26 +149,30 @@ export async function parseIntent(
     });
 
     child.on('error', (err) => {
+      clearTimeout(timer);
       logger.error({ err, bin }, 'Intent compiler spawn failed');
-      rejectPromise(new Error(`Intent compiler failed: ${err.message}`));
+      killAndReject(`Intent compiler failed: ${err.message}`);
     });
 
     child.on('close', (code) => {
+      clearTimeout(timer);
+      if (settled) return;
       if (code !== 0) {
         logger.warn({ code, stderr }, 'Intent compiler non-zero exit');
-        rejectPromise(new Error(`Intent compiler exited ${code}: ${stderr || 'see logs'}`));
+        killAndReject(`Intent compiler exited ${code}: ${stderr || 'see logs'}`);
         return;
       }
       try {
         const parsed = JSON.parse(stdout) as StructuredIntent;
         if (!parsed.raw || !Array.isArray(parsed.actors)) {
-          rejectPromise(new Error('Invalid intent compiler output'));
+          killAndReject('Invalid intent compiler output');
           return;
         }
+        settled = true;
         resolvePromise(parsed);
       } catch (e) {
         logger.error({ stdout: stdout.slice(0, 500) }, 'Intent compiler invalid JSON');
-        rejectPromise(new Error('Intent compiler returned invalid JSON'));
+        killAndReject('Intent compiler returned invalid JSON');
       }
     });
   });
@@ -236,6 +262,52 @@ export async function parseIntentWithFallback(
 }
 
 /**
+ * Normalize and enrich intent metadata so downstream consumers get a stable shape.
+ * - Deduplicate and sort actors, features, data flows, tech hints.
+ * - Ensure enriched.features at least mirrors top-level features when missing.
+ * - Preserve existing enrichment fields but normalize arrays for consistency.
+ */
+export function optimizeEnrichedIntent(intent: EnrichedIntent): EnrichedIntent {
+  const dedupeSort = (values?: string[]): string[] | undefined => {
+    if (!values) return undefined;
+    const seen = new Set<string>();
+    for (const v of values) {
+      const trimmed = v.trim();
+      if (trimmed) seen.add(trimmed);
+    }
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  };
+
+  const baseActors = dedupeSort(intent.actors) ?? [];
+  const baseFeatures = dedupeSort(intent.features) ?? [];
+  const baseFlows = dedupeSort(intent.data_flows) ?? [];
+  const baseTechHints = dedupeSort(intent.tech_stack_hints) ?? [];
+
+  const enriched = intent.enriched ?? {};
+
+  const optimizedEnriched: EnrichedIntent['enriched'] = {
+    ...enriched,
+    features: dedupeSort(enriched.features ?? baseFeatures),
+    users: dedupeSort(enriched.users ?? baseActors),
+    data_flows: dedupeSort(enriched.data_flows ?? baseFlows),
+    tech_stack: dedupeSort(enriched.tech_stack ?? baseTechHints),
+    code_patterns: dedupeSort(enriched.code_patterns),
+    architecture_hints: enriched.architecture_hints,
+    optimization_opportunities: enriched.optimization_opportunities,
+    code_quality_requirements: enriched.code_quality_requirements,
+  };
+
+  return {
+    ...intent,
+    actors: baseActors,
+    features: baseFeatures,
+    data_flows: baseFlows,
+    tech_stack_hints: baseTechHints,
+    enriched: optimizedEnriched,
+  };
+}
+
+/**
  * Extract StructuredIntent from raw NL using Claude when Rust compiler is unavailable or failed.
  */
 export async function extractIntentViaClaude(raw: string, _rustError?: string): Promise<StructuredIntent> {
@@ -316,14 +388,15 @@ export async function parseAndEnrichIntent(
   constraints?: Record<string, unknown>
 ): Promise<EnrichedIntent> {
   // Create cache key from input
-  const cacheKey = JSON.stringify({ raw: raw.trim(), constraints });
+  const cacheKey = JSON.stringify({ v: INTENT_CACHE_VERSION, raw: raw.trim(), constraints });
 
   return await withCache(
     'intent',
     cacheKey,
     async () => {
       const structured = await parseIntentWithFallback(raw, constraints);
-      return enrichIntentViaClaude(structured);
+      const enriched = await enrichIntentViaClaude(structured);
+      return optimizeEnrichedIntent(enriched);
     }
   );
 }

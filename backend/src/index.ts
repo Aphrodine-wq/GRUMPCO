@@ -34,6 +34,7 @@ import testingRoutes from './features/testing-qa/routes.js';
 import expoTestRoutes from './routes/expoTest.js';
 import webhookRoutes from './routes/webhooks.js';
 import eventsRoutes from './routes/events.js';
+import agentsRoutes from './routes/agents.js';
 import { handleStripeWebhook } from './routes/billingWebhook.js';
 import collaborationRoutes from './routes/collaboration.js';
 import analyticsRoutes from './routes/analytics.js';
@@ -41,6 +42,7 @@ import templatesRoutes from './routes/templates.js';
 import { findAvailablePort } from './utils/portUtils.js';
 import { skillRegistry } from './skills/index.js';
 import { startJobWorker, stopJobWorker } from './services/jobQueue.js';
+import { startScheduledAgentsWorker, stopScheduledAgentsWorker, loadRepeatableJobsFromDb } from './services/scheduledAgentsQueue.js';
 import { apiAuthMiddleware } from './middleware/authMiddleware.js';
 import type { Server } from 'http';
 
@@ -141,6 +143,15 @@ let server: Server | undefined;
     // Start job worker for SHIP (and later codegen) long-running work
     await startJobWorker();
 
+    // Scheduled agents: Redis = BullMQ repeatable jobs; no Redis = node-cron
+    if (process.env.REDIS_HOST?.trim()) {
+      await startScheduledAgentsWorker();
+      await loadRepeatableJobsFromDb();
+    } else {
+      const { loadAllFromDbAndSchedule: loadCron } = await import('./services/scheduledAgentsCron.js');
+      await loadCron();
+    }
+
     // Rate limiting (uses Redis store when REDIS_HOST is set)
     const rateLimitMw = await applyRateLimiting();
     app.use('/api', rateLimitMw);
@@ -168,6 +179,7 @@ let server: Server | undefined;
     app.use('/api/expo-test', expoTestRoutes);
     app.use('/api/webhooks', webhookRoutes);
     app.use('/api/events', eventsRoutes);
+    app.use('/api/agents', agentsRoutes);
     app.use('/api/collaboration', collaborationRoutes);
     app.use('/api/analytics', analyticsRoutes);
     app.use('/api/templates', templatesRoutes);
@@ -227,6 +239,7 @@ let server: Server | undefined;
     process.on('SIGTERM', async () => {
       logger.info('SIGTERM received, shutting down gracefully');
       await stopJobWorker();
+      await stopScheduledAgentsWorker();
       server?.close(async () => {
         await skillRegistry.cleanup();
         await closeDatabase();
@@ -239,6 +252,7 @@ let server: Server | undefined;
     process.on('SIGINT', async () => {
       logger.info('SIGINT received, shutting down gracefully');
       await stopJobWorker();
+      await stopScheduledAgentsWorker();
       server?.close(async () => {
         await skillRegistry.cleanup();
         await closeDatabase();

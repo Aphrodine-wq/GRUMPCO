@@ -53,7 +53,7 @@ export interface IntegrationsSettings {
 /** Tier override (e.g. from billing); used by feature-flags resolution when set. */
 export type TierId = 'free' | 'pro' | 'team' | 'enterprise';
 
-/** Guard rails for local file read/write: workspace, allowlist, confirm writes. */
+/** Guard rails for local file read/write: workspace, allowlist, confirm writes, autonomous. */
 export interface GuardRailsSettings {
   /** Workspace root for file tools (default from request or env). */
   workspaceRoot?: string;
@@ -61,6 +61,10 @@ export interface GuardRailsSettings {
   allowedDirs?: string[];
   /** When true, require explicit user confirmation for each write/delete (default on for safety). */
   confirmEveryWrite?: boolean;
+  /** Yolo/autonomous mode: skip tool confirmations. */
+  autonomousMode?: boolean;
+  /** When true, allow larger message/context (200K+) for chat. */
+  useLargeContext?: boolean;
 }
 
 export interface Settings {

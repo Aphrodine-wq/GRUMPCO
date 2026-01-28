@@ -41,12 +41,16 @@ export interface IntegrationsSettings {
   twilio?: { enabled: boolean; replyNumber?: string };
 }
 
-/** Guard rails for local file read/write: allowlist, confirm writes. */
+/** Guard rails for local file read/write: allowlist, confirm writes, autonomous. */
 export interface GuardRailsSettings {
   /** Extra directories allowed in addition to workspace (absolute paths). */
   allowedDirs?: string[];
   /** When true, require explicit user confirmation for each write/delete (default on). */
   confirmEveryWrite?: boolean;
+  /** Yolo/autonomous mode: skip tool confirmations; backend runs tools without per-step approval. */
+  autonomousMode?: boolean;
+  /** When true, allow larger message/context (200K+ chars) for chat requests. */
+  useLargeContext?: boolean;
 }
 
 export interface Settings {

@@ -160,7 +160,9 @@
     {:else}
       <div class="preview-tree">
         {#each structure as node (node.id)}
-          {@render renderTreeNode(node, 0)}
+          <div class="tree-root">
+            {@render renderTreeNode(node, 0)}
+          </div>
         {/each}
       </div>
     {/if}
@@ -169,9 +171,9 @@
 
 {#snippet renderTreeNode(node: Node, level: number)}
   <div class="tree-node" style="padding-left: {level * 1.5}rem">
-    <div class="tree-node-content" on:click={() => handleNodeClick(node, new MouseEvent('click'))} role="button" tabindex="0">
+    <div class="tree-node-content" onclick={() => handleNodeClick(node, new MouseEvent('click'))} role="button" tabindex="0">
       {#if node.children && node.children.length > 0}
-        <button class="tree-toggle" on:click|stopPropagation={() => toggleNode(node.id)}>
+        <button class="tree-toggle" onclick={(e) => { e.stopPropagation(); toggleNode(node.id); }}>
           {expandedNodes.has(node.id) ? '▼' : '▶'}
         </button>
       {:else}

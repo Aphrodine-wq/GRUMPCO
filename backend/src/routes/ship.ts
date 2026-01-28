@@ -17,10 +17,12 @@ import {
   executeCodePhase,
 } from '../services/shipModeService.js';
 import { enqueueShipJob } from '../services/jobQueue.js';
-import type { ShipStartRequest } from '../types/ship.js';
+import type { ShipStartRequest, ShipPhase } from '../types/ship.js';
 
 const router = Router();
 const log = getRequestLogger();
+
+const PHASE_ORDER: ShipPhase[] = ['design', 'spec', 'plan', 'code'];
 
 /**
  * POST /api/ship/start
@@ -115,83 +117,98 @@ router.post('/:sessionId/execute', async (req, res) => {
 
 /**
  * POST /api/ship/:sessionId/execute/stream
- * Execute SHIP mode workflow with streaming updates
+ * Execute SHIP mode workflow with streaming updates.
+ * Optional query or body: resumeFromPhase = 'design' | 'spec' | 'plan' | 'code' to start from a given phase (previous phases must be completed).
  */
 router.post('/:sessionId/execute/stream', async (req, res) => {
   try {
     const { sessionId } = req.params;
-    
+    const resumeFromPhase = (req.query.resumeFromPhase as ShipPhase) || (req.body?.resumeFromPhase as ShipPhase);
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    
-    log.info({ sessionId }, 'Starting SHIP mode streaming execution');
-    
-    // Send initial status
-    res.write(`data: ${JSON.stringify({ type: 'start', sessionId, phase: 'design' })}\n\n`);
-    
-    // Execute phases sequentially with streaming updates
+
+    log.info({ sessionId, resumeFromPhase }, 'Starting SHIP mode streaming execution');
+
+    const startPhase: ShipPhase = PHASE_ORDER.includes(resumeFromPhase) ? resumeFromPhase : 'design';
+    res.write(`data: ${JSON.stringify({ type: 'start', sessionId, phase: startPhase })}\n\n`);
+
     try {
-      const session = await getShipSession(sessionId);
+      let session = await getShipSession(sessionId);
       if (!session) {
         res.write(`data: ${JSON.stringify({ type: 'error', error: 'Session not found' })}\n\n`);
         res.end();
         return;
       }
-      
-      // Phase 1: Design
-      if (!session.designResult) {
+
+      function canResumeFrom(phase: ShipPhase): boolean {
+        if (phase === 'design') return true;
+        if (phase === 'spec') return session!.designResult?.status === 'completed';
+        if (phase === 'plan') return session!.designResult?.status === 'completed' && session!.specResult?.status === 'completed';
+        if (phase === 'code') return session!.designResult?.status === 'completed' && session!.specResult?.status === 'completed' && session!.planResult?.status === 'completed';
+        return false;
+      }
+
+      if (startPhase !== 'design' && !canResumeFrom(startPhase)) {
+        res.write(`data: ${JSON.stringify({ type: 'error', error: 'Cannot resume: previous phase(s) not completed' })}\n\n`);
+        res.end();
+        return;
+      }
+
+      const startIndex = PHASE_ORDER.indexOf(startPhase);
+      const runDesign = startIndex <= 0 && (!session.designResult || startPhase === 'design');
+      const runSpec = startIndex <= 1 && session.designResult?.status === 'completed' && (!session.specResult || startPhase === 'spec');
+      const runPlan = startIndex <= 2 && session.specResult?.status === 'completed' && (!session.planResult || startPhase === 'plan' || startPhase === 'spec');
+      const runCode = startIndex <= 3 && session.planResult?.status === 'completed' && session.designResult?.status === 'completed' && (!session.codeResult || startPhase === 'code' || startPhase === 'plan' || startPhase === 'spec');
+
+      if (runDesign) {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'design' })}\n\n`);
         const designResult = await executeDesignPhase(session);
+        session = (await getShipSession(sessionId))!;
         res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'design', result: designResult, nextPhase: 'spec' })}\n\n`);
-        
         if (designResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'design', error: designResult.error })}\n\n`);
           res.end();
           return;
         }
       }
-      
-      // Phase 2: Spec
-      if (!session.specResult && session.designResult?.status === 'completed') {
+
+      if (runSpec) {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'spec' })}\n\n`);
-        const specResult = await executeSpecPhase(session, session.designResult);
+        const specResult = await executeSpecPhase(session, session.designResult!);
+        session = (await getShipSession(sessionId))!;
         res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'spec', result: specResult, nextPhase: 'plan' })}\n\n`);
-        
         if (specResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'spec', error: specResult.error })}\n\n`);
           res.end();
           return;
         }
       }
-      
-      // Phase 3: Plan
-      if (!session.planResult && session.specResult?.status === 'completed') {
+
+      if (runPlan) {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'plan' })}\n\n`);
-        const planResult = await executePlanPhase(session, session.specResult);
+        const planResult = await executePlanPhase(session, session.specResult!);
+        session = (await getShipSession(sessionId))!;
         res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'plan', result: planResult, nextPhase: 'code' })}\n\n`);
-        
         if (planResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'plan', error: planResult.error })}\n\n`);
           res.end();
           return;
         }
       }
-      
-      // Phase 4: Code
-      if (!session.codeResult && session.planResult?.status === 'completed' && session.designResult?.status === 'completed') {
+
+      if (runCode) {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'code' })}\n\n`);
-        const codeResult = await executeCodePhase(session, session.planResult, session.designResult);
+        const codeResult = await executeCodePhase(session, session.planResult!, session.designResult!);
         res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'code', result: codeResult, nextPhase: 'completed' })}\n\n`);
-        
         if (codeResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'code', error: codeResult.error })}\n\n`);
           res.end();
           return;
         }
       }
-      
-      // Complete
+
       res.write(`data: ${JSON.stringify({ type: 'complete', sessionId })}\n\n`);
       res.end();
     } catch (error) {

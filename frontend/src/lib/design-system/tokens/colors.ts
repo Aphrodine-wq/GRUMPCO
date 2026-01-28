@@ -89,10 +89,10 @@ export const colors = {
 
   // Shadows - Soft blurred shadows (NO borders)
   shadow: {
-    sm: '0 2px 8px rgba(0, 0, 0, 0.04)',      // Soft blur
-    md: '0 4px 16px rgba(0, 0, 0, 0.06)',     // More blur
-    lg: '0 8px 32px rgba(0, 0, 0, 0.08)',     // Even more blur
-    floating: '0 12px 48px rgba(0, 0, 0, 0.12)', // Floating elements (input bar)
+    sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+    md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+    lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+    floating: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
   },
 } as const;
 

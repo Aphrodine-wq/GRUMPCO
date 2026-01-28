@@ -64,7 +64,7 @@ router.post('/architecture', async (req: Request, res: Response) => {
       return;
     }
 
-    const mermaidDiagram = await generateArchitectureDiagram({
+    const { mermaidDiagram, summary, diagramType: resolvedDiagramType } = await generateArchitectureDiagram({
       workspacePath,
       diagramType,
       focusOn,
@@ -73,8 +73,9 @@ router.post('/architecture', async (req: Request, res: Response) => {
     res.json({
       success: true,
       data: {
-        diagram: mermaidDiagram,
-        diagramType: diagramType || 'component',
+        mermaidDiagram,
+        summary,
+        diagramType: resolvedDiagramType || diagramType || 'component',
       },
     });
   } catch (error) {

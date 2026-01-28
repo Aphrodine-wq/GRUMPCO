@@ -103,7 +103,7 @@ const createMermaidToCodeStore = () => {
     startGeneration: () => {
       update(state => ({
         ...state,
-        status: 'generating',
+        status: 'generating' as const,
         error: undefined,
       }));
     },
@@ -120,7 +120,7 @@ const createMermaidToCodeStore = () => {
           generatedCode,
         };
         
-        const newState = {
+        const newState: MermaidToCodeState = {
           ...state,
           status: 'completed',
           generatedCode,
@@ -142,10 +142,11 @@ const createMermaidToCodeStore = () => {
           framework: state.framework,
           language: state.language,
           timestamp: Date.now(),
+          generatedCode: undefined,
           error,
         };
         
-        const newState = {
+        const newState: MermaidToCodeState = {
           ...state,
           status: 'error',
           error,
@@ -169,7 +170,7 @@ const createMermaidToCodeStore = () => {
       update(state => {
         const entry = state.history.find(h => h.id === historyId);
         if (entry) {
-          const newState = {
+          const newState: MermaidToCodeState = {
             ...state,
             mermaidCode: entry.mermaidCode,
             framework: entry.framework,

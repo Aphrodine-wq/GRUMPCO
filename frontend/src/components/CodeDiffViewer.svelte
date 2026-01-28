@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import { computeLineDiff, formatDiffSummary, detectLanguage, type FileDiff } from '../utils/diffUtils';
   import { highlightCode } from '../utils/highlighter';
   import { showToast } from '../stores/toastStore';
@@ -12,8 +12,6 @@
 
   let viewMode: 'side-by-side' | 'unified' = $state('side-by-side');
   let diffLines = $derived(computeLineDiff(diff.beforeContent, diff.afterContent));
-  let beforeHighlighted = $state('');
-  let afterHighlighted = $state('');
   let isCollapsed = $state(false);
   let language = $derived(detectLanguage(diff.filePath));
   let summary = $derived(formatDiffSummary(diff));
@@ -24,12 +22,10 @@
 
   async function loadHighlights() {
     try {
-      beforeHighlighted = await highlightCode(diff.beforeContent, language);
-      afterHighlighted = await highlightCode(diff.afterContent, language);
+      await highlightCode(diff.beforeContent, language);
+      await highlightCode(diff.afterContent, language);
     } catch (error) {
       console.error('Failed to highlight code:', error);
-      beforeHighlighted = `<pre><code>${escapeHtml(diff.beforeContent)}</code></pre>`;
-      afterHighlighted = `<pre><code>${escapeHtml(diff.afterContent)}</code></pre>`;
     }
   }
 

@@ -80,3 +80,29 @@ A Cursor **skill** can wrap these calls so the agent can say “generate full ap
 4. Returns the session ID, status URL, and codegen download URL (using `codeResult.session.sessionId`).
 
 See [integrations/moltbot-skill](../integrations/moltbot-skill) for a Moltbot skill that invokes G-Rump. A Cursor-oriented skill is in [docs/cursor-grump-skill.md](cursor-grump-skill.md): copy it into `.cursor/rules` or use as a skill so the agent can "generate full app from X" and invoke SHIP.
+
+## MCP server (Cursor / Claude Code)
+
+G-Rump can run as an **MCP server** so Cursor or Claude Code can call SHIP, architecture, codegen, and intent via MCP tools.
+
+**Run the server (stdio):**
+
+```bash
+# From backend directory; ensure G-Rump backend is running at GRUMP_API_URL
+export GRUMP_API_URL=http://localhost:3000
+npm run mcp-server
+# Or: node dist/mcp/grump-server.js
+```
+
+**Tools exposed:**
+
+| Tool | Description |
+|------|-------------|
+| `grump_ship_start` | Start SHIP session. Args: `projectDescription`. |
+| `grump_ship_execute` | Run SHIP (design→spec→plan→code). Args: `sessionId`. |
+| `grump_ship_status` | Get SHIP status and codegen sessionId. Args: `sessionId`. |
+| `grump_architecture_generate` | Generate architecture (Mermaid). Args: `projectDescription`. |
+| `grump_intent_parse` | Parse NL intent. Args: `raw`. |
+| `grump_codegen_download` | Get download URL for code ZIP. Args: `sessionId`. |
+
+**Config (Cursor / Claude Code):** Add an MCP server with **stdio** transport, command `node`, args `path/to/backend/dist/mcp/grump-server.js`, env `GRUMP_API_URL=http://localhost:3000`.

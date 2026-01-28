@@ -287,13 +287,14 @@ export async function applyRateLimiting(): Promise<RateLimitRequestHandler> {
     logger.info('Rate limiting using Redis store (tier-aware)');
   }
   const tierLimiters = buildTierLimiters(store);
-  return (req: Request, res: Response, next: () => void) => {
+  const handler: RateLimitRequestHandler = (req: Request, res: Response, next: () => void) => {
     const tier = getTierFromRequest(req);
     const pathKey = normalizePathForRateLimit(req.path);
     const endpointLimiter = tierLimiters.get(`${pathKey}:${tier}`);
     const globalLimiter = tierLimiters.get(`global:${tier}`);
     (endpointLimiter ?? globalLimiter!)(req, res, next);
   };
+  return handler;
 }
 
 /**

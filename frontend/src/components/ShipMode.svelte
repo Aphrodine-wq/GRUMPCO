@@ -78,6 +78,20 @@
   function handleStartOver() {
     shipStore.reset();
   }
+
+  const runnablePhases: ShipPhase[] = ['design', 'spec', 'plan', 'code'];
+  const canResume = $derived(runnablePhases.includes(phase));
+
+  async function handleResume() {
+    if (!session?.id || !canResume) return;
+    try {
+      await shipStore.executeStream(session.id, (data) => {
+        console.log('SHIP update:', data);
+      }, { resumeFromPhase: phase });
+    } catch (err) {
+      console.error('Failed to resume SHIP:', err);
+    }
+  }
   
   function getPhaseProgress(): number {
     const phases: ShipPhase[] = ['design', 'spec', 'plan', 'code'];
@@ -227,6 +241,13 @@
       
       {#if error}
         <div class="error-message">{error}</div>
+        {#if canResume && session?.id}
+          <div class="resume-actions">
+            <button type="button" class="action-btn primary resume-btn" onclick={handleResume} disabled={isStreaming}>
+              Resume from {phaseLabels[phase]}
+            </button>
+          </div>
+        {/if}
       {/if}
       
       <div class="phase-results">
@@ -317,6 +338,24 @@
             <p>Status: {session.specResult.status}</p>
             {#if session.specResult.specification}
               <p>Specification: {session.specResult.specification.title}</p>
+              <details class="phase-details">
+                <summary>Specification details</summary>
+                <div class="phase-details-content">
+                  {#if session.specResult.specification.description}
+                    <p class="spec-description">{session.specResult.specification.description}</p>
+                  {/if}
+                  {#if session.specResult.specification.sections?.requirements?.length}
+                    <h4>Requirements</h4>
+                    <ul>
+                      {#each session.specResult.specification.sections.requirements as req}
+                        <li><strong>{req.title}</strong>: {req.description}</li>
+                      {/each}
+                    </ul>
+                  {:else}
+                    <p class="text-muted">No requirements list available.</p>
+                  {/if}
+                </div>
+              </details>
             {/if}
           </div>
         {/if}
@@ -327,6 +366,43 @@
             <p>Status: {session.planResult.status}</p>
             {#if session.planResult.plan}
               <p>Plan: {session.planResult.plan.title}</p>
+              <details class="phase-details">
+                <summary>Plan summary</summary>
+                <div class="phase-details-content">
+                  {#if session.planResult.plan.description}
+                    <p class="plan-description">{session.planResult.plan.description}</p>
+                  {/if}
+                  {#if session.planResult.plan.phases?.length}
+                    <h4>Phases and steps</h4>
+                    <ul class="plan-phase-list">
+                      {#each session.planResult.plan.phases as phase}
+                        <li>
+                          <strong>{phase.name}</strong>
+                          {#if phase.steps?.length && session.planResult.plan.steps?.length}
+                            <ul class="plan-step-list">
+                              {#each phase.steps as stepId}
+                                {@const step = session.planResult.plan.steps.find((s: { id: string }) => s.id === stepId)}
+                                {#if step}
+                                  <li>{step.title}</li>
+                                {/if}
+                              {/each}
+                            </ul>
+                          {/if}
+                        </li>
+                      {/each}
+                    </ul>
+                  {:else if session.planResult.plan.steps?.length}
+                    <h4>Steps</h4>
+                    <ul>
+                      {#each session.planResult.plan.steps as step}
+                        <li>{step.title}</li>
+                      {/each}
+                    </ul>
+                  {:else}
+                    <p class="text-muted">No phase breakdown available.</p>
+                  {/if}
+                </div>
+              </details>
             {/if}
           </div>
         {/if}
@@ -431,12 +507,14 @@
   .preferences {
     margin: 2rem 0;
     padding: 1.5rem;
-    background: #f9f9f9;
-    border-radius: 4px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
   }
   
   .preferences h3 {
     margin-bottom: 1rem;
+    color: #334155;
   }
   
   .preference-row {
@@ -446,13 +524,17 @@
   .preference-row label {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    color: #475569;
   }
   
   .preference-row select {
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background-color: white;
+    font-size: 0.95rem;
+    cursor: pointer;
   }
   
   .ai-disclaimer {
@@ -542,6 +624,30 @@
     border-radius: 4px;
     margin-bottom: 1rem;
   }
+
+  .resume-actions {
+    margin-bottom: 1rem;
+  }
+
+  .resume-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    background: #0EA5E9;
+    color: #fff;
+  }
+
+  .resume-btn:hover:not(:disabled) {
+    background: #0284c7;
+  }
+
+  .resume-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
   
   .phase-results {
     margin-top: 2rem;
@@ -599,6 +705,63 @@
 
   .cdd-section li {
     margin-bottom: 0.25rem;
+  }
+
+  .phase-details {
+    margin-top: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .phase-details summary {
+    padding: 0.5rem 0.75rem;
+    background: #f0f4f8;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .phase-details-content {
+    padding: 1rem;
+    background: #fafafa;
+  }
+
+  .phase-details-content h4 {
+    margin-bottom: 0.35rem;
+    font-size: 0.95rem;
+    color: #333;
+  }
+
+  .phase-details-content .spec-description,
+  .phase-details-content .plan-description {
+    margin-bottom: 0.75rem;
+    color: #374151;
+    line-height: 1.4;
+  }
+
+  .phase-details-content .text-muted {
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+
+  .plan-phase-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .plan-phase-list > li {
+    margin-bottom: 0.75rem;
+  }
+
+  .plan-step-list {
+    margin: 0.25rem 0 0 1rem;
+    padding: 0;
+    list-style: disc;
+  }
+
+  .plan-step-list li {
+    margin-bottom: 0.2rem;
   }
   
   .completion-message {

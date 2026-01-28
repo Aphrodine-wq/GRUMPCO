@@ -86,7 +86,14 @@ export function tracingMiddleware(
   const correlationId = getCorrelationIdFromHeaders(req.headers) || generateCorrelationId();
 
   // Set correlation ID in response
-  setCorrelationIdHeader(res.getHeaders(), correlationId);
+  const headerTarget: Record<string, string | string[]> = {};
+  const existing = res.getHeaders();
+  for (const [key, value] of Object.entries(existing)) {
+    if (typeof value === 'string') headerTarget[key] = value;
+    else if (Array.isArray(value)) headerTarget[key] = value.map(String);
+    else if (typeof value === 'number') headerTarget[key] = String(value);
+  }
+  setCorrelationIdHeader(headerTarget, correlationId);
   res.setHeader('x-correlation-id', correlationId);
 
   // Create span for HTTP request with enhanced attributes

@@ -49,6 +49,18 @@
         },
       },
       {
+        id: 'open-ship-mode',
+        label: 'Open SHIP Mode',
+        category: 'navigation',
+        icon: '🚀',
+        action: () => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('open-ship-mode'));
+          }
+          close();
+        },
+      },
+      {
         id: 'clear-chat',
         label: 'Clear Chat',
         category: 'actions',

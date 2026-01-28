@@ -1,5 +1,17 @@
 # G-Rump - Capabilities
 
+## Why G-Rump (differentiators)
+
+G-Rump is the one app that combines design-first architecture and PRD, full app generation (SHIP: design → spec → plan → code in one run), and tool-enabled code chat with workspace, plan mode, and specialist agents. Use it from Desktop, Web, VS Code ([integrations/vscode-extension](../integrations/vscode-extension)), CLI ([packages/cli](../packages/cli)), or chat bots (Moltbot/Clawdbot). From Cursor, use the [G-Rump API](CURSOR_GRUMP_API.md) or skill to delegate full app generation and SHIP. **Scheduled agents (24/7):** Run SHIP on a cron schedule. `POST /api/agents/schedule` (body: `name`, `cronExpression`, `action`: `ship`|`codegen`|`chat`, `params`), `GET /api/agents/scheduled`, `DELETE /api/agents/scheduled/:id`. With Redis: BullMQ repeatable jobs; without: node-cron in-process.
+
+**Large context:** Chat accepts `largeContext: true` for up to 200K chars per message and 100 messages per request when using models that support it (Claude, OpenRouter).
+
+**Autonomous (Yolo) mode:** Chat accepts `autonomous: true`; backend emits `{ type: 'autonomous', value: true }` so the client can skip tool confirmations. Settings: Guard Rails → Autonomous (Yolo) mode, Large context (200K+).
+
+**MCP server:** G-Rump can run as an MCP server (stdio) so Cursor/Claude Code can call SHIP, architecture, codegen, intent. Run from backend: `GRUMP_API_URL=http://localhost:3000 npm run mcp-server`. Tools: `grump_ship_start`, `grump_ship_execute`, `grump_ship_status`, `grump_architecture_generate`, `grump_intent_parse`, `grump_codegen_download`. See [CURSOR_GRUMP_API.md](CURSOR_GRUMP_API.md).
+
+---
+
 ## Core Workflow
 
 1. **User Input** – Natural language intent + optional constraints

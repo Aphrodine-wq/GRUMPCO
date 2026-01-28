@@ -1,5 +1,12 @@
 export const templates = [
   {
+    id: 'ship-mode',
+    label: 'Build full app from description',
+    icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+    prompt: '',
+    description: 'Run SHIP: Design → Spec → Plan → Code in one go'
+  },
+  {
     id: 'webapp',
     label: 'Web App',
     icon: 'M3 4h18v16H3V4zm2 2v12h14V6H5zm2 2h10v2H7V8zm0 4h6v2H7v-2z',

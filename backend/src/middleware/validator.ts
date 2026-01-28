@@ -7,8 +7,12 @@ export const MAX_MESSAGE_LENGTH = 4000;
 
 /** Max length per message content in chat (chars). */
 export const MAX_CHAT_MESSAGE_LENGTH = 16000;
+/** Max length when large context is requested (e.g. 200K for Claude, 1M for some OpenRouter models). */
+export const MAX_CHAT_MESSAGE_LENGTH_LARGE = 200_000;
 /** Max number of messages in a single chat request. */
 export const MAX_CHAT_MESSAGES = 50;
+/** Max messages when large context is requested. */
+export const MAX_CHAT_MESSAGES_LARGE = 100;
 /** Max length for ship projectDescription (chars). */
 export const MAX_SHIP_PROJECT_DESCRIPTION_LENGTH = 16000;
 /** Max length for projectName (chars). */
