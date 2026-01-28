@@ -23,7 +23,7 @@
   import { sessionsStore, currentSession } from '../stores/sessionsStore';
   import { getCurrentProjectId } from '../stores/projectStore';
   // import { chatModeStore } from '../stores/chatModeStore';
-  // import { workspaceStore } from '../stores/workspaceStore';
+  import { workspaceStore } from '../stores/workspaceStore';
   // import { codeSessionsStore } from '../stores/codeSessionsStore';
   // import { openModal } from '../stores/clarificationStore';
   // import {
@@ -367,12 +367,12 @@
   async function runCodeModeStream(signal: AbortSignal) {
     const apiMessages = flattenMessagesForChatApi(messages);
     if (apiMessages.length === 0) throw new Error('No messages to send');
-    // let ws = workspaceInput.trim() || get(workspaceStore) || undefined;
-    // if (ws) workspaceStore.setWorkspace(ws);
+    let ws = workspaceInput.trim() || get(workspaceStore) || undefined;
+    if (ws) workspaceStore.setWorkspace(ws);
     // let ws = undefined;
     const body: Record<string, unknown> = {
       messages: apiMessages,
-      // workspaceRoot: ws || undefined,
+      workspaceRoot: ws || undefined,
       mode: 'code', // Fixed mode for debug
       // get(chatModeStore) === 'argument'
       // ? 'argument'
@@ -613,8 +613,8 @@
 
   onMount(() => {
     inputRef?.focus();
-    // const w = get(workspaceStore);
-    // if (w) workspaceInput = w;
+    const w = get(workspaceStore);
+    if (w) workspaceInput = w;
     document.addEventListener('keydown', handleGlobalKeydown);
     const handleOpenShipMode = () => {
       chatMode = 'ship';
