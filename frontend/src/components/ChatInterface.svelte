@@ -12,14 +12,14 @@
   import SettingsScreen from './SettingsScreen.svelte';
   import { Badge, Button } from '../lib/design-system';
   import { exportAsSvg } from '../lib/mermaid';
-  // import {
-  //   trackMessageSent,
-  //   trackDiagramGenerated,
-  //   trackError,
-  //   trackTemplateUsed,
-  // } from '../lib/analytics';
+  import {
+    trackMessageSent,
+    trackDiagramGenerated,
+    trackError,
+    trackTemplateUsed,
+  } from '../lib/analytics';
   import { showToast } from '../stores/toastStore';
-  // import { processError, logError } from '../utils/errorHandler';
+  import { processError, logError } from '../utils/errorHandler';
   import { sessionsStore, currentSession } from '../stores/sessionsStore';
   import { getCurrentProjectId } from '../stores/projectStore';
   import { chatModeStore } from '../stores/chatModeStore';
@@ -33,7 +33,7 @@
   //   reset as resetWorkflow,
   //   codegenSession,
   // } from '../stores/workflowStore';
-  // import { parseAssistantResponse } from '../utils/responseParser';
+  import { parseAssistantResponse } from '../utils/responseParser';
   import { flattenTextContent } from '../utils/contentParser';
   // import { generatePlan } from '../stores/planStore';
   // import { startSpecSession } from '../stores/specStore';
@@ -201,7 +201,7 @@
     const mode = get(chatModeStore);
     lastUserMessage = text;
     lastError = false;
-    // trackMessageSent(text.length);
+    trackMessageSent(text.length);
     if (mode === 'code' && chatMode === 'plan') {
       try {
         const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
@@ -466,11 +466,11 @@
   function handleTemplateSelect(event: CustomEvent) {
     if (event.detail.id === 'ship-mode') {
       chatMode = 'ship';
-      // trackTemplateUsed('ship-mode');
+      trackTemplateUsed('ship-mode');
       return;
     }
     inputText = event.detail.prompt;
-    // trackTemplateUsed(event.detail.id || 'unknown');
+    trackTemplateUsed(event.detail.id || 'unknown');
     inputRef?.focus();
   }
 
