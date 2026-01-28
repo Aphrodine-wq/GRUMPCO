@@ -26,7 +26,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.91.1",
-    "diff": "^8.0.3",
+    "diff": "^5.2.0",
+    "mermaid": "^10.9.0",
+    "shiki": "^1.1.0",
     "svelte": "^5.0.0"
   },
   "devDependencies": {

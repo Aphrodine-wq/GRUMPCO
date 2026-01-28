@@ -1,14 +1,11 @@
+
 /**
  * Diff Utilities
- * MOCKED IMPLEMENTATION
  */
 
-export type Change = {
-  value: string;
-  count?: number;
-  added?: boolean;
-  removed?: boolean;
-};
+import * as Diff from 'diff';
+
+export type Change = Diff.Change;
 
 export interface DiffLine {
   lineNumber: number;
@@ -27,7 +24,7 @@ export interface FileDiff {
 }
 
 export function computeLineDiff(before: string, after: string): DiffLine[] {
-  const changes = diffLines(before, after);
+  const changes = Diff.diffLines(before, after);
 
   const result: DiffLine[] = [];
   let oldLineNum = 1;
@@ -85,7 +82,7 @@ export function computeLineDiff(before: string, after: string): DiffLine[] {
  * Compute word-level diff for inline highlighting
  */
 export function computeWordDiff(before: string, after: string): Change[] {
-  return diffWords(before, after);
+  return Diff.diffWords(before, after);
 }
 
 /**
@@ -98,72 +95,20 @@ export function getDiffSummary(diff: FileDiff): {
   total: number;
 } {
   const lines = computeLineDiff(diff.beforeContent, diff.afterContent);
-  const added = lines.filter((l) => l.type === 'added').length;
-  const removed = lines.filter((l) => l.type === 'removed').length;
-  const modified = lines.filter((l) => l.type === 'modified').length;
+  let added = 0;
+  let removed = 0;
+  let modified = 0;
+
+  lines.forEach((line) => {
+    if (line.type === 'added') added++;
+    if (line.type === 'removed') removed++;
+    // Modified is not strictly a line type in basic diffLines, but we keep the structure
+  });
 
   return {
     added,
     removed,
     modified,
-    total: lines.length,
+    total: added + removed, // Rough estimate
   };
-}
-
-/**
- * Format diff summary as human-readable string
- */
-export function formatDiffSummary(diff: FileDiff): string {
-  const stats = getDiffSummary(diff);
-  const parts: string[] = [];
-
-  if (diff.changeType === 'created') {
-    parts.push(`Created file with ${stats.added} line${stats.added !== 1 ? 's' : ''}`);
-  } else if (diff.changeType === 'deleted') {
-    parts.push(`Deleted file (${stats.removed} line${stats.removed !== 1 ? 's' : ''} removed)`);
-  } else {
-    if (stats.added > 0) parts.push(`+${stats.added}`);
-    if (stats.removed > 0) parts.push(`-${stats.removed}`);
-    if (stats.modified > 0) parts.push(`~${stats.modified}`);
-    if (parts.length === 0) parts.push('No changes');
-  }
-
-  return parts.join(', ');
-}
-
-/**
- * Detect language from file path
- */
-export function detectLanguage(filePath: string): string {
-  const ext = filePath.split('.').pop()?.toLowerCase() || '';
-  const langMap: Record<string, string> = {
-    ts: 'typescript',
-    tsx: 'tsx',
-    js: 'javascript',
-    jsx: 'jsx',
-    py: 'python',
-    java: 'java',
-    cpp: 'cpp',
-    c: 'c',
-    cs: 'csharp',
-    go: 'go',
-    rs: 'rust',
-    rb: 'ruby',
-    php: 'php',
-    html: 'html',
-    css: 'css',
-    scss: 'scss',
-    json: 'json',
-    yaml: 'yaml',
-    yml: 'yaml',
-    xml: 'xml',
-    sql: 'sql',
-    sh: 'bash',
-    bash: 'bash',
-    md: 'markdown',
-    vue: 'vue',
-    svelte: 'svelte',
-  };
-
-  return langMap[ext] || 'plaintext';
 }
