@@ -1,13 +1,13 @@
 <script lang="ts">
   /**
    * G-Rump Design System - Icon Component
-   * Unified icon interface using Lucide SVG icons
+   * Unified icon interface
+   * Note: lucide-svelte dependency removed. Use inline SVGs or a different icon solution.
    */
-  // import * as Icons from 'lucide-svelte';
   import type { ComponentProps } from 'svelte';
 
   interface Props {
-    name: string; // keyof typeof Icons;
+    name: string;
     size?: number;
     strokeWidth?: number;
     color?: string;
@@ -22,8 +22,6 @@
     class: className = '',
   }: Props = $props();
 
-  // Get the icon component dynamically
-  // const IconComponent = Icons[name] as any;
   const IconComponent = null;
 </script>
 
