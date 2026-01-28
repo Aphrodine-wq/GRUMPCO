@@ -145,13 +145,13 @@
 
   .error-action-btn:hover {
     background: #30363d;
-    border-color: #0066ff;
-    color: #0066ff;
+    border-color: #0ea5e9;
+    color: #0ea5e9;
   }
 
   .error-action-btn.primary {
-    background: #0066ff;
-    border-color: #0066ff;
+    background: #0ea5e9;
+    border-color: #0ea5e9;
     color: #ffffff;
   }
 

@@ -113,19 +113,20 @@
     display: flex;
     align-items: center;
     background-color: var(--bg-input);
-    border: 1px solid var(--border-default);
-    border-radius: 6px;
+    border: 0;
+    border-radius: 8px;
     padding: 0 12px;
     transition: all 150ms ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   .is-focused .input-container {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    border: 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 
   .has-error {
-    border-color: var(--error-color) !important;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1) !important;
   }
 
   .input {

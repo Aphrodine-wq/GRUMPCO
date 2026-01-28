@@ -92,12 +92,14 @@
     padding: 0 8px;
     font-size: 11px;
     height: 20px;
+    border-radius: 6px;
   }
 
   .badge-md {
-    padding: 2px 10px;
+    padding: 4px 12px;
     font-size: 12px;
     height: 24px;
+    border-radius: 6px;
   }
 
   /* Dot indicator */

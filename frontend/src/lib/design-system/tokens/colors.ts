@@ -1,17 +1,17 @@
 /**
- * G-Rump Design System - Color Tokens
- * Clean, professional light theme
+ * G-Rump Design System - Color Tokens (Redesigned)
+ * Minimal & elegant light theme with electric cyan-blue accent
  */
 
 export const colors = {
-  // Background colors - Light, warm whites
+  // Background colors - Off-white base
   background: {
-    primary: '#FAFAFA',      // Main background
+    primary: '#FAFAFA',      // Main background (off-white)
     secondary: '#FFFFFF',    // Cards, elevated surfaces
-    tertiary: '#F4F4F5',     // Subtle sections
+    tertiary: '#F5F5F5',     // Subtle sections
     code: '#F8F8F8',         // Code blocks
     input: '#FFFFFF',        // Input fields
-    sidebar: '#FFFFFF',      // Sidebar
+    sidebar: '#FAFAFA',      // Sidebar (same as primary)
   },
 
   // Text colors - Strong hierarchy
@@ -21,19 +21,17 @@ export const colors = {
     muted: '#71717A',        // Captions, hints
     inverse: '#FFFFFF',      // Text on dark backgrounds
     code: '#18181B',         // Code text
-    accent: '#2563EB',       // Links, emphasis
   },
 
-  // Accent colors - Professional blue palette
+  // Accent colors - Electric cyan-blue ONLY
   accent: {
-    primary: '#2563EB',      // Primary action blue
-    primaryHover: '#1D4ED8', // Darker on hover
-    primaryLight: '#EFF6FF', // Light blue background
-    secondary: '#0EA5E9',    // Secondary cyan
-    tertiary: '#8B5CF6',     // Accent purple
+    primary: '#0EA5E9',      // ⚡ Electric cyan-blue (main accent)
+    primaryHover: '#0284C7', // Darker on hover
+    primaryLight: '#E0F2FE', // Light background
+    // REMOVED: secondary, tertiary (blue only!)
   },
 
-  // Status colors
+  // Status colors (kept for errors/warnings/success)
   status: {
     success: '#059669',      // Green
     successLight: '#D1FAE5',
@@ -41,16 +39,8 @@ export const colors = {
     errorLight: '#FEE2E2',
     warning: '#D97706',      // Amber
     warningLight: '#FEF3C7',
-    info: '#0EA5E9',         // Cyan
+    info: '#0EA5E9',         // Cyan (matches primary)
     infoLight: '#E0F2FE',
-  },
-
-  // Border colors
-  border: {
-    default: '#E4E4E7',      // Standard border
-    light: '#F4F4F5',        // Subtle border
-    dark: '#D4D4D8',         // Prominent border
-    focus: '#2563EB',        // Focus ring
   },
 
   // Code diff colors
@@ -72,7 +62,7 @@ export const colors = {
     lineNumber: {
       background: '#F4F4F5',
       text: '#A1A1AA',
-      border: '#E4E4E7',
+      border: 'transparent', // Removed border (no borders design)
     },
   },
 
@@ -82,7 +72,7 @@ export const colors = {
     string: '#059669',       // Green
     number: '#D97706',       // Amber
     comment: '#A1A1AA',      // Gray
-    function: '#2563EB',     // Blue
+    function: '#0EA5E9',     // Cyan (matches primary accent)
     variable: '#18181B',     // Dark
     operator: '#DC2626',     // Red
     type: '#0EA5E9',         // Cyan
@@ -92,16 +82,17 @@ export const colors = {
   // Interactive states
   interactive: {
     hover: '#F4F4F5',
-    active: '#E4E4E7',
-    selected: '#EFF6FF',
+    active: '#E0F2FE',       // Light cyan background
+    selected: '#E0F2FE',     // Light cyan background
     disabled: '#FAFAFA',
   },
 
-  // Shadows
+  // Shadows - Soft blurred shadows (NO borders)
   shadow: {
-    sm: '0 1px 2px rgba(0, 0, 0, 0.05)',
-    md: '0 4px 6px rgba(0, 0, 0, 0.07)',
-    lg: '0 10px 15px rgba(0, 0, 0, 0.1)',
+    sm: '0 2px 8px rgba(0, 0, 0, 0.04)',      // Soft blur
+    md: '0 4px 16px rgba(0, 0, 0, 0.06)',     // More blur
+    lg: '0 8px 32px rgba(0, 0, 0, 0.08)',     // Even more blur
+    floating: '0 12px 48px rgba(0, 0, 0, 0.12)', // Floating elements (input bar)
   },
 } as const;
 

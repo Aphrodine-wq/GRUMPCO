@@ -381,10 +381,10 @@
         style.setAttribute('data-node-highlight', 'true');
         style.textContent = `
           .selected-node {
-            filter: drop-shadow(0 0 4px #0066FF);
+            filter: drop-shadow(0 0 4px #0EA5E9);
           }
           .selected-node > * {
-            stroke: #0066FF !important;
+            stroke: #0EA5E9 !important;
             stroke-width: 2px !important;
           }
         `;
@@ -595,8 +595,8 @@
 
   .action-btn:hover {
     background: #F5F5F5;
-    border-color: #0066FF;
-    color: #0066FF;
+    border-color: #0EA5E9;
+    color: #0EA5E9;
   }
 
   .action-btn svg {
@@ -605,8 +605,8 @@
   }
 
   .generate-code-btn {
-    background: #0066FF;
-    border-color: #0066FF;
+    background: #0EA5E9;
+    border-color: #0EA5E9;
     color: #FFFFFF;
   }
 

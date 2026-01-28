@@ -209,7 +209,7 @@
   }
 
   .action-btn.primary {
-    background: #0066FF;
+    background: #0EA5E9;
     color: #FFFFFF;
   }
 
@@ -228,11 +228,11 @@
 
   .action-btn.secondary {
     background: #EBEBEB;
-    color: #0066FF;
+    color: #0EA5E9;
   }
 
   .action-btn.secondary:hover {
-    background: #0066FF;
+    background: #0EA5E9;
     color: #FFFFFF;
   }
 

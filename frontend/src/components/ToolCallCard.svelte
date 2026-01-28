@@ -4,6 +4,7 @@
    */
   import { Badge } from '../lib/design-system';
   import { colors } from '../lib/design-system/tokens/colors';
+  import { Code2 } from 'lucide-svelte';
 
   interface Props {
     toolCall?: {
@@ -44,12 +45,7 @@
   >
     <div class="tool-call-header">
       <div class="tool-info">
-        <span class="tool-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="16 18 22 12 16 6"></polyline>
-            <polyline points="8 6 2 12 8 18"></polyline>
-          </svg>
-        </span>
+        <Code2 size={14} stroke-width={2.5} />
         <span class="tool-name">{toolCall.name}</span>
       </div>
       {#if toolCall.status}
@@ -68,22 +64,22 @@
 
 <style>
   .tool-call-card {
-    border: 1px solid var(--border-color);
+    border: 0;
     border-radius: 8px;
     overflow: hidden;
-    margin: 12px 0;
-    background: var(--bg-content);
+    margin: 8px 0;
+    background: white;
     font-family: inherit;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   .tool-call-header {
-    background-color: var(--bg-header);
-    padding: 10px 14px;
+    background-color: white;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 0;
   }
 
   .tool-info {

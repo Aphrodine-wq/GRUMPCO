@@ -2,6 +2,7 @@
   /**
    * ToolResultCard - Professional light theme
    */
+  import { Check, X } from 'lucide-svelte';
   import CodeDiffViewer from './CodeDiffViewer.svelte';
   import { Badge } from '../lib/design-system';
   import { colors } from '../lib/design-system/tokens/colors';
@@ -40,18 +41,11 @@
   >
     <div class="tool-result-header">
       <div class="tool-info">
-        <span class="result-icon">
-          {#if toolResult.success}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          {:else}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          {/if}
-        </span>
+        {#if toolResult.success}
+          <Check size={14} stroke-width={3} />
+        {:else}
+          <X size={14} stroke-width={3} />
+        {/if}
         <span class="tool-name">{toolResult.toolName}</span>
       </div>
       <div class="header-meta">
@@ -80,22 +74,22 @@
 
 <style>
   .tool-result-card {
-    border: 1px solid var(--border-color);
+    border: 0;
     border-radius: 8px;
     overflow: hidden;
-    margin: 12px 0;
-    background: var(--bg-content);
+    margin: 8px 0;
+    background: white;
     font-family: inherit;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   .tool-result-header {
-    background-color: var(--bg-header);
-    padding: 10px 14px;
+    background-color: white;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 0;
   }
 
   .tool-info {
@@ -138,7 +132,7 @@
 
   .output-wrapper {
     padding: 12px 14px;
-    background-color: #f9fafb;
+    background-color: #F8F8F8;
   }
 
   .tool-output {

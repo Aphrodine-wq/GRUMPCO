@@ -188,8 +188,8 @@
   }
 
   .plan-card.highlight {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
+    border-color: #0EA5E9;
+    box-shadow: 0 0 0 1px #0EA5E9;
     background-color: #eff6ff;
   }
 

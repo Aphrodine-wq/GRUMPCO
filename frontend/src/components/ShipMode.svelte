@@ -659,7 +659,7 @@
   .completion-actions .action-btn.success:hover { background: #059669; }
 
   .completion-actions .action-btn.primary {
-    background: #0066FF;
+    background: #0EA5E9;
     color: #fff;
   }
   .completion-actions .action-btn.primary:hover { background: #0052CC; }
@@ -720,7 +720,7 @@
     cursor: pointer;
     border: none;
   }
-  .github-prompt .action-btn.primary { background: #0066FF; color: #fff; }
+  .github-prompt .action-btn.primary { background: #0EA5E9; color: #fff; }
   .github-prompt .action-btn.primary:hover:not(:disabled) { background: #0052CC; }
   .github-prompt .action-btn.subtle { background: #e9ecef; color: #6c757d; }
   .github-prompt .action-btn.subtle:hover { background: #dee2e6; }

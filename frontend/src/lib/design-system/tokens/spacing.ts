@@ -31,23 +31,23 @@ export const spacing = {
 
 // Semantic spacing
 export const semanticSpacing = {
-  // Component internal padding
+  // Component internal padding (increased for airy feel)
   component: {
-    xs: spacing[1],      // 4px - very compact
-    sm: spacing[2],      // 8px - compact
-    md: spacing[3],      // 12px - default
-    lg: spacing[4],      // 16px - comfortable
-    xl: spacing[6],      // 24px - spacious
+    xs: spacing[2],      // 8px - very compact (was 4px)
+    sm: spacing[3],      // 12px - compact (was 8px)
+    md: spacing[4],      // 16px - default (was 12px)
+    lg: spacing[5],      // 20px - comfortable (was 16px)
+    xl: spacing[6],      // 24px - spacious (was 24px)
   },
 
-  // Gaps between elements
+  // Gaps between elements (increased for generous spacing)
   gap: {
-    xs: spacing[1],      // 4px
-    sm: spacing[2],      // 8px
-    md: spacing[3],      // 12px
-    lg: spacing[4],      // 16px
-    xl: spacing[6],      // 24px
-    '2xl': spacing[8],   // 32px
+    xs: spacing[2],      // 8px (was 4px)
+    sm: spacing[3],      // 12px (was 8px)
+    md: spacing[4],      // 16px (was 12px)
+    lg: spacing[6],      // 24px (was 16px)
+    xl: spacing[8],      // 32px (was 24px)
+    '2xl': spacing[10],  // 40px (was 32px)
   },
 
   // Section margins
@@ -65,24 +65,24 @@ export const semanticSpacing = {
     lg: spacing[11],     // 44px - large buttons
   },
 
-  // Border radius
+  // Border radius (slightly rounded)
   radius: {
     none: '0',
-    sm: '0.25rem',       // 4px
-    md: '0.375rem',      // 6px
-    lg: '0.5rem',        // 8px
-    xl: '0.75rem',       // 12px
-    '2xl': '1rem',       // 16px
+    sm: '4px',           // 4px
+    md: '6px',           // 6px
+    lg: '8px',           // 8px (standard for components)
+    xl: '12px',          // 12px
+    '2xl': '16px',       // 16px
     full: '9999px',      // Pill shape
   },
 
   // Sidebar and panels
   layout: {
     sidebarWidth: '280px',
-    sidebarCollapsed: '48px',
+    sidebarCollapsed: '64px',   // Increased from 48px (was too small)
     headerHeight: '48px',
-    maxContentWidth: '56rem',  // 896px
-    chatMaxWidth: '48rem',     // 768px (original)
+    maxContentWidth: '896px',   // Same as before
+    chatMaxWidth: '768px',      // Claude.ai-style centered
   },
 } as const;
 

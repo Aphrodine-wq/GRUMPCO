@@ -258,7 +258,7 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #0066FF;
+    background: #0EA5E9;
     color: #FFFFFF;
     display: flex;
     align-items: center;
@@ -331,7 +331,7 @@
   }
 
   .btn-primary {
-    background: #0066FF;
+    background: #0EA5E9;
     color: #FFFFFF;
   }
 

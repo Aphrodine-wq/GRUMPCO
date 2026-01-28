@@ -3,30 +3,42 @@
 @tailwind utilities;
 
 :root {
-  --color-bg: #FFFFFF;
-  --color-bg-subtle: #F8F9FA;
-  --color-bg-muted: #F1F3F4;
-  --color-text: #1A1A1A;
-  --color-text-secondary: #5F6368;
-  --color-text-muted: #9AA0A6;
-  --color-border: #DADCE0;
-  --color-border-light: #E8EAED;
-  --color-primary: #1A73E8;
-  --color-primary-hover: #1557B0;
-  --color-success: #34A853;
-  --color-error: #EA4335;
-  --color-warning: #FBBC04;
-  
+  /* Background colors */
+  --color-bg: #FAFAFA;
+  --color-bg-subtle: #F5F5F5;
+  --color-bg-muted: #F8F8F8;
+  --color-text: #18181B;
+  --color-text-secondary: #3F3F46;
+  --color-text-muted: #71717A;
+
+  /* Borders - removed (no borders design) */
+  --color-border: transparent;
+  --color-border-light: transparent;
+
+  /* Accent - electric cyan-blue only */
+  --color-primary: #0EA5E9;
+  --color-primary-hover: #0284C7;
+
+  /* Status colors */
+  --color-success: #059669;
+  --color-error: #DC2626;
+  --color-warning: #D97706;
+
+  /* Radius */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
-  
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
-  
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
+
+  /* Shadows - soft blurred */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --shadow-floating: 0 12px 48px rgba(0, 0, 0, 0.12);
+
+  /* Typography */
+  --font-sans: Geist, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: Merriweather, Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
 *,
@@ -77,6 +89,7 @@ body {
 h1, h2, h3, h4, h5, h6 {
   margin: 0;
   font-weight: 600;
+  font-family: var(--font-serif);
   color: var(--color-text);
   line-height: 1.3;
 }

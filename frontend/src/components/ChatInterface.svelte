@@ -2,6 +2,7 @@
   import { onMount, tick } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { get } from 'svelte/store';
+  import { Send, X } from 'lucide-svelte';
   import DiagramRenderer from './DiagramRenderer.svelte';
   import SuggestionChips from './SuggestionChips.svelte';
   import RefinementActions from './RefinementActions.svelte';
@@ -12,7 +13,7 @@
   import WorkflowActions from './WorkflowActions.svelte';
   import ToolCallCard from './ToolCallCard.svelte';
   import ToolResultCard from './ToolResultCard.svelte';
-  import { CollapsibleSidebar, Badge, Button, Input } from '../lib/design-system';
+  import { Badge, Button, Input } from '../lib/design-system';
   import { exportAsSvg } from '../lib/mermaid';
   import { trackMessageSent, trackDiagramGenerated, trackError, trackTemplateUsed } from '../lib/analytics';
   import { showToast } from '../stores/toastStore';
@@ -72,7 +73,6 @@
   let isTyping = $state(false);
   let typingTimeout: ReturnType<typeof setTimeout> | null = null;
   let editingMessageIndex = $state<number | null>(null);
-  let sidebarCollapsed = $state(false);
   let showSettings = $state(false);
 
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
@@ -460,39 +460,11 @@
   });
 </script>
 
-<div class="chat-interface" style:--bg-primary={colors.background.primary} style:--bg-secondary={colors.background.secondary} style:--border-color={colors.border.default}>
-    <CollapsibleSidebar bind:collapsed={sidebarCollapsed}>
-    {#snippet header()}
-      <div class="sidebar-header">
-        <h2 class="sidebar-title">History</h2>
-        <Button variant="primary" size="sm" onclick={() => sessionsStore.createSession([])}>New</Button>
-      </div>
-    {/snippet}
-    {#snippet children()}
-      <div class="session-list">
-        {#each $sortedSessions as session (session.id)}
-          <button 
-            class="session-item" 
-            class:active={session.id === $currentSession?.id}
-            onclick={() => sessionsStore.switchSession(session.id)}
-          >
-            <span class="session-name">{session.name}</span>
-            <span class="session-date">{new Date(session.updatedAt).toLocaleDateString()}</span>
-          </button>
-        {/each}
-      </div>
-    {/snippet}
-    {#snippet footer()}
-      <div class="sidebar-footer">
-        <Button variant="ghost" fullWidth onclick={() => (showSettings = true)}>Settings</Button>
-      </div>
-    {/snippet}
-  </CollapsibleSidebar>
-
-  <main class="main-content">
-    {#if showSettings}
-      <SettingsScreen onBack={() => (showSettings = false)} />
-    {:else}
+<div class="chat-interface" style:--bg-primary={colors.background.primary} style:--bg-secondary={colors.background.secondary}>
+  {#if showSettings}
+    <SettingsScreen onBack={() => (showSettings = false)} />
+  {:else}
+    <div class="chat-root">
       <div class="chat-viewport">
         <div class="messages-scroll" bind:this={messagesRef}>
           <div class="messages-inner">
@@ -561,7 +533,7 @@
                 <div class="message-content-container">
                   <div class="message-meta">
                     <span class="message-role">G-Rump</span>
-                    <Badge variant="primary" size="sm" dot>Thinking...</Badge>
+                    <span class="thinking-indicator">Thinking...</span>
                   </div>
                   <div class="message-bubble">
                     {#if streamingBlocks.length > 0}
@@ -600,12 +572,9 @@
               </div>
               <button class="send-button" type="submit" disabled={!inputText.trim() || streaming}>
                 {#if streaming}
-                  <div class="stop-icon" onclick={cancelGeneration}></div>
+                  <X size={18} />
                 {:else}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                  </svg>
+                  <Send size={18} />
                 {/if}
               </button>
             </form>
@@ -653,84 +622,26 @@
         </div>
       </div>
     {/if}
-  </main>
+  </div>
 </div>
 
 <style>
   .chat-interface {
     display: flex;
+    flex-direction: column;
     height: 100vh;
     width: 100%;
     background-color: var(--bg-primary);
     color: #18181b;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
   }
 
-  .sidebar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-
-  .sidebar-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #18181b;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .session-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .session-item {
-    display: flex;
-    flex-direction: column;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: none;
-    background: transparent;
-    text-align: left;
-    cursor: pointer;
-    transition: background 150ms;
-  }
-
-  .session-item:hover {
-    background-color: #f4f4f5;
-  }
-
-  .session-item.active {
-    background-color: #eff6ff;
-  }
-
-  .session-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: #18181b;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .session-date {
-    font-size: 12px;
-    color: #71717a;
-  }
-
-  .sidebar-footer {
-    padding-top: 16px;
-  }
-
-  .main-content {
+  .chat-root {
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-width: 0;
     position: relative;
+    overflow: hidden;
   }
 
   .chat-viewport {
@@ -738,8 +649,6 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    max-width: 900px;
-    margin: 0 auto;
     width: 100%;
   }
 
@@ -749,14 +658,15 @@
     padding: 24px 16px;
     display: flex;
     flex-direction: column;
+    padding-bottom: 140px;
   }
 
   .messages-inner {
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: 24px;
     width: 100%;
-    max-width: 760px;
+    max-width: 768px;
     margin: 0 auto;
   }
 
@@ -765,7 +675,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 64px 0;
+    padding: 64px 24px;
     text-align: center;
     gap: 16px;
   }
@@ -774,42 +684,56 @@
     font-size: 24px;
     font-weight: 700;
     color: #18181b;
+    font-family: var(--font-serif, Georgia, serif);
   }
 
   .empty-text {
-    font-size: 16px;
-    color: #52525b;
+    font-size: 15px;
+    color: #3f3f46;
     max-width: 400px;
+    line-height: 1.5;
   }
 
   .message-wrapper {
     display: flex;
     gap: 16px;
     width: 100%;
+    padding: 0;
+  }
+
+  .message-wrapper.assistant {
+    margin-right: 0;
+  }
+
+  .message-wrapper.user {
+    margin-right: 0;
   }
 
   .message-avatar {
     flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 4px;
   }
 
   .avatar-circle {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
   }
 
   .avatar-circle.user {
-    background-color: #f4f4f5;
-    color: #71717a;
+    background-color: #F5F5F5;
+    color: #71717A;
   }
 
   .avatar-circle.assistant {
-    background-color: #2563eb;
+    background-color: #0EA5E9;
     color: white;
   }
 
@@ -822,25 +746,46 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
 
   .message-role {
     font-size: 13px;
     font-weight: 600;
-    color: #18181b;
+    color: #18181B;
   }
 
   .message-time {
-    font-size: 12px;
-    color: #71717a;
+    font-size: 11px;
+    color: #71717A;
+  }
+
+  .thinking-indicator {
+    font-size: 11px;
+    color: #0EA5E9;
+    font-weight: 500;
+    animation: pulse-indicator 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-indicator {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
   }
 
   .message-bubble {
-    font-size: 15px;
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.5;
     color: #18181b;
     word-break: break-word;
+    background: white;
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  .message-wrapper.assistant .message-bubble {
+    border-left: 3px solid #0EA5E9;
+    padding-left: 13px;
   }
 
   .text-block {
@@ -848,13 +793,16 @@
     margin-bottom: 8px;
   }
 
+  .text-block:last-child {
+    margin-bottom: 0;
+  }
+
   .diagram-card {
     background: white;
-    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 16px;
-    margin: 16px 0;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin: 8px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   .diagram-header {
@@ -865,51 +813,48 @@
   }
 
   .chat-controls {
-    background-color: white;
-    border-top: 1px solid var(--border-color);
-    padding: 16px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--bg-primary);
+    padding: 16px 24px 24px;
+    z-index: 10;
+    pointer-events: none;
   }
 
   .controls-inner {
-    max-width: 760px;
+    max-width: 768px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 12px;
-  }
-
-  .mode-selector {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: center;
+    pointer-events: auto;
   }
 
   .input-container {
     display: flex;
     align-items: center;
     gap: 12px;
-    background-color: #f0f7ff;
-    border: 1px solid #dbeafe;
+    background-color: white;
+    border: none;
     border-radius: 12px;
-    padding: 12px 16px;
-    transition: all 150ms;
+    padding: 14px 16px;
+    transition: all 150ms ease;
     width: 100%;
-    max-width: 720px;
-    margin: 0 auto;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
   }
 
   .input-container:focus-within {
-    border-color: #3b82f6;
-    background-color: #ffffff;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 14px 56px rgba(0, 0, 0, 0.14);
   }
 
   .input-prompt {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
-    color: #3b82f6;
+    color: #0EA5E9;
     user-select: none;
+    flex-shrink: 0;
   }
 
   .input-wrapper {
@@ -922,14 +867,16 @@
     width: 100%;
     border: none;
     background: transparent;
-    font-size: 16px;
-    color: #1e293b;
+    font-size: 14px;
+    color: #18181b;
     outline: none;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+    resize: none;
+    line-height: 1.5;
   }
 
   .message-input::placeholder {
-    color: #94a3b8;
+    color: #71717A;
   }
 
   .send-button {
@@ -940,20 +887,23 @@
     height: 36px;
     border-radius: 8px;
     border: none;
-    background-color: #3b82f6;
+    background-color: #0EA5E9;
     color: white;
     cursor: pointer;
-    transition: all 150ms;
+    transition: all 150ms ease;
+    flex-shrink: 0;
   }
 
   .send-button:hover:not(:disabled) {
-    background-color: #2563eb;
+    background-color: #0284C7;
     transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(14, 165, 233, 0.2);
   }
 
   .send-button:disabled {
-    background-color: #cbd5e1;
+    background-color: #D4D4D8;
     cursor: not-allowed;
+    transform: none;
   }
 
   .stop-icon {
@@ -963,19 +913,27 @@
     border-radius: 2px;
   }
 
+  .mode-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
   .workspace-bar {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 8px;
-    background-color: #f4f4f5;
+    padding: 8px 12px;
+    background-color: #F5F5F5;
     border-radius: 6px;
   }
 
   .ws-label {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    color: #71717a;
+    color: #71717A;
+    white-space: nowrap;
   }
 
   .ws-input {
@@ -995,10 +953,49 @@
     background: transparent;
   }
   .messages-scroll::-webkit-scrollbar-thumb {
-    background: #e4e4e7;
-    border-radius: 10px;
+    background: #D4D4D8;
+    border-radius: 3px;
   }
   .messages-scroll::-webkit-scrollbar-thumb:hover {
-    background: #d4d4d8;
+    background: #A1A1AA;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .messages-inner {
+      max-width: 100%;
+    }
+
+    .messages-scroll {
+      padding: 16px 12px;
+      padding-bottom: 140px;
+    }
+
+    .message-wrapper {
+      gap: 12px;
+    }
+
+    .avatar-circle {
+      width: 24px;
+      height: 24px;
+      font-size: 10px;
+    }
+
+    .chat-controls {
+      padding: 12px 16px 16px;
+    }
+
+    .input-container {
+      padding: 12px 14px;
+    }
+
+    .message-bubble {
+      font-size: 13px;
+      padding: 10px 14px;
+    }
+
+    .message-wrapper.assistant .message-bubble {
+      padding-left: 11px;
+    }
   }
 </style>

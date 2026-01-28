@@ -1,11 +1,12 @@
 /**
  * G-Rump Design System - Typography Tokens
- * Clean system font stack for professional UI
+ * Elegant serif headings (Merriweather) + clean sans body (Geist)
  */
 
 export const typography = {
   fontFamily: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+    sans: "Geist, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+    serif: "Merriweather, Georgia, serif",
     mono: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
   },
 
@@ -47,21 +48,21 @@ export const typography = {
 
 export const textStyles = {
   h1: {
-    fontFamily: typography.fontFamily.sans,
+    fontFamily: typography.fontFamily.serif,
     fontSize: typography.fontSize['3xl'],
     fontWeight: typography.fontWeight.semibold,
     lineHeight: typography.lineHeight.tight,
     letterSpacing: typography.letterSpacing.tight,
   },
   h2: {
-    fontFamily: typography.fontFamily.sans,
+    fontFamily: typography.fontFamily.serif,
     fontSize: typography.fontSize['2xl'],
     fontWeight: typography.fontWeight.semibold,
     lineHeight: typography.lineHeight.tight,
     letterSpacing: typography.letterSpacing.tight,
   },
   h3: {
-    fontFamily: typography.fontFamily.sans,
+    fontFamily: typography.fontFamily.serif,
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.medium,
     lineHeight: typography.lineHeight.snug,

@@ -193,7 +193,7 @@
   }
 
   .option-card.selected {
-    background: #0066FF;
+    background: #0EA5E9;
     color: #FFFFFF;
   }
 
@@ -268,7 +268,7 @@
     font-size: 0.875rem;
     font-weight: 600;
     padding: 0.75rem 1.5rem;
-    background: #0066FF;
+    background: #0EA5E9;
     color: #FFFFFF;
     border-radius: 6px;
     cursor: pointer;

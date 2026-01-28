@@ -19,7 +19,7 @@
 
   .refine-btn {
     padding: 0.5rem 1rem;
-    background: #0066FF;
+    background: #0EA5E9;
     color: #FFFFFF;
     border: none;
     border-radius: 4px;

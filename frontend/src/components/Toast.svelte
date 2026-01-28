@@ -90,11 +90,11 @@
   }
 
   .toast--success {
-    border-color: #0066FF;
+    border-color: #0EA5E9;
   }
 
   .toast--success .toast-icon {
-    color: #0066FF;
+    color: #0EA5E9;
   }
 
   .toast--error {
@@ -185,7 +185,7 @@
   }
 
   .toast--success .toast-progress {
-    background: #0066FF;
+    background: #0EA5E9;
   }
 
   .toast--error .toast-progress {

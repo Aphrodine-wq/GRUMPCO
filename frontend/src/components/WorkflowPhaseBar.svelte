@@ -150,48 +150,49 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #E5E5E5;
+    background: #E4E4E7;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #6B7280;
+    color: #71717A;
   }
 
   .phase-step.active .phase-icon {
-    background: #0066FF;
-    color: #FFFFFF;
+    background: #0EA5E9;
+    color: white;
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
   }
 
   .phase-step.complete .phase-icon {
-    background: #10B981;
-    color: #FFFFFF;
+    background: #059669;
+    color: white;
   }
 
   .phase-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
-    color: #6B7280;
+    color: #71717A;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
   .phase-step.active .phase-label {
-    color: #0066FF;
+    color: #0EA5E9;
     font-weight: 600;
   }
 
   .phase-connector {
     width: 40px;
     height: 2px;
-    background: #E5E5E5;
+    background: #E4E4E7;
     transition: background 0.2s;
   }
 
   .phase-connector.complete {
-    background: #10B981;
+    background: #059669;
   }
 
   .agent-progress {
@@ -208,10 +209,11 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: #F5F5F5;
-    border-radius: 4px;
+    background: white;
+    border-radius: 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   .agent-status.running {
@@ -242,7 +244,7 @@
   }
 
   .agent-status.running .agent-status-dot {
-    background: #0066FF;
+    background: #0EA5E9;
     animation: pulse 1.5s infinite;
   }
 

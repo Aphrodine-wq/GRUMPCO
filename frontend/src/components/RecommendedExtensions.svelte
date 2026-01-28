@@ -80,7 +80,7 @@
   .ext-link {
     font-size: 0.8125rem;
     font-weight: 600;
-    color: #0066ff;
+    color: #0ea5e9;
     text-decoration: none;
     white-space: nowrap;
   }

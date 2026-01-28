@@ -130,7 +130,7 @@
 
   .progress-fill {
     height: 100%;
-    background: #0066FF;
+    background: #0EA5E9;
     transition: width 0.3s ease;
     border-radius: 2px;
   }
@@ -162,12 +162,12 @@
   }
 
   .stage-item.active {
-    border-color: #0066FF;
+    border-color: #0EA5E9;
     background: rgba(0, 102, 255, 0.1);
   }
 
   .stage-item.completed {
-    border-color: #0066FF;
+    border-color: #0EA5E9;
     background: rgba(0, 102, 255, 0.05);
   }
 
@@ -194,12 +194,12 @@
   }
 
   .stage-item.active .stage-indicator {
-    border-color: #0066FF;
+    border-color: #0EA5E9;
   }
 
   .stage-item.completed .stage-indicator {
-    background: #0066FF;
-    border-color: #0066FF;
+    background: #0EA5E9;
+    border-color: #0EA5E9;
   }
 
   .stage-item.error .stage-indicator {
@@ -222,7 +222,7 @@
     width: 12px;
     height: 12px;
     border: 2px solid rgba(0, 102, 255, 0.3);
-    border-top-color: #0066FF;
+    border-top-color: #0EA5E9;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
   }

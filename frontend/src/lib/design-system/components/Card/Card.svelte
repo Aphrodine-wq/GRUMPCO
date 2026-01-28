@@ -71,22 +71,22 @@
     overflow: hidden;
     font-family: inherit;
     position: relative;
-    border: 1px solid var(--border-color);
+    border: 0;
     transition: all 200ms ease;
   }
 
   /* Variants */
   .card-default {
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   .card-outlined {
-    box-shadow: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   .card-flat {
-    background-color: #f9fafb;
-    border: none;
+    background-color: #F5F5F5;
+    border: 0;
     box-shadow: none;
   }
 
@@ -98,7 +98,7 @@
 
   /* Header & Footer */
   .card-header {
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid #F0F0F0;
     padding: 16px 20px;
     display: flex;
     align-items: center;
@@ -113,8 +113,8 @@
   }
 
   .card-footer {
-    border-top: 1px solid var(--border-color);
-    background-color: #f9fafb;
+    border-top: 1px solid #F0F0F0;
+    background-color: #F9F9F9;
     padding: 12px 20px;
   }
 
@@ -124,9 +124,8 @@
   }
 
   .card-interactive:hover {
-    border-color: var(--primary-color);
     transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 
   .card-interactive:focus-visible {

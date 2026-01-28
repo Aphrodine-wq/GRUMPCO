@@ -1,0 +1,212 @@
+<script lang="ts">
+  import { CollapsibleSidebar, Button, Icon } from '../lib/design-system';
+  import { sessionsStore, sortedSessions, currentSession } from '../stores/sessionsStore';
+  import type { Session } from '../types';
+  import { Plus, Trash2 } from 'lucide-svelte';
+
+  let hoveredSessionId: string | null = $state(null);
+
+  function handleNewSession() {
+    sessionsStore.createSession([]);
+  }
+
+  function handleSelectSession(id: string) {
+    sessionsStore.switchSession(id);
+  }
+
+  function handleDeleteSession(e: MouseEvent, id: string) {
+    e.stopPropagation();
+    if (confirm('Delete this session?')) {
+      sessionsStore.deleteSession(id);
+    }
+  }
+
+  function formatDate(timestamp: number): string {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    }
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function truncateText(text: string, maxLength: number = 50): string {
+    if (text.length > maxLength) {
+      return text.substring(0, maxLength) + '...';
+    }
+    return text;
+  }
+</script>
+
+<CollapsibleSidebar width={280} collapsedWidth={64}>
+  {#snippet header()}
+    <Button
+      variant="primary"
+      size="md"
+      fullWidth
+      onclick={handleNewSession}
+      class="new-chat-btn"
+    >
+      <Plus size={16} />
+      New Chat
+    </Button>
+  {/snippet}
+
+  <div class="sessions-list">
+    {#each $sortedSessions as session (session.id)}
+      <button
+        class="session-item"
+        class:active={session.id === $currentSession?.id}
+        onmouseenter={() => (hoveredSessionId = session.id)}
+        onmouseleave={() => (hoveredSessionId = null)}
+        onclick={() => handleSelectSession(session.id)}
+        title={session.name}
+      >
+        <div class="session-content">
+          <div class="session-name">
+            {truncateText(session.name)}
+          </div>
+          <div class="session-meta">
+            {formatDate(session.updatedAt)} · {session.messages.length} msg
+          </div>
+        </div>
+
+        {#if hoveredSessionId === session.id}
+          <button
+            class="delete-btn"
+            onclick={(e) => handleDeleteSession(e, session.id)}
+            title="Delete session"
+            aria-label="Delete session"
+          >
+            <Trash2 size={14} />
+          </button>
+        {/if}
+      </button>
+    {/each}
+
+    {#if $sortedSessions.length === 0}
+      <div class="empty-state">
+        <p>No sessions yet</p>
+        <p class="hint">Start a new chat above</p>
+      </div>
+    {/if}
+  </div>
+</CollapsibleSidebar>
+
+<style>
+  .sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .session-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: all 150ms ease;
+  }
+
+  .session-item:hover {
+    background-color: #F5F5F5;
+  }
+
+  .session-item.active {
+    background-color: #E0F2FE;
+    border-left: 3px solid #0EA5E9;
+    padding-left: 9px;
+  }
+
+  .session-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .session-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #18181B;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .session-meta {
+    font-size: 11px;
+    color: #71717A;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .delete-btn {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: #71717A;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .delete-btn:hover {
+    background-color: #FEE2E2;
+    color: #DC2626;
+  }
+
+  .empty-state {
+    padding: 24px 12px;
+    text-align: center;
+    color: #71717A;
+  }
+
+  .empty-state p {
+    margin: 0;
+    font-size: 13px;
+  }
+
+  .empty-state .hint {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  /* Custom scrollbar */
+  .sessions-list::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sessions-list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sessions-list::-webkit-scrollbar-thumb {
+    background: #D4D4D8;
+    border-radius: 3px;
+  }
+
+  .sessions-list::-webkit-scrollbar-thumb:hover {
+    background: #A1A1AA;
+  }
+</style>
