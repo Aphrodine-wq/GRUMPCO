@@ -84,14 +84,17 @@
   .sidebar {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: calc(100% - 24px);
+    margin: 12px;
     background-color: var(--bg-sidebar);
-    border-right: 1px solid var(--border-color);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
     transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     font-family: inherit;
     z-index: 20;
     backdrop-filter: blur(20px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   }
 
   .sidebar-inner {
@@ -99,6 +102,7 @@
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+    border-radius: 16px;
   }
 
   .sidebar-header {

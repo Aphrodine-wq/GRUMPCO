@@ -42,7 +42,7 @@
   }
 </script>
 
-<CollapsibleSidebar width={280} collapsedWidth={64}>
+<CollapsibleSidebar width={240} collapsedWidth={64}>
   {#snippet header()}
     <Button variant="primary" size="md" fullWidth onclick={handleNewSession} class="new-chat-btn">
       <svg
