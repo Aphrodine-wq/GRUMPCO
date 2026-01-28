@@ -5,6 +5,7 @@
 
   export let onSelectProject: (id: string) => void;
   export let onNewProject: () => void;
+  export let onUpgrade: () => void;
 
   function formatDate(timestamp: number) {
     return new Date(timestamp).toLocaleDateString(undefined, {
@@ -29,13 +30,17 @@
         <GRumpBlob size={48} speed={1.2} />
         <h1>G-Rump</h1>
       </div>
-      <Button onclick={onNewProject} variant="primary">
+      <div style="display: flex; gap: 12px;">
+        <Button onclick={onUpgrade} variant="secondary">Upgrade</Button>
+        <Button onclick={onNewProject} variant="primary">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
+        </svg>
         New Project
       </Button>
+      </div>
     </div>
   </header>
 

@@ -4,12 +4,14 @@
   import ProjectsDashboard from './components/ProjectsDashboard.svelte';
   import Toast from './components/Toast.svelte';
   import QuestionModal from './components/QuestionModal.svelte';
+  import PricingModal from './components/PricingModal.svelte';
   import { sessionsStore, currentSession } from './stores/sessionsStore';
   import { settingsStore } from './stores/settingsStore';
   import { Button } from './lib/design-system';
   import type { Message } from './types';
 
   let view = $state<'dashboard' | 'chat'>('dashboard');
+  let showPricing = $state(false);
 
   onMount(() => {
     localStorage.removeItem('mermaid-app-state');
@@ -20,10 +22,9 @@
       view = 'chat';
     }
 
-    const isTauri = typeof window !== 'undefined' && (
-      !!(window as any).__TAURI__ || 
-      !!(window as any).__TAURI_INTERNALS__
-    );
+    const isTauri =
+      typeof window !== 'undefined' &&
+      (!!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__);
 
     if (isTauri) {
       setTimeout(() => {
@@ -32,11 +33,10 @@
             invoke('close_splash_show_main').catch((err) => console.error(err));
           })
           .catch(() => {
-            import('@tauri-apps/api')
-              .then((module: any) => {
-                const invoke = module.invoke || module.tauri?.invoke;
-                if (invoke) invoke('close_splash_show_main').catch((err: any) => console.error(err));
-              });
+            import('@tauri-apps/api').then((module: any) => {
+              const invoke = module.invoke || module.tauri?.invoke;
+              if (invoke) invoke('close_splash_show_main').catch((err: any) => console.error(err));
+            });
           });
       }, 400);
     }
@@ -68,17 +68,30 @@
 <div class="app">
   <Toast />
   <QuestionModal />
+  {#if showPricing}
+    <PricingModal onClose={() => (showPricing = false)} />
+  {/if}
 
   {#if view === 'dashboard'}
-    <ProjectsDashboard 
-      onSelectProject={handleSelectProject} 
-      onNewProject={handleNewProject} 
+    <ProjectsDashboard
+      onSelectProject={handleSelectProject}
+      onNewProject={handleNewProject}
+      onUpgrade={() => (showPricing = true)}
     />
   {:else}
     <div class="chat-container">
       <nav class="top-nav">
         <Button variant="ghost" size="sm" onclick={() => (view = 'dashboard')}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <rect x="3" y="3" width="7" height="7"></rect>
             <rect x="14" y="3" width="7" height="7"></rect>
             <rect x="14" y="14" width="7" height="7"></rect>
@@ -86,13 +99,16 @@
           </svg>
           All Projects
         </Button>
+
         <div class="nav-session-name">{$currentSession?.name || 'New Session'}</div>
+        <div style="flex-grow: 1;"></div>
+        <Button variant="outline" size="sm" onclick={() => (showPricing = true)}>Upgrade</Button>
       </nav>
-      
+
       {#key $currentSession?.id ?? 'none'}
         <ChatInterface
           initialMessages={getInitialMessages()}
-          on:messages-updated={(e: CustomEvent<Message[]>) => handleMessagesUpdate(e.detail)}
+          on:messages-updated={(e: CustomEvent) => handleMessagesUpdate(e.detail)}
         />
       {/key}
     </div>
@@ -103,7 +119,7 @@
   .app {
     min-height: 100vh;
     width: 100%;
-    background: #FAFAFA;
+    background: #fafafa;
     display: flex;
     flex-direction: column;
   }
@@ -121,13 +137,13 @@
     gap: 16px;
     padding: 8px 16px;
     background: white;
-    border-bottom: 1px solid #E4E4E7;
+    border-bottom: 1px solid #e4e4e7;
     z-index: 30;
   }
 
   .nav-session-name {
     font-size: 14px;
     font-weight: 600;
-    color: #18181B;
+    color: #18181b;
   }
 </style>
