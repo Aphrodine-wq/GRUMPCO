@@ -1,7 +1,6 @@
 <script lang="ts">
   import Router, { push } from 'svelte-spa-router'
   import { authStore } from './stores/authStore'
-  import Dashboard from './routes/Dashboard.svelte'
   import Workspace from './routes/Workspace.svelte'
   import Login from './routes/Login.svelte'
   import Register from './routes/Register.svelte'
@@ -30,9 +29,9 @@
   $: showNav = $authStore.user != null
 </script>
 
-<div class="app flex min-h-screen flex-col bg-gray-50">
+<div class="app flex min-h-screen flex-col bg-gray-50 h-screen w-screen overflow-hidden">
   {#if showNav}
-    <header class="sticky top-0 z-10 border-b border-gray-200 bg-white shadow-sm">
+    <header class="sticky top-0 z-10 border-b border-gray-200 bg-white shadow-sm flex-none">
       <div class="flex h-14 items-center justify-between px-4 sm:px-6">
         <a href="/#/" class="text-xl font-semibold text-gray-900">G-Rump</a>
         <nav class="flex items-center gap-2 sm:gap-4">
@@ -55,7 +54,7 @@
       </div>
     </header>
   {/if}
-  <main class="flex-1">
+  <main class="flex-1 flex flex-col overflow-hidden relative">
     <Router {routes} />
   </main>
 </div>
