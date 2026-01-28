@@ -2,8 +2,7 @@
   import { CollapsibleSidebar, Button, Icon } from '../lib/design-system';
   import { sessionsStore, sortedSessions, currentSession } from '../stores/sessionsStore';
   import type { Session } from '../types';
-  import Plus from 'lucide-svelte/icons/plus';
-  import Trash2 from 'lucide-svelte/icons/trash-2';
+  import { Plus, Trash2 } from 'lucide-svelte';
 
   let hoveredSessionId: string | null = $state(null);
 

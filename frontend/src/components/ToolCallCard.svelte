@@ -4,7 +4,7 @@
    */
   import { Badge } from '../lib/design-system';
   import { colors } from '../lib/design-system/tokens/colors';
-  import Code2 from 'lucide-svelte/icons/code-2';
+  import { Code2 } from 'lucide-svelte';
 
   interface Props {
     toolCall?: {

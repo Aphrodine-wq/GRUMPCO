@@ -2,8 +2,7 @@
   /**
    * ToolResultCard - Professional light theme
    */
-  import Check from 'lucide-svelte/icons/check';
-  import X from 'lucide-svelte/icons/x';
+  import { Check, X } from 'lucide-svelte';
   import CodeDiffViewer from './CodeDiffViewer.svelte';
   import { Badge } from '../lib/design-system';
   import { colors } from '../lib/design-system/tokens/colors';
