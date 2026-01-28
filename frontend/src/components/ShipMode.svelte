@@ -88,7 +88,7 @@
       console.error('Failed to resume SHIP:', err);
     }
   }
-  
+
   function getPhaseProgress(): number {
     const phases: ShipPhase[] = ['design', 'spec', 'plan', 'code'];
     const currentIndex = phases.indexOf(phase);
@@ -139,8 +139,12 @@
   }
 
   function handleShipOpenInIde(ide: 'cursor' | 'vscode' | 'jetbrains') {
-    const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__);
-    const base = isTauri ? 'Download the project, then open the folder in ' : 'Download the ZIP, extract it, then open the folder in ';
+    const isTauri =
+      typeof window !== 'undefined' &&
+      (!!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__);
+    const base = isTauri
+      ? 'Download the project, then open the folder in '
+      : 'Download the ZIP, extract it, then open the folder in ';
     const msg = {
       cursor: base + 'Cursor (File > Open Folder).',
       vscode: base + 'VS Code (File > Open Folder).',
@@ -151,693 +155,733 @@
   }
 </script>
 
-<div class="ship-mode">
-  <div class="ship-header">
-    <h1>SHIP Mode</h1>
-    <p class="subtitle">Sequential workflow: Design → Spec → Plan → Code</p>
-  </div>
-  
-  {#if !session}
-    <div class="start-section">
-      <div class="form-group">
-        <label for="description">Project Description</label>
-        <textarea
-          id="description"
-          bind:value={projectDescription}
-          placeholder="Describe your project..."
-          rows="5"
-        ></textarea>
+<div class="ship-overlay">
+  <div class="ship-modal">
+    <div class="ship-header">
+      <div class="header-content">
+        <h1>SHIP Mode</h1>
+        <p class="subtitle">Sequential workflow: Design → Spec → Plan → Code</p>
       </div>
-      
-      <div class="preferences">
-        <h3>Preferences</h3>
-        <div class="preference-row">
-          <label>
-            <span>Frontend Framework:</span>
-            <select bind:value={preferences.frontendFramework}>
-              <option value="vue">Vue</option>
-              <option value="react">React</option>
-            </select>
-          </label>
-        </div>
-        <div class="preference-row">
-          <label>
-            <span>Backend Runtime:</span>
-            <select bind:value={preferences.backendRuntime}>
-              <option value="node">Node.js</option>
-              <option value="python">Python</option>
-              <option value="go">Go</option>
-            </select>
-          </label>
-        </div>
-        <div class="preference-row">
-          <label>
-            <span>Database:</span>
-            <select bind:value={preferences.database}>
-              <option value="postgres">PostgreSQL</option>
-              <option value="mongodb">MongoDB</option>
-            </select>
-          </label>
-        </div>
-        <div class="preference-row">
-          <label>
-            <input type="checkbox" bind:checked={preferences.includeTests} />
-            Include Tests
-          </label>
-        </div>
-        <div class="preference-row">
-          <label>
-            <input type="checkbox" bind:checked={preferences.includeDocs} />
-            Include Documentation
-          </label>
-        </div>
-      </div>
-
-      <p class="ai-disclaimer">Generated code and content are suggestions only. Always review and test before use. We do not guarantee correctness or fitness for any purpose.</p>
-      
-      <button 
-        class="start-button" 
-        onclick={handleStart}
-        disabled={!projectDescription.trim() || status === 'running'}
+      <button
+        class="close-btn"
+        onclick={() => window.dispatchEvent(new CustomEvent('close-ship-mode'))}
+        aria-label="Close"
       >
-        Start SHIP Mode
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"
+          ></line></svg
+        >
       </button>
     </div>
-  {:else}
-    <div class="session-section">
-      <div class="phase-indicator">
-        <div class="phase-progress">
-          <div class="progress-bar" style="width: {getPhaseProgress()}%"></div>
-        </div>
-        <div class="phase-label">Current Phase: {phaseLabels[phase]}{#if isStreaming} <span class="streaming-dot">…</span>{/if}</div>
-        <div class="status-badge" class:running={status === 'running'} class:completed={status === 'completed'} class:failed={status === 'failed'}>
-          {isStreaming ? 'streaming' : status}
-        </div>
-      </div>
-      
-      {#if error}
-        <div class="error-message">{error}</div>
-        {#if canResume && session?.id}
-          <div class="resume-actions">
-            <button type="button" class="action-btn primary resume-btn" onclick={handleResume} disabled={isStreaming}>
-              Resume from {phaseLabels[phase]}
+
+    <div class="ship-content">
+      {#if !session}
+        <div class="start-section">
+          <div class="form-group">
+            <label for="description">Project Description</label>
+            <textarea
+              id="description"
+              bind:value={projectDescription}
+              placeholder="Describe your project idea in detail..."
+              rows="4"
+            ></textarea>
+          </div>
+
+          <div class="preferences-grid">
+            <div class="preference-col">
+              <h3>Configuration</h3>
+              <div class="preference-item">
+                <label>
+                  <span class="pref-label">Frontend</span>
+                  <select bind:value={preferences.frontendFramework}>
+                    <option value="vue">Vue</option>
+                    <option value="react">React</option>
+                  </select>
+                </label>
+              </div>
+              <div class="preference-item">
+                <label>
+                  <span class="pref-label">Runtime</span>
+                  <select bind:value={preferences.backendRuntime}>
+                    <option value="node">Node.js</option>
+                    <option value="python">Python</option>
+                    <option value="go">Go</option>
+                  </select>
+                </label>
+              </div>
+              <div class="preference-item">
+                <label>
+                  <span class="pref-label">Database</span>
+                  <select bind:value={preferences.database}>
+                    <option value="postgres">PostgreSQL</option>
+                    <option value="mongodb">MongoDB</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div class="preference-col">
+              <h3>Options</h3>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" bind:checked={preferences.includeTests} />
+                  <span>Include Tests</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" bind:checked={preferences.includeDocs} />
+                  <span>Include Documentation</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-actions">
+            <p class="ai-disclaimer">Generated code is a suggestion. Review before use.</p>
+            <button
+              class="start-button"
+              onclick={handleStart}
+              disabled={!projectDescription.trim() || status === 'running'}
+            >
+              Start SHIP Mode
             </button>
           </div>
-        {/if}
-      {/if}
-      
-      <div class="phase-results">
-        {#if session.designResult}
-          <div class="phase-result">
-            <h3>Design Phase</h3>
-            <p>Status: {session.designResult.status}</p>
-            {#if session.designResult.architecture}
-              <p>Architecture: {session.designResult.architecture.projectName}</p>
+        </div>
+      {:else}
+        <div class="session-section">
+          <div class="phase-indicator">
+            <div class="phase-header">
+              <span class="current-phase">{phaseLabels[phase]}</span>
+              <span
+                class="status-badge"
+                class:running={status === 'running'}
+                class:completed={status === 'completed'}
+                class:failed={status === 'failed'}
+              >
+                {isStreaming ? 'streaming' : status}
+              </span>
+            </div>
+            <div class="phase-progress-track">
+              <div class="progress-fill" style="width: {getPhaseProgress()}%"></div>
+            </div>
+          </div>
+
+          {#if error}
+            <div class="error-banner">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                ><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"
+                ></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg
+              >
+              <span>{error}</span>
+            </div>
+            {#if canResume && session?.id}
+              <div class="resume-actions">
+                <button
+                  type="button"
+                  class="action-btn primary resume-btn"
+                  onclick={handleResume}
+                  disabled={isStreaming}
+                >
+                  Resume from {phaseLabels[phase]}
+                </button>
+              </div>
             {/if}
-            {#if session.designResult.creativeDesignDoc}
-              <details class="cdd-details">
-                <summary>Creative Design Document (layout & UI/UX)</summary>
-                <div class="cdd-content">
-                  {#if session.designResult.creativeDesignDoc.layout}
-                    <section class="cdd-section">
-                      <h4>Layout</h4>
-                      <p>{session.designResult.creativeDesignDoc.layout.gridDescription || '—'}</p>
-                      {#if session.designResult.creativeDesignDoc.layout.regions?.length}
-                        <ul>
-                          {#each session.designResult.creativeDesignDoc.layout.regions as region}
-                            <li><strong>{region.name}</strong>: {region.description}</li>
-                          {/each}
-                        </ul>
-                      {/if}
-                    </section>
-                  {/if}
-                  {#if session.designResult.creativeDesignDoc.keyScreens?.length}
-                    <section class="cdd-section">
-                      <h4>Key screens</h4>
-                      <ul>
-                        {#each session.designResult.creativeDesignDoc.keyScreens as screen}
-                          <li><strong>{screen.name}</strong> — {screen.purpose}</li>
-                        {/each}
-                      </ul>
-                    </section>
-                  {/if}
-                  {#if session.designResult.creativeDesignDoc.uxFlows?.length}
-                    <section class="cdd-section">
-                      <h4>UX flows</h4>
-                      <ul>
-                        {#each session.designResult.creativeDesignDoc.uxFlows as flow}
-                          <li><strong>{flow.name}</strong>: {flow.steps?.join(' → ') || '—'}</li>
-                        {/each}
-                      </ul>
-                    </section>
-                  {/if}
-                  {#if session.designResult.creativeDesignDoc.uiPrinciples?.visualHierarchy?.length || session.designResult.creativeDesignDoc.uiPrinciples?.keyInteractions?.length}
-                    <section class="cdd-section">
-                      <h4>UI principles</h4>
-                      {#if session.designResult.creativeDesignDoc.uiPrinciples.visualHierarchy?.length}
-                        <p><strong>Visual hierarchy:</strong> {session.designResult.creativeDesignDoc.uiPrinciples.visualHierarchy.join('; ')}</p>
-                      {/if}
-                      {#if session.designResult.creativeDesignDoc.uiPrinciples.keyInteractions?.length}
-                        <p><strong>Key interactions:</strong> {session.designResult.creativeDesignDoc.uiPrinciples.keyInteractions.join('; ')}</p>
-                      {/if}
-                    </section>
-                  {/if}
-                  {#if session.designResult.creativeDesignDoc.accessibilityNotes?.length}
-                    <section class="cdd-section">
-                      <h4>Accessibility</h4>
-                      <ul>
-                        {#each session.designResult.creativeDesignDoc.accessibilityNotes as note}
-                          <li>{note}</li>
-                        {/each}
-                      </ul>
-                    </section>
-                  {/if}
-                  {#if session.designResult.creativeDesignDoc.responsivenessNotes?.length}
-                    <section class="cdd-section">
-                      <h4>Responsiveness</h4>
-                      <ul>
-                        {#each session.designResult.creativeDesignDoc.responsivenessNotes as note}
-                          <li>{note}</li>
-                        {/each}
-                      </ul>
-                    </section>
-                  {/if}
+          {/if}
+
+          <div class="phase-results-scroll">
+            <div class="phase-results">
+              {#if session.designResult}
+                <div class="phase-card completed">
+                  <div class="phase-card-header">
+                    <span class="check-icon">✓</span>
+                    <h3>Design</h3>
+                  </div>
+                  <div class="phase-card-content">
+                    {#if session.designResult.architecture}
+                      <p class="phase-summary">{session.designResult.architecture.projectName}</p>
+                    {/if}
+                    <!-- Details omitted for brevity in modal view, expandable if needed -->
+                  </div>
                 </div>
-              </details>
-            {/if}
-          </div>
-        {/if}
-        
-        {#if session.specResult}
-          <div class="phase-result">
-            <h3>Specification Phase</h3>
-            <p>Status: {session.specResult.status}</p>
-            {#if session.specResult.specification}
-              <p>Specification: {session.specResult.specification.title}</p>
-              <details class="phase-details">
-                <summary>Specification details</summary>
-                <div class="phase-details-content">
-                  {#if session.specResult.specification.description}
-                    <p class="spec-description">{session.specResult.specification.description}</p>
-                  {/if}
-                  {#if session.specResult.specification.sections?.requirements?.length}
-                    <h4>Requirements</h4>
-                    <ul>
-                      {#each session.specResult.specification.sections.requirements as req}
-                        <li><strong>{req.title}</strong>: {req.description}</li>
-                      {/each}
-                    </ul>
-                  {:else}
-                    <p class="text-muted">No requirements list available.</p>
-                  {/if}
+              {/if}
+
+              {#if session.specResult}
+                <div class="phase-card completed">
+                  <div class="phase-card-header">
+                    <span class="check-icon">✓</span>
+                    <h3>Specification</h3>
+                  </div>
+                  <div class="phase-card-content">
+                    {#if session.specResult.specification}
+                      <p class="phase-summary">{session.specResult.specification.title}</p>
+                    {/if}
+                  </div>
                 </div>
-              </details>
-            {/if}
-          </div>
-        {/if}
-        
-        {#if session.planResult}
-          <div class="phase-result">
-            <h3>Plan Phase</h3>
-            <p>Status: {session.planResult.status}</p>
-            {#if session.planResult.plan}
-              <p>Plan: {session.planResult.plan.title}</p>
-              <details class="phase-details">
-                <summary>Plan summary</summary>
-                <div class="phase-details-content">
-                  {#if session.planResult.plan.description}
-                    <p class="plan-description">{session.planResult.plan.description}</p>
-                  {/if}
-                  {#if session.planResult.plan.phases?.length}
-                    <h4>Phases and steps</h4>
-                    <ul class="plan-phase-list">
-                      {#each session.planResult.plan.phases as phase}
-                        <li>
-                          <strong>{phase.name}</strong>
-                          {#if phase.steps?.length && session.planResult.plan.steps?.length}
-                            <ul class="plan-step-list">
-                              {#each phase.steps as stepId}
-                                {@const step = session.planResult.plan.steps.find((s: { id: string }) => s.id === stepId)}
-                                {#if step}
-                                  <li>{step.title}</li>
-                                {/if}
-                              {/each}
-                            </ul>
-                          {/if}
-                        </li>
-                      {/each}
-                    </ul>
-                  {:else if session.planResult.plan.steps?.length}
-                    <h4>Steps</h4>
-                    <ul>
-                      {#each session.planResult.plan.steps as step}
-                        <li>{step.title}</li>
-                      {/each}
-                    </ul>
-                  {:else}
-                    <p class="text-muted">No phase breakdown available.</p>
-                  {/if}
+              {/if}
+
+              {#if session.planResult}
+                <div class="phase-card completed">
+                  <div class="phase-card-header">
+                    <span class="check-icon">✓</span>
+                    <h3>Plan</h3>
+                  </div>
+                  <div class="phase-card-content">
+                    {#if session.planResult.plan}
+                      <p class="phase-summary">{session.planResult.plan.title}</p>
+                    {/if}
+                  </div>
                 </div>
-              </details>
-            {/if}
+              {/if}
+
+              {#if session.codeResult}
+                <div class="phase-card completed">
+                  <div class="phase-card-header">
+                    <span class="check-icon">✓</span>
+                    <h3>Code</h3>
+                  </div>
+                  <div class="phase-card-content">
+                    <p class="phase-summary">Code generation complete.</p>
+                  </div>
+                </div>
+              {/if}
+            </div>
           </div>
-        {/if}
-        
-        {#if session.codeResult}
-          <div class="phase-result">
-            <h3>Code Phase</h3>
-            <p>Status: {session.codeResult.status}</p>
-            {#if session.codeResult.session}
-              <p>Session ID: {session.codeResult.session.sessionId}</p>
-            {/if}
-          </div>
-        {/if}
-      </div>
-      
-      {#if status === 'completed'}
-        <div class="completion-message">
-          <h2>✓ SHIP Mode Complete!</h2>
-          <p>All phases have been completed successfully.</p>
-          {#if showCompletionActions}
-            <div class="completion-actions">
-              <button type="button" class="action-btn success" onclick={handleShipDownload} title="Download project as ZIP">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                Download
-              </button>
-              <button type="button" class="action-btn primary" onclick={handleShipPushClick} title="Push to GitHub">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                Push to GitHub
-              </button>
-              <button type="button" class="action-btn secondary" onclick={() => handleShipOpenInIde('cursor')} title="Open in Cursor">Cursor</button>
-              <button type="button" class="action-btn secondary" onclick={() => handleShipOpenInIde('vscode')} title="Open in VS Code">VS Code</button>
-              <button type="button" class="action-btn secondary" onclick={() => handleShipOpenInIde('jetbrains')} title="Open in JetBrains">JetBrains</button>
+
+          {#if status === 'completed'}
+            <div class="completion-panel">
+              <div class="completion-header">
+                <h2>All Systems Go! 🚀</h2>
+                <p>Your project is ready for liftoff.</p>
+              </div>
+              {#if showCompletionActions}
+                <div class="action-grid">
+                  <button type="button" class="action-tile primary" onclick={handleShipDownload}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline
+                        points="7 10 12 15 17 10"
+                      ></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg
+                    >
+                    <span>Download ZIP</span>
+                  </button>
+                  <button type="button" class="action-tile" onclick={handleShipPushClick}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      ><path
+                        d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+                      ></path></svg
+                    >
+                    <span>Push to GitHub</span>
+                  </button>
+                  <!-- IDE Actions omitted for cleaner layout -->
+                </div>
+                <div class="secondary-actions">
+                  <button type="button" class="text-btn" onclick={handleStartOver}
+                    >Start new project</button
+                  >
+                </div>
+              {/if}
             </div>
           {/if}
-          <button type="button" class="start-over-btn" onclick={handleStartOver}>Start over</button>
-        </div>
-      {/if}
 
-      {#if showGitHubPrompt}
-        <div class="github-prompt-overlay" role="dialog" aria-label="Push to GitHub">
-          <div class="github-prompt">
-            <label for="ship-repo-input" class="github-prompt-label">Repository name</label>
-            <input id="ship-repo-input" type="text" class="github-prompt-input" placeholder="my-project" bind:value={repoNameInput} onkeydown={(e) => e.key === 'Enter' && submitShipPush()} />
-            <div class="github-prompt-actions">
-              <button type="button" class="action-btn primary" onclick={submitShipPush} disabled={!repoNameInput.trim()}>Push to GitHub</button>
-              <button type="button" class="action-btn subtle" onclick={cancelShipGitHubPrompt}>Cancel</button>
+          {#if showGitHubPrompt}
+            <div class="github-prompt-overlay" role="dialog" aria-label="Push to GitHub">
+              <div class="github-prompt">
+                <h3>Push to GitHub</h3>
+                <label for="ship-repo-input" class="github-prompt-label">Repository Name</label>
+                <input
+                  id="ship-repo-input"
+                  type="text"
+                  class="github-prompt-input"
+                  placeholder="my-awesome-project"
+                  bind:value={repoNameInput}
+                  onkeydown={(e) => e.key === 'Enter' && submitShipPush()}
+                  autoFocus
+                />
+                <div class="github-prompt-actions">
+                  <button
+                    type="button"
+                    class="action-btn secondary"
+                    onclick={cancelShipGitHubPrompt}>Cancel</button
+                  >
+                  <button
+                    type="button"
+                    class="action-btn primary"
+                    onclick={submitShipPush}
+                    disabled={!repoNameInput.trim()}>Push</button
+                  >
+                </div>
+              </div>
             </div>
-          </div>
+          {/if}
         </div>
       {/if}
     </div>
-  {/if}
+  </div>
 </div>
 
 <style>
-  .ship-mode {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
+  /* Modal Overlay */
+  .ship-overlay {
+    position: fixed; /* Ensure it floats over everything */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 1rem;
   }
-  
+
+  .ship-modal {
+    background: white;
+    width: 100%;
+    max-width: 700px;
+    border-radius: 16px;
+    box-shadow:
+      0 20px 25px -5px rgba(0, 0, 0, 0.1),
+      0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+  }
+
+  @keyframes modalSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Header */
   .ship-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: #ffffff;
+  }
+
+  .header-content h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 0.25rem 0;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  .close-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: -0.5rem;
+    margin-right: -0.5rem;
+  }
+
+  .close-btn:hover {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  /* Content Area */
+  .ship-content {
+    overflow-y: auto;
+    padding: 2rem;
+    flex: 1;
+    background: #f8fafc;
+  }
+
+  /* Form Styles */
+  .form-group {
     margin-bottom: 2rem;
   }
-  
-  .ship-header h1 {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .subtitle {
-    color: #666;
-    font-size: 1.1rem;
-  }
-  
-  .start-section {
-    background: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  
-  .form-group {
-    margin-bottom: 1.5rem;
-  }
-  
+
   .form-group label {
     display: block;
-    margin-bottom: 0.5rem;
     font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
   }
-  
-  .form-group textarea {
+
+  textarea {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
     font-family: inherit;
     font-size: 1rem;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+    background: white;
   }
-  
-  .preferences {
-    margin: 2rem 0;
-    padding: 1.5rem;
-    background: #f8fafc;
-    border-radius: 8px;
+
+  textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .preferences-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .preference-col h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+  }
+
+  .preference-item {
+    margin-bottom: 0.75rem;
+  }
+
+  .preference-item label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 0.5rem 0.75rem;
     border: 1px solid #e2e8f0;
+    border-radius: 6px;
   }
-  
-  .preferences h3 {
-    margin-bottom: 1rem;
-    color: #334155;
+
+  .pref-label {
+    font-size: 0.9rem;
+    color: #475569;
+    font-weight: 500;
   }
-  
-  .preference-row {
-    margin-bottom: 1rem;
+
+  select {
+    border: none;
+    background: transparent;
+    font-size: 0.9rem;
+    color: #1e293b;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    text-align: right;
   }
-  
-  .preference-row label {
+
+  .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .checkbox-label {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    color: #475569;
-  }
-  
-  .preference-row select {
-    padding: 0.5rem 2rem 0.5rem 0.75rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    background-color: white;
+    cursor: pointer;
     font-size: 0.95rem;
+    color: #334155;
+  }
+
+  .checkbox-label input[type='checkbox'] {
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: #3b82f6;
     cursor: pointer;
   }
-  
+
+  /* Footer Actions */
+  .footer-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    margin-top: auto;
+  }
+
   .ai-disclaimer {
-    font-size: 0.75rem;
-    color: #6b7280;
-    margin: 0 0 1rem;
-    line-height: 1.3;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-align: center;
+    margin: 0;
   }
 
   .start-button {
-    background: #007bff;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     border: none;
-    padding: 0.75rem 2rem;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  
-  .start-button:hover:not(:disabled) {
-    background: #0056b3;
-  }
-  
-  .start-button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-  
-  .session-section {
-    background: white;
-    padding: 2rem;
+    padding: 1rem;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      transform 0.1s,
+      box-shadow 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
   }
-  
+
+  .start-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 8px -1px rgba(59, 130, 246, 0.3);
+  }
+
+  .start-button:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .start-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #cbd5e1;
+    box-shadow: none;
+  }
+
+  /* Session View */
   .phase-indicator {
     margin-bottom: 2rem;
   }
-  
-  .phase-progress {
-    height: 8px;
-    background: #e9ecef;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 1rem;
+
+  .phase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
   }
-  
-  .progress-bar {
+
+  .current-phase {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+  }
+
+  .phase-progress-track {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
     height: 100%;
-    background: #007bff;
-    transition: width 0.3s;
+    background: #3b82f6;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
-  .phase-label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-  }
-  
+
   .status-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.875rem;
-    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.6rem;
+    border-radius: 99px;
   }
-  
+
   .status-badge.running {
-    background: #fff3cd;
-    color: #856404;
+    background: #e0f2fe;
+    color: #0284c7;
   }
-  
   .status-badge.completed {
-    background: #d4edda;
-    color: #155724;
+    background: #dcfce7;
+    color: #166534;
   }
-  
   .status-badge.failed {
-    background: #f8d7da;
-    color: #721c24;
+    background: #fee2e2;
+    color: #b91c1c;
   }
-  
-  .error-message {
-    background: #f8d7da;
-    color: #721c24;
+
+  /* Error Banner */
+  .error-banner {
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
     padding: 1rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-  }
-
-  .resume-actions {
-    margin-bottom: 1rem;
-  }
-
-  .resume-btn {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    border-radius: 6px;
-    cursor: pointer;
-    border: none;
-    background: #0EA5E9;
-    color: #fff;
-  }
-
-  .resume-btn:hover:not(:disabled) {
-    background: #0284c7;
-  }
-
-  .resume-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-  
-  .phase-results {
-    margin-top: 2rem;
-  }
-  
-  .phase-result {
-    padding: 1rem;
-    margin-bottom: 1rem;
-    background: #f9f9f9;
-    border-radius: 4px;
-    border-left: 4px solid #007bff;
-  }
-  
-  .phase-result h3 {
-    margin-bottom: 0.5rem;
-  }
-
-  .cdd-details {
-    margin-top: 1rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .cdd-details summary {
-    padding: 0.5rem 0.75rem;
-    background: #f0f4f8;
-    cursor: pointer;
-    font-weight: 600;
-  }
-
-  .cdd-content {
-    padding: 1rem;
-    background: #fafafa;
-  }
-
-  .cdd-section {
-    margin-bottom: 1rem;
-  }
-
-  .cdd-section:last-child {
-    margin-bottom: 0;
-  }
-
-  .cdd-section h4 {
-    margin-bottom: 0.35rem;
-    font-size: 0.95rem;
-    color: #333;
-  }
-
-  .cdd-section ul {
-    margin: 0.25rem 0 0 1rem;
-    padding: 0;
-  }
-
-  .cdd-section li {
-    margin-bottom: 0.25rem;
-  }
-
-  .phase-details {
-    margin-top: 1rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .phase-details summary {
-    padding: 0.5rem 0.75rem;
-    background: #f0f4f8;
-    cursor: pointer;
-    font-weight: 600;
-  }
-
-  .phase-details-content {
-    padding: 1rem;
-    background: #fafafa;
-  }
-
-  .phase-details-content h4 {
-    margin-bottom: 0.35rem;
-    font-size: 0.95rem;
-    color: #333;
-  }
-
-  .phase-details-content .spec-description,
-  .phase-details-content .plan-description {
-    margin-bottom: 0.75rem;
-    color: #374151;
-    line-height: 1.4;
-  }
-
-  .phase-details-content .text-muted {
-    color: #6b7280;
-    font-size: 0.875rem;
-  }
-
-  .plan-phase-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .plan-phase-list > li {
-    margin-bottom: 0.75rem;
-  }
-
-  .plan-step-list {
-    margin: 0.25rem 0 0 1rem;
-    padding: 0;
-    list-style: disc;
-  }
-
-  .plan-step-list li {
-    margin-bottom: 0.2rem;
-  }
-  
-  .completion-message {
-    text-align: center;
-    padding: 2rem;
-    background: #d4edda;
-    border-radius: 4px;
-    margin-top: 2rem;
-  }
-  
-  .completion-message h2 {
-    color: #155724;
-    margin-bottom: 0.5rem;
-  }
-
-  .start-over-btn {
-    margin-top: 1rem;
-    padding: 0.5rem 1.25rem;
-    font-size: 0.95rem;
-    border: 1px solid #155724;
-    background: transparent;
-    color: #155724;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-  }
-
-  .start-over-btn:hover {
-    background: #155724;
-    color: white;
-  }
-
-  .completion-actions {
+    border-radius: 8px;
     display: flex;
-    flex-wrap: wrap;
     gap: 0.75rem;
-    justify-content: center;
-    margin-top: 1rem;
-  }
-
-  .completion-actions .action-btn {
-    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Phase Cards */
+  .phase-results-scroll {
+    margin: -0.5rem;
+    padding: 0.5rem;
+  }
+
+  .phase-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .phase-card.completed {
+    border-left: 4px solid #3b82f6;
+  }
+
+  .phase-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .check-icon {
+    color: #22c55e;
+    font-weight: 800;
+  }
+
+  .phase-card-header h3 {
+    margin: 0;
+    font-size: 1rem;
     font-weight: 600;
-    border-radius: 6px;
+    color: #334155;
+  }
+
+  .phase-summary {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.9rem;
+  }
+
+  /* Completion Panel */
+  .completion-panel {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .completion-header h2 {
+    font-size: 1.5rem;
+    color: #1e293b;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .completion-header p {
+    color: #64748b;
+    margin-bottom: 1.5rem;
+  }
+
+  .action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .action-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    background: white;
+    border-radius: 8px;
     cursor: pointer;
+    transition: all 0.2s;
+    color: #475569;
+  }
+
+  .action-tile:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    color: #1e40af;
+  }
+
+  .action-tile.primary {
+    background: #f8fafc;
+  }
+
+  .secondary-actions {
+    margin-top: 1.5rem;
+  }
+
+  .text-btn {
+    background: none;
     border: none;
-    transition: background 0.2s, color 0.2s;
+    color: #94a3b8;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.9rem;
   }
 
-  .completion-actions .action-btn.success {
-    background: #10B981;
-    color: #fff;
+  .text-btn:hover {
+    color: #64748b;
   }
-  .completion-actions .action-btn.success:hover { background: #059669; }
 
-  .completion-actions .action-btn.primary {
-    background: #0EA5E9;
-    color: #fff;
-  }
-  .completion-actions .action-btn.primary:hover { background: #0052CC; }
-  .completion-actions .action-btn.primary:disabled { opacity: 0.6; cursor: not-allowed; }
-
-  .completion-actions .action-btn.secondary {
-    background: #e9ecef;
-    color: #155724;
-  }
-  .completion-actions .action-btn.secondary:hover { background: #dee2e6; }
-
+  /* GitHub Prompt */
   .github-prompt-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 50;
   }
 
   .github-prompt {
@@ -845,7 +889,7 @@
     padding: 1.25rem;
     border-radius: 8px;
     min-width: 280px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
   .github-prompt-label {
@@ -879,8 +923,18 @@
     cursor: pointer;
     border: none;
   }
-  .github-prompt .action-btn.primary { background: #0EA5E9; color: #fff; }
-  .github-prompt .action-btn.primary:hover:not(:disabled) { background: #0052CC; }
-  .github-prompt .action-btn.subtle { background: #e9ecef; color: #6c757d; }
-  .github-prompt .action-btn.subtle:hover { background: #dee2e6; }
+  .github-prompt .action-btn.primary {
+    background: #0ea5e9;
+    color: #fff;
+  }
+  .github-prompt .action-btn.primary:hover:not(:disabled) {
+    background: #0052cc;
+  }
+  .github-prompt .action-btn.subtle {
+    background: #e9ecef;
+    color: #6c757d;
+  }
+  .github-prompt .action-btn.subtle:hover {
+    background: #dee2e6;
+  }
 </style>
