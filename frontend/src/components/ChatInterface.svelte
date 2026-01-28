@@ -83,27 +83,7 @@
     if (Array.isArray(content)) return content;
     // Basic text content might contain mermaid code blocks
     // return flattenTextContent(content);
-    return [{ type: 'text', text: content }];
-  }
-  const mermaidRegex = /```mermaid\s*([\s\S]*?)```/g;
-    let lastIndex = 0;
-    let match;
-    while ((match = mermaidRegex.exec(content)) !== null) {
-      if (match.index > lastIndex) {
-        const text = content.slice(lastIndex, match.index).trim();
-        if (text) blocks.push({ type: 'text', content: text });
-      }
-      blocks.push({ type: 'mermaid', content: match[1].trim() });
-      lastIndex = match.index + match[0].length;
-    }
-    if (lastIndex < content.length) {
-      const text = content.slice(lastIndex).trim();
-      if (text) blocks.push({ type: 'text', content: text });
-    }
-    if (blocks.length === 0 && typeof content === 'string' && content.trim()) {
-      blocks.push({ type: 'text', content: content.trim() });
-    }
-    return blocks;
+    return [{ type: 'text', content: content }];
   }
 
   function flattenMessagesForChatApi(
@@ -113,7 +93,10 @@
       .filter((m) => m.role === 'user' || m.role === 'assistant')
       .map((m) => ({
         role: m.role as 'user' | 'assistant',
-        content: typeof m.content === 'string' ? m.content : flattenTextContent(m.content),
+        content:
+          typeof m.content === 'string'
+            ? m.content
+            : m.content.map((b) => (b.type === 'text' ? b.content : '')).join('\n'),
       }))
       .filter((m) => (m.content || '').trim().length > 0);
   }
@@ -212,11 +195,17 @@
         // const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
         // DISABLED FOR DEBUG
         // await generatePlan(text, ws);
-        
-        // Mock success for now
-        messages = [...messages, { role: 'assistant', content: "Plan generation is currently disabled for debugging.", timestamp: Date.now() }];
-        streaming = false;
 
+        // Mock success for now
+        messages = [
+          ...messages,
+          {
+            role: 'assistant',
+            content: 'Plan generation is currently disabled for debugging.',
+            timestamp: Date.now(),
+          },
+        ];
+        streaming = false;
       } catch (e: any) {
         lastError = true;
         streaming = false;
@@ -224,35 +213,41 @@
       }
       return;
     }
-    
+
     if (mode === 'code' && chatMode === 'spec') {
-       try {
+      try {
         // const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
         // DISABLED FOR DEBUG
         // await startSpecSession(text, ws);
 
         // Mock success
-         messages = [...messages, { role: 'assistant', content: "Spec generation is currently disabled for debugging.", timestamp: Date.now() }];
-         streaming = false;
-
-       } catch (e: any) {
-         lastError = true;
-         streaming = false;
-         showToast(e.message || 'Error starting spec session', 'error');
-       }
-       return;
+        messages = [
+          ...messages,
+          {
+            role: 'assistant',
+            content: 'Spec generation is currently disabled for debugging.',
+            timestamp: Date.now(),
+          },
+        ];
+        streaming = false;
+      } catch (e: any) {
+        lastError = true;
+        streaming = false;
+        showToast(e.message || 'Error starting spec session', 'error');
+      }
+      return;
     }
 
     if (mode === 'code') {
-       // Standard code mode message
-       // We'll treat 'code' mode in 'normal' chat submode as a regular chat
-       // unless we want to trigger specific coding actions.
-       // For now, let's route to standard stream for 'normal' submode, 
-       // or specialized streams for others if implemented.
-       // However, pure "Code Mode" usually implies `codeSessionsStore`.
-       // Let's use runCodeModeStream if intended.
-       await runCodeModeStream(controller.signal);
-       return;
+      // Standard code mode message
+      // We'll treat 'code' mode in 'normal' chat submode as a regular chat
+      // unless we want to trigger specific coding actions.
+      // For now, let's route to standard stream for 'normal' submode,
+      // or specialized streams for others if implemented.
+      // However, pure "Code Mode" usually implies `codeSessionsStore`.
+      // Let's use runCodeModeStream if intended.
+      await runCodeModeStream(controller.signal);
+      return;
     }
 
     if (mode === 'design') {
