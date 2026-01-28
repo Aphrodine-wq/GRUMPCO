@@ -574,11 +574,11 @@
     language: string;
     workspaceRoot?: string;
   }) {
-    chatModeStore.setMode('code');
-    if (detail.workspaceRoot) {
-      workspaceStore.setWorkspace(detail.workspaceRoot);
-      workspaceInput = detail.workspaceRoot;
-    }
+    // chatModeStore.setMode('code');
+    // if (detail.workspaceRoot) {
+    //   workspaceStore.setWorkspace(detail.workspaceRoot);
+    //   workspaceInput = detail.workspaceRoot;
+    // }
     inputText = `Generate ${detail.framework} code in ${detail.language} based on this architecture diagram:\n\n\`\`\`mermaid\n${detail.mermaidCode}\n\`\`\`\n\nCreate a complete project structure with all necessary files.`;
     await tick();
     sendMessage();
