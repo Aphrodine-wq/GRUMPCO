@@ -1187,5 +1187,22 @@
     .message-wrapper.assistant .message-bubble {
       padding-left: 11px;
     }
+
+    /* Empty state mobile adjustments */
+    .empty-state {
+      padding: 48px 16px;
+      gap: 20px;
+      min-height: 200px;
+    }
+
+    .empty-title {
+      font-size: 20px;
+    }
+
+    .empty-text {
+      font-size: 14px;
+      max-width: 100%;
+      padding: 0 12px;
+    }
   }
 </style>

@@ -64,6 +64,7 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    z-index: 10;
   }
 
   .blob-outer {
@@ -162,5 +163,28 @@
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-6px); }
     75% { transform: translateX(6px); }
+  }
+
+  /* Mobile responsiveness - ensure blob is visible and properly sized */
+  @media (max-width: 768px) {
+    .grump-blob-container {
+      /* Ensure blob doesn't shrink too much on mobile */
+      min-width: var(--blob-size);
+      min-height: var(--blob-size);
+    }
+
+    .grump-blob--lg {
+      /* Slightly reduce size on mobile for better fit */
+      --blob-size: 64px;
+    }
+
+    .grump-blob--xl {
+      --blob-size: 96px;
+    }
+
+    .blob-outer {
+      /* Reduce glow effect on mobile for better visibility */
+      filter: drop-shadow(0 0 8px var(--glow-color)) drop-shadow(0 0 15px rgba(0, 102, 255, 0.15));
+    }
   }
 </style>
