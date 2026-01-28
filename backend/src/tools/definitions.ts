@@ -246,16 +246,186 @@ export const listDirectoryTool: Anthropic.Tool = {
 };
 
 // ============================================================================
-// ALL TOOLS ARRAY
+// CODEBASE SEARCH TOOL
 // ============================================================================
 
-export const AVAILABLE_TOOLS: Anthropic.Tool[] = [
+export const codebaseSearchInputSchema = z.object({
+  query: z.string().describe('Search query or path pattern (e.g. "auth", "*.ts")'),
+  workingDirectory: z
+    .string()
+    .optional()
+    .describe('Directory to search (default: workspace root)'),
+  maxResults: z
+    .number()
+    .optional()
+    .default(20)
+    .describe('Maximum number of matching paths or snippets to return'),
+});
+
+export type CodebaseSearchInput = z.infer<typeof codebaseSearchInputSchema>;
+
+export const codebaseSearchTool: Anthropic.Tool = {
+  name: 'codebase_search',
+  description:
+    'Search the codebase for files or content matching a query. Use for finding relevant files before reading. Prefer list_directory + file_read for targeted exploration.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: 'Search query or path pattern' },
+      workingDirectory: { type: 'string', description: 'Directory to search (default: workspace root)' },
+      maxResults: { type: 'number', description: 'Maximum results (default 20)' },
+    },
+    required: ['query'],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+// ============================================================================
+// DB SCHEMA TOOL (schema-from-diagram/PRD, Drizzle/SQL)
+// ============================================================================
+
+export const generateDbSchemaInputSchema = z.object({
+  description: z.string().describe('Architecture description, PRD excerpt, or diagram/design summary'),
+  targetDb: z
+    .enum(['sqlite', 'postgres', 'mysql'])
+    .optional()
+    .default('sqlite')
+    .describe('Target database type'),
+  format: z
+    .enum(['sql', 'drizzle'])
+    .optional()
+    .default('sql')
+    .describe('Output format: sql (DDL only) or drizzle (DDL + Drizzle schema)'),
+});
+
+export type GenerateDbSchemaInput = z.infer<typeof generateDbSchemaInputSchema>;
+
+export const generateDbSchemaTool: Anthropic.Tool = {
+  name: 'generate_db_schema',
+  description:
+    'Generate database schema (SQL DDL and optionally Drizzle) from an architecture description, PRD excerpt, or diagram summary. Use for user DB creation, not G-Rump internal DB.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      description: { type: 'string', description: 'Architecture/PRD/diagram description' },
+      targetDb: { type: 'string', enum: ['sqlite', 'postgres', 'mysql'], description: 'Target DB (default sqlite)' },
+      format: { type: 'string', enum: ['sql', 'drizzle'], description: 'Output format (default sql)' },
+    },
+    required: ['description'],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+// ============================================================================
+// MIGRATIONS TOOL
+// ============================================================================
+
+export const generateMigrationsInputSchema = z.object({
+  schemaDdl: z.string().describe('Existing schema DDL (CREATE TABLE ...) to turn into migrations'),
+  targetDb: z
+    .enum(['sqlite', 'postgres'])
+    .optional()
+    .default('sqlite')
+    .describe('Target database for migration SQL'),
+});
+
+export type GenerateMigrationsInput = z.infer<typeof generateMigrationsInputSchema>;
+
+export const generateMigrationsTool: Anthropic.Tool = {
+  name: 'generate_migrations',
+  description:
+    'Generate migration files (raw SQL) from schema DDL for SQLite or Postgres. Does not apply migrations; output is for user to review and apply with guard rails.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      schemaDdl: { type: 'string', description: 'Schema DDL to migrate' },
+      targetDb: { type: 'string', enum: ['sqlite', 'postgres'], description: 'Target DB (default sqlite)' },
+    },
+    required: ['schemaDdl'],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+// ============================================================================
+// BROWSER TOOLS (headless screenshot / run script; requires Playwright)
+// ============================================================================
+
+export const screenshotUrlInputSchema = z.object({
+  url: z.string().url().describe('URL to capture (e.g. https://example.com)'),
+});
+
+export type ScreenshotUrlInput = z.infer<typeof screenshotUrlInputSchema>;
+
+export const screenshotUrlTool: Anthropic.Tool = {
+  name: 'screenshot_url',
+  description:
+    'Capture a screenshot of a URL using headless browser. Requires Playwright. Use for E2E checks or visual verification.',
+  input_schema: {
+    type: 'object',
+    properties: { url: { type: 'string', description: 'URL to capture' } },
+    required: ['url'],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+export const browserRunScriptInputSchema = z.object({
+  steps: z
+    .array(
+      z.object({
+        action: z.enum(['navigate', 'click', 'type', 'screenshot', 'wait']),
+        url: z.string().optional(),
+        selector: z.string().optional(),
+        value: z.string().optional(),
+        timeout: z.number().optional(),
+      })
+    )
+    .describe('Ordered steps: navigate, click, type, screenshot, wait'),
+});
+
+export type BrowserRunScriptInput = z.infer<typeof browserRunScriptInputSchema>;
+
+export const browserRunScriptTool: Anthropic.Tool = {
+  name: 'browser_run_script',
+  description:
+    'Run a short browser script (navigate, click, type, screenshot, wait). Requires Playwright. Use for E2E-style checks.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      steps: {
+        type: 'array',
+        description: 'Ordered steps',
+        items: {
+          type: 'object',
+          properties: {
+            action: { type: 'string', enum: ['navigate', 'click', 'type', 'screenshot', 'wait'] },
+            url: { type: 'string' },
+            selector: { type: 'string' },
+            value: { type: 'string' },
+            timeout: { type: 'number' },
+          },
+          required: ['action'],
+        },
+      },
+    },
+    required: ['steps'],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+// ============================================================================
+// ALL TOOLS ARRAY (base tools; MCP/dynamic tools can be added via getTools())
+// ============================================================================
+
+const BASE_TOOLS: Anthropic.Tool[] = [
   bashExecuteTool,
   fileReadTool,
   fileWriteTool,
   fileEditTool,
   listDirectoryTool,
+  codebaseSearchTool,
+  generateDbSchemaTool,
+  generateMigrationsTool,
+  screenshotUrlTool,
+  browserRunScriptTool,
 ];
+
+/** Tools that can be extended by MCP or dynamic registration. */
+export const AVAILABLE_TOOLS: Anthropic.Tool[] = [...BASE_TOOLS];
 
 // ============================================================================
 // TOOL RESULT TYPE

@@ -29,8 +29,9 @@ const client = new Anthropic({
 });
 
 // Create resilient wrapper for Claude API calls
+// Type assertion: since we never pass stream: true, the response is always a Message
 const resilientClaudeCall = withResilience(
-  async (params: Parameters<typeof client.messages.create>[0]) => {
+  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
     return await client.messages.create(params);
   },
   'claude-context'

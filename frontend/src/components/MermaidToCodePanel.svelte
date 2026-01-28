@@ -202,7 +202,7 @@
       <div class="preview-section">
         <div class="preview-header">
           <span class="preview-title">Preview</span>
-          <button class="preview-toggle" on:click={togglePreview}>Hide</button>
+          <button class="preview-toggle" onclick={togglePreview}>Hide</button>
         </div>
         <div class="preview-content">
           <div class="preview-item">
@@ -217,7 +217,7 @@
         </div>
       </div>
     {:else if !isGenerating}
-      <button class="preview-toggle" on:click={togglePreview}>Show Preview</button>
+      <button class="preview-toggle" onclick={togglePreview}>Show Preview</button>
     {/if}
 
     {#if error}
@@ -234,7 +234,7 @@
 
     <button
       class="generate-btn"
-      on:click={generateCode}
+      onclick={generateCode}
       disabled={isGenerating || !mermaidCode || !isValidMermaid}
       title="Generate code (Ctrl/Cmd + Enter)"
     >

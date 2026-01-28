@@ -32,8 +32,8 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.375rem 0.75rem;
-    background: #FFFFFF;
-    border: 1px solid #000000;
+    background: #EBEBEB;
+    border-radius: 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
     color: #000000;

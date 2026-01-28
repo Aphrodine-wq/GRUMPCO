@@ -1,18 +1,15 @@
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
+import { fetchApi, getApiBase } from '../lib/api.js';
+import { getCurrentProjectId } from './projectStore.js';
+import { DEFAULT_PREFERENCES } from '../types/workflow';
 import type {
   WorkflowState,
   WorkflowPhase,
   GenerationPreferences,
   SystemArchitecture,
   PRD,
-  CodeGenSession,
-  DEFAULT_PREFERENCES
+  CodeGenSession
 } from '../types/workflow';
-
-// API Base URL
-const API_BASE = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL
-  ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
-  : 'http://localhost:3000';
 
 // Create store
 const state = writable<WorkflowState>({
@@ -29,6 +26,8 @@ const state = writable<WorkflowState>({
 
 // Polling interval for codegen status
 let statusPollingInterval: ReturnType<typeof setInterval> | null = null;
+// SSE for codegen.ready / codegen.failed
+let codegenEventSource: EventSource | null = null;
 
 // Derived stores
 export const phase = derived(state, s => s.phase);
@@ -78,9 +77,8 @@ export async function* streamArchitecture(
   }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/architecture/generate-stream`, {
+    const response = await fetchApi('/api/architecture/generate-stream', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         projectDescription,
         projectType: options?.projectType || 'fullstack',
@@ -147,10 +145,7 @@ export async function* streamArchitecture(
 
 // PHASE 2: PRD GENERATION
 export async function* streamPrd(): AsyncGenerator<string> {
-  let currentArchitecture: SystemArchitecture | null = null;
-  architecture.subscribe(a => {
-    currentArchitecture = a;
-  })();
+  const currentArchitecture = get(architecture);
 
   if (!currentArchitecture) {
     throw new Error('No architecture available - generate architecture first');
@@ -166,9 +161,8 @@ export async function* streamPrd(): AsyncGenerator<string> {
   }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/prd/generate-stream`, {
+    const response = await fetchApi('/api/prd/generate-stream', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         architectureId: currentArchitecture.id,
         projectName: currentArchitecture.projectName,
@@ -233,24 +227,17 @@ export async function* streamPrd(): AsyncGenerator<string> {
 }
 
 // PHASE 3: CODE GENERATION
-export async function startCodeGeneration(): Promise<void> {
-  let currentArchitecture: SystemArchitecture | null = null;
-  let currentPrd: PRD | null = null;
-  let currentPreferences: GenerationPreferences = DEFAULT_PREFERENCES;
-
-  architecture.subscribe(a => {
-    currentArchitecture = a;
-  })();
-  prd.subscribe(p => {
-    currentPrd = p;
-  })();
-  preferences.subscribe(p => {
-    currentPreferences = p;
-  })();
+/** projectIdOverride: when starting from chat, pass currentSession.projectId to unify project context. */
+export async function startCodeGeneration(projectIdOverride?: string | null): Promise<void> {
+  const currentArchitecture = get(architecture);
+  const currentPrd = get(prd);
+  const currentPreferences = get(preferences);
 
   if (!currentArchitecture || !currentPrd) {
     throw new Error('Architecture and PRD required before code generation');
   }
+
+  const projectId = projectIdOverride ?? getCurrentProjectId() ?? undefined;
 
   state.update(s => ({
     ...s,
@@ -259,15 +246,15 @@ export async function startCodeGeneration(): Promise<void> {
   }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/codegen/start`, {
+    const response = await fetchApi('/api/codegen/start', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prdId: currentPrd.id,
         architectureId: currentArchitecture.id,
         preferences: currentPreferences,
         prd: currentPrd,
         architecture: currentArchitecture,
+        projectId,
       }),
     });
 
@@ -290,6 +277,48 @@ export async function startCodeGeneration(): Promise<void> {
 
     // Start polling for status
     startStatusPolling(data.sessionId);
+    // Subscribe to SSE for codegen.ready / codegen.failed
+    if (typeof EventSource !== 'undefined') {
+      const url = getApiBase() + '/api/events/stream?sessionId=' + encodeURIComponent(data.sessionId);
+      const es = new EventSource(url);
+      codegenEventSource = es;
+      es.onmessage = (e: MessageEvent) => {
+        try {
+          const { event, payload } = JSON.parse(e.data);
+          if (payload?.sessionId !== data.sessionId) return;
+          if (event === 'codegen.ready') {
+            fetchApi(`/api/codegen/status/${data.sessionId}`)
+              .then((r) => r.ok ? r.json() : null)
+              .then((d) => {
+                if (d) {
+                  state.update(s => ({
+                    ...s,
+                    codegenSession: {
+                      sessionId: d.sessionId,
+                      status: d.status,
+                      progress: d.progress || 0,
+                      agents: d.agents,
+                      generatedFileCount: d.generatedFileCount || 0,
+                      error: d.error,
+                    },
+                    phase: 'complete',
+                  }));
+                }
+                stopCodegenEventSource();
+                stopStatusPolling();
+              });
+          } else if (event === 'codegen.failed') {
+            state.update(s => ({
+              ...s,
+              error: (payload.error as string) || 'Code generation failed',
+            }));
+            stopCodegenEventSource();
+            stopStatusPolling();
+          }
+        } catch (_) {}
+      };
+      es.onerror = () => stopCodegenEventSource();
+    }
   } catch (err) {
     state.update(s => ({
       ...s,
@@ -306,7 +335,7 @@ function startStatusPolling(sessionId: string) {
 
   statusPollingInterval = setInterval(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/codegen/status/${sessionId}`);
+      const response = await fetchApi(`/api/codegen/status/${sessionId}`);
       if (!response.ok) return;
 
       const data = await response.json();
@@ -326,12 +355,14 @@ function startStatusPolling(sessionId: string) {
       if (data.status === 'completed') {
         state.update(s => ({ ...s, phase: 'complete' }));
         stopStatusPolling();
+        stopCodegenEventSource();
       } else if (data.status === 'failed') {
         state.update(s => ({
           ...s,
           error: data.error || 'Code generation failed',
         }));
         stopStatusPolling();
+        stopCodegenEventSource();
       }
     } catch (err) {
       console.error('Status polling error:', err);
@@ -346,12 +377,25 @@ function stopStatusPolling() {
   }
 }
 
+function stopCodegenEventSource() {
+  if (codegenEventSource) {
+    codegenEventSource.close();
+    codegenEventSource = null;
+  }
+}
+
 // DOWNLOAD
+function parseDownloadFilename(contentDisposition: string | null): string {
+  if (!contentDisposition) return 'generated-project.zip';
+  const quoted = contentDisposition.match(/filename="([^"]*)"/);
+  if (quoted?.[1]) return decodeURIComponent(quoted[1].replace(/^"(.*)"$/, '$1'));
+  const encoded = contentDisposition.match(/filename\*=(?:UTF-8'')?([^;]+)/);
+  if (encoded?.[1]) return decodeURIComponent(encoded[1].trim());
+  return 'generated-project.zip';
+}
+
 export async function downloadProject(): Promise<void> {
-  let currentSession: CodeGenSession | null = null;
-  codegenSession.subscribe(s => {
-    currentSession = s;
-  })();
+  const currentSession = get(codegenSession);
 
   if (!currentSession?.sessionId) {
     throw new Error('No code generation session');
@@ -359,12 +403,34 @@ export async function downloadProject(): Promise<void> {
 
   const sessionId = currentSession.sessionId;
 
-  // TODO: Implement actual ZIP download when backend supports it
-  const response = await fetch(`${API_BASE}/api/codegen/download/${sessionId}`);
-  const data = await response.json();
+  try {
+    const response = await fetchApi(`/api/codegen/download/${sessionId}`);
 
-  console.log('Download info:', data);
-  alert(`Download ready: ${data.fileCount} files generated`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const message = (errorData as { error?: string }).error ?? `Download failed: ${response.status}`;
+      state.update(s => ({ ...s, error: message }));
+      throw new Error(message);
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition');
+    const filename = parseDownloadFilename(disposition);
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename.endsWith('.zip') ? filename : `${filename}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (err) {
+    if (err instanceof Error && !(err.message.startsWith('Download failed') || err.message.startsWith('No code generation'))) {
+      state.update(s => ({ ...s, error: err.message }));
+    }
+    throw err;
+  }
 }
 
 // UTILITIES

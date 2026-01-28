@@ -1,6 +1,7 @@
 /**
  * Tool Execution Service
- * Handles execution of all available tools with security validation
+ * Handles execution of all available tools with security validation.
+ * Uses pathPolicyService for guard rails (blocklist/allowlist).
  */
 
 import path from 'path';
@@ -8,6 +9,7 @@ import fs from 'fs/promises';
 import { execSync } from 'child_process';
 import { ToolExecutionResult } from '../tools/definitions.js';
 import { logger } from '../utils/logger.js';
+import { resolvePath, type PathOperation } from './pathPolicyService.js';
 
 // ============================================================================
 // DANGEROUS COMMANDS - BLOCKED
@@ -30,54 +32,65 @@ const DANGEROUS_COMMANDS = [
   'poweroff',
 ];
 
+/** When STRICT_COMMAND_ALLOWLIST=true, only these basenames are allowed for bash_execute. */
+const STRICT_ALLOWLIST = process.env.STRICT_COMMAND_ALLOWLIST === 'true';
+const ALLOWED_COMMANDS = new Set(['npm', 'npx', 'node', 'git', 'pnpm', 'yarn', 'tsx', 'ts-node']);
+
 // ============================================================================
 // TOOL EXECUTION SERVICE
 // ============================================================================
 
 export class ToolExecutionService {
   private workspaceRoot: string;
+  private allowedDirs: string[];
 
-  constructor(workspaceRoot: string = process.env.WORKSPACE_ROOT || '/tmp/workspace') {
-    this.workspaceRoot = workspaceRoot;
+  constructor(
+    workspaceRoot: string = process.env.WORKSPACE_ROOT || '/tmp/workspace',
+    options?: { allowedDirs?: string[] }
+  ) {
+    this.workspaceRoot = path.resolve(workspaceRoot);
+    this.allowedDirs = options?.allowedDirs ?? [];
   }
 
   /**
-   * Validate a file path to prevent directory traversal
+   * Validate a file path using path policy (blocklist, allowlist, traversal).
+   * Returns resolved path when valid so callers use a single canonical path.
    */
-  private validatePath(requestedPath: string): { valid: boolean; error?: string } {
-    // Normalize the path
-    const normalized = path.normalize(requestedPath);
-    const resolved = path.resolve(this.workspaceRoot, normalized);
-
-    // Check if the resolved path is within the workspace
-    if (!resolved.startsWith(this.workspaceRoot)) {
-      return {
-        valid: false,
-        error: `Path traversal detected: requested path is outside workspace root`,
-      };
+  private validatePath(
+    requestedPath: string,
+    operation: PathOperation = 'read'
+  ): { valid: boolean; error?: string; resolvedPath?: string } {
+    const result = resolvePath(requestedPath, operation, {
+      workspaceRoot: this.workspaceRoot,
+      allowedDirs: this.allowedDirs,
+      allowlistOnly: true,
+    });
+    if (result.ok) {
+      return { valid: true, resolvedPath: result.resolved };
     }
-
-    // Check for suspicious patterns
-    if (normalized.includes('..')) {
-      return {
-        valid: false,
-        error: `Invalid path pattern: cannot use .. in paths`,
-      };
-    }
-
-    return { valid: true };
+    return { valid: false, error: result.reason };
   }
 
   /**
-   * Validate a bash command for dangerous operations
+   * Validate a bash command for dangerous operations.
+   * When STRICT_COMMAND_ALLOWLIST=true, only ALLOWED_COMMANDS (npm, npx, git, etc.) are allowed.
    */
   private validateCommand(command: string): { valid: boolean; error?: string } {
-    // Check for dangerous commands
     for (const dangerous of DANGEROUS_COMMANDS) {
       if (command.toLowerCase().includes(dangerous.toLowerCase())) {
+        return { valid: false, error: `Dangerous command blocked: ${dangerous}` };
+      }
+    }
+
+    if (STRICT_ALLOWLIST) {
+      const trimmed = command.trim();
+      const first = trimmed.split(/\s+/)[0] ?? '';
+      const base = path.basename(first.replace(/^[\s"']+|["']$/g, ''));
+      const name = base.toLowerCase();
+      if (!ALLOWED_COMMANDS.has(name)) {
         return {
           valid: false,
-          error: `Dangerous command blocked: ${dangerous}`,
+          error: `Command not in allowlist (STRICT_COMMAND_ALLOWLIST): ${base}. Allowed: ${[...ALLOWED_COMMANDS].join(', ')}.`,
         };
       }
     }
@@ -108,8 +121,9 @@ export class ToolExecutionService {
       }
 
       // Validate working directory if provided
+      let cwd = this.workspaceRoot;
       if (workingDirectory) {
-        const dirValidation = this.validatePath(workingDirectory);
+        const dirValidation = this.validatePath(workingDirectory, 'list');
         if (!dirValidation.valid) {
           return {
             success: false,
@@ -118,10 +132,8 @@ export class ToolExecutionService {
             executionTime: Date.now() - startTime,
           };
         }
+        cwd = dirValidation.resolvedPath ?? path.resolve(this.workspaceRoot, workingDirectory);
       }
-
-      // Use workspace root or provided directory
-      const cwd = workingDirectory ? path.resolve(this.workspaceRoot, workingDirectory) : this.workspaceRoot;
 
       // Execute command with timeout
       const output = execSync(command, {
@@ -182,8 +194,7 @@ export class ToolExecutionService {
     const startTime = Date.now();
 
     try {
-      // Validate path
-      const validation = this.validatePath(filePath);
+      const validation = this.validatePath(filePath, 'read');
       if (!validation.valid) {
         return {
           success: false,
@@ -193,7 +204,7 @@ export class ToolExecutionService {
         };
       }
 
-      const resolvedPath = path.resolve(this.workspaceRoot, filePath);
+      const resolvedPath = validation.resolvedPath!;
       const content = await fs.readFile(resolvedPath, encoding);
 
       return {
@@ -225,8 +236,7 @@ export class ToolExecutionService {
     const startTime = Date.now();
 
     try {
-      // Validate path
-      const validation = this.validatePath(filePath);
+      const validation = this.validatePath(filePath, 'write');
       if (!validation.valid) {
         return {
           success: false,
@@ -236,7 +246,7 @@ export class ToolExecutionService {
         };
       }
 
-      const resolvedPath = path.resolve(this.workspaceRoot, filePath);
+      const resolvedPath = validation.resolvedPath!;
 
       // Check if file exists to determine change type
       let beforeContent = '';
@@ -245,26 +255,24 @@ export class ToolExecutionService {
         beforeContent = await fs.readFile(resolvedPath, 'utf8');
         changeType = 'modified';
       } catch {
-        // File doesn't exist, will be created
         changeType = 'created';
       }
 
-      // Create directories if needed
       if (createDirectories) {
         const dir = path.dirname(resolvedPath);
         await fs.mkdir(dir, { recursive: true });
       }
 
-      // Write file
       await fs.writeFile(resolvedPath, content, 'utf8');
 
+      const displayPath = path.relative(this.workspaceRoot, resolvedPath) || filePath;
       return {
         success: true,
-        output: `File ${changeType === 'created' ? 'created' : 'modified'} successfully: ${filePath}`,
+        output: `File ${changeType === 'created' ? 'created' : 'modified'} successfully: ${displayPath}`,
         toolName: 'file_write',
         executionTime: Date.now() - startTime,
         diff: {
-          filePath,
+          filePath: displayPath,
           beforeContent,
           afterContent: content,
           changeType,
@@ -297,8 +305,7 @@ export class ToolExecutionService {
     const startTime = Date.now();
 
     try {
-      // Validate path
-      const validation = this.validatePath(filePath);
+      const validation = this.validatePath(filePath, 'write');
       if (!validation.valid) {
         return {
           success: false,
@@ -308,7 +315,7 @@ export class ToolExecutionService {
         };
       }
 
-      const resolvedPath = path.resolve(this.workspaceRoot, filePath);
+      const resolvedPath = validation.resolvedPath!;
 
       // Read file - capture before content
       const beforeContent = await fs.readFile(resolvedPath, 'utf8');
@@ -379,8 +386,7 @@ export class ToolExecutionService {
     const startTime = Date.now();
 
     try {
-      // Validate path
-      const validation = this.validatePath(dirPath);
+      const validation = this.validatePath(dirPath, 'list');
       if (!validation.valid) {
         return {
           success: false,
@@ -390,7 +396,7 @@ export class ToolExecutionService {
         };
       }
 
-      const resolvedPath = path.resolve(this.workspaceRoot, dirPath);
+      const resolvedPath = validation.resolvedPath!;
       const files = await this._listDir(resolvedPath, recursive, '');
 
       return {
@@ -406,6 +412,64 @@ export class ToolExecutionService {
         success: false,
         error: error.message,
         toolName: 'list_directory',
+        executionTime: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
+   * Search codebase for paths matching query (substring or simple pattern).
+   * Returns up to maxResults paths as newline-separated list.
+   */
+  async searchCodebase(
+    query: string,
+    workingDirectory?: string,
+    maxResults: number = 20
+  ): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+    const dir = workingDirectory ?? '.';
+    const validation = this.validatePath(dir, 'list');
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: validation.error,
+        toolName: 'codebase_search',
+        executionTime: Date.now() - startTime,
+      };
+    }
+    try {
+      const basePath = validation.resolvedPath!;
+      const q = query.toLowerCase().replace(/\*\./g, '.').replace(/\*\*/g, '');
+      const collected: string[] = [];
+      const walk = async (p: string): Promise<void> => {
+        if (collected.length >= maxResults) return;
+        const entries = await fs.readdir(p, { withFileTypes: true }).catch(() => []);
+        for (const e of entries) {
+          const full = path.join(p, e.name);
+          const rel = full.replace(this.workspaceRoot, '').replace(/^[/\\]/, '');
+          if (e.isDirectory()) {
+            if (e.name !== 'node_modules' && e.name !== '.git') {
+              await walk(full);
+            }
+          } else {
+            if (collected.length >= maxResults) return;
+            const match = rel.toLowerCase().includes(q) || e.name.toLowerCase().includes(query.toLowerCase());
+            if (match) collected.push(rel);
+          }
+        }
+      };
+      await walk(basePath);
+      return {
+        success: true,
+        output: collected.length ? collected.join('\n') : `No paths matching "${query}" in ${dir}.`,
+        toolName: 'codebase_search',
+        executionTime: Date.now() - startTime,
+      };
+    } catch (err: unknown) {
+      return {
+        success: false,
+        error: (err as Error).message,
+        toolName: 'codebase_search',
         executionTime: Date.now() - startTime,
       };
     }

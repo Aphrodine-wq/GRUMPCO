@@ -10,10 +10,11 @@ COPY tsconfig.json ./
 # Install all dependencies (needed for TypeScript compilation)
 RUN npm ci
 
-# Copy source code
+# Copy source code and build scripts
 COPY src ./src
+COPY scripts ./scripts
 
-# Build TypeScript
+# Build TypeScript and copy migrations into dist
 RUN npm run build
 
 # Production stage
@@ -44,9 +45,9 @@ USER nodejs
 # Expose port
 EXPOSE 3000
 
-# Health check
+# Health check (align with railway.json and deploy workflow)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health/quick || exit 1
 
 # Start the application
 CMD ["node", "dist/index.js"]

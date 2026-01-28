@@ -30,6 +30,7 @@ export interface ErrorWithStatus extends Error {
   status?: number;
   statusCode?: number;
   code?: string;
+  retryAfter?: number;
 }
 
 export function isRetryableError(error: ErrorWithStatus): boolean {

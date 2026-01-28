@@ -158,6 +158,8 @@ export interface SpecGenerateRequest {
   sessionId: string;
   /** When provided, generate spec from context without requiring Q&A answers */
   designContext?: SpecDesignContext;
+  /** Optional head + mode prompt prepended for SHIP/chat consistency */
+  systemPromptPrefix?: string;
 }
 
 export interface SpecGenerateResponse {

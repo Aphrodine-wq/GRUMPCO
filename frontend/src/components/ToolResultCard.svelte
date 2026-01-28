@@ -43,16 +43,15 @@
 <style>
   .tool-result-card {
     padding: 0.75rem 1rem;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    border-radius: 4px;
+    background: #ECFDF5;
+    border-radius: 6px;
     margin: 0.5rem 0;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.8rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   }
   .tool-result-card.error {
-    background: #fef2f2;
-    border-color: #fecaca;
+    background: #FEF2F2;
   }
   .tool-result-header {
     display: flex;

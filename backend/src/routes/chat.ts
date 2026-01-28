@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { claudeServiceWithTools } from '../services/claudeServiceWithTools.js';
 import { logger } from '../utils/logger.js';
+import { MAX_CHAT_MESSAGE_LENGTH, MAX_CHAT_MESSAGES } from '../middleware/validator.js';
 
 const router = Router();
 
@@ -21,11 +22,16 @@ const router = Router();
  *   planMode?: boolean,     // Deprecated: use mode='plan'. If true, model outputs a plan only; no tools used
  *   planId?: string,         // For execute mode: plan ID to execute
  *   specSessionId?: string,  // For spec mode: spec session ID
- *   agentProfile?: string   // 'general' | 'router' | 'frontend' | 'backend' | 'devops' | 'test'
+ *   agentProfile?: string,  // 'general' | 'router' | 'frontend' | 'backend' | 'devops' | 'test'
+ *   provider?: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter',  // LLM provider
+ *   modelId?: string,       // e.g. 'claude-sonnet-4-20250514', 'glm-4', 'anthropic/claude-3.5-sonnet'
+ *   modelKey?: string,      // Alternative: single key (provider inferred from prefix, e.g. openrouter:...)
+ *   guardRailOptions?: { allowedDirs?: string[] }  // Path policy allowlist; confirmEveryWrite is UX-only
+ *   tier?: 'free' | 'pro' | 'team' | 'enterprise'  // For capability list and feature flags in prompt
  * }
  */
 router.post('/stream', async (req: Request, res: Response) => {
-  const { messages, workspaceRoot, mode, planMode, planId, specSessionId, agentProfile } = req.body;
+  const { messages, workspaceRoot, mode, planMode, planId, specSessionId, agentProfile, provider, modelId, modelKey, guardRailOptions, tier } = req.body;
 
   // Validate request
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -35,12 +41,29 @@ router.post('/stream', async (req: Request, res: Response) => {
     });
   }
 
-  // Validate message format
+  if (messages.length > MAX_CHAT_MESSAGES) {
+    return res.status(400).json({
+      error: 'Invalid request',
+      message: `Too many messages. Maximum ${MAX_CHAT_MESSAGES} messages per request.`,
+      type: 'validation_error',
+    });
+  }
+
+  // Validate message format and length
   for (const msg of messages) {
     if (!msg.role || !msg.content) {
       return res.status(400).json({
         error: 'Invalid message format',
         message: 'Each message must have role and content',
+        type: 'validation_error',
+      });
+    }
+    const content = typeof msg.content === 'string' ? msg.content : String(msg.content);
+    if (content.length > MAX_CHAT_MESSAGE_LENGTH) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: `Message content exceeds maximum length of ${MAX_CHAT_MESSAGE_LENGTH} characters.`,
+        type: 'validation_error',
       });
     }
   }
@@ -78,6 +101,30 @@ router.post('/stream', async (req: Request, res: Response) => {
     const profile = typeof agentProfile === 'string' && /^(router|frontend|backend|devops|test|general)$/.test(agentProfile)
       ? agentProfile
       : undefined;
+    // Model: provider + modelId, or modelKey (e.g. glm-4 → zhipu, copilot-* → copilot, openrouter:* → openrouter, else anthropic)
+    let reqProvider: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter' | undefined = provider;
+    let reqModelId: string | undefined = modelId;
+    if (modelKey && typeof modelKey === 'string') {
+      const [prefix, rest] = modelKey.split(':');
+      if (prefix === 'openrouter' && rest) {
+        reqProvider = 'openrouter';
+        reqModelId = rest;
+      } else {
+        reqModelId = modelKey;
+        if (!reqProvider) reqProvider = /^glm/i.test(modelKey) ? 'zhipu' : /^copilot/i.test(modelKey) ? 'copilot' : 'anthropic';
+      }
+    }
+    const guardOpts =
+      guardRailOptions && typeof guardRailOptions === 'object' && Array.isArray(guardRailOptions.allowedDirs)
+        ? { allowedDirs: guardRailOptions.allowedDirs as string[] }
+        : undefined;
+
+    const tierRaw = tier ?? (req.headers['x-tier'] as string);
+    const tierOverride =
+      typeof tierRaw === 'string' && ['free', 'pro', 'team', 'enterprise'].includes(tierRaw.toLowerCase())
+        ? tierRaw.toLowerCase() as 'free' | 'pro' | 'team' | 'enterprise'
+        : undefined;
+
     const stream = claudeServiceWithTools.generateChatStream(
       messages,
       abortController.signal,
@@ -85,7 +132,11 @@ router.post('/stream', async (req: Request, res: Response) => {
       chatMode,
       profile,
       planId,
-      specSessionId
+      specSessionId,
+      reqProvider,
+      reqModelId,
+      guardOpts,
+      tierOverride
     );
 
       // Stream events to client

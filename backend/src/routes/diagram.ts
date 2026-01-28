@@ -2,8 +2,9 @@ import express, { Request, Response, Router } from 'express';
 import { generateDiagram, generateDiagramStream } from '../services/claudeService.js';
 import { generateProjectZip } from '../services/codeGeneratorService.js';
 import { getRequestLogger } from '../middleware/logger.js';
-import { validateDiagramRequest, handleValidationErrors } from '../middleware/validator.js';
+import { validateDiagramRequest, handleDiagramValidationErrors } from '../middleware/validator.js';
 import { activeSseConnections } from '../middleware/metrics.js';
+import { sendServerError } from '../utils/errorResponse.js';
 import type { ConversationMessage, RefinementContext, DiagramType, TechStack, ClarificationResponse } from '../types/index.js';
 import type { UserPreferences } from '../prompts/index.js';
 
@@ -162,7 +163,7 @@ interface CodeGenRequestBody extends Request {
 router.post(
   '/generate-diagram',
   validateDiagramRequest,
-  handleValidationErrors,
+  handleDiagramValidationErrors,
   async (req: DiagramRequestBody, res: Response) => {
     const log = getRequestLogger();
     const { message, preferences } = req.body;
@@ -220,7 +221,7 @@ router.post(
 router.post(
   '/generate-diagram-stream',
   validateDiagramRequest,
-  handleValidationErrors,
+  handleDiagramValidationErrors,
   async (req: DiagramRequestBody, res: Response) => {
     const log = getRequestLogger();
     const { message, preferences, conversationHistory, refinementContext, clarificationAnswers } = req.body;
@@ -399,11 +400,7 @@ router.post('/generate-code', async (req: CodeGenRequestBody, res: Response) => 
 
     const err = error as ErrorWithStatus;
     log.error({ error: err.message }, 'Error generating code');
-    const status = err.status || 500;
-    res.status(status).json({
-      error: err.message || 'Failed to generate code',
-      type: 'internal_error',
-    });
+    sendServerError(res, err);
   }
 });
 

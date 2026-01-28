@@ -1,6 +1,32 @@
 /**
- * Agent Orchestrator
- * Manages multi-agent code generation pipeline
+ * Agent Orchestrator Service
+ *
+ * Manages multi-agent code generation pipeline for G-Rump. This is the core service
+ * that coordinates specialized AI agents (architect, frontend, backend, devops, test, docs)
+ * to generate complete codebases from PRDs and architecture specifications.
+ *
+ * ## Key Concepts
+ * - **GenerationSession**: Tracks the state of a code generation run
+ * - **AgentTask**: Individual agent's work item within a session
+ * - **MasterContext**: Shared context generated for all agents to ensure consistency
+ * - **WRunner**: Post-generation analysis and auto-fix system
+ *
+ * ## Pipeline Flow
+ * 1. Initialize session with PRD and preferences
+ * 2. Generate master context for agent coordination
+ * 3. Run architect agent to create generation plan
+ * 4. Run specialized agents (frontend, backend, devops, test, docs) in sequence
+ * 5. Run WRunner analysis and apply auto-fixes
+ * 6. Complete session and dispatch webhook
+ *
+ * ## Usage
+ * ```typescript
+ * const session = await initializeSession(request);
+ * await executeCodeGeneration(session, prd, architecture);
+ * const result = await getSession(session.sessionId);
+ * ```
+ *
+ * @module agentOrchestrator
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -17,7 +43,10 @@ import { getBackendAgentPrompt } from '../prompts/agents/backend-agent.js';
 import { getDevOpsAgentPrompt } from '../prompts/agents/devops-agent.js';
 import { getTestAgentPrompt } from '../prompts/agents/test-agent.js';
 import { getDocsAgentPrompt } from '../prompts/agents/docs-agent.js';
+import { getSecurityAgentPrompt } from '../prompts/agents/security-agent.js';
+import { getI18nAgentPrompt } from '../prompts/agents/i18n-agent.js';
 import { analyzeAgentReports, generateFixPlan, hasAutoFixableIssues } from './wrunnerService.js';
+import { dispatchWebhook } from './webhookService.js';
 import { analyzeCode, scanSecurity, optimizePerformance } from './claudeCodeService.js';
 import { generateMasterContext, enrichContextForAgent, generateContextSummary } from './contextService.js';
 import type {
@@ -50,15 +79,37 @@ const client = new Anthropic({
 const AGENT_QUALITY_STANDARD = 'claude-code' as const;
 
 // Create resilient wrapper for Claude API calls
+// Type assertion: since we never pass stream: true, the response is always a Message
 const resilientClaudeCall = withResilience(
-  async (params: Parameters<typeof client.messages.create>[0]) => {
+  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
     return await client.messages.create(params);
   },
   'claude-agent'
 );
 
 /**
- * Initialize generation session
+ * Initialize a new code generation session.
+ *
+ * Creates a new session with all agent tasks in 'pending' state. The session
+ * is persisted to the database immediately and can be retrieved later via
+ * {@link getSession}.
+ *
+ * @param request - Code generation request containing PRD ID, architecture ID,
+ *                  project preferences (framework, runtime, database), and optional project ID
+ * @returns Promise resolving to the initialized GenerationSession with unique sessionId
+ *
+ * @example
+ * ```typescript
+ * const session = await initializeSession({
+ *   prdId: 'prd_123',
+ *   architectureId: 'arch_456',
+ *   preferences: {
+ *     frontendFramework: 'vue',
+ *     backendRuntime: 'node',
+ *     database: 'postgres'
+ *   }
+ * });
+ * ```
  */
 export async function initializeSession(request: CodeGenRequest): Promise<GenerationSession> {
   const db = getDatabase();
@@ -71,6 +122,7 @@ export async function initializeSession(request: CodeGenRequest): Promise<Genera
     architectureId: request.architectureId,
     createdAt: new Date().toISOString(),
     preferences: request.preferences,
+    projectId: request.projectId,
     agents: {
       architect: initializeAgentTask('architect', 'Validate PRD and create generation plan'),
       frontend: initializeAgentTask('frontend', 'Generate frontend components and pages'),
@@ -78,6 +130,9 @@ export async function initializeSession(request: CodeGenRequest): Promise<Genera
       devops: initializeAgentTask('devops', 'Generate Docker and CI/CD configs'),
       test: initializeAgentTask('test', 'Generate test suites'),
       docs: initializeAgentTask('docs', 'Generate documentation'),
+      security: initializeAgentTask('security', 'Review generated code for security issues'),
+      i18n: initializeAgentTask('i18n', 'Suggest or add i18n structure'),
+      wrunner: initializeAgentTask('wrunner', 'WRunner analysis and auto-fix'),
     },
     generatedFiles: [],
   };
@@ -157,6 +212,7 @@ export async function initializeSessionMulti(request: CodeGenRequestMulti): Prom
     architectureId: request.architecture.id,
     createdAt: new Date().toISOString(),
     preferences: request.preferences,
+    projectId: request.projectId,
     prds,
     architecture: request.architecture,
     subTasksByPrdId,
@@ -168,6 +224,9 @@ export async function initializeSessionMulti(request: CodeGenRequestMulti): Prom
       devops: initializeAgentTask('devops', 'Generate DevOps configs'),
       test: initializeAgentTask('test', 'Generate tests'),
       docs: initializeAgentTask('docs', 'Generate docs'),
+      security: initializeAgentTask('security', 'Review generated code for security issues'),
+      i18n: initializeAgentTask('i18n', 'Suggest or add i18n structure'),
+      wrunner: initializeAgentTask('wrunner', 'WRunner analysis and auto-fix'),
     },
     generatedFiles: [],
   };
@@ -203,7 +262,8 @@ async function runArchitectAgent(
   prd: PRD,
   prds?: PRD[],
   masterContext?: MasterContext,
-  creativeDesignDoc?: CreativeDesignDoc
+  creativeDesignDoc?: CreativeDesignDoc,
+  systemPromptPrefix?: string
 ): Promise<Record<string, any>> {
   return await withSpan(
     'agent.architect.execute',
@@ -231,7 +291,8 @@ async function runArchitectAgent(
           contextSummary = generateContextSummary(agentContext);
         }
         
-        const systemPrompt = getArchitectAgentPromptWithContext(context, contextSummary, creativeDesignDoc);
+        const basePrompt = getArchitectAgentPromptWithContext(context, contextSummary, creativeDesignDoc);
+        const systemPrompt = systemPromptPrefix ? `${systemPromptPrefix}\n\n${basePrompt}` : basePrompt;
 
         addSpanEvent('claude.api.call', { operation: 'architect_plan_generation' });
         const response = await resilientClaudeCall({
@@ -324,7 +385,8 @@ async function runFrontendAgent(
   subTasks?: SubTask[],
   masterContext?: MasterContext,
   creativeDesignDoc?: CreativeDesignDoc,
-  specUiContext?: SpecUiContext
+  specUiContext?: SpecUiContext,
+  systemPromptPrefix?: string
 ): Promise<GeneratedFile[]> {
   const log = getRequestLogger();
   const timer = createApiTimer('agent_frontend');
@@ -343,7 +405,8 @@ async function runFrontendAgent(
       contextSummary = generateContextSummary(agentContext);
     }
     
-    const systemPrompt = getFrontendAgentPrompt(framework as 'vue' | 'react', contextSummary, !!creativeDesignDoc);
+    const basePrompt = getFrontendAgentPrompt(framework as 'vue' | 'react', contextSummary, !!creativeDesignDoc);
+    const systemPrompt = systemPromptPrefix ? `${systemPromptPrefix}\n\n${basePrompt}` : basePrompt;
 
     let userContent = `Generate frontend code for this project:\n\nPRD:\n${JSON.stringify(prd.sections, null, 2)}\n\nArchitecture Plan:\n${JSON.stringify(architecturePlan, null, 2)}`;
     if (prds && prds.length > 0) {
@@ -432,7 +495,8 @@ async function runBackendAgent(
   architecturePlan: Record<string, any>,
   prds?: PRD[],
   subTasks?: SubTask[],
-  masterContext?: MasterContext
+  masterContext?: MasterContext,
+  systemPromptPrefix?: string
 ): Promise<GeneratedFile[]> {
   const log = getRequestLogger();
   const timer = createApiTimer('agent_backend');
@@ -452,7 +516,8 @@ async function runBackendAgent(
       contextSummary = generateContextSummary(agentContext);
     }
     
-    const systemPrompt = getBackendAgentPrompt(runtime as 'node' | 'python' | 'go', database as 'postgres' | 'mongodb', contextSummary);
+    const basePrompt = getBackendAgentPrompt(runtime as 'node' | 'python' | 'go', database as 'postgres' | 'mongodb', contextSummary);
+    const systemPrompt = systemPromptPrefix ? `${systemPromptPrefix}\n\n${basePrompt}` : basePrompt;
 
     let userContent = `Generate backend code for this project:\n\nPRD:\n${JSON.stringify(prd.sections, null, 2)}\n\nArchitecture Plan:\n${JSON.stringify(architecturePlan, null, 2)}`;
     if (prds && prds.length > 0) {
@@ -513,7 +578,8 @@ async function runBackendAgent(
  */
 async function runDevOpsAgent(
   session: GenerationSession,
-  masterContext?: MasterContext
+  masterContext?: MasterContext,
+  systemPromptPrefix?: string
 ): Promise<GeneratedFile[]> {
   const log = getRequestLogger();
   const timer = createApiTimer('agent_devops');
@@ -530,7 +596,8 @@ async function runDevOpsAgent(
       contextSummary = generateContextSummary(agentContext);
     }
     
-    const systemPrompt = getDevOpsAgentPrompt(contextSummary);
+    const basePrompt = getDevOpsAgentPrompt(contextSummary);
+    const systemPrompt = systemPromptPrefix ? `${systemPromptPrefix}\n\n${basePrompt}` : basePrompt;
 
     const response = await resilientClaudeCall({
       model: 'claude-opus-4-5-20251101',
@@ -592,7 +659,8 @@ async function runTestAgent(
   prd: PRD,
   prds?: PRD[],
   subTasks?: SubTask[],
-  masterContext?: MasterContext
+  masterContext?: MasterContext,
+  systemPromptPrefix?: string
 ): Promise<GeneratedFile[]> {
   const log = getRequestLogger();
   const timer = createApiTimer('agent_test');
@@ -609,7 +677,8 @@ async function runTestAgent(
       contextSummary = generateContextSummary(agentContext);
     }
     
-    const systemPrompt = getTestAgentPrompt(contextSummary);
+    const basePrompt = getTestAgentPrompt(contextSummary);
+    const systemPrompt = systemPromptPrefix ? `${systemPromptPrefix}\n\n${basePrompt}` : basePrompt;
 
     let userContent = `Generate comprehensive test suites for this project:\n\nPRD:\n${JSON.stringify(prd.sections, null, 2)}`;
     if (prds && prds.length > 0) {
@@ -670,7 +739,8 @@ async function runDocsAgent(
   session: GenerationSession,
   prd: PRD,
   prds?: PRD[],
-  masterContext?: MasterContext
+  masterContext?: MasterContext,
+  systemPromptPrefix?: string
 ): Promise<GeneratedFile[]> {
   const log = getRequestLogger();
   const timer = createApiTimer('agent_docs');
@@ -687,7 +757,8 @@ async function runDocsAgent(
       contextSummary = generateContextSummary(agentContext);
     }
     
-    const systemPrompt = getDocsAgentPrompt(contextSummary);
+    const basePrompt = getDocsAgentPrompt(contextSummary);
+    const systemPrompt = systemPromptPrefix ? `${systemPromptPrefix}\n\n${basePrompt}` : basePrompt;
 
     let userContent = `Generate comprehensive documentation for this project:\n\nPRD:\n${JSON.stringify(prd.sections, null, 2)}`;
     if (prds && prds.length > 0) {
@@ -1149,11 +1220,41 @@ function validateFixes(
 export interface CodeGenerationOptions {
   creativeDesignDoc?: CreativeDesignDoc;
   specification?: Specification;
+  /** Optional head + mode prompt prepended for SHIP/chat consistency */
+  systemPromptPrefix?: string;
 }
 
 /**
- * Execute full code generation pipeline (SEQUENTIAL). Legacy single-PRD.
- * When called from Ship, pass options.creativeDesignDoc and options.specification for layout/UI guidance.
+ * Execute the full code generation pipeline for a single PRD.
+ *
+ * Runs all agents sequentially: architect → frontend → backend → devops → test → docs.
+ * Each agent generates files that are accumulated in the session. After all agents
+ * complete, WRunner analysis identifies issues and applies auto-fixes.
+ *
+ * The session status progresses: 'initializing' → 'running' → 'completed' | 'failed'
+ *
+ * @param session - Initialized generation session from {@link initializeSession}
+ * @param prd - Product Requirements Document containing project specifications
+ * @param architecture - System architecture defining components and their relationships
+ * @param options - Optional configuration for Ship mode integration
+ * @param options.creativeDesignDoc - Design document for UI/UX guidance (from Ship)
+ * @param options.specification - Specification document with UI component details
+ * @param options.systemPromptPrefix - Custom system prompt prefix for agent consistency
+ *
+ * @throws Error if any critical agent fails (non-critical failures are logged)
+ *
+ * @example
+ * ```typescript
+ * const session = await initializeSession(request);
+ * await executeCodeGeneration(session, prd, architecture, {
+ *   creativeDesignDoc: designDoc,
+ *   specification: spec
+ * });
+ *
+ * // Check results
+ * const completed = await getSession(session.sessionId);
+ * console.log(`Generated ${completed.generatedFiles.length} files`);
+ * ```
  */
 export async function executeCodeGeneration(
   session: GenerationSession,
@@ -1184,7 +1285,8 @@ export async function executeCodeGeneration(
       log.warn({ sessionId: session.sessionId, error: (error as Error).message }, 'Master context generation failed, continuing without it');
     }
 
-    const architecturePlan = await runArchitectAgent(session, prd, undefined, masterContext, options?.creativeDesignDoc);
+    const systemPromptPrefix = options?.systemPromptPrefix;
+    const architecturePlan = await runArchitectAgent(session, prd, undefined, masterContext, options?.creativeDesignDoc, systemPromptPrefix);
 
     if (session.preferences.frontendFramework) {
       log.info({}, 'Running frontend agent');
@@ -1199,7 +1301,8 @@ export async function executeCodeGeneration(
         undefined,
         masterContext,
         options?.creativeDesignDoc,
-        specUiContext
+        specUiContext,
+        systemPromptPrefix
       );
       session.generatedFiles!.push(...frontendFiles);
       await db.saveSession(session);
@@ -1207,26 +1310,26 @@ export async function executeCodeGeneration(
 
     if (session.preferences.backendRuntime) {
       log.info({}, 'Running backend agent');
-      const backendFiles = await runBackendAgent(session, prd, architecturePlan, undefined, undefined, masterContext);
+      const backendFiles = await runBackendAgent(session, prd, architecturePlan, undefined, undefined, masterContext, systemPromptPrefix);
       session.generatedFiles!.push(...backendFiles);
       await db.saveSession(session);
     }
 
     log.info({}, 'Running DevOps agent');
-    const devopsFiles = await runDevOpsAgent(session, masterContext);
+    const devopsFiles = await runDevOpsAgent(session, masterContext, systemPromptPrefix);
     session.generatedFiles!.push(...devopsFiles);
     await db.saveSession(session);
 
     if (session.preferences.includeTests !== false) {
       log.info({}, 'Running test agent');
-      const testFiles = await runTestAgent(session, prd, undefined, undefined, masterContext);
+      const testFiles = await runTestAgent(session, prd, undefined, undefined, masterContext, systemPromptPrefix);
       session.generatedFiles!.push(...testFiles);
       await db.saveSession(session);
     }
 
     if (session.preferences.includeDocs !== false) {
       log.info({}, 'Running docs agent');
-      const docFiles = await runDocsAgent(session, prd, undefined, masterContext);
+      const docFiles = await runDocsAgent(session, prd, undefined, masterContext, systemPromptPrefix);
       session.generatedFiles!.push(...docFiles);
       await db.saveSession(session);
     }
@@ -1264,7 +1367,11 @@ export async function executeCodeGeneration(
     session.status = 'completed';
     session.completedAt = new Date().toISOString();
     await db.saveSession(session);
-
+    dispatchWebhook('codegen.ready', {
+      sessionId: session.sessionId,
+      fileCount: session.generatedFiles?.length ?? 0,
+      completedAt: session.completedAt,
+    });
     log.info(
       { sessionId: session.sessionId, fileCount: session.generatedFiles!.length },
       'Code generation pipeline completed'
@@ -1274,6 +1381,7 @@ export async function executeCodeGeneration(
     session.error = (error as Error).message;
     session.completedAt = new Date().toISOString();
     await db.saveSession(session);
+    dispatchWebhook('codegen.failed', { sessionId: session.sessionId, error: (error as Error).message });
     log.error({ sessionId: session.sessionId, error: (error as Error).message }, 'Code generation pipeline failed');
     throw error;
   }
@@ -1417,7 +1525,11 @@ export async function executeCodeGenerationMulti(session: GenerationSession): Pr
     session.status = 'completed';
     session.completedAt = new Date().toISOString();
     await db.saveSession(session);
-
+    dispatchWebhook('codegen.ready', {
+      sessionId: session.sessionId,
+      fileCount: session.generatedFiles?.length ?? 0,
+      completedAt: session.completedAt,
+    });
     log.info(
       { sessionId: session.sessionId, fileCount: session.generatedFiles!.length },
       'Multi-PRD code generation completed'
@@ -1427,6 +1539,7 @@ export async function executeCodeGenerationMulti(session: GenerationSession): Pr
     session.error = (error as Error).message;
     session.completedAt = new Date().toISOString();
     await db.saveSession(session);
+    dispatchWebhook('codegen.failed', { sessionId: session.sessionId, error: (error as Error).message });
     log.error(
       { sessionId: session.sessionId, error: (error as Error).message },
       'Multi-PRD code generation failed'

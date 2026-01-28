@@ -1,11 +1,15 @@
 /**
  * Advanced Rate Limiting Middleware
- * Per-user and per-endpoint rate limiting with Redis support
+ * Per-user and per-endpoint rate limiting with Redis when REDIS_HOST is set.
+ * Tier-based limits: free < pro < team < enterprise (when X-Tier header or tier context is set).
  */
 
 import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
 import type { Request, Response } from 'express';
 import logger from './logger.js';
+import { getRedisClient, isRedisConnected } from '../services/redis.js';
+import type { TierId } from '../services/featureFlagsService.js';
 
 interface RateLimitConfig {
   windowMs: number;
@@ -25,7 +29,21 @@ interface UserRateLimit {
   config: RateLimitConfig;
 }
 
-// Per-endpoint rate limit configurations
+/** Max requests per window by tier (same windowMs). */
+const TIER_MULTIPLIERS: Record<TierId, number> = {
+  free: 1,
+  pro: 4,
+  team: 8,
+  enterprise: 20,
+};
+
+function getTierFromRequest(req: Request): TierId {
+  const h = (req.headers['x-tier'] as string)?.toLowerCase();
+  if (h === 'pro' || h === 'team' || h === 'enterprise') return h;
+  return 'free';
+}
+
+// Per-endpoint base rate limit configurations (max is per-tier: base * TIER_MULTIPLIERS)
 const ENDPOINT_LIMITS: Record<string, RateLimitConfig> = {
   '/api/chat': {
     windowMs: 60 * 1000, // 1 minute
@@ -59,7 +77,7 @@ const ENDPOINT_LIMITS: Record<string, RateLimitConfig> = {
   },
 };
 
-// Global fallback rate limit
+// Global fallback rate limit (max scaled by tier)
 const GLOBAL_LIMIT: RateLimitConfig = {
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
@@ -84,13 +102,42 @@ function getUserId(req: Request): string | null {
   return null;
 }
 
+type Store = InstanceType<typeof RedisStore>;
+
 /**
- * Create rate limiter with custom key generator
+ * Get Redis store when REDIS_HOST is set and Redis is connected
  */
-function createRateLimiter(config: RateLimitConfig, keyGenerator?: (req: Request) => string): RateLimitRequestHandler {
+async function getRedisStoreIfConfigured(): Promise<Store | undefined> {
+  if (!process.env.REDIS_HOST) return undefined;
+  try {
+    const client = getRedisClient();
+    const connected = await isRedisConnected();
+    if (!connected) {
+      logger.debug('Redis not connected, rate limiting will use in-memory store');
+      return undefined;
+    }
+    return new RedisStore({
+      sendCommand: (command: string, ...args: string[]) =>
+        client.call(command, ...args) as Promise<number>,
+    });
+  } catch (err) {
+    logger.warn({ err: (err as Error).message }, 'Redis store for rate limiting unavailable, using in-memory');
+    return undefined;
+  }
+}
+
+/**
+ * Create rate limiter with custom key generator and optional Redis store
+ */
+function createRateLimiter(
+  config: RateLimitConfig,
+  keyGenerator?: (req: Request) => string,
+  store?: Store
+): RateLimitRequestHandler {
   return rateLimit({
     windowMs: config.windowMs,
     max: config.max,
+    ...(store && { store }),
     message: {
       error: config.message || 'Too many requests',
       type: 'rate_limit',
@@ -98,13 +145,25 @@ function createRateLimiter(config: RateLimitConfig, keyGenerator?: (req: Request
     },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: {
+      trustProxy: false,
+      xForwardedForHeader: false,
+      ip: false,
+      // @ts-ignore - suppress IPv6 validation error
+      keyGeneratorIpFallback: false,
+    },
     keyGenerator: keyGenerator || ((req: Request) => {
       // Default: use IP address
       const forwarded = req.headers['x-forwarded-for'];
       if (forwarded && typeof forwarded === 'string') {
-        return forwarded.split(',')[0].trim();
+        return `ip:${forwarded.split(',')[0].trim()}`;
       }
-      return req.ip || req.socket.remoteAddress || 'unknown';
+      let ip = req.ip || req.socket.remoteAddress || 'unknown';
+      // Sanitize IPv6 localhost
+      if (ip === '::1') {
+        ip = '127.0.0.1';
+      }
+      return `ip:${ip}`;
     }),
     skip: (req: Request) => {
       // Skip rate limiting for health checks
@@ -145,54 +204,95 @@ export function createUserRateLimiter(config: RateLimitConfig): RateLimitRequest
     if (forwarded && typeof forwarded === 'string') {
       return `ip:${forwarded.split(',')[0].trim()}`;
     }
-    return `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`;
-  });
-}
-
-/**
- * Create per-endpoint rate limiter
- */
-export function createEndpointRateLimiter(path: string, config: RateLimitConfig): RateLimitRequestHandler {
-  return createRateLimiter(config, (req: Request) => {
-    const userId = getUserId(req);
-    const key = userId ? `endpoint:${path}:user:${userId}` : `endpoint:${path}:ip:${req.ip || 'unknown'}`;
-    return key;
-  });
-}
-
-/**
- * Get rate limiter for a specific endpoint
- */
-export function getEndpointRateLimiter(path: string): RateLimitRequestHandler | null {
-  const config = ENDPOINT_LIMITS[path];
-  if (!config) {
-    return null;
-  }
-
-  return createEndpointRateLimiter(path, config);
-}
-
-/**
- * Global rate limiter (fallback)
- */
-export const globalRateLimiter = createRateLimiter(GLOBAL_LIMIT);
-
-/**
- * Apply rate limiting to specific routes
- * Returns middleware that applies endpoint-specific limits or falls back to global
- */
-export function applyRateLimiting(): RateLimitRequestHandler {
-  return (req: Request, res: Response, next: () => void) => {
-    // Check if there's an endpoint-specific limiter
-    const endpointLimiter = getEndpointRateLimiter(req.path);
-    
-    if (endpointLimiter) {
-      // Apply endpoint-specific limit
-      endpointLimiter(req, res, next);
-    } else {
-      // Apply global limit
-      globalRateLimiter(req, res, next);
+    let ip = req.ip || req.socket.remoteAddress || 'unknown';
+    if (ip === '::1') {
+      ip = '127.0.0.1';
     }
+    return `ip:${ip}`;
+  });
+}
+
+/**
+ * Create per-endpoint rate limiter with tier-scaled max
+ */
+function createEndpointRateLimiter(
+  path: string,
+  config: RateLimitConfig,
+  tier: TierId,
+  store?: Store
+): RateLimitRequestHandler {
+  const scaled = { ...config, max: Math.max(1, Math.floor(config.max * (TIER_MULTIPLIERS[tier] ?? 1))) };
+  return createRateLimiter(
+    scaled,
+    (req: Request) => {
+      const userId = getUserId(req);
+      const base = userId ? `user:${userId}` : `ip:${req.ip || 'unknown'}`;
+      return `endpoint:${path}:tier:${tier}:${base}`;
+    },
+    store
+  );
+}
+
+/**
+ * Get rate limiter for a specific endpoint and tier (optional Redis store for multi-instance)
+ */
+export function getEndpointRateLimiter(path: string, tier: TierId, store?: Store): RateLimitRequestHandler | null {
+  const config = ENDPOINT_LIMITS[path];
+  if (!config) return null;
+  return createEndpointRateLimiter(path, config, tier, store);
+}
+
+/**
+ * Normalize request path to endpoint key for rate limit lookup.
+ * e.g. /api/chat/stream -> /api/chat, /api/codegen/start -> /api/codegen
+ */
+function normalizePathForRateLimit(path: string): string {
+  const bases = Object.keys(ENDPOINT_LIMITS);
+  for (const base of bases) {
+    if (path === base || path.startsWith(base + '/')) return base;
+  }
+  return path;
+}
+
+/** Build limiters per tier for global and each endpoint. */
+function buildTierLimiters(store?: Store): Map<string, RateLimitRequestHandler> {
+  const limiters = new Map<string, RateLimitRequestHandler>();
+  const tiers: TierId[] = ['free', 'pro', 'team', 'enterprise'];
+  for (const tier of tiers) {
+    const globalMax = Math.max(1, Math.floor(GLOBAL_LIMIT.max * (TIER_MULTIPLIERS[tier] ?? 1)));
+    limiters.set(`global:${tier}`, createRateLimiter(
+      { ...GLOBAL_LIMIT, max: globalMax },
+      (req: Request) => {
+        const userId = getUserId(req);
+        const base = userId ? `user:${userId}` : `ip:${req.ip || 'unknown'}`;
+        return `global:tier:${tier}:${base}`;
+      },
+      store
+    ));
+    for (const path of Object.keys(ENDPOINT_LIMITS)) {
+      limiters.set(`${path}:${tier}`, createEndpointRateLimiter(path, ENDPOINT_LIMITS[path], tier, store));
+    }
+  }
+  return limiters;
+}
+
+/**
+ * Apply rate limiting to specific routes.
+ * When REDIS_HOST is set and Redis is connected, uses Redis store for multi-instance consistency.
+ * Tier (X-Tier header) scales limits: free &lt; pro &lt; team &lt; enterprise.
+ */
+export async function applyRateLimiting(): Promise<RateLimitRequestHandler> {
+  const store = await getRedisStoreIfConfigured();
+  if (store) {
+    logger.info('Rate limiting using Redis store (tier-aware)');
+  }
+  const tierLimiters = buildTierLimiters(store);
+  return (req: Request, res: Response, next: () => void) => {
+    const tier = getTierFromRequest(req);
+    const pathKey = normalizePathForRateLimit(req.path);
+    const endpointLimiter = tierLimiters.get(`${pathKey}:${tier}`);
+    const globalLimiter = tierLimiters.get(`global:${tier}`);
+    (endpointLimiter ?? globalLimiter!)(req, res, next);
   };
 }
 

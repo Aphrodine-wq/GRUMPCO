@@ -12,6 +12,9 @@ import { generateCreativeDesignDoc } from './creativeDesignDocService.js';
 import { startSpecSession, generateSpecification } from './specService.js';
 import { generatePlan, approvePlan, startPlanExecution } from './planService.js';
 import { initializeSession, executeCodeGeneration } from './agentOrchestrator.js';
+import { dispatchWebhook } from './webhookService.js';
+import { getHeadSystemPrompt } from '../prompts/head.js';
+import { getChatModePrompt } from '../prompts/chat/index.js';
 import type {
   ShipSession,
   ShipPhase,
@@ -25,6 +28,7 @@ import type {
 } from '../types/ship.js';
 import type { SystemArchitecture } from '../types/architecture.js';
 import type { PRD } from '../types/prd.js';
+import type { Plan } from '../types/plan.js';
 
 /**
  * Start a new SHIP mode session
@@ -41,6 +45,7 @@ export async function startShipMode(request: ShipStartRequest): Promise<ShipSess
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     preferences: request.preferences,
+    projectId: request.projectId,
   };
   
   await db.saveShipSession(session);
@@ -71,6 +76,10 @@ export async function executeDesignPhase(session: ShipSession): Promise<DesignPh
   await db.saveShipSession(session);
   
   try {
+    const headPrompt = getHeadSystemPrompt();
+    const designModePrompt = getChatModePrompt('design');
+    const systemPromptPrefix = `${headPrompt}\n\n${designModePrompt}`;
+
     // Generate architecture
     log.info({ sessionId: session.id }, 'Generating architecture');
     const archResponse = await generateArchitecture({
@@ -79,6 +88,7 @@ export async function executeDesignPhase(session: ShipSession): Promise<DesignPh
       techStack: session.preferences?.backendRuntime 
         ? [session.preferences.backendRuntime, session.preferences.frontendFramework || 'vue'].filter(Boolean) as string[]
         : undefined,
+      systemPromptPrefix,
     });
     
     if (archResponse.status === 'error' || !archResponse.architecture) {
@@ -175,6 +185,10 @@ export async function executeSpecPhase(
       workspaceRoot: session.preferences?.workspaceRoot,
     });
     
+    const headPrompt = getHeadSystemPrompt();
+    const specModePrompt = getChatModePrompt('spec');
+    const systemPromptPrefix = `${headPrompt}\n\n${specModePrompt}`;
+
     // For automated flow, generate spec from design context (PRD + CDD) without Q&A
     log.info({ sessionId: session.id, specSessionId: specSession.id }, 'Generating specification from design context');
     const specResponse = await generateSpecification({
@@ -184,6 +198,7 @@ export async function executeSpecPhase(
         prdOverview: designResult.prd.sections?.overview,
         creativeDesignDoc: designResult.creativeDesignDoc,
       },
+      systemPromptPrefix,
     });
     
     if (!specResponse.specification) {
@@ -244,11 +259,16 @@ export async function executePlanPhase(
   await db.saveShipSession(session);
   
   try {
+    const headPrompt = getHeadSystemPrompt();
+    const planModePrompt = getChatModePrompt('plan');
+    const systemPromptPrefix = `${headPrompt}\n\n${planModePrompt}`;
+
     // Generate plan from specification
     const plan = await generatePlan({
       userRequest: `Implement: ${specResult.specification.title}\n\n${specResult.specification.description}\n\nRequirements:\n${specResult.specification.sections.requirements?.map(r => `- ${r.title}: ${r.description}`).join('\n') || 'None'}`,
       workspaceRoot: session.preferences?.workspaceRoot,
       agentProfile: 'router',
+      systemPromptPrefix,
     });
     
     // Auto-approve plan for automated flow
@@ -322,10 +342,15 @@ export async function executeCodePhase(
       },
     });
     
+    const headPrompt = getHeadSystemPrompt();
+    const codeModePrompt = getChatModePrompt('normal');
+    const systemPromptPrefix = `${headPrompt}\n\n${codeModePrompt}`;
+
     // Execute code generation with CDD and spec for layout/UI guidance
     await executeCodeGeneration(genSession, designResult.prd, designResult.architecture, {
       creativeDesignDoc: designResult.creativeDesignDoc,
       specification: session.specResult?.specification,
+      systemPromptPrefix,
     });
     
     const result: CodePhaseResult = {
@@ -437,6 +462,7 @@ export async function executeShipMode(sessionId: string): Promise<ShipPhaseRespo
         };
       }
       
+      dispatchWebhook('ship.completed', { sessionId, phase: 'code', result: codeResult });
       return {
         sessionId,
         phase: 'completed',
@@ -463,12 +489,11 @@ export async function executeShipMode(sessionId: string): Promise<ShipPhaseRespo
   } catch (error) {
     const err = error as Error;
     log.error({ sessionId, error: err.message }, 'SHIP mode execution failed');
-    
+    dispatchWebhook('ship.failed', { sessionId, phase: session.phase, error: err.message });
     session.status = 'failed';
     session.error = err.message;
     session.updatedAt = new Date().toISOString();
     await db.saveShipSession(session);
-    
     return {
       sessionId,
       phase: session.phase,

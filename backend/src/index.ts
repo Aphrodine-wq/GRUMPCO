@@ -4,10 +4,10 @@ import { initializeDatabase, closeDatabase } from './db/database.js';
 import express, { Request, Response, NextFunction, Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import { requestIdMiddleware, httpLogger } from './middleware/logger.js';
-import { applyRateLimiting, getEndpointRateLimiter } from './middleware/rateLimiter.js';
+import { applyRateLimiting } from './middleware/rateLimiter.js';
 import { metricsMiddleware, getMetrics } from './middleware/metrics.js';
+import { requestTimeout } from './middleware/timeout.js';
 import { initializeTracing, shutdownTracing, tracingMiddleware } from './middleware/tracing.js';
 import { initializeAlerting } from './services/alerting.js';
 import logger from './middleware/logger.js';
@@ -21,13 +21,27 @@ import planRoutes from './routes/plan.js';
 import specRoutes from './routes/spec.js';
 import shipRoutes from './routes/ship.js';
 import healthRoutes from './routes/health.js';
+import messagingRoutes from './routes/messaging.js';
 import authRoutes from './routes/auth.js';
 import githubRoutes from './routes/github.js';
 import analyzeRoutes from './features/codebase-analysis/routes.js';
+import settingsRoutes from './routes/settings.js';
+import billingRoutes from './routes/billing.js';
+import skillsApiRoutes from './routes/skillsApi.js';
 import securityRoutes from './features/security-compliance/routes.js';
 import infraRoutes from './features/infrastructure/routes.js';
 import testingRoutes from './features/testing-qa/routes.js';
+import expoTestRoutes from './routes/expoTest.js';
+import webhookRoutes from './routes/webhooks.js';
+import eventsRoutes from './routes/events.js';
+import { handleStripeWebhook } from './routes/billingWebhook.js';
+import collaborationRoutes from './routes/collaboration.js';
+import analyticsRoutes from './routes/analytics.js';
+import templatesRoutes from './routes/templates.js';
 import { findAvailablePort } from './utils/portUtils.js';
+import { skillRegistry } from './skills/index.js';
+import { startJobWorker, stopJobWorker } from './services/jobQueue.js';
+import { apiAuthMiddleware } from './middleware/authMiddleware.js';
 import type { Server } from 'http';
 
 const app: Express = express();
@@ -103,66 +117,17 @@ app.use(httpLogger);
 // Metrics middleware
 app.use(metricsMiddleware);
 
-// Body parsing
+// Stripe webhook (raw body required for signature verification) – must be before express.json
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
+
+// Body parsing (JSON + urlencoded for Twilio webhooks)
 app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 
-// Apply advanced rate limiting (per-endpoint and per-user)
-// This will use endpoint-specific limits where configured, or fall back to global
-app.use('/api', applyRateLimiting());
+// Request timeout middleware (route-level timeouts)
+app.use(requestTimeout);
 
-// Routes
-app.use('/api', diagramRoutes);
-app.use('/api/intent', intentRoutes);
-app.use('/api/architecture', architectureRoutes);
-app.use('/api/prd', prdRoutes);
-app.use('/api/codegen', codegenRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/plan', planRoutes);
-app.use('/api/spec', specRoutes);
-app.use('/api/ship', shipRoutes);
-app.use('/auth', authRoutes);
-app.use('/api/github', githubRoutes);
-app.use('/api/analyze', analyzeRoutes);
-app.use('/api/security', securityRoutes);
-app.use('/api/infra', infraRoutes);
-app.use('/api/testing', testingRoutes);
-app.use('/health', healthRoutes);
-
-// Metrics endpoint (should be protected in production)
-app.get('/metrics', (req: Request, res: Response, next: NextFunction) => {
-  // Basic auth check for metrics in production
-  if (process.env.NODE_ENV === 'production' && process.env.METRICS_AUTH) {
-    const auth = req.headers.authorization;
-    const expected = `Basic ${Buffer.from(process.env.METRICS_AUTH).toString('base64')}`;
-    if (auth !== expected) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-  }
-  next();
-}, getMetrics);
-
-// 404 handler
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({ error: 'Not found', type: 'not_found' });
-});
-
-// Global error handler
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  logger.error({ error: err.message, stack: err.stack }, 'Unhandled error');
-
-  // Handle CORS errors
-  if (err.message === 'Not allowed by CORS') {
-    res.status(403).json({ error: 'CORS error', type: 'forbidden' });
-    return;
-  }
-
-  res.status(500).json({
-    error: 'Internal server error',
-    type: 'internal_error',
-    ...(process.env.NODE_ENV === 'development' && { details: err.message }),
-  });
-});
+// Rate limiting, routes, metrics, 404, and error handler are mounted in async startup
 
 // Graceful shutdown with automatic port detection
 let server: Server | undefined;
@@ -173,9 +138,82 @@ let server: Server | undefined;
     await initializeDatabase();
     logger.info('Database initialized');
 
+    // Start job worker for SHIP (and later codegen) long-running work
+    await startJobWorker();
+
+    // Rate limiting (uses Redis store when REDIS_HOST is set)
+    const rateLimitMw = await applyRateLimiting();
+    app.use('/api', rateLimitMw);
+    // When REQUIRE_AUTH_FOR_API=true, chat/ship/codegen require auth; else optionalAuth
+    app.use('/api', apiAuthMiddleware);
+    app.use('/api', diagramRoutes);
+    app.use('/api/intent', intentRoutes);
+    app.use('/api/architecture', architectureRoutes);
+    app.use('/api/prd', prdRoutes);
+    app.use('/api/codegen', codegenRoutes);
+    app.use('/api/chat', chatRoutes);
+    app.use('/api/plan', planRoutes);
+    app.use('/api/spec', specRoutes);
+    app.use('/api/ship', shipRoutes);
+    app.use('/auth', authRoutes);
+    app.use('/api/github', githubRoutes);
+    app.use('/api/analyze', analyzeRoutes);
+    app.use('/api/settings', settingsRoutes);
+    app.use('/api/billing', billingRoutes);
+    app.use('/api/skills-api', skillsApiRoutes);
+    app.use('/api/messaging', messagingRoutes);
+    app.use('/api/security', securityRoutes);
+    app.use('/api/infra', infraRoutes);
+    app.use('/api/testing', testingRoutes);
+    app.use('/api/expo-test', expoTestRoutes);
+    app.use('/api/webhooks', webhookRoutes);
+    app.use('/api/events', eventsRoutes);
+    app.use('/api/collaboration', collaborationRoutes);
+    app.use('/api/analytics', analyticsRoutes);
+    app.use('/api/templates', templatesRoutes);
+    app.use('/health', healthRoutes);
+
+    // Metrics endpoint
+    app.get('/metrics', (req: Request, res: Response, next: NextFunction) => {
+      if (process.env.NODE_ENV === 'production' && process.env.METRICS_AUTH) {
+        const auth = req.headers.authorization;
+        const expected = `Basic ${Buffer.from(process.env.METRICS_AUTH).toString('base64')}`;
+        if (auth !== expected) {
+          res.status(401).json({ error: 'Unauthorized' });
+          return;
+        }
+      }
+      next();
+    }, getMetrics);
+
+    // 404 handler
+    app.use((_req: Request, res: Response) => {
+      res.status(404).json({ error: 'Not found', type: 'not_found' });
+    });
+
+    // Global error handler
+    app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+      logger.error({ error: err.message, stack: err.stack }, 'Unhandled error');
+      if (err.message === 'Not allowed by CORS') {
+        res.status(403).json({ error: 'CORS error', type: 'forbidden' });
+        return;
+      }
+      res.status(500).json({
+        error: 'Internal server error',
+        type: 'internal_error',
+        ...(process.env.NODE_ENV === 'development' && { details: err.message }),
+      });
+    });
+
     // Initialize alerting
     initializeAlerting(60000); // Check every minute
     logger.info('Alerting service initialized');
+
+    // Initialize skills system
+    await skillRegistry.discoverSkills();
+    await skillRegistry.initialize();
+    skillRegistry.mountRoutes(app);
+    logger.info({ skillCount: skillRegistry.count }, 'Skills system initialized');
 
     const PORT = await findAvailablePort(PREFERRED_PORT);
     const host = process.env.HOST ?? (isProduction ? '127.0.0.1' : '0.0.0.0');
@@ -188,7 +226,9 @@ let server: Server | undefined;
 
     process.on('SIGTERM', async () => {
       logger.info('SIGTERM received, shutting down gracefully');
+      await stopJobWorker();
       server?.close(async () => {
+        await skillRegistry.cleanup();
         await closeDatabase();
         await shutdownTracing();
         logger.info('Server closed');
@@ -198,7 +238,9 @@ let server: Server | undefined;
 
     process.on('SIGINT', async () => {
       logger.info('SIGINT received, shutting down gracefully');
+      await stopJobWorker();
       server?.close(async () => {
+        await skillRegistry.cleanup();
         await closeDatabase();
         await shutdownTracing();
         logger.info('Server closed');

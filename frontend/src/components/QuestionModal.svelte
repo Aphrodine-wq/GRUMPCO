@@ -15,8 +15,7 @@
   }
 </script>
 
-{#if $isOpen && document.body}
-  <svelte:body>
+{#if $isOpen}
     <div class="modal-overlay" on:click|self={closeModal}>
       <div class="modal-container">
         <div class="modal-header">
@@ -87,7 +86,6 @@
         </div>
       </div>
     </div>
-  </svelte:body>
 {/if}
 
 <style>
@@ -109,8 +107,8 @@
     max-height: 90vh;
     overflow-y: auto;
     background: #FFFFFF;
-    border: 1px solid #000000;
-    box-shadow: 8px 8px 0 #000000;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
     animation: modal-slide-in 200ms ease-out;
   }
 
@@ -182,8 +180,8 @@
     flex-direction: column;
     align-items: flex-start;
     padding: 1rem;
-    background: #FFFFFF;
-    border: 1px solid #E5E5E5;
+    background: #F5F5F5;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s;
     text-align: left;
@@ -191,11 +189,10 @@
   }
 
   .option-card:hover {
-    border-color: #0066FF;
+    background: #EBEBEB;
   }
 
   .option-card.selected {
-    border-color: #0066FF;
     background: #0066FF;
     color: #FFFFFF;
   }
@@ -264,7 +261,6 @@
     justify-content: flex-end;
     gap: 0.75rem;
     padding: 1.5rem;
-    border-top: 1px solid #E5E5E5;
   }
 
   .primary-btn {
@@ -274,19 +270,17 @@
     padding: 0.75rem 1.5rem;
     background: #0066FF;
     color: #FFFFFF;
-    border: 1px solid #0066FF;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s;
   }
 
   .primary-btn:hover:not(:disabled) {
     background: #0052CC;
-    border-color: #0052CC;
   }
 
   .primary-btn:disabled {
     background: #E5E5E5;
-    border-color: #E5E5E5;
     color: #9CA3AF;
     cursor: not-allowed;
   }
@@ -295,9 +289,9 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
     padding: 0.75rem 1.5rem;
-    background: transparent;
+    background: #EBEBEB;
     color: #000000;
-    border: 1px solid #000000;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s;
   }

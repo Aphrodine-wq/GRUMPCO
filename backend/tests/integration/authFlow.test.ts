@@ -18,7 +18,6 @@ vi.mock('../../src/services/supabaseClient.ts', async () => {
       getUser: vi.fn(),
       signOut: vi.fn(),
     },
-    isMockMode: false,
   };
 });
 

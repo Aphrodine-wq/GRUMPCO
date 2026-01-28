@@ -19,16 +19,18 @@ export interface ShipSession {
   status: 'initializing' | 'running' | 'paused' | 'completed' | 'failed';
   createdAt: string;
   updatedAt: string;
-  
+  /** Optional project/workspace id linking chat, ship, and codegen */
+  projectId?: string;
+
   // Phase results
   designResult?: DesignPhaseResult;
   specResult?: SpecPhaseResult;
   planResult?: PlanPhaseResult;
   codeResult?: CodePhaseResult;
-  
+
   // Preferences
   preferences?: ShipPreferences;
-  
+
   // Error tracking
   error?: string;
 }
@@ -79,6 +81,8 @@ export interface CodePhaseResult {
 export interface ShipStartRequest {
   projectDescription: string;
   preferences?: ShipPreferences;
+  /** Optional project/workspace id to associate with this session */
+  projectId?: string;
 }
 
 export interface ShipPhaseResponse {

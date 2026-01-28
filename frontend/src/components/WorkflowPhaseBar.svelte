@@ -118,9 +118,8 @@
 
 <style>
   .workflow-phase-bar {
-    background: #FFFFFF;
-    border-bottom: 1px solid #E5E5E5;
-    padding: 1rem 1.5rem;
+    background: #FAFAFA;
+    padding: 1rem 0;
   }
 
   .phase-steps {
@@ -200,7 +199,6 @@
     gap: 1rem;
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid #E5E5E5;
     flex-wrap: wrap;
     justify-content: center;
   }

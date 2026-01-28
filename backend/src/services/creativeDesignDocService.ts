@@ -6,7 +6,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getRequestLogger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
-import { logger } from '../utils/logger.js';
+import logger from '../middleware/logger.js';
 import {
   getCreativeDesignDocPrompt,
   getCreativeDesignDocUserPrompt,
@@ -16,7 +16,7 @@ import type { SystemArchitecture } from '../types/architecture.js';
 import { withResilience } from './resilience.js';
 
 if (!process.env.ANTHROPIC_API_KEY) {
-  logger.error('ANTHROPIC_API_KEY is not set');
+  logger.error({}, 'ANTHROPIC_API_KEY is not set');
   process.exit(1);
 }
 
@@ -24,8 +24,9 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// Type assertion: since we never pass stream: true, the response is always a Message
 const resilientClaudeCall = withResilience(
-  async (params: Parameters<typeof client.messages.create>[0]) => {
+  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
     return await client.messages.create(params);
   },
   'claude-cdd'

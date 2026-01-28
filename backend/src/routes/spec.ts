@@ -18,6 +18,7 @@ import type {
   SpecGenerateRequest,
 } from '../types/spec.js';
 import { logger } from '../utils/logger.js';
+import { sendServerError } from '../utils/errorResponse.js';
 
 const router = Router();
 
@@ -43,10 +44,7 @@ router.post('/start', async (req: Request, res: Response) => {
     res.json({ session });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Spec session start failed');
-    res.status(500).json({
-      error: 'Spec session start failed',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -76,10 +74,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Get spec session failed');
-    res.status(500).json({
-      error: 'Failed to get spec session',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -111,10 +106,7 @@ router.post('/:id/answer', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Answer submission failed');
-    res.status(500).json({
-      error: 'Answer submission failed',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -142,10 +134,7 @@ router.post('/:id/generate', async (req: Request, res: Response) => {
     res.json({ specification, session });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Spec generation failed');
-    res.status(500).json({
-      error: 'Spec generation failed',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 

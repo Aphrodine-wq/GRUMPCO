@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { parseAndEnrichIntent } from '../services/intentCompilerService.js';
 import { getRequestLogger } from '../middleware/logger.js';
+import { sendServerError } from '../utils/errorResponse.js';
 
 const router = Router();
 
@@ -38,10 +39,7 @@ router.post('/parse', async (req: Request<{}, {}, ParseBody>, res: Response) => 
   } catch (e) {
     const err = e as Error;
     log.error({ error: err.message }, 'Intent parse failed');
-    res.status(500).json({
-      error: err.message || 'Intent parse failed',
-      type: 'internal_error',
-    });
+    sendServerError(res, err);
   }
 });
 

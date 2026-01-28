@@ -7,9 +7,11 @@ import { spawn } from 'child_process';
 import { resolve } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import logger from '../middleware/logger.js';
-import { getIntentCompilerPrompt } from '../prompts/intent-compiler.js';
+import { getIntentCompilerPrompt, getIntentExtractionFallbackPrompt } from '../prompts/intent-compiler.js';
 import { withResilience } from './resilience.js';
 import { withCache } from './cacheService.js';
+import { getDatabase } from '../db/database.js';
+import { randomUUID } from 'crypto';
 
 export interface StructuredIntent {
   actors: string[];
@@ -161,8 +163,9 @@ export async function enrichIntentViaClaude(intent: StructuredIntent): Promise<E
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   
   // Create resilient wrapper
+  // Type assertion: since we never pass stream: true, the response is always a Message
   const resilientClaudeCall = withResilience(
-    async (params: Parameters<typeof client.messages.create>[0]) => {
+    async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
       return await client.messages.create(params);
     },
     'claude-intent'
@@ -204,7 +207,108 @@ export async function enrichIntentViaClaude(intent: StructuredIntent): Promise<E
 }
 
 /**
- * Parse raw NL + constraints via Rust, then enrich via Claude.
+ * When Rust intent compiler fails, extract structured intent via Claude and optionally store for analysis.
+ */
+export async function parseIntentWithFallback(
+  raw: string,
+  constraints?: Record<string, unknown>
+): Promise<StructuredIntent> {
+  try {
+    return await parseIntent(raw, constraints);
+  } catch (rustErr) {
+    const err = rustErr as Error;
+    logger.warn({ rustError: err.message, inputLength: raw.length }, 'Intent compiler fallback: Rust failed, using Claude');
+    let claudeIntent: StructuredIntent;
+    try {
+      claudeIntent = await extractIntentViaClaude(raw, err.message);
+    } catch (claudeErr) {
+      logger.error({ claudeError: (claudeErr as Error).message }, 'Intent compiler fallback: Claude extraction failed');
+      throw rustErr;
+    }
+    try {
+      storeIntentCompilerFailure(raw.trim(), err.message, claudeIntent);
+    } catch (storeErr) {
+      logger.debug({ storeError: (storeErr as Error).message }, 'Could not store intent compiler failure');
+    }
+    return claudeIntent;
+  }
+}
+
+/**
+ * Extract StructuredIntent from raw NL using Claude when Rust compiler is unavailable or failed.
+ */
+export async function extractIntentViaClaude(raw: string, _rustError?: string): Promise<StructuredIntent> {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return {
+      actors: ['user'],
+      features: [],
+      data_flows: [],
+      tech_stack_hints: [],
+      constraints: {},
+      raw: raw.trim(),
+    };
+  }
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  // Type assertion: since we never pass stream: true, the response is always a Message
+  const resilient = withResilience(
+    async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => client.messages.create(params),
+    'claude-intent-fallback'
+  );
+  const systemPrompt = getIntentExtractionFallbackPrompt();
+  const userMsg = `Raw input:\n${raw.trim()}\n\nExtract structured intent as JSON.`;
+
+  const res = await resilient({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 2048,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userMsg }],
+  });
+  const block = res.content[0];
+  if (block.type !== 'text') {
+    return { actors: ['user'], features: [], data_flows: [], tech_stack_hints: [], constraints: {}, raw: raw.trim() };
+  }
+  let text = block.text.trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) text = jsonMatch[0];
+  if (text.includes('```json')) {
+    const m = text.match(/```json\n?([\s\S]*?)\n?```/);
+    if (m) text = m[1];
+  } else if (text.includes('```')) {
+    const m = text.match(/```\n?([\s\S]*?)\n?```/);
+    if (m) text = m[1];
+  }
+  const parsed = JSON.parse(text) as Record<string, unknown>;
+  return {
+    actors: Array.isArray(parsed.actors) ? (parsed.actors as string[]) : ['user'],
+    features: Array.isArray(parsed.features) ? (parsed.features as string[]) : [],
+    data_flows: Array.isArray(parsed.data_flows) ? (parsed.data_flows as string[]) : [],
+    tech_stack_hints: Array.isArray(parsed.tech_stack_hints) ? (parsed.tech_stack_hints as string[]) : [],
+    constraints: parsed.constraints && typeof parsed.constraints === 'object' ? (parsed.constraints as Record<string, unknown>) : {},
+    raw: typeof parsed.raw === 'string' ? parsed.raw : raw.trim(),
+  };
+}
+
+/**
+ * Store (input, Rust error, Claude result) for later analysis and rule-update pipeline.
+ */
+export function storeIntentCompilerFailure(
+  inputText: string,
+  rustError: string,
+  claudeResult: StructuredIntent
+): void {
+  try {
+    const db = getDatabase().getDb();
+    const id = randomUUID();
+    db.prepare(
+      `INSERT INTO intent_compiler_failures (id, input_text, rust_error, claude_result_json, created_at) VALUES (?, ?, ?, ?, datetime('now'))`
+    ).run(id, inputText, rustError, JSON.stringify(claudeResult));
+  } catch (e) {
+    throw e;
+  }
+}
+
+/**
+ * Parse raw NL + constraints via Rust (with Claude fallback on failure), then enrich via Claude.
  */
 export async function parseAndEnrichIntent(
   raw: string,
@@ -217,7 +321,7 @@ export async function parseAndEnrichIntent(
     'intent',
     cacheKey,
     async () => {
-      const structured = await parseIntent(raw, constraints);
+      const structured = await parseIntentWithFallback(raw, constraints);
       return enrichIntentViaClaude(structured);
     }
   );

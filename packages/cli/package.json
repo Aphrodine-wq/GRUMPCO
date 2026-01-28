@@ -1,0 +1,23 @@
+{
+  "name": "grump-cli",
+  "version": "1.0.0",
+  "description": "G-Rump CLI: ship, argument, plan, code, analyze",
+  "type": "module",
+  "bin": {
+    "grump": "./dist/index.js",
+    "grump-analyze": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "run": "node --import tsx src/index.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

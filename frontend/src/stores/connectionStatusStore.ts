@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { onMount, onDestroy } from 'svelte';
+import { fetchApi } from '../lib/api.js';
 
 export type ConnectionStatus = 'connected' | 'disconnected' | 'checking';
 
@@ -18,28 +19,12 @@ const MAX_INTERVAL = 120000; // 2 minutes
 const BACKOFF_MULTIPLIER = 2;
 const REQUEST_TIMEOUT = 5000; // 5 seconds
 
-// Get the API base URL
-function getApiBaseUrl(): string {
-  // Try Vite env var first
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
-  }
-  // Default to localhost
-  return 'http://localhost:3000';
-}
-
 async function performHealthCheck(): Promise<boolean> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-  
   try {
-    const baseUrl = getApiBaseUrl();
-    const response = await fetch(`${baseUrl}/health/quick`, {
+    const response = await fetchApi('/health/quick', {
       method: 'GET',
-      signal: controller.signal,
+      timeout: REQUEST_TIMEOUT,
     });
-    
-    clearTimeout(timeoutId);
     
     if (!response.ok) {
       return false;
@@ -47,8 +32,7 @@ async function performHealthCheck(): Promise<boolean> {
     
     const data: HealthResponse = await response.json();
     return data.status === 'healthy';
-  } catch (error) {
-    clearTimeout(timeoutId);
+  } catch {
     return false;
   }
 }

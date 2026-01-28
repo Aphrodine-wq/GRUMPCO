@@ -15,7 +15,7 @@ import type {
   SpecDesignContext,
   QuestionType,
 } from '../types/spec.js';
-import { logger } from '../utils/logger.js';
+import logger from '../middleware/logger.js';
 import { getDatabase } from '../db/database.js';
 import { withResilience } from './resilience.js';
 
@@ -29,8 +29,9 @@ const client = new Anthropic({
 });
 
 // Create resilient wrapper for Claude API calls
+// Type assertion: since we never pass stream: true, the response is always a Message
 const resilientClaudeCall = withResilience(
-  async (params: Parameters<typeof client.messages.create>[0]) => {
+  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
     return await client.messages.create(params);
   },
   'claude-spec'
@@ -348,7 +349,7 @@ When a Creative Design Document is provided, you MUST:
 - For each uiComponent, include "region", "placement", and "layoutNotes" so implementation follows the CDD.`
     : '';
 
-  const systemPrompt = `You are a specification writer. ${useDesignContext ? 'Based on project description, PRD overview, and optional Creative Design Document, create a comprehensive technical specification.' : 'Based on user answers to questions, create a comprehensive technical specification.'}
+  const baseSpecPrompt = `You are a specification writer. ${useDesignContext ? 'Based on project description, PRD overview, and optional Creative Design Document, create a comprehensive technical specification.' : 'Based on user answers to questions, create a comprehensive technical specification.'}
 
 Generate a detailed specification with:
 1. Overview and description${hasCDD ? ' including a Layout & UX subsection' : ''}
@@ -377,6 +378,9 @@ Return a JSON object:
 ${layoutGuidance}
 
 Be thorough and specific. ${useDesignContext ? 'Use all provided design context (project description, PRD overview, Creative Design Document).' : 'Include all relevant details from the answers.'}`;
+  const systemPrompt = request.systemPromptPrefix
+    ? `${request.systemPromptPrefix}\n\n${baseSpecPrompt}`
+    : baseSpecPrompt;
 
   let userPrompt: string;
   if (useDesignContext && request.designContext) {

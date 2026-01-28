@@ -6,7 +6,7 @@
 import type { PRD } from '../types/prd.js';
 import type { SystemArchitecture } from '../types/architecture.js';
 
-export type AgentType = 'architect' | 'frontend' | 'backend' | 'devops' | 'test' | 'docs' | 'wrunner';
+export type AgentType = 'architect' | 'frontend' | 'backend' | 'devops' | 'test' | 'docs' | 'security' | 'i18n' | 'wrunner';
 export type AgentStatus = 'pending' | 'running' | 'completed' | 'failed' | 'blocked';
 
 export interface AgentMessage {
@@ -40,6 +40,8 @@ export interface GenerationSession {
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
+  /** Optional project/workspace id linking chat, ship, and codegen */
+  projectId?: string;
   agents: Record<AgentType, AgentTask>;
   preferences: GenerationPreferences;
   generatedFiles?: GeneratedFile[];
@@ -78,6 +80,8 @@ export interface CodeGenRequest {
   prdId: string;
   architectureId: string;
   preferences: GenerationPreferences;
+  /** Optional project/workspace id to associate with this session */
+  projectId?: string;
 }
 
 export interface SubTask {
@@ -92,6 +96,8 @@ export interface CodeGenRequestMulti {
   preferences: GenerationPreferences;
   /** Map agent type to component ids (or prd ids) it owns */
   componentMapping?: Partial<Record<AgentType, string[]>>;
+  /** Optional project/workspace id to associate with this session */
+  projectId?: string;
 }
 
 export interface CodeGenResponse {

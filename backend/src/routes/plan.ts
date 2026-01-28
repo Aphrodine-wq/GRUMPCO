@@ -21,6 +21,7 @@ import type {
   PlanExecutionRequest,
 } from '../types/plan.js';
 import { logger } from '../utils/logger.js';
+import { sendServerError } from '../utils/errorResponse.js';
 
 const router = Router();
 
@@ -46,10 +47,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     res.json({ plan });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Plan generation failed');
-    res.status(500).json({
-      error: 'Plan generation failed',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -72,10 +70,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     res.json({ plan });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Get plan failed');
-    res.status(500).json({
-      error: 'Failed to get plan',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -98,10 +93,7 @@ router.post('/:id/approve', async (req: Request, res: Response) => {
     res.json({ plan });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Plan approval failed');
-    res.status(500).json({
-      error: 'Plan approval failed',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -119,10 +111,7 @@ router.post('/:id/reject', async (req: Request, res: Response) => {
     res.json({ plan });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Plan rejection failed');
-    res.status(500).json({
-      error: 'Plan rejection failed',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -140,10 +129,7 @@ router.post('/:id/edit', async (req: Request, res: Response) => {
     res.json({ plan });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Plan edit failed');
-    res.status(500).json({
-      error: 'Plan edit failed',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -189,10 +175,7 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
     res.json({ plan: updatedPlan });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Plan execution start failed');
-    res.status(500).json({
-      error: 'Plan execution failed',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -208,10 +191,7 @@ router.post('/:id/complete', async (req: Request, res: Response) => {
     res.json({ plan });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Plan completion failed');
-    res.status(500).json({
-      error: 'Plan completion failed',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -236,10 +216,7 @@ router.post('/:id/phase/:phaseId/status', async (req: Request, res: Response) =>
     res.json({ plan });
   } catch (error: any) {
     logger.error({ error, requestId: req.id }, 'Phase status update failed');
-    res.status(500).json({
-      error: 'Phase status update failed',
-      message: error.message || 'Unknown error occurred',
-    });
+    sendServerError(res, error);
   }
 });
 

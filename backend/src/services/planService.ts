@@ -13,12 +13,12 @@ import type {
   PlanPhase,
   FileChange,
 } from '../types/plan.js';
-import { logger } from '../utils/logger.js';
+import logger from '../middleware/logger.js';
 import { getDatabase } from '../db/database.js';
 import { withResilience } from './resilience.js';
 
 if (!process.env.ANTHROPIC_API_KEY) {
-  logger.error('ANTHROPIC_API_KEY is not set');
+  logger.error({}, 'ANTHROPIC_API_KEY is not set');
   process.exit(1);
 }
 
@@ -27,8 +27,9 @@ const client = new Anthropic({
 });
 
 // Create resilient wrapper for Claude API calls
+// Type assertion: since we never pass stream: true, the response is always a Message
 const resilientClaudeCall = withResilience(
-  async (params: Parameters<typeof client.messages.create>[0]) => {
+  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
     return await client.messages.create(params);
   },
   'claude-plan'
@@ -45,7 +46,7 @@ export async function generatePlan(
   
   logger.info({ planId, workspaceRoot: request.workspaceRoot }, 'Generating plan');
 
-  const systemPrompt = `You are a planning assistant that creates detailed, structured implementation plans.
+  const basePlanPrompt = `You are a planning assistant that creates detailed, structured implementation plans.
 
 Generate a comprehensive plan with:
 1. Clear, numbered steps with dependencies
@@ -92,6 +93,9 @@ Return a JSON object with this structure:
 }
 
 Be specific about file paths and changes. Include all necessary steps.`;
+  const systemPrompt = request.systemPromptPrefix
+    ? `${request.systemPromptPrefix}\n\n${basePlanPrompt}`
+    : basePlanPrompt;
 
   const userPrompt = `Create a detailed implementation plan for:
 

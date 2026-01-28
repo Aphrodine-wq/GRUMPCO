@@ -5,6 +5,8 @@
 
 import { Router } from 'express';
 import { getRequestLogger } from '../middleware/logger.js';
+import { sendServerError, writeSSEError } from '../utils/errorResponse.js';
+import { validateShipRequest, handleShipValidationErrors } from '../middleware/validator.js';
 import {
   startShipMode,
   getShipSession,
@@ -14,6 +16,7 @@ import {
   executePlanPhase,
   executeCodePhase,
 } from '../services/shipModeService.js';
+import { enqueueShipJob } from '../services/jobQueue.js';
 import type { ShipStartRequest } from '../types/ship.js';
 
 const router = Router();
@@ -23,17 +26,18 @@ const log = getRequestLogger();
  * POST /api/ship/start
  * Start a new SHIP mode session
  */
-router.post('/start', async (req, res) => {
+router.post(
+  '/start',
+  validateShipRequest,
+  handleShipValidationErrors,
+  async (req, res) => {
   try {
+    const desc = (req.body.projectDescription as string).trim();
     const request: ShipStartRequest = {
-      projectDescription: req.body.projectDescription,
+      projectDescription: desc,
       preferences: req.body.preferences,
+      projectId: req.body.projectId,
     };
-    
-    if (!request.projectDescription) {
-      return res.status(400).json({ error: 'projectDescription is required' });
-    }
-    
     const session = await startShipMode(request);
     
     log.info({ sessionId: session.id }, 'SHIP mode session started');
@@ -46,7 +50,7 @@ router.post('/start', async (req, res) => {
     });
   } catch (error) {
     log.error({ error: (error as Error).message }, 'Failed to start SHIP mode session');
-    res.status(500).json({ error: (error as Error).message });
+    sendServerError(res, error);
   }
 });
 
@@ -65,6 +69,9 @@ router.get('/:sessionId', async (req, res) => {
     
     res.json({
       sessionId: session.id,
+      projectDescription: session.projectDescription,
+      preferences: session.preferences,
+      projectId: session.projectId,
       phase: session.phase,
       status: session.status,
       designResult: session.designResult,
@@ -77,33 +84,32 @@ router.get('/:sessionId', async (req, res) => {
     });
   } catch (error) {
     log.error({ error: (error as Error).message }, 'Failed to get SHIP mode session');
-    res.status(500).json({ error: (error as Error).message });
+    sendServerError(res, error);
   }
 });
 
 /**
  * POST /api/ship/:sessionId/execute
- * Execute SHIP mode workflow (runs all phases sequentially)
+ * Enqueue SHIP mode workflow; worker runs it. Returns immediately.
  */
 router.post('/:sessionId/execute', async (req, res) => {
   try {
     const { sessionId } = req.params;
-    
-    log.info({ sessionId }, 'Executing SHIP mode workflow');
-    
-    // Execute asynchronously and return immediately
-    executeShipMode(sessionId).catch((error) => {
-      log.error({ sessionId, error: (error as Error).message }, 'SHIP mode execution error');
-    });
-    
-    res.json({
+    const session = await getShipSession(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    const jobId = await enqueueShipJob(sessionId);
+    log.info({ sessionId, jobId }, 'SHIP mode job enqueued');
+    res.status(202).json({
       sessionId,
+      jobId,
       status: 'running',
-      message: 'SHIP mode workflow started',
+      message: 'SHIP mode workflow enqueued',
     });
   } catch (error) {
-    log.error({ error: (error as Error).message }, 'Failed to execute SHIP mode');
-    res.status(500).json({ error: (error as Error).message });
+    log.error({ error: (error as Error).message }, 'Failed to enqueue SHIP mode');
+    sendServerError(res, error);
   }
 });
 
@@ -137,7 +143,7 @@ router.post('/:sessionId/execute/stream', async (req, res) => {
       if (!session.designResult) {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'design' })}\n\n`);
         const designResult = await executeDesignPhase(session);
-        res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'design', result: designResult })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'design', result: designResult, nextPhase: 'spec' })}\n\n`);
         
         if (designResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'design', error: designResult.error })}\n\n`);
@@ -150,7 +156,7 @@ router.post('/:sessionId/execute/stream', async (req, res) => {
       if (!session.specResult && session.designResult?.status === 'completed') {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'spec' })}\n\n`);
         const specResult = await executeSpecPhase(session, session.designResult);
-        res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'spec', result: specResult })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'spec', result: specResult, nextPhase: 'plan' })}\n\n`);
         
         if (specResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'spec', error: specResult.error })}\n\n`);
@@ -163,7 +169,7 @@ router.post('/:sessionId/execute/stream', async (req, res) => {
       if (!session.planResult && session.specResult?.status === 'completed') {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'plan' })}\n\n`);
         const planResult = await executePlanPhase(session, session.specResult);
-        res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'plan', result: planResult })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'plan', result: planResult, nextPhase: 'code' })}\n\n`);
         
         if (planResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'plan', error: planResult.error })}\n\n`);
@@ -176,7 +182,7 @@ router.post('/:sessionId/execute/stream', async (req, res) => {
       if (!session.codeResult && session.planResult?.status === 'completed' && session.designResult?.status === 'completed') {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'code' })}\n\n`);
         const codeResult = await executeCodePhase(session, session.planResult, session.designResult);
-        res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'code', result: codeResult })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'code', result: codeResult, nextPhase: 'completed' })}\n\n`);
         
         if (codeResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'code', error: codeResult.error })}\n\n`);
@@ -191,12 +197,12 @@ router.post('/:sessionId/execute/stream', async (req, res) => {
     } catch (error) {
       const err = error as Error;
       log.error({ sessionId, error: err.message }, 'SHIP mode streaming execution error');
-      res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
+      writeSSEError(res, err);
       res.end();
     }
   } catch (error) {
     log.error({ error: (error as Error).message }, 'Failed to start SHIP mode streaming');
-    res.status(500).json({ error: (error as Error).message });
+    sendServerError(res, error);
   }
 });
 

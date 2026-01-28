@@ -25,8 +25,9 @@ const client = new Anthropic({
 });
 
 // Create resilient wrapper for Claude API calls
+// Type assertion: since we never pass stream: true, the response is always a Message
 const resilientClaudeCall = withResilience(
-  async (params: Parameters<typeof client.messages.create>[0]) => {
+  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
     return await client.messages.create(params);
   },
   'claude-architecture'
@@ -70,11 +71,14 @@ async function _generateArchitecture(
       features: intent.features,
     }, 'Building architecture');
 
-    const systemPrompt = getArchitectPrompt({
+    const basePrompt = getArchitectPrompt({
       projectType: request.projectType || intent.projectType || 'general',
       complexity: request.complexity || intent.features.length > 5 ? 'standard' : 'mvp',
       techStack: (request.techStack || techStack || intent.techStack) as string[],
     });
+    const systemPrompt = request.systemPromptPrefix
+      ? `${request.systemPromptPrefix}\n\n${basePrompt}`
+      : basePrompt;
 
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
@@ -254,11 +258,14 @@ export async function* generateArchitectureStream(
         }
       : analyzeProjectIntent(request.projectDescription);
 
-    const systemPrompt = getArchitectPrompt({
+    const basePrompt = getArchitectPrompt({
       projectType: request.projectType || intent.projectType || 'general',
       complexity: request.complexity || 'standard',
       techStack: (request.techStack || techStack || intent.techStack) as string[],
     });
+    const systemPrompt = request.systemPromptPrefix
+      ? `${request.systemPromptPrefix}\n\n${basePrompt}`
+      : basePrompt;
 
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 

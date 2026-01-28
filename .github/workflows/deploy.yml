@@ -1,11 +1,14 @@
+# Branch policy: main = production-ready; develop = integration branch for staging.
+# Deploy to staging on push to develop; deploy to production on release (publish from main).
+# Backend deploys to Railway. Set RAILWAY_TOKEN (project token) and RAILWAY_SERVICE_ID.
 name: Deployment Pipeline
 
 on:
   push:
     branches:
-      - develop  # Deploy to staging
+      - develop
   release:
-    types: [published]  # Deploy to production on release
+    types: [published]
 
 env:
   NODE_VERSION: '20'
@@ -20,46 +23,108 @@ jobs:
       url: https://staging.grump.app
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Validate Railway Configuration
+        id: railway-check
+        run: |
+          RAILWAY_CONFIGURED="false"
+          if [ -n "${{ secrets.RAILWAY_TOKEN }}" ]; then
+            if [ -n "${{ vars.RAILWAY_SERVICE_ID }}" ] || [ -n "${{ secrets.RAILWAY_SERVICE_ID }}" ]; then
+              RAILWAY_CONFIGURED="true"
+              echo "::notice::Railway is configured for staging deployment"
+            else
+              echo "::warning::RAILWAY_TOKEN is set but RAILWAY_SERVICE_ID is missing"
+            fi
+          else
+            echo "::warning::RAILWAY_TOKEN is not configured - backend will NOT be deployed to Railway"
+            echo "::warning::Set RAILWAY_TOKEN and RAILWAY_SERVICE_ID secrets to enable deployment"
+          fi
+          echo "configured=$RAILWAY_CONFIGURED" >> $GITHUB_OUTPUT
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      
+
       - name: Build backend
         working-directory: backend
         run: |
           npm ci
           npm run build
-      
+
       - name: Build frontend
         working-directory: frontend
         run: |
           npm ci
           npm run build
-      
-      - name: Build Docker images
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/grump-backend:staging
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/grump-frontend:staging
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy backend to Railway (staging)
+        if: steps.railway-check.outputs.configured == 'true'
+        working-directory: backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_ID: ${{ vars.RAILWAY_SERVICE_ID || secrets.RAILWAY_SERVICE_ID }}
         run: |
-          docker build -t grump-backend:staging ./backend
-          docker build -t grump-frontend:staging ./frontend
-      
-      - name: Deploy to staging
+          npm install -g @railway/cli
+          railway up --detach --service "$RAILWAY_SERVICE_ID"
+          echo "::notice::Backend deployed to Railway staging"
+
+      - name: Set STAGING_URL
         run: |
-          echo "Deploying to staging environment"
-          # Add your deployment commands here
-          # Example: kubectl apply, docker-compose up, etc.
-      
+          echo "STAGING_URL=${{ vars.STAGING_URL || 'https://staging.grump.app' }}" >> $GITHUB_ENV
+
+      - name: Railway not configured warning
+        if: steps.railway-check.outputs.configured != 'true'
+        run: |
+          echo "::warning::Backend NOT deployed - Railway secrets not configured"
+          echo "::warning::Images pushed to GHCR at ghcr.io/${{ github.repository_owner }}/grump-backend:staging"
+          echo "::warning::To enable Railway deployment:"
+          echo "::warning::  1. Set RAILWAY_TOKEN secret (project token from Railway)"
+          echo "::warning::  2. Set RAILWAY_SERVICE_ID variable or secret"
+
       - name: Health check
         run: |
-          echo "Waiting for services to be ready..."
-          sleep 30
-          curl -f https://staging.grump.app/health/quick || exit 1
-      
+          URL="${{ env.STAGING_URL || 'https://staging.grump.app' }}"
+          echo "Waiting for $URL to be ready..."
+          for i in $(seq 1 15); do
+            curl -sf "$URL/health/quick" && break
+            sleep 2
+          done
+          curl -sf "$URL/health/quick" || exit 1
+          curl -sf "$URL/health/ready" || true
+
       - name: Rollback on failure
         if: failure()
         run: |
-          echo "Deployment failed, initiating rollback..."
-          # Add rollback commands here
+          echo "Deployment failed. Rollback via Railway dashboard or 'railway rollback'."
 
   deploy-production:
     name: Deploy to Production
@@ -70,50 +135,106 @@ jobs:
       url: https://grump.app
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Validate Railway Configuration
+        id: railway-check
+        run: |
+          RAILWAY_CONFIGURED="false"
+          if [ -n "${{ secrets.RAILWAY_TOKEN }}" ]; then
+            if [ -n "${{ vars.RAILWAY_SERVICE_ID_PROD }}" ] || [ -n "${{ secrets.RAILWAY_SERVICE_ID_PROD }}" ]; then
+              RAILWAY_CONFIGURED="true"
+              echo "::notice::Railway is configured for production deployment"
+            else
+              echo "::error::RAILWAY_TOKEN is set but RAILWAY_SERVICE_ID_PROD is missing"
+              echo "::error::Production deployment REQUIRES Railway configuration"
+              exit 1
+            fi
+          else
+            echo "::error::RAILWAY_TOKEN is not configured"
+            echo "::error::Production deployment REQUIRES Railway configuration"
+            exit 1
+          fi
+          echo "configured=$RAILWAY_CONFIGURED" >> $GITHUB_OUTPUT
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      
+
       - name: Build backend
         working-directory: backend
         run: |
           npm ci
           npm run build
-      
+
       - name: Build frontend
         working-directory: frontend
         run: |
           npm ci
           npm run build
-      
-      - name: Build Docker images
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/grump-backend:${{ github.event.release.tag_name }}
+            ghcr.io/${{ github.repository_owner }}/grump-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/grump-frontend:${{ github.event.release.tag_name }}
+            ghcr.io/${{ github.repository_owner }}/grump-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy backend to Railway (production)
+        working-directory: backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_ID: ${{ vars.RAILWAY_SERVICE_ID_PROD || secrets.RAILWAY_SERVICE_ID_PROD }}
         run: |
-          docker build -t grump-backend:${{ github.event.release.tag_name }} ./backend
-          docker build -t grump-backend:latest ./backend
-          docker build -t grump-frontend:${{ github.event.release.tag_name }} ./frontend
-          docker build -t grump-frontend:latest ./frontend
-      
-      - name: Deploy to production
+          npm install -g @railway/cli
+          railway up --detach --service "$RAILWAY_SERVICE_ID"
+          echo "::notice::Backend deployed to Railway production"
+
+      - name: Set PRODUCTION_URL
         run: |
-          echo "Deploying to production environment"
-          # Add your deployment commands here
-          # Example: kubectl apply, docker-compose up, etc.
-      
+          echo "PRODUCTION_URL=${{ vars.PRODUCTION_URL || 'https://grump.app' }}" >> $GITHUB_ENV
+
       - name: Health check
         run: |
-          echo "Waiting for services to be ready..."
-          sleep 60
-          curl -f https://grump.app/health/quick || exit 1
-          curl -f https://grump.app/health/ready || exit 1
-      
+          URL="${{ env.PRODUCTION_URL || 'https://grump.app' }}"
+          echo "Waiting for $URL to be ready..."
+          for i in $(seq 1 30); do
+            curl -sf "$URL/health/quick" && break
+            sleep 2
+          done
+          curl -sf "$URL/health/quick" || exit 1
+          curl -sf "$URL/health/ready" || exit 1
+
       - name: Rollback on failure
         if: failure()
         run: |
-          echo "Deployment failed, initiating rollback..."
-          # Add rollback commands here
-      
+          echo "Deployment failed. Rollback via Railway dashboard or 'railway rollback'."
+
       - name: Notify deployment
         if: success()
         run: |

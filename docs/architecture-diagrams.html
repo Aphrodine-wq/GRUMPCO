@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>G-Rump architecture diagrams</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js" crossorigin="anonymous"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; background: #1a1a1a; color: #e0e0e0; }
+    h1 { margin-bottom: 0.5rem; }
+    h2 { margin-top: 2.5rem; margin-bottom: 1rem; font-size: 1.1rem; color: #888; }
+    .diagram-wrap { background: #fff; padding: 1.5rem; border-radius: 8px; margin: 1rem 0; min-height: 120px; }
+    .diagram-wrap.err { background: #2a1a1a; border: 1px solid #a44; }
+    .diagram-wrap.err .mermaid { display: none; }
+    .diagram-err { color: #f88; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap; }
+    a { color: #6ab; }
+  </style>
+</head>
+<body>
+  <h1>G-Rump system architecture</h1>
+  <p>Rendered from <code>docs/CAPABILITIES.md</code>. If diagrams don't load (e.g. opened via <code>file://</code>), serve this folder over HTTP (e.g. <code>npx serve docs</code>) and open <code>http://localhost:3000/architecture-diagrams.html</code>.</p>
+
+  <h2>1. System context (clients, backends, data, external)</h2>
+  <div class="diagram-wrap" id="wrap-1">
+    <div class="mermaid" id="d1">
+flowchart TB
+  subgraph clients [Clients]
+    Desktop[Desktop: Tauri + Svelte]
+    Web[Web: Svelte]
+    VSCode[VS Code Extension]
+    CLI[grump-analyze CLI]
+    Moltbot[Moltbot Skill]
+  end
+
+  subgraph backend [Single Backend on Railway]
+    BE[grump-backend :3000]
+  end
+
+  subgraph data [Data and Storage]
+    SQLite[(SQLite)]
+    Redis[(Redis)]
+    Supa[(Supabase)]
+  end
+
+  subgraph ext [External Services]
+    IC[intent-compiler Rust]
+    LLM[Anthropic + LLM Gateway]
+    Twilio[Twilio]
+    Stripe[Stripe]
+    GitHub[GitHub]
+  end
+
+  Desktop --> BE
+  Web --> BE
+  VSCode --> BE
+  CLI --> BE
+  Moltbot --> BE
+  BE --> SQLite
+  BE --> Redis
+  BE --> Supa
+  BE --> IC
+  BE --> LLM
+  BE --> Twilio
+  BE --> Stripe
+  BE --> GitHub
+    </div>
+    <div class="diagram-err" id="err-1" style="display:none"></div>
+  </div>
+
+  <h2>2. Backend API domains and pipeline</h2>
+  <div class="diagram-wrap" id="wrap-2">
+    <div class="mermaid" id="d2">
+flowchart LR
+  subgraph be [grump-backend]
+    H[Health]
+    D[Diagram]
+    I[Intent / Architecture]
+    P[PRD]
+    C[Codegen]
+    Ch[Chat]
+    Pl[Plan and Spec]
+    S[Ship]
+    G[GitHub]
+    A[Analyze Security Infra Testing]
+    M[Messaging]
+    W[Webhooks]
+    Sk[Skills]
+  end
+  I --> D
+  D --> P
+  P --> C
+  Pl --> C
+  S --> I
+  S --> Pl
+  S --> C
+    </div>
+    <div class="diagram-err" id="err-2" style="display:none"></div>
+  </div>
+
+  <h2>3. Core workflow pipeline</h2>
+  <div class="diagram-wrap" id="wrap-3">
+    <div class="mermaid" id="d3">
+flowchart LR
+  U[User input] --> IC[intent parse + Claude]
+  IC --> Arch[Architecture Mermaid]
+  Arch --> PRD[PRDs per component]
+  PRD --> Agents[Agent orchestrator]
+  Agents --> Zip[ZIP or GitHub push]
+  Ch[Chat] --> Arch
+  Ch --> PRD
+  Ch --> Agents
+  Ship[SHIP] --> Arch
+  Ship --> Spec[Spec]
+  Ship --> Plan[Plan]
+  Spec --> Plan
+  Plan --> Agents
+    </div>
+    <div class="diagram-err" id="err-3" style="display:none"></div>
+  </div>
+
+  <h2>4. Data and sessions</h2>
+  <div class="diagram-wrap" id="wrap-4">
+    <div class="mermaid" id="d4">
+flowchart TB
+  subgraph fe [Frontend]
+    ChatStore[sessionsStore localStorage]
+  end
+
+  subgraph be_db [Backend DB]
+    Sessions[(sessions codegen)]
+    ShipSess[(ship_sessions)]
+    Plans[(plans)]
+    Specs[(specs)]
+    WorkReports[(work_reports)]
+    ShipJobs[(ship_jobs)]
+  end
+
+  subgraph redis_opt [Optional Redis]
+    RedisCache[rate limit cache BullMQ]
+  end
+
+  ChatStore -.-> Sessions
+  ShipSess --> ShipJobs
+  Backend[backend] --> Sessions
+  Backend --> ShipSess
+  Backend --> Plans
+  Backend --> Specs
+  Backend --> WorkReports
+  Backend --> RedisCache
+    </div>
+    <div class="diagram-err" id="err-4" style="display:none"></div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      flowchart: { useMaxWidth: true, htmlLabels: true }
+    });
+
+    const diagrams = [
+      { id: 'd1', wrap: 'wrap-1', err: 'err-1' },
+      { id: 'd2', wrap: 'wrap-2', err: 'err-2' },
+      { id: 'd3', wrap: 'wrap-3', err: 'err-3' },
+      { id: 'd4', wrap: 'wrap-4', err: 'err-4' }
+    ];
+
+    diagrams.forEach(function (d, i) {
+      const el = document.getElementById(d.id);
+      const wrap = document.getElementById(d.wrap);
+      const errEl = document.getElementById(d.err);
+      if (!el || !wrap || !errEl) return;
+      mermaid.run({ nodes: [el] }).then(function () {
+        /* success */
+      }).catch(function (e) {
+        wrap.classList.add('err');
+        errEl.textContent = 'Diagram ' + (i + 1) + ' failed: ' + (e.message || String(e));
+        errEl.style.display = 'block';
+      });
+    });
+  </script>
+</body>
+</html>

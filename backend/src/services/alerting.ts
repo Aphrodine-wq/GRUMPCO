@@ -7,7 +7,19 @@ import logger from '../middleware/logger.js';
 import { getAllServiceStates } from './bulkheads.js';
 import { getDatabase } from '../db/database.js';
 import { register } from '../middleware/metrics.js';
-import type { Counter, Histogram, Gauge } from 'prom-client';
+
+// Type for metrics from getMetricsAsJSON()
+interface MetricValue {
+  value: number;
+  labels?: Record<string, string>;
+}
+
+interface MetricObject {
+  name: string;
+  help?: string;
+  type?: string;
+  values?: MetricValue[];
+}
 
 interface Alert {
   id: string;
@@ -117,28 +129,28 @@ class AlertingService {
     }
 
     try {
-      const metrics = await register.getMetricsAsJSON();
+      const metrics = (await register.getMetricsAsJSON()) as unknown as MetricObject[];
       const httpRequestsMetric = metrics.find(
-        (m: any) => m.name === 'http_requests_total'
-      ) as Counter | undefined;
+        (m) => m.name === 'http_requests_total'
+      );
 
-      if (!httpRequestsMetric) {
+      if (!httpRequestsMetric || !httpRequestsMetric.values) {
         return;
       }
 
       // Calculate error rate from metrics
       // This is a simplified version - in production, you'd query Prometheus
-      const totalRequests = httpRequestsMetric.values?.reduce(
-        (sum: number, v: any) => sum + (v.value || 0),
+      const totalRequests = httpRequestsMetric.values.reduce(
+        (sum, v) => sum + (v.value || 0),
         0
-      ) || 0;
+      );
 
       const errorRequests = httpRequestsMetric.values
-        ?.filter((v: any) => {
+        .filter((v) => {
           const status = parseInt(v.labels?.status_code || '200', 10);
           return status >= 400;
         })
-        .reduce((sum: number, v: any) => sum + (v.value || 0), 0) || 0;
+        .reduce((sum, v) => sum + (v.value || 0), 0);
 
       if (totalRequests > 0) {
         const errorRate = (errorRequests / totalRequests) * 100;
@@ -172,18 +184,18 @@ class AlertingService {
     }
 
     try {
-      const metrics = await register.getMetricsAsJSON();
+      const metrics = (await register.getMetricsAsJSON()) as unknown as MetricObject[];
       const httpDurationMetric = metrics.find(
-        (m: any) => m.name === 'http_request_duration_seconds'
-      ) as Histogram | undefined;
+        (m) => m.name === 'http_request_duration_seconds'
+      );
 
-      if (!httpDurationMetric) {
+      if (!httpDurationMetric || !httpDurationMetric.values) {
         return;
       }
 
       // Calculate p95 latency
       // Simplified - in production, query Prometheus for actual p95
-      const durations = httpDurationMetric.values?.map((v: any) => v.value || 0) || [];
+      const durations = httpDurationMetric.values.map((v) => v.value || 0);
       if (durations.length > 0) {
         const sorted = durations.sort((a, b) => b - a);
         const p95Index = Math.floor(sorted.length * 0.05);
@@ -345,11 +357,13 @@ class AlertingService {
   }
 
   /**
-   * Send alert via email (placeholder - would use email service)
+   * Send alert via email. Deferred: integrate SendGrid, Resend, or SES to enable.
    */
   private async sendEmailAlert(alert: Alert): Promise<void> {
-    // In production, integrate with email service (SendGrid, SES, etc.)
-    logger.info({ alertId: alert.id, recipients: this.config.emailRecipients }, 'Email alert (not implemented)');
+    logger.debug(
+      { alertId: alert.id, recipients: this.config.emailRecipients },
+      'Email alerting deferred; configure email service to enable'
+    );
   }
 
   /**

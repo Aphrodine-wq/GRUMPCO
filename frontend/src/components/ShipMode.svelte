@@ -1,8 +1,38 @@
 <script lang="ts">
   import { shipStore, shipSession } from '../stores/shipStore';
+  import { getCurrentProjectId } from '../stores/projectStore';
+  import { fetchApi, getApiBase } from '../lib/api.js';
+  import { showToast } from '../stores/toastStore';
+  import { downloadCodegenZip } from '../lib/codeGeneration.js';
   import type { ShipStartRequest, ShipPhase } from '../types/ship';
-  
+
+  // Subscribe to SSE for ship.completed / ship.failed when we have an active ship session
+  $effect(() => {
+    const sess = $shipSession.session;
+    const st = $shipSession.status;
+    const streaming = $shipSession.isStreaming;
+    if (typeof window === 'undefined' || !sess?.id || (st !== 'running' && !streaming)) return;
+    const url = getApiBase() + '/api/events/stream?sessionId=' + encodeURIComponent(sess.id);
+    const es = new EventSource(url);
+    es.onmessage = (e) => {
+      try {
+        const { event, payload } = JSON.parse(e.data);
+        if (event === 'ship.completed' && payload?.sessionId) {
+          shipStore.getSession(payload.sessionId);
+          showToast('SHIP completed', 'success');
+        } else if (event === 'ship.failed' && payload?.sessionId) {
+          shipStore.getSession(payload.sessionId);
+          showToast((payload.error as string) || 'SHIP failed', 'error');
+        }
+      } catch (_) {}
+    };
+    es.onerror = () => es.close();
+    return () => es.close();
+  });
+
   let projectDescription = $state('');
+  let repoNameInput = $state('');
+  let showGitHubPrompt = $state(false);
   let preferences = $state({
     frontendFramework: 'vue' as 'vue' | 'react',
     backendRuntime: 'node' as 'node' | 'python' | 'go',
@@ -10,13 +40,13 @@
     includeTests: true,
     includeDocs: true,
   });
-  
+
   let session = $derived($shipSession.session);
   let phase = $derived($shipSession.phase);
   let status = $derived($shipSession.status);
   let error = $derived($shipSession.error);
   let isStreaming = $derived($shipSession.isStreaming);
-  
+
   const phaseLabels: Record<ShipPhase, string> = {
     design: 'Design',
     spec: 'Specification',
@@ -25,16 +55,17 @@
     completed: 'Completed',
     failed: 'Failed',
   };
-  
+
   async function handleStart() {
     if (!projectDescription.trim()) return;
-    
+
     try {
       const request: ShipStartRequest = {
         projectDescription: projectDescription.trim(),
         preferences,
+        projectId: getCurrentProjectId() ?? undefined,
       };
-      
+
       const newSession = await shipStore.start(request);
       await shipStore.executeStream(newSession.id, (data) => {
         console.log('SHIP update:', data);
@@ -43,11 +74,70 @@
       console.error('Failed to start SHIP mode:', err);
     }
   }
+
+  function handleStartOver() {
+    shipStore.reset();
+  }
   
   function getPhaseProgress(): number {
     const phases: ShipPhase[] = ['design', 'spec', 'plan', 'code'];
     const currentIndex = phases.indexOf(phase);
     return currentIndex >= 0 ? ((currentIndex + 1) / phases.length) * 100 : 0;
+  }
+
+  const codegenSessionId = $derived(session?.codeResult?.session?.sessionId);
+  const showCompletionActions = $derived(status === 'completed' && !!codegenSessionId);
+
+  async function handleShipDownload() {
+    if (!codegenSessionId) return;
+    try {
+      await downloadCodegenZip(codegenSessionId);
+      showToast('Download started', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Download failed', 'error');
+    }
+  }
+
+  function handleShipPushClick() {
+    showGitHubPrompt = true;
+  }
+
+  async function submitShipPush() {
+    const name = repoNameInput.trim();
+    if (!name || !codegenSessionId) return;
+    try {
+      const res = await fetchApi('/api/github/create-and-push', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId: codegenSessionId, repoName: name }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        showToast((data as { error?: string }).error ?? 'Push to GitHub failed', 'error');
+        return;
+      }
+      showToast(`Pushed to GitHub as ${name}`, 'success');
+      showGitHubPrompt = false;
+      repoNameInput = '';
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Push to GitHub failed', 'error');
+    }
+  }
+
+  function cancelShipGitHubPrompt() {
+    showGitHubPrompt = false;
+    repoNameInput = '';
+  }
+
+  function handleShipOpenInIde(ide: 'cursor' | 'vscode' | 'jetbrains') {
+    const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__);
+    const base = isTauri ? 'Download the project, then open the folder in ' : 'Download the ZIP, extract it, then open the folder in ';
+    const msg = {
+      cursor: base + 'Cursor (File > Open Folder).',
+      vscode: base + 'VS Code (File > Open Folder).',
+      jetbrains: base + 'IntelliJ or WebStorm (File > Open).',
+    };
+    showToast(msg[ide], 'info', 8000);
+    handleShipDownload();
   }
 </script>
 
@@ -112,10 +202,12 @@
           </label>
         </div>
       </div>
+
+      <p class="ai-disclaimer">Generated code and content are suggestions only. Always review and test before use. We do not guarantee correctness or fitness for any purpose.</p>
       
       <button 
         class="start-button" 
-        on:click={handleStart}
+        onclick={handleStart}
         disabled={!projectDescription.trim() || status === 'running'}
       >
         Start SHIP Mode
@@ -127,9 +219,9 @@
         <div class="phase-progress">
           <div class="progress-bar" style="width: {getPhaseProgress()}%"></div>
         </div>
-        <div class="phase-label">Current Phase: {phaseLabels[phase]}</div>
+        <div class="phase-label">Current Phase: {phaseLabels[phase]}{#if isStreaming} <span class="streaming-dot">…</span>{/if}</div>
         <div class="status-badge" class:running={status === 'running'} class:completed={status === 'completed'} class:failed={status === 'failed'}>
-          {status}
+          {isStreaming ? 'streaming' : status}
         </div>
       </div>
       
@@ -254,6 +346,35 @@
         <div class="completion-message">
           <h2>✓ SHIP Mode Complete!</h2>
           <p>All phases have been completed successfully.</p>
+          {#if showCompletionActions}
+            <div class="completion-actions">
+              <button type="button" class="action-btn success" onclick={handleShipDownload} title="Download project as ZIP">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download
+              </button>
+              <button type="button" class="action-btn primary" onclick={handleShipPushClick} title="Push to GitHub">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                Push to GitHub
+              </button>
+              <button type="button" class="action-btn secondary" onclick={() => handleShipOpenInIde('cursor')} title="Open in Cursor">Cursor</button>
+              <button type="button" class="action-btn secondary" onclick={() => handleShipOpenInIde('vscode')} title="Open in VS Code">VS Code</button>
+              <button type="button" class="action-btn secondary" onclick={() => handleShipOpenInIde('jetbrains')} title="Open in JetBrains">JetBrains</button>
+            </div>
+          {/if}
+          <button type="button" class="start-over-btn" onclick={handleStartOver}>Start over</button>
+        </div>
+      {/if}
+
+      {#if showGitHubPrompt}
+        <div class="github-prompt-overlay" role="dialog" aria-label="Push to GitHub">
+          <div class="github-prompt">
+            <label for="ship-repo-input" class="github-prompt-label">Repository name</label>
+            <input id="ship-repo-input" type="text" class="github-prompt-input" placeholder="my-project" bind:value={repoNameInput} onkeydown={(e) => e.key === 'Enter' && submitShipPush()} />
+            <div class="github-prompt-actions">
+              <button type="button" class="action-btn primary" onclick={submitShipPush} disabled={!repoNameInput.trim()}>Push to GitHub</button>
+              <button type="button" class="action-btn subtle" onclick={cancelShipGitHubPrompt}>Cancel</button>
+            </div>
+          </div>
         </div>
       {/if}
     </div>
@@ -334,6 +455,13 @@
     border-radius: 4px;
   }
   
+  .ai-disclaimer {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin: 0 0 1rem;
+    line-height: 1.3;
+  }
+
   .start-button {
     background: #007bff;
     color: white;
@@ -485,4 +613,115 @@
     color: #155724;
     margin-bottom: 0.5rem;
   }
+
+  .start-over-btn {
+    margin-top: 1rem;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.95rem;
+    border: 1px solid #155724;
+    background: transparent;
+    color: #155724;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .start-over-btn:hover {
+    background: #155724;
+    color: white;
+  }
+
+  .completion-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+
+  .completion-actions .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .completion-actions .action-btn.success {
+    background: #10B981;
+    color: #fff;
+  }
+  .completion-actions .action-btn.success:hover { background: #059669; }
+
+  .completion-actions .action-btn.primary {
+    background: #0066FF;
+    color: #fff;
+  }
+  .completion-actions .action-btn.primary:hover { background: #0052CC; }
+  .completion-actions .action-btn.primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .completion-actions .action-btn.secondary {
+    background: #e9ecef;
+    color: #155724;
+  }
+  .completion-actions .action-btn.secondary:hover { background: #dee2e6; }
+
+  .github-prompt-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .github-prompt {
+    background: #fff;
+    padding: 1.25rem;
+    border-radius: 8px;
+    min-width: 280px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  .github-prompt-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #374151;
+  }
+
+  .github-prompt-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+  }
+
+  .github-prompt-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  .github-prompt .action-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+  }
+  .github-prompt .action-btn.primary { background: #0066FF; color: #fff; }
+  .github-prompt .action-btn.primary:hover:not(:disabled) { background: #0052CC; }
+  .github-prompt .action-btn.subtle { background: #e9ecef; color: #6c757d; }
+  .github-prompt .action-btn.subtle:hover { background: #dee2e6; }
 </style>

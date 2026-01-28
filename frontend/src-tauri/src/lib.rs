@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::sync::Mutex;
 use tauri::Manager;
@@ -73,7 +73,7 @@ fn find_backend_executable(app_handle: &tauri::AppHandle) -> Option<PathBuf> {
     None
 }
 
-fn load_env_file(backend_dir: &PathBuf) -> HashMap<String, String> {
+fn load_env_file(backend_dir: &Path) -> HashMap<String, String> {
     let mut env_vars = HashMap::new();
     let env_path = backend_dir.join(".env");
 

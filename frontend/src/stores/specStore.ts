@@ -1,4 +1,5 @@
 import { writable, derived } from 'svelte/store';
+import { fetchApi } from '../lib/api.js';
 import type {
   SpecSession,
   SpecQuestion,
@@ -7,10 +8,6 @@ import type {
   SpecStartRequest,
   SpecAnswerRequest,
 } from '../types/spec';
-
-const API_BASE = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL
-  ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
-  : 'http://localhost:3000';
 
 // Spec state
 interface SpecState {
@@ -46,9 +43,8 @@ export async function startSpecSession(request: SpecStartRequest): Promise<SpecS
   state.update(s => ({ ...s, isLoading: true, error: null }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/spec/start`, {
+    const response = await fetchApi('/api/spec/start', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     });
 
@@ -86,7 +82,7 @@ export async function loadSpecSession(sessionId: string): Promise<SpecSession> {
   state.update(s => ({ ...s, isLoading: true, error: null }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/spec/${sessionId}`);
+    const response = await fetchApi(`/api/spec/${sessionId}`);
 
     if (!response.ok) {
       const error = await response.json();
@@ -122,9 +118,8 @@ export async function submitAnswer(sessionId: string, answer: SpecAnswerRequest)
   state.update(s => ({ ...s, isLoading: true, error: null }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/spec/${sessionId}/answer`, {
+    const response = await fetchApi(`/api/spec/${sessionId}/answer`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(answer),
     });
 
@@ -162,9 +157,8 @@ export async function generateSpecification(sessionId: string): Promise<{ specif
   state.update(s => ({ ...s, isLoading: true, error: null }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/spec/${sessionId}/generate`, {
+    const response = await fetchApi(`/api/spec/${sessionId}/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
     });
 
     if (!response.ok) {

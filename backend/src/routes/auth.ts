@@ -1,6 +1,6 @@
 import express, { Request, Response, Router } from 'express';
 import { body, validationResult, ValidationChain } from 'express-validator';
-import { auth, isMockMode } from '../services/supabaseClient.js';
+import { auth } from '../services/supabaseClient.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 import { getRequestLogger } from '../middleware/logger.js';
 import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
@@ -73,7 +73,7 @@ router.post(
         return;
       }
 
-      log.info({ userId: data.user?.id, email, mock: isMockMode }, 'User signed up');
+      log.info({ userId: data.user?.id, email }, 'User signed up');
       res.status(201).json({
         success: true,
         user: {
@@ -93,7 +93,6 @@ router.post(
                   : undefined,
             }
           : null,
-        mock: isMockMode,
       });
     } catch (err) {
       const error = err as Error;
@@ -130,7 +129,7 @@ router.post(
         return;
       }
 
-      log.info({ userId: data.user?.id, email, mock: isMockMode }, 'User logged in');
+      log.info({ userId: data.user?.id, email }, 'User logged in');
       res.json({
         success: true,
         user: {
@@ -148,7 +147,6 @@ router.post(
               ? data.session.expires_at
               : undefined,
         },
-        mock: isMockMode,
       });
     } catch (err) {
       const error = err as Error;
@@ -191,16 +189,14 @@ router.get('/me', requireAuth, (req: AuthenticatedRequest, res: Response) => {
       name: req.user?.user_metadata?.name as string | undefined,
       created_at: req.user?.created_at,
     },
-    mock: isMockMode,
   });
 });
 
 // GET /auth/status - Check auth configuration (public)
 router.get('/status', (_req: Request, res: Response) => {
   res.json({
-    configured: !isMockMode,
-    mock: isMockMode,
-    providers: isMockMode ? ['email'] : ['email', 'google', 'github'],
+    configured: true,
+    providers: ['email', 'google', 'github'],
   });
 });
 

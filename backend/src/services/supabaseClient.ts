@@ -4,21 +4,35 @@ import logger from '../middleware/logger.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const isProduction = process.env.NODE_ENV === 'production';
 
-// Check if Supabase is configured
+// Production: require real Supabase; fail startup if not configured.
+if (isProduction) {
+  if (
+    !SUPABASE_URL ||
+    !SUPABASE_SERVICE_KEY ||
+    SUPABASE_URL === 'https://your-project.supabase.co'
+  ) {
+    throw new Error(
+      'SUPABASE_URL and SUPABASE_SERVICE_KEY are required in production. Set them in your environment.'
+    );
+  }
+}
+
+// Dev only: allow mock when Supabase not configured. Never use mock in production.
 const MOCK_MODE =
-  !SUPABASE_URL ||
-  !SUPABASE_SERVICE_KEY ||
-  SUPABASE_URL === 'https://your-project.supabase.co';
+  !isProduction &&
+  (!SUPABASE_URL ||
+    !SUPABASE_SERVICE_KEY ||
+    SUPABASE_URL === 'https://your-project.supabase.co');
 
 if (MOCK_MODE) {
-  logger.warn('Supabase running in MOCK MODE - no credentials configured');
-  logger.warn('Set SUPABASE_URL and SUPABASE_SERVICE_KEY in backend/.env');
+  logger.warn('Supabase running in MOCK MODE (dev only) - no credentials configured');
+  logger.warn('Set SUPABASE_URL and SUPABASE_SERVICE_KEY in backend/.env for real auth');
 } else {
   logger.info('Supabase client configured');
 }
 
-// Create real client or null for mock mode
 const supabaseClient: SupabaseClient | null = MOCK_MODE
   ? null
   : createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!, {
@@ -28,7 +42,6 @@ const supabaseClient: SupabaseClient | null = MOCK_MODE
       },
     });
 
-// Mock user type
 interface MockUser {
   id: string;
   email: string;
@@ -44,7 +57,6 @@ interface MockSession {
   expiresAt: number;
 }
 
-// Mock user database for development
 const mockUsers = new Map<string, MockUser>();
 const mockSessions = new Map<string, MockSession>();
 
@@ -102,7 +114,6 @@ interface SignInOptions {
   password: string;
 }
 
-// Wrapped auth functions that work in both modes
 export async function getUser(
   token: string
 ): Promise<AuthResponse<{ user: MockUserPublic | User | null }>> {
@@ -195,7 +206,6 @@ interface MockQueryBuilder {
   single: () => { data: null; error: null };
 }
 
-// Database query helper
 export function from(table: string): MockQueryBuilder | ReturnType<SupabaseClient['from']> {
   if (MOCK_MODE) {
     const mockBuilder: MockQueryBuilder = {
@@ -213,7 +223,6 @@ export function from(table: string): MockQueryBuilder | ReturnType<SupabaseClien
   return supabaseClient!.from(table);
 }
 
-// Export auth object with wrapped methods
 export const auth = {
   getUser,
   signUp,
@@ -221,9 +230,6 @@ export const auth = {
   signOut,
 };
 
-// Export db interface
 export const db = { from };
-
-export const isMockMode = MOCK_MODE;
 
 export default supabaseClient;

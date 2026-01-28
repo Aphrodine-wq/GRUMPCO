@@ -86,6 +86,8 @@ export interface Session {
   updatedAt: number;
   diagramVersions?: DiagramVersion[]; // Track diagram history
   currentDiagramId?: string; // Current active diagram version
+  /** Optional project id; when present, include in backend calls (e.g. ship/codegen from chat). */
+  projectId?: string | null;
 }
 
 // Legacy session type for migration

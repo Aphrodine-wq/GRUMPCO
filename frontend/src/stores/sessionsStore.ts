@@ -1,5 +1,6 @@
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import type { Session, Message, LegacySession, DiagramVersion } from '../types';
+import { getCurrentProjectId } from './projectStore.js';
 
 const SESSIONS_KEY = 'mermaid-sessions';
 const MAX_SESSIONS = 10;
@@ -84,20 +85,18 @@ function loadSessions(): void {
   }
 }
 
-// Save sessions to storage
+// Save sessions to storage (uses get() to avoid memory leaks)
 function saveSessions(): void {
-  sessions.subscribe((s) => {
-    currentSessionId.subscribe((id) => {
-      try {
-        localStorage.setItem(SESSIONS_KEY, JSON.stringify({
-          sessions: s,
-          currentSessionId: id
-        }));
-      } catch (e) {
-        console.warn('Failed to save sessions:', e);
-      }
-    })();
-  })();
+  try {
+    const s = get(sessions);
+    const id = get(currentSessionId);
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify({
+      sessions: s,
+      currentSessionId: id
+    }));
+  } catch (e) {
+    console.warn('Failed to save sessions:', e);
+  }
 }
 
 // Auto-save on changes
@@ -129,13 +128,14 @@ export const sessionsStore = {
   },
 
   // Actions
-  createSession(messages: Message[] = []): Session {
+  createSession(messages: Message[] = [], projectId?: string | null): Session {
     const session: Session = {
       id: generateId(),
       name: messages.length > 0 ? generateSessionName(messages) : 'New Session',
       messages,
       timestamp: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      projectId: projectId !== undefined ? projectId : (getCurrentProjectId() ?? undefined),
     };
 
     sessions.update(s => {
@@ -191,6 +191,17 @@ export const sessionsStore = {
     });
   },
 
+  /** Set or clear the project id for a chat session; used when starting ship/codegen from chat. */
+  setSessionProjectId(id: string, projectId: string | null): void {
+    sessions.update(s => {
+      const session = s.find(sess => sess.id === id);
+      if (session) {
+        session.projectId = projectId ?? undefined;
+      }
+      return [...s];
+    });
+  },
+
   switchSession(id: string): void {
     sessions.update(s => {
       const session = s.find(sess => sess.id === id);
@@ -206,10 +217,7 @@ export const sessionsStore = {
   },
 
   exportSession(id: string): void {
-    let session: Session | undefined;
-    sessions.subscribe(s => {
-      session = s.find(sess => sess.id === id);
-    })();
+    const session = get(sessions).find(sess => sess.id === id);
 
     if (!session) return;
 
@@ -297,25 +305,16 @@ export const sessionsStore = {
   },
 
   getDiagramVersions(sessionId: string): DiagramVersion[] {
-    let result: DiagramVersion[] = [];
-    sessions.subscribe(s => {
-      const session = s.find(sess => sess.id === sessionId);
-      result = session?.diagramVersions || [];
-    })();
-    return result;
+    const session = get(sessions).find(sess => sess.id === sessionId);
+    return session?.diagramVersions || [];
   },
 
   getCurrentDiagram(sessionId: string): DiagramVersion | null {
-    let result: DiagramVersion | null = null;
-    sessions.subscribe(s => {
-      const session = s.find(sess => sess.id === sessionId);
-      if (!session?.currentDiagramId || !session.diagramVersions) {
-        result = null;
-        return;
-      }
-      result = session.diagramVersions.find(v => v.id === session.currentDiagramId) || null;
-    })();
-    return result;
+    const session = get(sessions).find(sess => sess.id === sessionId);
+    if (!session?.currentDiagramId || !session.diagramVersions) {
+      return null;
+    }
+    return session.diagramVersions.find(v => v.id === session.currentDiagramId) || null;
   },
 
   revertToDiagramVersion(sessionId: string, versionId: string): boolean {
@@ -336,12 +335,8 @@ export const sessionsStore = {
 
   // Conversation context helpers
   getRecentMessages(sessionId: string, count: number = 10): Message[] {
-    let result: Message[] = [];
-    sessions.subscribe(s => {
-      const session = s.find(sess => sess.id === sessionId);
-      result = session ? session.messages.slice(-count) : [];
-    })();
-    return result;
+    const session = get(sessions).find(sess => sess.id === sessionId);
+    return session ? session.messages.slice(-count) : [];
   }
 };
 

@@ -12,40 +12,39 @@
   import WorkflowActions from './WorkflowActions.svelte';
   import ToolCallCard from './ToolCallCard.svelte';
   import ToolResultCard from './ToolResultCard.svelte';
+  import { CollapsibleSidebar, Badge } from '../lib/design-system';
   import { exportAsSvg } from '../lib/mermaid';
   import { trackMessageSent, trackDiagramGenerated, trackError, trackTemplateUsed } from '../lib/analytics';
   import { showToast } from '../stores/toastStore';
-  import { processError, logError, type ErrorContext } from '../utils/errorHandler';
-  import { retryWithBackoff } from '../utils/retryHandler';
-  import { sessionsStore, currentSession } from '../stores/sessionsStore';
+  import { processError, logError } from '../utils/errorHandler';
+  import { sessionsStore, currentSession, sortedSessions } from '../stores/sessionsStore';
+  import { getCurrentProjectId } from '../stores/projectStore';
   import { chatModeStore } from '../stores/chatModeStore';
   import { workspaceStore } from '../stores/workspaceStore';
   import { codeSessionsStore } from '../stores/codeSessionsStore';
   import { openModal } from '../stores/clarificationStore';
-  import { phase, canProceedToPrd, canProceedToCodegen, canDownload, streamArchitecture, streamPrd, startCodeGeneration, downloadProject, reset as resetWorkflow, architecture } from '../stores/workflowStore';
+  import { phase, canProceedToPrd, canProceedToCodegen, canDownload, streamPrd, startCodeGeneration, downloadProject, reset as resetWorkflow, architecture, codegenSession } from '../stores/workflowStore';
   import { parseAssistantResponse } from '../utils/responseParser';
   import { flattenTextContent } from '../utils/contentParser';
-  import { generatePlan, currentPlan, approvePlan, startPlanExecution } from '../stores/planStore';
-  import { startSpecSession, currentSession, submitAnswer, generateSpecification } from '../stores/specStore';
+  import { generatePlan, currentPlan } from '../stores/planStore';
+  import { startSpecSession, currentSession as currentSpecSession } from '../stores/specStore';
   import PlanViewer from './PlanViewer.svelte';
   import SpecMode from './SpecMode.svelte';
+  import ShipMode from './ShipMode.svelte';
   import CommandPalette from './CommandPalette.svelte';
+  import LoadSessionModal from './LoadSessionModal.svelte';
+  import SettingsScreen from './SettingsScreen.svelte';
+  import { fetchApi } from '../lib/api.js';
+  import { settingsStore } from '../stores/settingsStore';
   import type { Message, ContentBlock } from '../types';
 
   interface Props {
     initialMessages?: Message[];
-    key?: number;
   }
 
   let {
-    initialMessages = $bindable(undefined),
-    key = $bindable(0)
+    initialMessages = $bindable(undefined)
   }: Props = $props();
-
-  const API_URL = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL
-    ? import.meta.env.VITE_API_URL
-    : 'http://localhost:3000/api';
-  const API_BASE = API_URL.replace(/\/api\/?$/, '') || 'http://localhost:3000';
 
   const defaultMessage: Message = {
     role: 'assistant',
@@ -64,15 +63,17 @@
   let lastUserMessage = $state('');
   let activeController: AbortController | null = $state(null);
   let workspaceInput = $state('');
-  let chatMode: 'normal' | 'plan' | 'spec' | 'execute' = $state('normal');
+  let chatMode: 'normal' | 'plan' | 'spec' | 'ship' | 'execute' = $state('normal');
   let planMode = $state(false); // Deprecated, kept for backward compatibility
-  let agentProfile = $state<string>('general');
   let currentPlanId = $state<string | null>(null);
   let currentSpecSessionId = $state<string | null>(null);
   let commandPaletteOpen = $state(false);
+  let loadSessionModalOpen = $state(false);
   let isTyping = $state(false);
   let typingTimeout: ReturnType<typeof setTimeout> | null = null;
   let editingMessageIndex = $state<number | null>(null);
+  let sidebarCollapsed = $state(false);
+  let showSettings = $state(false);
 
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
     if (Array.isArray(content)) return content;
@@ -220,7 +221,6 @@
         const plan = await generatePlan({
           userRequest: text,
           workspaceRoot: ws,
-          agentProfile: agentProfile,
         });
         currentPlanId = plan.id;
         inputText = '';
@@ -327,9 +327,8 @@
     
     let response: Response;
     try {
-      response = await fetch(`${API_URL}/generate-diagram-stream`, {
+      response = await fetchApi('/api/generate-diagram-stream', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
         signal,
       });
@@ -390,7 +389,7 @@
     if (parsed.mermaidCode) trackDiagramGenerated('mermaid', true);
     if ($currentSession) sessionsStore.updateSession($currentSession.id, messages);
     else sessionsStore.createSession(messages);
-    dispatch('messages-updated', { detail: messages });
+    dispatch('messages-updated', messages);
   }
 
   async function runCodeModeStream(signal: AbortSignal) {
@@ -401,18 +400,21 @@
 
     let response: Response;
     try {
-      response = await fetch(`${API_BASE}/api/chat/stream`, {
+      const body: Record<string, unknown> = {
+        messages: apiMessages,
+        workspaceRoot: ws || undefined,
+        mode: get(chatModeStore) === 'argument' ? 'argument' : (chatMode !== 'normal' ? chatMode : (planMode ? 'plan' : 'normal')),
+        planMode: planMode,
+        planId: currentPlanId || undefined,
+        specSessionId: currentSpecSessionId || undefined,
+      };
+      const s = settingsStore.getCurrent();
+      if (s?.models?.defaultProvider) body.provider = s.models.defaultProvider;
+      if (s?.models?.defaultModelId) body.modelId = s.models.defaultModelId;
+      if (s?.guardRails?.allowedDirs?.length) body.guardRailOptions = { allowedDirs: s.guardRails.allowedDirs };
+      response = await fetchApi('/api/chat/stream', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: apiMessages,
-          workspaceRoot: ws || undefined,
-          mode: get(chatModeStore) === 'argument' ? 'argument' : (chatMode !== 'normal' ? chatMode : (planMode ? 'plan' : 'normal')),
-          planMode: planMode, // Keep for backward compatibility
-          planId: currentPlanId || undefined,
-          specSessionId: currentSpecSessionId || undefined,
-          agentProfile: agentProfile || undefined,
-        }),
+        body: JSON.stringify(body),
         signal,
       });
     } catch (err: any) {
@@ -491,7 +493,7 @@
     streamingBlocks = [];
     if ($currentSession) sessionsStore.updateSession($currentSession.id, messages);
     else sessionsStore.createSession(messages);
-    dispatch('messages-updated', { detail: messages });
+    dispatch('messages-updated', messages);
   }
 
   function cancelGeneration() {
@@ -532,12 +534,21 @@
     }
   }
 
+  function setupDiagramRef(el: HTMLElement, params: {index: number, blockIdx: number}) {
+    setDiagramRef(el, params.index, params.blockIdx);
+    return {
+      update(newParams: {index: number, blockIdx: number}) {
+        setDiagramRef(el, newParams.index, newParams.blockIdx);
+      }
+    };
+  }
+
   function handleRefinement() {
     // Simplified refinement
     showToast('Refinement feature coming soon', 'info');
   }
 
-  const dispatch = createEventDispatcher();
+  const dispatch = createEventDispatcher<{ 'messages-updated': Message[] }>();
 
   // Workflow handlers
   async function handleProceedToPrd() {
@@ -547,11 +558,52 @@
   }
 
   async function handleProceedToCodegen() {
-    await startCodeGeneration();
+    const session = get(currentSession);
+    const projectId = session?.projectId ?? getCurrentProjectId();
+    await startCodeGeneration(projectId ?? undefined);
   }
 
   async function handleDownload() {
     await downloadProject();
+  }
+
+  async function handlePushToGitHub(detail: { repoName: string }) {
+    const session = get(codegenSession);
+    const sessionId = session?.sessionId;
+    if (!sessionId) {
+      showToast('No code generation session to push', 'error');
+      return;
+    }
+    try {
+      const res = await fetchApi('/api/github/create-and-push', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId, repoName: detail.repoName }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        showToast((data as { error?: string }).error ?? 'Push to GitHub failed', 'error');
+        return;
+      }
+      showToast(`Pushed to GitHub as ${detail.repoName}`, 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Push to GitHub failed', 'error');
+    }
+  }
+
+  function handleOpenInIde(e: CustomEvent<{ ide?: string }>) {
+    const ide = e?.detail?.ide ?? 'cursor';
+    const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__);
+    const base = isTauri
+      ? 'Download the project, then open the folder in '
+      : 'Download the ZIP, extract it, then open the folder in ';
+    const suffix = isTauri ? ': File > Open Folder.' : ' (File > Open Folder).';
+    const msg: Record<string, string> = {
+      cursor: base + 'Cursor' + suffix,
+      vscode: base + 'VS Code' + suffix,
+      jetbrains: base + 'IntelliJ or WebStorm' + (isTauri ? ': File > Open.' : ' (File > Open).'),
+    };
+    showToast(msg[ide] ?? msg.cursor, 'info', 8000);
+    handleDownload();
   }
 
   function handleWorkflowRefine() {
@@ -568,7 +620,7 @@
       : null;
     if (name == null) return;
     const ws = workspaceInput.trim() || get(workspaceStore) || null;
-    codeSessionsStore.save(name, messages, ws, agentProfile || undefined);
+    codeSessionsStore.save(name, messages, ws, 'general');
     showToast('Session saved', 'success');
   }
 
@@ -595,19 +647,15 @@
     sendMessage();
   }
 
-  function handleLoadCodeSession(e: Event) {
-    const sel = e.currentTarget as HTMLSelectElement;
-    const id = sel?.value;
-    if (!id) return;
+  function loadSessionById(id: string) {
     const session = codeSessionsStore.load(id);
     if (session) {
       messages = JSON.parse(JSON.stringify(session.messages));
       workspaceInput = session.workspaceRoot ?? '';
       if (session.workspaceRoot) workspaceStore.setWorkspace(session.workspaceRoot);
-      if (session.agentProfile) agentProfile = session.agentProfile;
       showToast(`Loaded: ${session.name}`, 'success');
+      loadSessionModalOpen = false;
     }
-    sel.value = '';
   }
 
   // Handle command palette events
@@ -623,16 +671,16 @@
   }
 
   function handleLoadSession() {
-    // Focus the load session select
-    const select = document.querySelector('.session-select') as HTMLSelectElement;
-    if (select) {
-      select.focus();
-      select.click();
-    }
+    loadSessionModalOpen = true;
   }
 
   function handleShowShortcuts() {
     showToast('Keyboard Shortcuts:\nCtrl/Cmd+K: Command Palette\nCtrl/Cmd+/: Show Shortcuts\nEscape: Cancel\nArrow Up: Edit Last Message', 'info', 8000);
+  }
+
+  function handleNewSession() {
+    sessionsStore.createSession([]);
+    inputRef?.focus();
   }
 
   onMount(() => {
@@ -667,111 +715,40 @@
 </script>
 
 <div class="chat-interface">
-  <div class="mode-bar">
-    <div class="mode-tabs">
-      <button
-        type="button"
-        class="mode-tab"
-        class:active={$chatModeStore === 'design'}
-        on:click={() => chatModeStore.setMode('design')}
-      >Design</button>
-      <button
-        type="button"
-        class="mode-tab"
-        class:active={$chatModeStore === 'code'}
-        on:click={() => chatModeStore.setMode('code')}
-      >Code</button>
-      <button
-        type="button"
-        class="mode-tab"
-        class:active={$chatModeStore === 'argument'}
-        on:click={() => chatModeStore.setMode('argument')}
-      >Argument</button>
-    </div>
-    {#if $chatModeStore === 'code' || $chatModeStore === 'argument'}
-      <div class="workspace-row">
-        <label class="workspace-label">Workspace</label>
-        <input
-          type="text"
-          class="workspace-input"
-          placeholder="C:\path\to\project or /home/user/project"
-          bind:value={workspaceInput}
-          on:blur={() => { const v = workspaceInput.trim(); if (v) workspaceStore.setWorkspace(v); }}
-        />
+  <CollapsibleSidebar bind:collapsed={sidebarCollapsed} position="left" width="280px">
+    {#snippet header()}
+      <div class="sidebar-header-row">
+        <span class="sidebar-title">History</span>
+        <button type="button" class="sidebar-new-btn" onclick={handleNewSession} aria-label="New session" title="New session">New</button>
       </div>
-      {#if $chatModeStore === 'code'}
-      <div class="mode-selector-row">
-        <label class="workspace-label">Mode</label>
-        <select class="mode-select" bind:value={chatMode} title="Chat mode">
-          <option value="normal">Normal</option>
-          <option value="plan">Plan Mode</option>
-          <option value="spec">Spec Mode</option>
-          <option value="execute">Execute Plan</option>
-        </select>
+    {/snippet}
+    {#snippet children()}
+      <ul class="session-list" role="list">
+        {#each $sortedSessions as session (session.id)}
+          <li>
+            <button type="button" class="session-item" class:session-item-active={session.id === $currentSession?.id} onclick={() => sessionsStore.switchSession(session.id)} title="Switch to session {session.name}">
+              <span class="session-name">{session.name}</span>
+              <span class="session-meta">{new Date(session.updatedAt).toLocaleDateString()}</span>
+              {#if session.id === $currentSession?.id}
+                <Badge>{#snippet children()}Current{/snippet}</Badge>
+              {/if}
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {/snippet}
+    {#snippet footer()}
+      <div class="sidebar-footer-actions">
+        <button type="button" class="sidebar-footer-btn" onclick={() => (showSettings = true)} aria-label="Settings">Settings</button>
+        <button type="button" class="sidebar-footer-btn sidebar-footer-btn-upgrade" onclick={() => showToast('Upgrade your account for more projects and features.', 'info')} aria-label="Upgrade">Upgrade</button>
       </div>
-      {/if}
-      <style>
-        .mode-selector-row {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-        .mode-select {
-          flex: 1;
-          padding: 0.5rem;
-          border: 1px solid #E5E5E5;
-          border-radius: 4px;
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 0.875rem;
-        }
-        .plan-section, .spec-section {
-          padding: 1rem;
-          background: #F9FAFB;
-          border-top: 1px solid #E5E5E5;
-        }
-        .plan-info {
-          padding: 0.5rem;
-          background: #E0F2FE;
-          border-radius: 4px;
-          font-size: 0.875rem;
-          color: #0C4A6E;
-          margin-top: 0.5rem;
-        }
-      </style>
-      {#if chatMode === 'execute' && $currentPlan}
-        <div class="plan-info">
-          Executing: {$currentPlan.title}
-        </div>
-      {/if}
-      {#if chatMode === 'plan'}
-        <label class="plan-mode-check">
-          <input type="checkbox" bind:checked={planMode} />
-          <span>Legacy plan mode (deprecated)</span>
-        </label>
-      {/if}
-      <div class="agent-profile-row">
-        <label class="workspace-label">Agent</label>
-        <select class="agent-select" bind:value={agentProfile} title="Specialist profile">
-          <option value="general">General</option>
-          <option value="router">Router</option>
-          <option value="frontend">Frontend</option>
-          <option value="backend">Backend</option>
-          <option value="devops">DevOps</option>
-          <option value="test">Test</option>
-        </select>
-      </div>
-      <div class="session-actions">
-        <button type="button" class="session-btn" on:click={handleSaveCodeSession}>Save</button>
-        <select class="session-select" on:change={handleLoadCodeSession} title="Load session">
-          <option value="">Load session…</option>
-          {#each $codeSessionsStore as session}
-            <option value={session.id}>{session.name}</option>
-          {/each}
-        </select>
-      </div>
-    {/if}
-  </div>
-
+    {/snippet}
+  </CollapsibleSidebar>
+  <div class="layout-main">
+    {#if showSettings}
+      <SettingsScreen onBack={() => (showSettings = false)} />
+    {:else}
+    <div class="chat-column">
   {#if $chatModeStore === 'design'}
     <WorkflowPhaseBar
       phase={$phase}
@@ -785,25 +762,33 @@
     </div>
   {/if}
 
-  {#if chatMode === 'spec' && $currentSession}
+  {#if chatMode === 'spec' && $currentSpecSession}
     <div class="spec-section">
       <SpecMode />
     </div>
   {/if}
 
+  {#if chatMode === 'ship'}
+    <div class="ship-section">
+      <ShipMode />
+    </div>
+  {/if}
+
+  {#if chatMode === 'execute' && $currentPlan}
+    <div class="plan-info">Executing: {$currentPlan.title}</div>
+  {/if}
+
   <div class="messages-container" bind:this={messagesRef}>
     {#if messages.length <= 1 && !streaming}
       <div class="empty-state">
+        <h2 class="empty-title above-blob">What are we building?</h2>
         <GRumpBlob size="lg" state="idle" animated={true} />
         {#if $chatModeStore === 'design'}
-          <h2 class="empty-title">What do you want to build?</h2>
           <p class="empty-subtitle">Describe your app idea and I'll help you code it</p>
           <SuggestionChips on:select={handleTemplateSelect} />
         {:else if $chatModeStore === 'argument'}
-          <h2 class="empty-title">Argue with me</h2>
           <p class="empty-subtitle">Describe what you want to build or change—I'll push back, suggest alternatives, and only implement when you say so.</p>
         {:else}
-          <h2 class="empty-title">Code with tools</h2>
           <p class="empty-subtitle">Set a workspace path, then ask me to run commands, read or edit files</p>
         {/if}
       </div>
@@ -832,7 +817,7 @@
                     <div class="diagram-header">
                       <span class="diagram-label">Architecture</span>
                       <div class="diagram-actions">
-                        <button on:click={() => exportSvg(index, blockIdx)} class="action-btn" title="Export SVG">
+                        <button onclick={() => exportSvg(index, blockIdx)} class="action-btn" title="Export SVG">
                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
@@ -841,12 +826,13 @@
                         </button>
                       </div>
                     </div>
-                    <DiagramRenderer
-                      bind:this={(el) => setDiagramRef(el, index, blockIdx)}
-                      code={(block as { content: string }).content}
-                      architectureMetadata={$architecture?.metadata}
-                      on:generate-code={(e) => handleMermaidToCode({ mermaidCode: e.detail.mermaidCode, framework: 'react', language: 'typescript', workspaceRoot: get(workspaceStore) })}
-                    />
+                    <div use:setupDiagramRef={{index, blockIdx}}>
+                      <DiagramRenderer
+                        code={(block as { content: string }).content}
+                        architectureMetadata={$architecture?.metadata}
+                        on:generate-code={(e) => handleMermaidToCode({ mermaidCode: e.detail.mermaidCode, framework: 'react', language: 'typescript', workspaceRoot: get(workspaceStore) ?? undefined })}
+                      />
+                    </div>
                     {#if isLastAssistantMessage(index) && !streaming}
                       <RefinementActions on:refine={handleRefinement} />
                       {#if $chatModeStore === 'design'}
@@ -940,103 +926,383 @@
       on:download={handleDownload}
       on:refine={handleWorkflowRefine}
       on:reset={handleWorkflowReset}
+      on:pushToGitHub={(e) => handlePushToGitHub(e.detail)}
+      on:openInIde={handleOpenInIde}
     />
   {/if}
 
-  <form on:submit|preventDefault={sendMessage} class="input-container">
-    <span class="input-prompt">&gt;</span>
-    <div class="input-wrapper">
-      <input
-        bind:value={inputText}
-        on:input={handleInputChange}
-        type="text"
-        placeholder={$chatModeStore === 'code' ? 'e.g. list files in src, add a hello.js script...' : $chatModeStore === 'argument' ? 'e.g. add Auth0 login, switch to Postgres…' : "Describe what you want to build..."}
-        disabled={streaming}
-        class="message-input"
-        bind:this={inputRef}
-      />
-      {#if isTyping && !streaming}
-        <div class="typing-indicator">
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
-        </div>
-      {/if}
+    <div class="five-buttons-row">
+      <button type="button" class="mode-icon-btn" class:active={$chatModeStore === 'design'} onclick={() => { chatModeStore.setMode('design'); chatMode = 'normal'; }} title="Design">
+        <span class="mode-icon-label">Design</span>
+      </button>
+      <button type="button" class="mode-icon-btn" class:active={$chatModeStore === 'code' && chatMode === 'normal'} onclick={() => { chatModeStore.setMode('code'); chatMode = 'normal'; }} title="Code">
+        <span class="mode-icon-label">Code</span>
+      </button>
+      <button type="button" class="mode-icon-btn" class:active={$chatModeStore === 'code' && chatMode === 'plan'} onclick={() => { chatModeStore.setMode('code'); chatMode = 'plan'; }} title="Plan">
+        <span class="mode-icon-label">Plan</span>
+      </button>
+      <button type="button" class="mode-icon-btn" class:active={$chatModeStore === 'code' && chatMode === 'spec'} onclick={() => { chatModeStore.setMode('code'); chatMode = 'spec'; }} title="Spec">
+        <span class="mode-icon-label">Spec</span>
+      </button>
+      <button type="button" class="mode-icon-btn" class:active={$chatModeStore === 'argument'} onclick={() => { chatModeStore.setMode('argument'); chatMode = 'normal'; }} title="Argument">
+        <span class="mode-icon-label">Argument</span>
+      </button>
     </div>
-    {#if streaming}
-      <button type="button" on:click={cancelGeneration} class="cancel-button">
-        Stop
+
+    <div class="ship-button-row">
+      <button type="button" class="ship-btn" class:active={chatMode === 'ship'} onclick={() => chatMode = 'ship'} title="SHIP — design→spec→plan→argument→code">
+        SHIP
       </button>
-    {:else}
-      <button type="submit" disabled={!inputText.trim()} class="send-button">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="22" y1="2" x2="11" y2="13"></line>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-        </svg>
-      </button>
-    {/if}
-    {#if lastError && !streaming}
-      <button type="button" on:click={retryLastMessage} class="retry-button">
-        Retry
-      </button>
+    </div>
+
+    <p class="ai-disclaimer">Generated code and content are suggestions only. Always review and test before use. We do not guarantee correctness or fitness for any purpose.</p>
+
+    <form onsubmit={(e) => { e.preventDefault(); sendMessage(); }} class="input-container">
+      <span class="input-prompt">&gt;</span>
+      <div class="input-wrapper">
+        <input
+          bind:value={inputText}
+          oninput={handleInputChange}
+          type="text"
+          placeholder={$chatModeStore === 'code' ? 'e.g. list files in src, add a hello.js script...' : $chatModeStore === 'argument' ? 'e.g. add Auth0 login, switch to Postgres…' : "Describe what you want to build..."}
+          disabled={streaming}
+          class="message-input"
+          bind:this={inputRef}
+        />
+        {#if isTyping && !streaming}
+          <div class="typing-indicator">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+          </div>
+        {/if}
+      </div>
+      {#if streaming}
+        <button type="button" onclick={cancelGeneration} class="cancel-button">
+          Stop
+        </button>
+      {:else}
+        <button type="submit" disabled={!inputText.trim()} class="send-button" title="Send">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      {/if}
+      {#if lastError && !streaming}
+        <button type="button" onclick={retryLastMessage} class="retry-button">
+          Retry
+        </button>
       {/if}
     </form>
 
+    {#if $chatModeStore === 'code' || $chatModeStore === 'argument'}
+      <div class="workspace-row">
+        <label class="workspace-label" for="workspace-input">Workspace</label>
+        <input
+          id="workspace-input"
+          type="text"
+          class="workspace-input"
+          placeholder="C:\path\to\project or /home/user/project"
+          bind:value={workspaceInput}
+          onblur={() => { const v = workspaceInput.trim(); if (v) workspaceStore.setWorkspace(v); }}
+        />
+      </div>
+    {/if}
+  </div>
+  {/if}
+  </div>
   <CommandPalette bind:open={commandPaletteOpen} />
+  <LoadSessionModal bind:open={loadSessionModalOpen} onLoad={loadSessionById} onClose={() => (loadSessionModalOpen = false)} />
 </div>
 
 <style>
   .chat-interface {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     height: 100vh;
+    width: 100%;
     background: #F5F5F5;
   }
 
-  .mode-bar {
+  .layout-main {
+    flex: 1;
+    min-width: 0;
     display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.5rem 1rem;
-    background: #fff;
-    border-bottom: 1px solid #E5E5E5;
-    flex-wrap: wrap;
+    flex-direction: column;
+    overflow: hidden;
   }
 
-  .mode-tabs {
+  .chat-column {
+    flex: 1;
     display: flex;
+    flex-direction: column;
+    min-width: 0;
+    max-width: 48rem;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* Sidebar sessions list (passed as snippets into CollapsibleSidebar) */
+  .sidebar-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .sidebar-title {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-weight: 600;
+    font-size: var(--font-size-sm, 0.8rem);
+  }
+
+  .sidebar-new-btn {
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    background: var(--color-accent-primary, #0066FF);
+    color: #fff;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    cursor: pointer;
+    border: none;
+    transition: background 0.15s;
+  }
+
+  .sidebar-new-btn:hover {
+    background: #0052CC;
+  }
+
+  .session-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
     gap: 0.25rem;
   }
 
-  .mode-tab {
-    padding: 0.4rem 0.75rem;
-    border: 1px solid #E5E5E5;
-    border-radius: 4px;
-    background: #F5F5F5;
+  .session-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.8rem;
+    color: var(--color-text-primary, #000);
+    transition: background 0.15s;
+  }
+
+  .session-item:hover {
+    background: var(--color-bg-tertiary, #EBEBEB);
+  }
+
+  .session-item.session-item-active {
+    background: rgba(0, 102, 255, 0.12);
+    color: var(--color-accent-primary, #0066FF);
+  }
+
+  .session-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .session-meta {
+    font-size: 0.7rem;
+    color: var(--color-text-muted, #9CA3AF);
+  }
+
+  .sidebar-footer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .sidebar-footer-btn {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid var(--color-border-default, #E5E7EB);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--color-text-primary, #000);
+    transition: background 0.15s;
+    text-align: left;
+  }
+
+  .sidebar-footer-btn:hover {
+    background: var(--color-bg-tertiary, #EBEBEB);
+  }
+
+  .sidebar-footer-btn-upgrade {
+    background: var(--color-accent-primary, #0066FF);
+    color: #fff;
+    border-color: var(--color-accent-primary, #0066FF);
+    text-align: center;
+  }
+
+  .sidebar-footer-btn-upgrade:hover {
+    background: #0052CC;
+  }
+
+  .empty-title.above-blob {
+    margin-bottom: 0.5rem;
+  }
+
+  .five-buttons-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0;
+    flex-wrap: wrap;
+  }
+
+  .ship-button-row {
+    display: flex;
+    justify-content: center;
+    padding: 0 0 0.75rem;
+  }
+
+  .ai-disclaimer {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #6b7280);
+    margin: -0.25rem 0 0.5rem;
+    line-height: 1.3;
+  }
+
+  .ship-btn {
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    background: #EBEBEB;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: #6B7280;
+    border: none;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .ship-btn:hover {
+    background: #E0E0E0;
+    color: #0066FF;
+  }
+
+  .ship-btn.active {
+    background: #0066FF;
+    color: #fff;
+  }
+
+  .mode-icon-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0;
+    flex-wrap: wrap;
+  }
+
+  .mode-icon-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+    background: #EBEBEB;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.8rem;
     cursor: pointer;
     color: #6B7280;
+    transition: background 0.15s, color 0.15s;
   }
 
-  .mode-tab:hover {
-    background: #EBEBEB;
-    border-color: #0066FF;
+  .mode-icon-btn:hover {
+    background: #E0E0E0;
     color: #0066FF;
   }
 
-  .mode-tab.active {
+  .mode-icon-btn.active {
     background: #0066FF;
-    border-color: #0066FF;
     color: #fff;
+  }
+
+  .mode-icon {
+    flex-shrink: 0;
+  }
+
+  .mode-icon-label {
+    white-space: nowrap;
+  }
+
+  .submode-icon-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0 0 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .submode-icon-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    background: #EBEBEB;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    color: #6B7280;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .submode-icon-btn:hover {
+    background: #E0E0E0;
+    color: #0066FF;
+  }
+
+  .submode-icon-btn.active {
+    background: rgba(0, 102, 255, 0.12);
+    color: #0066FF;
+  }
+
+  .submode-icon {
+    flex-shrink: 0;
+  }
+
+  .plan-section, .spec-section, .ship-section {
+    padding: 1rem 0;
+    background: #F5F5F5;
+  }
+
+  .plan-info {
+    padding: 0.5rem 0.75rem;
+    background: #E0F2FE;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #0C4A6E;
+    margin-bottom: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   .workspace-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex: 1;
-    min-width: 200px;
+    padding-bottom: 1rem;
   }
 
   .workspace-label {
@@ -1049,76 +1315,50 @@
   .workspace-input {
     flex: 1;
     padding: 0.4rem 0.6rem;
-    border: 1px solid #E5E5E5;
-    border-radius: 4px;
+    border-radius: 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.8rem;
+    color: #000;
     outline: none;
+    background: #F0F0F0;
   }
 
   .workspace-input:focus {
-    border-color: #0066FF;
+    box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.25);
   }
 
-  .plan-mode-check {
+  .workspace-input::placeholder {
+    color: #9CA3AF;
+  }
+
+  .agent-badge {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: #9CA3AF;
+    padding: 0.25rem 0.5rem;
+    background: #F0F0F0;
+    border-radius: 4px;
+  }
+
+  .input-actions {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    color: #6B7280;
-    cursor: pointer;
-    white-space: nowrap;
   }
-  .plan-mode-check input { cursor: pointer; }
-
-  .agent-profile-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .agent-select {
-    padding: 0.35rem 0.6rem;
-    border: 1px solid #E5E5E5;
-    border-radius: 4px;
-    background: #F5F5F5;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    color: #374151;
-    cursor: pointer;
-    min-width: 110px;
-  }
-
-  .session-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .session-btn {
-    padding: 0.35rem 0.6rem;
-    border: 1px solid #E5E5E5;
-    border-radius: 4px;
-    background: #F5F5F5;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    cursor: pointer;
-    color: #374151;
-  }
-  .session-btn:hover {
+  .session-action-btn {
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
     background: #EBEBEB;
-    border-color: #0066FF;
-    color: #0066FF;
-  }
-  .session-select {
-    padding: 0.35rem 0.6rem;
-    border: 1px solid #E5E5E5;
-    border-radius: 4px;
-    background: #F5F5F5;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    color: #374151;
+    font-size: 0.75rem;
     cursor: pointer;
-    max-width: 180px;
+    color: #000;
+    transition: background 0.15s, color 0.15s;
+  }
+  .session-action-btn:hover {
+    background: #E0E0E0;
+    color: #0066FF;
   }
 
   .messages-container {
@@ -1214,11 +1454,10 @@
 
   .diagram-block {
     margin: 1.5rem 0;
-    background: #FFFFFF;
-    border: 1px solid #E5E5E5;
+    background: #FAFAFA;
     border-radius: 8px;
     padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
     animation: slideIn 0.4s ease-out;
   }
 
@@ -1253,17 +1492,15 @@
   }
 
   .action-btn {
-    background: transparent;
-    border: 1px solid #E5E5E5;
-    border-radius: 4px;
+    background: #EBEBEB;
+    border-radius: 6px;
     padding: 0.25rem 0.5rem;
     cursor: pointer;
     color: #6B7280;
   }
 
   .action-btn:hover {
-    background: #F5F5F5;
-    border-color: #0066FF;
+    background: #E0E0E0;
     color: #0066FF;
   }
 
@@ -1353,9 +1590,8 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 1rem 1.5rem;
-    background: #FFFFFF;
-    border-top: 1px solid #E5E5E5;
+    padding: 1rem 0;
+    background: transparent;
   }
 
   .input-wrapper {
@@ -1374,21 +1610,25 @@
   .message-input {
     flex: 1;
     padding: 0.75rem 1rem;
-    border: 1px solid #E5E5E5;
-    border-radius: 4px;
+    border-radius: 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
+    color: #000;
     outline: none;
+    background: #F0F0F0;
   }
 
   .message-input:focus {
-    border-color: #0066FF;
+    box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.25);
+  }
+
+  .message-input::placeholder {
+    color: #9CA3AF;
   }
 
   .send-button, .cancel-button, .retry-button {
     padding: 0.75rem 1rem;
-    border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
@@ -1414,9 +1654,8 @@
   }
 
   .retry-button {
-    background: #F5F5F5;
-    color: #000000;
-    border: 1px solid #E5E5E5;
+    background: #EBEBEB;
+    color: #000;
   }
 
   .typing-indicator {

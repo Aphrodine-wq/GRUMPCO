@@ -162,10 +162,10 @@ export function findSvgNodeElement(svg: SVGElement, nodeId: string): SVGElement 
   for (const textEl of Array.from(allTextElements)) {
     if (textEl.textContent?.trim().toLowerCase() === nodeId.toLowerCase()) {
       // Find parent group or node
-      let parent = textEl.parentElement;
+      let parent: Element | null = textEl.parentElement;
       while (parent && parent !== svg) {
         if (parent.classList.contains('node') || parent.tagName === 'g') {
-          return parent as SVGElement;
+          return parent as unknown as SVGElement;
         }
         parent = parent.parentElement;
       }

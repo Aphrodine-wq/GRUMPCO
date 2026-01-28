@@ -133,3 +133,21 @@ You MUST respond with a single JSON object (no markdown, no code blocks):
 - Provide rationale for recommendations
 - Focus on production-ready solutions`;
 }
+
+/**
+ * Short prompt for extracting structured intent from raw NL when the Rust compiler fails.
+ * Used as Claude fallback; output must match StructuredIntent shape.
+ */
+export function getIntentExtractionFallbackPrompt(): string {
+  return `You are an intent extractor. The Rust intent parser failed on this input. Extract structured intent as JSON only.
+
+Output MUST be a single JSON object with exactly these keys:
+- "actors": string[] (user roles, e.g. ["user", "admin"])
+- "features": string[] (product features)
+- "data_flows": string[] (e.g. ["REST API", "WebSocket"])
+- "tech_stack_hints": string[]
+- "constraints": object (optional key-value)
+- "raw": string (the original input, unchanged)
+
+Return only the JSON object, no markdown or explanation.`;
+}

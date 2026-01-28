@@ -1,6 +1,42 @@
 /**
  * Claude Service with Tool Calling
- * Integrates Claude API with tool execution
+ *
+ * Core service that integrates the Claude API with tool execution capabilities.
+ * Enables the AI to perform actions like file operations, code execution, database
+ * schema generation, and browser automation.
+ *
+ * ## Architecture
+ * - Uses resilient patterns: circuit breakers, rate limiting, retry with backoff
+ * - Supports multiple LLM providers via llmGateway (Anthropic, OpenRouter, etc.)
+ * - Integrates with skill registry for extensible capabilities
+ * - Streams responses for real-time UI updates
+ *
+ * ## Tool Execution Flow
+ * 1. Claude requests tool use via tool_use content block
+ * 2. Service validates tool input against schema
+ * 3. Tool executes with safety checks (sandboxing, path policies)
+ * 4. Result streams back as tool_result event
+ * 5. Claude continues conversation with tool result context
+ *
+ * ## Events Emitted (ChatStreamEvent)
+ * - `text`: Streaming text response from Claude
+ * - `thinking`: Extended thinking content (when enabled)
+ * - `tool_call`: Claude requesting tool execution
+ * - `tool_result`: Result of tool execution
+ * - `skill_activated`: Skill system activated
+ * - `error`: Error with retry information
+ * - `done`: Stream complete
+ *
+ * ## Usage
+ * ```typescript
+ * const service = new ClaudeServiceWithTools();
+ * for await (const event of service.streamChat(messages, { projectPath })) {
+ *   if (event.type === 'text') console.log(event.text);
+ *   if (event.type === 'tool_result') console.log(`Tool: ${event.toolName}`);
+ * }
+ * ```
+ *
+ * @module claudeServiceWithTools
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -12,13 +48,30 @@ import {
   fileWriteInputSchema,
   fileEditInputSchema,
   listDirectoryInputSchema,
+  codebaseSearchInputSchema,
+  generateDbSchemaInputSchema,
+  generateMigrationsInputSchema,
+  screenshotUrlInputSchema,
+  browserRunScriptInputSchema,
 } from '../tools/definitions.js';
+import { generateSchemaFromDescription } from './dbSchemaService.js';
+import { generateMigrations } from './migrationService.js';
+import { screenshotUrl, browserRunScript } from './browserService.js';
 import { toolExecutionService, ToolExecutionService } from './toolExecutionService.js';
 import { logger } from '../utils/logger.js';
 import { getPlan, startPlanExecution } from './planService.js';
 import { getSpecSession } from './specService.js';
 import { withResilience, withRetry, isRetryableError, type ErrorWithStatus } from './resilience.js';
 import { checkRateLimit, getCircuitBreaker } from './bulkheads.js';
+import { skillRegistry } from '../skills/index.js';
+import { getMcpTools } from '../mcp/registry.js';
+import { getUserToolDefinitions, executeUserTool, isUserTool } from '../skills/userToolsRegistry.js';
+import { createSkillContext } from '../skills/base/SkillContext.js';
+import { getHeadSystemPrompt } from '../prompts/head.js';
+import { wrapModeContext } from '../prompts/compose.js';
+import { getChatModePrompt, type ChatModeName, type CodeSpecialist } from '../prompts/chat/index.js';
+import { getStream, type LLMProvider } from './llmGateway.js';
+import { filterOutput } from '../utils/outputFilters.js';
 
 // ============================================================================
 // CHAT STREAM EVENT TYPES
@@ -26,6 +79,9 @@ import { checkRateLimit, getCircuitBreaker } from './bulkheads.js';
 
 export type ChatStreamEvent =
   | { type: 'text'; text: string }
+  | { type: 'thinking'; content: string }
+  | { type: 'tool_planning'; tools: string[] }
+  | { type: 'tool_progress'; id: string; percent: number; message?: string }
   | {
     type: 'tool_call';
     id: string;
@@ -47,6 +103,7 @@ export type ChatStreamEvent =
       operations?: Array<{ type: string; lineStart: number; lineEnd?: number }>;
     };
   }
+  | { type: 'skill_activated'; skillId: string; skillName: string }
   | { type: 'done' }
   | {
     type: 'error';
@@ -62,12 +119,45 @@ export type ChatStreamEvent =
 // CLAUDE SERVICE WITH TOOLS
 // ============================================================================
 
+/**
+ * Main service class for Claude AI interactions with tool execution.
+ *
+ * Provides streaming chat with tool calling support, resilient API handling,
+ * and integration with various execution backends (file system, browser, database).
+ *
+ * @example
+ * ```typescript
+ * const claude = new ClaudeServiceWithTools();
+ *
+ * // Simple streaming chat
+ * for await (const event of claude.streamChat(messages)) {
+ *   handleEvent(event);
+ * }
+ *
+ * // With project context and tools enabled
+ * for await (const event of claude.streamChat(messages, {
+ *   projectPath: '/path/to/project',
+ *   enableTools: true,
+ *   enableExtendedThinking: true
+ * })) {
+ *   handleEvent(event);
+ * }
+ * ```
+ */
 export class ClaudeServiceWithTools {
+  /** Anthropic SDK client instance */
   private client: Anthropic;
+  /** Default model for API calls */
   private model: string = 'claude-sonnet-4-20250514';
+  /** Shared tool execution service */
   private toolExecutionService: ToolExecutionService;
+  /** Request-scoped tool execution service (for isolation) */
   private requestScopedTes: ToolExecutionService | null = null;
 
+  /**
+   * Create a new ClaudeServiceWithTools instance.
+   * Initializes the Anthropic client with API key from environment.
+   */
   constructor() {
     this.client = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
@@ -144,6 +234,8 @@ export class ClaudeServiceWithTools {
    * agentProfile selects a specialist (router, frontend, backend, devops, test) or general.
    * planId: For execute mode, the plan ID to execute
    * specSessionId: For spec mode, the spec session ID
+   * guardRailOptions: allowedDirs for path policy; confirmEveryWrite drives UX (backend uses path policy only).
+   * tierOverride: used for feature-flags and capability list in head prompt.
    */
   async *generateChatStream(
     messages: Array<{ role: 'user' | 'assistant'; content: string }>,
@@ -152,11 +244,15 @@ export class ClaudeServiceWithTools {
     mode: 'normal' | 'plan' | 'spec' | 'execute' = 'normal',
     agentProfile?: string,
     planId?: string,
-    specSessionId?: string
+    specSessionId?: string,
+    provider?: LLMProvider,
+    modelId?: string,
+    guardRailOptions?: { allowedDirs?: string[] },
+    tierOverride?: 'free' | 'pro' | 'team' | 'enterprise'
   ): AsyncGenerator<ChatStreamEvent, void, unknown> {
     // Handle execute mode - load plan and execute it
     if (mode === 'execute' && planId) {
-      const plan = getPlan(planId);
+      const plan = await getPlan(planId);
       if (!plan) {
         yield { type: 'error', message: `Plan ${planId} not found` };
         return;
@@ -165,10 +261,10 @@ export class ClaudeServiceWithTools {
         yield { type: 'error', message: `Plan ${planId} is not approved` };
         return;
       }
-      
+
       // Start plan execution
       startPlanExecution(planId);
-      
+
       // Add plan context to messages
       const planContext = `Execute this approved plan:\n\n${plan.title}\n${plan.description}\n\nSteps:\n${plan.steps.map(s => `${s.order}. ${s.title}: ${s.description}`).join('\n')}`;
       messages = [
@@ -183,7 +279,7 @@ export class ClaudeServiceWithTools {
 
     // Handle spec mode - load spec session context
     if (mode === 'spec' && specSessionId) {
-      const session = getSpecSession(specSessionId);
+      const session = await getSpecSession(specSessionId);
       if (session && session.specification) {
         const specContext = `Generate code based on this specification:\n\n${session.specification.title}\n${session.specification.description}\n\nRequirements:\n${session.specification.sections.requirements?.map(r => `- ${r.title}: ${r.description}`).join('\n') || 'None'}`;
         messages = [
@@ -198,44 +294,29 @@ export class ClaudeServiceWithTools {
     }
 
     if (workspaceRoot && mode !== 'plan') {
-      this.requestScopedTes = new ToolExecutionService(workspaceRoot);
+      this.requestScopedTes = new ToolExecutionService(workspaceRoot, {
+        allowedDirs: guardRailOptions?.allowedDirs,
+      });
     }
     try {
       logger.debug({ messageCount: messages.length, workspaceRoot, mode, agentProfile, planId, specSessionId }, 'Starting chat stream');
 
-      const base = `Paths are relative to the workspace root. Use tools to explore the codebase, run commands, and implement changes. Prefer small, focused edits. Explain briefly what you did.`;
-      const specialistPrompts: Record<string, string> = {
-        router: `You are a router coordinating specialists. Decide which domain (frontend, backend, devops, test) each request needs. Use tools to implement; prefer small, focused changes. ${base}`,
-        frontend: `You are the frontend specialist. Focus on UI, components, styling, client-side logic. Use tools to edit frontend code. Prefer modern frameworks (React, Vue, Svelte). ${base}`,
-        backend: `You are the backend specialist. Focus on APIs, services, data, auth. Use tools to edit backend code. ${base}`,
-        devops: `You are the DevOps specialist. Focus on Docker, CI/CD, config, deployment. Use tools to edit config files. ${base}`,
-        test: `You are the test specialist. Focus on unit, integration, E2E tests. Use tools to add or update tests. ${base}`,
-      };
-      const defaultPrompt = `You are a helpful coding assistant with access to tools. You can run bash commands, read/write/edit files, and list directories. ${base}`;
+      const chatMode: ChatModeName = mode === 'execute' ? 'execute' : (mode as ChatModeName);
+      const specialist: CodeSpecialist | undefined =
+        agentProfile && agentProfile !== 'general' && /^(router|frontend|backend|devops|test)$/.test(agentProfile)
+          ? (agentProfile as CodeSpecialist)
+          : undefined;
+      const headPrompt = getHeadSystemPrompt({ tier: tierOverride });
+      const modePrompt = getChatModePrompt(chatMode, { workspaceRoot, specialist });
+      const systemPrompt = `${headPrompt}\n\n${wrapModeContext(modePrompt)}`;
 
-      let systemPrompt: string;
-      if (mode === 'plan') {
-        systemPrompt = `You are a helpful coding assistant. The user has enabled Plan mode. Output a clear, step-by-step plan only. Do not use any tools. Number the steps. Keep it concise.`;
-      } else if (mode === 'spec') {
-        systemPrompt = `You are a helpful coding assistant. The user is in Spec mode. Ask clarifying questions to understand their requirements. Be conversational and ask one question at a time.`;
-      } else if (mode === 'argument') {
-        systemPrompt = `You are in Argument mode. Your job is to disagree by default and only implement after explicit confirmation.
-
-For each user request:
-1. Restate what they want clearly.
-2. Push back: name risks, costs, tradeoffs, or simpler alternatives. Be specific and constructive.
-3. Offer a counter-plan or modification you'd prefer, with a one-line rationale.
-4. End with: "If you still want [their idea], say 'do it' or 'use [X]'. If you prefer my approach, say 'go with yours'."
-5. Do NOT use file_write, file_edit, or bash_execute until the user says something like "do it", "go with yours", "use Auth0", "use my approach", or "implement it". You may use file_read and list_directory to inform your pushback.
-6. If the user says "just do it" or "no debate", skip pushback and implement immediately.
-
-You have the same tools as in Code mode; use them only after the user has confirmed. Be concise. One short paragraph of pushback is enough.`;
-      } else {
-        systemPrompt = (agentProfile && specialistPrompts[agentProfile]) ? specialistPrompts[agentProfile] : defaultPrompt;
-      }
+      // Get tools: base + user-defined + MCP + skills
+      const allTools = mode !== 'plan'
+        ? [...AVAILABLE_TOOLS, ...getUserToolDefinitions(), ...getMcpTools(), ...skillRegistry.getAllTools()]
+        : [];
 
       const requestParams: Parameters<typeof this.client.messages.stream>[0] = {
-        model: this.model,
+        model: modelId ?? this.model,
         max_tokens: 4096,
         system: systemPrompt,
         messages: messages.map((msg) => ({
@@ -243,11 +324,30 @@ You have the same tools as in Code mode; use them only after the user has confir
           content: msg.content,
         })),
       };
-      if (mode !== 'plan') {
-        requestParams.tools = AVAILABLE_TOOLS;
+      if (allTools.length > 0) {
+        requestParams.tools = allTools;
       }
 
-      const response = await this.resilientStream(requestParams);
+      const useGateway = provider != null || modelId != null;
+      const response = useGateway
+        ? getStream(
+            {
+              model: requestParams.model,
+              max_tokens: requestParams.max_tokens,
+              system: typeof requestParams.system === 'string' ? requestParams.system : JSON.stringify(requestParams.system),
+              messages: requestParams.messages.map((m) => ({
+                role: m.role as 'user' | 'assistant',
+                content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+              })),
+              tools: requestParams.tools?.map((t) => ({
+                name: t.name,
+                description: 'description' in t ? (t.description ?? '') : '',
+                input_schema: t.input_schema as { type: 'object'; properties?: Record<string, unknown>; required?: string[] },
+              })),
+            },
+            { provider: provider ?? 'anthropic', modelId: modelId ?? this.model }
+          )
+        : await this.resilientStream(requestParams);
 
       let currentTextBlock = '';
 
@@ -261,8 +361,9 @@ You have the same tools as in Code mode; use them only after the user has confir
         // Handle content block deltas (text)
         if (event.type === 'content_block_delta') {
           if (event.delta.type === 'text_delta') {
-            currentTextBlock += event.delta.text;
-            yield { type: 'text', text: event.delta.text };
+            const raw = event.delta.text;
+            currentTextBlock += raw;
+            yield { type: 'text', text: filterOutput(raw) };
           }
         }
 
@@ -291,15 +392,17 @@ You have the same tools as in Code mode; use them only after the user has confir
             // Execute tool (uses request-scoped TES when workspaceRoot provided)
             const result = await this._executeTool(
               toolUse.name,
-              toolUse.input as Record<string, any>
+              toolUse.input as Record<string, any>,
+              workspaceRoot
             );
 
-            // Emit tool result event
+            // Emit tool result event (filter output for secrets/PII)
+            const rawOutput = result.output || result.error || '';
             yield {
               type: 'tool_result',
               id: toolUse.id,
               toolName: toolUse.name,
-              output: result.output || result.error || '',
+              output: filterOutput(rawOutput),
               success: result.success,
               executionTime: result.executionTime,
               diff: result.diff,
@@ -370,10 +473,27 @@ You have the same tools as in Code mode; use them only after the user has confir
    */
   private async _executeTool(
     toolName: string,
-    input: Record<string, any>
+    input: Record<string, any>,
+    workspaceRoot?: string
   ): Promise<ToolExecutionResult> {
     try {
       logger.debug({ toolName, inputKeys: Object.keys(input) }, 'Executing tool');
+
+      // Check if this is a skill tool (prefixed with skill_)
+      if (toolName.startsWith('skill_')) {
+        return await this._executeSkillTool(toolName, input, workspaceRoot);
+      }
+      // User-defined tools (from "add to skills" or API)
+      if (isUserTool(toolName)) {
+        const start = Date.now();
+        try {
+          const context = createSkillContext({ workspacePath: workspaceRoot, source: 'chat' });
+          const { output } = await executeUserTool(toolName, input, context);
+          return { success: true, output, toolName, executionTime: Date.now() - start };
+        } catch (err: unknown) {
+          return { success: false, error: (err as Error).message, toolName, executionTime: Date.now() - start };
+        }
+      }
 
       switch (toolName) {
         case 'bash_execute':
@@ -391,6 +511,21 @@ You have the same tools as in Code mode; use them only after the user has confir
         case 'list_directory':
           return await this._executeListDirectory(input);
 
+        case 'codebase_search':
+          return await this._executeCodebaseSearch(input);
+
+        case 'generate_db_schema':
+          return await this._executeGenerateDbSchema(input);
+
+        case 'generate_migrations':
+          return await this._executeGenerateMigrations(input);
+
+        case 'screenshot_url':
+          return await this._executeScreenshotUrl(input);
+
+        case 'browser_run_script':
+          return await this._executeBrowserRunScript(input);
+
         default:
           return {
             success: false,
@@ -407,6 +542,52 @@ You have the same tools as in Code mode; use them only after the user has confir
         error: error.message,
         toolName,
         executionTime: 0,
+      };
+    }
+  }
+
+  /**
+   * Execute a skill tool
+   */
+  private async _executeSkillTool(
+    toolName: string,
+    input: Record<string, any>,
+    workspaceRoot?: string
+  ): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+
+    const toolHandler = skillRegistry.getToolHandler(toolName);
+    if (!toolHandler) {
+      return {
+        success: false,
+        error: `Unknown skill tool: ${toolName}`,
+        toolName,
+        executionTime: 0,
+      };
+    }
+
+    const { skill, handler } = toolHandler;
+    logger.debug({ toolName, skillId: skill.manifest.id }, 'Executing skill tool');
+
+    const context = createSkillContext({
+      workspacePath: workspaceRoot,
+      source: 'chat',
+    });
+
+    try {
+      const result = await handler(input, context);
+      return {
+        ...result,
+        toolName,
+        executionTime: Date.now() - startTime,
+      };
+    } catch (error: any) {
+      logger.error({ error, toolName, skillId: skill.manifest.id }, 'Skill tool execution failed');
+      return {
+        success: false,
+        error: error.message,
+        toolName,
+        executionTime: Date.now() - startTime,
       };
     }
   }
@@ -505,6 +686,119 @@ You have the same tools as in Code mode; use them only after the user has confir
 
     const { path, recursive } = validation.data;
     return await this.getTes().listDirectory(path, recursive);
+  }
+
+  /**
+   * Execute codebase_search tool
+   */
+  private async _executeCodebaseSearch(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const validation = codebaseSearchInputSchema.safeParse(input);
+    if (!validation.success) {
+      return {
+        success: false,
+        error: `Invalid input: ${validation.error.message}`,
+        toolName: 'codebase_search',
+        executionTime: 0,
+      };
+    }
+    const { query, workingDirectory, maxResults } = validation.data;
+    return await this.getTes().searchCodebase(query, workingDirectory, maxResults);
+  }
+
+  private async _executeGenerateDbSchema(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const start = Date.now();
+    const validation = generateDbSchemaInputSchema.safeParse(input);
+    if (!validation.success) {
+      return {
+        success: false,
+        error: `Invalid input: ${validation.error.message}`,
+        toolName: 'generate_db_schema',
+        executionTime: 0,
+      };
+    }
+    try {
+      const { description, targetDb, format } = validation.data;
+      const result = await generateSchemaFromDescription(description, {
+        targetDb: targetDb as 'sqlite' | 'postgres' | 'mysql',
+        format: format as 'sql' | 'drizzle',
+      });
+      let output = `DDL:\n${result.ddl}`;
+      if (result.drizzle) output += `\n\nDrizzle schema:\n${result.drizzle}`;
+      if (result.tables?.length) output += `\n\nTables: ${result.tables.join(', ')}`;
+      return { success: true, output, toolName: 'generate_db_schema', executionTime: Date.now() - start };
+    } catch (e) {
+      return {
+        success: false,
+        error: (e as Error).message,
+        toolName: 'generate_db_schema',
+        executionTime: Date.now() - start,
+      };
+    }
+  }
+
+  private async _executeGenerateMigrations(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const start = Date.now();
+    const validation = generateMigrationsInputSchema.safeParse(input);
+    if (!validation.success) {
+      return {
+        success: false,
+        error: `Invalid input: ${validation.error.message}`,
+        toolName: 'generate_migrations',
+        executionTime: 0,
+      };
+    }
+    try {
+      const { schemaDdl, targetDb } = validation.data;
+      const result = await generateMigrations(schemaDdl, targetDb as 'sqlite' | 'postgres');
+      const output = result.migrations.length
+        ? result.migrations.map((m, i) => `-- Migration ${i + 1}\n${m}`).join('\n\n')
+        : 'No migrations generated.';
+      return {
+        success: true,
+        output: (result.summary ? `${result.summary}\n\n` : '') + output,
+        toolName: 'generate_migrations',
+        executionTime: Date.now() - start,
+      };
+    } catch (e) {
+      return {
+        success: false,
+        error: (e as Error).message,
+        toolName: 'generate_migrations',
+        executionTime: Date.now() - start,
+      };
+    }
+  }
+
+  private async _executeScreenshotUrl(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const start = Date.now();
+    const validation = screenshotUrlInputSchema.safeParse(input);
+    if (!validation.success) {
+      return { success: false, error: `Invalid input: ${validation.error.message}`, toolName: 'screenshot_url', executionTime: 0 };
+    }
+    const result = await screenshotUrl(validation.data.url);
+    if (!result.ok) {
+      return { success: false, error: result.error ?? 'Screenshot failed', toolName: 'screenshot_url', executionTime: Date.now() - start };
+    }
+    const output = result.imageBase64
+      ? `Screenshot captured (base64 PNG, ${result.imageBase64.length} chars). Use for visual verification.`
+      : 'Screenshot captured.';
+    return { success: true, output, toolName: 'screenshot_url', executionTime: Date.now() - start };
+  }
+
+  private async _executeBrowserRunScript(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const start = Date.now();
+    const validation = browserRunScriptInputSchema.safeParse(input);
+    if (!validation.success) {
+      return { success: false, error: `Invalid input: ${validation.error.message}`, toolName: 'browser_run_script', executionTime: 0 };
+    }
+    const result = await browserRunScript(validation.data.steps);
+    if (!result.ok) {
+      return { success: false, error: result.error ?? 'Script failed', toolName: 'browser_run_script', executionTime: Date.now() - start };
+    }
+    const parts = result.logs ? [`Steps: ${result.logs.join('; ')}`] : [];
+    if (result.lastUrl) parts.push(`Last URL: ${result.lastUrl}`);
+    if (result.screenshotBase64) parts.push(`Screenshot captured (base64, ${result.screenshotBase64.length} chars)`);
+    return { success: true, output: parts.join('\n') || 'Script completed.', toolName: 'browser_run_script', executionTime: Date.now() - start };
   }
 }
 

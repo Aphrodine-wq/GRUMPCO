@@ -1,9 +1,6 @@
 import { writable } from 'svelte/store';
+import { fetchApi } from '../lib/api.js';
 import type { ShipSession, ShipPhase, ShipStartRequest } from '../types/ship.js';
-
-const API_BASE = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL
-  ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
-  : 'http://localhost:3000';
 
 interface ShipState {
   session: ShipSession | null;
@@ -33,9 +30,8 @@ export const shipStore = {
     try {
       state.update(s => ({ ...s, status: 'running', error: null }));
       
-      const response = await fetch(`${API_BASE}/api/ship/start`, {
+      const response = await fetchApi('/api/ship/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
       });
       
@@ -69,7 +65,7 @@ export const shipStore = {
    */
   async getSession(sessionId: string): Promise<ShipSession> {
     try {
-      const response = await fetch(`${API_BASE}/api/ship/${sessionId}`);
+      const response = await fetchApi(`/api/ship/${sessionId}`);
       
       if (!response.ok) {
         const error = await response.json();
@@ -108,7 +104,7 @@ export const shipStore = {
     try {
       state.update(s => ({ ...s, status: 'running', error: null }));
       
-      const response = await fetch(`${API_BASE}/api/ship/${sessionId}/execute`, {
+      const response = await fetchApi(`/api/ship/${sessionId}/execute`, {
         method: 'POST',
       });
       
@@ -133,7 +129,7 @@ export const shipStore = {
     try {
       state.update(s => ({ ...s, status: 'running', isStreaming: true, error: null }));
       
-      const response = await fetch(`${API_BASE}/api/ship/${sessionId}/execute/stream`, {
+      const response = await fetchApi(`/api/ship/${sessionId}/execute/stream`, {
         method: 'POST',
       });
       
@@ -149,6 +145,8 @@ export const shipStore = {
         throw new Error('No response body');
       }
       
+      let buffer = '';
+      
       while (true) {
         const { done, value } = await reader.read();
         
@@ -157,8 +155,9 @@ export const shipStore = {
           break;
         }
         
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
         
         for (const line of lines) {
           if (line.startsWith('data: ')) {

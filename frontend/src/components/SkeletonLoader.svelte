@@ -34,7 +34,7 @@
       </div>
     {/each}
   {:else if variant === 'card'}
-    {#each Array(count) as _, i}
+    {#each Array(count) as _, i (i)}
       <div class="skeleton-card">
         <div class="skeleton skeleton-card-header"></div>
         <div class="skeleton skeleton-card-body"></div>

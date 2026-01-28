@@ -12,6 +12,7 @@ import {
   getCallbackRedirectError,
 } from '../services/githubService.js';
 import { getRequestLogger } from '../middleware/logger.js';
+import { sendServerError, getClientErrorMessage } from '../utils/errorResponse.js';
 
 const router = Router();
 
@@ -25,10 +26,7 @@ router.get('/auth-url', (_req: Request, res: Response) => {
     res.json({ url });
   } catch (e) {
     const err = e as Error;
-    res.status(500).json({
-      error: err.message || 'GitHub auth not configured',
-      type: 'internal_error',
-    });
+    sendServerError(res, err);
   }
 });
 
@@ -50,7 +48,7 @@ router.get('/callback', async (req: Request<{}, {}, {}, { code?: string }>, res:
   } catch (e) {
     const err = e as Error;
     log.error({ error: err.message }, 'GitHub OAuth callback failed');
-    res.redirect(getCallbackRedirectError(err.message));
+    res.redirect(getCallbackRedirectError(getClientErrorMessage(err)));
   }
 });
 
@@ -90,10 +88,7 @@ router.post(
     } catch (e) {
       const err = e as Error;
       log.error({ error: err.message, sessionId, repoName }, 'Create-and-push failed');
-      res.status(500).json({
-        error: err.message || 'Create-and-push failed',
-        type: 'internal_error',
-      });
+      sendServerError(res, err);
     }
   }
 );

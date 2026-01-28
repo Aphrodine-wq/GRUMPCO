@@ -1,4 +1,5 @@
 import { writable, derived } from 'svelte/store';
+import { fetchApi } from '../lib/api.js';
 import type {
   Plan,
   PlanStep,
@@ -6,10 +7,6 @@ import type {
   PlanGenerationRequest,
   PlanEditRequest,
 } from '../types/plan';
-
-const API_BASE = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL
-  ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
-  : 'http://localhost:3000';
 
 // Plan state
 interface PlanState {
@@ -38,9 +35,8 @@ export async function generatePlan(request: PlanGenerationRequest): Promise<Plan
   state.update(s => ({ ...s, isLoading: true, error: null }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/plan/generate`, {
+    const response = await fetchApi('/api/plan/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     });
 
@@ -78,7 +74,7 @@ export async function loadPlan(planId: string): Promise<Plan> {
   state.update(s => ({ ...s, isLoading: true, error: null }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/plan/${planId}`);
+    const response = await fetchApi(`/api/plan/${planId}`);
 
     if (!response.ok) {
       const error = await response.json();
@@ -115,9 +111,8 @@ export async function approvePlan(planId: string, approved: boolean = true, comm
 
   try {
     const endpoint = approved ? 'approve' : 'reject';
-    const response = await fetch(`${API_BASE}/api/plan/${planId}/${endpoint}`, {
+    const response = await fetchApi(`/api/plan/${planId}/${endpoint}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ approved, comments }),
     });
 
@@ -155,9 +150,8 @@ export async function editPlan(planId: string, edits: PlanEditRequest): Promise<
   state.update(s => ({ ...s, isLoading: true, error: null }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/plan/${planId}/edit`, {
+    const response = await fetchApi(`/api/plan/${planId}/edit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(edits),
     });
 
@@ -195,9 +189,8 @@ export async function startPlanExecution(planId: string, startFromPhase?: string
   state.update(s => ({ ...s, isLoading: true, error: null }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/plan/${planId}/execute`, {
+    const response = await fetchApi(`/api/plan/${planId}/execute`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         planId,
         startFromPhase,
@@ -243,9 +236,8 @@ export async function updatePhaseStatus(
   state.update(s => ({ ...s, isLoading: true, error: null }));
 
   try {
-    const response = await fetch(`${API_BASE}/api/plan/${planId}/phase/${phaseId}/status`, {
+    const response = await fetchApi(`/api/plan/${planId}/phase/${phaseId}/status`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
 

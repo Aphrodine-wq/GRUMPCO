@@ -67,6 +67,8 @@ export interface PlanGenerationRequest {
   workspaceRoot?: string;
   agentProfile?: string;
   includePhases?: boolean;
+  /** Optional head + mode prompt prepended for SHIP/chat consistency */
+  systemPromptPrefix?: string;
 }
 
 export interface PlanGenerationResponse {

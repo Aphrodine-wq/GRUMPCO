@@ -101,6 +101,8 @@ export interface ArchitectureRequest {
   techStack?: string[];
   complexity?: Complexity;
   refinements?: string[];
+  /** Optional head + mode prompt prepended for SHIP/chat consistency */
+  systemPromptPrefix?: string;
 }
 
 export interface ArchitectureResponse {

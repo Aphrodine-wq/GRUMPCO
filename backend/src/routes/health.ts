@@ -4,6 +4,7 @@ import { getRequestLogger } from '../middleware/logger.js';
 import { getDatabase } from '../db/database.js';
 import { getAllServiceStates } from '../services/bulkheads.js';
 import { getAlertingService } from '../services/alerting.js';
+import { isRedisConnected } from '../services/redis.js';
 
 const router: Router = express.Router();
 
@@ -78,6 +79,13 @@ router.get('/ready', async (_req: Request, res: Response) => {
     database: false,
   };
 
+  const redisRequired =
+    process.env.REDIS_HOST != null && process.env.REDIS_HOST !== '' ||
+    process.env.SESSION_STORAGE === 'redis';
+  if (redisRequired) {
+    checks.redis = false;
+  }
+
   // Check API key is configured
   if (process.env.ANTHROPIC_API_KEY) {
     checks.api_key = true;
@@ -93,6 +101,17 @@ router.get('/ready', async (_req: Request, res: Response) => {
     const err = error as Error;
     log.warn({ error: err.message }, 'Database health check failed');
     checks.database = false;
+  }
+
+  // Check Redis when required (REDIS_HOST or SESSION_STORAGE=redis)
+  if (redisRequired) {
+    try {
+      checks.redis = await isRedisConnected();
+    } catch (error) {
+      const err = error as Error;
+      log.warn({ error: err.message }, 'Redis health check failed');
+      checks.redis = false;
+    }
   }
 
   // Check Anthropic API connectivity (lightweight check)

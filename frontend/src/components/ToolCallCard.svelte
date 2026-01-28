@@ -31,12 +31,12 @@
 <style>
   .tool-call-card {
     padding: 0.75rem 1rem;
-    background: #f0f4ff;
-    border: 1px solid #c7d2fe;
-    border-radius: 4px;
+    background: #EEF2FF;
+    border-radius: 6px;
     margin: 0.5rem 0;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.8rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   }
   .tool-call-header {
     display: flex;

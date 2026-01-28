@@ -13,6 +13,8 @@ import {
 } from '../services/agentOrchestrator.js';
 import { createCodegenZip } from '../services/zipService.js';
 import { getRequestLogger } from '../middleware/logger.js';
+import { sendServerError } from '../utils/errorResponse.js';
+import { validateCodegenRequest, handleCodegenValidationErrors } from '../middleware/validator.js';
 import type { CodeGenRequest, CodeGenRequestMulti } from '../types/agents.js';
 import type { PRD } from '../types/prd.js';
 import type { SystemArchitecture } from '../types/architecture.js';
@@ -30,6 +32,7 @@ const DEFAULT_PREFERENCES = {
 interface CodeGenRequestBody extends CodeGenRequest {
   prd: PRD;
   architecture: SystemArchitecture;
+  projectId?: string;
 }
 
 interface CodeGenRequestBodyMulti {
@@ -37,6 +40,7 @@ interface CodeGenRequestBodyMulti {
   architecture: SystemArchitecture;
   preferences?: CodeGenRequest['preferences'];
   componentMapping?: CodeGenRequestMulti['componentMapping'];
+  projectId?: string;
 }
 
 /**
@@ -47,12 +51,11 @@ interface CodeGenRequestBodyMulti {
  */
 router.post(
   '/start',
-  async (
-    req: Request<{}, {}, CodeGenRequestBody | CodeGenRequestBodyMulti>,
-    res: Response
-  ) => {
+  validateCodegenRequest,
+  handleCodegenValidationErrors,
+  async (req: Request, res: Response) => {
     const log = getRequestLogger();
-    const body = req.body;
+    const body = req.body as CodeGenRequestBody | CodeGenRequestBodyMulti;
 
     try {
       const isMulti = Array.isArray((body as CodeGenRequestBodyMulti).prds) && (body as CodeGenRequestBodyMulti).architecture;
@@ -75,6 +78,7 @@ router.post(
           architecture,
           preferences: preferences ?? DEFAULT_PREFERENCES,
           componentMapping,
+          projectId: (body as CodeGenRequestBodyMulti).projectId,
         });
         setImmediate(() => {
           executeCodeGenerationMulti(session).catch((error) => {
@@ -118,6 +122,7 @@ router.post(
       const session = await initializeSession({
         prdId,
         architectureId,
+        projectId: (body as CodeGenRequestBody).projectId,
         preferences: preferences ?? DEFAULT_PREFERENCES,
       });
 
@@ -146,11 +151,7 @@ router.post(
     } catch (error) {
       const err = error as Error;
       log.error({ error: err.message }, 'Code generation start error');
-      res.status(500).json({
-        error: 'Failed to start code generation',
-        type: 'internal_error',
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined,
-      });
+      sendServerError(res, err);
     }
   }
 );
@@ -206,10 +207,7 @@ router.get('/status/:sessionId', async (req: Request<{ sessionId: string }>, res
   } catch (error) {
     const err = error as Error;
     log.error({ error: err.message }, 'Status check error');
-    res.status(500).json({
-      error: 'Failed to get status',
-      type: 'internal_error',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -223,7 +221,7 @@ router.get('/download/:sessionId', async (req: Request<{ sessionId: string }>, r
   try {
     const { sessionId } = req.params;
 
-    const session = getSession(sessionId);
+    const session = await getSession(sessionId);
     if (!session) {
       res.status(404).json({
         error: 'Session not found',
@@ -263,10 +261,7 @@ router.get('/download/:sessionId', async (req: Request<{ sessionId: string }>, r
   } catch (error) {
     const err = error as Error;
     log.error({ error: err.message }, 'Download error');
-    res.status(500).json({
-      error: 'Failed to download code',
-      type: 'internal_error',
-    });
+    sendServerError(res, error);
   }
 });
 
@@ -319,10 +314,7 @@ router.post('/preview/:sessionId', async (req: Request<{ sessionId: string }, {}
   } catch (error) {
     const err = error as Error;
     log.error({ error: err.message }, 'Preview error');
-    res.status(500).json({
-      error: 'Failed to get preview',
-      type: 'internal_error',
-    });
+    sendServerError(res, error);
   }
 });
 

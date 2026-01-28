@@ -6,6 +6,8 @@
 import express, { Request, Response, Router } from 'express';
 import { generateArchitecture, generateArchitectureStream } from '../services/architectureService.js';
 import { getRequestLogger } from '../middleware/logger.js';
+import { sendServerError, writeSSEError } from '../utils/errorResponse.js';
+import { validateArchitectureRequest, handleArchitectureValidationErrors } from '../middleware/validator.js';
 import type { ArchitectureRequest, ConversationMessage } from '../types/index.js';
 import type { EnrichedIntent } from '../services/intentCompilerService.js';
 
@@ -20,20 +22,18 @@ interface ArchitectureRequestBody extends ArchitectureRequest {
  * POST /api/architecture/generate
  * Generate system architecture from project description
  */
-router.post('/generate', async (req: Request<{}, {}, ArchitectureRequestBody>, res: Response) => {
+router.post(
+  '/generate',
+  validateArchitectureRequest,
+  handleArchitectureValidationErrors,
+  async (req: Request, res: Response) => {
   const log = getRequestLogger();
+  const body = req.body as ArchitectureRequestBody;
 
   try {
-    const { projectDescription, projectType, techStack, complexity, refinements, conversationHistory, enrichedIntent } = req.body;
+    const { projectDescription, projectType, techStack, complexity, refinements, conversationHistory, enrichedIntent } = body;
 
-    const desc = projectDescription ?? enrichedIntent?.raw;
-    if (!desc || typeof desc !== 'string') {
-      res.status(400).json({
-        error: 'Missing or invalid projectDescription or enrichedIntent.raw',
-        type: 'validation_error',
-      });
-      return;
-    }
+    const desc = (projectDescription ?? enrichedIntent?.raw) as string;
 
     log.info(
       {
@@ -67,11 +67,7 @@ router.post('/generate', async (req: Request<{}, {}, ArchitectureRequestBody>, r
   } catch (error) {
     const err = error as Error;
     log.error({ error: err.message }, 'Architecture generation endpoint error');
-    res.status(500).json({
-      error: 'Failed to generate architecture',
-      type: 'internal_error',
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined,
-    });
+    sendServerError(res, err);
   }
 });
 
@@ -79,20 +75,18 @@ router.post('/generate', async (req: Request<{}, {}, ArchitectureRequestBody>, r
  * POST /api/architecture/generate-stream
  * Generate architecture with streaming response
  */
-router.post('/generate-stream', async (req: Request<{}, {}, ArchitectureRequestBody>, res: Response) => {
+router.post(
+  '/generate-stream',
+  validateArchitectureRequest,
+  handleArchitectureValidationErrors,
+  async (req: Request, res: Response) => {
   const log = getRequestLogger();
+  const body = req.body as ArchitectureRequestBody;
 
   try {
-    const { projectDescription, projectType, techStack, complexity, refinements, conversationHistory, enrichedIntent } = req.body;
+    const { projectDescription, projectType, techStack, complexity, refinements, conversationHistory, enrichedIntent } = body;
 
-    const desc = projectDescription ?? enrichedIntent?.raw;
-    if (!desc || typeof desc !== 'string') {
-      res.status(400).json({
-        error: 'Missing or invalid projectDescription or enrichedIntent.raw',
-        type: 'validation_error',
-      });
-      return;
-    }
+    const desc = (projectDescription ?? enrichedIntent?.raw) as string;
 
     log.info({ hasEnrichedIntent: !!enrichedIntent }, 'Architecture stream generation requested');
 
@@ -122,7 +116,7 @@ router.post('/generate-stream', async (req: Request<{}, {}, ArchitectureRequestB
   } catch (error) {
     const err = error as Error;
     log.error({ error: err.message }, 'Architecture stream endpoint error');
-    res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
+    writeSSEError(res, err);
     res.end();
   }
 });
@@ -160,10 +154,7 @@ router.post('/refine', async (req: Request<{}, {}, { architectureId?: string; re
   } catch (error) {
     const err = error as Error;
     log.error({ error: err.message }, 'Architecture refine endpoint error');
-    res.status(500).json({
-      error: 'Failed to refine architecture',
-      type: 'internal_error',
-    });
+    sendServerError(res, err);
   }
 });
 

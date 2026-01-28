@@ -3,8 +3,11 @@
  * Provides database abstraction with SQLite (desktop) and PostgreSQL (scale) support
  */
 
+import fs from 'fs';
+import path from 'path';
 import Database from 'better-sqlite3';
-import { SCHEMA_SQL, SCHEMA_POSTGRESQL, type SessionRow, type PlanRow, type SpecRow, type ShipSessionRow, type WorkReportRow } from './schema.js';
+import { runMigrations } from './migrate.js';
+import { SCHEMA_POSTGRESQL, type SessionRow, type PlanRow, type SpecRow, type ShipSessionRow, type WorkReportRow } from './schema.js';
 import logger from '../middleware/logger.js';
 import { recordDbOperation } from '../middleware/metrics.js';
 import type { GenerationSession } from '../types/agents.js';
@@ -12,6 +15,7 @@ import type { ShipSession } from '../types/ship.js';
 import type { Plan } from '../types/plan.js';
 import type { SpecSession } from '../types/spec.js';
 import type { AgentWorkReport } from '../types/agents.js';
+import type { Settings } from '../types/settings.js';
 
 type DbType = 'sqlite' | 'postgresql';
 
@@ -48,14 +52,15 @@ class DatabaseService {
 
     try {
       if (this.config.type === 'sqlite') {
-        const path = this.config.sqlite?.path || './data/grump.db';
-        this.db = new Database(path);
+        const dbPath = this.config.sqlite?.path || './data/grump.db';
+        const dir = path.dirname(path.resolve(dbPath));
+        fs.mkdirSync(dir, { recursive: true });
+        this.db = new Database(dbPath);
         this.db.pragma('journal_mode = WAL'); // Better concurrency
         this.db.pragma('foreign_keys = ON'); // Enable foreign keys
-        
-        // Run SQLite schema
-        this.db.exec(SCHEMA_SQL);
-        logger.info({ path }, 'SQLite database initialized');
+
+        runMigrations(this.db);
+        logger.info({ path: dbPath }, 'SQLite database initialized');
       } else if (this.config.type === 'postgresql') {
         // PostgreSQL would use pg library
         // For now, we'll implement SQLite as primary
@@ -103,14 +108,15 @@ class DatabaseService {
     const start = process.hrtime.bigint();
     try {
       const stmt = this.db.prepare(`
-        INSERT INTO sessions (id, type, status, data, created_at, updated_at, started_at, completed_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sessions (id, type, status, data, created_at, updated_at, started_at, completed_at, project_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           status = excluded.status,
           data = excluded.data,
           updated_at = excluded.updated_at,
           started_at = excluded.started_at,
-          completed_at = excluded.completed_at
+          completed_at = excluded.completed_at,
+          project_id = excluded.project_id
       `);
 
       stmt.run(
@@ -121,7 +127,8 @@ class DatabaseService {
         session.createdAt,
         new Date().toISOString(),
         session.startedAt || null,
-        session.completedAt || null
+        session.completedAt || null,
+        session.projectId ?? null
       );
 
       const duration = Number(process.hrtime.bigint() - start) / 1e9;
@@ -210,13 +217,14 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     const stmt = this.db.prepare(`
-      INSERT INTO ship_sessions (id, phase, status, data, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO ship_sessions (id, phase, status, data, created_at, updated_at, project_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         phase = excluded.phase,
         status = excluded.status,
         data = excluded.data,
-        updated_at = excluded.updated_at
+        updated_at = excluded.updated_at,
+        project_id = excluded.project_id
     `);
 
     stmt.run(
@@ -225,7 +233,8 @@ class DatabaseService {
       session.status,
       JSON.stringify(session),
       session.createdAt,
-      session.updatedAt
+      session.updatedAt,
+      session.projectId ?? null
     );
   }
 
@@ -251,6 +260,7 @@ class DatabaseService {
   async listShipSessions(options: {
     phase?: string;
     status?: string;
+    projectId?: string;
     limit?: number;
   } = {}): Promise<ShipSession[]> {
     if (!this.db) throw new Error('Database not initialized');
@@ -266,6 +276,11 @@ class DatabaseService {
     if (options.status) {
       query += ' AND status = ?';
       params.push(options.status);
+    }
+
+    if (options.projectId != null) {
+      query += ' AND project_id = ?';
+      params.push(options.projectId);
     }
 
     query += ' ORDER BY created_at DESC';
@@ -438,6 +453,37 @@ class DatabaseService {
     const rows = stmt.all(sessionId) as WorkReportRow[];
 
     return rows.map(row => JSON.parse(row.report) as AgentWorkReport);
+  }
+
+  // ========== Settings ==========
+
+  /**
+   * Get settings by user key (e.g. userId or 'default')
+   */
+  async getSettings(userKey: string): Promise<Settings | null> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const stmt = this.db.prepare('SELECT data FROM settings WHERE id = ?');
+    const row = stmt.get(userKey) as { data: string } | undefined;
+    if (!row) return null;
+
+    const data = JSON.parse(row.data) as Settings;
+    return data;
+  }
+
+  /**
+   * Save or update settings for a user key
+   */
+  async saveSettings(userKey: string, data: Settings): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const updatedAt = new Date().toISOString();
+    const payload = { ...data, updatedAt };
+    const stmt = this.db.prepare(`
+      INSERT INTO settings (id, data, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
+    `);
+    stmt.run(userKey, JSON.stringify(payload), updatedAt);
   }
 
   /**

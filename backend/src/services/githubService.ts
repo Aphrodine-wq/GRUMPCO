@@ -153,7 +153,7 @@ export async function createAndPush(
     throw new Error('No GitHub token. Complete OAuth first.');
   }
 
-  const session = getSession(sessionId);
+  const session = await getSession(sessionId);
   if (!session) {
     throw new Error('Session not found');
   }

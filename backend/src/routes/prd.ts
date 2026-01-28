@@ -11,6 +11,8 @@ import {
   generatePRDForComponent,
 } from '../services/prdGeneratorService.js';
 import { getRequestLogger } from '../middleware/logger.js';
+import { sendServerError, writeSSEError } from '../utils/errorResponse.js';
+import { validatePrdGenerateRequest, handlePrdValidationErrors } from '../middleware/validator.js';
 import type { PRDRequest, ConversationMessage } from '../types/index.js';
 import type { SystemArchitecture } from '../types/architecture.js';
 
@@ -25,35 +27,16 @@ interface PRDRequestBody extends PRDRequest {
  * POST /api/prd/generate
  * Generate PRD from architecture
  */
-router.post('/generate', async (req: Request<{}, {}, PRDRequestBody>, res: Response) => {
+router.post(
+  '/generate',
+  validatePrdGenerateRequest,
+  handlePrdValidationErrors,
+  async (req: Request, res: Response) => {
   const log = getRequestLogger();
+  const body = req.body as PRDRequestBody;
 
   try {
-    const { projectName, projectDescription, architecture, refinements, conversationHistory } = req.body;
-
-    if (!projectName || typeof projectName !== 'string') {
-      res.status(400).json({
-        error: 'Missing or invalid projectName',
-        type: 'validation_error',
-      });
-      return;
-    }
-
-    if (!projectDescription || typeof projectDescription !== 'string') {
-      res.status(400).json({
-        error: 'Missing or invalid projectDescription',
-        type: 'validation_error',
-      });
-      return;
-    }
-
-    if (!architecture) {
-      res.status(400).json({
-        error: 'Missing architecture. Please provide architecture from previous phase.',
-        type: 'validation_error',
-      });
-      return;
-    }
+    const { projectName, projectDescription, architecture, refinements, conversationHistory } = body;
 
     log.info(
       {
@@ -84,11 +67,7 @@ router.post('/generate', async (req: Request<{}, {}, PRDRequestBody>, res: Respo
   } catch (error) {
     const err = error as Error;
     log.error({ error: err.message }, 'PRD generation endpoint error');
-    res.status(500).json({
-      error: 'Failed to generate PRD',
-      type: 'internal_error',
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined,
-    });
+    sendServerError(res, err);
   }
 });
 
@@ -96,27 +75,16 @@ router.post('/generate', async (req: Request<{}, {}, PRDRequestBody>, res: Respo
  * POST /api/prd/generate-stream
  * Generate PRD with streaming response
  */
-router.post('/generate-stream', async (req: Request<{}, {}, PRDRequestBody>, res: Response) => {
+router.post(
+  '/generate-stream',
+  validatePrdGenerateRequest,
+  handlePrdValidationErrors,
+  async (req: Request, res: Response) => {
   const log = getRequestLogger();
+  const body = req.body as PRDRequestBody;
 
   try {
-    const { projectName, projectDescription, architecture, refinements, conversationHistory } = req.body;
-
-    if (!projectName || typeof projectName !== 'string') {
-      res.status(400).json({
-        error: 'Missing or invalid projectName',
-        type: 'validation_error',
-      });
-      return;
-    }
-
-    if (!architecture) {
-      res.status(400).json({
-        error: 'Missing architecture',
-        type: 'validation_error',
-      });
-      return;
-    }
+    const { projectName, projectDescription, architecture, refinements, conversationHistory } = body;
 
     log.info({}, 'PRD stream generation requested');
 
@@ -145,7 +113,7 @@ router.post('/generate-stream', async (req: Request<{}, {}, PRDRequestBody>, res
   } catch (error) {
     const err = error as Error;
     log.error({ error: err.message }, 'PRD stream endpoint error');
-    res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
+    writeSSEError(res, err);
     res.end();
   }
 });
@@ -174,10 +142,7 @@ router.post(
     } catch (e) {
       const err = e as Error;
       log.error({ error: err.message }, 'Components-from-diagram failed');
-      res.status(500).json({
-        error: err.message || 'Failed to suggest components',
-        type: 'internal_error',
-      });
+      sendServerError(res, err);
     }
   }
 );
@@ -227,10 +192,7 @@ router.post(
     } catch (e) {
       const err = e as Error;
       log.error({ error: err.message, componentId: req.body?.componentId }, 'Generate-for-component failed');
-      res.status(500).json({
-        error: err.message || 'Failed to generate PRD for component',
-        type: 'internal_error',
-      });
+      sendServerError(res, err);
     }
   }
 );
@@ -267,10 +229,7 @@ router.post('/refine', async (req: Request<{}, {}, { prdId?: string; refinements
   } catch (error) {
     const err = error as Error;
     log.error({ error: err.message }, 'PRD refine endpoint error');
-    res.status(500).json({
-      error: 'Failed to refine PRD',
-      type: 'internal_error',
-    });
+    sendServerError(res, err);
   }
 });
 

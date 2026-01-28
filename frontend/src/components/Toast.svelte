@@ -2,65 +2,61 @@
   import { toasts, dismissToast } from '../stores/toastStore';
 </script>
 
-{#if document.body}
-  <svelte:body>
-    <div class="toast-container" aria-live="polite">
-      {#each $toasts as toast (toast.id)}
-        <div
-          class="toast toast--{toast.type}"
-          role="alert"
-        >
-          <div class="toast-icon">
-            {#if toast.type === 'success'}
-              <span>&#10003;</span>
-            {:else if toast.type === 'error'}
-              <span>&#10005;</span>
-            {:else}
-              <span>&#8505;</span>
-            {/if}
-          </div>
-          <span class="toast-message">{toast.message}</span>
-          {#if toast.actions && toast.actions.length > 0}
-            <div class="toast-actions">
-              {#each toast.actions as action}
-                <button
-                  class="toast-action-btn"
-                  class:primary={action.primary}
-                  on:click={() => {
-                    action.action();
-                    if (!toast.persistent) {
-                      dismissToast(toast.id);
-                    }
-                  }}
-                >
-                  {action.label}
-                </button>
-              {/each}
-            </div>
-          {/if}
-          <button 
-            class="toast-dismiss" 
-            on:click={() => {
-              if (toast.onDismiss) {
-                toast.onDismiss();
-              }
-              dismissToast(toast.id);
-            }}
-            aria-label="Dismiss notification"
-          >
-            &#10005;
-          </button>
-          {#if toast.duration > 0}
-            <div 
-              class="toast-progress"
-              style="animation-duration: {toast.duration}ms"
-            ></div>
+  <div class="toast-container" aria-live="polite">
+    {#each $toasts as toast (toast.id)}
+      <div
+        class="toast toast--{toast.type}"
+        role="alert"
+      >
+        <div class="toast-icon">
+          {#if toast.type === 'success'}
+            <span>&#10003;</span>
+          {:else if toast.type === 'error'}
+            <span>&#10005;</span>
+          {:else}
+            <span>&#8505;</span>
           {/if}
         </div>
-      {/each}
-    </div>
-  </svelte:body>
-{/if}
+        <span class="toast-message">{toast.message}</span>
+        {#if toast.actions && toast.actions.length > 0}
+          <div class="toast-actions">
+            {#each toast.actions as action}
+              <button
+                class="toast-action-btn"
+                class:primary={action.primary}
+                on:click={() => {
+                  action.action();
+                  if (!toast.persistent) {
+                    dismissToast(toast.id);
+                  }
+                }}
+              >
+                {action.label}
+              </button>
+            {/each}
+          </div>
+        {/if}
+        <button 
+          class="toast-dismiss" 
+          on:click={() => {
+            if (toast.onDismiss) {
+              toast.onDismiss();
+            }
+            dismissToast(toast.id);
+          }}
+          aria-label="Dismiss notification"
+        >
+          &#10005;
+        </button>
+        {#if toast.duration > 0}
+          <div 
+            class="toast-progress"
+            style="animation-duration: {toast.duration}ms"
+          ></div>
+        {/if}
+      </div>
+    {/each}
+  </div>
 
 <style>
   .toast-container {

@@ -28,6 +28,14 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// Type assertion: since we never pass stream: true, the response is always a Message
+const resilientClaudeCall = withResilience(
+  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
+    return await client.messages.create(params);
+  },
+  'claude-code'
+);
+
 const CODE_ANALYSIS_PROMPT = `You are an expert code analyst specializing in code quality, patterns, and architecture. Analyze the provided code and return a comprehensive analysis.
 
 ## Your Task:
@@ -553,6 +561,76 @@ export async function generateDocumentation(
     timer.failure('documentation_error');
     const err = error as Error;
     log.error({ error: err.message }, 'Documentation generation failed');
+    throw error;
+  }
+}
+
+/** Return type for diagram-to-code generation */
+export interface GenerateCodeFromDiagramResult {
+  files: { path: string; content: string }[];
+  warnings?: string[];
+}
+
+const GENERATE_CODE_FROM_DIAGRAM_PROMPT = `You are an expert full-stack developer. Generate production-ready code from a Mermaid diagram.
+
+## Your Task:
+Given a Mermaid diagram and tech stack, output a JSON object with a "files" array. Each file has "path" (relative, e.g. src/index.js) and "content" (full file contents).
+Optionally include a "warnings" array of strings for caveats or follow-up items.
+
+## Output Format (JSON only, no markdown):
+\`\`\`json
+{
+  "files": [
+    { "path": "src/example.js", "content": "// full file content" }
+  ],
+  "warnings": ["optional warning"]
+}
+\`\`\`
+
+Generate only the JSON. Use the exact tech stack and diagram type. Produce runnable, minimal-but-complete code.`;
+
+/**
+ * Generate code files from a Mermaid diagram using Claude
+ */
+export async function generateCodeFromDiagram(
+  diagramType: string,
+  mermaidCode: string,
+  techStack: string
+): Promise<GenerateCodeFromDiagramResult> {
+  const log = getRequestLogger();
+  const timer = createApiTimer('claude_code_from_diagram');
+
+  try {
+    const response = await resilientClaudeCall({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8192,
+      system: GENERATE_CODE_FROM_DIAGRAM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: `Diagram type: ${diagramType}\nTech stack: ${techStack}\n\nMermaid diagram:\n\`\`\`mermaid\n${mermaidCode}\n\`\`\`\n\nGenerate the code as JSON with "files" and optional "warnings".`,
+        },
+      ],
+    });
+
+    const content = response.content[0];
+    if (content.type !== 'text') {
+      throw new Error('Unexpected response type from Claude');
+    }
+
+    const jsonText = extractJSON(content.text);
+    const parsed = JSON.parse(jsonText) as { files?: { path: string; content: string }[]; warnings?: string[] };
+    const files = Array.isArray(parsed.files) ? parsed.files : [];
+    const warnings = Array.isArray(parsed.warnings) ? parsed.warnings : [];
+
+    log.info({ diagramType, techStack, fileCount: files.length }, 'Code from diagram generated');
+    timer.success();
+
+    return { files, warnings };
+  } catch (error) {
+    timer.failure('code_from_diagram_error');
+    const err = error as Error;
+    log.error({ error: err.message, diagramType, techStack }, 'Generate code from diagram failed');
     throw error;
   }
 }

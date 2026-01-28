@@ -12,6 +12,7 @@ export interface SessionRow {
   updated_at: string;
   started_at?: string;
   completed_at?: string;
+  project_id?: string | null;
 }
 
 export interface PlanRow {
@@ -42,6 +43,7 @@ export interface ShipSessionRow {
   data: string; // JSON string
   created_at: string;
   updated_at: string;
+  project_id?: string | null;
 }
 
 export interface WorkReportRow {

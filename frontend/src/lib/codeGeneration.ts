@@ -1,3 +1,5 @@
+import { fetchApi } from './api.js';
+
 export type TechStack = 'react-express-prisma' | 'fastapi-sqlalchemy' | 'nextjs-prisma';
 export type DiagramType = 'er' | 'sequence' | 'flowchart' | 'class';
 
@@ -8,10 +10,6 @@ export interface CodeGenRequest {
   projectName?: string;
 }
 
-const API_URL = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL
-  ? import.meta.env.VITE_API_URL
-  : 'http://localhost:3000/api';
-
 export function detectDiagramType(mermaidCode: string): DiagramType {
   const code = mermaidCode.toLowerCase().trim();
   if (code.startsWith('erdiagram')) return 'er';
@@ -20,11 +18,39 @@ export function detectDiagramType(mermaidCode: string): DiagramType {
   return 'flowchart';
 }
 
+function parseDownloadFilename(contentDisposition: string | null): string {
+  if (!contentDisposition) return 'generated-project.zip';
+  const quoted = contentDisposition.match(/filename="([^"]*)"/);
+  if (quoted?.[1]) return decodeURIComponent(quoted[1].replace(/^"(.*)"$/, '$1'));
+  const encoded = contentDisposition.match(/filename\*=(?:UTF-8'')?([^;]+)/);
+  if (encoded?.[1]) return decodeURIComponent(encoded[1].trim());
+  return 'generated-project.zip';
+}
+
+/** Download codegen ZIP by session ID. Uses /api/codegen/download/:sessionId. */
+export async function downloadCodegenZip(sessionId: string): Promise<void> {
+  const response = await fetchApi(`/api/codegen/download/${sessionId}`);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error((errorData as { error?: string }).error ?? `Download failed: ${response.status}`);
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition');
+  const filename = parseDownloadFilename(disposition);
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.endsWith('.zip') ? filename : `${filename}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
 export async function generateCode(request: CodeGenRequest): Promise<boolean> {
   try {
-    const response = await fetch(`${API_URL}/generate-code`, {
+    const response = await fetchApi('/api/generate-code', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     });
 
