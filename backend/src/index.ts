@@ -39,6 +39,7 @@ import { handleStripeWebhook } from './routes/billingWebhook.js';
 import collaborationRoutes from './routes/collaboration.js';
 import analyticsRoutes from './routes/analytics.js';
 import templatesRoutes from './routes/templates.js';
+import workspaceRoutes from './routes/workspace.js';
 import { findAvailablePort } from './utils/portUtils.js';
 import { skillRegistry } from './skills/index.js';
 import { startJobWorker, stopJobWorker } from './services/jobQueue.js';
@@ -188,6 +189,7 @@ let server: Server | undefined;
     app.use('/api/collaboration', collaborationRoutes);
     app.use('/api/analytics', analyticsRoutes);
     app.use('/api/templates', templatesRoutes);
+    app.use('/api/workspace', workspaceRoutes);
     app.use('/health', healthRoutes);
 
     // Metrics endpoint

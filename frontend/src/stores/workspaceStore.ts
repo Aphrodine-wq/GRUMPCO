@@ -1,40 +1,53 @@
 import { writable } from 'svelte/store';
 
-const STORAGE_KEY = 'grump-workspace-root';
+const ROOT_KEY = 'grump-workspace-root';
+const REPO_URL_KEY = 'grump-workspace-repo-url';
 
-function loadStored(): string | null {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      const v = localStorage.getItem(STORAGE_KEY);
-      return v && v.trim() ? v.trim() : null;
-    }
-  } catch {
-    /* ignore */
-  }
-  return null;
+interface WorkspaceState {
+  root: string | null;
+  repoUrl: string | null;
+  isRemote: boolean;
 }
 
-function persist(path: string | null) {
+function loadStored(): WorkspaceState {
   try {
     if (typeof localStorage !== 'undefined') {
-      if (path) localStorage.setItem(STORAGE_KEY, path);
-      else localStorage.removeItem(STORAGE_KEY);
+      const root = localStorage.getItem(ROOT_KEY);
+      const repoUrl = localStorage.getItem(REPO_URL_KEY);
+      return {
+        root: root && root.trim() ? root.trim() : null,
+        repoUrl: repoUrl && repoUrl.trim() ? repoUrl.trim() : null,
+        isRemote: !!repoUrl,
+      };
     }
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
+  return { root: null, repoUrl: null, isRemote: false };
 }
 
-const { subscribe, set, update } = writable<string | null>(loadStored());
+function persist(state: WorkspaceState) {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      if (state.root) localStorage.setItem(ROOT_KEY, state.root);
+      else localStorage.removeItem(ROOT_KEY);
+
+      if (state.repoUrl) localStorage.setItem(REPO_URL_KEY, state.repoUrl);
+      else localStorage.removeItem(REPO_URL_KEY);
+    }
+  } catch { /* ignore */ }
+}
+
+const { subscribe, set, update } = writable<WorkspaceState>(loadStored());
 
 export const workspaceStore = {
   subscribe,
-  setWorkspace(path: string | null) {
-    persist(path);
-    set(path);
+  setWorkspace(root: string | null, repoUrl: string | null = null) {
+    const newState = { root, repoUrl, isRemote: !!repoUrl };
+    persist(newState);
+    set(newState);
   },
   clear() {
-    persist(null);
-    set(null);
+    const empty = { root: null, repoUrl: null, isRemote: false };
+    persist(empty);
+    set(empty);
   },
 };
