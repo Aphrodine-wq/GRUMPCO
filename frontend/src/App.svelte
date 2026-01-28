@@ -77,7 +77,7 @@
     display: flex;
     height: 100vh;
     width: 100%;
-    background: #FAFAFA;
+    background: linear-gradient(135deg, #FAFAFA 0%, #F5F7FA 100%);
     overflow: hidden;
   }
 
@@ -98,6 +98,13 @@
   @media (max-width: 768px) {
     .app {
       flex-direction: column;
+      height: 100dvh;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .app {
+      height: 100dvh;
     }
   }
 </style>

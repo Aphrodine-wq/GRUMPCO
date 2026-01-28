@@ -600,6 +600,13 @@
                 <div class="empty-state">
                   <GRumpBlob size="lg" state="idle" animated={true} />
                   <h1 class="empty-title">What are we building?</h1>
+                  <p class="empty-text">
+                    I can design your system architecture, create requirements, and write the
+                    full-stack code. Just tell me your idea.
+                  </p>
+                  <div class="suggestion-chips">
+                    <SuggestionChips on:select={handleTemplateSelect} />
+                  </div>
                 </div>
               {/if}
 
@@ -885,14 +892,19 @@
     justify-content: center;
     padding: 64px 24px;
     text-align: center;
-    gap: 16px;
+    gap: 24px;
+    min-height: 50vh;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.03) 0%, rgba(59, 130, 246, 0.03) 100%);
+    border-radius: 20px;
+    margin: 20px;
   }
 
   .empty-title {
-    font-size: 24px;
+    font-size: 32px;
     font-weight: 700;
     color: #18181b;
     font-family: var(--font-serif, Georgia, serif);
+    letter-spacing: -0.5px;
   }
 
   .empty-text {
@@ -941,8 +953,9 @@
   }
 
   .avatar-circle.assistant {
-    background-color: #0ea5e9;
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
   }
 
   .message-content-container {
@@ -987,18 +1000,20 @@
 
   .message-bubble {
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.6;
     color: #18181b;
     word-break: break-word;
     background: white;
-    border-radius: 8px;
-    padding: 12px 16px;
+    border-radius: 12px;
+    padding: 14px 18px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e5e7eb;
   }
 
   .message-wrapper.assistant .message-bubble {
-    border-left: 3px solid #0ea5e9;
-    padding-left: 13px;
+    border-left: 4px solid #0ea5e9;
+    padding-left: 14px;
+    background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
   }
 
   .text-block {
@@ -1049,12 +1064,13 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    background-color: white;
-    border: 1px solid #e2e8f0; /* Slate-200 */
-    border-radius: 16px;
-    padding: 16px 20px;
-    transition: all 200ms ease;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 16px 22px;
+    transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
     width: 100%;
+<<<<<<< HEAD
     box-shadow:
       0 4px 6px -1px rgb(0 0 0 / 0.1),
       0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -1066,6 +1082,16 @@
       0 4px 6px -4px rgb(0 0 0 / 0.1);
     border-color: #cbd5e1; /* Slate-300 */
     transform: translateY(-1px);
+=======
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  }
+
+  .input-container:focus-within {
+    box-shadow: 0 12px 24px rgba(14, 165, 233, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.8);
+    border-color: #0ea5e9;
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+>>>>>>> bd57c1a48c1ddf13ad06615be43d1f5c60feb30f
   }
 
   .input-prompt {
@@ -1102,27 +1128,29 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
     border: none;
-    background-color: #0ea5e9;
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
     color: white;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
   }
 
   .send-button:hover:not(:disabled) {
-    background-color: #0284c7;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(14, 165, 233, 0.2);
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4);
   }
 
   .send-button:disabled {
-    background-color: #d4d4d8;
+    background: #e5e7eb;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
   }
 
   .stop-icon {
@@ -1138,10 +1166,11 @@
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    background: rgba(14, 165, 233, 0.05);
-    padding: 6px;
-    border-radius: 10px;
-    border: 1px solid rgba(14, 165, 233, 0.15);
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%);
+    padding: 8px;
+    border-radius: 14px;
+    border: 1.5px solid rgba(14, 165, 233, 0.2);
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.05);
   }
 
   .mode-group {
@@ -1197,12 +1226,89 @@
     }
 
     .messages-scroll {
-      padding: 16px 12px;
+      padding: 12px 8px;
+      padding-bottom: 160px;
+    }
+
+    .message-wrapper {
+      gap: 10px;
+    }
+
+    .avatar-circle {
+      width: 28px;
+      height: 28px;
+      font-size: 11px;
+    }
+
+    .chat-controls {
+      padding: 12px 12px 16px;
+      left: 0;
+      right: 0;
+    }
+
+    .controls-inner {
+      max-width: 100%;
+      padding: 0 4px;
+    }
+
+    .input-container {
+      padding: 14px 16px;
+      border-radius: 18px;
+      gap: 10px;
+    }
+
+    .message-bubble {
+      font-size: 13px;
+      padding: 12px 14px;
+      border-radius: 10px;
+    }
+
+    .message-wrapper.assistant .message-bubble {
+      padding-left: 12px;
+      border-left-width: 3px;
+    }
+
+    /* Empty state mobile adjustments */
+    .empty-state {
+      padding: 40px 16px;
+      gap: 20px;
+      min-height: auto;
+      margin: 16px;
+    }
+
+    .empty-title {
+      font-size: 26px;
+    }
+
+    .empty-text {
+      font-size: 14px;
+      max-width: 100%;
+      padding: 0 8px;
+    }
+
+    .mode-selector {
+      gap: 6px;
+      padding: 6px;
+    }
+
+    .send-button {
+      width: 36px;
+      height: 36px;
+    }
+
+    .input-prompt {
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .messages-scroll {
+      padding: 8px 4px;
       padding-bottom: 140px;
     }
 
     .message-wrapper {
-      gap: 12px;
+      gap: 8px;
     }
 
     .avatar-circle {
@@ -1212,20 +1318,31 @@
     }
 
     .chat-controls {
-      padding: 12px 16px 16px;
+      padding: 10px 8px 12px;
     }
 
     .input-container {
       padding: 12px 14px;
+      border-radius: 16px;
     }
 
     .message-bubble {
-      font-size: 13px;
-      padding: 10px 14px;
+      font-size: 12px;
+      padding: 10px 12px;
     }
 
-    .message-wrapper.assistant .message-bubble {
-      padding-left: 11px;
+    .empty-state {
+      padding: 32px 12px;
+      gap: 16px;
+    }
+
+    .empty-title {
+      font-size: 22px;
+    }
+
+    .mode-selector {
+      gap: 4px;
+      padding: 4px;
     }
   }
 </style>

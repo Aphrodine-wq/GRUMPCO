@@ -6,14 +6,21 @@
 
   let hoveredSessionId: string | null = $state(null);
   let collapsed = $state(false);
+  let mobileMenuOpen = $state(false);
 
   function handleNewSession() {
     sessionsStore.createSession([]);
+    if (window.innerWidth < 768) {
+      mobileMenuOpen = false;
+    }
   }
 
   function handleSelectSession(id: string) {
     sessionsStore.switchSession(id);
     showSettings.set(false);
+    if (window.innerWidth < 768) {
+      mobileMenuOpen = false;
+    }
   }
 
   function handleDeleteSession(e: MouseEvent, id: string) {
@@ -52,6 +59,40 @@
   }
 </script>
 
+<!-- Mobile toggle button -->
+<button
+  class="mobile-toggle"
+  class:open={mobileMenuOpen}
+  onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
+  aria-label="Toggle menu"
+>
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    {#if mobileMenuOpen}
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    {:else}
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    {/if}
+  </svg>
+</button>
+
+<!-- Mobile backdrop -->
+{#if mobileMenuOpen}
+  <div class="mobile-backdrop" onclick={() => (mobileMenuOpen = false)}></div>
+{/if}
+
+<div class="sidebar-wrapper" class:mobile-open={mobileMenuOpen}>
   <CollapsibleSidebar bind:collapsed width={240} collapsedWidth={64}>
     {#snippet header()}
       <Button variant="primary" size="md" fullWidth onclick={handleNewSession} class="new-chat-btn">
@@ -143,7 +184,6 @@
         </div>
       {/if}
     </div>
-
     {#snippet footer()}
       <div class="sidebar-footer-content" class:collapsed>
         <button class="settings-btn" title="Settings" aria-label="Settings" onclick={openSettings}>
@@ -169,6 +209,7 @@
       </div>
     {/snippet}
   </CollapsibleSidebar>
+</div>
 
 <style>
   .btn-inner {
@@ -381,5 +422,82 @@
 
   .sessions-list::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.1);
+  }
+
+  /* Mobile styles */
+  .mobile-toggle {
+    display: none;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 1001;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: none;
+    background: white;
+    color: #18181b;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .mobile-toggle:hover {
+    background: #f4f4f5;
+    transform: scale(1.05);
+  }
+
+  .mobile-toggle.open {
+    background: #18181b;
+    color: white;
+  }
+
+  .mobile-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .sidebar-wrapper {
+    display: contents;
+  }
+
+  @media (max-width: 768px) {
+    .mobile-toggle {
+      display: flex;
+    }
+
+    .mobile-backdrop {
+      display: block;
+    }
+
+    .sidebar-wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      z-index: 1000;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease-out;
+    }
+
+    .sidebar-wrapper.mobile-open {
+      transform: translateX(0);
+    }
   }
 </style>
