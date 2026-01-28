@@ -3,7 +3,7 @@
  * Use getApiBase() or fetchApi() everywhere instead of inline VITE_API_URL.
  */
 
-const DEFAULT_BASE = 'http://localhost:3000';
+const DEFAULT_BASE = import.meta.env?.PROD ? '' : 'http://localhost:3000';
 
 /** Normalize env to root URL (no trailing /api). */
 function normalizedBase(): string {
