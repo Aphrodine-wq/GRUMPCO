@@ -46,98 +46,123 @@
   }
 </script>
 
-<CollapsibleSidebar bind:collapsed width={240} collapsedWidth={64}>
-  {#snippet header()}
-    <Button variant="primary" size="md" fullWidth onclick={handleNewSession} class="new-chat-btn">
-      <div class="btn-inner" class:collapsed>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="lucide lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg
-        >
-        {#if !collapsed}
-          <span>New Chat</span>
-        {/if}
-      </div>
-    </Button>
-  {/snippet}
-
-  <div class="sessions-list" class:collapsed>
-    {#each $sortedSessions as session (session.id)}
-      <div
-        class="session-item"
-        class:active={session.id === $currentSession?.id}
-        class:collapsed
-        onmouseenter={() => (hoveredSessionId = session.id)}
-        onmouseleave={() => (hoveredSessionId = null)}
-        onclick={() => handleSelectSession(session.id)}
-        onkeydown={(e) => e.key === 'Enter' && handleSelectSession(session.id)}
-        role="button"
-        tabindex="0"
-        title={session.name}
-      >
-        <div class="session-content" class:collapsed>
-          <div class="session-name" class:collapsed>
-            {truncateText(session.name)}
-          </div>
+  <CollapsibleSidebar bind:collapsed width={240} collapsedWidth={64}>
+    {#snippet header()}
+      <Button variant="primary" size="md" fullWidth onclick={handleNewSession} class="new-chat-btn">
+        <div class="btn-inner" class:collapsed>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg
+          >
           {#if !collapsed}
-            <div class="session-meta">
-              {formatDate(session.updatedAt)} · {session.messages.length} msg
-            </div>
+            <span>New Chat</span>
           {/if}
         </div>
+      </Button>
+    {/snippet}
 
-        {#if hoveredSessionId === session.id && !collapsed}
-          <button
-            class="delete-btn"
-            onclick={(e) => handleDeleteSession(e, session.id)}
-            title="Delete session"
-            aria-label="Delete session"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="lucide lucide-trash-2"
-              ><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path
-                d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
-              /><line x1="10" x2="10" y1="11" y2="17" /><line
-                x1="14"
-                x2="14"
-                y1="11"
-                y2="17"
-              /></svg
+    <div class="sessions-list" class:collapsed>
+      {#each $sortedSessions as session (session.id)}
+        <div
+          class="session-item"
+          class:active={session.id === $currentSession?.id}
+          class:collapsed
+          onmouseenter={() => (hoveredSessionId = session.id)}
+          onmouseleave={() => (hoveredSessionId = null)}
+          onclick={() => handleSelectSession(session.id)}
+          onkeydown={(e) => e.key === 'Enter' && handleSelectSession(session.id)}
+          role="button"
+          tabindex="0"
+          title={session.name}
+        >
+          <div class="session-content" class:collapsed>
+            <div class="session-name" class:collapsed>
+              {truncateText(session.name)}
+            </div>
+            {#if !collapsed}
+              <div class="session-meta">
+                {formatDate(session.updatedAt)} · {session.messages.length} msg
+              </div>
+            {/if}
+          </div>
+
+          {#if hoveredSessionId === session.id && !collapsed}
+            <button
+              class="delete-btn"
+              onclick={(e) => handleDeleteSession(e, session.id)}
+              title="Delete session"
+              aria-label="Delete session"
             >
-          </button>
-        {/if}
-      </div>
-    {/each}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="lucide lucide-trash-2"
+                ><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path
+                  d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+                /><line x1="10" x2="10" y1="11" y2="17" /><line
+                  x1="14"
+                  x2="14"
+                  y1="11"
+                  y2="17"
+                /></svg
+              >
+            </button>
+          {/if}
+        </div>
+      {/each}
 
-    {#if $sortedSessions.length === 0}
-      <div class="empty-state" class:collapsed>
-        {#if !collapsed}
-          <p>No sessions yet</p>
-          <p class="hint">Start a new chat above</p>
-        {:else}
-          <div class="empty-dot"></div>
-        {/if}
+      {#if $sortedSessions.length === 0}
+        <div class="empty-state" class:collapsed>
+          {#if !collapsed}
+            <p>No sessions yet</p>
+            <p class="hint">Start a new chat above</p>
+          {:else}
+            <div class="empty-dot"></div>
+          {/if}
+        </div>
+      {/if}
+    </div>
+
+    {#snippet footer()}
+      <div class="sidebar-footer-content" class:collapsed>
+        <button class="settings-btn" title="Settings" aria-label="Settings">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-settings"
+            ><path
+              d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+            /><circle cx="12" cy="12" r="3" /></svg
+          >
+          {#if !collapsed}
+            <span>Settings</span>
+          {/if}
+        </button>
       </div>
-    {/if}
-  </div>
-</CollapsibleSidebar>
+    {/snippet}
+  </CollapsibleSidebar>
 
 <style>
   .btn-inner {
@@ -293,6 +318,45 @@
   .empty-state .hint {
     font-size: 12px;
     margin-top: 4px;
+  }
+
+  .sidebar-footer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .sidebar-footer-content.collapsed {
+    align-items: center;
+  }
+
+  .settings-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all 150ms ease;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .settings-btn:hover {
+    background-color: var(--color-bg-card-hover);
+    color: var(--color-primary);
+  }
+
+  .sidebar-footer-content.collapsed .settings-btn {
+    padding: 10px;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
   }
 
   /* Custom scrollbar */

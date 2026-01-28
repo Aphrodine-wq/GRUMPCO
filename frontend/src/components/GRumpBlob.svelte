@@ -21,11 +21,11 @@
   }: Props = $props();
 
   const sizeMap: Record<BlobSize, number> = {
-    xs: 24,
-    sm: 32,
-    md: 48,
-    lg: 80,
-    xl: 120
+    xs: 16,
+    sm: 24,
+    md: 40,
+    lg: 64,
+    xl: 100
   };
 
   const ariaLabel =
