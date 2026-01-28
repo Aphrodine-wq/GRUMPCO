@@ -461,11 +461,11 @@
 </script>
 
 <div class="chat-interface" style:--bg-primary={colors.background.primary} style:--bg-secondary={colors.background.secondary} style:--border-color={colors.border.default}>
-  <CollapsibleSidebar bind:collapsed={sidebarCollapsed}>
+    <CollapsibleSidebar bind:collapsed={sidebarCollapsed}>
     {#snippet header()}
       <div class="sidebar-header">
         <h2 class="sidebar-title">History</h2>
-        <Button variant="ghost" size="sm" onclick={() => sessionsStore.createSession([])}>New</Button>
+        <Button variant="primary" size="sm" onclick={() => sessionsStore.createSession([])}>New</Button>
       </div>
     {/snippet}
     {#snippet children()}
@@ -676,7 +676,7 @@
   .sidebar-title {
     font-size: 14px;
     font-weight: 600;
-    color: #71717a;
+    color: #18181b;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }

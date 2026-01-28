@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * GRumpBlob - Professional light theme avatar
+   * GRumpBlob - Enhanced fluid blob avatar
    */
   import { onMount } from 'svelte';
   import { colors } from '../lib/design-system/tokens/colors';
@@ -21,11 +21,11 @@
   }: Props = $props();
 
   const sizeMap: Record<BlobSize, number> = {
-    xs: 16,
+    xs: 24,
     sm: 32,
     md: 48,
-    lg: 64,
-    xl: 96
+    lg: 80,
+    xl: 120
   };
 
   const ariaLabel =
@@ -41,33 +41,33 @@
 </script>
 
 <div 
-  class="grump-avatar grump-avatar--{size} grump-avatar--{blobState}"
+  class="grump-blob-container grump-blob--{size} grump-blob--{blobState}"
   class:is-animated={animated}
-  style="--avatar-size: {sizeMap[size]}px"
-  style:--primary-color={colors.accent.primary}
-  style:--success-color={colors.status.success}
-  style:--error-color={colors.status.error}
+  style="--blob-size: {sizeMap[size]}px"
+  style:--primary-color="#000000"
+  style:--glow-color="rgba(0, 102, 255, 0.4)"
   role="img"
   aria-label={ariaLabel}
 >
-  <div class="avatar-ring"></div>
-  <div class="avatar-circle">
-    {#if blobState === 'thinking'}
-      <div class="thinking-dots">
-        <span></span><span></span><span></span>
-      </div>
-    {:else}
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-      </svg>
-    {/if}
+  <div class="blob-outer">
+    <div class="blob-inner">
+      {#if blobState === 'thinking'}
+        <div class="thinking-dots">
+          <span></span><span></span><span></span>
+        </div>
+      {:else if blobState === 'idle'}
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      {/if}
+    </div>
   </div>
 </div>
 
 <style>
-  .grump-avatar {
-    width: var(--avatar-size);
-    height: var(--avatar-size);
+  .grump-blob-container {
+    width: var(--blob-size);
+    height: var(--blob-size);
     position: relative;
     display: flex;
     align-items: center;
@@ -75,96 +75,100 @@
     flex-shrink: 0;
   }
 
-  .avatar-ring {
-    position: absolute;
-    inset: -2px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    transition: all 300ms ease;
+  .blob-outer {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    filter: drop-shadow(0 0 10px var(--glow-color)) drop-shadow(0 0 20px rgba(0, 102, 255, 0.2));
   }
 
-  .grump-avatar--thinking .avatar-ring {
-    border-color: var(--primary-color);
-    border-top-color: transparent;
-    animation: rotate 1s linear infinite;
-  }
-
-  .grump-avatar--success .avatar-ring {
-    border-color: var(--success-color);
-    transform: scale(1.1);
-    opacity: 0;
-    animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-  }
-
-  .grump-avatar--error .avatar-ring {
-    border-color: var(--error-color);
-  }
-
-  .avatar-circle {
+  .blob-inner {
     width: 100%;
     height: 100%;
     background-color: var(--primary-color);
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
+    position: relative;
     z-index: 1;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    transition: all 300ms ease;
+    animation: blob-idle 8s ease-in-out infinite;
+    box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.1);
   }
 
-  .grump-avatar--success .avatar-circle {
-    background-color: var(--success-color);
+  .grump-blob--lg .blob-inner {
+    animation-duration: 10s;
   }
 
-  .grump-avatar--error .avatar-circle {
-    background-color: var(--error-color);
-  }
-
-  .avatar-circle svg {
-    width: 50%;
-    height: 50%;
+  .blob-inner svg {
+    width: 45%;
+    height: 45%;
+    opacity: 0.9;
   }
 
   .thinking-dots {
     display: flex;
-    gap: 3px;
+    gap: 4px;
   }
 
   .thinking-dots span {
-    width: 4px;
-    height: 4px;
-    background-color: currentColor;
+    width: 5px;
+    height: 5px;
+    background-color: white;
     border-radius: 50%;
-    animation: bounce 0.6s infinite alternate;
+    animation: dot-pulse 1.2s infinite ease-in-out;
   }
 
   .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
   .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
 
-  @keyframes rotate {
-    to { transform: rotate(360deg); }
-  }
-
-  @keyframes bounce {
-    to { transform: translateY(-4px); }
-  }
-
-  @keyframes ping {
-    75%, 100% {
-      transform: scale(1.5);
-      opacity: 0;
+  @keyframes blob-idle {
+    0%, 100% {
+      border-radius: 54% 46% 45% 55% / 55% 45% 55% 45%;
+      transform: translate(0, 0) rotate(0deg) scale(1);
     }
+    20% {
+      border-radius: 45% 55% 58% 42% / 48% 58% 42% 52%;
+      transform: translate(-2px, 1px) rotate(1deg) scale(1.02);
+    }
+    40% {
+      border-radius: 58% 42% 40% 60% / 52% 42% 58% 48%;
+      transform: translate(1px, -2px) rotate(-1deg) scale(0.98);
+    }
+    60% {
+      border-radius: 42% 58% 55% 45% / 58% 52% 48% 42%;
+      transform: translate(-1px, 2px) rotate(2deg) scale(1.01);
+    }
+    80% {
+      border-radius: 50% 50% 45% 55% / 45% 55% 50% 50%;
+      transform: translate(2px, -1px) rotate(-2deg) scale(0.99);
+    }
+  }
+
+  @keyframes dot-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.3); opacity: 1; }
+  }
+
+  .grump-blob--thinking .blob-inner {
+    animation-duration: 4s;
+    background-color: #000;
+  }
+
+  .grump-blob--success .blob-inner {
+    background-color: #10b981;
+    --glow-color: rgba(16, 185, 129, 0.4);
+  }
+
+  .grump-blob--error .blob-inner {
+    background-color: #ef4444;
+    --glow-color: rgba(239, 68, 68, 0.4);
+    animation: shake 0.4s ease-in-out 0s 2;
   }
 
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-4px); }
-    75% { transform: translateX(4px); }
-  }
-
-  .grump-avatar--error.is-animated .avatar-circle {
-    animation: shake 0.2s ease-in-out 0s 2;
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
   }
 </style>
