@@ -107,6 +107,8 @@ export type Env = z.infer<typeof envSchema>;
 const parseResult = envSchema.safeParse(process.env);
 
 if (!parseResult.success) {
+  console.log('[DEBUG] ANTHROPIC_API_KEY from process.env:', process.env.ANTHROPIC_API_KEY);
+  console.log('[DEBUG] startsWith sk-:', process.env.ANTHROPIC_API_KEY?.startsWith('sk-'));
   console.error('\n' + '='.repeat(60));
   console.error('  G-RUMP CONFIGURATION ERROR');
   console.error('='.repeat(60));

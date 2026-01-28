@@ -35,6 +35,9 @@ RUN npm ci --only=production
 # Copy built application from builder
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 
+# Create data directory for SQLite (will be overwritten by volume mount in Fly.io)
+RUN mkdir -p /app/data && chown nodejs:nodejs /app/data
+
 # Set environment
 ENV NODE_ENV=production
 ENV PORT=3000
