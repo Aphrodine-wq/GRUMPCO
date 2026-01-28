@@ -45,7 +45,18 @@
 <CollapsibleSidebar width={280} collapsedWidth={64}>
   {#snippet header()}
     <Button variant="primary" size="md" fullWidth onclick={handleNewSession} class="new-chat-btn">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg
+      >
       New Chat
     </Button>
   {/snippet}
@@ -79,7 +90,26 @@
             title="Delete session"
             aria-label="Delete session"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-trash-2"
+              ><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path
+                d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+              /><line x1="10" x2="10" y1="11" y2="17" /><line
+                x1="14"
+                x2="14"
+                y1="11"
+                y2="17"
+              /></svg
+            >
           </button>
         {/if}
       </div>
@@ -111,19 +141,21 @@
     padding: 12px;
     border-radius: 8px;
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     cursor: pointer;
     text-align: left;
     transition: all 150ms ease;
   }
 
   .session-item:hover {
-    background-color: #f5f5f5;
+    background-color: var(--color-bg-card-hover);
+    border-color: var(--color-border-light);
   }
 
   .session-item.active {
-    background-color: #e0f2fe;
-    border-left: 3px solid #0ea5e9;
+    background-color: var(--color-bg-card);
+    border-left: 3px solid var(--color-primary);
+    border-color: var(--color-border-highlight);
     padding-left: 9px;
   }
 
@@ -138,7 +170,7 @@
   .session-name {
     font-size: 13px;
     font-weight: 500;
-    color: #18181b;
+    color: var(--color-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -146,7 +178,7 @@
 
   .session-meta {
     font-size: 11px;
-    color: #71717a;
+    color: var(--color-text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -162,20 +194,20 @@
     border-radius: 6px;
     background: transparent;
     border: none;
-    color: #71717a;
+    color: var(--color-text-muted);
     cursor: pointer;
     transition: all 150ms ease;
   }
 
   .delete-btn:hover {
-    background-color: #fee2e2;
-    color: #dc2626;
+    background-color: var(--color-error-light, rgba(239, 68, 68, 0.2));
+    color: var(--color-error);
   }
 
   .empty-state {
     padding: 24px 12px;
     text-align: center;
-    color: #71717a;
+    color: var(--color-text-muted);
   }
 
   .empty-state p {
@@ -198,11 +230,11 @@
   }
 
   .sessions-list::-webkit-scrollbar-thumb {
-    background: #d4d4d8;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
   }
 
   .sessions-list::-webkit-scrollbar-thumb:hover {
-    background: #a1a1aa;
+    background: rgba(255, 255, 255, 0.2);
   }
 </style>

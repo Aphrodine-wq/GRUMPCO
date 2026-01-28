@@ -2,46 +2,49 @@
 export default {
   content: [
     "./index.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
+    "./src/**/*.{vue,js,ts,jsx,tsx,svelte}",
   ],
   theme: {
     extend: {
       colors: {
-        // Light mode base
-        surface: '#FFFFFF',
-        background: '#F5F5F5',
-        border: '#000000',
-        
-        // Monochrome accents
-        primary: '#000000',
-        muted: '#6B7280',
-        
-        // Electric blue brand colors
-        electric: '#0066FF',
-        'electric-dark': '#0052CC',
-        'electric-light': '#3385FF',
-        'electric-glow': 'rgba(0, 102, 255, 0.4)',
-        
-        // Semantic
-        accent: '#374151',
-        'accent-hover': '#1F2937',
-        
+        // Core
+        background: 'var(--color-bg-app)',
+        surface: 'var(--glass-bg)',
+
         // Text
-        'text-primary': '#000000',
-        'text-muted': '#6B7280',
-        'text-inverse': '#FFFFFF',
+        primary: 'var(--color-text)',
+        secondary: 'var(--color-text-secondary)',
+        muted: 'var(--color-text-muted)',
+        inverse: 'var(--color-text-inverse)',
+
+        // Brand
+        electric: 'var(--color-primary)',
+        'electric-hover': 'var(--color-primary-hover)',
+
+        // Semantic
+        success: 'var(--color-success)',
+        error: 'var(--color-error)',
+        warning: 'var(--color-warning)',
+
+        // Boarders
+        border: 'var(--color-border)',
       },
       boxShadow: {
-        'electric-glow': '0 0 20px rgba(0, 102, 255, 0.4)',
-        'electric-glow-lg': '0 0 40px rgba(0, 102, 255, 0.5)',
-        'electric-glow-sm': '0 0 10px rgba(0, 102, 255, 0.3)',
+        glow: 'var(--shadow-glow)',
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
       },
       fontFamily: {
-        mono: ['JetBrains Mono', 'Fira Code', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
-      borderWidth: {
-        '1': '1px',
-      },
+      borderRadius: {
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
+      }
     },
   },
   plugins: [],

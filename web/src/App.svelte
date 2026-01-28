@@ -35,8 +35,7 @@
       <div class="flex h-14 items-center justify-between px-4 sm:px-6">
         <a href="/#/" class="text-xl font-semibold text-gray-900">G-Rump</a>
         <nav class="flex items-center gap-2 sm:gap-4">
-          <a href="/#/" class="hidden text-sm text-gray-600 hover:text-gray-900 sm:inline">Dashboard</a>
-          <a href="/#/workspace" class="text-sm text-gray-600 hover:text-gray-900">Workspace</a>
+          <a href="/#/" class="text-sm text-gray-600 hover:text-gray-900">Workspace</a>
           <a href="/#/settings" class="hidden text-sm text-gray-600 hover:text-gray-900 sm:inline">Settings</a>
           <a href="/#/billing" class="hidden text-sm text-gray-600 hover:text-gray-900 sm:inline">Billing</a>
           <a href="/#/analytics" class="hidden text-sm text-gray-600 hover:text-gray-900 sm:inline">Analytics</a>

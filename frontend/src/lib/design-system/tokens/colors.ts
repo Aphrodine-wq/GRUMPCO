@@ -1,98 +1,97 @@
 /**
- * G-Rump Design System - Color Tokens (Redesigned)
- * Minimal & elegant light theme with electric cyan-blue accent
+ * G-Rump Design System - Color Tokens
+ * Premium Dark Theme with Aurora Gradients and Glassmorphism
  */
 
 export const colors = {
-  // Background colors - Off-white base
+  // Background colors
   background: {
-    primary: '#FAFAFA',      // Main background (off-white)
-    secondary: '#FFFFFF',    // Cards, elevated surfaces
-    tertiary: '#F5F5F5',     // Subtle sections
-    code: '#F8F8F8',         // Code blocks
-    input: '#FFFFFF',        // Input fields
-    sidebar: '#FAFAFA',      // Sidebar (same as primary)
+    primary: 'var(--color-bg-app)',      // Deep space blue/black
+    secondary: 'var(--glass-bg)',        // Glassmorphic panels
+    tertiary: 'var(--color-bg-subtle)',  // Subtle sections
+    code: 'var(--color-bg-input)',       // Code blocks
+    input: 'var(--color-bg-input)',      // Input fields
+    sidebar: 'var(--glass-bg)',          // Glass sidebar
   },
 
-  // Text colors - Strong hierarchy
+  // Text colors
   text: {
-    primary: '#18181B',      // Headings, primary content
-    secondary: '#3F3F46',    // Body text
-    muted: '#71717A',        // Captions, hints
-    inverse: '#FFFFFF',      // Text on dark backgrounds
-    code: '#18181B',         // Code text
+    primary: 'var(--color-text)',           // Headings, primary content
+    secondary: 'var(--color-text-secondary)', // Body text
+    muted: 'var(--color-text-muted)',       // Captions, hints
+    inverse: 'var(--color-text-inverse)',   // Text on light backgrounds
+    code: 'var(--color-text)',              // Code text
   },
 
-  // Accent colors - Electric cyan-blue ONLY
+  // Accent colors
   accent: {
-    primary: '#0EA5E9',      // ⚡ Electric cyan-blue (main accent)
-    primaryHover: '#0284C7', // Darker on hover
-    primaryLight: '#E0F2FE', // Light background
-    // REMOVED: secondary, tertiary (blue only!)
+    primary: 'var(--color-primary)',        // Electric Blue
+    primaryHover: 'var(--color-primary-hover)',
+    primaryLight: 'rgba(59, 130, 246, 0.1)', // Light blue tint
   },
 
-  // Status colors (kept for errors/warnings/success)
+  // Status colors
   status: {
-    success: '#059669',      // Green
-    successLight: '#D1FAE5',
-    error: '#DC2626',        // Red
-    errorLight: '#FEE2E2',
-    warning: '#D97706',      // Amber
-    warningLight: '#FEF3C7',
-    info: '#0EA5E9',         // Cyan (matches primary)
-    infoLight: '#E0F2FE',
+    success: 'var(--color-success)',
+    successLight: 'rgba(16, 185, 129, 0.2)',
+    error: 'var(--color-error)',
+    errorLight: 'rgba(239, 68, 68, 0.2)',
+    warning: 'var(--color-warning)',
+    warningLight: 'rgba(245, 158, 11, 0.2)',
+    info: 'var(--color-primary)',
+    infoLight: 'rgba(59, 130, 246, 0.2)',
   },
 
   // Code diff colors
   diff: {
     added: {
-      background: '#D1FAE5',
-      border: '#059669',
-      text: '#065F46',
+      background: 'rgba(16, 185, 129, 0.2)',
+      border: 'var(--color-success)',
+      text: '#4ADE80',
     },
     removed: {
-      background: '#FEE2E2',
-      border: '#DC2626',
-      text: '#991B1B',
+      background: 'rgba(239, 68, 68, 0.2)',
+      border: 'var(--color-error)',
+      text: '#F87171',
     },
     unchanged: {
       background: 'transparent',
-      text: '#3F3F46',
+      text: 'var(--color-text-secondary)',
     },
     lineNumber: {
-      background: '#F4F4F5',
-      text: '#A1A1AA',
-      border: 'transparent', // Removed border (no borders design)
+      background: 'rgba(255, 255, 255, 0.05)',
+      text: 'var(--color-text-muted)',
+      border: 'transparent',
     },
   },
 
   // Syntax highlighting
   syntax: {
-    keyword: '#7C3AED',      // Purple
-    string: '#059669',       // Green
-    number: '#D97706',       // Amber
-    comment: '#A1A1AA',      // Gray
-    function: '#0EA5E9',     // Cyan (matches primary accent)
-    variable: '#18181B',     // Dark
-    operator: '#DC2626',     // Red
-    type: '#0EA5E9',         // Cyan
-    punctuation: '#71717A',  // Muted
+    keyword: '#C084FC',      // Purple
+    string: '#4ADE80',       // Green
+    number: '#FBBF24',       // Amber
+    comment: '#94A3B8',      // Slate
+    function: '#60A5FA',     // Blue
+    variable: '#E2E8F0',     // Light
+    operator: '#F87171',     // Red
+    type: '#2DD4BF',         // Teal
+    punctuation: '#94A3B8',  // Slate
   },
 
   // Interactive states
   interactive: {
-    hover: '#F4F4F5',
-    active: '#E0F2FE',       // Light cyan background
-    selected: '#E0F2FE',     // Light cyan background
-    disabled: '#FAFAFA',
+    hover: 'var(--color-bg-card-hover)',
+    active: 'rgba(59, 130, 246, 0.1)',
+    selected: 'rgba(59, 130, 246, 0.15)',
+    disabled: 'rgba(255, 255, 255, 0.1)',
   },
 
-  // Shadows - Soft blurred shadows (NO borders)
+  // Shadows
   shadow: {
-    sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-    md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-    lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-    floating: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+    sm: 'var(--shadow-sm)',
+    md: 'var(--shadow-md)',
+    lg: 'var(--shadow-lg)',
+    floating: 'var(--shadow-glow)',
   },
 } as const;
 
