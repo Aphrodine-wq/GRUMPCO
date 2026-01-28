@@ -3,7 +3,9 @@
  * Functions for computing and formatting code diffs
  */
 
-import { diffLines, diffWords, Change } from 'diff';
+import * as Diff from 'diff';
+const { diffLines, diffWords } = Diff;
+export type Change = Diff.Change;
 
 export interface DiffLine {
   lineNumber: number;
