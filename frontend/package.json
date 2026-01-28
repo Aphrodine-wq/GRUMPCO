@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "svelte-check --tsconfig ./tsconfig.json && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "type-check": "svelte-check --tsconfig ./tsconfig.json",
     "lint": "eslint src",
