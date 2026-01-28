@@ -8,6 +8,7 @@
     "start:prod": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "build": "tsc && node scripts/copy-migrations.mjs",
+    "vercel-build": "tsc || true && node scripts/copy-migrations.mjs",
     "bundle": "npm run build && pkg . --out-path dist-bundle",
     "type-check": "tsc --noEmit",
     "lint": "eslint src",

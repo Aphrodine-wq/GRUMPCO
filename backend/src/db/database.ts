@@ -5,8 +5,9 @@
 
 import fs from 'fs';
 import path from 'path';
-import Database from 'better-sqlite3';
-import { runMigrations } from './migrate.js';
+// NOTE: better-sqlite3 is dynamically imported only when DB_TYPE=sqlite
+// This avoids loading native modules in serverless environments
+import type DatabaseType from 'better-sqlite3';
 import { SupabaseDatabaseService } from './supabase-db.js';
 import { SCHEMA_POSTGRESQL, type SessionRow, type PlanRow, type SpecRow, type ShipSessionRow, type WorkReportRow } from './schema.js';
 import logger from '../middleware/logger.js';
@@ -35,7 +36,7 @@ interface DatabaseConfig {
 }
 
 class DatabaseService {
-  private db: Database.Database | null = null;
+  private db: DatabaseType.Database | null = null;
   private config: DatabaseConfig;
   private initialized = false;
 
@@ -53,6 +54,9 @@ class DatabaseService {
 
     try {
       if (this.config.type === 'sqlite') {
+        // Dynamic import to avoid loading native module in serverless
+        const Database = (await import('better-sqlite3')).default;
+        const { runMigrations } = await import('./migrate.js');
         const dbPath = this.config.sqlite?.path || './data/grump.db';
         const dir = path.dirname(path.resolve(dbPath));
         fs.mkdirSync(dir, { recursive: true });
@@ -91,7 +95,7 @@ class DatabaseService {
   /**
    * Get database instance (for raw queries if needed)
    */
-  getDb(): Database.Database {
+  getDb(): DatabaseType.Database {
     if (!this.db || !this.initialized) {
       throw new Error('Database not initialized. Call initialize() first.');
     }
@@ -504,7 +508,7 @@ class DatabaseService {
   /**
    * Transaction support
    */
-  transaction<T>(fn: (db: Database.Database) => T): T {
+  transaction<T>(fn: (db: DatabaseType.Database) => T): T {
     if (!this.db) throw new Error('Database not initialized');
 
     const transaction = this.db.transaction(fn);
@@ -542,7 +546,6 @@ function shouldUseSupabase(): boolean {
 export function getDatabase(): DatabaseInterface {
   if (shouldUseSupabase()) {
     if (!supabaseDbInstance) {
-      const { SupabaseDatabaseService } = require('./supabase-db.js');
       supabaseDbInstance = new SupabaseDatabaseService(
         process.env.SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_KEY!

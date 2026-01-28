@@ -3,6 +3,7 @@
  * Spawns Rust grump-intent CLI, parses output, optionally enriches via Claude.
  */
 
+import fs from 'fs';
 import { spawn } from 'child_process';
 import { resolve } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
@@ -66,31 +67,31 @@ export interface EnrichedIntent extends StructuredIntent {
 function getIntentCompilerPath(): string {
   const override = process.env.GRUMP_INTENT_PATH;
   if (override) return override;
-  
+
   // Production: Check if running from bundled executable (app data directory)
   if (process.env.NODE_ENV === 'production') {
     // When bundled, grump-intent should be in the same directory as the backend executable
     // or in a known location relative to the executable
     const appDataDir = process.env.APPDATA || process.env.LOCALAPPDATA || process.cwd();
     const bundledPath = resolve(appDataDir, 'grump-intent.exe');
-    if (require('fs').existsSync(bundledPath)) {
+    if (fs.existsSync(bundledPath)) {
       return bundledPath;
     }
   }
-  
+
   // Development: backend runs from backend/; project root = ..
   const root = resolve(process.cwd(), '..');
   const exe = process.platform === 'win32' ? 'grump-intent.exe' : 'grump-intent';
   const devPath = resolve(root, 'intent-compiler', 'target', 'release', exe);
-  
+
   // Fallback to x86_64-pc-windows-msvc target for Windows
-  if (process.platform === 'win32' && !require('fs').existsSync(devPath)) {
+  if (process.platform === 'win32' && !fs.existsSync(devPath)) {
     const msvcPath = resolve(root, 'intent-compiler', 'target', 'x86_64-pc-windows-msvc', 'release', exe);
-    if (require('fs').existsSync(msvcPath)) {
+    if (fs.existsSync(msvcPath)) {
       return msvcPath;
     }
   }
-  
+
   return devPath;
 }
 
@@ -161,7 +162,7 @@ export async function enrichIntentViaClaude(intent: StructuredIntent): Promise<E
     return { ...intent, enriched: {} };
   }
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  
+
   // Create resilient wrapper
   // Type assertion: since we never pass stream: true, the response is always a Message
   const resilientClaudeCall = withResilience(
@@ -170,7 +171,7 @@ export async function enrichIntentViaClaude(intent: StructuredIntent): Promise<E
     },
     'claude-intent'
   );
-  
+
   const systemPrompt = getIntentCompilerPrompt();
   const userMsg = `Structured intent from parser:\n${JSON.stringify(intent, null, 2)}\n\nAnalyze and enrich this intent with code-specific insights, patterns, architecture hints, optimization opportunities, and quality requirements.`;
 
@@ -316,7 +317,7 @@ export async function parseAndEnrichIntent(
 ): Promise<EnrichedIntent> {
   // Create cache key from input
   const cacheKey = JSON.stringify({ raw: raw.trim(), constraints });
-  
+
   return await withCache(
     'intent',
     cacheKey,
