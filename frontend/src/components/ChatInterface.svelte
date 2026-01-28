@@ -2,7 +2,8 @@
   import { onMount, tick } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { get } from 'svelte/store';
-  import { Send, X } from 'lucide-svelte';
+  import Send from 'lucide-svelte/icons/send';
+  import X from 'lucide-svelte/icons/x';
   import DiagramRenderer from './DiagramRenderer.svelte';
   import SuggestionChips from './SuggestionChips.svelte';
   import RefinementActions from './RefinementActions.svelte';
