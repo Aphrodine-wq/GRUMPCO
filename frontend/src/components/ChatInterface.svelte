@@ -77,10 +77,7 @@
   let loadSessionModalOpen = $state(false);
 
   // Use the global showSettings store
-  // const showSettingsValue = $derived($showSettings);
-  const showSettingsValue = false;
-  const showSettings = { set: (v: boolean) => {} };
-  const colors = { background: { primary: '#fff', secondary: '#f0f0f0' } };
+  const showSettingsValue = $derived($showSettings);
 
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
     if (Array.isArray(content)) return content;
