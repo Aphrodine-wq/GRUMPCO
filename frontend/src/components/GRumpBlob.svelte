@@ -122,28 +122,29 @@
   .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
   .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
 
-  @keyframes blob-idle {
-    0%, 100% {
-      border-radius: 54% 46% 45% 55% / 55% 45% 55% 45%;
-      transform: translate(0, 0) rotate(0deg) scale(1);
+    @keyframes blob-idle {
+      0%, 100% {
+        border-radius: 54% 46% 45% 55% / 55% 45% 55% 45%;
+        transform: translate(0, 0) rotate(0deg) scale(1);
+      }
+      20% {
+        border-radius: 42% 58% 52% 48% / 48% 52% 48% 52%;
+        transform: translate(-3px, 2px) rotate(1.5deg) scale(1.03);
+      }
+      40% {
+        border-radius: 58% 42% 40% 60% / 52% 48% 52% 48%;
+        transform: translate(2px, -3px) rotate(-2deg) scale(0.97);
+      }
+      60% {
+        border-radius: 45% 55% 58% 42% / 55% 42% 58% 45%;
+        transform: translate(-2px, 3px) rotate(2.5deg) scale(1.02);
+      }
+      80% {
+        border-radius: 52% 48% 48% 52% / 45% 58% 42% 55%;
+        transform: translate(3px, -2px) rotate(-1.5deg) scale(0.98);
+      }
     }
-    20% {
-      border-radius: 45% 55% 58% 42% / 48% 58% 42% 52%;
-      transform: translate(-2px, 1px) rotate(1deg) scale(1.02);
-    }
-    40% {
-      border-radius: 58% 42% 40% 60% / 52% 42% 58% 48%;
-      transform: translate(1px, -2px) rotate(-1deg) scale(0.98);
-    }
-    60% {
-      border-radius: 42% 58% 55% 45% / 58% 52% 48% 42%;
-      transform: translate(-1px, 2px) rotate(2deg) scale(1.01);
-    }
-    80% {
-      border-radius: 50% 50% 45% 55% / 45% 55% 50% 50%;
-      transform: translate(2px, -1px) rotate(-2deg) scale(0.99);
-    }
-  }
+
 
   @keyframes dot-pulse {
     0%, 100% { transform: scale(1); opacity: 0.5; }

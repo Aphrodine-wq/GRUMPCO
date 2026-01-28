@@ -718,7 +718,7 @@
 
   .session-date {
     font-size: 12px;
-    color: #a1a1aa;
+    color: #71717a;
   }
 
   .sidebar-footer {
@@ -778,7 +778,7 @@
 
   .empty-text {
     font-size: 16px;
-    color: #71717a;
+    color: #52525b;
     max-width: 400px;
   }
 
@@ -833,13 +833,13 @@
 
   .message-time {
     font-size: 12px;
-    color: #a1a1aa;
+    color: #71717a;
   }
 
   .message-bubble {
     font-size: 15px;
     line-height: 1.6;
-    color: #3f3f46;
+    color: #18181b;
     word-break: break-word;
   }
 
