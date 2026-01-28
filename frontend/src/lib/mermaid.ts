@@ -6,14 +6,15 @@ let mermaidPromise: Promise<typeof import('mermaid').default> | null = null;
 
 const getMermaid = async () => {
   if (mermaidInstance) return mermaidInstance;
-  
+
   if (!mermaidPromise) {
     mermaidPromise = import('mermaid').then((m) => {
-      mermaidInstance = m.default;
+      mermaidInstance = m.default || m;
+      if (!mermaidInstance) throw new Error('Failed to load mermaid module');
       return mermaidInstance;
     });
   }
-  
+
   return mermaidPromise;
 };
 
@@ -46,7 +47,7 @@ const mermaidConfig: MermaidConfig = {
 
 export async function initMermaid(): Promise<void> {
   if (initialized) return;
-  
+
   const mermaid = await getMermaid();
   mermaid.initialize(mermaidConfig);
   initialized = true;
@@ -79,7 +80,7 @@ export function exportAsSvg(svgElement: SVGElement, filename: string = 'diagram.
   const svgData = svgElement.outerHTML;
   const blob = new Blob([svgData], { type: 'image/svg+xml' });
   const url = URL.createObjectURL(blob);
-  
+
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
@@ -96,21 +97,21 @@ export async function exportAsPng(svgElement: SVGElement, filename: string = 'di
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
-      
+
       const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(svgBlob);
-      
+
       img.onload = () => {
         canvas.width = img.width;
         canvas.height = img.height;
         ctx?.drawImage(img, 0, 0);
-        
+
         canvas.toBlob((blob) => {
           if (!blob) {
             reject(new Error('Failed to create PNG blob'));
             return;
           }
-          
+
           const pngUrl = URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = pngUrl;
@@ -123,12 +124,12 @@ export async function exportAsPng(svgElement: SVGElement, filename: string = 'di
           resolve();
         }, 'image/png');
       };
-      
+
       img.onerror = () => {
         URL.revokeObjectURL(url);
         reject(new Error('Failed to load SVG as image'));
       };
-      
+
       img.src = url;
     } catch (error) {
       reject(error);

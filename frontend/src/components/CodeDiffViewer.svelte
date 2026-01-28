@@ -11,12 +11,12 @@
   let { diff }: Props = $props();
 
   let viewMode: 'side-by-side' | 'unified' = $state('side-by-side');
-  let diffLines = $state(computeLineDiff(diff.beforeContent, diff.afterContent));
+  let diffLines = $derived(computeLineDiff(diff.beforeContent, diff.afterContent));
   let beforeHighlighted = $state('');
   let afterHighlighted = $state('');
   let isCollapsed = $state(false);
-  let language = $state(detectLanguage(diff.filePath));
-  let summary = $state(formatDiffSummary(diff));
+  let language = $derived(detectLanguage(diff.filePath));
+  let summary = $derived(formatDiffSummary(diff));
   let changeLocations = $state<Array<{ index: number; lineNumber: number; type: 'added' | 'removed' }>>([]);
   let currentChangeIndex = $state(0);
   let lineRefs: Record<number, HTMLElement> = $state({});
