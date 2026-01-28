@@ -57,11 +57,6 @@
   <SessionsSidebar />
 
   <div class="main-content">
-    <div style="padding: 20px;">
-      <h1>App Skeleton Loaded</h1>
-      <p>Session ID: {$currentSession?.id ?? 'None'}</p>
-      <p>ChatInterface is currently DISABLED for debugging.</p>
-    </div>
     {#key $currentSession?.id ?? 'none'}
       <ChatInterface
         initialMessages={getInitialMessages()}
