@@ -2,8 +2,14 @@
   "name": "mermaid-ai-monorepo",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "docs-site"
+  ],
   "description": "AI-powered Mermaid diagram generator",
   "scripts": {
+    "build": "npm run build --prefix frontend",
     "lint": "npm run lint --prefix frontend && npm run lint --prefix backend",
     "lint:fix": "npm run lint:fix --prefix frontend && npm run lint:fix --prefix backend",
     "format": "npm run format --prefix frontend && npm run format --prefix backend",
