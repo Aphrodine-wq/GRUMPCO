@@ -15,7 +15,12 @@
   import ToolResultCard from './ToolResultCard.svelte';
   import { Badge, Button, Input } from '../lib/design-system';
   import { exportAsSvg } from '../lib/mermaid';
-  import { trackMessageSent, trackDiagramGenerated, trackError, trackTemplateUsed } from '../lib/analytics';
+  import {
+    trackMessageSent,
+    trackDiagramGenerated,
+    trackError,
+    trackTemplateUsed,
+  } from '../lib/analytics';
   import { showToast } from '../stores/toastStore';
   import { processError, logError } from '../utils/errorHandler';
   import { sessionsStore, currentSession, sortedSessions } from '../stores/sessionsStore';
@@ -24,7 +29,18 @@
   import { workspaceStore } from '../stores/workspaceStore';
   import { codeSessionsStore } from '../stores/codeSessionsStore';
   import { openModal } from '../stores/clarificationStore';
-  import { phase, canProceedToPrd, canProceedToCodegen, canDownload, streamPrd, startCodeGeneration, downloadProject, reset as resetWorkflow, architecture, codegenSession } from '../stores/workflowStore';
+  import {
+    phase,
+    canProceedToPrd,
+    canProceedToCodegen,
+    canDownload,
+    streamPrd,
+    startCodeGeneration,
+    downloadProject,
+    reset as resetWorkflow,
+    architecture,
+    codegenSession,
+  } from '../stores/workflowStore';
   import { parseAssistantResponse } from '../utils/responseParser';
   import { flattenTextContent } from '../utils/contentParser';
   import { generatePlan, currentPlan } from '../stores/planStore';
@@ -44,13 +60,12 @@
     initialMessages?: Message[];
   }
 
-  let {
-    initialMessages = $bindable(undefined)
-  }: Props = $props();
+  let { initialMessages = $bindable(undefined) }: Props = $props();
 
   const defaultMessage: Message = {
     role: 'assistant',
-    content: "Tell me what you want to build. I'll design the architecture and help you code it section by section.",
+    content:
+      "Tell me what you want to build. I'll design the architecture and help you code it section by section.",
   };
 
   let messages = $state<Message[]>(initialMessages || [defaultMessage]);
@@ -99,7 +114,9 @@
     return blocks;
   }
 
-  function flattenMessagesForChatApi(msgs: Message[]): Array<{ role: 'user' | 'assistant'; content: string }> {
+  function flattenMessagesForChatApi(
+    msgs: Message[]
+  ): Array<{ role: 'user' | 'assistant'; content: string }> {
     return msgs
       .filter((m) => m.role === 'user' || m.role === 'assistant')
       .map((m) => ({
@@ -147,7 +164,9 @@
   function handleInputChange() {
     isTyping = true;
     if (typingTimeout) clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => { isTyping = false; }, 500);
+    typingTimeout = setTimeout(() => {
+      isTyping = false;
+    }, 500);
   }
 
   function handleGlobalKeydown(event: KeyboardEvent) {
@@ -158,7 +177,11 @@
     }
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
       event.preventDefault();
-      showToast('Keyboard Shortcuts:\nCtrl/Cmd+K: Command Palette\nCtrl/Cmd+/: Show Shortcuts\nEscape: Cancel\nArrow Up: Edit Last Message', 'info', 5000);
+      showToast(
+        'Keyboard Shortcuts:\nCtrl/Cmd+K: Command Palette\nCtrl/Cmd+/: Show Shortcuts\nEscape: Cancel\nArrow Up: Edit Last Message',
+        'info',
+        5000
+      );
       return;
     }
     if (event.key === 'Escape' && streaming) {
@@ -168,7 +191,7 @@
     }
     if (event.key === 'ArrowUp' && document.activeElement === inputRef && !inputText.trim()) {
       event.preventDefault();
-      const lastUserMessageIndex = messages.findLastIndex(m => m.role === 'user');
+      const lastUserMessageIndex = messages.findLastIndex((m) => m.role === 'user');
       if (lastUserMessageIndex >= 0) {
         const lastMsg = messages[lastUserMessageIndex];
         if (typeof lastMsg.content === 'string') {
@@ -232,7 +255,7 @@
     scrollToBottom();
     const controller = new AbortController();
     activeController = controller;
-    const timeoutMs = (mode === 'code' || mode === 'argument') ? 120000 : 60000;
+    const timeoutMs = mode === 'code' || mode === 'argument' ? 120000 : 60000;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
       if (mode === 'code' || mode === 'argument') await runCodeModeStream(controller.signal);
@@ -241,7 +264,11 @@
       streaming = false;
       lastError = true;
       const errorContext = processError(err, async () => {
-        if (lastUserMessage) { inputText = lastUserMessage; await tick(); sendMessage(); }
+        if (lastUserMessage) {
+          inputText = lastUserMessage;
+          await tick();
+          sendMessage();
+        }
       });
       logError(errorContext, { mode: get(chatModeStore), workspaceRoot: get(workspaceStore) });
       trackError('api_error', errorContext.message);
@@ -257,7 +284,11 @@
 
   async function runDesignModeStream(signal: AbortSignal) {
     const text = lastUserMessage;
-    const response = await fetchApi('/api/generate-diagram-stream', { method: 'POST', body: JSON.stringify({ message: text }), signal });
+    const response = await fetchApi('/api/generate-diagram-stream', {
+      method: 'POST',
+      body: JSON.stringify({ message: text }),
+      signal,
+    });
     if (!response.ok) throw new Error(`Server error (${response.status})`);
     const reader = response.body?.getReader();
     if (!reader) throw new Error('No response body');
@@ -280,7 +311,9 @@
             await tick();
             scrollToBottom();
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     }
     const parsed = parseAssistantResponse(streamingContent);
@@ -290,7 +323,10 @@
       await openModal(parsed.clarification);
       return;
     }
-    messages = [...messages, { role: 'assistant', content: streamingContent, timestamp: Date.now() }];
+    messages = [
+      ...messages,
+      { role: 'assistant', content: streamingContent, timestamp: Date.now() },
+    ];
     streaming = false;
     streamingContent = '';
     if (parsed.mermaidCode) trackDiagramGenerated('mermaid', true);
@@ -307,14 +343,23 @@
     const body: Record<string, unknown> = {
       messages: apiMessages,
       workspaceRoot: ws || undefined,
-      mode: get(chatModeStore) === 'argument' ? 'argument' : (chatMode !== 'normal' ? chatMode : 'normal'),
+      mode:
+        get(chatModeStore) === 'argument'
+          ? 'argument'
+          : chatMode !== 'normal'
+            ? chatMode
+            : 'normal',
       planId: currentPlanId || undefined,
       specSessionId: currentSpecSessionId || undefined,
     };
     const s = settingsStore.getCurrent();
     if (s?.models?.defaultProvider) body.provider = s.models.defaultProvider;
     if (s?.models?.defaultModelId) body.modelId = s.models.defaultModelId;
-    const response = await fetchApi('/api/chat/stream', { method: 'POST', body: JSON.stringify(body), signal });
+    const response = await fetchApi('/api/chat/stream', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      signal,
+    });
     if (!response.ok) throw new Error(`Server error (${response.status})`);
     const reader = response.body?.getReader();
     if (!reader) throw new Error('No response body');
@@ -334,32 +379,62 @@
           if (ev.type === 'text' && ev.text) {
             const last = streamingBlocks[streamingBlocks.length - 1];
             if (last?.type === 'text') {
-              streamingBlocks = [...streamingBlocks.slice(0, -1), { type: 'text', content: last.content + ev.text }];
+              streamingBlocks = [
+                ...streamingBlocks.slice(0, -1),
+                { type: 'text', content: last.content + ev.text },
+              ];
             } else {
               streamingBlocks = [...streamingBlocks, { type: 'text', content: ev.text }];
             }
             await tick();
             scrollToBottom();
           } else if (ev.type === 'tool_call' && ev.id && ev.name) {
-            streamingBlocks = [...streamingBlocks, { type: 'tool_call', id: ev.id, name: ev.name, input: ev.input ?? {}, status: 'executing' }];
+            streamingBlocks = [
+              ...streamingBlocks,
+              {
+                type: 'tool_call',
+                id: ev.id,
+                name: ev.name,
+                input: ev.input ?? {},
+                status: 'executing',
+              },
+            ];
             await tick();
             scrollToBottom();
           } else if (ev.type === 'tool_result' && ev.id && ev.toolName) {
-            const idx = streamingBlocks.findIndex((b) => b.type === 'tool_call' && (b as any).id === ev.id);
+            const idx = streamingBlocks.findIndex(
+              (b) => b.type === 'tool_call' && (b as any).id === ev.id
+            );
             if (idx >= 0) {
               const blk = streamingBlocks[idx] as any;
               const updated = [...streamingBlocks];
               updated[idx] = { ...blk, status: ev.success ? 'success' : 'error' };
               streamingBlocks = updated;
             }
-            streamingBlocks = [...streamingBlocks, { type: 'tool_result', id: ev.id, toolName: ev.toolName, output: ev.output ?? '', success: ev.success ?? false, executionTime: ev.executionTime ?? 0, diff: ev.diff }];
+            streamingBlocks = [
+              ...streamingBlocks,
+              {
+                type: 'tool_result',
+                id: ev.id,
+                toolName: ev.toolName,
+                output: ev.output ?? '',
+                success: ev.success ?? false,
+                executionTime: ev.executionTime ?? 0,
+                diff: ev.diff,
+              },
+            ];
             await tick();
             scrollToBottom();
           }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          /* ignore */
+        }
       }
     }
-    messages = [...messages, { role: 'assistant', content: [...streamingBlocks], timestamp: Date.now() }];
+    messages = [
+      ...messages,
+      { role: 'assistant', content: [...streamingBlocks], timestamp: Date.now() },
+    ];
     streaming = false;
     streamingBlocks = [];
     if ($currentSession) sessionsStore.updateSession($currentSession.id, messages);
@@ -368,13 +443,21 @@
   }
 
   function cancelGeneration() {
-    if (activeController) { activeController.abort(); activeController = null; }
+    if (activeController) {
+      activeController.abort();
+      activeController = null;
+    }
     streaming = false;
     streamingContent = '';
     streamingBlocks = [];
   }
 
-  function retryLastMessage() { if (lastUserMessage) { inputText = lastUserMessage; sendMessage(); } }
+  function retryLastMessage() {
+    if (lastUserMessage) {
+      inputText = lastUserMessage;
+      sendMessage();
+    }
+  }
 
   function handleTemplateSelect(event: CustomEvent) {
     inputText = event.detail.prompt;
@@ -388,31 +471,48 @@
     if (svgElement) exportAsSvg(svgElement, 'diagram.svg');
   }
 
-  function setupDiagramRef(el: HTMLElement, params: {index: number, blockIdx: number}) {
+  function setupDiagramRef(el: HTMLElement, params: { index: number; blockIdx: number }) {
     diagramRefs[`${params.index}-${params.blockIdx}`] = el;
     return {
-      update(newParams: {index: number, blockIdx: number}) { diagramRefs[`${newParams.index}-${newParams.blockIdx}`] = el; }
+      update(newParams: { index: number; blockIdx: number }) {
+        diagramRefs[`${newParams.index}-${newParams.blockIdx}`] = el;
+      },
     };
   }
 
   const dispatch = createEventDispatcher<{ 'messages-updated': Message[] }>();
 
-  async function handleProceedToPrd() { for await (const _ of streamPrd()) {} }
-  async function handleProceedToCodegen() { await startCodeGeneration(get(currentSession)?.projectId ?? getCurrentProjectId() ?? undefined); }
-  async function handleDownload() { await downloadProject(); }
+  async function handleProceedToPrd() {
+    for await (const _ of streamPrd()) {
+    }
+  }
+  async function handleProceedToCodegen() {
+    await startCodeGeneration(get(currentSession)?.projectId ?? getCurrentProjectId() ?? undefined);
+  }
+  async function handleDownload() {
+    await downloadProject();
+  }
 
   async function handlePushToGitHub(detail: { repoName: string }) {
     const sessionId = get(codegenSession)?.sessionId;
-    if (!sessionId) { showToast('No code generation session to push', 'error'); return; }
+    if (!sessionId) {
+      showToast('No code generation session to push', 'error');
+      return;
+    }
     try {
-      const res = await fetchApi('/api/github/create-and-push', { method: 'POST', body: JSON.stringify({ sessionId, repoName: detail.repoName }) });
+      const res = await fetchApi('/api/github/create-and-push', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId, repoName: detail.repoName }),
+      });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         showToast((data as any).error ?? 'Push to GitHub failed', 'error');
         return;
       }
       showToast(`Pushed to GitHub as ${detail.repoName}`, 'success');
-    } catch (e) { showToast(e instanceof Error ? e.message : 'Push to GitHub failed', 'error'); }
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Push to GitHub failed', 'error');
+    }
   }
 
   function handleOpenInIde(e: CustomEvent<{ ide?: string }>) {
@@ -421,11 +521,21 @@
     handleDownload();
   }
 
-  function handleWorkflowReset() { resetWorkflow(); }
+  function handleWorkflowReset() {
+    resetWorkflow();
+  }
 
-  async function handleMermaidToCode(detail: { mermaidCode: string; framework: string; language: string; workspaceRoot?: string; }) {
+  async function handleMermaidToCode(detail: {
+    mermaidCode: string;
+    framework: string;
+    language: string;
+    workspaceRoot?: string;
+  }) {
     chatModeStore.setMode('code');
-    if (detail.workspaceRoot) { workspaceStore.setWorkspace(detail.workspaceRoot); workspaceInput = detail.workspaceRoot; }
+    if (detail.workspaceRoot) {
+      workspaceStore.setWorkspace(detail.workspaceRoot);
+      workspaceInput = detail.workspaceRoot;
+    }
     inputText = `Generate ${detail.framework} code in ${detail.language} based on this architecture diagram:\n\n\`\`\`mermaid\n${detail.mermaidCode}\n\`\`\`\n\nCreate a complete project structure with all necessary files.`;
     await tick();
     sendMessage();
@@ -442,7 +552,11 @@
     }
   }
 
-  function handleClearChat() { messages = [defaultMessage]; inputText = ''; showToast('Chat cleared', 'info'); }
+  function handleClearChat() {
+    messages = [defaultMessage];
+    inputText = '';
+    showToast('Chat cleared', 'info');
+  }
   function handleSaveSession() {
     const name = window.prompt('Session name', `Session ${new Date().toLocaleString()}`);
     if (name) {
@@ -460,7 +574,11 @@
   });
 </script>
 
-<div class="chat-interface" style:--bg-primary={colors.background.primary} style:--bg-secondary={colors.background.secondary}>
+<div
+  class="chat-interface"
+  style:--bg-primary={colors.background.primary}
+  style:--bg-secondary={colors.background.secondary}
+>
   {#if showSettings}
     <SettingsScreen onBack={() => (showSettings = false)} />
   {:else}
@@ -489,7 +607,9 @@
                 <div class="message-content-container">
                   <div class="message-meta">
                     <span class="message-role">{msg.role === 'user' ? 'You' : 'G-Rump'}</span>
-                    {#if msg.timestamp}<span class="message-time">{formatTimestamp(msg.timestamp)}</span>{/if}
+                    {#if msg.timestamp}<span class="message-time"
+                        >{formatTimestamp(msg.timestamp)}</span
+                      >{/if}
                   </div>
                   <div class="message-bubble">
                     {#if typeof msg.content === 'string'}
@@ -497,14 +617,23 @@
                         {#if block.type === 'text'}
                           <div class="text-block">{block.content}</div>
                         {:else if block.type === 'mermaid'}
-                          <div class="diagram-card" use:setupDiagramRef={{index, blockIdx: bIdx}}>
+                          <div class="diagram-card" use:setupDiagramRef={{ index, blockIdx: bIdx }}>
                             <div class="diagram-header">
                               <Badge variant="info">Architecture</Badge>
-                              <Button variant="ghost" size="sm" onclick={() => exportSvg(index, bIdx)}>Export</Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onclick={() => exportSvg(index, bIdx)}>Export</Button
+                              >
                             </div>
-                            <DiagramRenderer 
-                              code={block.content} 
-                              on:generate-code={(e) => handleMermaidToCode({ mermaidCode: e.detail.mermaidCode, framework: 'react', language: 'typescript' })}
+                            <DiagramRenderer
+                              code={block.content}
+                              on:generate-code={(e) =>
+                                handleMermaidToCode({
+                                  mermaidCode: e.detail.mermaidCode,
+                                  framework: 'react',
+                                  language: 'typescript',
+                                })}
                             />
                           </div>
                         {/if}
@@ -528,7 +657,7 @@
             {#if streaming}
               <div class="message-wrapper assistant streaming">
                 <div class="message-avatar">
-                   <div class="avatar-circle assistant">AI</div>
+                  <div class="avatar-circle assistant">AI</div>
                 </div>
                 <div class="message-content-container">
                   <div class="message-meta">
@@ -558,10 +687,16 @@
 
         <div class="chat-controls">
           <div class="controls-inner">
-            <form class="input-container" onsubmit={(e) => { e.preventDefault(); sendMessage(); }}>
+            <form
+              class="input-container"
+              onsubmit={(e) => {
+                e.preventDefault();
+                sendMessage();
+              }}
+            >
               <span class="input-prompt">&gt;</span>
               <div class="input-wrapper">
-                <input 
+                <input
                   bind:value={inputText}
                   bind:this={inputRef}
                   oninput={handleInputChange}
@@ -580,49 +715,62 @@
             </form>
 
             <div class="mode-selector">
-              <Button 
-                variant={$chatModeStore === 'design' ? 'primary' : 'secondary'} 
-                size="sm" 
-                onclick={() => chatModeStore.setMode('design')}
-              >Design</Button>
-              <Button 
-                variant={$chatModeStore === 'code' && chatMode === 'normal' ? 'primary' : 'secondary'} 
-                size="sm" 
-                onclick={() => { chatModeStore.setMode('code'); chatMode = 'normal'; }}
-              >Code</Button>
-              <Button 
-                variant={$chatModeStore === 'code' && chatMode === 'plan' ? 'primary' : 'secondary'} 
-                size="sm" 
-                onclick={() => { chatModeStore.setMode('code'); chatMode = 'plan'; }}
-              >Plan</Button>
-              <Button 
-                variant={$chatModeStore === 'code' && chatMode === 'spec' ? 'primary' : 'secondary'} 
-                size="sm" 
-                onclick={() => { chatModeStore.setMode('code'); chatMode = 'spec'; }}
-              >Spec</Button>
-              <Button 
-                variant={$chatModeStore === 'argument' ? 'primary' : 'secondary'} 
-                size="sm" 
-                onclick={() => chatModeStore.setMode('argument')}
-              >Argument</Button>
+              <Button
+                variant={$chatModeStore === 'design' ? 'primary' : 'secondary'}
+                size="sm"
+                onclick={() => chatModeStore.setMode('design')}>Design</Button
+              >
+              <Button
+                variant={$chatModeStore === 'code' && chatMode === 'normal'
+                  ? 'primary'
+                  : 'secondary'}
+                size="sm"
+                onclick={() => {
+                  chatModeStore.setMode('code');
+                  chatMode = 'normal';
+                }}>Code</Button
+              >
+              <Button
+                variant={$chatModeStore === 'code' && chatMode === 'plan' ? 'primary' : 'secondary'}
+                size="sm"
+                onclick={() => {
+                  chatModeStore.setMode('code');
+                  chatMode = 'plan';
+                }}>Plan</Button
+              >
+              <Button
+                variant={$chatModeStore === 'code' && chatMode === 'spec' ? 'primary' : 'secondary'}
+                size="sm"
+                onclick={() => {
+                  chatModeStore.setMode('code');
+                  chatMode = 'spec';
+                }}>Spec</Button
+              >
+              <Button
+                variant={$chatModeStore === 'argument' ? 'primary' : 'secondary'}
+                size="sm"
+                onclick={() => chatModeStore.setMode('argument')}>Argument</Button
+              >
             </div>
 
             {#if $chatModeStore === 'code' || $chatModeStore === 'argument'}
               <div class="workspace-bar">
                 <span class="ws-label">Workspace:</span>
-                <input 
-                  bind:value={workspaceInput} 
-                  class="ws-input" 
+                <input
+                  bind:value={workspaceInput}
+                  class="ws-input"
                   placeholder="Path to project..."
-                  onblur={() => { if (workspaceInput.trim()) workspaceStore.setWorkspace(workspaceInput.trim()); }}
+                  onblur={() => {
+                    if (workspaceInput.trim()) workspaceStore.setWorkspace(workspaceInput.trim());
+                  }}
                 />
               </div>
             {/if}
           </div>
         </div>
       </div>
-    {/if}
-  </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -633,7 +781,16 @@
     width: 100%;
     background-color: var(--bg-primary);
     color: #18181b;
-    font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+    font-family: var(
+      --font-sans,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif
+    );
   }
 
   .chat-root {
@@ -728,12 +885,12 @@
   }
 
   .avatar-circle.user {
-    background-color: #F5F5F5;
-    color: #71717A;
+    background-color: #f5f5f5;
+    color: #71717a;
   }
 
   .avatar-circle.assistant {
-    background-color: #0EA5E9;
+    background-color: #0ea5e9;
     color: white;
   }
 
@@ -752,24 +909,29 @@
   .message-role {
     font-size: 13px;
     font-weight: 600;
-    color: #18181B;
+    color: #18181b;
   }
 
   .message-time {
     font-size: 11px;
-    color: #71717A;
+    color: #71717a;
   }
 
   .thinking-indicator {
     font-size: 11px;
-    color: #0EA5E9;
+    color: #0ea5e9;
     font-weight: 500;
     animation: pulse-indicator 2s ease-in-out infinite;
   }
 
   @keyframes pulse-indicator {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
   }
 
   .message-bubble {
@@ -784,7 +946,7 @@
   }
 
   .message-wrapper.assistant .message-bubble {
-    border-left: 3px solid #0EA5E9;
+    border-left: 3px solid #0ea5e9;
     padding-left: 13px;
   }
 
@@ -852,7 +1014,7 @@
   .input-prompt {
     font-size: 16px;
     font-weight: 600;
-    color: #0EA5E9;
+    color: #0ea5e9;
     user-select: none;
     flex-shrink: 0;
   }
@@ -870,13 +1032,13 @@
     font-size: 14px;
     color: #18181b;
     outline: none;
-    font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+    font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
     resize: none;
     line-height: 1.5;
   }
 
   .message-input::placeholder {
-    color: #71717A;
+    color: #71717a;
   }
 
   .send-button {
@@ -887,7 +1049,7 @@
     height: 36px;
     border-radius: 8px;
     border: none;
-    background-color: #0EA5E9;
+    background-color: #0ea5e9;
     color: white;
     cursor: pointer;
     transition: all 150ms ease;
@@ -895,13 +1057,13 @@
   }
 
   .send-button:hover:not(:disabled) {
-    background-color: #0284C7;
+    background-color: #0284c7;
     transform: translateY(-1px);
     box-shadow: 0 4px 16px rgba(14, 165, 233, 0.2);
   }
 
   .send-button:disabled {
-    background-color: #D4D4D8;
+    background-color: #d4d4d8;
     cursor: not-allowed;
     transform: none;
   }
@@ -925,14 +1087,14 @@
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    background-color: #F5F5F5;
+    background-color: #f5f5f5;
     border-radius: 6px;
   }
 
   .ws-label {
     font-size: 11px;
     font-weight: 600;
-    color: #71717A;
+    color: #71717a;
     white-space: nowrap;
   }
 
@@ -953,11 +1115,11 @@
     background: transparent;
   }
   .messages-scroll::-webkit-scrollbar-thumb {
-    background: #D4D4D8;
+    background: #d4d4d8;
     border-radius: 3px;
   }
   .messages-scroll::-webkit-scrollbar-thumb:hover {
-    background: #A1A1AA;
+    background: #a1a1aa;
   }
 
   /* Responsive adjustments */
