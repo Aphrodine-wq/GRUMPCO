@@ -14,30 +14,32 @@
   import { exportAsSvg } from '../lib/mermaid';
   // import {
   //   trackMessageSent,
-  //   trackDiagramGenerated,
-  //   trackError,
-  //   trackTemplateUsed,
-  // } from '../lib/analytics';
+  import {
+    trackMessageSent,
+    trackDiagramGenerated,
+    trackError,
+    trackTemplateUsed,
+  } from '../lib/analytics';
   import { showToast } from '../stores/toastStore';
-  // import { processError, logError } from '../utils/errorHandler';
+  import { processError, logError } from '../utils/errorHandler';
   import { sessionsStore, currentSession } from '../stores/sessionsStore';
   import { getCurrentProjectId } from '../stores/projectStore';
-  // import { chatModeStore } from '../stores/chatModeStore';
-  import { workspaceStore } from '../stores/workspaceStore';
-  // import { codeSessionsStore } from '../stores/codeSessionsStore';
-  // import { openModal } from '../stores/clarificationStore';
-  // import {
-  //   streamPrd,
-  //   startCodeGeneration,
-  //   downloadProject,
-  //   reset as resetWorkflow,
-  //   codegenSession,
-  // } from '../stores/workflowStore';
+  import { chatModeStore } from '../stores/chatModeStore';
+  import { workspaceStore } from '../stores/workspaceStore'; // Already enabled
+  import { codeSessionsStore } from '../stores/codeSessionsStore';
+  import { openModal } from '../stores/clarificationStore';
+  import {
+    streamPrd,
+    startCodeGeneration,
+    downloadProject,
+    reset as resetWorkflow,
+    codegenSession,
+  } from '../stores/workflowStore';
   import { parseAssistantResponse } from '../utils/responseParser';
-  // import { flattenTextContent } from '../utils/contentParser';
-  // import { generatePlan } from '../stores/planStore';
-  // import { startSpecSession } from '../stores/specStore';
-  // import { fetchApi } from '../lib/api.js';
+  import { flattenTextContent } from '../utils/contentParser';
+  import { generatePlan } from '../stores/planStore';
+  import { startSpecSession } from '../stores/specStore';
+  import { fetchApi } from '../lib/api.js';
   import { settingsStore } from '../stores/settingsStore';
   import { colors } from '../lib/design-system/tokens/colors';
   import { showSettings } from '../stores/uiStore';
@@ -79,11 +81,19 @@
   // Use the global showSettings store
   const showSettingsValue = $derived($showSettings);
 
+  // Re-enabled projectStore usage
+  const projectId = getCurrentProjectId();
+
+  $effect(() => {
+    if (chatModeStore) {
+      chatMode = $chatModeStore;
+    }
+  });
+
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
     if (Array.isArray(content)) return content;
     // Basic text content might contain mermaid code blocks
-    // return flattenTextContent(content);
-    return [{ type: 'text', content: content }];
+    return flattenTextContent(content);
   }
 
   function flattenMessagesForChatApi(
@@ -93,10 +103,7 @@
       .filter((m) => m.role === 'user' || m.role === 'assistant')
       .map((m) => ({
         role: m.role as 'user' | 'assistant',
-        content:
-          typeof m.content === 'string'
-            ? m.content
-            : m.content.map((b) => (b.type === 'text' ? b.content : '')).join('\n'),
+        content: typeof m.content === 'string' ? m.content : flattenTextContent(m.content),
       }))
       .filter((m) => (m.content || '').trim().length > 0);
   }
@@ -185,26 +192,14 @@
     const text = inputText.trim();
     if (!text || streaming) return;
     // --- Mode Switching Logic ---
-    // const mode = get(chatModeStore);
-    const mode = 'normal';
+    const mode = get(chatModeStore);
     lastUserMessage = text;
     lastError = false;
-    // trackMessageSent(text.length);
+    trackMessageSent(text.length);
     if (mode === 'code' && chatMode === 'plan') {
       try {
-        // const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
-        // DISABLED FOR DEBUG
-        // await generatePlan(text, ws);
-
-        // Mock success for now
-        messages = [
-          ...messages,
-          {
-            role: 'assistant',
-            content: 'Plan generation is currently disabled for debugging.',
-            timestamp: Date.now(),
-          },
-        ];
+        const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
+        await generatePlan(text, ws);
         streaming = false;
       } catch (e: any) {
         lastError = true;
@@ -216,19 +211,8 @@
 
     if (mode === 'code' && chatMode === 'spec') {
       try {
-        // const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
-        // DISABLED FOR DEBUG
-        // await startSpecSession(text, ws);
-
-        // Mock success
-        messages = [
-          ...messages,
-          {
-            role: 'assistant',
-            content: 'Spec generation is currently disabled for debugging.',
-            timestamp: Date.now(),
-          },
-        ];
+        const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
+        await startSpecSession(text, ws);
         streaming = false;
       } catch (e: any) {
         lastError = true;
@@ -282,7 +266,6 @@
     } catch (err: any) {
       streaming = false;
       lastError = true;
-      /*
       const errorContext = processError(err, async () => {
         if (lastUserMessage) {
           inputText = lastUserMessage;
@@ -290,78 +273,69 @@
           sendMessage();
         }
       });
-      // logError(errorContext, { mode: get(chatModeStore), workspaceRoot: get(workspaceStore) });
+      logError(errorContext, { mode: get(chatModeStore), workspaceRoot: get(workspaceStore) });
       trackError('api_error', errorContext.message);
       showToast(errorContext.userMessage, 'error', errorContext.retryable ? 0 : 5000, {
         persistent: errorContext.retryable,
         actions: errorContext.recovery,
       });
-      */
-      showToast('Error sending message', 'error');
     } finally {
       clearTimeout(timeoutId);
       activeController = null;
     }
   }
 
-  // async function runDesignModeStream(signal: AbortSignal) {
-  //   const text = lastUserMessage;
-  //   // const response = await fetchApi('/api/generate-diagram-stream', {
-  //   //   method: 'POST',
-  //   //   body: JSON.stringify({ message: text }),
-  //   //   signal,
-  //   // });
-  //   // if (!response.ok) throw new Error(`Server error (${response.status})`);
-  //   // const reader = response.body?.getReader();
-  //   // if (!reader) throw new Error('No response body');
-  //   // const decoder = new TextDecoder();
-  //   // let buffer = '';
-  //   // while (true) {
-  //   //   const { done, value } = await reader.read();
-  //   //   if (done) break;
-  //   //   buffer += decoder.decode(value, { stream: true });
-  //   //   const lines = buffer.split('\n');
-  //   //   buffer = lines.pop() || '';
-  //   //   for (const line of lines) {
-  //   //     if (!line.startsWith('data: ')) continue;
-  //   //     const data = line.slice(6);
-  //   //     if (data === '[DONE]') continue;
-  //   //     try {
-  //   //       const parsed = JSON.parse(data);
-  //   //       if (parsed.text) {
-  //   //         streamingContent += parsed.text;
-  //   //         await tick();
-  //   //         scrollToBottom();
-  //   //       }
-  //   //     } catch {
-  //   //       /* ignore */
-  //   //     }
-  //   //   }
-  //   // }
-  //   // // const parsed = parseAssistantResponse(streamingContent);
-  //   /*
-  //   if (parsed.type === 'clarification' && parsed.clarification) {
-  //     streaming = false;
-  //     streamingContent = '';
-  //     // DISABLED FOR DEBUG
-  //     // await openModal(parsed.clarification);
-  //     return;
-  //   }
-  //   */
-  //   /*
-  //   messages = [
-  //     ...messages,
-  //     { role: 'assistant', content: streamingContent, timestamp: Date.now() },
-  //   ];
-  //   streaming = false;
-  //   streamingContent = '';
-  //   // if (parsed.mermaidCode) trackDiagramGenerated('mermaid', true);
-  //   if ($currentSession) sessionsStore.updateSession($currentSession.id, messages);
-  //   else sessionsStore.createSession(messages);
-  //   dispatch('messages-updated', messages);
-  // }
   async function runDesignModeStream(signal: AbortSignal) {
-    // Stubbed
+    const text = lastUserMessage;
+    const response = await fetchApi('/api/generate-diagram-stream', {
+      method: 'POST',
+      body: JSON.stringify({ message: text }),
+      signal,
+    });
+    if (!response.ok) throw new Error(`Server error (${response.status})`);
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.text) {
+            streamingContent += parsed.text;
+            await tick();
+            scrollToBottom();
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    const parsed = parseAssistantResponse(streamingContent);
+    if (parsed.type === 'clarification' && parsed.clarification) {
+      streaming = false;
+      streamingContent = '';
+      await openModal(parsed.clarification);
+      return;
+    }
+    messages = [
+      ...messages,
+      { role: 'assistant', content: streamingContent, timestamp: Date.now() },
+    ];
+    streaming = false;
+    streamingContent = '';
+    if (parsed.mermaidCode) trackDiagramGenerated('mermaid', true);
+    if ($currentSession) sessionsStore.updateSession($currentSession.id, messages);
+    else sessionsStore.createSession(messages);
+    dispatch('messages-updated', messages);
   }
 
   async function runCodeModeStream(signal: AbortSignal) {
@@ -369,16 +343,15 @@
     if (apiMessages.length === 0) throw new Error('No messages to send');
     let ws = workspaceInput.trim() || get(workspaceStore) || undefined;
     if (ws) workspaceStore.setWorkspace(ws);
-    // let ws = undefined;
     const body: Record<string, unknown> = {
       messages: apiMessages,
       workspaceRoot: ws || undefined,
-      mode: 'code', // Fixed mode for debug
-      // get(chatModeStore) === 'argument'
-      // ? 'argument'
-      // : chatMode !== 'normal'
-      // ? chatMode
-      // : 'normal',
+      mode:
+        get(chatModeStore) === 'argument'
+          ? 'argument'
+          : chatMode !== 'normal'
+            ? chatMode
+            : 'normal',
       planId: currentPlanId || undefined,
       specSessionId: currentSpecSessionId || undefined,
     };
@@ -496,11 +469,11 @@
   function handleTemplateSelect(event: CustomEvent) {
     if (event.detail.id === 'ship-mode') {
       chatMode = 'ship';
-      // trackTemplateUsed('ship-mode');
+      trackTemplateUsed('ship-mode');
       return;
     }
     inputText = event.detail.prompt;
-    // trackTemplateUsed(event.detail.id || 'unknown');
+    trackTemplateUsed(event.detail.id || 'unknown');
     inputRef?.focus();
   }
 
@@ -522,40 +495,36 @@
   const dispatch = createEventDispatcher<{ 'messages-updated': Message[] }>();
 
   async function handleProceedToPrd() {
-    // DISABLED FOR DEBUG
-    // for await (const _ of streamPrd()) {
-    // }
+    for await (const _ of streamPrd()) {
+    }
   }
   async function handleProceedToCodegen() {
-    // DISABLED FOR DEBUG
-    // await startCodeGeneration(get(currentSession)?.projectId ?? getCurrentProjectId() ?? undefined);
+    await startCodeGeneration(get(currentSession)?.projectId ?? getCurrentProjectId() ?? undefined);
   }
   async function handleDownload() {
-    // DISABLED FOR DEBUG
-    // await downloadProject();
+    await downloadProject();
   }
 
   async function handlePushToGitHub(detail: { repoName: string }) {
-    // DISABLED FOR DEBUG
-    // const sessionId = get(codegenSession)?.sessionId;
-    // if (!sessionId) {
-    //   showToast('No code generation session to push', 'error');
-    //   return;
-    // }
-    // try {
-    //   const res = await fetchApi('/api/github/create-and-push', {
-    //     method: 'POST',
-    //     body: JSON.stringify({ sessionId, repoName: detail.repoName }),
-    //   });
-    //   if (!res.ok) {
-    //     const data = await res.json().catch(() => ({}));
-    //     showToast((data as any).error ?? 'Push to GitHub failed', 'error');
-    //     return;
-    //   }
-    //   showToast(`Pushed to GitHub as ${detail.repoName}`, 'success');
-    // } catch (e) {
-    //   showToast(e instanceof Error ? e.message : 'Push to GitHub failed', 'error');
-    // }
+    const sessionId = get(codegenSession)?.sessionId;
+    if (!sessionId) {
+      showToast('No code generation session to push', 'error');
+      return;
+    }
+    try {
+      const res = await fetchApi('/api/github/create-and-push', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId, repoName: detail.repoName }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        showToast((data as any).error ?? 'Push to GitHub failed', 'error');
+        return;
+      }
+      showToast(`Pushed to GitHub as ${detail.repoName}`, 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Push to GitHub failed', 'error');
+    }
   }
 
   function handleOpenInIde(e: CustomEvent<{ ide?: string }>) {
@@ -565,8 +534,7 @@
   }
 
   function handleWorkflowReset() {
-    // DISABLED FOR DEBUG
-    // resetWorkflow();
+    resetWorkflow();
   }
 
   async function handleMermaidToCode(detail: {
@@ -575,26 +543,25 @@
     language: string;
     workspaceRoot?: string;
   }) {
-    // chatModeStore.setMode('code');
-    // if (detail.workspaceRoot) {
-    //   workspaceStore.setWorkspace(detail.workspaceRoot);
-    //   workspaceInput = detail.workspaceRoot;
-    // }
+    chatModeStore.setMode('code');
+    if (detail.workspaceRoot) {
+      workspaceStore.setWorkspace(detail.workspaceRoot);
+      workspaceInput = detail.workspaceRoot;
+    }
     inputText = `Generate ${detail.framework} code in ${detail.language} based on this architecture diagram:\n\n\`\`\`mermaid\n${detail.mermaidCode}\n\`\`\`\n\nCreate a complete project structure with all necessary files.`;
     await tick();
     sendMessage();
   }
 
   function loadSessionById(id: string) {
-    // DISABLED FOR DEBUG
-    // const session = codeSessionsStore.load(id);
-    // if (session) {
-    //   messages = JSON.parse(JSON.stringify(session.messages));
-    //   workspaceInput = session.workspaceRoot ?? '';
-    //   if (session.workspaceRoot) workspaceStore.setWorkspace(session.workspaceRoot);
-    //   showToast(`Loaded: ${session.name}`, 'success');
-    //   loadSessionModalOpen = false;
-    // }
+    const session = codeSessionsStore.load(id);
+    if (session) {
+      messages = JSON.parse(JSON.stringify(session.messages));
+      workspaceInput = session.workspaceRoot ?? '';
+      if (session.workspaceRoot) workspaceStore.setWorkspace(session.workspaceRoot);
+      showToast(`Loaded: ${session.name}`, 'success');
+      loadSessionModalOpen = false;
+    }
   }
 
   function handleClearChat() {
@@ -605,8 +572,7 @@
   function handleSaveSession() {
     const name = window.prompt('Session name', `Session ${new Date().toLocaleString()}`);
     if (name) {
-      // DISABLED FOR DEBUG
-      // codeSessionsStore.save(name, messages, workspaceInput || null, 'general');
+      codeSessionsStore.save(name, messages, workspaceInput || null, 'general');
       showToast('Session saved', 'success');
     }
   }
@@ -639,21 +605,21 @@
       <div class="chat-viewport">
         {#if chatMode === 'ship'}
           <div class="ship-mode-viewport">
-            <!-- <ShipMode /> -->
+            <ShipMode />
           </div>
         {:else}
           <div class="messages-scroll" bind:this={messagesRef}>
             <div class="messages-inner">
               {#if messages.length <= 1 && !streaming}
                 <div class="empty-state">
-                  <!-- <GRumpBlob size="lg" state="idle" animated={true} /> -->
+                  <GRumpBlob size="lg" state="idle" animated={true} />
                   <h1 class="empty-title">What are we building?</h1>
                   <p class="empty-text">
                     I can design your system architecture, create requirements, and write the
                     full-stack code. Just tell me your idea.
                   </p>
                   <div class="suggestion-chips">
-                    <!-- <SuggestionChips on:select={handleTemplateSelect} /> -->
+                    <SuggestionChips on:select={handleTemplateSelect} />
                   </div>
                 </div>
               {/if}
@@ -692,7 +658,6 @@
                                   onclick={() => exportSvg(index, bIdx)}>Export</Button
                                 >
                               </div>
-                              <!--
                               <DiagramRenderer
                                 code={block.content}
                                 on:generate-code={(e) =>
@@ -702,7 +667,6 @@
                                     language: 'typescript',
                                   })}
                               />
-                              -->
                             </div>
                           {/if}
                         {/each}
@@ -711,9 +675,9 @@
                           {#if block.type === 'text'}
                             <div class="text-block">{block.content}</div>
                           {:else if block.type === 'tool_call'}
-                            <!-- <ToolCallCard toolCall={block} /> -->
+                            <ToolCallCard toolCall={block} />
                           {:else if block.type === 'tool_result'}
-                            <!-- <ToolResultCard toolResult={block} /> -->
+                            <ToolResultCard toolResult={block} />
                           {/if}
                         {/each}
                       {/if}
@@ -738,9 +702,9 @@
                           {#if block.type === 'text'}
                             <div class="text-block">{block.content}</div>
                           {:else if block.type === 'tool_call'}
-                            <!-- <ToolCallCard toolCall={block} /> -->
+                            <ToolCallCard toolCall={block} />
                           {:else if block.type === 'tool_result'}
-                            <!-- <ToolResultCard toolResult={block} /> -->
+                            <ToolResultCard toolResult={block} />
                           {/if}
                         {/each}
                       {:else}
@@ -808,8 +772,7 @@
               </form>
             {/if}
 
-            <!-- MODE SELECTOR DISABLED FOR DEBUGGING -->
-            <!--
+            <!-- MODE SELECTOR RESTORED -->
             <div class="mode-selector">
               <button
                 class="mode-btn {$chatModeStore === 'code' && chatMode === 'normal'
@@ -849,10 +812,6 @@
                   window.dispatchEvent(new CustomEvent('open-ship-mode'));
                 }}>Ship</button
               >
-            </div>
-            -->
-            <div class="mode-selector">
-              <button class="mode-btn active">DEBUG MODE</button>
             </div>
           </div>
         </div>
