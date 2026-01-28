@@ -3,12 +3,12 @@
   import { createEventDispatcher } from 'svelte';
   import { get } from 'svelte/store';
 
-  // import DiagramRenderer from './DiagramRenderer.svelte';
-  // import SuggestionChips from './SuggestionChips.svelte';
-  // import GRumpBlob from './GRumpBlob.svelte';
-  // import ToolCallCard from './ToolCallCard.svelte';
-  // import ToolResultCard from './ToolResultCard.svelte';
-  // import ShipMode from './ShipMode.svelte';
+  import DiagramRenderer from './DiagramRenderer.svelte';
+  import SuggestionChips from './SuggestionChips.svelte';
+  import GRumpBlob from './GRumpBlob.svelte';
+  import ToolCallCard from './ToolCallCard.svelte';
+  import ToolResultCard from './ToolResultCard.svelte';
+  import ShipMode from './ShipMode.svelte';
   import SettingsScreen from './SettingsScreen.svelte';
   import { Badge, Button } from '../lib/design-system';
   import { exportAsSvg } from '../lib/mermaid';
