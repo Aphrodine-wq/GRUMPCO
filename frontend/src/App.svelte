@@ -65,7 +65,7 @@
       {#key $currentSession?.id ?? 'none'}
         <ChatInterface
           initialMessages={getInitialMessages()}
-          on:messages-updated={(e) => handleMessagesUpdate(e.detail)}
+          onmessagesUpdated={handleMessagesUpdate}
         />
       {/key}
     {/if}

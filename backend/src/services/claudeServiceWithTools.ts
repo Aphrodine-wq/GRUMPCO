@@ -53,10 +53,23 @@ import {
   generateMigrationsInputSchema,
   screenshotUrlInputSchema,
   browserRunScriptInputSchema,
+  browserNavigateInputSchema,
+  browserClickInputSchema,
+  browserTypeInputSchema,
+  browserGetContentInputSchema,
+  browserScreenshotInputSchema,
 } from '../tools/definitions.js';
 import { generateSchemaFromDescription } from './dbSchemaService.js';
 import { generateMigrations } from './migrationService.js';
-import { screenshotUrl, browserRunScript } from './browserService.js';
+import {
+  screenshotUrl,
+  browserRunScript,
+  browserNavigate,
+  browserClick,
+  browserType,
+  browserGetContent,
+  browserScreenshot,
+} from './browserService.js';
 import { toolExecutionService, ToolExecutionService } from './toolExecutionService.js';
 import { logger } from '../utils/logger.js';
 import { getPlan, startPlanExecution } from './planService.js';
@@ -208,7 +221,7 @@ export class ClaudeServiceWithTools {
       return stream;
     } catch (error) {
       const err = error as ErrorWithStatus;
-      
+
       // Check if circuit is open
       if (breaker.opened) {
         const circuitError: ErrorWithStatus = new Error('Service temporarily unavailable') as ErrorWithStatus;
@@ -337,22 +350,22 @@ export class ClaudeServiceWithTools {
       const useGateway = provider != null || modelId != null;
       const response = useGateway
         ? getStream(
-            {
-              model: requestParams.model,
-              max_tokens: requestParams.max_tokens,
-              system: typeof requestParams.system === 'string' ? requestParams.system : JSON.stringify(requestParams.system),
-              messages: requestParams.messages.map((m) => ({
-                role: m.role as 'user' | 'assistant',
-                content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
-              })),
-              tools: requestParams.tools?.map((t) => ({
-                name: t.name,
-                description: 'description' in t ? (t.description ?? '') : '',
-                input_schema: t.input_schema as { type: 'object'; properties?: Record<string, unknown>; required?: string[] },
-              })),
-            },
-            { provider: provider ?? 'anthropic', modelId: modelId ?? this.model }
-          )
+          {
+            model: requestParams.model,
+            max_tokens: requestParams.max_tokens,
+            system: typeof requestParams.system === 'string' ? requestParams.system : JSON.stringify(requestParams.system),
+            messages: requestParams.messages.map((m) => ({
+              role: m.role as 'user' | 'assistant',
+              content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+            })),
+            tools: requestParams.tools?.map((t) => ({
+              name: t.name,
+              description: 'description' in t ? (t.description ?? '') : '',
+              input_schema: (t as any).input_schema as { type: 'object'; properties?: Record<string, unknown>; required?: string[] },
+            })),
+          },
+          { provider: provider ?? 'anthropic', modelId: modelId ?? this.model }
+        )
         : await this.resilientStream(requestParams);
 
       let currentTextBlock = '';
@@ -424,7 +437,7 @@ export class ClaudeServiceWithTools {
       // Enhanced error handling with structured error types
       const status = error.status || error.statusCode;
       const errorCode = error.code || error.name;
-      
+
       let errorType = 'api_error';
       let userMessage = 'An error occurred. Please try again.';
       let retryable = false;
@@ -531,6 +544,21 @@ export class ClaudeServiceWithTools {
 
         case 'browser_run_script':
           return await this._executeBrowserRunScript(input);
+
+        case 'browser_navigate':
+          return await this._executeBrowserNavigate(input);
+
+        case 'browser_click':
+          return await this._executeBrowserClick(input);
+
+        case 'browser_type':
+          return await this._executeBrowserType(input);
+
+        case 'browser_get_content':
+          return await this._executeBrowserGetContent(input);
+
+        case 'browser_screenshot':
+          return await this._executeBrowserScreenshot(input);
 
         default:
           return {
@@ -671,7 +699,14 @@ export class ClaudeServiceWithTools {
     }
 
     const { path, operations } = validation.data;
-    return await this.getTes().editFile(path, operations);
+    // Map operations to ensure required 'type' and 'lineStart' are treated as non-optional for the service
+    const typedOps = operations.map(op => ({
+      type: op.type as 'insert' | 'replace' | 'delete',
+      lineStart: op.lineStart,
+      lineEnd: op.lineEnd,
+      content: op.content,
+    }));
+    return await this.getTes().editFile(path, typedOps);
   }
 
   /**
@@ -797,7 +832,8 @@ export class ClaudeServiceWithTools {
     if (!validation.success) {
       return { success: false, error: `Invalid input: ${validation.error.message}`, toolName: 'browser_run_script', executionTime: 0 };
     }
-    const result = await browserRunScript(validation.data.steps);
+    // Cast to any to bypass strict type check for the internal action property mismatch
+    const result = await browserRunScript(validation.data.steps as any);
     if (!result.ok) {
       return { success: false, error: result.error ?? 'Script failed', toolName: 'browser_run_script', executionTime: Date.now() - start };
     }
@@ -805,6 +841,73 @@ export class ClaudeServiceWithTools {
     if (result.lastUrl) parts.push(`Last URL: ${result.lastUrl}`);
     if (result.screenshotBase64) parts.push(`Screenshot captured (base64, ${result.screenshotBase64.length} chars)`);
     return { success: true, output: parts.join('\n') || 'Script completed.', toolName: 'browser_run_script', executionTime: Date.now() - start };
+  }
+
+  private async _executeBrowserNavigate(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const start = Date.now();
+    const validation = browserNavigateInputSchema.safeParse(input);
+    if (!validation.success) return { success: false, error: validation.error.message, toolName: 'browser_navigate', executionTime: 0 };
+    const res = await browserNavigate(validation.data.url, validation.data.timeout);
+    return {
+      success: res.ok,
+      output: res.ok ? `Navigated to ${res.result?.url}. Title: ${res.result?.title}` : res.error,
+      toolName: 'browser_navigate',
+      executionTime: Date.now() - start
+    };
+  }
+
+  private async _executeBrowserClick(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const start = Date.now();
+    const validation = browserClickInputSchema.safeParse(input);
+    if (!validation.success) return { success: false, error: validation.error.message, toolName: 'browser_click', executionTime: 0 };
+    const { selector, url } = validation.data;
+    const res = await browserClick(selector, url);
+    return {
+      success: res.ok,
+      output: res.ok ? `Clicked element: ${selector}` : res.error,
+      toolName: 'browser_click',
+      executionTime: Date.now() - start
+    };
+  }
+
+  private async _executeBrowserType(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const start = Date.now();
+    const validation = browserTypeInputSchema.safeParse(input);
+    if (!validation.success) return { success: false, error: validation.error.message, toolName: 'browser_type', executionTime: 0 };
+    const { selector, text, url } = validation.data;
+    const res = await browserType(selector, text, url);
+    return {
+      success: res.ok,
+      output: res.ok ? `Typed "${text}" into ${selector}` : res.error,
+      toolName: 'browser_type',
+      executionTime: Date.now() - start
+    };
+  }
+
+  private async _executeBrowserGetContent(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const start = Date.now();
+    const validation = browserGetContentInputSchema.safeParse(input);
+    if (!validation.success) return { success: false, error: validation.error.message, toolName: 'browser_get_content', executionTime: 0 };
+    const res = await browserGetContent(validation.data.url);
+    return {
+      success: res.ok,
+      output: res.ok ? `HTML Length: ${res.html?.length}\nText Content:\n${res.text?.substring(0, 5000)}` : res.error,
+      toolName: 'browser_get_content',
+      executionTime: Date.now() - start
+    };
+  }
+
+  private async _executeBrowserScreenshot(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const start = Date.now();
+    const validation = browserScreenshotInputSchema.safeParse(input);
+    if (!validation.success) return { success: false, error: validation.error.message, toolName: 'browser_screenshot', executionTime: 0 };
+    const res = await browserScreenshot(validation.data.url, validation.data.fullPage);
+    return {
+      success: res.ok,
+      output: res.ok ? "Screenshot captured." : res.error,
+      toolName: 'browser_screenshot',
+      executionTime: Date.now() - start
+    };
   }
 }
 

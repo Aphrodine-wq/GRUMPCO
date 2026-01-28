@@ -6,7 +6,12 @@
   import { settingsStore } from '../stores/settingsStore';
   import { showToast } from '../stores/toastStore';
   import { fetchApi } from '../lib/api.js';
-  import type { Settings, ModelsSettings, AccessibilitySettings, GuardRailsSettings } from '../types/settings';
+  import type {
+    Settings,
+    ModelsSettings,
+    AccessibilitySettings,
+    GuardRailsSettings,
+  } from '../types/settings';
   import RecommendedExtensions from './RecommendedExtensions.svelte';
   import ScheduledAgents from './ScheduledAgents.svelte';
   import { Button, Card, Badge } from '../lib/design-system';
@@ -48,18 +53,26 @@
   let architectureDiagram = $state<string | null>(null);
 
   const modelOptions = [
-    { provider: 'anthropic' as const, modelId: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    {
+      provider: 'anthropic' as const,
+      modelId: 'claude-sonnet-4-20250514',
+      label: 'Claude Sonnet 4',
+    },
     { provider: 'anthropic' as const, modelId: 'claude-opus-4-5-20251101', label: 'Claude Opus 4' },
     { provider: 'zhipu' as const, modelId: 'glm-4', label: 'GLM 4.7' },
     { provider: 'copilot' as const, modelId: 'copilot-codex', label: 'Copilot Codex' },
     { provider: 'copilot' as const, modelId: 'copilot-codebase', label: 'Copilot Codebase' },
-    { provider: 'openrouter' as const, modelId: 'anthropic/claude-3.5-sonnet', label: 'OpenRouter Claude 3.5 Sonnet' },
+    {
+      provider: 'openrouter' as const,
+      modelId: 'anthropic/claude-3.5-sonnet',
+      label: 'OpenRouter Claude 3.5 Sonnet',
+    },
     { provider: 'openrouter' as const, modelId: 'openai/gpt-4o', label: 'OpenRouter GPT-4o' },
   ];
 
   onMount(() => {
-    const unsubWorkspace = workspaceStore.subscribe((path) => {
-      workspaceRoot = path;
+    const unsubWorkspace = workspaceStore.subscribe((state) => {
+      workspaceRoot = state?.root ?? null;
     });
 
     settingsStore.load().then((s) => {
@@ -68,12 +81,20 @@
     });
     fetchApi('/api/billing/tiers')
       .then((r) => r.json())
-      .then((d: { tiers?: Tier[] }) => { tiers = d.tiers ?? []; })
-      .catch(() => { tiers = []; });
+      .then((d: { tiers?: Tier[] }) => {
+        tiers = d.tiers ?? [];
+      })
+      .catch(() => {
+        tiers = [];
+      });
     fetchApi('/api/billing/me')
       .then((r) => r.json())
-      .then((d: BillingMe) => { billingMe = d; })
-      .catch(() => { billingMe = null; });
+      .then((d: BillingMe) => {
+        billingMe = d;
+      })
+      .catch(() => {
+        billingMe = null;
+      });
     const unsubSettings = settingsStore.subscribe((v) => {
       settings = v ?? null;
       if (v?.guardRails?.allowedDirs) allowedDirsText = v.guardRails.allowedDirs.join('\n');
@@ -110,7 +131,10 @@
   }
 
   function parseAllowedDirs(s: string): string[] {
-    return s.split(/[\n,]/).map((p) => p.trim()).filter(Boolean);
+    return s
+      .split(/[\n,]/)
+      .map((p) => p.trim())
+      .filter(Boolean);
   }
 
   function modelValue(): string {
@@ -154,7 +178,16 @@
   <header class="settings-header">
     <div class="header-left">
       <Button variant="ghost" size="sm" onclick={onBack}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
@@ -171,7 +204,13 @@
         <p class="section-desc">Default AI model for code generation and chat.</p>
         <div class="field-group">
           <label class="field-label" for="model-select">AI Model</label>
-          <select id="model-select" class="custom-select" value={modelValue()} onchange={handleModelChange} disabled={saving}>
+          <select
+            id="model-select"
+            class="custom-select"
+            value={modelValue()}
+            onchange={handleModelChange}
+            disabled={saving}
+          >
             {#each modelOptions as opt}
               <option value="{opt.provider}:{opt.modelId}">{opt.label}</option>
             {/each}
@@ -191,7 +230,10 @@
             bind:value={allowedDirsText}
             onblur={() => {
               const dirs = parseAllowedDirs(allowedDirsText);
-              saveGuardRails({ ...settings?.guardRails, allowedDirs: dirs.length ? dirs : undefined });
+              saveGuardRails({
+                ...settings?.guardRails,
+                allowedDirs: dirs.length ? dirs : undefined,
+              });
             }}
             disabled={saving}
           ></textarea>
@@ -202,7 +244,11 @@
             <input
               type="checkbox"
               checked={settings?.guardRails?.confirmEveryWrite !== false}
-              onchange={(e) => saveGuardRails({ ...settings?.guardRails, confirmEveryWrite: (e.target as HTMLInputElement).checked })}
+              onchange={(e) =>
+                saveGuardRails({
+                  ...settings?.guardRails,
+                  confirmEveryWrite: (e.target as HTMLInputElement).checked,
+                })}
             />
             <span class="checkbox-label-text">Confirm every file write</span>
           </label>
@@ -212,22 +258,34 @@
             <input
               type="checkbox"
               checked={settings?.guardRails?.autonomousMode ?? false}
-              onchange={(e) => saveGuardRails({ ...settings?.guardRails, autonomousMode: (e.target as HTMLInputElement).checked })}
+              onchange={(e) =>
+                saveGuardRails({
+                  ...settings?.guardRails,
+                  autonomousMode: (e.target as HTMLInputElement).checked,
+                })}
             />
             <span class="checkbox-label-text">Autonomous (Yolo) mode</span>
           </label>
-          <p class="field-hint">Skip tool confirmations; tools run without per-step approval. Use with care.</p>
+          <p class="field-hint">
+            Skip tool confirmations; tools run without per-step approval. Use with care.
+          </p>
         </div>
         <div class="field-group">
           <label class="checkbox-field">
             <input
               type="checkbox"
               checked={settings?.guardRails?.useLargeContext ?? false}
-              onchange={(e) => saveGuardRails({ ...settings?.guardRails, useLargeContext: (e.target as HTMLInputElement).checked })}
+              onchange={(e) =>
+                saveGuardRails({
+                  ...settings?.guardRails,
+                  useLargeContext: (e.target as HTMLInputElement).checked,
+                })}
             />
             <span class="checkbox-label-text">Large context (200K+)</span>
           </label>
-          <p class="field-hint">Allow longer messages for chat when using models that support large context.</p>
+          <p class="field-hint">
+            Allow longer messages for chat when using models that support large context.
+          </p>
         </div>
       </Card>
 
@@ -244,10 +302,16 @@
             </div>
             <div class="status-row">
               <span class="status-label">Usage</span>
-              <span class="status-value">{billingMe.usage ?? 0} / {billingMe.limit ?? '∞'} calls</span>
+              <span class="status-value"
+                >{billingMe.usage ?? 0} / {billingMe.limit ?? '∞'} calls</span
+              >
             </div>
             <div class="billing-actions">
-              <Button variant="secondary" size="sm" onclick={() => window.open(billingUrl, '_blank')}>Manage Billing</Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onclick={() => window.open(billingUrl, '_blank')}>Manage Billing</Button
+              >
             </div>
             {#if tiers.length}
               <div class="status-row">
@@ -257,7 +321,9 @@
             {/if}
           {:else}
             <p class="billing-empty">Sign in to view your subscription details.</p>
-            <Button variant="primary" size="sm" onclick={() => window.open(billingUrl, '_blank')}>View Pricing</Button>
+            <Button variant="primary" size="sm" onclick={() => window.open(billingUrl, '_blank')}
+              >View Pricing</Button
+            >
           {/if}
         </div>
       </Card>
@@ -269,7 +335,11 @@
             <input
               type="checkbox"
               checked={settings?.accessibility?.reducedMotion ?? false}
-              onchange={(e) => saveAccessibility({ ...settings?.accessibility, reducedMotion: (e.target as HTMLInputElement).checked })}
+              onchange={(e) =>
+                saveAccessibility({
+                  ...settings?.accessibility,
+                  reducedMotion: (e.target as HTMLInputElement).checked,
+                })}
             />
             <span class="checkbox-label-text">Reduced Motion</span>
           </label>
@@ -279,7 +349,11 @@
             <input
               type="checkbox"
               checked={settings?.accessibility?.highContrast ?? false}
-              onchange={(e) => saveAccessibility({ ...settings?.accessibility, highContrast: (e.target as HTMLInputElement).checked })}
+              onchange={(e) =>
+                saveAccessibility({
+                  ...settings?.accessibility,
+                  highContrast: (e.target as HTMLInputElement).checked,
+                })}
             />
             <span class="checkbox-label-text">High Contrast Mode</span>
           </label>
@@ -292,10 +366,16 @@
 
       <Card title="Codebase Architecture (Mermaid)" padding="md">
         <p class="section-desc">
-          Scan your current workspace and generate a Mermaid architecture diagram from the existing codebase.
+          Scan your current workspace and generate a Mermaid architecture diagram from the existing
+          codebase.
         </p>
         <div class="field-group">
-          <Button variant="primary" size="sm" onclick={handleAnalyzeArchitectureClick} disabled={analyzingArchitecture}>
+          <Button
+            variant="primary"
+            size="sm"
+            onclick={handleAnalyzeArchitectureClick}
+            disabled={analyzingArchitecture}
+          >
             {#if analyzingArchitecture}
               Analyzing workspace…
             {:else}
@@ -303,7 +383,8 @@
             {/if}
           </Button>
           <p class="field-hint">
-            Uses the workspace root from Code mode. The diagram and summary are generated using the codebase analysis service.
+            Uses the workspace root from Code mode. The diagram and summary are generated using the
+            codebase analysis service.
           </p>
         </div>
         {#if architectureSummary || architectureDiagram}
@@ -317,7 +398,9 @@
             <div class="field-group">
               <p class="field-label">Mermaid diagram</p>
               <pre class="mermaid-output"><code>{architectureDiagram}</code></pre>
-              <p class="field-hint">Copy this into Architecture mode or any Mermaid viewer to visualize.</p>
+              <p class="field-hint">
+                Copy this into Architecture mode or any Mermaid viewer to visualize.
+              </p>
             </div>
           {/if}
         {/if}
@@ -408,7 +491,7 @@
   }
 
   .custom-select:focus {
-    border-color: #0EA5E9;
+    border-color: #0ea5e9;
   }
 
   .custom-textarea {
@@ -424,7 +507,7 @@
   }
 
   .custom-textarea:focus {
-    border-color: #0EA5E9;
+    border-color: #0ea5e9;
   }
 
   .checkbox-field {

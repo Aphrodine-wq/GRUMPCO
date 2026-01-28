@@ -47,9 +47,10 @@
 
   interface Props {
     initialMessages?: Message[];
+    onmessagesUpdated?: (messages: Message[]) => void;
   }
 
-  let { initialMessages = $bindable(undefined) }: Props = $props();
+  let { initialMessages = $bindable(undefined), onmessagesUpdated }: Props = $props();
 
   const defaultMessage: Message = {
     role: 'assistant',
@@ -87,6 +88,12 @@
   $effect(() => {
     if (chatModeStore) {
       chatMode = $chatModeStore;
+    }
+  });
+
+  $effect(() => {
+    if (onmessagesUpdated) {
+      onmessagesUpdated(messages);
     }
   });
 
@@ -204,8 +211,8 @@
 
     if (mode === 'code' && chatMode === 'plan') {
       try {
-        const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
-        await generatePlan(text, ws);
+        const ws = workspaceInput.trim() || get(workspaceStore).root || undefined;
+        await generatePlan({ userRequest: text, workspaceRoot: ws });
         streaming = false;
       } catch (e: any) {
         lastError = true;
@@ -217,8 +224,8 @@
 
     if (mode === 'code' && chatMode === 'spec') {
       try {
-        const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
-        await startSpecSession(text, ws);
+        const ws = workspaceInput.trim() || get(workspaceStore).root || undefined;
+        await startSpecSession({ userRequest: text, workspaceRoot: ws });
         streaming = false;
       } catch (e: any) {
         lastError = true;
@@ -279,7 +286,7 @@
           sendMessage();
         }
       });
-      logError(errorContext, { mode: get(chatModeStore), workspaceRoot: get(workspaceStore) });
+      logError(errorContext, { mode: get(chatModeStore), workspaceRoot: get(workspaceStore).root });
       trackError('api_error', errorContext.message);
       showToast(errorContext.userMessage, 'error', errorContext.retryable ? 0 : 5000, {
         persistent: errorContext.retryable,
@@ -347,7 +354,7 @@
   async function runCodeModeStream(signal: AbortSignal) {
     const apiMessages = flattenMessagesForChatApi(messages);
     if (apiMessages.length === 0) throw new Error('No messages to send');
-    let ws = workspaceInput.trim() || get(workspaceStore) || undefined;
+    let ws = workspaceInput.trim() || get(workspaceStore).root || undefined;
     if (ws) workspaceStore.setWorkspace(ws);
     const body: Record<string, unknown> = {
       messages: apiMessages,
@@ -585,7 +592,7 @@
 
   onMount(() => {
     inputRef?.focus();
-    const w = get(workspaceStore);
+    const w = get(workspaceStore).root;
     if (w) workspaceInput = w;
     document.addEventListener('keydown', handleGlobalKeydown);
     const handleOpenShipMode = () => {

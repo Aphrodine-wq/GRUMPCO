@@ -14,6 +14,7 @@
     fullWidth?: boolean;
     type?: 'button' | 'submit' | 'reset';
     onclick?: (e: MouseEvent) => void;
+    class?: string;
     children: Snippet;
   }
 
@@ -25,6 +26,7 @@
     fullWidth = false,
     type = 'button',
     onclick,
+    class: className = '',
     children,
   }: Props = $props();
 
@@ -33,18 +35,18 @@
 
 <button
   {type}
-  class="btn btn-{variant} btn-{size}"
+  class="btn btn-{variant} btn-{size} {className}"
   class:btn-full-width={fullWidth}
   class:btn-loading={loading}
   disabled={isDisabled}
-  onclick={onclick}
+  {onclick}
   style:--primary-color={colors.accent.primary}
   style:--primary-hover={colors.accent.primaryHover}
   style:--text-primary={colors.text.primary}
   style:--text-inverse={colors.text.inverse}
   style:--border-default={colors.diff.lineNumber.border}
   style:--error-color={colors.status.error}
-  style:--radius-md={colors.shadow.md ? '6px' : '4px'} 
+  style:--radius-md={colors.shadow.md ? '6px' : '4px'}
 >
   {#if loading}
     <span class="btn-spinner"></span>
@@ -101,7 +103,7 @@
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background-color: #FAFAFA;
+    background-color: #fafafa;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     transform: translateY(-1px);
   }
@@ -113,7 +115,7 @@
   }
 
   .btn-ghost:hover:not(:disabled) {
-    background-color: #F5F5F5;
+    background-color: #f5f5f5;
     color: var(--text-primary);
   }
 
@@ -124,7 +126,7 @@
   }
 
   .btn-danger:hover:not(:disabled) {
-    background-color: #FEE2E2;
+    background-color: #fee2e2;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     transform: translateY(-1px);
   }
@@ -167,6 +169,8 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>

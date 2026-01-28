@@ -25,7 +25,7 @@ import type {
   ExtractFunctionResult,
 } from './types.js';
 import logger from '../../middleware/logger.js';
-import { withResilience } from '../resilience.js';
+import { withResilience } from '../../services/resilience.js';
 
 // Load manifest
 import manifest from './manifest.json' with { type: 'json' };

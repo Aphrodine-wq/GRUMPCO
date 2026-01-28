@@ -18,9 +18,9 @@ export interface BillingStatus {
 }
 
 export async function getBillingStatus(userId: string): Promise<BillingStatus> {
-  const tierId = getTierForUser(userId);
+  const tierId = await getTierForUser(userId);
   const tier = getTier(tierId);
-  const used = getMonthlyCallCount(userId);
+  const used = await getMonthlyCallCount(userId);
   const limit = tier.apiCallsPerMonth;
   return {
     tier: tierId,

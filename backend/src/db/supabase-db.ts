@@ -299,4 +299,89 @@ export class SupabaseDatabaseService {
 
     if (error) throw error;
   }
+  async saveUsageRecord(record: {
+    id: string;
+    userId: string;
+    endpoint: string;
+    method: string;
+    model?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+    latencyMs?: number;
+    success: boolean;
+  }): Promise<void> {
+    const start = process.hrtime.bigint();
+    const { error } = await this.client.from('usage_records').insert({
+      id: record.id,
+      user_id: record.userId,
+      endpoint: record.endpoint,
+      method: record.method,
+      model: record.model || null,
+      input_tokens: record.inputTokens || null,
+      output_tokens: record.outputTokens || null,
+      latency_ms: record.latencyMs || null,
+      success: record.success ? 1 : 0,
+      created_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      const duration = Number(process.hrtime.bigint() - start) / 1e9;
+      recordDbOperation('saveUsageRecord', 'usage_records', duration, 'error');
+      throw error;
+    }
+  }
+
+  async getUsageForUser(userId: string, fromDate: Date, toDate: Date): Promise<any[]> {
+    const { data, error } = await this.client
+      .from('usage_records')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('created_at', fromDate.toISOString())
+      .lte('created_at', toDate.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getUsageSummary(userId: string): Promise<{
+    totalRequests: number;
+    successfulRequests: number;
+    failedRequests: number;
+    monthlyInputTokens: number;
+    monthlyOutputTokens: number;
+    avgLatencyMs: number;
+  }> {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const { data, error } = await this.client
+      .from('usage_records')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('created_at', startOfMonth.toISOString());
+
+    if (error || !data) {
+      return {
+        totalRequests: 0,
+        successfulRequests: 0,
+        failedRequests: 0,
+        monthlyInputTokens: 0,
+        monthlyOutputTokens: 0,
+        avgLatencyMs: 0,
+      };
+    }
+
+    const successful = data.filter((r) => r.success === 1);
+    const totalLatency = successful.reduce((acc, r) => acc + (r.latency_ms || 0), 0);
+
+    return {
+      totalRequests: data.length,
+      successfulRequests: successful.length,
+      failedRequests: data.length - successful.length,
+      monthlyInputTokens: data.reduce((acc, r) => acc + (r.input_tokens || 0), 0),
+      monthlyOutputTokens: data.reduce((acc, r) => acc + (r.output_tokens || 0), 0),
+      avgLatencyMs: successful.length > 0 ? Math.round(totalLatency / successful.length) : 0,
+    };
+  }
 }

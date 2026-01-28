@@ -21,11 +21,11 @@
   let isValidMermaid = $state(true);
   let showPreview = $state(false);
   let estimatedTime = $state<number | null>(null);
-  
+
   // Remember last selections
   const LAST_FRAMEWORK_KEY = 'mermaid-to-code-last-framework';
   const LAST_LANGUAGE_KEY = 'mermaid-to-code-last-language';
-  
+
   // Load last selections
   if (typeof window !== 'undefined') {
     const lastFramework = localStorage.getItem(LAST_FRAMEWORK_KEY);
@@ -52,11 +52,11 @@
   ];
 
   function getFrameworkIcon(value: string): string {
-    return frameworks.find(f => f.value === value)?.icon || '📦';
+    return frameworks.find((f) => f.value === value)?.icon || '📦';
   }
 
   function getLanguageIcon(value: string): string {
-    return languages.find(l => l.value === value)?.icon || '📄';
+    return languages.find((l) => l.value === value)?.icon || '📄';
   }
 
   function estimateGenerationTime(): number {
@@ -80,10 +80,13 @@
     if (!code || code.trim().length === 0) {
       return false;
     }
-    
+
     // Basic validation: check if it looks like Mermaid code
-    const hasMermaidKeywords = /(flowchart|graph|sequenceDiagram|classDiagram|erDiagram|stateDiagram|gantt|pie|gitgraph|journey|requirementDiagram|mindmap|timeline|quadrantChart|sankey-beta|xychart-beta|block-beta|packet-beta|C4Context|C4Container|C4Component|C4Deployment|C4Dynamic)/i.test(code);
-    
+    const hasMermaidKeywords =
+      /(flowchart|graph|sequenceDiagram|classDiagram|erDiagram|stateDiagram|gantt|pie|gitgraph|journey|requirementDiagram|mindmap|timeline|quadrantChart|sankey-beta|xychart-beta|block-beta|packet-beta|C4Context|C4Container|C4Component|C4Deployment|C4Dynamic)/i.test(
+        code
+      );
+
     return hasMermaidKeywords;
   }
 
@@ -101,7 +104,7 @@
     error = null;
     isValidMermaid = true;
     isGenerating = true;
-    const ws = get(workspaceStore);
+    const ws = get(workspaceStore).root;
 
     try {
       // Validate workspace if in Code mode
@@ -135,7 +138,7 @@
         // Retry generation
         await generateCode();
       });
-      
+
       logError(errorContext);
       error = errorContext.userMessage;
       showToast(errorContext.userMessage, 'error', errorContext.retryable ? 0 : 5000, {
@@ -206,10 +209,12 @@
         </div>
         <div class="preview-content">
           <div class="preview-item">
-            <strong>Framework:</strong> {frameworks.find(f => f.value === framework)?.label}
+            <strong>Framework:</strong>
+            {frameworks.find((f) => f.value === framework)?.label}
           </div>
           <div class="preview-item">
-            <strong>Language:</strong> {languages.find(l => l.value === language)?.label}
+            <strong>Language:</strong>
+            {languages.find((l) => l.value === language)?.label}
           </div>
           <div class="preview-item">
             <strong>Files to generate:</strong> Project structure with components, services, and configuration
@@ -225,11 +230,9 @@
         {error}
       </div>
     {/if}
-    
+
     {#if !isValidMermaid && mermaidCode}
-      <div class="validation-warning">
-        ⚠️ Invalid Mermaid syntax detected
-      </div>
+      <div class="validation-warning">⚠️ Invalid Mermaid syntax detected</div>
     {/if}
 
     <button
@@ -246,7 +249,7 @@
         Generate Code
       {/if}
     </button>
-    
+
     <div class="shortcut-hint">
       Press <kbd>Ctrl/Cmd + Enter</kbd> to generate
     </div>

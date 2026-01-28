@@ -3,7 +3,7 @@
  * Provides Redis connection with connection pooling and error handling
  */
 
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import logger from '../middleware/logger.js';
 
 let redisClient: Redis | null = null;
@@ -43,7 +43,7 @@ export function initializeRedis(config?: RedisConfig): Redis {
   }
 
   const redisConfig = { ...DEFAULT_CONFIG, ...config };
-  
+
   redisClient = new Redis({
     host: redisConfig.host,
     port: redisConfig.port,

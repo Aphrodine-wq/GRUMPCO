@@ -18,7 +18,7 @@ router.get('/usage', requireAuth, async (req: AuthenticatedRequest, res: Respons
   const status = await getBillingStatus(userId);
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const calls = getUsageForUser(userId, startOfMonth, now);
+  const calls = await getUsageForUser(userId, startOfMonth, now);
   res.json({
     ...status,
     callsThisMonth: calls.length,
@@ -40,7 +40,7 @@ router.get('/summary', requireAuth, async (req: AuthenticatedRequest, res: Respo
   }
   const status = await getBillingStatus(userId);
   res.json({
-    apiCallsThisMonth: getMonthlyCallCount(userId),
+    apiCallsThisMonth: await getMonthlyCallCount(userId),
     limit: status.apiCallsLimit,
     remaining: status.remaining,
     tier: status.tier,

@@ -20,7 +20,7 @@ import { CODE_REVIEW_SYSTEM_PROMPT, templates } from './prompts.js';
 import { definitions } from './tools.js';
 import type { ReviewType, ReviewRequest, ReviewResult } from './types.js';
 import logger from '../../middleware/logger.js';
-import { withResilience } from '../resilience.js';
+import { withResilience } from '../../services/resilience.js';
 
 // Load manifest
 import manifest from './manifest.json' with { type: 'json' };

@@ -1,9 +1,4 @@
-/**
- * Browser Service
- * Headless browser for screenshots and E2E-style scripts. Uses Playwright when available.
- * When Playwright is not installed, tools that use this return a clear "browser not available" message.
- */
-
+import type { Page } from 'playwright';
 import logger from '../middleware/logger.js';
 
 let playwrightAvailable = false;
@@ -32,11 +27,11 @@ export interface ScreenshotResult {
 }
 
 /**
- * Capture a screenshot of a URL. Returns base64 PNG when Playwright is available.
+ * Capture a screenshot of a URL.
  */
 export async function screenshotUrl(url: string): Promise<ScreenshotResult> {
   if (!(await ensurePlaywright())) {
-    return { ok: false, error: 'Browser not available. Install playwright to enable screenshot_url.' };
+    return { ok: false, error: 'Browser not available.' };
   }
   try {
     const browser = await playwrightChromium!.launch({ headless: true });
@@ -44,18 +39,89 @@ export async function screenshotUrl(url: string): Promise<ScreenshotResult> {
       const page = await browser.newPage();
       await page.goto(url, { waitUntil: 'networkidle', timeout: 15000 });
       const buf = await page.screenshot({ type: 'png', fullPage: false });
-      await browser.close();
       return { ok: true, imageBase64: Buffer.from(buf).toString('base64') };
     } finally {
-      await browser.close().catch(() => {});
+      await browser.close().catch(() => { });
     }
   } catch (e) {
-    const msg = (e as Error).message;
-    logger.warn({ url, err: msg }, 'screenshot_url failed');
-    return { ok: false, error: msg };
+    logger.warn({ url, err: (e as Error).message }, 'screenshot_url failed');
+    return { ok: false, error: (e as Error).message };
   }
 }
 
+// ============================================================================
+// GRANULAR ACTIONS
+// ============================================================================
+
+/**
+ * Common wrapper for browser actions
+ */
+async function runWithPage<T>(
+  action: (page: Page) => Promise<T>,
+  url?: string,
+  timeout?: number
+): Promise<{ ok: boolean; error?: string; result?: T }> {
+  if (!(await ensurePlaywright())) {
+    return { ok: false, error: 'Browser not available.' };
+  }
+  try {
+    const browser = await playwrightChromium!.launch({ headless: true });
+    try {
+      const page = await browser.newPage();
+      if (url) {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeout ?? 30000 });
+      }
+      const result = await action(page);
+      return { ok: true, result };
+    } finally {
+      await browser.close().catch(() => { });
+    }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+export async function browserNavigate(url: string, timeout?: number) {
+  return runWithPage(async (page) => {
+    return { url: page.url(), title: await (page as any).title() };
+  }, url, timeout);
+}
+
+export async function browserClick(selector: string, url?: string, timeout?: number) {
+  return runWithPage(async (page) => {
+    await (page as any).click(selector, { timeout: timeout ?? 10000 });
+    return { clicked: selector };
+  }, url, timeout);
+}
+
+export async function browserType(selector: string, text: string, url?: string, timeout?: number) {
+  return runWithPage(async (page) => {
+    await (page as any).fill(selector, text, { timeout: timeout ?? 10000 });
+    return { typed: selector, text };
+  }, url, timeout);
+}
+
+export async function browserScreenshot(url?: string, fullPage: boolean = false): Promise<ScreenshotResult> {
+  const res = await runWithPage(async (page) => {
+    const buf = await page.screenshot({ type: 'png', fullPage });
+    return Buffer.from(buf).toString('base64');
+  }, url);
+
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, imageBase64: res.result };
+}
+
+export async function browserGetContent(url?: string): Promise<{ ok: boolean; error?: string; html?: string; text?: string }> {
+  const res = await runWithPage(async (page) => {
+    const html = await (page as any).content();
+    const text = await (page as any).evaluate(() => (globalThis as any).document.body.innerText);
+    return { html, text };
+  }, url);
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, ...res.result };
+}
+
+// Legacy support
 export interface BrowserStep {
   action: 'navigate' | 'click' | 'type' | 'screenshot' | 'wait';
   selector?: string;
@@ -64,20 +130,9 @@ export interface BrowserStep {
   timeout?: number;
 }
 
-export interface BrowserRunResult {
-  ok: boolean;
-  error?: string;
-  screenshotBase64?: string;
-  lastUrl?: string;
-  logs?: string[];
-}
-
-/**
- * Run a short browser script (navigate, click, type, screenshot). Used for E2E-style checks.
- */
-export async function browserRunScript(steps: BrowserStep[]): Promise<BrowserRunResult> {
+export async function browserRunScript(steps: BrowserStep[]): Promise<any> {
   if (!(await ensurePlaywright())) {
-    return { ok: false, error: 'Browser not available. Install playwright to enable browser_run_script.' };
+    return { ok: false, error: 'Browser not available.' };
   }
   const logs: string[] = [];
   try {
@@ -107,14 +162,13 @@ export async function browserRunScript(steps: BrowserStep[]): Promise<BrowserRun
           logs.push('Waited');
         }
       } catch (stepErr) {
-        await browser.close().catch(() => {});
+        await browser.close().catch(() => { });
         return { ok: false, error: (stepErr as Error).message, logs, lastUrl: lastUrl || undefined };
       }
     }
-    await browser.close().catch(() => {});
+    await browser.close().catch(() => { });
     return { ok: true, logs, lastUrl: lastUrl || undefined, screenshotBase64 };
   } catch (e) {
-    logger.warn({ err: (e as Error).message }, 'browser_run_script failed');
     return { ok: false, error: (e as Error).message, logs };
   }
 }

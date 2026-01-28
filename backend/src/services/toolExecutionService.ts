@@ -68,7 +68,7 @@ export class ToolExecutionService {
     if (result.ok) {
       return { valid: true, resolvedPath: result.resolved };
     }
-    return { valid: false, error: result.reason };
+    return { valid: false, error: (result as any).reason };
   }
 
   /**

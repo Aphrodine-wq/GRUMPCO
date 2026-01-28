@@ -1,5 +1,4 @@
 import { EnrichedIntent } from './intentCompilerService.js';
-import { getProjectContext } from './contextService.js'; // Assuming this exists or similar
 
 export interface VerificationResult {
     valid: boolean;

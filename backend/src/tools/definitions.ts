@@ -408,6 +408,97 @@ export const browserRunScriptTool: Anthropic.Tool = {
 };
 
 // ============================================================================
+// GRANULAR BROWSER TOOLS (MCP Style)
+// ============================================================================
+
+export const browserNavigateInputSchema = z.object({
+  url: z.string().url().describe('URL to navigate to'),
+  timeout: z.number().optional().default(30000).describe('Timeout in ms'),
+});
+
+export const browserNavigateTool: Anthropic.Tool = {
+  name: 'browser_navigate',
+  description: 'Navigate the browser to a specific URL.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      url: { type: 'string', description: 'URL to navigate to' },
+      timeout: { type: 'number', description: 'Timeout in ms (default 30000)' },
+    },
+    required: ['url'],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+export const browserClickInputSchema = z.object({
+  selector: z.string().describe('CSS selector to click'),
+  url: z.string().url().optional().describe('Optional navigation URL'),
+  timeout: z.number().optional().default(10000).describe('Timeout in ms'),
+});
+
+export const browserClickTool: Anthropic.Tool = {
+  name: 'browser_click',
+  description: 'Click an element on the current page.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      selector: { type: 'string', description: 'CSS selector to click' },
+      timeout: { type: 'number', description: 'Timeout in ms (default 10000)' },
+    },
+    required: ['selector'],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+export const browserTypeInputSchema = z.object({
+  selector: z.string().describe('CSS selector to type into'),
+  text: z.string().describe('Text to type'),
+  url: z.string().url().optional().describe('Optional navigation URL'),
+  timeout: z.number().optional().default(10000).describe('Timeout in ms'),
+});
+
+export const browserTypeTool: Anthropic.Tool = {
+  name: 'browser_type',
+  description: 'Type text into an input field.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      selector: { type: 'string', description: 'CSS selector' },
+      text: { type: 'string', description: 'Text to type' },
+      timeout: { type: 'number', description: 'Timeout in ms' },
+    },
+    required: ['selector', 'text'],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+export const browserGetContentInputSchema = z.object({
+  url: z.string().url().optional().describe('Optional navigation URL'),
+});
+
+export const browserGetContentTool: Anthropic.Tool = {
+  name: 'browser_get_content',
+  description: 'Get the current page HTML and text content.',
+  input_schema: {
+    type: 'object',
+    properties: {},
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+export const browserScreenshotInputSchema = z.object({
+  url: z.string().url().optional().describe('Optional navigation URL'),
+  fullPage: z.boolean().optional().default(false).describe('Whether to capture the full scrollable page'),
+});
+
+export const browserScreenshotTool: Anthropic.Tool = {
+  name: 'browser_screenshot',
+  description: 'Capture a screenshot of the current page.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      fullPage: { type: 'boolean', description: 'Capture full scrollable page (default false)' },
+    },
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+// ============================================================================
 // ALL TOOLS ARRAY (base tools; MCP/dynamic tools can be added via getTools())
 // ============================================================================
 
@@ -422,6 +513,11 @@ const BASE_TOOLS: Anthropic.Tool[] = [
   generateMigrationsTool,
   screenshotUrlTool,
   browserRunScriptTool,
+  browserNavigateTool,
+  browserClickTool,
+  browserTypeTool,
+  browserGetContentTool,
+  browserScreenshotTool,
 ];
 
 /** Tools that can be extended by MCP or dynamic registration. */
