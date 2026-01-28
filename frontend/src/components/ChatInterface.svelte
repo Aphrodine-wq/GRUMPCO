@@ -196,6 +196,12 @@
     lastUserMessage = text;
     lastError = false;
     trackMessageSent(text.length);
+
+    // Initialize controller for this request
+    const controller = new AbortController();
+    activeController = controller;
+    streaming = true;
+
     if (mode === 'code' && chatMode === 'plan') {
       try {
         const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
