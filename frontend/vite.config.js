@@ -15,7 +15,8 @@ export default defineConfig({
       },
       output: {
         // manualChunks removed to prevent circular dependency/loading issues
-      }
+      },
+      sourcemap: true
     }
   },
   test: {
