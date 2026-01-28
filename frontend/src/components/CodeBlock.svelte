@@ -59,6 +59,7 @@
   <div class="code-block">
   <div class="code-header">
     <div class="code-header-left">
+      <span class="header-icon">⏺</span>
       {#if fileName}
         <span class="file-name">{fileName}</span>
       {/if}
@@ -74,12 +75,12 @@
           class="action-btn"
           title="Toggle line numbers"
         >
-          {showLineNumbers ? '#' : '#'}
+          #
         </button>
       {/if}
       <button on:click={copyCode} class="action-btn copy-btn" title="Copy code">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <rect x="9" y="9" width="13" height="13" rx="0" ry="0"></rect>
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
         </svg>
       </button>
@@ -107,21 +108,20 @@
     </div>
   {:else}
     <div class="collapsed-placeholder">
-      <span>Code collapsed ({lineCount} lines)</span>
-      <button on:click={() => (isCollapsed = false)} class="expand-btn">Expand</button>
+      <span>// Code collapsed ({lineCount} lines)</span>
+      <button on:click={() => (isCollapsed = false)} class="expand-btn">EXPAND</button>
     </div>
   {/if}
 </div>
 
 <style>
   .code-block {
-    background: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 6px;
+    background: #000;
+    border: 1px solid #333;
+    border-radius: 0;
     overflow: hidden;
     margin: 1rem 0;
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New',
-      monospace;
+    font-family: 'JetBrains Mono', Monaco, 'Cascadia Code', monospace;
     font-size: 13px;
     line-height: 1.5;
   }
@@ -131,8 +131,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.625rem 0.875rem;
-    background: #161b22;
-    border-bottom: 1px solid #30363d;
+    background: #0A0A0A;
+    border-bottom: 1px solid #222;
     font-size: 12px;
   }
 
@@ -144,8 +144,13 @@
     min-width: 0;
   }
 
+  .header-icon {
+    color: #00E5FF;
+    font-size: 0.7rem;
+  }
+
   .file-name {
-    color: #c9d1d9;
+    color: #D4D4D4;
     font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -153,18 +158,18 @@
   }
 
   .language-label {
-    color: #8b949e;
+    color: #00E5FF;
     text-transform: uppercase;
-    font-size: 11px;
-    letter-spacing: 0.5px;
-    padding: 0.2rem 0.5rem;
-    background: #21262d;
-    border-radius: 3px;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    padding: 0.15rem 0.4rem;
+    background: rgba(0, 229, 255, 0.1);
+    border: 1px solid #00E5FF;
   }
 
   .line-count {
-    color: #6e7681;
-    font-size: 11px;
+    color: #444;
+    font-size: 10px;
   }
 
   .code-actions {
@@ -175,12 +180,11 @@
 
   .action-btn {
     background: transparent;
-    border: none;
-    color: #8b949e;
+    border: 1px solid #333;
+    color: #525252;
     cursor: pointer;
     padding: 0.35rem;
-    border-radius: 4px;
-    transition: all 0.15s;
+    transition: all 0.1s;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -189,8 +193,9 @@
   }
 
   .action-btn:hover {
-    background: #21262d;
-    color: #c9d1d9;
+    background: rgba(255, 255, 255, 0.05);
+    color: #00E5FF;
+    border-color: #00E5FF;
   }
 
   .action-btn svg {
@@ -201,14 +206,14 @@
   .code-container {
     display: flex;
     overflow-x: auto;
-    background: #0d1117;
+    background: #000;
   }
 
   .line-numbers {
-    background: #161b22;
-    border-right: 1px solid #30363d;
+    background: #0A0A0A;
+    border-right: 1px solid #222;
     padding: 1rem 0.75rem;
-    color: #6e7681;
+    color: #333;
     font-size: 12px;
     text-align: right;
     user-select: none;
@@ -226,7 +231,7 @@
   .code-content {
     padding: 1rem;
     overflow-x: auto;
-    color: #c9d1d9;
+    color: #D4D4D4;
     flex: 1;
     min-width: 0;
   }
@@ -255,29 +260,31 @@
   .collapsed-placeholder {
     padding: 2rem;
     text-align: center;
-    color: #8b949e;
+    color: #444;
     font-size: 0.875rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.75rem;
+    background: #0A0A0A;
   }
 
   .expand-btn {
     padding: 0.5rem 1rem;
-    background: #21262d;
-    border: 1px solid #30363d;
-    border-radius: 4px;
-    color: #c9d1d9;
+    background: transparent;
+    border: 1px solid #333;
+    color: #666;
     cursor: pointer;
     font-family: inherit;
-    font-size: 0.875rem;
-    transition: all 0.15s;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.1s;
   }
 
   .expand-btn:hover {
-    background: #30363d;
-    border-color: #0066ff;
-    color: #0066ff;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: #00FF41;
+    color: #00FF41;
   }
 </style>

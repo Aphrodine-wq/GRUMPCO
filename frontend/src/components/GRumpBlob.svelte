@@ -42,7 +42,7 @@
     let blinkTimerId: ReturnType<typeof setInterval> | undefined;
 
     function scheduleBlink() {
-      const ms = 60_000 + Math.random() * 120_000; // 1–3 minutes
+      const ms = 60_000 + Math.random() * 120_000;
       const id = setTimeout(() => {
         if (cancelled) return;
         blinking = true;
@@ -71,7 +71,9 @@
   role="img"
   aria-label={ariaLabel}
 >
-  <div class="blob-inner"></div>
+  <div class="blob-inner">
+    <span class="blob-symbol">&gt;_</span>
+  </div>
 </div>
 
 <style>
@@ -88,74 +90,100 @@
     width: 100%;
     height: 100%;
     background-color: #000000;
-    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    border: 1px solid #00FF41;
+    border-radius: 0;
     position: relative;
-    box-shadow: 0 0 10px rgba(0, 102, 255, 0.3), 0 0 20px rgba(0, 102, 255, 0.2);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.3), 0 0 20px rgba(0, 255, 65, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .blob-symbol {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: calc(var(--blob-size) * 0.4);
+    color: #00FF41;
+    font-weight: bold;
+    animation: cursor-blink 1s step-end infinite;
+  }
+
+  @keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
   }
 
   .grump-blob--sm .blob-inner {
-    box-shadow: 0 0 6px rgba(0, 102, 255, 0.3), 0 0 12px rgba(0, 102, 255, 0.2);
+    box-shadow: 0 0 6px rgba(0, 255, 65, 0.3), 0 0 12px rgba(0, 255, 65, 0.2);
   }
 
   .grump-blob--lg .blob-inner {
-    box-shadow: 0 0 10px rgba(0, 102, 255, 0.35), 0 0 20px rgba(0, 102, 255, 0.2);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.35), 0 0 20px rgba(0, 255, 65, 0.2);
   }
 
   .grump-blob--idle.blob-animated .blob-inner {
-    animation: blob-idle 8s ease-in-out infinite;
+    animation: none;
   }
 
   .grump-blob--thinking.blob-animated .blob-inner {
-    animation: blob-thinking 2s ease-in-out infinite, glow-pulse 1.8s ease-in-out infinite;
+    animation: terminal-pulse 1.5s ease-in-out infinite;
+  }
+
+  .grump-blob--thinking .blob-symbol {
+    animation: cursor-blink 0.5s step-end infinite;
   }
 
   .grump-blob--speaking.blob-animated .blob-inner {
-    animation: blob-idle 4s ease-in-out infinite, glow-pulse 1.2s ease-in-out infinite;
+    animation: terminal-pulse 1s ease-in-out infinite;
   }
 
   .grump-blob--success .blob-inner {
-    box-shadow: 0 0 12px rgba(34, 197, 94, 0.5), 0 0 24px rgba(34, 197, 94, 0.25);
+    border-color: #00FF41;
+    box-shadow: 0 0 12px rgba(0, 255, 65, 0.5), 0 0 24px rgba(0, 255, 65, 0.25);
   }
 
-  .grump-blob--success.blob-animated .blob-inner {
-    animation: blob-success 0.6s ease-out;
+  .grump-blob--success .blob-symbol {
+    color: #00FF41;
   }
 
   .grump-blob--error .blob-inner {
-    box-shadow: 0 0 12px rgba(239, 68, 68, 0.5), 0 0 24px rgba(239, 68, 68, 0.25);
+    border-color: #FF3131;
+    box-shadow: 0 0 12px rgba(255, 49, 49, 0.5), 0 0 24px rgba(255, 49, 49, 0.25);
+  }
+
+  .grump-blob--error .blob-symbol {
+    color: #FF3131;
   }
 
   .grump-blob--error.blob-animated .blob-inner {
-    animation: blob-error 0.4s ease-out;
+    animation: terminal-error 0.4s ease-out;
+  }
+
+  @keyframes terminal-pulse {
+    0%, 100% { 
+      box-shadow: 0 0 10px rgba(0, 255, 65, 0.3), 0 0 20px rgba(0, 255, 65, 0.2);
+    }
+    50% { 
+      box-shadow: 0 0 15px rgba(0, 255, 65, 0.5), 0 0 30px rgba(0, 255, 65, 0.3);
+    }
+  }
+
+  @keyframes terminal-error {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    50% { transform: translateX(2px); }
+    75% { transform: translateX(-2px); }
+    100% { transform: translateX(0); }
   }
 
   .grump-blob:not(.blob-animated) .blob-inner {
     animation: none;
   }
 
-  .grump-blob.blinking .blob-inner {
-    animation: blob-blink 0.3s ease-in-out !important;
-  }
-
-  @keyframes blob-success {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.12); }
-    100% { transform: scale(1); }
-  }
-
-  @keyframes blob-error {
-    0% { transform: scale(1); }
-    25% { transform: scale(1.05) translateX(-2px); }
-    75% { transform: scale(1.05) translateX(2px); }
-    100% { transform: scale(1); }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .blob-inner {
       animation: none !important;
-      border-radius: 50%;
     }
-    .grump-blob.blinking .blob-inner {
+    .blob-symbol {
       animation: none !important;
     }
   }
