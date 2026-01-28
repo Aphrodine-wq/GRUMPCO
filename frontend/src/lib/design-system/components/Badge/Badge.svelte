@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * G-Rump Design System - Badge Component
-   * Status indicators and labels
+   * Dark terminal/Claude Code aesthetic - Tag style
    */
   import type { Snippet } from 'svelte';
 
@@ -24,80 +24,93 @@
   {#if dot}
     <span class="badge-dot-indicator"></span>
   {/if}
-  {@render children()}
+  <span class="badge-content">
+    {@render children()}
+  </span>
 </span>
 
 <style>
   .badge {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-1, 0.25rem);
-    font-family: var(--font-mono);
-    font-weight: 500;
-    border-radius: var(--radius-full, 9999px);
+    gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 0; /* Square for terminal feel */
     white-space: nowrap;
+    border: 1px solid transparent;
   }
 
   /* Variants */
   .badge-default {
-    background-color: var(--color-bg-tertiary, #EBEBEB);
-    color: var(--color-text-secondary, #4B5563);
+    background-color: #262626;
+    color: #A3A3A3;
+    border-color: #404040;
   }
 
   .badge-primary {
-    background-color: var(--color-accent-primary-light, #E6F0FF);
-    color: var(--color-accent-primary, #0066FF);
+    background-color: rgba(0, 255, 65, 0.1);
+    color: var(--color-accent-primary, #00FF41);
+    border-color: var(--color-accent-primary, #00FF41);
   }
 
   .badge-success {
-    background-color: var(--color-status-success-light, #D1FAE5);
-    color: var(--color-status-success, #059669);
+    background-color: rgba(0, 255, 65, 0.1);
+    color: #00FF41;
+    border-color: #00FF41;
   }
 
   .badge-warning {
-    background-color: var(--color-status-warning-light, #FEF3C7);
-    color: var(--color-status-warning, #F59E0B);
+    background-color: rgba(255, 215, 0, 0.1);
+    color: #FFD700;
+    border-color: #FFD700;
   }
 
   .badge-error {
-    background-color: var(--color-status-error-light, #FEE2E2);
-    color: var(--color-status-error, #DC2626);
+    background-color: rgba(255, 49, 49, 0.1);
+    color: #FF3131;
+    border-color: #FF3131;
   }
 
   .badge-info {
-    background-color: var(--color-status-info-light, #DBEAFE);
-    color: var(--color-status-info, #3B82F6);
+    background-color: rgba(0, 229, 255, 0.1);
+    color: #00E5FF;
+    border-color: #00E5FF;
   }
 
   /* Sizes */
   .badge-sm {
-    padding: var(--space-0\.5, 0.125rem) var(--space-2, 0.5rem);
-    font-size: var(--font-size-xs, 0.7rem);
+    padding: 0 6px;
+    font-size: 10px;
+    height: 18px;
   }
 
   .badge-md {
-    padding: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
-    font-size: var(--font-size-sm, 0.8rem);
+    padding: 2px 8px;
+    font-size: 11px;
+    height: 22px;
   }
 
   /* Dot indicator */
   .badge-dot-indicator {
     width: 6px;
     height: 6px;
-    border-radius: 50%;
     background-color: currentColor;
+    border-radius: 0; /* Square dot */
   }
 
   .badge-success .badge-dot-indicator {
-    animation: pulse 2s ease-in-out infinite;
+    animation: blink 1s step-end infinite;
   }
 
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .badge-content {
+    display: inline-block;
   }
 </style>

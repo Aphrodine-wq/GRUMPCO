@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * G-Rump Design System - Button Component
-   * Consistent button styling across the application
+   * Dark terminal/Claude Code aesthetic
    */
   import type { Snippet } from 'svelte';
 
@@ -51,81 +51,96 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-2, 0.5rem);
-    font-family: var(--font-mono);
-    font-weight: 500;
-    border: none;
-    border-radius: var(--radius-md, 0.375rem);
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid transparent;
+    border-radius: 0; /* Square corners for terminal feel */
     cursor: pointer;
-    transition: var(--transition-fast, 150ms ease-out);
+    transition: all 100ms cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     white-space: nowrap;
   }
 
   .btn:focus-visible {
-    outline: 2px solid var(--color-accent-primary, #0066FF);
+    outline: 2px solid var(--color-accent-primary, #00FF41);
     outline-offset: 2px;
   }
 
   .btn:disabled {
-    opacity: 0.5;
+    opacity: 0.3;
     cursor: not-allowed;
+    border-color: #333;
+    background-color: transparent;
+    color: #666;
   }
 
   /* Variants */
   .btn-primary {
-    background-color: var(--color-accent-primary, #0066FF);
-    color: var(--color-text-inverse, #FFFFFF);
+    background-color: var(--color-accent-primary, #00FF41);
+    color: #000000;
+    border-color: var(--color-accent-primary, #00FF41);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: var(--color-accent-primary-hover, #0052CC);
+    background-color: transparent;
+    color: var(--color-accent-primary, #00FF41);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
   }
 
   .btn-secondary {
-    background-color: var(--color-bg-tertiary, #EBEBEB);
-    color: var(--color-text-primary, #000000);
+    background-color: transparent;
+    color: var(--color-text-primary, #D4D4D4);
+    border-color: #333;
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background-color: var(--color-border-default, #E5E7EB);
+    border-color: var(--color-accent-secondary, #00E5FF);
+    color: var(--color-accent-secondary, #00E5FF);
+    background-color: rgba(0, 229, 255, 0.05);
   }
 
   .btn-ghost {
     background-color: transparent;
-    color: var(--color-text-primary, #000000);
+    color: #666;
+    border-color: transparent;
   }
 
   .btn-ghost:hover:not(:disabled) {
-    background-color: var(--color-bg-tertiary, #EBEBEB);
+    color: var(--color-text-primary, #D4D4D4);
+    background-color: rgba(255, 255, 255, 0.05);
   }
 
   .btn-danger {
-    background-color: var(--color-status-error, #DC2626);
-    color: var(--color-text-inverse, #FFFFFF);
+    background-color: transparent;
+    color: #FF3131;
+    border-color: #FF3131;
   }
 
   .btn-danger:hover:not(:disabled) {
-    background-color: #B91C1C;
+    background-color: #FF3131;
+    color: #000;
   }
 
   /* Sizes */
   .btn-sm {
-    height: var(--space-7, 1.75rem);
-    padding: 0 var(--space-3, 0.75rem);
-    font-size: var(--font-size-xs, 0.7rem);
+    height: 32px;
+    padding: 0 12px;
+    font-size: 11px;
   }
 
   .btn-md {
-    height: var(--space-9, 2.25rem);
-    padding: 0 var(--space-4, 1rem);
-    font-size: var(--font-size-sm, 0.8rem);
+    height: 40px;
+    padding: 0 16px;
+    font-size: 13px;
   }
 
   .btn-lg {
-    height: var(--space-11, 2.75rem);
-    padding: 0 var(--space-6, 1.5rem);
-    font-size: var(--font-size-base, 0.875rem);
+    height: 48px;
+    padding: 0 24px;
+    font-size: 15px;
   }
 
   /* Full width */
@@ -140,8 +155,8 @@
 
   .btn-spinner {
     position: absolute;
-    width: 1em;
-    height: 1em;
+    width: 14px;
+    height: 14px;
     border: 2px solid currentColor;
     border-top-color: transparent;
     border-radius: 50%;
@@ -153,8 +168,6 @@
   }
 
   @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
   }
 </style>

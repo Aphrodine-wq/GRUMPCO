@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * G-Rump Design System - Input Component
-   * Text input with consistent styling
+   * Dark terminal/Claude Code aesthetic - Command prompt style
    */
 
   interface Props {
@@ -37,31 +37,49 @@
   }: Props = $props();
 
   let inputId = $state(`input-${Math.random().toString(36).slice(2, 9)}`);
+  let isFocused = $state(false);
+
+  function handleFocus(e: FocusEvent) {
+    isFocused = true;
+    onfocus?.(e);
+  }
+
+  function handleBlur(e: FocusEvent) {
+    isFocused = false;
+    onblur?.(e);
+  }
 </script>
 
-<div class="input-wrapper" class:input-full-width={fullWidth}>
+<div class="input-wrapper" class:input-full-width={fullWidth} class:is-focused={isFocused}>
   {#if label}
-    <label class="input-label" for={inputId}>{label}</label>
+    <label class="input-label" for={inputId}>
+      <span class="label-prefix">#</span> {label}
+    </label>
   {/if}
 
-  <input
-    id={inputId}
-    {type}
-    bind:value
-    class="input input-{size}"
-    class:input-error={!!error}
-    {placeholder}
-    {disabled}
-    {oninput}
-    {onkeydown}
-    {onfocus}
-    {onblur}
-  />
+  <div class="input-container" class:has-error={!!error}>
+    <span class="prompt-arrow">&gt;</span>
+    <input
+      id={inputId}
+      {type}
+      bind:value
+      class="input input-{size}"
+      {placeholder}
+      {disabled}
+      {oninput}
+      {onkeydown}
+      onfocus={handleFocus}
+      onblur={handleBlur}
+    />
+    {#if isFocused}
+      <span class="terminal-cursor"></span>
+    {/if}
+  </div>
 
   {#if error}
-    <span class="input-error-text">{error}</span>
+    <span class="input-error-text">! ERROR: {error}</span>
   {:else if hint}
-    <span class="input-hint">{hint}</span>
+    <span class="input-hint">// {hint}</span>
   {/if}
 </div>
 
@@ -69,7 +87,8 @@
   .input-wrapper {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1, 0.25rem);
+    gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   .input-full-width {
@@ -77,30 +96,54 @@
   }
 
   .input-label {
-    font-family: var(--font-mono);
-    font-size: var(--font-size-sm, 0.8rem);
-    font-weight: 500;
-    color: var(--color-text-primary, #000000);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-accent-secondary, #00E5FF);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .label-prefix {
+    opacity: 0.5;
+  }
+
+  .input-container {
+    display: flex;
+    align-items: center;
+    background-color: #000;
+    border: 1px solid #333;
+    padding: 0 12px;
+    position: relative;
+    transition: border-color 100ms ease;
+  }
+
+  .input-wrapper.is-focused .input-container {
+    border-color: var(--color-accent-primary, #00FF41);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
+  }
+
+  .has-error {
+    border-color: #FF3131 !important;
+  }
+
+  .prompt-arrow {
+    color: var(--color-accent-primary, #00FF41);
+    margin-right: 8px;
+    font-weight: bold;
+    user-select: none;
   }
 
   .input {
-    font-family: var(--font-mono);
-    background-color: var(--color-bg-input, #F0F0F0);
-    color: var(--color-text-primary, #000000);
-    border: 1px solid transparent;
-    border-radius: var(--radius-md, 0.375rem);
-    transition: var(--transition-fast, 150ms ease-out);
+    background: transparent;
+    color: #E5E5E5;
+    border: none;
     width: 100%;
+    outline: none;
+    font-family: inherit;
   }
 
   .input::placeholder {
-    color: var(--color-text-muted, #9CA3AF);
-  }
-
-  .input:focus {
-    outline: none;
-    border-color: var(--color-accent-primary, #0066FF);
-    box-shadow: 0 0 0 2px var(--color-border-focus, rgba(0, 102, 255, 0.25));
+    color: #444;
   }
 
   .input:disabled {
@@ -108,42 +151,45 @@
     cursor: not-allowed;
   }
 
-  .input-error {
-    border-color: var(--color-status-error, #DC2626);
+  .terminal-cursor {
+    width: 8px;
+    height: 1.2em;
+    background-color: var(--color-accent-primary, #00FF41);
+    display: inline-block;
+    animation: blink 1s step-end infinite;
+    margin-left: 2px;
   }
 
-  .input-error:focus {
-    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.25);
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
   }
 
   /* Sizes */
   .input-sm {
-    height: var(--space-7, 1.75rem);
-    padding: 0 var(--space-2, 0.5rem);
-    font-size: var(--font-size-xs, 0.7rem);
+    height: 32px;
+    font-size: 12px;
   }
 
   .input-md {
-    height: var(--space-9, 2.25rem);
-    padding: 0 var(--space-3, 0.75rem);
-    font-size: var(--font-size-sm, 0.8rem);
+    height: 40px;
+    font-size: 14px;
   }
 
   .input-lg {
-    height: var(--space-11, 2.75rem);
-    padding: 0 var(--space-4, 1rem);
-    font-size: var(--font-size-base, 0.875rem);
+    height: 48px;
+    font-size: 16px;
   }
 
   .input-error-text {
-    font-family: var(--font-mono);
-    font-size: var(--font-size-xs, 0.7rem);
-    color: var(--color-status-error, #DC2626);
+    font-size: 11px;
+    color: #FF3131;
+    font-weight: 600;
   }
 
   .input-hint {
-    font-family: var(--font-mono);
-    font-size: var(--font-size-xs, 0.7rem);
-    color: var(--color-text-muted, #9CA3AF);
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
   }
 </style>
