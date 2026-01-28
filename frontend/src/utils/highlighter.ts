@@ -4,7 +4,7 @@
  */
 
 import type { Highlighter } from 'shiki';
-import { getHighlighter } from 'shiki';
+import { createHighlighter } from 'shiki';
 
 let highlighter: Highlighter | null = null;
 
@@ -18,7 +18,7 @@ export async function initHighlighter(): Promise<Highlighter> {
   }
 
   try {
-    highlighter = await getHighlighter({
+    highlighter = await createHighlighter({
       themes: ['github-dark'],
       langs: [
         'typescript',
