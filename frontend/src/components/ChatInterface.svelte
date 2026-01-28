@@ -262,8 +262,8 @@
     streamingBlocks = [];
     await tick();
     scrollToBottom();
-    const controller = new AbortController();
-    activeController = controller;
+    scrollToBottom();
+    // activeController is already set at the top, reusing it.
     const timeoutMs = mode === 'code' || mode === 'argument' ? 120000 : 60000;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
