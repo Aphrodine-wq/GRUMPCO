@@ -1,107 +1,107 @@
 /**
  * G-Rump Design System - Color Tokens
- * Dark terminal/Claude Code focused palette
+ * Clean, professional light theme
  */
 
 export const colors = {
-  // Background colors
+  // Background colors - Light, warm whites
   background: {
-    primary: '#0D0D0D',      // Deep black (terminal bg)
-    secondary: '#1A1A1A',    // Slightly lighter (cards, sidebars)
-    tertiary: '#262626',     // Hover states
-    code: '#000000',         // True black for code blocks
-    input: '#121212',        // Input fields
-    sidebar: '#141414',      // Sidebar background
+    primary: '#FAFAFA',      // Main background
+    secondary: '#FFFFFF',    // Cards, elevated surfaces
+    tertiary: '#F4F4F5',     // Subtle sections
+    code: '#F8F8F8',         // Code blocks
+    input: '#FFFFFF',        // Input fields
+    sidebar: '#FFFFFF',      // Sidebar
   },
 
-  // Text colors
+  // Text colors - Strong hierarchy
   text: {
-    primary: '#D4D4D4',      // Standard white/gray
-    secondary: '#A3A3A3',    // Secondary text
-    muted: '#525252',        // Muted/placeholder text
-    inverse: '#000000',      // Text on light backgrounds (if any)
-    code: '#E5E5E5',         // Code text
-    accent: '#00FF41',       // Terminal green
+    primary: '#18181B',      // Headings, primary content
+    secondary: '#3F3F46',    // Body text
+    muted: '#71717A',        // Captions, hints
+    inverse: '#FFFFFF',      // Text on dark backgrounds
+    code: '#18181B',         // Code text
+    accent: '#2563EB',       // Links, emphasis
   },
 
-  // Accent colors (Terminal ANSI style)
+  // Accent colors - Professional blue palette
   accent: {
-    primary: '#00FF41',      // Matrix/Terminal Green
-    primaryHover: '#00CC33', // Darker green
-    primaryLight: 'rgba(0, 255, 65, 0.1)', // Green tint
-    secondary: '#00E5FF',    // Cyan (for tools/actions)
-    tertiary: '#BB86FC',     // Soft purple (for rare accents)
+    primary: '#2563EB',      // Primary action blue
+    primaryHover: '#1D4ED8', // Darker on hover
+    primaryLight: '#EFF6FF', // Light blue background
+    secondary: '#0EA5E9',    // Secondary cyan
+    tertiary: '#8B5CF6',     // Accent purple
   },
 
-  // Status colors (ANSI palette)
+  // Status colors
   status: {
-    success: '#00FF41',      // Green
-    successLight: 'rgba(0, 255, 65, 0.1)',
-    error: '#FF3131',        // Red
-    errorLight: 'rgba(255, 49, 49, 0.1)',
-    warning: '#FFD700',      // Gold/Yellow
-    warningLight: 'rgba(255, 215, 0, 0.1)',
-    info: '#00E5FF',         // Cyan
-    infoLight: 'rgba(0, 229, 255, 0.1)',
+    success: '#059669',      // Green
+    successLight: '#D1FAE5',
+    error: '#DC2626',        // Red
+    errorLight: '#FEE2E2',
+    warning: '#D97706',      // Amber
+    warningLight: '#FEF3C7',
+    info: '#0EA5E9',         // Cyan
+    infoLight: '#E0F2FE',
   },
 
-  // Border colors (Rigid/Sharp)
+  // Border colors
   border: {
-    default: '#333333',      // Standard border
-    light: '#262626',        // Subtle border
-    dark: '#404040',         // Prominent border
-    focus: '#00FF41',        // Green focus
+    default: '#E4E4E7',      // Standard border
+    light: '#F4F4F5',        // Subtle border
+    dark: '#D4D4D8',         // Prominent border
+    focus: '#2563EB',        // Focus ring
   },
 
-  // Code diff colors (Dark theme)
+  // Code diff colors
   diff: {
     added: {
-      background: 'rgba(0, 255, 65, 0.1)',
-      border: '#00FF41',
-      text: '#00FF41',
+      background: '#D1FAE5',
+      border: '#059669',
+      text: '#065F46',
     },
     removed: {
-      background: 'rgba(255, 49, 49, 0.1)',
-      border: '#FF3131',
-      text: '#FF3131',
+      background: '#FEE2E2',
+      border: '#DC2626',
+      text: '#991B1B',
     },
     unchanged: {
       background: 'transparent',
-      text: '#D4D4D4',
+      text: '#3F3F46',
     },
     lineNumber: {
-      background: '#0D0D0D',
-      text: '#404040',
-      border: '#262626',
+      background: '#F4F4F5',
+      text: '#A1A1AA',
+      border: '#E4E4E7',
     },
   },
 
-  // Syntax highlighting (Dark terminal theme)
+  // Syntax highlighting
   syntax: {
-    keyword: '#BB86FC',      // Purple
-    string: '#00FF41',       // Green
-    number: '#FFD700',       // Gold
-    comment: '#6B7280',      // Gray
-    function: '#00E5FF',     // Cyan
-    variable: '#E5E5E5',     // White
-    operator: '#FF3131',     // Red
-    type: '#00E5FF',         // Cyan
-    punctuation: '#A3A3A3',  // Gray
+    keyword: '#7C3AED',      // Purple
+    string: '#059669',       // Green
+    number: '#D97706',       // Amber
+    comment: '#A1A1AA',      // Gray
+    function: '#2563EB',     // Blue
+    variable: '#18181B',     // Dark
+    operator: '#DC2626',     // Red
+    type: '#0EA5E9',         // Cyan
+    punctuation: '#71717A',  // Muted
   },
 
   // Interactive states
   interactive: {
-    hover: 'rgba(255, 255, 255, 0.05)',
-    active: 'rgba(255, 255, 255, 0.1)',
-    selected: 'rgba(0, 255, 65, 0.15)',
-    disabled: 'rgba(255, 255, 255, 0.02)',
+    hover: '#F4F4F5',
+    active: '#E4E4E7',
+    selected: '#EFF6FF',
+    disabled: '#FAFAFA',
   },
 
-  // Shadows (Minimal elevation for terminal)
+  // Shadows
   shadow: {
-    sm: '0 1px 2px rgba(0, 0, 0, 0.5)',
-    md: '0 4px 6px rgba(0, 0, 0, 0.5)',
-    lg: '0 10px 15px rgba(0, 0, 0, 0.5)',
+    sm: '0 1px 2px rgba(0, 0, 0, 0.05)',
+    md: '0 4px 6px rgba(0, 0, 0, 0.07)',
+    lg: '0 10px 15px rgba(0, 0, 0, 0.1)',
   },
 } as const;
 

@@ -1,27 +1,25 @@
 /**
  * G-Rump Design System - Typography Tokens
- * JetBrains Mono focused for code-centric UI
+ * Clean system font stack for professional UI
  */
 
 export const typography = {
-  // Font families
   fontFamily: {
-    mono: "'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace",
-    sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+    mono: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
   },
 
-  // Font sizes (rem based)
   fontSize: {
-    xs: '0.7rem',      // 11.2px - tiny labels
-    sm: '0.8rem',      // 12.8px - small text, captions
-    base: '0.875rem',  // 14px - body text
-    md: '0.95rem',     // 15.2px - slightly larger
-    lg: '1.1rem',      // 17.6px - headings
-    xl: '1.25rem',     // 20px - large headings
-    '2xl': '1.5rem',   // 24px - hero text
+    xs: '0.75rem',     // 12px
+    sm: '0.8125rem',   // 13px
+    base: '0.875rem',  // 14px
+    md: '0.9375rem',   // 15px
+    lg: '1rem',        // 16px
+    xl: '1.125rem',    // 18px
+    '2xl': '1.25rem',  // 20px
+    '3xl': '1.5rem',   // 24px
   },
 
-  // Font weights
   fontWeight: {
     normal: '400',
     medium: '500',
@@ -29,65 +27,59 @@ export const typography = {
     bold: '700',
   },
 
-  // Line heights
   lineHeight: {
-    tight: '1.25',     // Compact text
-    snug: '1.375',     // Slightly compact
-    normal: '1.5',     // Standard
-    relaxed: '1.625',  // Comfortable reading
-    loose: '2',        // Very spacious
-    code: '1.6',       // Optimized for code
+    tight: '1.25',
+    snug: '1.375',
+    normal: '1.5',
+    relaxed: '1.625',
+    loose: '1.75',
+    code: '1.6',
   },
 
-  // Letter spacing
   letterSpacing: {
-    tighter: '-0.02em',
-    tight: '-0.01em',
+    tighter: '-0.025em',
+    tight: '-0.0125em',
     normal: '0',
-    wide: '0.01em',
-    wider: '0.02em',
+    wide: '0.0125em',
+    wider: '0.025em',
   },
 } as const;
 
-// Pre-composed text styles
 export const textStyles = {
-  // Headings
   h1: {
-    fontFamily: typography.fontFamily.mono,
-    fontSize: typography.fontSize['2xl'],
-    fontWeight: typography.fontWeight.bold,
+    fontFamily: typography.fontFamily.sans,
+    fontSize: typography.fontSize['3xl'],
+    fontWeight: typography.fontWeight.semibold,
     lineHeight: typography.lineHeight.tight,
     letterSpacing: typography.letterSpacing.tight,
   },
   h2: {
-    fontFamily: typography.fontFamily.mono,
-    fontSize: typography.fontSize.xl,
+    fontFamily: typography.fontFamily.sans,
+    fontSize: typography.fontSize['2xl'],
     fontWeight: typography.fontWeight.semibold,
     lineHeight: typography.lineHeight.tight,
     letterSpacing: typography.letterSpacing.tight,
   },
   h3: {
-    fontFamily: typography.fontFamily.mono,
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
+    fontFamily: typography.fontFamily.sans,
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.medium,
     lineHeight: typography.lineHeight.snug,
   },
 
-  // Body text
   body: {
-    fontFamily: typography.fontFamily.mono,
+    fontFamily: typography.fontFamily.sans,
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.normal,
     lineHeight: typography.lineHeight.normal,
   },
   bodySmall: {
-    fontFamily: typography.fontFamily.mono,
+    fontFamily: typography.fontFamily.sans,
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.normal,
     lineHeight: typography.lineHeight.normal,
   },
 
-  // Code
   code: {
     fontFamily: typography.fontFamily.mono,
     fontSize: typography.fontSize.sm,
@@ -101,22 +93,20 @@ export const textStyles = {
     lineHeight: typography.lineHeight.code,
   },
 
-  // UI elements
   label: {
-    fontFamily: typography.fontFamily.mono,
+    fontFamily: typography.fontFamily.sans,
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
     lineHeight: typography.lineHeight.tight,
-    letterSpacing: typography.letterSpacing.wide,
   },
   caption: {
-    fontFamily: typography.fontFamily.mono,
+    fontFamily: typography.fontFamily.sans,
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.normal,
     lineHeight: typography.lineHeight.normal,
   },
   button: {
-    fontFamily: typography.fontFamily.mono,
+    fontFamily: typography.fontFamily.sans,
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
     lineHeight: typography.lineHeight.tight,

@@ -1,182 +1,149 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Colors - Synced with design tokens */
-  --color-bg-primary: #0D0D0D;
-  --color-bg-secondary: #1A1A1A;
-  --color-text-primary: #D4D4D4;
-  --color-accent-primary: #00FF41;
-  --color-accent-secondary: #00E5FF;
-  --color-border-default: #333333;
+  --color-bg-primary: #FAFAFA;
+  --color-bg-secondary: #FFFFFF;
+  --color-bg-tertiary: #F4F4F5;
+  --color-text-primary: #18181B;
+  --color-text-secondary: #3F3F46;
+  --color-text-muted: #71717A;
+  --color-accent-primary: #2563EB;
+  --color-accent-hover: #1D4ED8;
+  --color-border-default: #E4E4E7;
+  --color-border-light: #F4F4F5;
   
-  /* Spacing */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
   
-  /* Transitions */
-  --duration-quick: 100ms;
-  --duration-normal: 200ms;
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
   background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scanline Effect Overlay */
-body::before {
-  content: " ";
-  display: block;
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-  z-index: 9999;
-  background-size: 100% 4px, 3px 100%;
-  pointer-events: none;
-  opacity: 0.3;
-}
-
-/* Dark scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-primary);
+  background: var(--color-bg-tertiary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
-  border: 2px solid var(--color-bg-primary);
+  background: var(--color-border-default);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-accent-primary);
+  background: #A1A1AA;
 }
 
-/* Rigid Terminal Animations */
-@keyframes terminal-cursor {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-.cursor-blink::after {
-  content: '_';
-  animation: terminal-cursor 1s infinite;
-}
-
-/* Replace Bubbly Blobs with Rigid Box Elements */
-.blob-animated {
-  border-radius: 0 !important;
-  border: 1px solid var(--color-accent-primary);
-  background: rgba(0, 255, 65, 0.05);
-  box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
-  animation: none !important;
-}
-
-.blob-thinking {
-  border: 1px solid var(--color-accent-secondary) !important;
-  background: rgba(0, 229, 255, 0.05) !important;
-  animation: pulse-border 2s infinite !important;
-}
-
-@keyframes pulse-border {
-  0%, 100% { border-color: var(--color-accent-secondary); box-shadow: 0 0 5px rgba(0, 229, 255, 0.1); }
-  50% { border-color: #ffffff; box-shadow: 0 0 15px rgba(0, 229, 255, 0.3); }
-}
-
-/* Global focus style */
 *:focus-visible {
   outline: 2px solid var(--color-accent-primary);
   outline-offset: 2px;
 }
 
-/* Loading bar - Block style */
-@keyframes loading-block {
-  0% { transform: scaleX(0); }
-  50% { transform: scaleX(0.5); }
-  100% { transform: scaleX(1); }
-}
-
-.progress-bar {
-  height: 4px;
-  background: var(--color-accent-primary);
-  transform-origin: left;
-  animation: loading-block 2s infinite ease-in-out;
-}
-
-/* Screen Transitions - Snap / Glitch feel */
-.fade-enter-active {
-  transition: opacity var(--duration-normal) var(--ease-out);
-}
-.fade-enter-from { opacity: 0; }
-
-/* Box Utilities */
-.box-retro {
-  border: 1px solid var(--color-border-default);
-  background: var(--color-bg-secondary);
-  position: relative;
-}
-
-.box-retro::before {
-  content: '';
-  position: absolute;
-  top: -1px; left: -1px; right: -1px; bottom: -1px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  pointer-events: none;
-}
-
-/* Typography Overrides */
 h1, h2, h3, h4, h5, h6 {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  margin: 0;
   font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.25;
+}
+
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.125rem; }
+h4 { font-size: 1rem; }
+
+p {
+  margin: 0;
+}
+
+a {
   color: var(--color-accent-primary);
+  text-decoration: none;
 }
 
-pre, code {
-  font-family: 'JetBrains Mono', monospace;
-  background: #000 !important;
-  border: 1px solid #222;
+a:hover {
+  text-decoration: underline;
 }
 
-/* Utility for "Claude Code" tool headers */
-.tool-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
-  color: var(--color-accent-secondary);
-  border-bottom: 1px solid #222;
-  padding-bottom: 4px;
-  margin-bottom: 8px;
+code, pre {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
 }
 
-.tool-header::before {
-  content: '⏺';
+pre {
+  margin: 0;
+  padding: var(--space-4);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+code {
+  padding: 2px 6px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+pre code {
+  padding: 0;
+  background: none;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
