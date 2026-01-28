@@ -53,7 +53,7 @@
       <div class="sidebar-footer">
         {@render footer()}
       </div>
-    {#else}
+    {:else}
        <div class="sidebar-footer-spacer"></div>
     {/if}
   </div>
