@@ -586,9 +586,16 @@
       chatMode = 'ship';
     };
     window.addEventListener('open-ship-mode', handleOpenShipMode);
+
+    const handleCloseShipMode = () => {
+      chatMode = 'normal';
+    };
+    window.addEventListener('close-ship-mode', handleCloseShipMode);
+
     return () => {
       document.removeEventListener('keydown', handleGlobalKeydown);
       window.removeEventListener('open-ship-mode', handleOpenShipMode);
+      window.removeEventListener('close-ship-mode', handleCloseShipMode);
     };
   });
 </script>
