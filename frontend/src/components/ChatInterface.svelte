@@ -267,8 +267,8 @@
     const timeoutMs = mode === 'code' || mode === 'argument' ? 120000 : 60000;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      if (mode === 'code' || mode === 'argument') await runCodeModeStream(controller.signal);
-      else await runDesignModeStream(controller.signal);
+      if (mode === 'design') await runDesignModeStream(controller.signal);
+      else await runCodeModeStream(controller.signal);
     } catch (err: any) {
       streaming = false;
       lastError = true;
