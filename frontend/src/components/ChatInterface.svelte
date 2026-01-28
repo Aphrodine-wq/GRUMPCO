@@ -643,7 +643,7 @@
                     {#if msg.role === 'user'}
                       <div class="avatar-circle user">U</div>
                     {:else}
-                      <div class="avatar-circle assistant">AI</div>
+                      <GRumpBlob size="sm" state="idle" animated={false} />
                     {/if}
                   </div>
                   <div class="message-content-container">
@@ -702,7 +702,7 @@
               {#if streaming}
                 <div class="message-wrapper assistant streaming">
                   <div class="message-avatar">
-                    <div class="avatar-circle assistant">AI</div>
+                    <GRumpBlob size="sm" state="thinking" animated={true} />
                   </div>
                   <div class="message-content-container">
                     <div class="message-meta">
