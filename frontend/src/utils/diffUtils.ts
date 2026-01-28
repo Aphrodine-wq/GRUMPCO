@@ -112,3 +112,30 @@ export function getDiffSummary(diff: FileDiff): {
     total: added + removed, // Rough estimate
   };
 }
+
+export function detectLanguage(filePath: string): string {
+  const ext = filePath.split('.').pop()?.toLowerCase() || '';
+  const map: Record<string, string> = {
+    ts: 'typescript',
+    js: 'javascript',
+    svelte: 'svelte',
+    html: 'html',
+    css: 'css',
+    json: 'json',
+    py: 'python',
+    rs: 'rust',
+    sh: 'bash',
+    md: 'markdown',
+    yml: 'yaml',
+    yaml: 'yaml'
+  };
+  return map[ext] || 'plaintext';
+}
+
+export function formatDiffSummary(diff: FileDiff): string {
+  const { added, removed } = getDiffSummary(diff);
+  const parts = [];
+  if (added > 0) parts.push(`+${added}`);
+  if (removed > 0) parts.push(`-${removed}`);
+  return parts.length > 0 ? parts.join(' ') : 'No changes';
+}
