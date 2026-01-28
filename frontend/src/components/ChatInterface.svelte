@@ -2,7 +2,7 @@
   import { onMount, tick } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { get } from 'svelte/store';
-  import { Send, X } from 'lucide-svelte';
+
   import DiagramRenderer from './DiagramRenderer.svelte';
   import SuggestionChips from './SuggestionChips.svelte';
   import RefinementActions from './RefinementActions.svelte';
@@ -707,9 +707,9 @@
               </div>
               <button class="send-button" type="submit" disabled={!inputText.trim() || streaming}>
                 {#if streaming}
-                  <X size={18} />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 {:else}
-                  <Send size={18} />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                 {/if}
               </button>
             </form>

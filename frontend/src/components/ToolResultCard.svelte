@@ -2,7 +2,7 @@
   /**
    * ToolResultCard - Professional light theme
    */
-  import { Check, X } from 'lucide-svelte';
+
   import CodeDiffViewer from './CodeDiffViewer.svelte';
   import { Badge } from '../lib/design-system';
   import { colors } from '../lib/design-system/tokens/colors';
@@ -42,9 +42,9 @@
     <div class="tool-result-header">
       <div class="tool-info">
         {#if toolResult.success}
-          <Check size={14} stroke-width={3} />
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
         {:else}
-          <X size={14} stroke-width={3} />
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         {/if}
         <span class="tool-name">{toolResult.toolName}</span>
       </div>

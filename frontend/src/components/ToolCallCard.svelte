@@ -4,7 +4,7 @@
    */
   import { Badge } from '../lib/design-system';
   import { colors } from '../lib/design-system/tokens/colors';
-  import { Code2 } from 'lucide-svelte';
+
 
   interface Props {
     toolCall?: {
@@ -45,7 +45,7 @@
   >
     <div class="tool-call-header">
       <div class="tool-info">
-        <Code2 size={14} stroke-width={2.5} />
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-code-2"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
         <span class="tool-name">{toolCall.name}</span>
       </div>
       {#if toolCall.status}
