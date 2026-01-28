@@ -883,17 +883,21 @@
   .empty-state {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    /* Left align with margin instead of center */
+    align-items: flex-start;
+    justify-content: flex-start; /* Move to top as requested previously */
+    padding-top: 15vh; /* Visual vertical adjustment */
+    padding-left: 5vw; /* Left margin to reduce "white space" but keep breathing room */
+    padding-right: 5vw;
+
     min-height: 400px;
-    height: 100%; /* Take full height to allow centering adjustment */
-    text-align: center;
+    height: 100%;
+    text-align: left; /* Text alignment */
     gap: 1.5rem;
-    padding-bottom: 15vh; /* Push content up visually */
   }
 
   .empty-title {
-    font-size: 2rem;
+    font-size: 2.5rem; /* Slightly larger */
     font-weight: 700;
     color: #111827;
     margin: 0;
@@ -910,7 +914,9 @@
   .suggestion-chips {
     margin-top: 1rem;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start; /* Left align chips */
+    flex-wrap: wrap; /* efficient wrapping */
+    gap: 0.5rem;
     width: 100%;
   }
 
