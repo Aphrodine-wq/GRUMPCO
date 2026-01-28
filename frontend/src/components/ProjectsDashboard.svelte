@@ -3,9 +3,11 @@
   import { Button } from '../lib/design-system';
   import GRumpBlob from './GRumpBlob.svelte';
 
-  export let onSelectProject: (id: string) => void;
-  export let onNewProject: () => void;
-  export let onUpgrade: () => void;
+  let { onSelectProject, onNewProject, onUpgrade } = $props<{
+    onSelectProject: (id: string) => void;
+    onNewProject: () => void;
+    onUpgrade: () => void;
+  }>();
 
   function formatDate(timestamp: number) {
     return new Date(timestamp).toLocaleDateString(undefined, {
