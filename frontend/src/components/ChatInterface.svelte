@@ -1134,6 +1134,29 @@
   }
 
   /* Mode Selector */
+  .mode-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    border: 1px solid #e5e7eb;
+    background: white;
+    color: #4b5563;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mode-btn:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+  }
+
+  .mode-btn.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+  }
+
   .mode-selector {
     display: flex;
     gap: 0.5rem;

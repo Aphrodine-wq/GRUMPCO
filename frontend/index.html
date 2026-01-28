@@ -1,40 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Mermaid Chart Generator</title>
 
-    <!-- Font preconnect -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Mermaid Chart Generator</title>
 
-    <!-- Font imports: Merriweather (serif headings) + Geist (sans body) -->
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <script>
-      window.addEventListener('error', (event) => {
-        // Only show if the app hasn't mounted (or if it's a critical load error)
-        // We'll just always append to body for visibility
-        const errorDiv = document.createElement('div');
-        errorDiv.style.position = 'fixed';
-        errorDiv.style.top = '0';
-        errorDiv.style.left = '0';
-        errorDiv.style.width = '100%';
-        errorDiv.style.height = '100vh';
-        errorDiv.style.padding = '20px';
-        errorDiv.style.backgroundColor = '#fee2e2';
-        errorDiv.style.color = '#991b1b';
-        errorDiv.style.zIndex = '999999';
-        errorDiv.style.fontFamily = 'monospace';
-        errorDiv.style.whiteSpace = 'pre-wrap';
-        errorDiv.style.overflow = 'auto';
-        errorDiv.innerHTML = `<h1>Critical Error</h1><p><strong>${event.message}</strong></p><pre>${event.error?.stack || 'No stack trace available'}</pre>`;
-        document.body.appendChild(errorDiv);
-      });
-    </script>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+  <!-- Font preconnect -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Font imports: Merriweather (serif headings) + Geist (sans body) -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&family=Geist:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+
+  <div id="app"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
 </html>
