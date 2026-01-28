@@ -46,7 +46,7 @@ function buildConversationMessages(
   refinementContext?: RefinementContext
 ): Array<{ role: 'user' | 'assistant'; content: string }> {
   const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
-  
+
   // Add recent conversation history (limited to context window)
   if (conversationHistory && conversationHistory.length > 0) {
     const recentHistory = conversationHistory.slice(-CONTEXT_WINDOW_SIZE * 2); // user+assistant pairs
@@ -57,35 +57,35 @@ function buildConversationMessages(
       });
     }
   }
-  
+
   // Build current message with refinement context if present
   let currentMessage = userMessage;
   if (refinementContext?.baseDiagram) {
     currentMessage = `Based on this existing diagram:\n\`\`\`mermaid\n${refinementContext.baseDiagram}\n\`\`\`\n\n${refinementContext.instruction || 'Please modify this diagram according to my request:'}\n\n${userMessage}`;
   }
-  
+
   messages.push({
     role: 'user',
     content: currentMessage,
   });
-  
+
   return messages;
 }
 
 // Base diagram generation function with intent analysis and conversation context
 async function _generateDiagram(
-  userMessage: string, 
+  userMessage: string,
   preferences?: UserPreferences,
   conversationHistory?: ConversationMessage[],
   refinementContext?: RefinementContext
 ): Promise<string> {
   const log = getRequestLogger();
   const timer = createApiTimer('generate_diagram');
-  
+
   try {
     // Analyze user intent
     const intent = analyzeIntent(userMessage);
-    log.info({ 
+    log.info({
       messageLength: userMessage.length,
       intentConfidence: intent.confidence,
       suggestedType: intent.suggestedType,
@@ -94,7 +94,7 @@ async function _generateDiagram(
       hasConversationHistory: !!conversationHistory?.length,
       hasRefinementContext: !!refinementContext?.baseDiagram,
     }, 'Generating diagram with intent analysis');
-    
+
     // Enrich preferences with intent analysis
     const enrichedPreferences: UserPreferences = {
       ...preferences,
@@ -104,7 +104,7 @@ async function _generateDiagram(
       complexity: preferences?.complexity ?? intent.constraints.complexity,
       focusAreas: preferences?.focusAreas ?? intent.constraints.focusAreas,
     };
-    
+
     // Build message content, potentially with intent augmentation
     let messageContent = userMessage;
     const intentAugmentation = getIntentAugmentation(intent);
@@ -112,16 +112,16 @@ async function _generateDiagram(
       messageContent = `${userMessage}\n\n${intentAugmentation}`;
       log.info('Added intent augmentation for clarification guidance');
     }
-    
+
     // Build conversation messages with history
     const messages = buildConversationMessages(
-      messageContent, 
-      conversationHistory, 
+      messageContent,
+      conversationHistory,
       refinementContext
     );
-    
+
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1024,
       system: getSystemPrompt(enrichedPreferences),
       messages,
@@ -133,32 +133,32 @@ async function _generateDiagram(
     }
 
     const result = extractMermaidCode(content.text);
-    
+
     // If extraction failed but we have text, it might be a clarification question
     // In that case, return the raw text so it can be shown to the user
     if (!result.extracted || !result.code) {
       // Check if this looks like a clarification question from Claude
       const lowerText = content.text.toLowerCase();
-      const isClarification = lowerText.includes('would you') || 
-                              lowerText.includes('could you') ||
-                              lowerText.includes('which') ||
-                              lowerText.includes('prefer') ||
-                              lowerText.includes('clarify');
-      
+      const isClarification = lowerText.includes('would you') ||
+        lowerText.includes('could you') ||
+        lowerText.includes('which') ||
+        lowerText.includes('prefer') ||
+        lowerText.includes('clarify');
+
       if (isClarification && intent.requiresClarification) {
         // Return the clarification text as-is (not diagram code)
         log.info('Claude asked for clarification');
         timer.success();
         return content.text;
       }
-      
+
       const error: ServiceError = new Error('Could not extract diagram code from response');
       error.code = 'EXTRACTION_FAILED';
       error.rawText = content.text;
       timer.failure('extraction_failed');
       throw error;
     }
-    
+
     timer.success();
     log.info({ method: result.method }, 'Diagram generated successfully');
     return result.code;
@@ -174,7 +174,7 @@ const resilientGenerateDiagram = withResilience(_generateDiagram, 'claude-diagra
 
 // Export wrapped function with conversation context support
 export async function generateDiagram(
-  userMessage: string, 
+  userMessage: string,
   preferences?: UserPreferences,
   conversationHistory?: ConversationMessage[],
   refinementContext?: RefinementContext
@@ -184,7 +184,7 @@ export async function generateDiagram(
 
 // Streaming generator with abort signal support, intent analysis, and conversation context
 export async function* generateDiagramStream(
-  userMessage: string, 
+  userMessage: string,
   preferences?: UserPreferences,
   abortSignal?: AbortSignal,
   conversationHistory?: ConversationMessage[],
@@ -192,11 +192,11 @@ export async function* generateDiagramStream(
 ): AsyncGenerator<string, void, unknown> {
   const log = getRequestLogger();
   const timer = createApiTimer('generate_diagram_stream');
-  
+
   try {
     // Analyze user intent
     const intent = analyzeIntent(userMessage);
-    log.info({ 
+    log.info({
       messageLength: userMessage.length,
       intentConfidence: intent.confidence,
       suggestedType: intent.suggestedType,
@@ -204,7 +204,7 @@ export async function* generateDiagramStream(
       hasConversationHistory: !!conversationHistory?.length,
       hasRefinementContext: !!refinementContext?.baseDiagram,
     }, 'Starting diagram stream with intent analysis');
-    
+
     // Enrich preferences with intent analysis
     const enrichedPreferences: UserPreferences = {
       ...preferences,
@@ -212,23 +212,23 @@ export async function* generateDiagramStream(
       complexity: preferences?.complexity ?? intent.constraints.complexity,
       focusAreas: preferences?.focusAreas ?? intent.constraints.focusAreas,
     };
-    
+
     // Build message content
     let messageContent = userMessage;
     const intentAugmentation = getIntentAugmentation(intent);
     if (intentAugmentation && !refinementContext?.baseDiagram) {
       messageContent = `${userMessage}\n\n${intentAugmentation}`;
     }
-    
+
     // Build conversation messages with history
     const messages = buildConversationMessages(
       messageContent,
       conversationHistory,
       refinementContext
     );
-    
+
     const stream = await resilientClaudeStream({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1024,
       system: getSystemPrompt(enrichedPreferences),
       messages,
@@ -249,14 +249,14 @@ export async function* generateDiagramStream(
         timer.failure('aborted');
         return;
       }
-      
-      if (event.type === 'content_block_delta' && 
-          event.delta && 
-          'text' in event.delta) {
+
+      if (event.type === 'content_block_delta' &&
+        event.delta &&
+        'text' in event.delta) {
         yield event.delta.text;
       }
     }
-    
+
     timer.success();
     log.info('Stream completed successfully');
   } catch (error) {
