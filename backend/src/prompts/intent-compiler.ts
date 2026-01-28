@@ -57,6 +57,12 @@ You MUST respond with a single JSON object (no markdown, no code blocks):
 
 \`\`\`json
 {
+  "reasoning": "Explain your thought process here. Why did you classify the intent this way?",
+  "ambiguity_analysis": {
+    "score": 0.0, // 0.0 to 1.0 (high means very ambiguous)
+    "reason": "Why is it ambiguous?",
+    "clarification_questions": ["Question 1?", "Question 2?"]
+  },
   "features": ["feature1", "feature2", ...],
   "users": ["user_role1", "user_role2", ...],
   "data_flows": ["REST API", "WebSocket", ...],
@@ -95,6 +101,10 @@ You MUST respond with a single JSON object (no markdown, no code blocks):
 \`\`\`
 
 ## Analysis Guidelines:
+
+### Cognitive Analysis (NEW):
+- **Reasoning**: Before listing features, explain *why* the user wants this. Is it a bug fix? A new feature? Refactoring?
+- **Ambiguity Check**: If the request is vague (e.g., "fix it", "make it better"), set a high ambiguity score and providing specific clarifying questions.
 
 ### Feature Extraction:
 - Prioritize features by importance (must-have, should-have, could-have)

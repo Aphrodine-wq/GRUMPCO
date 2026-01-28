@@ -51,8 +51,16 @@ export interface CodeQualityRequirements {
   security?: string[];
 }
 
+export interface AmbiguityAnalysis {
+  score: number;
+  reason: string;
+  clarification_questions: string[];
+}
+
 export interface EnrichedIntent extends StructuredIntent {
   enriched?: {
+    reasoning?: string;
+    ambiguity_analysis?: AmbiguityAnalysis;
     features?: string[];
     users?: string[];
     data_flows?: string[];
@@ -199,7 +207,12 @@ export async function enrichIntentViaClaude(intent: StructuredIntent): Promise<E
   );
 
   const systemPrompt = getIntentCompilerPrompt();
-  const userMsg = `Structured intent from parser:\n${JSON.stringify(intent, null, 2)}\n\nAnalyze and enrich this intent with code-specific insights, patterns, architecture hints, optimization opportunities, and quality requirements.`;
+  // Inject project context if available
+  // In a real implementation, we'd fetch this from ContextService.
+  // For now, we'll suggest to the model to consider typical project structures.
+  const contextHint = `Consider a modern web application structure (Frontend + Backend + Database).`;
+
+  const userMsg = `Structured intent from parser:\n${JSON.stringify(intent, null, 2)}\n\nContext Hint: ${contextHint}\n\nAnalyze and enrich this intent with code-specific insights, patterns, architecture hints, optimization opportunities, and quality requirements. FOLLOW THE JSON SCHEMA EXACTLY.`;
 
   try {
     const res = await resilientClaudeCall({
@@ -287,6 +300,8 @@ export function optimizeEnrichedIntent(intent: EnrichedIntent): EnrichedIntent {
 
   const optimizedEnriched: EnrichedIntent['enriched'] = {
     ...enriched,
+    reasoning: enriched.reasoning,
+    ambiguity_analysis: enriched.ambiguity_analysis,
     features: dedupeSort(enriched.features ?? baseFeatures),
     users: dedupeSort(enriched.users ?? baseActors),
     data_flows: dedupeSort(enriched.data_flows ?? baseFlows),
