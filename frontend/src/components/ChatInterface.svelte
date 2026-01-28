@@ -1070,28 +1070,18 @@
     padding: 16px 22px;
     transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
     width: 100%;
-<<<<<<< HEAD
     box-shadow:
-      0 4px 6px -1px rgb(0 0 0 / 0.1),
-      0 2px 4px -2px rgb(0 0 0 / 0.1);
+      0 4px 12px rgba(0, 0, 0, 0.08),
+      inset 0 1px 2px rgba(255, 255, 255, 0.5);
   }
 
   .input-container:focus-within {
     box-shadow:
-      0 10px 15px -3px rgb(0 0 0 / 0.1),
-      0 4px 6px -4px rgb(0 0 0 / 0.1);
-    border-color: #cbd5e1; /* Slate-300 */
-    transform: translateY(-1px);
-=======
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5);
-  }
-
-  .input-container:focus-within {
-    box-shadow: 0 12px 24px rgba(14, 165, 233, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.8);
+      0 12px 24px rgba(14, 165, 233, 0.15),
+      inset 0 1px 2px rgba(255, 255, 255, 0.8);
     border-color: #0ea5e9;
     transform: translateY(-2px);
     background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
->>>>>>> bd57c1a48c1ddf13ad06615be43d1f5c60feb30f
   }
 
   .input-prompt {
