@@ -373,12 +373,12 @@
     const body: Record<string, unknown> = {
       messages: apiMessages,
       // workspaceRoot: ws || undefined,
-      mode: 'code' // Fixed mode for debug
-        // get(chatModeStore) === 'argument'
-          // ? 'argument'
-          // : chatMode !== 'normal'
-            // ? chatMode
-            // : 'normal',
+      mode: 'code', // Fixed mode for debug
+      // get(chatModeStore) === 'argument'
+      // ? 'argument'
+      // : chatMode !== 'normal'
+      // ? chatMode
+      // : 'normal',
       planId: currentPlanId || undefined,
       specSessionId: currentSpecSessionId || undefined,
     };
