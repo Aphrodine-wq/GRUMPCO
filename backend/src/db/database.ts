@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import Database from 'better-sqlite3';
 import { runMigrations } from './migrate.js';
+import { SupabaseDatabaseService } from './supabase-db.js';
 import { SCHEMA_POSTGRESQL, type SessionRow, type PlanRow, type SpecRow, type ShipSessionRow, type WorkReportRow } from './schema.js';
 import logger from '../middleware/logger.js';
 import { recordDbOperation } from '../middleware/metrics.js';
@@ -17,7 +18,7 @@ import type { SpecSession } from '../types/spec.js';
 import type { AgentWorkReport } from '../types/agents.js';
 import type { Settings } from '../types/settings.js';
 
-type DbType = 'sqlite' | 'postgresql';
+type DbType = 'sqlite' | 'postgresql' | 'supabase';
 
 interface DatabaseConfig {
   type: DbType;
@@ -499,11 +500,43 @@ class DatabaseService {
 
 // Singleton instance
 let dbInstance: DatabaseService | null = null;
+let supabaseDbInstance: SupabaseDatabaseService | null = null;
+
+// Common interface for both database types
+type DatabaseInterface = DatabaseService | SupabaseDatabaseService;
+
+/**
+ * Check if Supabase should be used
+ */
+function shouldUseSupabase(): boolean {
+  const dbType = process.env.DB_TYPE;
+  if (dbType === 'supabase') return true;
+
+  // Auto-detect: use Supabase in production if configured
+  const isProduction = process.env.NODE_ENV === 'production';
+  const hasSupabaseConfig =
+    process.env.SUPABASE_URL &&
+    process.env.SUPABASE_SERVICE_KEY &&
+    process.env.SUPABASE_URL !== 'https://your-project.supabase.co';
+
+  return isProduction && hasSupabaseConfig;
+}
 
 /**
  * Get or create database service instance
  */
-export function getDatabase(): DatabaseService {
+export function getDatabase(): DatabaseInterface {
+  if (shouldUseSupabase()) {
+    if (!supabaseDbInstance) {
+      const { SupabaseDatabaseService } = require('./supabase-db.js');
+      supabaseDbInstance = new SupabaseDatabaseService(
+        process.env.SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_KEY!
+      );
+    }
+    return supabaseDbInstance;
+  }
+
   if (!dbInstance) {
     const dbType = (process.env.DB_TYPE || 'sqlite') as DbType;
     const dbPath = process.env.DB_PATH || './data/grump.db';
@@ -534,6 +567,12 @@ export async function closeDatabase(): Promise<void> {
     await dbInstance.close();
     dbInstance = null;
   }
+  if (supabaseDbInstance) {
+    await supabaseDbInstance.close();
+    supabaseDbInstance = null;
+  }
 }
 
 export { DatabaseService };
+export { SupabaseDatabaseService } from './supabase-db.js';
+

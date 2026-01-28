@@ -42,6 +42,26 @@ vercel env add REDIS_HOST production
 vercel env add REDIS_PORT production
 ```
 
+## Supabase Database Setup
+
+1. Go to [supabase.com](https://supabase.com) and create a project
+
+2. In the Supabase Dashboard, go to **SQL Editor** and run the contents of `supabase-schema.sql`:
+   ```sql
+   -- Copy paste from backend/supabase-schema.sql
+   ```
+
+3. Get your credentials from **Settings > API**:
+   - `SUPABASE_URL`: Project URL
+   - `SUPABASE_ANON_KEY`: anon/public key
+   - `SUPABASE_SERVICE_KEY`: service_role key (keep secret!)
+
+4. Add these to Vercel:
+   ```bash
+   vercel env add SUPABASE_URL production
+   vercel env add SUPABASE_SERVICE_KEY production
+   ```
+
 ### Deploy to Production
 
 ```bash
