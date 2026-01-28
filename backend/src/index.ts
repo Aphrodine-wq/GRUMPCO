@@ -61,13 +61,13 @@ const allowedOrigins = process.env.CORS_ORIGINS
   : isProduction
     ? ['tauri://localhost', 'http://tauri.localhost', 'http://127.0.0.1:3000']
     : [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'http://localhost:5178',
-        'http://127.0.0.1:5178',
-        'tauri://localhost',
-        'http://tauri.localhost',
-      ];
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:5178',
+      'http://127.0.0.1:5178',
+      'tauri://localhost',
+      'http://tauri.localhost',
+    ];
 
 // Security middleware - must be early in chain
 app.use(
@@ -234,7 +234,7 @@ let server: Server | undefined;
     skillRegistry.mountRoutes(app);
     logger.info({ skillCount: skillRegistry.count }, 'Skills system initialized');
 
-    if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+    if (process.env.NODE_ENV !== 'test' && !process.env.VITEST && !process.env.VERCEL) {
       const PORT = await findAvailablePort(PREFERRED_PORT);
       const host = process.env.HOST ?? (isProduction ? '127.0.0.1' : '0.0.0.0');
       server = app.listen(PORT, host, () => {
