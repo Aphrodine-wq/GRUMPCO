@@ -1,22 +1,75 @@
-  import { showSettings } from './stores/uiStore';
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import ChatInterface from './components/ChatInterface.svelte';
+  import SessionsSidebar from './components/SessionsSidebar.svelte';
+  import Toast from './components/Toast.svelte';
+  import QuestionModal from './components/QuestionModal.svelte';
+  import PricingModal from './components/PricingModal.svelte';
   import SettingsScreen from './components/SettingsScreen.svelte';
+  import { sessionsStore, currentSession } from './stores/sessionsStore';
+  import { settingsStore } from './stores/settingsStore';
+  import { showSettings } from './stores/uiStore';
+  import type { Message } from './types';
 
-  // ... (keeping existing imports)
+  let showPricing = $state(false);
 
-  // ... (inside script)
+  onMount(() => {
+    localStorage.removeItem('mermaid-app-state');
+    settingsStore.load().catch(() => {});
 
-<div class="main-content">
-  {#if $showSettings}
-    <SettingsScreen onBack={() => showSettings.set(false)} />
-  {:else}
-    {#key $currentSession?.id ?? 'none'}
-      <ChatInterface
-        initialMessages={getInitialMessages()}
-        on:messages-updated={(e) => handleMessagesUpdate(e.detail)}
-      />
-    {/key}
-  {/if}
-</div>
+    // If no active session, create one
+    if (!$currentSession) {
+      sessionsStore.createSession([]);
+    }
+
+    const isTauri =
+      typeof window !== 'undefined' &&
+      (!!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__);
+
+    if (isTauri) {
+      setTimeout(() => {
+        import('@tauri-apps/api/core')
+          .then(({ invoke }) => {
+            invoke('close_splash_show_main').catch((err) => console.error(err));
+          })
+          .catch(() => {
+            import('@tauri-apps/api').then((module: any) => {
+              const invoke = module.invoke || module.tauri?.invoke;
+              if (invoke) invoke('close_splash_show_main').catch((err: any) => console.error(err));
+            });
+          });
+      }, 400);
+    }
+  });
+
+  function getInitialMessages(): Message[] | undefined {
+    return $currentSession?.messages || undefined;
+  }
+
+  function handleMessagesUpdate(messages: Message[]): void {
+    if ($currentSession) {
+      sessionsStore.updateSession($currentSession.id, messages);
+    } else {
+      sessionsStore.createSession(messages);
+    }
+  }
+</script>
+
+<div class="app">
+  <SessionsSidebar />
+
+  <div class="main-content">
+    {#if $showSettings}
+      <SettingsScreen onBack={() => showSettings.set(false)} />
+    {:else}
+      {#key $currentSession?.id ?? 'none'}
+        <ChatInterface
+          initialMessages={getInitialMessages()}
+          on:messages-updated={(e) => handleMessagesUpdate(e.detail)}
+        />
+      {/key}
+    {/if}
+  </div>
 
   <Toast />
   <QuestionModal />
