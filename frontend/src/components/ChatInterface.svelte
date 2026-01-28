@@ -886,8 +886,10 @@
     align-items: center;
     justify-content: center;
     min-height: 400px;
+    height: 100%; /* Take full height to allow centering adjustment */
     text-align: center;
     gap: 1.5rem;
+    padding-bottom: 15vh; /* Push content up visually */
   }
 
   .empty-title {

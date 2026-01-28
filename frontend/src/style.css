@@ -56,7 +56,7 @@
   --shadow-glow: 0 4px 24px rgba(14, 165, 233, 0.3);
 
   /* Typography */
-  --font-sans: "Patrick Hand", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: "Caveat", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "Fira Code", "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
 }
 
@@ -132,6 +132,8 @@ select,
   color: #1D1D1F;
   letter-spacing: 0.02em;
   /* Slightly wider for handwritten font */
+  font-size: 1.1em;
+  /* Bump visual size slightly for Caveat */
 }
 
 a {
