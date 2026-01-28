@@ -77,8 +77,21 @@
     display: flex;
     height: 100vh;
     width: 100%;
+    /* Centered Layout Logic */
+    max-width: 1400px;
+    margin: 0 auto;
+
     background: linear-gradient(135deg, #fafafa 0%, #f5f7fa 100%);
     overflow: hidden;
+    position: relative;
+
+    /* Visual Frame */
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.05); /* Subtle anchor shadow */
+  }
+
+  /* Ensure background fills the "void" outside the app on large screens */
+  :global(body) {
+    background-color: #f0f2f5;
   }
 
   .main-content {

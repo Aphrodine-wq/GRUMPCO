@@ -119,11 +119,19 @@ h2,
 h3,
 h4,
 h5,
-h6 {
+h6,
+button,
+input,
+textarea,
+select,
+.tooltip,
+.popover {
   margin: 0;
+  font-family: var(--font-sans);
   font-weight: 600;
   color: #1D1D1F;
-  letter-spacing: -0.015em;
+  letter-spacing: 0.02em;
+  /* Slightly wider for handwritten font */
 }
 
 a {
@@ -138,7 +146,7 @@ a:hover {
 
 button {
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--font-sans);
 }
 
 code,
