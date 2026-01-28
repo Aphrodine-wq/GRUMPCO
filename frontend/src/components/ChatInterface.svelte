@@ -21,9 +21,9 @@
   import { showToast } from '../stores/toastStore';
   // import { processError, logError } from '../utils/errorHandler';
   import { sessionsStore, currentSession } from '../stores/sessionsStore';
-  import { getCurrentProjectId } from '../stores/projectStore';
-  import { chatModeStore } from '../stores/chatModeStore';
-  import { workspaceStore } from '../stores/workspaceStore';
+  // import { getCurrentProjectId } from '../stores/projectStore';
+  // import { chatModeStore } from '../stores/chatModeStore';
+  // import { workspaceStore } from '../stores/workspaceStore';
   // import { codeSessionsStore } from '../stores/codeSessionsStore';
   // import { openModal } from '../stores/clarificationStore';
   // import {
@@ -34,10 +34,10 @@
   //   codegenSession,
   // } from '../stores/workflowStore';
   import { parseAssistantResponse } from '../utils/responseParser';
-  import { flattenTextContent } from '../utils/contentParser';
+  // import { flattenTextContent } from '../utils/contentParser';
   // import { generatePlan } from '../stores/planStore';
   // import { startSpecSession } from '../stores/specStore';
-  import { fetchApi } from '../lib/api.js';
+  // import { fetchApi } from '../lib/api.js';
   import { settingsStore } from '../stores/settingsStore';
   import { colors } from '../lib/design-system/tokens/colors';
   import { showSettings } from '../stores/uiStore';
@@ -81,8 +81,11 @@
 
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
     if (Array.isArray(content)) return content;
-    const blocks: ContentBlock[] = [];
-    const mermaidRegex = /```mermaid\s*([\s\S]*?)```/g;
+    // Basic text content might contain mermaid code blocks
+    // return flattenTextContent(content);
+    return [{ type: 'text', text: content }];
+  }
+  const mermaidRegex = /```mermaid\s*([\s\S]*?)```/g;
     let lastIndex = 0;
     let match;
     while ((match = mermaidRegex.exec(content)) !== null) {
@@ -198,36 +201,66 @@
   async function sendMessage() {
     const text = inputText.trim();
     if (!text || streaming) return;
-    const mode = get(chatModeStore);
+    // --- Mode Switching Logic ---
+    // const mode = get(chatModeStore);
+    const mode = 'normal';
     lastUserMessage = text;
     lastError = false;
     // trackMessageSent(text.length);
     if (mode === 'code' && chatMode === 'plan') {
       try {
-        const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
+        // const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
         // DISABLED FOR DEBUG
-        // const plan = await generatePlan({ userRequest: text, workspaceRoot: ws });
-        // currentPlanId = plan.id;
-        inputText = '';
-        return;
-      } catch (error) {
-        showToast('Failed to generate plan', 'error');
-        return;
+        // await generatePlan(text, ws);
+        
+        // Mock success for now
+        messages = [...messages, { role: 'assistant', content: "Plan generation is currently disabled for debugging.", timestamp: Date.now() }];
+        streaming = false;
+
+      } catch (e: any) {
+        lastError = true;
+        streaming = false;
+        showToast(e.message || 'Error generating plan', 'error');
       }
+      return;
     }
+    
     if (mode === 'code' && chatMode === 'spec') {
-      try {
-        const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
+       try {
+        // const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
         // DISABLED FOR DEBUG
-        // const session = await startSpecSession({ userRequest: text, workspaceRoot: ws });
-        // currentSpecSessionId = session.id;
-        inputText = '';
-        return;
-      } catch (error) {
-        showToast('Failed to start spec session', 'error');
-        return;
-      }
+        // await startSpecSession(text, ws);
+
+        // Mock success
+         messages = [...messages, { role: 'assistant', content: "Spec generation is currently disabled for debugging.", timestamp: Date.now() }];
+         streaming = false;
+
+       } catch (e: any) {
+         lastError = true;
+         streaming = false;
+         showToast(e.message || 'Error starting spec session', 'error');
+       }
+       return;
     }
+
+    if (mode === 'code') {
+       // Standard code mode message
+       // We'll treat 'code' mode in 'normal' chat submode as a regular chat
+       // unless we want to trigger specific coding actions.
+       // For now, let's route to standard stream for 'normal' submode, 
+       // or specialized streams for others if implemented.
+       // However, pure "Code Mode" usually implies `codeSessionsStore`.
+       // Let's use runCodeModeStream if intended.
+       await runCodeModeStream(controller.signal);
+       return;
+    }
+
+    if (mode === 'design') {
+      await runDesignModeStream(controller.signal);
+      return;
+    }
+
+    // Default / Argument / Ship mode fallback
     if (editingMessageIndex !== null && editingMessageIndex >= 0) {
       const updated = [...messages];
       updated[editingMessageIndex] = { role: 'user', content: text, timestamp: Date.now() };
@@ -278,39 +311,39 @@
 
   // async function runDesignModeStream(signal: AbortSignal) {
   //   const text = lastUserMessage;
-  //   const response = await fetchApi('/api/generate-diagram-stream', {
-  //     method: 'POST',
-  //     body: JSON.stringify({ message: text }),
-  //     signal,
-  //   });
-  //   if (!response.ok) throw new Error(`Server error (${response.status})`);
-  //   const reader = response.body?.getReader();
-  //   if (!reader) throw new Error('No response body');
-  //   const decoder = new TextDecoder();
-  //   let buffer = '';
-  //   while (true) {
-  //     const { done, value } = await reader.read();
-  //     if (done) break;
-  //     buffer += decoder.decode(value, { stream: true });
-  //     const lines = buffer.split('\n');
-  //     buffer = lines.pop() || '';
-  //     for (const line of lines) {
-  //       if (!line.startsWith('data: ')) continue;
-  //       const data = line.slice(6);
-  //       if (data === '[DONE]') continue;
-  //       try {
-  //         const parsed = JSON.parse(data);
-  //         if (parsed.text) {
-  //           streamingContent += parsed.text;
-  //           await tick();
-  //           scrollToBottom();
-  //         }
-  //       } catch {
-  //         /* ignore */
-  //       }
-  //     }
-  //   }
-  //   // const parsed = parseAssistantResponse(streamingContent);
+  //   // const response = await fetchApi('/api/generate-diagram-stream', {
+  //   //   method: 'POST',
+  //   //   body: JSON.stringify({ message: text }),
+  //   //   signal,
+  //   // });
+  //   // if (!response.ok) throw new Error(`Server error (${response.status})`);
+  //   // const reader = response.body?.getReader();
+  //   // if (!reader) throw new Error('No response body');
+  //   // const decoder = new TextDecoder();
+  //   // let buffer = '';
+  //   // while (true) {
+  //   //   const { done, value } = await reader.read();
+  //   //   if (done) break;
+  //   //   buffer += decoder.decode(value, { stream: true });
+  //   //   const lines = buffer.split('\n');
+  //   //   buffer = lines.pop() || '';
+  //   //   for (const line of lines) {
+  //   //     if (!line.startsWith('data: ')) continue;
+  //   //     const data = line.slice(6);
+  //   //     if (data === '[DONE]') continue;
+  //   //     try {
+  //   //       const parsed = JSON.parse(data);
+  //   //       if (parsed.text) {
+  //   //         streamingContent += parsed.text;
+  //   //         await tick();
+  //   //         scrollToBottom();
+  //   //       }
+  //   //     } catch {
+  //   //       /* ignore */
+  //   //     }
+  //   //   }
+  //   // }
+  //   // // const parsed = parseAssistantResponse(streamingContent);
   //   /*
   //   if (parsed.type === 'clarification' && parsed.clarification) {
   //     streaming = false;
@@ -320,6 +353,7 @@
   //     return;
   //   }
   //   */
+  //   /*
   //   messages = [
   //     ...messages,
   //     { role: 'assistant', content: streamingContent, timestamp: Date.now() },
