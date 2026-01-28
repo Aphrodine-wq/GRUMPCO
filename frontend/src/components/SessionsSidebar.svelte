@@ -4,6 +4,7 @@
   import type { Session } from '../types';
 
   let hoveredSessionId: string | null = $state(null);
+  let collapsed = $state(false);
 
   function handleNewSession() {
     sessionsStore.createSession([]);
@@ -35,6 +36,9 @@
   }
 
   function truncateText(text: string, maxLength: number = 50): string {
+    if (collapsed) {
+      return text.charAt(0).toUpperCase();
+    }
     if (text.length > maxLength) {
       return text.substring(0, maxLength) + '...';
     }
@@ -42,30 +46,35 @@
   }
 </script>
 
-<CollapsibleSidebar width={240} collapsedWidth={64}>
+<CollapsibleSidebar bind:collapsed width={240} collapsedWidth={64}>
   {#snippet header()}
     <Button variant="primary" size="md" fullWidth onclick={handleNewSession} class="new-chat-btn">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="lucide lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg
-      >
-      New Chat
+      <div class="btn-inner" class:collapsed>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg
+        >
+        {#if !collapsed}
+          <span>New Chat</span>
+        {/if}
+      </div>
     </Button>
   {/snippet}
 
-  <div class="sessions-list">
+  <div class="sessions-list" class:collapsed>
     {#each $sortedSessions as session (session.id)}
       <div
         class="session-item"
         class:active={session.id === $currentSession?.id}
+        class:collapsed
         onmouseenter={() => (hoveredSessionId = session.id)}
         onmouseleave={() => (hoveredSessionId = null)}
         onclick={() => handleSelectSession(session.id)}
@@ -74,16 +83,18 @@
         tabindex="0"
         title={session.name}
       >
-        <div class="session-content">
-          <div class="session-name">
+        <div class="session-content" class:collapsed>
+          <div class="session-name" class:collapsed>
             {truncateText(session.name)}
           </div>
-          <div class="session-meta">
-            {formatDate(session.updatedAt)} · {session.messages.length} msg
-          </div>
+          {#if !collapsed}
+            <div class="session-meta">
+              {formatDate(session.updatedAt)} · {session.messages.length} msg
+            </div>
+          {/if}
         </div>
 
-        {#if hoveredSessionId === session.id}
+        {#if hoveredSessionId === session.id && !collapsed}
           <button
             class="delete-btn"
             onclick={(e) => handleDeleteSession(e, session.id)}
@@ -116,15 +127,31 @@
     {/each}
 
     {#if $sortedSessions.length === 0}
-      <div class="empty-state">
-        <p>No sessions yet</p>
-        <p class="hint">Start a new chat above</p>
+      <div class="empty-state" class:collapsed>
+        {#if !collapsed}
+          <p>No sessions yet</p>
+          <p class="hint">Start a new chat above</p>
+        {:else}
+          <div class="empty-dot"></div>
+        {/if}
       </div>
     {/if}
   </div>
 </CollapsibleSidebar>
 
 <style>
+  .btn-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .btn-inner.collapsed {
+    gap: 0;
+  }
+
   .sessions-list {
     display: flex;
     flex-direction: column;
@@ -132,6 +159,12 @@
     padding: 8px;
     flex: 1;
     overflow-y: auto;
+    transition: padding 200ms ease;
+  }
+
+  .sessions-list.collapsed {
+    padding: 8px 4px;
+    align-items: center;
   }
 
   .session-item {
@@ -145,6 +178,16 @@
     cursor: pointer;
     text-align: left;
     transition: all 150ms ease;
+    min-height: 48px;
+  }
+
+  .session-item.collapsed {
+    justify-content: center;
+    padding: 8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    margin: 0 auto;
   }
 
   .session-item:hover {
@@ -159,12 +202,27 @@
     padding-left: 9px;
   }
 
+  .session-item.active.collapsed {
+    border-left: none;
+    background-color: var(--color-primary);
+    padding-left: 8px;
+  }
+
+  .session-item.active.collapsed .session-name {
+    color: white;
+  }
+
   .session-content {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .session-content.collapsed {
+    align-items: center;
+    justify-content: center;
   }
 
   .session-name {
@@ -174,6 +232,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .session-name.collapsed {
+    font-size: 16px;
+    font-weight: 600;
   }
 
   .session-meta {
@@ -210,6 +273,18 @@
     color: var(--color-text-muted);
   }
 
+  .empty-state.collapsed {
+    padding: 24px 0;
+  }
+
+  .empty-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: var(--color-border);
+    margin: 0 auto;
+  }
+
   .empty-state p {
     margin: 0;
     font-size: 13px;
@@ -222,7 +297,7 @@
 
   /* Custom scrollbar */
   .sessions-list::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
   }
 
   .sessions-list::-webkit-scrollbar-track {
@@ -230,11 +305,11 @@
   }
 
   .sessions-list::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
   }
 
   .sessions-list::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.1);
   }
 </style>
