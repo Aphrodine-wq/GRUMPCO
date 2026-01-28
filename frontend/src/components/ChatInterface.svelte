@@ -40,6 +40,7 @@
   import { fetchApi } from '../lib/api.js';
   import { settingsStore } from '../stores/settingsStore';
   import { colors } from '../lib/design-system/tokens/colors';
+  import { showSettings } from '../stores/uiStore';
   import type { Message, ContentBlock } from '../types';
 
   interface Props {
@@ -71,7 +72,12 @@
   let commandPaletteOpen = $state(false);
   let typingTimeout: ReturnType<typeof setTimeout> | null = null;
   let editingMessageIndex = $state<number | null>(null);
-  let showSettings = $state(false);
+  let isTyping = $state(false);
+  let lastError = $state(false);
+  let loadSessionModalOpen = $state(false);
+
+  // Use the global showSettings store
+  const showSettingsValue = $derived($showSettings);
 
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
     if (Array.isArray(content)) return content;

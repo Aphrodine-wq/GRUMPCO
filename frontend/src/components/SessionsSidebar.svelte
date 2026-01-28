@@ -1,6 +1,7 @@
 <script lang="ts">
   import { CollapsibleSidebar, Button } from '../lib/design-system';
   import { sessionsStore, sortedSessions, currentSession } from '../stores/sessionsStore';
+  import { showSettings } from '../stores/uiStore';
   import type { Session } from '../types';
 
   let hoveredSessionId: string | null = $state(null);
@@ -12,6 +13,7 @@
 
   function handleSelectSession(id: string) {
     sessionsStore.switchSession(id);
+    showSettings.set(false);
   }
 
   function handleDeleteSession(e: MouseEvent, id: string) {
@@ -19,6 +21,10 @@
     if (confirm('Delete this session?')) {
       sessionsStore.deleteSession(id);
     }
+  }
+
+  function openSettings() {
+    showSettings.set(true);
   }
 
   function formatDate(timestamp: number): string {
@@ -140,7 +146,7 @@
 
     {#snippet footer()}
       <div class="sidebar-footer-content" class:collapsed>
-        <button class="settings-btn" title="Settings" aria-label="Settings">
+        <button class="settings-btn" title="Settings" aria-label="Settings" onclick={openSettings}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="20"
