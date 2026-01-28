@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import ChatInterface from './components/ChatInterface.svelte';
-  import SessionsSidebar from './components/SessionsSidebar.svelte';
-  import Toast from './components/Toast.svelte';
-  import QuestionModal from './components/QuestionModal.svelte';
-  import PricingModal from './components/PricingModal.svelte';
+  // import ChatInterface from './components/ChatInterface.svelte';
+  // import SessionsSidebar from './components/SessionsSidebar.svelte';
+  // import Toast from './components/Toast.svelte';
+  // import QuestionModal from './components/QuestionModal.svelte';
+  // import PricingModal from './components/PricingModal.svelte';
   import { sessionsStore, currentSession } from './stores/sessionsStore';
   import { settingsStore } from './stores/settingsStore';
   import type { Message } from './types';
@@ -54,9 +54,14 @@
 </script>
 
 <div class="app">
-  <SessionsSidebar />
+  <!-- <SessionsSidebar /> -->
 
   <div class="main-content">
+    <div style="padding: 20px;">
+      <h1>App Skeleton Loaded</h1>
+      <p>Session ID: {$currentSession?.id ?? 'None'}</p>
+    </div>
+    <!--
     {#key $currentSession?.id ?? 'none'}
       <ChatInterface
         initialMessages={getInitialMessages()}
