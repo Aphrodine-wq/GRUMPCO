@@ -763,16 +763,16 @@
                   {:else}
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
+                      width="20"
+                      height="20"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      stroke-width="2"
+                      stroke-width="2.5"
                       stroke-linecap="round"
                       stroke-linejoin="round"
-                      class="lucide lucide-send"
-                      ><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg
+                      class="lucide lucide-arrow-up"
+                      ><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></svg
                     >
                   {/if}
                 </button>

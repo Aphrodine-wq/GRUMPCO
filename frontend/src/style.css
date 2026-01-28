@@ -56,8 +56,8 @@
   --shadow-glow: 0 4px 24px rgba(14, 165, 233, 0.3);
 
   /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+  --font-sans: "Patrick Hand", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "Fira Code", "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
 }
 
 *,
@@ -67,11 +67,16 @@
 }
 
 html,
-body {
+body,
+.app {
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
+  max-width: 1600px;
+  /* Center layout across the board */
+  margin: 0 auto;
+  /* Center layout across the board */
 }
 
 body {
