@@ -77,5 +77,16 @@ export interface Settings {
   guardRails?: GuardRailsSettings;
   /** Tier override from billing or admin; used by feature-flags resolution. */
   tier?: TierId;
+  /** UI Preferences synced from frontend */
+  preferences?: UserPreferences;
   updatedAt?: string;
+}
+
+export interface UserPreferences {
+  diagramStyle: 'minimal' | 'detailed' | 'comprehensive';
+  primaryTechStack: string[];
+  theme: 'light' | 'dark' | 'auto';
+  analyticsOptIn: boolean;
+  apiKey?: string;
+  setupComplete: boolean;
 }

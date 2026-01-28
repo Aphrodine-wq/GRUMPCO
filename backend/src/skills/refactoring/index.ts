@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import Anthropic from '@anthropic-ai/sdk';
 import { BaseSkill } from '../base/BaseSkill.js';
 import type {
   SkillManifest,
@@ -23,9 +24,17 @@ import type {
   RefactoringSuggestion,
   ExtractFunctionResult,
 } from './types.js';
+import logger from '../../middleware/logger.js';
+import { withResilience } from '../resilience.js';
 
 // Load manifest
 import manifest from './manifest.json' with { type: 'json' };
+
+// Initialize Anthropic client
+const apiKey = process.env.ANTHROPIC_API_KEY;
+const client = new Anthropic({
+  apiKey: apiKey || 'test-key',
+});
 
 class RefactoringSkill extends BaseSkill {
   manifest: SkillManifest = manifest as SkillManifest;
@@ -259,15 +268,121 @@ class RefactoringSkill extends BaseSkill {
     options: Record<string, unknown>,
     language: string
   ): Promise<RefactoringResult> {
-    // For now, return a placeholder result
-    // In production, this would use Claude for intelligent refactoring
+    try {
+      const template = templates[type] || templates.simplifyCode;
+      const prompt = template
+        .replace('{{language}}', language || 'code')
+        .replace('{{code}}', code);
+
+      // Call Claude API with resilience wrapper
+      const callClaude = withResilience(
+        async () => {
+          return await client.messages.create({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 4096,
+            system: REFACTORING_SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: prompt }],
+          });
+        },
+        'refactoring'
+      );
+
+      const response = await callClaude();
+
+      // Parse Claude's response
+      const responseText =
+        response.content[0].type === 'text' ? response.content[0].text : '';
+
+      return this.parseRefactoringResponse(responseText, code);
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          type,
+          codeLength: code.length,
+        },
+        'Refactoring failed'
+      );
+
+      // Return error result
+      return {
+        success: false,
+        original: code,
+        refactored: code,
+        changes: [],
+        explanation: 'Refactoring could not be completed. Please try again later.',
+        warnings: [
+          'The refactoring service encountered an error. Your original code is unchanged.',
+        ],
+      };
+    }
+  }
+
+  /**
+   * Parse Claude's refactoring response into structured RefactoringResult
+   */
+  private parseRefactoringResponse(
+    response: string,
+    originalCode: string
+  ): RefactoringResult {
+    const changes = [];
+    let refactoredCode = originalCode;
+    let explanation = '';
+
+    // Extract code blocks from response
+    const codeBlocks = response.match(/```(\w+)?\n([\s\S]*?)```/g) || [];
+
+    if (codeBlocks.length > 0) {
+      // Get the refactored code (usually the first code block)
+      const match = codeBlocks[0].match(/```(\w+)?\n([\s\S]*?)```/);
+      if (match) {
+        refactoredCode = match[2].trim();
+      }
+    }
+
+    // Extract explanation (text before first code block)
+    const firstCodeBlockIndex = response.indexOf('```');
+    if (firstCodeBlockIndex > 0) {
+      explanation = response.substring(0, firstCodeBlockIndex).trim();
+    } else {
+      explanation = response;
+    }
+
+    // Detect changes between original and refactored
+    if (refactoredCode !== originalCode) {
+      const originalLines = originalCode.split('\n');
+      const refactoredLines = refactoredCode.split('\n');
+
+      for (let i = 0; i < Math.min(originalLines.length, refactoredLines.length); i++) {
+        if (originalLines[i] !== refactoredLines[i]) {
+          changes.push({
+            startLine: i + 1,
+            endLine: i + 1,
+            description: `Modified line ${i + 1}`,
+          });
+        }
+      }
+
+      if (refactoredLines.length !== originalLines.length) {
+        changes.push({
+          startLine: Math.min(originalLines.length, refactoredLines.length),
+          endLine: Math.max(originalLines.length, refactoredLines.length),
+          description:
+            refactoredLines.length > originalLines.length
+              ? `Added ${refactoredLines.length - originalLines.length} lines`
+              : `Removed ${originalLines.length - refactoredLines.length} lines`,
+        });
+      }
+    }
 
     return {
-      success: true,
-      original: code,
-      refactored: code, // Would be transformed
-      changes: [],
-      explanation: `Applied ${type} refactoring to the code.`,
+      success: refactoredCode !== originalCode,
+      original: originalCode,
+      refactored: refactoredCode,
+      changes,
+      explanation:
+        explanation ||
+        'Code has been refactored according to best practices.',
     };
   }
 

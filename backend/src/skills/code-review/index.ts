@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import Anthropic from '@anthropic-ai/sdk';
 import { BaseSkill } from '../base/BaseSkill.js';
 import type {
   SkillManifest,
@@ -18,9 +19,17 @@ import type {
 import { CODE_REVIEW_SYSTEM_PROMPT, templates } from './prompts.js';
 import { definitions } from './tools.js';
 import type { ReviewType, ReviewRequest, ReviewResult } from './types.js';
+import logger from '../../middleware/logger.js';
+import { withResilience } from '../resilience.js';
 
 // Load manifest
 import manifest from './manifest.json' with { type: 'json' };
+
+// Initialize Anthropic client
+const apiKey = process.env.ANTHROPIC_API_KEY;
+const client = new Anthropic({
+  apiKey: apiKey || 'test-key',
+});
 
 class CodeReviewSkill extends BaseSkill {
   manifest: SkillManifest = manifest as SkillManifest;
@@ -228,17 +237,147 @@ class CodeReviewSkill extends BaseSkill {
       .replace('{{language}}', request.language || 'code')
       .replace('{{code}}', request.code);
 
-    // For now, return a structured placeholder
-    // In production, this would call Claude
-    return {
-      summary: `Code review of ${request.code.split('\n').length} lines of ${request.language || 'code'}`,
-      issues: [],
-      positives: ['Code is readable'],
-      metrics: {
-        linesOfCode: request.code.split('\n').length,
-        issueCount: { critical: 0, warning: 0, suggestion: 0, info: 0 },
-      },
+    try {
+      // Call Claude API with resilience wrapper
+      const callClaude = withResilience(
+        async () => {
+          return await client.messages.create({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 2048,
+            system: CODE_REVIEW_SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: prompt }],
+          });
+        },
+        'code-review'
+      );
+
+      const response = await callClaude();
+
+      // Parse Claude's response
+      const responseText =
+        response.content[0].type === 'text' ? response.content[0].text : '';
+
+      return this.parseReviewResponse(responseText, request.code);
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          reviewType: request.reviewType,
+          codeLength: request.code.length,
+        },
+        'Code review failed'
+      );
+
+      // Return empty review on error
+      return {
+        summary:
+          'Code review could not be completed. Please try again later.',
+        issues: [],
+        positives: [],
+        metrics: {
+          linesOfCode: request.code.split('\n').length,
+          issueCount: { critical: 0, warning: 0, suggestion: 0, info: 0 },
+        },
+      };
+    }
+  }
+
+  /**
+   * Parse Claude's review response into structured ReviewResult
+   */
+  private parseReviewResponse(response: string, code: string): ReviewResult {
+    const lines = response.split('\n');
+    const issues = [];
+    const positives = [];
+    let summary = '';
+    let currentSection = '';
+    let metrics = {
+      linesOfCode: code.split('\n').length,
+      issueCount: { critical: 0, warning: 0, suggestion: 0, info: 0 },
     };
+
+    for (const line of lines) {
+      if (line.includes('Summary') || line.includes('Overview')) {
+        currentSection = 'summary';
+      } else if (line.includes('Issues') || line.includes('Problems')) {
+        currentSection = 'issues';
+      } else if (line.includes('Positives') || line.includes('Strengths')) {
+        currentSection = 'positives';
+      } else if (line.includes('Metrics') || line.includes('Complexity')) {
+        currentSection = 'metrics';
+      } else if (
+        line.trim() &&
+        !line.startsWith('#') &&
+        !line.startsWith('*') &&
+        !line.startsWith('-')
+      ) {
+        if (currentSection === 'summary' && !summary) {
+          summary = line.trim();
+        } else if (currentSection === 'issues' && line.trim().startsWith('- ')) {
+          const issueText = line.trim().substring(2);
+          const severity = this.detectSeverity(issueText);
+
+          issues.push({
+            severity,
+            message: issueText,
+            line: 0,
+          });
+
+          metrics.issueCount[severity]++;
+        } else if (
+          currentSection === 'positives' &&
+          line.trim().startsWith('- ')
+        ) {
+          positives.push(line.trim().substring(2));
+        }
+      }
+    }
+
+    if (!summary) {
+      summary = `Code review completed. Found ${issues.length} issues.`;
+    }
+
+    return {
+      summary,
+      issues,
+      positives: positives.length > 0 ? positives : ['Code follows general best practices'],
+      metrics,
+    };
+  }
+
+  /**
+   * Detect issue severity from issue text
+   */
+  private detectSeverity(
+    text: string
+  ): 'critical' | 'warning' | 'suggestion' | 'info' {
+    const lower = text.toLowerCase();
+
+    if (
+      lower.includes('critical') ||
+      lower.includes('error') ||
+      lower.includes('security') ||
+      lower.includes('vulnerability') ||
+      lower.includes('bug')
+    ) {
+      return 'critical';
+    } else if (
+      lower.includes('warning') ||
+      lower.includes('problem') ||
+      lower.includes('issue') ||
+      lower.includes('concern')
+    ) {
+      return 'warning';
+    } else if (
+      lower.includes('suggestion') ||
+      lower.includes('consider') ||
+      lower.includes('might') ||
+      lower.includes('could')
+    ) {
+      return 'suggestion';
+    }
+
+    return 'info';
   }
 
   /**

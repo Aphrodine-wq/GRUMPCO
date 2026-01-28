@@ -299,26 +299,47 @@ export async function applyRateLimiting(): Promise<RateLimitRequestHandler> {
 
 /**
  * Redis-based rate limiter (for multi-instance deployments)
- * Note: Requires ioredis package and Redis instance
+ * Uses Redis store if available and configured, falls back to in-memory
  */
 export async function createRedisRateLimiter(
   config: RateLimitConfig,
   redisClient?: any
 ): Promise<RateLimitRequestHandler | null> {
-  if (!redisClient) {
-    // Fallback to in-memory if Redis not available
-    logger.warn('Redis not available, using in-memory rate limiting');
-    return createRateLimiter(config);
-  }
-
   try {
-    // Use express-rate-limit with Redis store
-    // This would require express-rate-limit/redis-store or similar
-    // For now, return in-memory limiter
-    logger.info('Redis rate limiting not fully implemented, using in-memory');
-    return createRateLimiter(config);
+    // Try to get Redis store if configured
+    const store = await getRedisStoreIfConfigured();
+
+    if (store) {
+      // Redis is available - use it for distributed rate limiting
+      logger.info(
+        { windowMs: config.windowMs, max: config.max },
+        'Creating Redis-backed rate limiter for multi-instance consistency'
+      );
+
+      return rateLimit({
+        store,
+        windowMs: config.windowMs,
+        max: config.max,
+        message: config.message,
+        skipSuccessfulRequests: config.skipSuccessfulRequests ?? false,
+        skipFailedRequests: config.skipFailedRequests ?? false,
+        standardHeaders: true,
+        legacyHeaders: false,
+      });
+    } else {
+      // Redis not available - use in-memory limiter
+      // This is safe for single-instance deployments, but will not share limits across instances
+      logger.info(
+        { windowMs: config.windowMs, max: config.max },
+        'Using in-memory rate limiter (configure REDIS_HOST for multi-instance deployments)'
+      );
+      return createRateLimiter(config);
+    }
   } catch (error) {
-    logger.error({ error: (error as Error).message }, 'Failed to create Redis rate limiter');
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      'Failed to create Redis rate limiter, falling back to in-memory'
+    );
     return createRateLimiter(config);
   }
 }

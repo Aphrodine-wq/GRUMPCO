@@ -44,6 +44,7 @@ import { skillRegistry } from './skills/index.js';
 import { startJobWorker, stopJobWorker } from './services/jobQueue.js';
 import { startScheduledAgentsWorker, stopScheduledAgentsWorker, loadRepeatableJobsFromDb } from './services/scheduledAgentsQueue.js';
 import { apiAuthMiddleware } from './middleware/authMiddleware.js';
+import { usageTrackingMiddleware } from './middleware/usageTrackingMiddleware.js';
 import type { Server } from 'http';
 
 const app: Express = express();

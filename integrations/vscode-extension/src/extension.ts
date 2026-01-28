@@ -143,7 +143,10 @@ class ChatViewProvider implements vscode.WebviewViewProvider {
             try {
               const j = JSON.parse(line.slice(6));
               if (j.type === 'text' && j.text) webview.postMessage({ type: 'append', text: j.text });
-            } catch (_) {}
+            } catch (err) {
+              // Invalid JSON in SSE stream - log and continue processing
+              console.debug('Failed to parse SSE event:', line.slice(0, 100));
+            }
           }
         }
       }

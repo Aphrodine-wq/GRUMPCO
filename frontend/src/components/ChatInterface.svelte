@@ -568,7 +568,9 @@
     const w = get(workspaceStore);
     if (w) workspaceInput = w;
     document.addEventListener('keydown', handleGlobalKeydown);
-    const handleOpenShipMode = () => { chatMode = 'ship'; };
+    const handleOpenShipMode = () => {
+      chatMode = 'ship';
+    };
     window.addEventListener('open-ship-mode', handleOpenShipMode);
     return () => {
       document.removeEventListener('keydown', handleGlobalKeydown);
@@ -583,7 +585,7 @@
   style:--bg-secondary={colors.background.secondary}
 >
   {#if showSettings}
-    <SettingsScreen onBack={() => (showSettings = false)} />
+    <SettingsScreen onBack={() => showSettings.set(false)} />
   {:else}
     <div class="chat-root">
       <div class="chat-viewport">
@@ -592,135 +594,161 @@
             <ShipMode />
           </div>
         {:else}
-        <div class="messages-scroll" bind:this={messagesRef}>
-          <div class="messages-inner">
-            {#if messages.length <= 1 && !streaming}
+          <div class="messages-scroll" bind:this={messagesRef}>
+            <div class="messages-inner">
+              {#if messages.length <= 1 && !streaming}
                 <div class="empty-state">
                   <GRumpBlob size="lg" state="idle" animated={true} />
                   <h1 class="empty-title">What are we building?</h1>
                 </div>
-            {/if}
+              {/if}
 
-            {#each messages as msg, index}
-              <div class="message-wrapper {msg.role}">
-                <div class="message-avatar">
-                  {#if msg.role === 'user'}
-                    <div class="avatar-circle user">U</div>
-                  {:else}
-                    <div class="avatar-circle assistant">AI</div>
-                  {/if}
-                </div>
-                <div class="message-content-container">
-                  <div class="message-meta">
-                    <span class="message-role">{msg.role === 'user' ? 'You' : 'G-Rump'}</span>
-                    {#if msg.timestamp}<span class="message-time"
-                        >{formatTimestamp(msg.timestamp)}</span
-                      >{/if}
+              {#each messages as msg, index}
+                <div class="message-wrapper {msg.role}">
+                  <div class="message-avatar">
+                    {#if msg.role === 'user'}
+                      <div class="avatar-circle user">U</div>
+                    {:else}
+                      <div class="avatar-circle assistant">AI</div>
+                    {/if}
                   </div>
-                  <div class="message-bubble">
-                    {#if typeof msg.content === 'string'}
-                      {#each parseMessageContent(msg.content) as block, bIdx}
-                        {#if block.type === 'text'}
-                          <div class="text-block">{block.content}</div>
-                        {:else if block.type === 'mermaid'}
-                          <div class="diagram-card" use:setupDiagramRef={{ index, blockIdx: bIdx }}>
-                            <div class="diagram-header">
-                              <Badge variant="info">Architecture</Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onclick={() => exportSvg(index, bIdx)}>Export</Button
-                              >
+                  <div class="message-content-container">
+                    <div class="message-meta">
+                      <span class="message-role">{msg.role === 'user' ? 'You' : 'G-Rump'}</span>
+                      {#if msg.timestamp}<span class="message-time"
+                          >{formatTimestamp(msg.timestamp)}</span
+                        >{/if}
+                    </div>
+                    <div class="message-bubble">
+                      {#if typeof msg.content === 'string'}
+                        {#each parseMessageContent(msg.content) as block, bIdx}
+                          {#if block.type === 'text'}
+                            <div class="text-block">{block.content}</div>
+                          {:else if block.type === 'mermaid'}
+                            <div
+                              class="diagram-card"
+                              use:setupDiagramRef={{ index, blockIdx: bIdx }}
+                            >
+                              <div class="diagram-header">
+                                <Badge variant="info">Architecture</Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onclick={() => exportSvg(index, bIdx)}>Export</Button
+                                >
+                              </div>
+                              <DiagramRenderer
+                                code={block.content}
+                                on:generate-code={(e) =>
+                                  handleMermaidToCode({
+                                    mermaidCode: e.detail.mermaidCode,
+                                    framework: 'react',
+                                    language: 'typescript',
+                                  })}
+                              />
                             </div>
-                            <DiagramRenderer
-                              code={block.content}
-                              on:generate-code={(e) =>
-                                handleMermaidToCode({
-                                  mermaidCode: e.detail.mermaidCode,
-                                  framework: 'react',
-                                  language: 'typescript',
-                                })}
-                            />
-                          </div>
-                        {/if}
-                      {/each}
-                    {:else}
-                      {#each msg.content as block}
-                        {#if block.type === 'text'}
-                          <div class="text-block">{block.content}</div>
-                        {:else if block.type === 'tool_call'}
-                          <ToolCallCard toolCall={block} />
-                        {:else if block.type === 'tool_result'}
-                          <ToolResultCard toolResult={block} />
-                        {/if}
-                      {/each}
-                    {/if}
+                          {/if}
+                        {/each}
+                      {:else}
+                        {#each msg.content as block}
+                          {#if block.type === 'text'}
+                            <div class="text-block">{block.content}</div>
+                          {:else if block.type === 'tool_call'}
+                            <ToolCallCard toolCall={block} />
+                          {:else if block.type === 'tool_result'}
+                            <ToolResultCard toolResult={block} />
+                          {/if}
+                        {/each}
+                      {/if}
+                    </div>
                   </div>
                 </div>
-              </div>
-            {/each}
+              {/each}
 
-            {#if streaming}
-              <div class="message-wrapper assistant streaming">
-                <div class="message-avatar">
-                  <div class="avatar-circle assistant">AI</div>
-                </div>
-                <div class="message-content-container">
-                  <div class="message-meta">
-                    <span class="message-role">G-Rump</span>
-                    <span class="thinking-indicator">Thinking...</span>
+              {#if streaming}
+                <div class="message-wrapper assistant streaming">
+                  <div class="message-avatar">
+                    <div class="avatar-circle assistant">AI</div>
                   </div>
-                  <div class="message-bubble">
-                    {#if streamingBlocks.length > 0}
-                      {#each streamingBlocks as block}
-                        {#if block.type === 'text'}
-                          <div class="text-block">{block.content}</div>
-                        {:else if block.type === 'tool_call'}
-                          <ToolCallCard toolCall={block} />
-                        {:else if block.type === 'tool_result'}
-                          <ToolResultCard toolResult={block} />
-                        {/if}
-                      {/each}
-                    {:else}
-                      <div class="text-block">{streamingContent || '...'}</div>
-                    {/if}
+                  <div class="message-content-container">
+                    <div class="message-meta">
+                      <span class="message-role">G-Rump</span>
+                      <span class="thinking-indicator">Thinking...</span>
+                    </div>
+                    <div class="message-bubble">
+                      {#if streamingBlocks.length > 0}
+                        {#each streamingBlocks as block}
+                          {#if block.type === 'text'}
+                            <div class="text-block">{block.content}</div>
+                          {:else if block.type === 'tool_call'}
+                            <ToolCallCard toolCall={block} />
+                          {:else if block.type === 'tool_result'}
+                            <ToolResultCard toolResult={block} />
+                          {/if}
+                        {/each}
+                      {:else}
+                        <div class="text-block">{streamingContent || '...'}</div>
+                      {/if}
+                    </div>
                   </div>
                 </div>
-              </div>
-            {/if}
+              {/if}
+            </div>
           </div>
-        </div>
         {/if}
 
         <div class="chat-controls">
           <div class="controls-inner">
             {#if chatMode !== 'ship'}
-            <form
-              class="input-container"
-              onsubmit={(e) => {
-                e.preventDefault();
-                sendMessage();
-              }}
-            >
-              <span class="input-prompt">&gt;</span>
-              <div class="input-wrapper">
-                <input
-                  bind:value={inputText}
-                  bind:this={inputRef}
-                  oninput={handleInputChange}
-                  placeholder="Describe what you want to build..."
-                  class="message-input"
-                  disabled={streaming}
-                />
-              </div>
-              <button class="send-button" type="submit" disabled={!inputText.trim() || streaming}>
-                {#if streaming}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                {:else}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-                {/if}
-              </button>
-            </form>
+              <form
+                class="input-container"
+                onsubmit={(e) => {
+                  e.preventDefault();
+                  sendMessage();
+                }}
+              >
+                <span class="input-prompt">&gt;</span>
+                <div class="input-wrapper">
+                  <input
+                    bind:value={inputText}
+                    bind:this={inputRef}
+                    oninput={handleInputChange}
+                    placeholder="Describe what you want to build..."
+                    class="message-input"
+                    disabled={streaming}
+                  />
+                </div>
+                <button class="send-button" type="submit" disabled={!inputText.trim() || streaming}>
+                  {#if streaming}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="lucide lucide-x"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg
+                    >
+                  {:else}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="lucide lucide-send"
+                      ><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg
+                    >
+                  {/if}
+                </button>
+              </form>
             {/if}
 
             <div class="mode-selector">
@@ -763,7 +791,9 @@
               <Button
                 variant={chatMode === 'ship' ? 'primary' : 'secondary'}
                 size="sm"
-                onclick={() => { chatMode = 'ship'; }}>SHIP</Button
+                onclick={() => {
+                  chatMode = 'ship';
+                }}>SHIP</Button
               >
             </div>
 
@@ -1025,11 +1055,15 @@
     padding: 16px 20px;
     transition: all 200ms ease;
     width: 100%;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
   }
 
   .input-container:focus-within {
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
     border-color: #cbd5e1; /* Slate-300 */
     transform: translateY(-1px);
   }

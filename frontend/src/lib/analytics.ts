@@ -17,14 +17,45 @@ export function track(eventName: string, properties?: Record<string, unknown>): 
     properties,
     timestamp: Date.now()
   };
-  
+
   events.push(event);
-  
-  // Log to console for now (replace with Posthog/Mixpanel later)
-  console.log('[Analytics]', eventName, properties || '');
-  
-  // Could send to backend:
-  // sendToBackend(event);
+
+  // In development, log to console
+  if (import.meta.env.DEV) {
+    console.log('[Analytics]', eventName, properties || '');
+  }
+
+  // Send to backend for persistence and analytics
+  sendToBackend(event).catch(() => {
+    // Fail silently - analytics failures shouldn't break the app
+  });
+}
+
+/**
+ * Send analytics event to backend for persistence
+ */
+async function sendToBackend(event: AnalyticsEvent): Promise<void> {
+  try {
+    // Only send if we have a backend to send to
+    if (typeof window === 'undefined') return;
+
+    const response = await fetch('/api/analytics/events', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(event),
+    });
+
+    if (!response.ok && import.meta.env.DEV) {
+      console.warn(`[Analytics] Failed to send event: ${response.status}`);
+    }
+  } catch (error) {
+    // Silently fail - don't break the app for analytics errors
+    if (import.meta.env.DEV) {
+      console.warn('[Analytics] Failed to send event:', error);
+    }
+  }
 }
 
 export function trackScreenView(screen: string): void {

@@ -505,6 +505,135 @@ class DatabaseService {
     stmt.run(userKey, JSON.stringify(payload), updatedAt);
   }
 
+  // ========== Usage Records ==========
+
+  /**
+   * Save a usage record for API tracking
+   */
+  async saveUsageRecord(record: {
+    id: string;
+    userId: string;
+    endpoint: string;
+    method: string;
+    model?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+    latencyMs?: number;
+    success: boolean;
+  }): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const start = process.hrtime.bigint();
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO usage_records
+        (id, user_id, endpoint, method, model, input_tokens, output_tokens, latency_ms, success, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      `);
+
+      stmt.run(
+        record.id,
+        record.userId,
+        record.endpoint,
+        record.method,
+        record.model || null,
+        record.inputTokens || null,
+        record.outputTokens || null,
+        record.latencyMs || null,
+        record.success ? 1 : 0
+      );
+
+      const duration = Number(process.hrtime.bigint() - start) / 1e9;
+      recordDbOperation('saveUsageRecord', 'usage_records', duration, 'success');
+    } catch (error) {
+      const duration = Number(process.hrtime.bigint() - start) / 1e9;
+      recordDbOperation('saveUsageRecord', 'usage_records', duration, 'error');
+      throw error;
+    }
+  }
+
+  /**
+   * Get usage records for a user within a date range
+   */
+  async getUsageForUser(
+    userId: string,
+    fromDate: Date,
+    toDate: Date
+  ): Promise<any[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const stmt = this.db.prepare(`
+      SELECT * FROM usage_records
+      WHERE user_id = ? AND created_at >= ? AND created_at <= ?
+      ORDER BY created_at DESC
+    `);
+
+    return stmt.all(userId, fromDate.toISOString(), toDate.toISOString()) as any[];
+  }
+
+  /**
+   * Get monthly token usage for a user
+   */
+  async getMonthlyTokenUsage(userId: string): Promise<{ input: number; output: number }> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const stmt = this.db.prepare(`
+      SELECT
+        COALESCE(SUM(input_tokens), 0) as input,
+        COALESCE(SUM(output_tokens), 0) as output
+      FROM usage_records
+      WHERE user_id = ? AND created_at >= ?
+    `);
+
+    const result = stmt.get(userId, startOfMonth.toISOString()) as any;
+    return {
+      input: result?.input || 0,
+      output: result?.output || 0,
+    };
+  }
+
+  /**
+   * Get API usage summary
+   */
+  async getUsageSummary(userId: string): Promise<{
+    totalRequests: number;
+    successfulRequests: number;
+    failedRequests: number;
+    monthlyInputTokens: number;
+    monthlyOutputTokens: number;
+    avgLatencyMs: number;
+  }> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const stmt = this.db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful,
+        SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failed,
+        COALESCE(SUM(input_tokens), 0) as input_tokens,
+        COALESCE(SUM(output_tokens), 0) as output_tokens,
+        COALESCE(ROUND(AVG(latency_ms)), 0) as avg_latency
+      FROM usage_records
+      WHERE user_id = ? AND created_at >= ?
+    `);
+
+    const result = stmt.get(userId, startOfMonth.toISOString()) as any;
+    return {
+      totalRequests: result?.total || 0,
+      successfulRequests: result?.successful || 0,
+      failedRequests: result?.failed || 0,
+      monthlyInputTokens: result?.input_tokens || 0,
+      monthlyOutputTokens: result?.output_tokens || 0,
+      avgLatencyMs: result?.avg_latency || 0,
+    };
+  }
+
   /**
    * Transaction support
    */

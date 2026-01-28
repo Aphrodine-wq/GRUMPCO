@@ -67,9 +67,7 @@
       };
 
       const newSession = await shipStore.start(request);
-      await shipStore.executeStream(newSession.id, (data) => {
-        console.log('SHIP update:', data);
-      });
+      await shipStore.executeStream(newSession.id);
     } catch (err) {
       console.error('Failed to start SHIP mode:', err);
     }
@@ -85,9 +83,7 @@
   async function handleResume() {
     if (!session?.id || !canResume) return;
     try {
-      await shipStore.executeStream(session.id, (data) => {
-        console.log('SHIP update:', data);
-      }, { resumeFromPhase: phase });
+      await shipStore.executeStream(session.id, undefined, { resumeFromPhase: phase });
     } catch (err) {
       console.error('Failed to resume SHIP:', err);
     }

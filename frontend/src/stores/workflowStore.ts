@@ -315,7 +315,10 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
             stopCodegenEventSource();
             stopStatusPolling();
           }
-        } catch (_) {}
+        } catch (err) {
+          // Failed to parse codegen event from stream - don't break event handling
+          console.debug('Failed to parse codegen event:', err instanceof Error ? err.message : String(err));
+        }
       };
       es.onerror = () => stopCodegenEventSource();
     }
