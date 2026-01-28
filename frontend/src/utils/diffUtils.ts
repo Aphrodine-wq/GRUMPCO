@@ -1,11 +1,14 @@
 /**
  * Diff Utilities
- * Functions for computing and formatting code diffs
+ * MOCKED IMPLEMENTATION
  */
 
-import * as Diff from 'diff';
-const { diffLines, diffWords } = Diff;
-export type Change = Diff.Change;
+export type Change = {
+  value: string;
+  count?: number;
+  added?: boolean;
+  removed?: boolean;
+};
 
 export interface DiffLine {
   lineNumber: number;
@@ -23,12 +26,7 @@ export interface FileDiff {
   operations?: Array<{ type: string; lineStart: number; lineEnd?: number }>;
 }
 
-/**
- * Compute line-by-line diff between two code strings
- */
 export function computeLineDiff(before: string, after: string): DiffLine[] {
-  const beforeLines = before.split('\n');
-  const afterLines = after.split('\n');
   const changes = diffLines(before, after);
 
   const result: DiffLine[] = [];
