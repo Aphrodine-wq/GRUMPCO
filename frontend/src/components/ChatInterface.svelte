@@ -586,6 +586,30 @@
 
         <div class="chat-controls">
           <div class="controls-inner">
+            <form class="input-container" onsubmit={(e) => { e.preventDefault(); sendMessage(); }}>
+              <span class="input-prompt">&gt;</span>
+              <div class="input-wrapper">
+                <input 
+                  bind:value={inputText}
+                  bind:this={inputRef}
+                  oninput={handleInputChange}
+                  placeholder="Describe what you want to build..."
+                  class="message-input"
+                  disabled={streaming}
+                />
+              </div>
+              <button class="send-button" type="submit" disabled={!inputText.trim() || streaming}>
+                {#if streaming}
+                  <div class="stop-icon" onclick={cancelGeneration}></div>
+                {:else}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                {/if}
+              </button>
+            </form>
+
             <div class="mode-selector">
               <Button 
                 variant={$chatModeStore === 'design' ? 'primary' : 'secondary'} 
@@ -613,26 +637,6 @@
                 onclick={() => chatModeStore.setMode('argument')}
               >Argument</Button>
             </div>
-
-            <form class="input-area" onsubmit={(e) => { e.preventDefault(); sendMessage(); }}>
-              <div class="input-field-wrapper">
-                <input 
-                  bind:value={inputText}
-                  bind:this={inputRef}
-                  oninput={handleInputChange}
-                  placeholder="Ask G-Rump anything..."
-                  class="custom-input"
-                  disabled={streaming}
-                />
-                <div class="input-actions">
-                  {#if streaming}
-                    <Button variant="danger" size="sm" onclick={cancelGeneration}>Stop</Button>
-                  {:else}
-                    <Button variant="primary" size="sm" type="submit" disabled={!inputText.trim()}>Send</Button>
-                  {/if}
-                </div>
-              </div>
-            </form>
 
             {#if $chatModeStore === 'code' || $chatModeStore === 'argument'}
               <div class="workspace-bar">
@@ -881,35 +885,82 @@
     justify-content: center;
   }
 
-  .input-area {
-    width: 100%;
-  }
-
-  .input-field-wrapper {
+  .input-container {
     display: flex;
     align-items: center;
-    gap: 8px;
-    background-color: #f9fafb;
-    border: 1px solid var(--border-color);
+    gap: 12px;
+    background-color: #f0f7ff;
+    border: 1px solid #dbeafe;
     border-radius: 12px;
-    padding: 8px 12px;
+    padding: 12px 16px;
+    transition: all 150ms;
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .input-container:focus-within {
+    border-color: #3b82f6;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  }
+
+  .input-prompt {
+    font-size: 18px;
+    font-weight: 600;
+    color: #3b82f6;
+    user-select: none;
+  }
+
+  .input-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  .message-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    color: #1e293b;
+    outline: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+
+  .message-input::placeholder {
+    color: #94a3b8;
+  }
+
+  .send-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background-color: #3b82f6;
+    color: white;
+    cursor: pointer;
     transition: all 150ms;
   }
 
-  .input-field-wrapper:focus-within {
-    border-color: #2563eb;
-    background-color: white;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  .send-button:hover:not(:disabled) {
+    background-color: #2563eb;
+    transform: translateY(-1px);
   }
 
-  .custom-input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    padding: 8px 4px;
-    font-size: 15px;
-    outline: none;
-    color: #18181b;
+  .send-button:disabled {
+    background-color: #cbd5e1;
+    cursor: not-allowed;
+  }
+
+  .stop-icon {
+    width: 12px;
+    height: 12px;
+    background-color: white;
+    border-radius: 2px;
   }
 
   .workspace-bar {
