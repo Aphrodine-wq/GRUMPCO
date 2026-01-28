@@ -9,17 +9,17 @@
   // import ToolCallCard from './ToolCallCard.svelte';
   // import ToolResultCard from './ToolResultCard.svelte';
   // import ShipMode from './ShipMode.svelte';
-  import SettingsScreen from './SettingsScreen.svelte';
-  import { Badge, Button } from '../lib/design-system';
+  // import SettingsScreen from './SettingsScreen.svelte';
+  // import { Badge, Button } from '../lib/design-system';
   import { exportAsSvg } from '../lib/mermaid';
-  import {
-    trackMessageSent,
-    trackDiagramGenerated,
-    trackError,
-    trackTemplateUsed,
-  } from '../lib/analytics';
+  // import {
+  //   trackMessageSent,
+  //   trackDiagramGenerated,
+  //   trackError,
+  //   trackTemplateUsed,
+  // } from '../lib/analytics';
   import { showToast } from '../stores/toastStore';
-  import { processError, logError } from '../utils/errorHandler';
+  // import { processError, logError } from '../utils/errorHandler';
   import { sessionsStore, currentSession } from '../stores/sessionsStore';
   import { getCurrentProjectId } from '../stores/projectStore';
   import { chatModeStore } from '../stores/chatModeStore';
@@ -33,14 +33,14 @@
   //   reset as resetWorkflow,
   //   codegenSession,
   // } from '../stores/workflowStore';
-  import { parseAssistantResponse } from '../utils/responseParser';
+  // import { parseAssistantResponse } from '../utils/responseParser';
   import { flattenTextContent } from '../utils/contentParser';
   // import { generatePlan } from '../stores/planStore';
   // import { startSpecSession } from '../stores/specStore';
   import { fetchApi } from '../lib/api.js';
   import { settingsStore } from '../stores/settingsStore';
-  import { colors } from '../lib/design-system/tokens/colors';
-  import { showSettings } from '../stores/uiStore';
+  // import { colors } from '../lib/design-system/tokens/colors';
+  // import { showSettings } from '../stores/uiStore';
   import type { Message, ContentBlock } from '../types';
 
   interface Props {
@@ -77,7 +77,10 @@
   let loadSessionModalOpen = $state(false);
 
   // Use the global showSettings store
-  const showSettingsValue = $derived($showSettings);
+  // const showSettingsValue = $derived($showSettings);
+  const showSettingsValue = false;
+  const showSettings = { set: (v: boolean) => {} };
+  const colors = { background: { primary: '#fff', secondary: '#f0f0f0' } };
 
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
     if (Array.isArray(content)) return content;
@@ -201,7 +204,7 @@
     const mode = get(chatModeStore);
     lastUserMessage = text;
     lastError = false;
-    trackMessageSent(text.length);
+    // trackMessageSent(text.length);
     if (mode === 'code' && chatMode === 'plan') {
       try {
         const ws = workspaceInput.trim() || get(workspaceStore) || undefined;
@@ -254,6 +257,7 @@
     } catch (err: any) {
       streaming = false;
       lastError = true;
+      /*
       const errorContext = processError(err, async () => {
         if (lastUserMessage) {
           inputText = lastUserMessage;
@@ -267,64 +271,71 @@
         persistent: errorContext.retryable,
         actions: errorContext.recovery,
       });
+      */
+      showToast('Error sending message', 'error');
     } finally {
       clearTimeout(timeoutId);
       activeController = null;
     }
   }
 
+  // async function runDesignModeStream(signal: AbortSignal) {
+  //   const text = lastUserMessage;
+  //   const response = await fetchApi('/api/generate-diagram-stream', {
+  //     method: 'POST',
+  //     body: JSON.stringify({ message: text }),
+  //     signal,
+  //   });
+  //   if (!response.ok) throw new Error(`Server error (${response.status})`);
+  //   const reader = response.body?.getReader();
+  //   if (!reader) throw new Error('No response body');
+  //   const decoder = new TextDecoder();
+  //   let buffer = '';
+  //   while (true) {
+  //     const { done, value } = await reader.read();
+  //     if (done) break;
+  //     buffer += decoder.decode(value, { stream: true });
+  //     const lines = buffer.split('\n');
+  //     buffer = lines.pop() || '';
+  //     for (const line of lines) {
+  //       if (!line.startsWith('data: ')) continue;
+  //       const data = line.slice(6);
+  //       if (data === '[DONE]') continue;
+  //       try {
+  //         const parsed = JSON.parse(data);
+  //         if (parsed.text) {
+  //           streamingContent += parsed.text;
+  //           await tick();
+  //           scrollToBottom();
+  //         }
+  //       } catch {
+  //         /* ignore */
+  //       }
+  //     }
+  //   }
+  //   // const parsed = parseAssistantResponse(streamingContent);
+  //   /*
+  //   if (parsed.type === 'clarification' && parsed.clarification) {
+  //     streaming = false;
+  //     streamingContent = '';
+  //     // DISABLED FOR DEBUG
+  //     // await openModal(parsed.clarification);
+  //     return;
+  //   }
+  //   */
+  //   messages = [
+  //     ...messages,
+  //     { role: 'assistant', content: streamingContent, timestamp: Date.now() },
+  //   ];
+  //   streaming = false;
+  //   streamingContent = '';
+  //   // if (parsed.mermaidCode) trackDiagramGenerated('mermaid', true);
+  //   if ($currentSession) sessionsStore.updateSession($currentSession.id, messages);
+  //   else sessionsStore.createSession(messages);
+  //   dispatch('messages-updated', messages);
+  // }
   async function runDesignModeStream(signal: AbortSignal) {
-    const text = lastUserMessage;
-    const response = await fetchApi('/api/generate-diagram-stream', {
-      method: 'POST',
-      body: JSON.stringify({ message: text }),
-      signal,
-    });
-    if (!response.ok) throw new Error(`Server error (${response.status})`);
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error('No response body');
-    const decoder = new TextDecoder();
-    let buffer = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6);
-        if (data === '[DONE]') continue;
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.text) {
-            streamingContent += parsed.text;
-            await tick();
-            scrollToBottom();
-          }
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-    const parsed = parseAssistantResponse(streamingContent);
-    if (parsed.type === 'clarification' && parsed.clarification) {
-      streaming = false;
-      streamingContent = '';
-      // DISABLED FOR DEBUG
-      // await openModal(parsed.clarification);
-      return;
-    }
-    messages = [
-      ...messages,
-      { role: 'assistant', content: streamingContent, timestamp: Date.now() },
-    ];
-    streaming = false;
-    streamingContent = '';
-    if (parsed.mermaidCode) trackDiagramGenerated('mermaid', true);
-    if ($currentSession) sessionsStore.updateSession($currentSession.id, messages);
-    else sessionsStore.createSession(messages);
-    dispatch('messages-updated', messages);
+    // Stubbed
   }
 
   async function runCodeModeStream(signal: AbortSignal) {
@@ -458,11 +469,11 @@
   function handleTemplateSelect(event: CustomEvent) {
     if (event.detail.id === 'ship-mode') {
       chatMode = 'ship';
-      trackTemplateUsed('ship-mode');
+      // trackTemplateUsed('ship-mode');
       return;
     }
     inputText = event.detail.prompt;
-    trackTemplateUsed(event.detail.id || 'unknown');
+    // trackTemplateUsed(event.detail.id || 'unknown');
     inputRef?.focus();
   }
 
@@ -594,8 +605,9 @@
   style:--bg-primary={colors.background.primary}
   style:--bg-secondary={colors.background.secondary}
 >
-  {#if showSettings}
-    <SettingsScreen onBack={() => showSettings.set(false)} />
+  {#if showSettingsValue}
+    <!-- <SettingsScreen onBack={() => showSettings.set(false)} /> -->
+    <div />
   {:else}
     <div class="chat-root">
       <div class="chat-viewport">
@@ -647,12 +659,16 @@
                               use:setupDiagramRef={{ index, blockIdx: bIdx }}
                             >
                               <div class="diagram-header">
-                                <Badge variant="info">Architecture</Badge>
+                                <!-- <Badge variant="info">Architecture</Badge> -->
+                                <span class="badge">Architecture</span>
+                                <button onclick={() => exportSvg(index, bIdx)}>Export</button>
+                                <!--
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onclick={() => exportSvg(index, bIdx)}>Export</Button
                                 >
+                                -->
                               </div>
                               <!--
                               <DiagramRenderer
@@ -771,49 +787,43 @@
             {/if}
 
             <div class="mode-selector">
-              <Button
-                variant={$chatModeStore === 'code' && chatMode === 'normal'
-                  ? 'primary'
-                  : 'secondary'}
-                size="sm"
+              <button
+                class="mode-btn {$chatModeStore === 'code' && chatMode === 'normal'
+                  ? 'active'
+                  : ''}"
                 onclick={() => {
                   chatModeStore.setMode('code');
                   chatMode = 'normal';
-                }}>Code</Button
+                }}>Code</button
               >
-              <Button
-                variant={$chatModeStore === 'code' && chatMode === 'plan' ? 'primary' : 'secondary'}
-                size="sm"
+              <button
+                class="mode-btn {$chatModeStore === 'code' && chatMode === 'plan' ? 'active' : ''}"
                 onclick={() => {
                   chatModeStore.setMode('code');
                   chatMode = 'plan';
-                }}>Plan</Button
+                }}>Plan</button
               >
-              <Button
-                variant={$chatModeStore === 'code' && chatMode === 'spec' ? 'primary' : 'secondary'}
-                size="sm"
+              <button
+                class="mode-btn {$chatModeStore === 'code' && chatMode === 'spec' ? 'active' : ''}"
                 onclick={() => {
                   chatModeStore.setMode('code');
                   chatMode = 'spec';
-                }}>Spec</Button
+                }}>Spec</button
               >
-              <Button
-                variant={$chatModeStore === 'design' ? 'primary' : 'secondary'}
-                size="sm"
-                onclick={() => chatModeStore.setMode('design')}>Design</Button
+              <button
+                class="mode-btn {$chatModeStore === 'design' ? 'active' : ''}"
+                onclick={() => chatModeStore.setMode('design')}>Design</button
               >
-              <Button
-                variant={$chatModeStore === 'argument' ? 'primary' : 'secondary'}
-                size="sm"
-                onclick={() => chatModeStore.setMode('argument')}>Argument</Button
+              <button
+                class="mode-btn {$chatModeStore === 'argument' ? 'active' : ''}"
+                onclick={() => chatModeStore.setMode('argument')}>Argument</button
               >
-              <Button
-                variant={chatMode === 'ship' ? 'primary' : 'secondary'}
-                size="sm"
+              <button
+                class="mode-btn {chatMode === 'ship' ? 'active' : ''}"
                 onclick={() => {
                   chatMode = 'ship';
                   window.dispatchEvent(new CustomEvent('open-ship-mode'));
-                }}>Ship</Button
+                }}>Ship</button
               >
             </div>
           </div>
