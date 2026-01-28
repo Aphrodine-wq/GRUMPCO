@@ -54,27 +54,12 @@
 </script>
 
 <div class="app">
-  <!-- <SessionsSidebar /> -->
-
   <div class="main-content">
     <div style="padding: 20px;">
       <h1>App Skeleton Loaded</h1>
       <p>Session ID: {$currentSession?.id ?? 'None'}</p>
     </div>
-    <!--
-    {#key $currentSession?.id ?? 'none'}
-      <ChatInterface
-        initialMessages={getInitialMessages()}
-        on:messages-updated={(e: CustomEvent) => handleMessagesUpdate(e.detail)}
-      />
-    {/key}
   </div>
-
-  <Toast />
-  <QuestionModal />
-  {#if showPricing}
-    <PricingModal onClose={() => (showPricing = false)} />
-  {/if}
 </div>
 
 <style>
@@ -82,7 +67,7 @@
     display: flex;
     height: 100vh;
     width: 100%;
-    background: linear-gradient(135deg, #FAFAFA 0%, #F5F7FA 100%);
+    background: linear-gradient(135deg, #fafafa 0%, #f5f7fa 100%);
     overflow: hidden;
   }
 
