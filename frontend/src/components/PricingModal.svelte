@@ -1,259 +1,345 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { fade, scale } from 'svelte/transition';
-  import { Button, Badge } from '../lib/design-system';
-  import { fetchApi } from '../lib/api';
-
-  let { onClose } = $props<{ onClose: () => void }>();
-
-  let tiers: any[] = $state([]);
-  let loading = $state(true);
-  let error: string | null = $state(null);
-  let processingPriceId: string | null = $state(null);
-
-  onMount(async () => {
-    try {
-      const res = await fetchApi('/api/billing/tiers');
-      const data = await res.json();
-      if (data && data.tiers) {
-        tiers = data.tiers;
-      }
-    } catch (e) {
-      error = 'Failed to load pricing plans.';
-      console.error(e);
-    } finally {
-      loading = false;
-    }
-  });
-
-  async function handleUpgrade(priceId: string) {
-    if (!priceId) return;
-    processingPriceId = priceId;
-    try {
-      const res = await fetchApi('/api/billing/checkout', {
-        method: 'POST',
-        body: JSON.stringify({ priceId }),
-      });
-      const data = await res.json();
-      if (data && data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error(data.error || 'No checkout URL returned');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('Failed to initiate checkout. Please try again.');
-      processingPriceId = null;
-    }
+  import { Button } from '../lib/design-system';
+  
+  interface Props {
+    onClose: () => void;
+    onSelectPlan?: (planId: string) => void;
+  }
+  
+  let { onClose, onSelectPlan }: Props = $props();
+  
+  const plans = [
+    {
+      id: 'free',
+      name: 'Free',
+      price: '$0',
+      period: 'forever',
+      features: [
+        '50 API calls/month',
+        'Basic architecture diagrams',
+        'Community support',
+        'Single project',
+      ],
+      recommended: false,
+    },
+    {
+      id: 'pro',
+      name: 'Pro',
+      price: '$29',
+      period: 'per month',
+      features: [
+        '1,000 API calls/month',
+        'Unlimited projects',
+        'Priority support',
+        'Advanced code generation',
+        'Custom templates',
+        'Team collaboration',
+      ],
+      recommended: true,
+    },
+    {
+      id: 'team',
+      name: 'Team',
+      price: '$99',
+      period: 'per month',
+      features: [
+        '5,000 API calls/month',
+        'Everything in Pro',
+        'Admin dashboard',
+        'Team analytics',
+        'SSO integration',
+        'Dedicated support',
+      ],
+      recommended: false,
+    },
+  ];
+  
+  function handleSelectPlan(planId: string) {
+    onSelectPlan?.(planId);
+    onClose();
   }
 </script>
 
-<div class="modal-backdrop" onclick={onClose} transition:fade={{ duration: 200 }}>
-  <!-- stopPropagation on modal-content to prevent closing when clicking inside -->
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="modal-content"
-    onclick={(e) => e.stopPropagation()}
-    transition:scale={{ duration: 200, start: 0.95 }}
-  >
-    <div class="header">
-      <h2>Upgrade Your Plan</h2>
-      <p>Unlock more power and capabilities.</p>
-      <button class="close-btn" onclick={onClose}>&times;</button>
+<div class="modal-overlay" onclick={onClose} role="presentation">
+  <div class="modal-content" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+    <button class="close-btn" onclick={onClose} aria-label="Close pricing modal">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    
+    <div class="modal-header">
+      <h2>Choose Your Plan</h2>
+      <p>Build faster with AI-powered development tools</p>
     </div>
-
-    {#if loading}
-      <div class="loading">Loading plans...</div>
-    {:else if error}
-      <div class="error">{error}</div>
-    {:else}
-      <div class="plans-grid">
-        {#each tiers as tier}
-          <div class="plan-card" class:highlight={tier.id === 'pro'}>
-            <div class="plan-header">
-              <h3>{tier.name}</h3>
-              {#if tier.id === 'pro'}
-                <Badge variant="info">Popular</Badge>
-              {/if}
-            </div>
-            <div class="price">
-              <span class="currency">$</span>
-              <span class="amount">{tier.price}</span>
-              <span class="period">/mo</span>
-            </div>
-            <ul class="features">
-              <li>{tier.apiCallsPerMonth.toLocaleString()} API calls/mo</li>
-              <!-- Add more hardcoded features or derived from tier object if available -->
-              <li>Standard Support</li>
-              {#if tier.id !== 'free'}
-                <li>Priority Access</li>
-              {/if}
-            </ul>
-            <div class="action">
-              <Button
-                variant={tier.id === 'pro' ? 'primary' : 'secondary'}
-                disabled={!!processingPriceId}
-                onclick={() => (tier.monthlyPriceId ? handleUpgrade(tier.monthlyPriceId) : null)}
-              >
-                {processingPriceId === tier.monthlyPriceId
-                  ? 'Processing...'
-                  : tier.price === 0
-                    ? 'Current Plan'
-                    : 'Upgrade'}
-              </Button>
-            </div>
+    
+    <div class="plans-grid">
+      {#each plans as plan}
+        <div class="plan-card" class:recommended={plan.recommended}>
+          {#if plan.recommended}
+            <div class="recommended-badge">Most Popular</div>
+          {/if}
+          
+          <h3 class="plan-name">{plan.name}</h3>
+          <div class="plan-price">
+            <span class="price">{plan.price}</span>
+            <span class="period">{plan.period}</span>
           </div>
-        {/each}
-      </div>
-    {/if}
+          
+          <ul class="features-list">
+            {#each plan.features as feature}
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                {feature}
+              </li>
+            {/each}
+          </ul>
+          
+          <Button 
+            variant={plan.recommended ? 'primary' : 'secondary'} 
+            onclick={() => handleSelectPlan(plan.id)}
+            class="select-btn"
+          >
+            {plan.id === 'free' ? 'Get Started' : 'Upgrade Now'}
+          </Button>
+        </div>
+      {/each}
+    </div>
+    
+    <div class="modal-footer">
+      <p>All plans include a 14-day free trial. No credit card required.</p>
+    </div>
   </div>
 </div>
 
 <style>
-  .modal-backdrop {
+  .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    backdrop-filter: blur(4px);
+    padding: 20px;
+    animation: fadeIn 0.2s ease-out;
   }
-
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
   .modal-content {
     background: white;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 900px;
+    border-radius: 24px;
+    max-width: 1000px;
+    width: 100%;
     max-height: 90vh;
     overflow-y: auto;
-    padding: 32px;
-    box-shadow:
-      0 20px 25px -5px rgba(0, 0, 0, 0.1),
-      0 10px 10px -5px rgba(0, 0, 0, 0.04);
     position: relative;
+    padding: 48px;
+    animation: slideUp 0.3s ease-out;
   }
-
-  .header {
-    text-align: center;
-    margin-bottom: 32px;
+  
+  @keyframes slideUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
-
-  .header h2 {
-    font-size: 24px;
-    font-weight: 700;
-    color: #111827;
-    margin: 0 0 8px 0;
-  }
-
-  .header p {
-    color: #6b7280;
-    margin: 0;
-  }
-
+  
   .close-btn {
     position: absolute;
-    top: 16px;
-    right: 16px;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     border: none;
-    background: none;
-    font-size: 24px;
+    background: #f4f4f5;
+    color: #71717a;
     cursor: pointer;
-    color: #9ca3af;
-  }
-
-  .close-btn:hover {
-    color: #4b5563;
-    margin: 0;
-  }
-
-  .plans-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 24px;
-  }
-
-  .plan-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 24px;
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s;
   }
-
-  .plan-card.highlight {
+  
+  .close-btn:hover {
+    background: #e4e4e7;
+    color: #18181b;
+  }
+  
+  .modal-header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  
+  .modal-header h2 {
+    font-size: 32px;
+    font-weight: 800;
+    color: #18181b;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+  
+  .modal-header p {
+    font-size: 16px;
+    color: #71717a;
+  }
+  
+  .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+  
+  .plan-card {
+    background: white;
+    border: 2px solid #e4e4e7;
+    border-radius: 16px;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: all 0.3s;
+  }
+  
+  .plan-card:hover {
+    border-color: #18181b;
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.15);
+  }
+  
+  .plan-card.recommended {
     border-color: #0EA5E9;
-    box-shadow: 0 0 0 1px #0EA5E9;
-    background-color: #eff6ff;
+    box-shadow: 0 10px 30px -10px rgba(14, 165, 233, 0.2);
   }
-
-  .plan-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
+  
+  .plan-card.recommended:hover {
+    box-shadow: 0 20px 40px -20px rgba(14, 165, 233, 0.3);
   }
-
-  .plan-header h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
+  
+  .recommended-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #0EA5E9, #0284c7);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 6px 16px;
+    border-radius: 20px;
   }
-
-  .price {
-    display: flex;
-    align-items: baseline;
+  
+  .plan-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #18181b;
+    margin-bottom: 12px;
+  }
+  
+  .plan-price {
     margin-bottom: 24px;
   }
-
-  .currency {
-    font-size: 18px;
-    font-weight: 500;
-    color: #374151;
+  
+  .price {
+    font-size: 40px;
+    font-weight: 800;
+    color: #18181b;
+    letter-spacing: -0.02em;
   }
-
-  .amount {
-    font-size: 36px;
-    font-weight: 700;
-    color: #111827;
-  }
-
+  
   .period {
-    color: #6b7280;
+    font-size: 14px;
+    color: #71717a;
     margin-left: 4px;
   }
-
-  .features {
+  
+  .features-list {
     list-style: none;
     padding: 0;
-    margin: 0 0 24px 0;
-    flex-grow: 1;
+    margin: 0 0 32px 0;
+    flex: 1;
   }
-
-  .features li {
-    margin-bottom: 12px;
-    color: #4b5563;
+  
+  .features-list li {
     display: flex;
     align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: #3f3f46;
+    margin-bottom: 12px;
+    line-height: 1.5;
   }
-
-  .features li::before {
-    content: '✓';
+  
+  .features-list svg {
+    flex-shrink: 0;
     color: #10b981;
-    margin-right: 8px;
-    font-weight: bold;
   }
-
-  .loading,
-  .error {
+  
+  .plan-card.recommended .features-list svg {
+    color: #0EA5E9;
+  }
+  
+  .modal-footer {
     text-align: center;
-    padding: 40px;
-    color: #6b7280;
+    padding-top: 24px;
+    border-top: 1px solid #e4e4e7;
+  }
+  
+  .modal-footer p {
+    font-size: 14px;
+    color: #71717a;
+  }
+  
+  /* Mobile responsive */
+  @media (max-width: 768px) {
+    .modal-content {
+      padding: 32px 24px;
+      border-radius: 16px;
+    }
+    
+    .modal-header {
+      margin-bottom: 32px;
+    }
+    
+    .modal-header h2 {
+      font-size: 24px;
+    }
+    
+    .modal-header p {
+      font-size: 14px;
+    }
+    
+    .plans-grid {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    
+    .plan-card {
+      padding: 24px 20px;
+    }
+    
+    .price {
+      font-size: 32px;
+    }
   }
 </style>
