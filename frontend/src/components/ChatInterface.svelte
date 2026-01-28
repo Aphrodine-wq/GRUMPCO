@@ -3,12 +3,12 @@
   import { createEventDispatcher } from 'svelte';
   import { get } from 'svelte/store';
 
-  import DiagramRenderer from './DiagramRenderer.svelte';
-  import SuggestionChips from './SuggestionChips.svelte';
-  import GRumpBlob from './GRumpBlob.svelte';
-  import ToolCallCard from './ToolCallCard.svelte';
-  import ToolResultCard from './ToolResultCard.svelte';
-  import ShipMode from './ShipMode.svelte';
+  // import DiagramRenderer from './DiagramRenderer.svelte';
+  // import SuggestionChips from './SuggestionChips.svelte';
+  // import GRumpBlob from './GRumpBlob.svelte';
+  // import ToolCallCard from './ToolCallCard.svelte';
+  // import ToolResultCard from './ToolResultCard.svelte';
+  // import ShipMode from './ShipMode.svelte';
   import SettingsScreen from './SettingsScreen.svelte';
   import { Badge, Button } from '../lib/design-system';
   import { exportAsSvg } from '../lib/mermaid';
@@ -598,14 +598,14 @@
             <div class="messages-inner">
               {#if messages.length <= 1 && !streaming}
                 <div class="empty-state">
-                  <GRumpBlob size="lg" state="idle" animated={true} />
+                  <!-- <GRumpBlob size="lg" state="idle" animated={true} /> -->
                   <h1 class="empty-title">What are we building?</h1>
                   <p class="empty-text">
                     I can design your system architecture, create requirements, and write the
                     full-stack code. Just tell me your idea.
                   </p>
                   <div class="suggestion-chips">
-                    <SuggestionChips on:select={handleTemplateSelect} />
+                    <!-- <SuggestionChips on:select={handleTemplateSelect} /> -->
                   </div>
                 </div>
               {/if}
@@ -644,6 +644,7 @@
                                   onclick={() => exportSvg(index, bIdx)}>Export</Button
                                 >
                               </div>
+                              <!--
                               <DiagramRenderer
                                 code={block.content}
                                 on:generate-code={(e) =>
@@ -653,6 +654,7 @@
                                     language: 'typescript',
                                   })}
                               />
+                              -->
                             </div>
                           {/if}
                         {/each}

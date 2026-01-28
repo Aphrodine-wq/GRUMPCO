@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  // import ChatInterface from './components/ChatInterface.svelte';
+  import ChatInterface from './components/ChatInterface.svelte';
   import SessionsSidebar from './components/SessionsSidebar.svelte';
   import Toast from './components/Toast.svelte';
   import QuestionModal from './components/QuestionModal.svelte';
@@ -62,14 +62,12 @@
       <p>Session ID: {$currentSession?.id ?? 'None'}</p>
       <p>ChatInterface is currently DISABLED for debugging.</p>
     </div>
-    <!--
     {#key $currentSession?.id ?? 'none'}
       <ChatInterface
         initialMessages={getInitialMessages()}
         on:messages-updated={(e: CustomEvent) => handleMessagesUpdate(e.detail)}
       />
     {/key}
-    -->
   </div>
 
   <Toast />
