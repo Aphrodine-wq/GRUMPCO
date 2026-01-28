@@ -290,7 +290,7 @@
           sendMessage();
         }
       });
-      logError(errorContext, { mode: get(chatModeStore), workspaceRoot: get(workspaceStore) });
+      // logError(errorContext, { mode: get(chatModeStore), workspaceRoot: get(workspaceStore) });
       trackError('api_error', errorContext.message);
       showToast(errorContext.userMessage, 'error', errorContext.retryable ? 0 : 5000, {
         persistent: errorContext.retryable,
@@ -367,17 +367,18 @@
   async function runCodeModeStream(signal: AbortSignal) {
     const apiMessages = flattenMessagesForChatApi(messages);
     if (apiMessages.length === 0) throw new Error('No messages to send');
-    let ws = workspaceInput.trim() || get(workspaceStore) || undefined;
-    if (ws) workspaceStore.setWorkspace(ws);
+    // let ws = workspaceInput.trim() || get(workspaceStore) || undefined;
+    // if (ws) workspaceStore.setWorkspace(ws);
+    // let ws = undefined;
     const body: Record<string, unknown> = {
       messages: apiMessages,
-      workspaceRoot: ws || undefined,
-      mode:
-        get(chatModeStore) === 'argument'
-          ? 'argument'
-          : chatMode !== 'normal'
-            ? chatMode
-            : 'normal',
+      // workspaceRoot: ws || undefined,
+      mode: 'code' // Fixed mode for debug
+        // get(chatModeStore) === 'argument'
+          // ? 'argument'
+          // : chatMode !== 'normal'
+            // ? chatMode
+            // : 'normal',
       planId: currentPlanId || undefined,
       specSessionId: currentSpecSessionId || undefined,
     };
@@ -612,8 +613,8 @@
 
   onMount(() => {
     inputRef?.focus();
-    const w = get(workspaceStore);
-    if (w) workspaceInput = w;
+    // const w = get(workspaceStore);
+    // if (w) workspaceInput = w;
     document.addEventListener('keydown', handleGlobalKeydown);
     const handleOpenShipMode = () => {
       chatMode = 'ship';
