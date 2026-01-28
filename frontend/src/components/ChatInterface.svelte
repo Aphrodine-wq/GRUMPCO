@@ -807,6 +807,8 @@
               </form>
             {/if}
 
+            <!-- MODE SELECTOR DISABLED FOR DEBUGGING -->
+            <!--
             <div class="mode-selector">
               <button
                 class="mode-btn {$chatModeStore === 'code' && chatMode === 'normal'
@@ -846,6 +848,10 @@
                   window.dispatchEvent(new CustomEvent('open-ship-mode'));
                 }}>Ship</button
               >
+            </div>
+            -->
+            <div class="mode-selector">
+              <button class="mode-btn active">DEBUG MODE</button>
             </div>
           </div>
         </div>
