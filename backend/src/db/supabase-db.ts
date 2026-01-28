@@ -28,7 +28,7 @@ export class SupabaseDatabaseService {
 
     // Test connection by checking if we can query
     const { error } = await this.client.from('sessions').select('id').limit(1);
-    
+
     if (error && error.code === '42P01') {
       // Table doesn't exist - user needs to run migrations
       logger.warn('Supabase tables not found. Please run the SQL schema in Supabase Dashboard.');
@@ -45,6 +45,28 @@ export class SupabaseDatabaseService {
   async close(): Promise<void> {
     // Supabase client doesn't need explicit close
     this.initialized = false;
+  }
+
+  /**
+   * Get raw database - stub for SQLite compatibility
+   * Note: This throws for Supabase as direct DB access is not supported
+   */
+  getDb(): never {
+    throw new Error('Direct database access not supported in Supabase mode. Use Supabase methods instead.');
+  }
+
+  /**
+   * Alias for saveSpec (for sessionStorage compatibility)
+   */
+  async saveSpecSession(spec: SpecSession): Promise<void> {
+    return this.saveSpec(spec);
+  }
+
+  /**
+   * Alias for getSpec (for sessionStorage compatibility)
+   */
+  async getSpecSession(specId: string): Promise<SpecSession | null> {
+    return this.getSpec(specId);
   }
 
   // ========== Sessions ==========

@@ -419,6 +419,20 @@ class DatabaseService {
     return JSON.parse(row.data) as SpecSession;
   }
 
+  /**
+   * Alias for saveSpec (for sessionStorage compatibility)
+   */
+  async saveSpecSession(spec: SpecSession): Promise<void> {
+    return this.saveSpec(spec);
+  }
+
+  /**
+   * Alias for getSpec (for sessionStorage compatibility)
+   */
+  async getSpecSession(specId: string): Promise<SpecSession | null> {
+    return this.getSpec(specId);
+  }
+
   // ========== Work Reports ==========
 
   /**
