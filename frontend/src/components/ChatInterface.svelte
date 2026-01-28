@@ -21,7 +21,7 @@
   import { showToast } from '../stores/toastStore';
   // import { processError, logError } from '../utils/errorHandler';
   import { sessionsStore, currentSession } from '../stores/sessionsStore';
-  // import { getCurrentProjectId } from '../stores/projectStore';
+  import { getCurrentProjectId } from '../stores/projectStore';
   // import { chatModeStore } from '../stores/chatModeStore';
   // import { workspaceStore } from '../stores/workspaceStore';
   // import { codeSessionsStore } from '../stores/codeSessionsStore';
