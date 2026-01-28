@@ -719,11 +719,6 @@
 
             <div class="mode-selector">
               <Button
-                variant={$chatModeStore === 'design' ? 'primary' : 'secondary'}
-                size="sm"
-                onclick={() => chatModeStore.setMode('design')}>Design</Button
-              >
-              <Button
                 variant={$chatModeStore === 'code' && chatMode === 'normal'
                   ? 'primary'
                   : 'secondary'}
@@ -750,22 +745,19 @@
                 }}>Spec</Button
               >
               <Button
-                variant={$chatModeStore === 'code' && chatMode === 'execute' ? 'primary' : 'secondary'}
+                variant={$chatModeStore === 'design' ? 'primary' : 'secondary'}
                 size="sm"
-                onclick={() => {
-                  chatModeStore.setMode('code');
-                  chatMode = 'execute';
-                }}>Execute</Button
-              >
-              <Button
-                variant={chatMode === 'ship' ? 'primary' : 'secondary'}
-                size="sm"
-                onclick={() => { chatMode = 'ship'; }}>SHIP</Button
+                onclick={() => chatModeStore.setMode('design')}>Design</Button
               >
               <Button
                 variant={$chatModeStore === 'argument' ? 'primary' : 'secondary'}
                 size="sm"
                 onclick={() => chatModeStore.setMode('argument')}>Argument</Button
+              >
+              <Button
+                variant={chatMode === 'ship' ? 'primary' : 'secondary'}
+                size="sm"
+                onclick={() => { chatMode = 'ship'; }}>SHIP</Button
               >
             </div>
 
@@ -1104,12 +1096,12 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-    justify-content: flex-start;
+    justify-content: center;
     align-items: center;
-    background: #f8fafc;
+    background: rgba(14, 165, 233, 0.05);
     padding: 6px;
     border-radius: 10px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(14, 165, 233, 0.15);
   }
 
   .mode-group {
