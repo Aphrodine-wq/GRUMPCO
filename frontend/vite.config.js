@@ -14,9 +14,7 @@ export default defineConfig({
         splashscreen: resolve(__dirname, 'splashscreen.html')
       },
       output: {
-        manualChunks: {
-          'vendor-mermaid': ['mermaid']
-        }
+        // manualChunks removed to prevent circular dependency/loading issues
       }
     }
   },
