@@ -45,13 +45,7 @@
 
 <CollapsibleSidebar width={280} collapsedWidth={64}>
   {#snippet header()}
-    <Button
-      variant="primary"
-      size="md"
-      fullWidth
-      onclick={handleNewSession}
-      class="new-chat-btn"
-    >
+    <Button variant="primary" size="md" fullWidth onclick={handleNewSession} class="new-chat-btn">
       <Plus size={16} />
       New Chat
     </Button>
@@ -59,12 +53,15 @@
 
   <div class="sessions-list">
     {#each $sortedSessions as session (session.id)}
-      <button
+      <div
         class="session-item"
         class:active={session.id === $currentSession?.id}
         onmouseenter={() => (hoveredSessionId = session.id)}
         onmouseleave={() => (hoveredSessionId = null)}
         onclick={() => handleSelectSession(session.id)}
+        onkeydown={(e) => e.key === 'Enter' && handleSelectSession(session.id)}
+        role="button"
+        tabindex="0"
         title={session.name}
       >
         <div class="session-content">
@@ -86,7 +83,7 @@
             <Trash2 size={14} />
           </button>
         {/if}
-      </button>
+      </div>
     {/each}
 
     {#if $sortedSessions.length === 0}
@@ -122,12 +119,12 @@
   }
 
   .session-item:hover {
-    background-color: #F5F5F5;
+    background-color: #f5f5f5;
   }
 
   .session-item.active {
-    background-color: #E0F2FE;
-    border-left: 3px solid #0EA5E9;
+    background-color: #e0f2fe;
+    border-left: 3px solid #0ea5e9;
     padding-left: 9px;
   }
 
@@ -142,7 +139,7 @@
   .session-name {
     font-size: 13px;
     font-weight: 500;
-    color: #18181B;
+    color: #18181b;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -150,7 +147,7 @@
 
   .session-meta {
     font-size: 11px;
-    color: #71717A;
+    color: #71717a;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -166,20 +163,20 @@
     border-radius: 6px;
     background: transparent;
     border: none;
-    color: #71717A;
+    color: #71717a;
     cursor: pointer;
     transition: all 150ms ease;
   }
 
   .delete-btn:hover {
-    background-color: #FEE2E2;
-    color: #DC2626;
+    background-color: #fee2e2;
+    color: #dc2626;
   }
 
   .empty-state {
     padding: 24px 12px;
     text-align: center;
-    color: #71717A;
+    color: #71717a;
   }
 
   .empty-state p {
@@ -202,11 +199,11 @@
   }
 
   .sessions-list::-webkit-scrollbar-thumb {
-    background: #D4D4D8;
+    background: #d4d4d8;
     border-radius: 3px;
   }
 
   .sessions-list::-webkit-scrollbar-thumb:hover {
-    background: #A1A1AA;
+    background: #a1a1aa;
   }
 </style>
