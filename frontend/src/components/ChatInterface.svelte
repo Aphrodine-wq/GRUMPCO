@@ -9,8 +9,8 @@
   // import ToolCallCard from './ToolCallCard.svelte';
   // import ToolResultCard from './ToolResultCard.svelte';
   // import ShipMode from './ShipMode.svelte';
-  // import SettingsScreen from './SettingsScreen.svelte';
-  // import { Badge, Button } from '../lib/design-system';
+  import SettingsScreen from './SettingsScreen.svelte';
+  import { Badge, Button } from '../lib/design-system';
   import { exportAsSvg } from '../lib/mermaid';
   // import {
   //   trackMessageSent,
@@ -39,8 +39,8 @@
   // import { startSpecSession } from '../stores/specStore';
   import { fetchApi } from '../lib/api.js';
   import { settingsStore } from '../stores/settingsStore';
-  // import { colors } from '../lib/design-system/tokens/colors';
-  // import { showSettings } from '../stores/uiStore';
+  import { colors } from '../lib/design-system/tokens/colors';
+  import { showSettings } from '../stores/uiStore';
   import type { Message, ContentBlock } from '../types';
 
   interface Props {
@@ -606,8 +606,7 @@
   style:--bg-secondary={colors.background.secondary}
 >
   {#if showSettingsValue}
-    <!-- <SettingsScreen onBack={() => showSettings.set(false)} /> -->
-    <div />
+    <SettingsScreen onBack={() => showSettings.set(false)} />
   {:else}
     <div class="chat-root">
       <div class="chat-viewport">
@@ -659,16 +658,12 @@
                               use:setupDiagramRef={{ index, blockIdx: bIdx }}
                             >
                               <div class="diagram-header">
-                                <!-- <Badge variant="info">Architecture</Badge> -->
-                                <span class="badge">Architecture</span>
-                                <button onclick={() => exportSvg(index, bIdx)}>Export</button>
-                                <!--
+                                <Badge variant="info">Architecture</Badge>
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onclick={() => exportSvg(index, bIdx)}>Export</Button
                                 >
-                                -->
                               </div>
                               <!--
                               <DiagramRenderer
