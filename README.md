@@ -77,8 +77,8 @@ Output will be in `frontend/src-tauri/target/release/bundle/`
 
 ### Deploy (hosted web)
 
-- **Backend**: Deploy to Railway (or similar) with `CORS_ORIGINS`, `NODE_ENV=production`, and `ANTHROPIC_API_KEY`.
-- **Frontend**: Build with `cd frontend && npm run build`. Set **`VITE_API_URL`** at build time to your backend URL (e.g. `https://your-backend.railway.app`). Serve `dist/`. See [docs/OVERVIEW.md](docs/OVERVIEW.md).
+- **Backend**: Deploy to Vercel with `CORS_ORIGINS`, `NODE_ENV=production`, and `ANTHROPIC_API_KEY`.
+- **Frontend**: Build with `cd frontend && npm run build`. Set **`VITE_API_URL`** at build time to your backend URL (e.g. `https://your-backend.vercel.app`). Serve `dist/`. See [docs/OVERVIEW.md](docs/OVERVIEW.md).
 - **Windows installer**: After `cd frontend && npm run tauri:build`, installers are in `frontend/src-tauri/target/release/bundle/`.
 
 ## Architecture

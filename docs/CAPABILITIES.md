@@ -24,7 +24,7 @@ G-Rump is the one app that combines design-first architecture and PRD, full app 
 
 ---
 
-## Backend: single service on Railway
+## Backend: single service on Vercel
 
 G-Rump uses **one backend** (grump-backend) for all clients. See [BACKENDS.md](BACKENDS.md).
 
@@ -51,7 +51,7 @@ flowchart TB
     Moltbot[Moltbot / Clawdbot Skill]
   end
 
-  subgraph backend [Single Backend on Railway]
+  subgraph backend [Single Backend on Vercel]
     BE[grump-backend :3000]
   end
 

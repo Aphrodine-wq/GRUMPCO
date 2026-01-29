@@ -35,7 +35,7 @@ RUN npm ci --only=production
 # Copy built application from builder
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 
-# Create data directory for SQLite (will be overwritten by volume mount in Fly.io)
+# Create data directory for SQLite (not used in serverless Vercel deployment)
 RUN mkdir -p /app/data && chown nodejs:nodejs /app/data
 
 # Set environment
@@ -48,7 +48,7 @@ USER nodejs
 # Expose port
 EXPOSE 3000
 
-# Health check (align with railway.json and deploy workflow)
+# Health check (align with Vercel deployment workflow)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health/quick || exit 1
 

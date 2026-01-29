@@ -47,4 +47,5 @@ export default defineConfig({
   // Setting srcDir to ../docs might be messy with node_modules. 
   // Let's just assume we will copy the files for now or I'll create a script to do it.
   ignoreDeadLinks: true,
+  srcDir: '../docs'
 })

@@ -72,7 +72,7 @@ Ideas to make the experience feel more impressive, especially for demos and firs
 - Polished UI details: motion that respects “Reduced Motion”, subtle transitions, keyboard shortcuts, rich empty states.
 - One-click “demo mode” that spins up a sample project and walks through Architecture → Spec → Plan → Code.
 - Shareable artifacts: exportable links or bundles for diagrams, PRDs, plans, and agent work reports.
-- One-click deploy for generated apps (e.g. opinionated Vercel/Railway presets for common stacks).
+- One-click deploy for generated apps (e.g. opinionated Vercel presets for common stacks).
 - A short, scripted end-to-end demo (recorded or live) that shows SHIP, agent reports, WRunner, and scheduled agents.
 
 ## 7. Webhooks for speed

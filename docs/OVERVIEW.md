@@ -18,7 +18,7 @@ One app, one backend: Architecture-as-Code first (diagram + spec + plan), then o
 
 ## Clients and backend
 
-G-Rump uses **one backend** (grump-backend) for all clients. It is not only a standalone Windows desktop app: the same backend is used by the **Desktop app** (Tauri), **Web app**, **VS Code extension**, **CLI** (`grump-analyze`), and **Moltbot/Clawdbot** skill. The backend typically runs on Railway or locally at `VITE_API_URL` (default `http://localhost:3000`). It uses SQLite for persistence and optionally Redis for rate limiting, cache, session storage, and job queues. Optional integrations include Stripe (billing), Supabase (auth/collaboration), and an LLM gateway (Anthropic, OpenRouter, Zhipu, etc.). Clients receive ship and codegen completion events in real time via `GET /api/events/stream` (SSE).
+G-Rump uses **one backend** (grump-backend) for all clients. It is not only a standalone Windows desktop app: the same backend is used by the **Desktop app** (Tauri), **Web app**, **VS Code extension**, **CLI** (`grump-analyze`), and **Moltbot/Clawdbot** skill. The backend is deployed to Vercel or runs locally at `VITE_API_URL` (default `http://localhost:3000`). It uses SQLite for persistence and optionally Redis for rate limiting, cache, session storage, and job queues. Optional integrations include Stripe (billing), Supabase (auth/collaboration), and an LLM gateway (Anthropic, OpenRouter, Zhipu, etc.). Clients receive ship and codegen completion events in real time via `GET /api/events/stream` (SSE).
 
 ---
 
@@ -144,7 +144,7 @@ The minimal path to validate a release: **Web** — run `.\start-app.bat` (Windo
 
 **Optional:** `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` for rate limiting, cache, BullMQ, and session storage; omit for in-memory fallback. `CORS_ORIGINS` for production (comma-separated origins; set for web deploy). `GRUMP_INTENT_PATH` for the Rust intent compiler; omit to use Claude-only intent. See `backend/.env.example` for full list (Supabase, Stripe, Twilio, etc.).
 
-**Recommended deploy path (MVP):** Local — run `.\start-app.bat` (backend 3000, frontend 5173). For production: backend on Railway (or similar) with `NODE_ENV=production`, `CORS_ORIGINS` set to your frontend URL; frontend as static build (e.g. Vercel or same host). Desktop: `cd frontend && npm run tauri:dev` (dev) or `npm run tauri:build` (installer).
+**Recommended deploy path (MVP):** Local — run `.\start-app.bat` (backend 3000, frontend 5173). For production: backend on Vercel with `NODE_ENV=production`, `CORS_ORIGINS` set to your frontend URL; frontend as static build (e.g. Vercel or same host). Desktop: `cd frontend && npm run tauri:dev` (dev) or `npm run tauri:build` (installer).
 
 **Tests:** Backend: `cd backend && npm run test` and `npm run type-check`. Frontend: `cd frontend && npm run test:run`. E2E: start backend, then `cd frontend && npm run test:e2e` (or `npm run test:e2e:ci` in CI). In CI, E2E job starts the backend and global-setup waits for backend health. Evals: run `cd backend && npm run evals` with backend up; results in `frontend/test-results/agent-evals.json`. CI (when `ANTHROPIC_API_KEY` is set) runs evals and publishes a score summary to the job summary.
 

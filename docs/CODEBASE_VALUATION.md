@@ -8,7 +8,7 @@ This document gives a concise, human-readable assessment of the G-Rump codebase:
 
 ## 1. Scope
 
-- **Single backend** (grump-backend): one Node/Express service deployed on Railway. Serves desktop, web app, VS Code extension, CLI, and Moltbot. The former backend-web was merged into backend and retired (see [BACKENDS.md](BACKENDS.md)).
+- **Single backend** (grump-backend): one Node/Express service deployed on Vercel. Serves desktop, web app, VS Code extension, CLI, and Moltbot. The former backend-web was merged into backend and retired (see [BACKENDS.md](BACKENDS.md)).
 - **Desktop app:** Tauri + Svelte, full UX: chat, diagrams, PRD, codegen, ship, settings, GitHub. Receives `ship.completed` / `codegen.ready` via `GET /api/events/stream` (SSE).
 - **Web app:** Svelte; uses the same backend for auth, billing, chat, codegen, collaboration, templates.
 - **Integrations:** VS Code extension, grump-analyze CLI, Moltbot skill.
@@ -48,11 +48,11 @@ See [SYSTEM_EVALUATION.md](SYSTEM_EVALUATION.md) for “how done” each area is
 
 - **Core pipeline** (intent → diagram → PRD → codegen → ship): ~85–90% complete; chat, phase bar, SHIP all functional.
 - **Desktop app:** ~90% complete; full UX and SSE for ship/codegen events.
-- **Single backend on Railway:** Implemented; Stripe webhook, collaboration, analytics, templates live in backend.
+- **Single backend on Vercel:** Implemented; Stripe webhook, collaboration, analytics, templates live in backend.
 - **Production readiness:** ~50% per [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md); Redis, env/secrets, legal, and hardening still to be configured and verified.
 
 ---
 
 ## 5. Valuation summary (narrative)
 
-Recreating this system from scratch would be a **multi‑month effort for a small team**. Main assets include: (1) the end‑to‑end “idea → diagram → PRD → code → ship” pipeline and multi‑agent codegen; (2) the Tauri + Svelte desktop app with real‑time events; (3) a single backend that serves all clients (desktop, web, VS Code, CLI, Moltbot); (4) skills (code‑review, refactoring, git), analytics, collaboration, and template surfaces. The codebase is structured, documented, and deployable to Railway with one backend. This valuation is a qualitative assessment for stakeholders, not a formal appraisal or price estimate.
+Recreating this system from scratch would be a **multi‑month effort for a small team**. Main assets include: (1) the end‑to‑end “idea → diagram → PRD → code → ship” pipeline and multi‑agent codegen; (2) the Tauri + Svelte desktop app with real‑time events; (3) a single backend that serves all clients (desktop, web, VS Code, CLI, Moltbot); (4) skills (code‑review, refactoring, git), analytics, collaboration, and template surfaces. The codebase is structured, documented, and deployable to Vercel with one backend. This valuation is a qualitative assessment for stakeholders, not a formal appraisal or price estimate.

@@ -1,6 +1,6 @@
-# One Backend on Railway
+# One Backend on Vercel
 
-G-Rump uses a **single backend** (grump-backend) deployed on Railway. Desktop and web app both use it via `VITE_API_URL` (Railway URL in production, or `http://localhost:3000` in development).
+G-Rump uses a **single backend** (grump-backend) deployed on Vercel. Desktop and web app both use it via `VITE_API_URL` (the Vercel URL in production, or `http://localhost:3000` in development).
 
 ## Summary
 
@@ -16,5 +16,5 @@ The former **backend-web** (grump-backend-web) was merged into backend in Jan 20
 ## See also
 
 - [CAPABILITIES.md](CAPABILITIES.md) – architecture, data flow, API domains
-- [RAILWAY_DEPLOY.md](RAILWAY_DEPLOY.md) – deploy the single backend to Railway
+
 - [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) – env vars, Redis, migrations, auth

@@ -17,7 +17,7 @@ Use this checklist to get G-Rump up and running and ready for production.
 ## Rate Limiting and Redis
 
 - [ ] Set `REDIS_HOST` (and `REDIS_PORT` if not 6379) so rate limiting is shared across restarts and replicas (see [CAPABILITIES.md](CAPABILITIES.md)).
-- [ ] Run Redis (e.g. via Docker Compose, Railway, or your PaaS) and confirm the backend can connect.
+- [ ] Configure Upstash QStash for asynchronous tasks (see `backend/DEPLOY_VERCEL.md`).
 
 ## Abuse Prevention
 
