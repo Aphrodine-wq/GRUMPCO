@@ -2,7 +2,6 @@
   /**
    * CodeBlock - Professional light theme
    */
-  import { onMount } from 'svelte';
   import { highlightCode } from '../utils/highlighter';
   import { showToast } from '../stores/toastStore';
   import { colors } from '../lib/design-system/tokens/colors';
@@ -112,7 +111,7 @@
           {/each}
         </div>
       {/if}
-      <div class="code-content" class:with-line-numbers={showLineNumbers} bind:innerHTML={highlightedCode}></div>
+      <div class="code-content" class:with-line-numbers={showLineNumbers}>{@html highlightedCode}</div>
     </div>
   {:else}
     <div class="collapsed-placeholder" onclick={() => (isCollapsed = false)}>

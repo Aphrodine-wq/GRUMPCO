@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: ClarificationPayload type (Phase 1.1) */
 // import type { ClarificationPayload } from '../stores/clarificationStore';
 
 export interface ParsedResponse {

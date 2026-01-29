@@ -36,5 +36,14 @@ nul
 .DS_Store
 Thumbs.db
 
+# SQLite WAL mode
+*.db-shm
+*.db-wal
+
 # Logs
 *.log
+
+# Playwright
+frontend/playwright-report/
+playwright-report/
+frontend/test-results/

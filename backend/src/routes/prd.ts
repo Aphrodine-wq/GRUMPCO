@@ -13,6 +13,8 @@ import {
 import { getRequestLogger } from '../middleware/logger.js';
 import { sendServerError, writeSSEError } from '../utils/errorResponse.js';
 import { validatePrdGenerateRequest, handlePrdValidationErrors } from '../middleware/validator.js';
+import { dispatchWebhook } from '../services/webhookService.js';
+import { DEMO_PRD } from '../demo/sampleData.js';
 import type { PRDRequest, ConversationMessage } from '../types/index.js';
 import type { SystemArchitecture } from '../types/architecture.js';
 
@@ -21,6 +23,7 @@ const router: Router = express.Router();
 interface PRDRequestBody extends PRDRequest {
   conversationHistory?: ConversationMessage[];
   architecture?: SystemArchitecture;
+  demo?: boolean;
 }
 
 /**
@@ -36,12 +39,33 @@ router.post(
   const body = req.body as PRDRequestBody;
 
   try {
-    const { projectName, projectDescription, architecture, refinements, conversationHistory } = body;
+    const { projectName, projectDescription, architecture: arch, refinements, conversationHistory, demo } = body;
+
+    if (!arch && !demo) {
+      res.status(400).json({ error: 'Missing architecture', type: 'validation_error' });
+      return;
+    }
+
+    if (demo === true) {
+      log.info({}, 'Demo mode: returning sample PRD');
+      res.json({
+        id: DEMO_PRD.id,
+        status: 'complete',
+        prd: DEMO_PRD,
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    if (!arch) {
+      res.status(400).json({ error: 'Missing architecture', type: 'validation_error' });
+      return;
+    }
 
     log.info(
       {
         projectName,
-        architectureId: architecture.id,
+        architectureId: arch.id,
         refinementsLength: refinements?.length,
       },
       'PRD generation requested'
@@ -49,12 +73,12 @@ router.post(
 
     const response = await generatePRD(
       {
-        architectureId: architecture.id,
+        architectureId: arch.id,
         projectName,
         projectDescription,
         refinements,
       },
-      architecture,
+      arch,
       conversationHistory
     );
 
@@ -63,6 +87,11 @@ router.post(
       return;
     }
 
+    dispatchWebhook('prd.generated', {
+      architectureId: arch.id,
+      projectName,
+      hasPrd: !!response.prd,
+    });
     res.json(response);
   } catch (error) {
     const err = error as Error;
@@ -84,7 +113,28 @@ router.post(
   const body = req.body as PRDRequestBody;
 
   try {
-    const { projectName, projectDescription, architecture, refinements, conversationHistory } = body;
+    const { projectName, projectDescription, architecture, refinements, conversationHistory, demo } = body;
+
+    if (!architecture) {
+      res.status(400).json({ error: 'Missing architecture', type: 'validation_error' });
+      return;
+    }
+
+    if (demo === true) {
+      log.info({}, 'Demo mode: returning sample PRD stream');
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.write(`data: ${JSON.stringify({ type: 'complete', prd: DEMO_PRD })}\n\n`);
+      res.end();
+      return;
+    }
+
+    if (!architecture) {
+      res.status(400).json({ error: 'Missing architecture', type: 'validation_error' });
+      return;
+    }
 
     log.info({}, 'PRD stream generation requested');
 
@@ -125,7 +175,7 @@ router.post(
  */
 router.post(
   '/components-from-diagram',
-  async (req: Request<{}, {}, { architecture: SystemArchitecture }>, res: Response) => {
+  async (req: Request<Record<string, never>, object, { architecture: SystemArchitecture }>, res: Response) => {
     const log = getRequestLogger();
     try {
       const { architecture } = req.body;
@@ -156,8 +206,8 @@ router.post(
   '/generate-for-component',
   async (
     req: Request<
-      {},
-      {},
+      Record<string, never>,
+      object,
       {
         componentId: string;
         componentLabel?: string;
@@ -201,7 +251,7 @@ router.post(
  * POST /api/prd/refine
  * Refine existing PRD
  */
-router.post('/refine', async (req: Request<{}, {}, { prdId?: string; refinements: string[] }>, res: Response) => {
+router.post('/refine', async (req: Request<Record<string, never>, object, { prdId?: string; refinements: string[] }>, res: Response) => {
   const log = getRequestLogger();
 
   try {

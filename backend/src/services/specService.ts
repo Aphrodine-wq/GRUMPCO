@@ -124,17 +124,17 @@ Generate relevant questions to gather all necessary information for creating a c
 
     const questionsData = JSON.parse(jsonText);
     const questions: SpecQuestion[] = (Array.isArray(questionsData) ? questionsData : [])
-      .map((q: any, index: number) => ({
-        id: q.id || `q${index + 1}`,
-        question: q.question || '',
+      .map((q: Record<string, unknown>, index: number) => ({
+        id: String(q.id ?? `q${index + 1}`),
+        question: String(q.question ?? ''),
         type: (q.type || 'text') as QuestionType,
-        options: q.options,
-        required: q.required !== undefined ? q.required : true,
-        placeholder: q.placeholder,
-        helpText: q.helpText,
-        validation: q.validation,
-        order: q.order || index + 1,
-        category: q.category,
+        options: q.options as string[] | undefined,
+        required: q.required !== undefined ? Boolean(q.required) : true,
+        placeholder: q.placeholder as string | undefined,
+        helpText: q.helpText as string | undefined,
+        validation: q.validation as SpecQuestion['validation'],
+        order: Number(q.order ?? index + 1),
+        category: q.category as string | undefined,
       }))
       .sort((a, b) => a.order - b.order);
 
@@ -204,7 +204,7 @@ export async function submitAnswer(
 /**
  * Validate answer based on question type and validation rules
  */
-function validateAnswer(question: SpecQuestion, value: any): void {
+function validateAnswer(question: SpecQuestion, value: unknown): void {
   if (question.required && (value === null || value === undefined || value === '')) {
     throw new Error(`Question ${question.id} is required`);
   }

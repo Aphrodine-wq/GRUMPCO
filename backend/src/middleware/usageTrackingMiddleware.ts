@@ -10,7 +10,11 @@ import { recordApiCall } from '../services/usageTracker.js';
 // Track which endpoints to skip (health checks, metrics, etc.)
 const SKIP_TRACKING = ['/health', '/metrics', '/api/health'];
 
-// Extend Express Request type to track response data
+// Extend Express Request type to track response data (user/userId from auth middleware)
+interface AuthRequest extends Request {
+  user?: { id?: string };
+  userId?: string;
+}
 interface TrackingRequest extends Request {
   startTime?: number;
   userId?: string;
@@ -33,19 +37,20 @@ export function usageTrackingMiddleware(req: TrackingRequest, res: Response, nex
   req.startTime = Date.now();
 
   // Try to extract user ID from request
-  req.userId = (req as any).user?.id || (req as any).userId || 'anonymous';
+  const authReq = req as AuthRequest;
+  req.userId = authReq.user?.id ?? authReq.userId ?? 'anonymous';
 
   // Intercept response to capture status and data
   const originalJson = res.json.bind(res);
   const originalSend = res.send.bind(res);
-  let responseBody: any = null;
+  let responseBody: unknown = null;
 
-  res.json = function (data: any) {
+  res.json = function (data: unknown) {
     responseBody = data;
     return originalJson(data);
   };
 
-  res.send = function (data: any) {
+  res.send = function (data: string | object) {
     if (typeof data === 'string') {
       try {
         responseBody = JSON.parse(data);
@@ -68,16 +73,19 @@ export function usageTrackingMiddleware(req: TrackingRequest, res: Response, nex
       let estimatedInputTokens = req.estimatedInputTokens;
       let estimatedOutputTokens = req.estimatedOutputTokens;
 
-      if (responseBody?.usage) {
-        estimatedInputTokens = responseBody.usage.input_tokens;
-        estimatedOutputTokens = responseBody.usage.output_tokens;
+      const usage = responseBody && typeof responseBody === 'object' && 'usage' in responseBody
+        ? (responseBody as { usage?: { input_tokens?: number; output_tokens?: number } }).usage
+        : undefined;
+      if (usage) {
+        estimatedInputTokens = usage.input_tokens;
+        estimatedOutputTokens = usage.output_tokens;
       }
 
       // Record the API call
       await recordApiCall({
-        userId: req.userId,
+        userId: req.userId ?? 'anonymous',
         endpoint: req.path,
-        method: req.method,
+        method: req.method ?? 'GET',
         model: req.model,
         inputTokens: estimatedInputTokens,
         outputTokens: estimatedOutputTokens,

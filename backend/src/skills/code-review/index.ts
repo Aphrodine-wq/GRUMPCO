@@ -85,7 +85,7 @@ class CodeReviewSkill extends BaseSkill {
     // Analyze file endpoint
     router.post('/analyze', async (req, res) => {
       try {
-        const { filePath, reviewType, workspacePath } = req.body;
+        const { filePath, reviewType: _reviewType, workspacePath } = req.body;
 
         if (!filePath || !workspacePath) {
           return res.status(400).json({ error: 'filePath and workspacePath are required' });
@@ -319,6 +319,7 @@ class CodeReviewSkill extends BaseSkill {
 
           issues.push({
             severity,
+            category: 'quality' as const,
             message: issueText,
             line: 0,
           });
@@ -494,7 +495,7 @@ class CodeReviewSkill extends BaseSkill {
 
   private async handleReviewCode(
     input: Record<string, unknown>,
-    context: SkillContext
+    _context: SkillContext
   ): Promise<ToolExecutionResult> {
     try {
       const review = await this.reviewCode({
@@ -545,8 +546,8 @@ class CodeReviewSkill extends BaseSkill {
   }
 
   private async handleSuggestImprovements(
-    input: Record<string, unknown>,
-    context: SkillContext
+    _input: Record<string, unknown>,
+    _context: SkillContext
   ): Promise<ToolExecutionResult> {
     try {
       // Placeholder for improvement suggestions

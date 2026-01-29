@@ -112,8 +112,8 @@ export function tracingMiddleware(
   });
 
   // Store span and correlation ID in request for later use
-  (req as any).span = span;
-  (req as any).correlationId = correlationId;
+  (req as Request & { span?: Span; correlationId?: string }).span = span;
+  (req as Request & { span?: Span; correlationId?: string }).correlationId = correlationId;
 
   // Run the request handler within the span context
   context.with(trace.setSpan(context.active(), span), () => {

@@ -7,15 +7,15 @@ import { getRequestLogger } from '../middleware/logger.js';
 
 // Create a default logger for use outside of request context
 const defaultLogger = {
-    debug: (...args: any[]) => console.debug('[DEBUG]', ...args),
-    info: (...args: any[]) => console.info('[INFO]', ...args),
-    warn: (...args: any[]) => console.warn('[WARN]', ...args),
-    error: (...args: any[]) => console.error('[ERROR]', ...args),
+    debug: (...args: unknown[]) => console.debug('[DEBUG]', ...args),
+    info: (...args: unknown[]) => console.info('[INFO]', ...args),
+    warn: (...args: unknown[]) => console.warn('[WARN]', ...args),
+    error: (...args: unknown[]) => console.error('[ERROR]', ...args),
 };
 
 // Export a logger that tries to use request context, falls back to default
 export const logger = {
-    debug: (obj: Record<string, any>, msg?: string) => {
+    debug: (obj: Record<string, unknown>, msg?: string) => {
         try {
             const log = getRequestLogger();
             log.debug(obj, msg);
@@ -27,7 +27,7 @@ export const logger = {
             }
         }
     },
-    info: (obj: Record<string, any>, msg?: string) => {
+    info: (obj: Record<string, unknown>, msg?: string) => {
         try {
             const log = getRequestLogger();
             log.info(obj, msg);
@@ -39,7 +39,7 @@ export const logger = {
             }
         }
     },
-    warn: (obj: Record<string, any>, msg?: string) => {
+    warn: (obj: Record<string, unknown>, msg?: string) => {
         try {
             const log = getRequestLogger();
             log.warn(obj, msg);
@@ -51,7 +51,7 @@ export const logger = {
             }
         }
     },
-    error: (obj: Record<string, any>, msg?: string) => {
+    error: (obj: Record<string, unknown>, msg?: string) => {
         try {
             const log = getRequestLogger();
             log.error(obj, msg);

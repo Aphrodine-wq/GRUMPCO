@@ -55,7 +55,7 @@ export async function runExpoTestsInDocker(projectPath: string): Promise<ExpoTes
         durationMs: Date.now() - start,
       });
     });
-    child.on('close', (code, signal) => {
+    child.on('close', (code, _signal) => {
       const durationMs = Date.now() - start;
       resolvePromise({
         success: code === 0,

@@ -553,7 +553,7 @@ export interface ToolExecutionEvent {
   type: 'tool_call' | 'tool_result' | 'tool_progress';
   toolName: string;
   toolId: string;
-  input?: Record<string, any>;
+  input?: Record<string, unknown>;
   result?: ToolExecutionResult;
   status?: 'pending' | 'executing' | 'success' | 'error';
 }

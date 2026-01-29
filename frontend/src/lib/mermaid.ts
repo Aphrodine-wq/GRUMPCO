@@ -1,4 +1,4 @@
-
+/* eslint-disable @typescript-eslint/no-explicit-any -- Mermaid theme type (Phase 1.1) */
 import mermaid from 'mermaid';
 import type { MermaidConfig } from '../types';
 

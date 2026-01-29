@@ -339,8 +339,13 @@ class AlertingService {
    * Send alert to webhook
    */
   private async sendWebhookAlert(alert: Alert): Promise<void> {
+    const url = this.config.webhookUrl;
+    if (!url) {
+      logger.warn('Webhook URL not configured, skipping alert');
+      return;
+    }
     try {
-      const response = await fetch(this.config.webhookUrl!, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

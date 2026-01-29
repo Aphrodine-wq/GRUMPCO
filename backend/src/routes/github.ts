@@ -34,7 +34,7 @@ router.get('/auth-url', (_req: Request, res: Response) => {
  * GET /api/github/callback?code=...
  * OAuth callback. Exchange code, store token, redirect to frontend.
  */
-router.get('/callback', async (req: Request<{}, {}, {}, { code?: string }>, res: Response) => {
+router.get('/callback', async (req: Request<Record<string, never>, object, object, { code?: string }>, res: Response) => {
   const log = getRequestLogger();
   const code = req.query.code;
   if (!code) {
@@ -69,7 +69,7 @@ router.get('/token', (_req: Request, res: Response) => {
 router.post(
   '/create-and-push',
   async (
-    req: Request<{}, {}, { sessionId: string; repoName: string; token?: string }>,
+    req: Request<Record<string, never>, object, { sessionId: string; repoName: string; token?: string }>,
     res: Response
   ) => {
     const log = getRequestLogger();

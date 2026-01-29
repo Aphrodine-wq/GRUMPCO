@@ -25,7 +25,6 @@ import {
 import {
   SECURITY_ANALYSIS_SYSTEM_PROMPT,
   generateSecurityScanPrompt,
-  generateSecretsAuditPrompt,
   generateCompliancePrompt,
   generateSBOMPrompt,
 } from './prompts.js';
@@ -135,7 +134,7 @@ function scanDirectory(dirPath: string, extensions: Set<string>, excludePatterns
         }
       }
     }
-  } catch (err) {
+  } catch (_err) {
     // Skip unreadable directories
   }
 
@@ -161,7 +160,7 @@ function readCodeFiles(workspacePath: string, maxFiles: number = 20): string {
       const relativePath = file.replace(workspacePath, '');
       snippets.push(`## ${relativePath}\n\`\`\`\n${content.substring(0, 5000)}\n\`\`\``);
       totalSize += content.length;
-    } catch (err) {
+    } catch (_err) {
       // Skip unreadable files
     }
   }
@@ -177,7 +176,7 @@ function readPackageJson(workspacePath: string): string | null {
   if (fs.existsSync(pkgPath)) {
     try {
       return fs.readFileSync(pkgPath, 'utf-8');
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }
@@ -241,7 +240,7 @@ export async function performSecurityScan(request: SecurityScanRequest): Promise
             recommendation: finding.recommendation,
           });
         }
-      } catch (err) {
+      } catch (_err) {
         // Skip unreadable files
       }
     }
@@ -273,7 +272,7 @@ export async function performSecurityScan(request: SecurityScanRequest): Promise
             vulnerabilities.push(...data.vulnerabilities);
           }
         }
-      } catch (err) {
+      } catch (_err) {
         // Continue with existing findings
       }
     }
@@ -377,7 +376,7 @@ export async function generateSBOM(request: SBOMRequest): Promise<SBOMResult> {
         }
       }
     }
-  } catch (err) {
+  } catch (_err) {
     // Continue with basic SBOM
   }
 
@@ -440,7 +439,7 @@ Dev Dependencies: ${Object.keys(pkg.devDependencies || {}).length}
       nextSteps = data.nextSteps || [];
       summary = data.summary || summary;
     }
-  } catch (err) {
+  } catch (_err) {
     // Use defaults
   }
 
@@ -475,7 +474,7 @@ export async function auditSecrets(request: SecretsAuditRequest): Promise<Secret
       const content = fs.readFileSync(file, 'utf-8');
       const fileFindings = scanFileForSecrets(file.replace(workspacePath, ''), content);
       findings.push(...fileFindings);
-    } catch (err) {
+    } catch (_err) {
       // Skip unreadable files
     }
   }

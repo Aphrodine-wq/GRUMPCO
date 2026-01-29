@@ -1,12 +1,18 @@
 <script lang="ts">
   import { CollapsibleSidebar, Button } from '../lib/design-system';
   import { sessionsStore, sortedSessions, currentSession } from '../stores/sessionsStore';
-  import { showSettings } from '../stores/uiStore';
+  import { showSettings, sidebarCollapsed } from '../stores/uiStore';
   import OpenRepoModal from './OpenRepoModal.svelte';
   import type { Session } from '../types';
 
   let hoveredSessionId: string | null = $state(null);
-  let collapsed = $state(false);
+  let collapsed = $state($sidebarCollapsed);
+  $effect(() => {
+    collapsed = $sidebarCollapsed;
+  });
+  $effect(() => {
+    sidebarCollapsed.set(collapsed);
+  });
   let mobileMenuOpen = $state(false);
   let showRepoModal = $state(false);
 
@@ -207,8 +213,13 @@
       {#if $sortedSessions.length === 0}
         <div class="empty-state" class:collapsed>
           {#if !collapsed}
-            <p>No sessions yet</p>
-            <p class="hint">Start a new chat above</p>
+            <div class="empty-state-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <p class="empty-state-heading">Your chats will appear here</p>
+            <p class="hint">Click <strong>New Chat</strong> above to get started</p>
           {:else}
             <div class="empty-dot"></div>
           {/if}
@@ -384,6 +395,18 @@
     padding: 24px 0;
   }
 
+  .empty-state-icon {
+    margin-bottom: 8px;
+    color: var(--color-border);
+  }
+
+  .empty-state-heading {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+
   .empty-dot {
     width: 4px;
     height: 4px;
@@ -533,6 +556,29 @@
 
     .sidebar-wrapper.mobile-open {
       transform: translateX(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sessions-list {
+      transition: none;
+    }
+    .session-item,
+    .delete-btn,
+    .settings-btn {
+      transition: none;
+    }
+    .mobile-toggle {
+      transition: none;
+    }
+    .mobile-backdrop {
+      animation: none;
+      transition: opacity 150ms ease;
+    }
+    @media (max-width: 768px) {
+      .sidebar-wrapper {
+        transition: none;
+      }
     }
   }
 </style>

@@ -4,11 +4,7 @@ import { getCurrentProjectId } from './projectStore.js';
 import { DEFAULT_PREFERENCES } from '../types/workflow';
 import type {
   WorkflowState,
-  WorkflowPhase,
   GenerationPreferences,
-  SystemArchitecture,
-  PRD,
-  CodeGenSession
 } from '../types/workflow';
 
 // Create store
@@ -40,6 +36,8 @@ export const prdRaw = derived(state, s => s.prdRaw);
 export const codegenSession = derived(state, s => s.codegenSession);
 export const preferences = derived(state, s => s.preferences);
 
+const EVENT_MODE = import.meta.env?.VITE_EVENT_MODE ?? 'sse';
+
 export const canProceedToPrd = derived(
   [phase, architecture, isStreaming],
   ([$phase, $architecture, $isStreaming]) =>
@@ -65,6 +63,7 @@ export async function* streamArchitecture(
     projectType?: string;
     techStack?: string[];
     complexity?: string;
+    demo?: boolean;
   }
 ): AsyncGenerator<string> {
   state.update(s => ({
@@ -84,6 +83,7 @@ export async function* streamArchitecture(
         projectType: options?.projectType || 'fullstack',
         techStack: options?.techStack || [],
         complexity: options?.complexity || 'mvp',
+        demo: options?.demo === true,
       }),
     });
 
@@ -144,7 +144,7 @@ export async function* streamArchitecture(
 }
 
 // PHASE 2: PRD GENERATION
-export async function* streamPrd(): AsyncGenerator<string> {
+export async function* streamPrd(options?: { demo?: boolean }): AsyncGenerator<string> {
   const currentArchitecture = get(architecture);
 
   if (!currentArchitecture) {
@@ -167,6 +167,8 @@ export async function* streamPrd(): AsyncGenerator<string> {
         architectureId: currentArchitecture.id,
         projectName: currentArchitecture.projectName,
         projectDescription: currentArchitecture.projectDescription,
+        architecture: currentArchitecture,
+        demo: options?.demo === true,
       }),
     });
 
@@ -278,7 +280,7 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
     // Start polling for status
     startStatusPolling(data.sessionId);
     // Subscribe to SSE for codegen.ready / codegen.failed
-    if (typeof EventSource !== 'undefined') {
+    if (EVENT_MODE !== 'poll' && typeof EventSource !== 'undefined') {
       const url = getApiBase() + '/api/events/stream?sessionId=' + encodeURIComponent(data.sessionId);
       const es = new EventSource(url);
       codegenEventSource = es;
@@ -317,7 +319,7 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
           }
         } catch (err) {
           // Failed to parse codegen event from stream - don't break event handling
-          console.debug('Failed to parse codegen event:', err instanceof Error ? err.message : String(err));
+          console.warn('Failed to parse codegen event:', err instanceof Error ? err.message : String(err));
         }
       };
       es.onerror = () => stopCodegenEventSource();
@@ -436,6 +438,20 @@ export async function downloadProject(): Promise<void> {
   }
 }
 
+/**
+ * Run demo mode: Architecture → PRD with prebaked sample data (no LLM calls).
+ * Call this then read architecture/prd from the store to show in UI.
+ */
+export async function runDemo(): Promise<void> {
+  const DEMO_DESCRIPTION = 'A simple todo app with user authentication and real-time sync.';
+  for await (const _ of streamArchitecture(DEMO_DESCRIPTION, { demo: true })) {
+    // consume stream
+  }
+  for await (const _ of streamPrd({ demo: true })) {
+    // consume stream
+  }
+}
+
 // UTILITIES
 export function reset() {
   stopStatusPolling();
@@ -457,4 +473,49 @@ export function setPreferences(prefs: Partial<GenerationPreferences>) {
     ...s,
     preferences: { ...s.preferences, ...prefs },
   }));
+}
+
+/** Export current architecture as JSON download. */
+export function exportArchitectureJson(): void {
+  const arch = get(architecture);
+  if (!arch) return;
+  const blob = new Blob([JSON.stringify(arch, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `architecture-${arch.id || 'export'}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Export current PRD as Markdown download. */
+export function exportPrdMarkdown(): void {
+  const prdDoc = get(prd);
+  if (!prdDoc) return;
+  const lines: string[] = [
+    `# ${prdDoc.projectName}`,
+    '',
+    prdDoc.projectDescription,
+    '',
+    '---',
+    '',
+  ];
+  const o = prdDoc.sections?.overview;
+  if (o) {
+    lines.push('## Overview');
+    lines.push('');
+    lines.push(`**Vision:** ${o.vision}`);
+    lines.push('');
+    lines.push(`**Problem:** ${o.problem}`);
+    lines.push('');
+    lines.push(`**Solution:** ${o.solution}`);
+    lines.push('');
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `prd-${prdDoc.id || 'export'}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
 }

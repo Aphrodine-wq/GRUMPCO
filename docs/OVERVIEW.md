@@ -61,7 +61,7 @@ There is no shared project or workspace id linking chat, ship, and codegen today
 │                    G-RUMP TAURI DESKTOP APP                         │
 ├─────────────────────────────────────────────────────────────────────┤
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                 SVELTE FRONTEND (5178)                        │   │
+│  │                 SVELTE FRONTEND (5173)                        │   │
 │  │  Architecture | Generate code modes; Mermaid; workflow; tool call UI │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                              │                                       │
@@ -131,8 +131,22 @@ milesproject/
 
 This opens:
 - G-Rump Backend on `http://localhost:3000`
-- G-Rump Frontend on `http://localhost:5178`
-- G-Rump Tauri desktop window
+- G-Rump Frontend on `http://localhost:5173`
+- (For Tauri desktop: `cd frontend && npm run tauri:dev`)
+
+### Ship path (MVP)
+
+The minimal path to validate a release: **Web** — run `.\start-app.bat` (Windows) so backend is on 3000 and frontend on 5173; confirm `http://localhost:3000/health` returns 200 and `http://localhost:5173` loads the UI. Then run one flow: **Architecture mode** (describe → Mermaid → optional PRD) or **SHIP** (design→spec→plan→code). Required: `ANTHROPIC_API_KEY` in `backend/.env`. Redis and grump-intent are optional for this path (rate limiting and intent fall back without them).
+
+### Deploy and environment
+
+**Required:** `ANTHROPIC_API_KEY` in `backend/.env`. Copy `backend/.env.example` to `backend/.env` and set the key.
+
+**Optional:** `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` for rate limiting, cache, BullMQ, and session storage; omit for in-memory fallback. `CORS_ORIGINS` for production (comma-separated origins; set for web deploy). `GRUMP_INTENT_PATH` for the Rust intent compiler; omit to use Claude-only intent. See `backend/.env.example` for full list (Supabase, Stripe, Twilio, etc.).
+
+**Recommended deploy path (MVP):** Local — run `.\start-app.bat` (backend 3000, frontend 5173). For production: backend on Railway (or similar) with `NODE_ENV=production`, `CORS_ORIGINS` set to your frontend URL; frontend as static build (e.g. Vercel or same host). Desktop: `cd frontend && npm run tauri:dev` (dev) or `npm run tauri:build` (installer).
+
+**Tests:** Backend: `cd backend && npm run test` and `npm run type-check`. Frontend: `cd frontend && npm run test:run`. E2E: start backend, then `cd frontend && npm run test:e2e` (or `npm run test:e2e:ci` in CI). In CI, E2E job starts the backend and global-setup waits for backend health. Evals: run `cd backend && npm run evals` with backend up; results in `frontend/test-results/agent-evals.json`. CI (when `ANTHROPIC_API_KEY` is set) runs evals and publishes a score summary to the job summary.
 
 ---
 
@@ -156,7 +170,7 @@ NODE_ENV=production PORT=3000 node dist/index.js  # in one terminal
 npm run evals
 ```
 
-This produces per-task scores and comments for architecture and PRD outputs, plus raw results for SHIP and codegen, which you can inspect locally or wire into CI.
+This produces per-task scores and comments for architecture and PRD outputs, plus raw results for SHIP and codegen. In CI (`.github/workflows/ci.yml`), when `ANTHROPIC_API_KEY` is set, the agent-evals job runs evals and writes a score summary to the GitHub Actions job summary via `backend/tests/evals/parseEvalsSummary.mjs`. Use `EVAL_CORRECTNESS_THRESHOLD` (default 3.0) to fail the job if average correctness is below threshold.
 
 ---
 

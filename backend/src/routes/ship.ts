@@ -3,20 +3,20 @@
  * API endpoints for SHIP mode workflow
  */
 
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { getRequestLogger } from '../middleware/logger.js';
 import { sendServerError, writeSSEError } from '../utils/errorResponse.js';
 import { validateShipRequest, handleShipValidationErrors } from '../middleware/validator.js';
 import {
   startShipMode,
   getShipSession,
-  executeShipMode,
   executeDesignPhase,
   executeSpecPhase,
   executePlanPhase,
   executeCodePhase,
 } from '../services/shipModeService.js';
 import { enqueueShipJob } from '../services/jobQueue.js';
+import { isServerlessRuntime } from '../config/runtime.js';
 import type { ShipStartRequest, ShipPhase } from '../types/ship.js';
 
 const router = Router();
@@ -32,7 +32,7 @@ router.post(
   '/start',
   validateShipRequest,
   handleShipValidationErrors,
-  async (req, res) => {
+  async (req: Request, res: Response) => {
   try {
     const desc = (req.body.projectDescription as string).trim();
     const request: ShipStartRequest = {
@@ -122,6 +122,10 @@ router.post('/:sessionId/execute', async (req, res) => {
  */
 router.post('/:sessionId/execute/stream', async (req, res) => {
   try {
+    if (isServerlessRuntime) {
+      res.status(400).json({ error: 'Streaming execution is not supported in serverless mode. Use /execute and poll.' });
+      return;
+    }
     const { sessionId } = req.params;
     const resumeFromPhase = (req.query.resumeFromPhase as ShipPhase) || (req.body?.resumeFromPhase as ShipPhase);
 
@@ -142,11 +146,12 @@ router.post('/:sessionId/execute/stream', async (req, res) => {
         return;
       }
 
+      const initialSession = session;
       function canResumeFrom(phase: ShipPhase): boolean {
         if (phase === 'design') return true;
-        if (phase === 'spec') return session!.designResult?.status === 'completed';
-        if (phase === 'plan') return session!.designResult?.status === 'completed' && session!.specResult?.status === 'completed';
-        if (phase === 'code') return session!.designResult?.status === 'completed' && session!.specResult?.status === 'completed' && session!.planResult?.status === 'completed';
+        if (phase === 'spec') return initialSession.designResult?.status === 'completed';
+        if (phase === 'plan') return initialSession.designResult?.status === 'completed' && initialSession.specResult?.status === 'completed';
+        if (phase === 'code') return initialSession.designResult?.status === 'completed' && initialSession.specResult?.status === 'completed' && initialSession.planResult?.status === 'completed';
         return false;
       }
 
@@ -165,7 +170,13 @@ router.post('/:sessionId/execute/stream', async (req, res) => {
       if (runDesign) {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'design' })}\n\n`);
         const designResult = await executeDesignPhase(session);
-        session = (await getShipSession(sessionId))!;
+        const nextSession = await getShipSession(sessionId);
+        if (!nextSession) {
+          res.write(`data: ${JSON.stringify({ type: 'error', error: 'Session not found after design' })}\n\n`);
+          res.end();
+          return;
+        }
+        session = nextSession;
         res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'design', result: designResult, nextPhase: 'spec' })}\n\n`);
         if (designResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'design', error: designResult.error })}\n\n`);
@@ -176,8 +187,20 @@ router.post('/:sessionId/execute/stream', async (req, res) => {
 
       if (runSpec) {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'spec' })}\n\n`);
-        const specResult = await executeSpecPhase(session, session.designResult!);
-        session = (await getShipSession(sessionId))!;
+        const designResult = session.designResult;
+        if (!designResult) {
+          res.write(`data: ${JSON.stringify({ type: 'error', error: 'Design result missing' })}\n\n`);
+          res.end();
+          return;
+        }
+        const specResult = await executeSpecPhase(session, designResult);
+        const nextSession = await getShipSession(sessionId);
+        if (!nextSession) {
+          res.write(`data: ${JSON.stringify({ type: 'error', error: 'Session not found after spec' })}\n\n`);
+          res.end();
+          return;
+        }
+        session = nextSession;
         res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'spec', result: specResult, nextPhase: 'plan' })}\n\n`);
         if (specResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'spec', error: specResult.error })}\n\n`);
@@ -188,8 +211,20 @@ router.post('/:sessionId/execute/stream', async (req, res) => {
 
       if (runPlan) {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'plan' })}\n\n`);
-        const planResult = await executePlanPhase(session, session.specResult!);
-        session = (await getShipSession(sessionId))!;
+        const specResultForPlan = session.specResult;
+        if (!specResultForPlan) {
+          res.write(`data: ${JSON.stringify({ type: 'error', error: 'Spec result missing for plan' })}\n\n`);
+          res.end();
+          return;
+        }
+        const planResult = await executePlanPhase(session, specResultForPlan);
+        const nextSession = await getShipSession(sessionId);
+        if (!nextSession) {
+          res.write(`data: ${JSON.stringify({ type: 'error', error: 'Session not found after plan' })}\n\n`);
+          res.end();
+          return;
+        }
+        session = nextSession;
         res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'plan', result: planResult, nextPhase: 'code' })}\n\n`);
         if (planResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'plan', error: planResult.error })}\n\n`);
@@ -200,7 +235,14 @@ router.post('/:sessionId/execute/stream', async (req, res) => {
 
       if (runCode) {
         res.write(`data: ${JSON.stringify({ type: 'phase_start', phase: 'code' })}\n\n`);
-        const codeResult = await executeCodePhase(session, session.planResult!, session.designResult!);
+        const planResult = session.planResult;
+        const designResult = session.designResult;
+        if (!planResult || !designResult) {
+          res.write(`data: ${JSON.stringify({ type: 'error', error: 'Plan or design result missing' })}\n\n`);
+          res.end();
+          return;
+        }
+        const codeResult = await executeCodePhase(session, planResult, designResult);
         res.write(`data: ${JSON.stringify({ type: 'phase_complete', phase: 'code', result: codeResult, nextPhase: 'completed' })}\n\n`);
         if (codeResult.status === 'failed') {
           res.write(`data: ${JSON.stringify({ type: 'error', phase: 'code', error: codeResult.error })}\n\n`);

@@ -7,11 +7,16 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Critical User Journeys', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to the app
-    await page.goto('/');
-    
-    // Wait for the app to load
-    await page.waitForLoadState('networkidle');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    // Wait for app shell so Svelte has mounted
+    await page.locator('body').waitFor({ state: 'visible', timeout: 15000 });
+    await page.waitForLoadState('networkidle').catch(() => {});
+    // If setup screen is shown (first-time or cleared state), skip to get to chat
+    const skipBtn = page.locator('button:has-text("Skip"), button:has-text("Get Started")').first();
+    if (await skipBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await skipBtn.click();
+      await page.waitForTimeout(500);
+    }
   });
 
   test('Complete workflow: Intent → Architecture → PRD → Code Generation', async ({ page }) => {
@@ -136,10 +141,12 @@ test.describe('Critical User Journeys', () => {
     }
 
     // Verify API is accessible by checking health endpoint
-    const response = await page.request.get('http://localhost:3000/health/quick');
+    const apiBase = process.env.VITE_API_URL || process.env.PLAYWRIGHT_API_URL || 'http://localhost:3000';
+    const healthUrl = `${apiBase.replace(/\/$/, '')}/health/quick`;
+    const response = await page.request.get(healthUrl);
     expect(response.status()).toBe(200);
     
-    const healthData = await response.json();
+    const healthData = (await response.json()) as { status?: string };
     expect(healthData.status).toBe('healthy');
   });
 

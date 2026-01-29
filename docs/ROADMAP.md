@@ -93,8 +93,7 @@ Design principles for “fast” workflows:
 
 Future enhancements:
 
-- Additional outbound events (e.g. `intent.parsed`, `architecture.generated`, `prd.generated`) so external systems can
-  chain pipelines based on finer-grained milestones.
+- Additional outbound events: `architecture.generated` and `prd.generated` are now emitted (payload: architectureId, projectName, hasDiagram/hasPrd) so external systems can chain pipelines on milestones. SSE `GET /api/events/stream` and `GRUMP_WEBHOOK_URLS` receive these events.
 - Optional webhook signing and retry policies for production-grade consumers.
 - Higher-level docs and examples for building webhook-driven flows (e.g. “when SHIP completes, auto-deploy and post to Slack”).
 
@@ -118,4 +117,3 @@ Next steps:
 
 - Wire `npm run evals` into CI as a separate workflow that runs on PRs and publishes score summaries.
 - Expand safety/jailbreak prompts and scheduled-agent scenarios once the core eval path is stable.
-

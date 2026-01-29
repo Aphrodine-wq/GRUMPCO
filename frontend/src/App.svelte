@@ -6,9 +6,11 @@
   import QuestionModal from './components/QuestionModal.svelte';
   import PricingModal from './components/PricingModal.svelte';
   import SettingsScreen from './components/SettingsScreen.svelte';
+  import SetupScreen from './components/SetupScreen.svelte';
   import { sessionsStore, currentSession } from './stores/sessionsStore';
   import { settingsStore } from './stores/settingsStore';
-  import { showSettings } from './stores/uiStore';
+  import { preferencesStore, setupComplete } from './stores/preferencesStore';
+  import { showSettings, sidebarCollapsed, focusChatTrigger } from './stores/uiStore';
   import type { Message } from './types';
 
   let showPricing = $state(false);
@@ -17,29 +19,46 @@
     localStorage.removeItem('mermaid-app-state');
     settingsStore.load().catch(() => {});
 
-    // If no active session, create one
     if (!$currentSession) {
       sessionsStore.createSession([]);
     }
 
+    function onKeydown(e: KeyboardEvent) {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === 'b') {
+        e.preventDefault();
+        sidebarCollapsed.update((v) => !v);
+      }
+      if ((mod && e.shiftKey && e.key === 'L') || (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey)) {
+        const target = e.target as HTMLElement;
+        if (target?.tagName !== 'INPUT' && target?.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          focusChatTrigger.update((n) => n + 1);
+        }
+      }
+    }
+    window.addEventListener('keydown', onKeydown);
+
     const isTauri =
       typeof window !== 'undefined' &&
-      (!!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__);
-
+      (!!(window as { __TAURI__?: unknown }).__TAURI__ || !!(window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
     if (isTauri) {
       setTimeout(() => {
         import('@tauri-apps/api/core')
           .then(({ invoke }) => {
-            invoke('close_splash_show_main').catch((err) => console.error(err));
+            invoke('close_splash_show_main').catch((err: unknown) => console.error(err));
           })
           .catch(() => {
-            import('@tauri-apps/api').then((module: any) => {
-              const invoke = module.invoke || module.tauri?.invoke;
-              if (invoke) invoke('close_splash_show_main').catch((err: any) => console.error(err));
+            import('@tauri-apps/api').then((mod: unknown) => {
+              const m = mod as { invoke?: (cmd: string) => Promise<unknown>; tauri?: { invoke: (cmd: string) => Promise<unknown> } };
+              const invoke = m.invoke ?? m.tauri?.invoke;
+              if (invoke) invoke('close_splash_show_main').catch((err: unknown) => console.error(err));
             });
           });
       }, 400);
     }
+
+    return () => window.removeEventListener('keydown', onKeydown);
   });
 
   function getInitialMessages(): Message[] | undefined {
@@ -61,6 +80,11 @@
   <div class="main-content">
     {#if $showSettings}
       <SettingsScreen onBack={() => showSettings.set(false)} />
+    {:else if !$setupComplete}
+      <SetupScreen
+        onComplete={() => preferencesStore.completeSetup()}
+        onSkip={() => preferencesStore.completeSetup()}
+      />
     {:else}
       {#key $currentSession?.id ?? 'none'}
         <ChatInterface
@@ -95,6 +119,17 @@
   /* Ensure background fills the "void" outside the app on large screens */
   :global(body) {
     background-color: #f0f2f5;
+  }
+
+  /* Respect user preference for reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    :global(*),
+    :global(*::before),
+    :global(*::after) {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   .main-content {

@@ -4,7 +4,8 @@
  * Manages multi-agent code generation pipeline for G-Rump. This is the core service
  * that coordinates specialized AI agents (architect, frontend, backend, devops, test, docs)
  * to generate complete codebases from PRDs and architecture specifications.
- *
+ */
+/**
  * ## Key Concepts
  * - **GenerationSession**: Tracks the state of a code generation run
  * - **AgentTask**: Individual agent's work item within a session
@@ -35,19 +36,17 @@ import { createApiTimer } from '../middleware/metrics.js';
 import logger from '../middleware/logger.js';
 import { getDatabase } from '../db/database.js';
 import { withResilience } from './resilience.js';
-import { withSpan, createAgentSpan, addSpanEvent, setSpanAttribute, getCurrentSpan } from '../middleware/tracing.js';
-import { getCorrelationIdFromHeaders } from '../utils/correlationId.js';
+import { withSpan, addSpanEvent, setSpanAttribute } from '../middleware/tracing.js';
 import { getArchitectAgentPromptWithContext } from '../prompts/agents/architect-agent.js';
 import { getFrontendAgentPrompt } from '../prompts/agents/frontend-agent.js';
 import { getBackendAgentPrompt } from '../prompts/agents/backend-agent.js';
 import { getDevOpsAgentPrompt } from '../prompts/agents/devops-agent.js';
 import { getTestAgentPrompt } from '../prompts/agents/test-agent.js';
 import { getDocsAgentPrompt } from '../prompts/agents/docs-agent.js';
-import { getSecurityAgentPrompt } from '../prompts/agents/security-agent.js';
-import { getI18nAgentPrompt } from '../prompts/agents/i18n-agent.js';
 import { analyzeAgentReports, generateFixPlan, hasAutoFixableIssues } from './wrunnerService.js';
 import { dispatchWebhook } from './webhookService.js';
 import { analyzeCode, scanSecurity, optimizePerformance } from './claudeCodeService.js';
+import type { CodeAnalysis, SecurityIssue, PerformanceOptimization } from '../types/claudeCode.js';
 import { generateMasterContext, enrichContextForAgent, generateContextSummary } from './contextService.js';
 import type {
   GenerationSession,
@@ -76,7 +75,7 @@ const client = new Anthropic({
 });
 
 /** Claude Code quality: all agent outputs must satisfy type safety, tests, security, and maintainability. */
-const AGENT_QUALITY_STANDARD = 'claude-code' as const;
+const _AGENT_QUALITY_STANDARD = 'claude-code' as const;
 
 // Create resilient wrapper for Claude API calls
 // Type assertion: since we never pass stream: true, the response is always a Message
@@ -264,10 +263,10 @@ async function runArchitectAgent(
   masterContext?: MasterContext,
   creativeDesignDoc?: CreativeDesignDoc,
   systemPromptPrefix?: string
-): Promise<Record<string, any>> {
+): Promise<Record<string, unknown>> {
   return await withSpan(
     'agent.architect.execute',
-    async (span) => {
+    async (_span) => {
       const log = getRequestLogger();
       const timer = createApiTimer('agent_architect');
       const agentTask = session.agents.architect;
@@ -380,7 +379,7 @@ export interface SpecUiContext {
 async function runFrontendAgent(
   session: GenerationSession,
   prd: PRD,
-  architecturePlan: Record<string, any>,
+  architecturePlan: Record<string, unknown>,
   prds?: PRD[],
   subTasks?: SubTask[],
   masterContext?: MasterContext,
@@ -492,7 +491,7 @@ async function runFrontendAgent(
 async function runBackendAgent(
   session: GenerationSession,
   prd: PRD,
-  architecturePlan: Record<string, any>,
+  architecturePlan: Record<string, unknown>,
   prds?: PRD[],
   subTasks?: SubTask[],
   masterContext?: MasterContext,
@@ -814,18 +813,18 @@ async function runDocsAgent(
 /**
  * Convert agent output to GeneratedFile array
  */
-function convertAgentOutputToFiles(agentOutput: Record<string, any>): GeneratedFile[] {
+function convertAgentOutputToFiles(agentOutput: Record<string, unknown>): GeneratedFile[] {
   const files: GeneratedFile[] = [];
 
   // Flatten all files from agent output
   for (const key of Object.keys(agentOutput)) {
     const items = agentOutput[key];
     if (Array.isArray(items)) {
-      for (const item of items) {
+      for (const item of items as Array<{ path?: string; content?: string; type?: string }>) {
         if (item.path && item.content) {
           files.push({
             path: item.path,
-            type: (item.type || 'source') as any,
+            type: (item.type === 'test' || item.type === 'config' || item.type === 'doc' ? item.type : 'source') as GeneratedFile['type'],
             language: getLanguageFromPath(item.path),
             size: item.content.length,
             content: item.content,
@@ -861,7 +860,7 @@ async function generateAgentWorkReport(
   agentTask: AgentTask,
   generatedFiles: GeneratedFile[],
   prd: PRD,
-  architecturePlan?: Record<string, any>,
+  architecturePlan?: Record<string, unknown>,
   prds?: PRD[]
 ): Promise<AgentWorkReport> {
   const log = getRequestLogger();
@@ -945,7 +944,7 @@ Return a JSON object matching the AgentWorkReport structure:
         );
         
         const successfulAnalyses = analyses
-          .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+          .filter((r): r is PromiseFulfilledResult<CodeAnalysis> => r.status === 'fulfilled')
           .map(r => r.value);
         
         if (successfulAnalyses.length > 0) {
@@ -960,7 +959,7 @@ Return a JSON object matching the AgentWorkReport structure:
         );
         
         const securityResults = securityScans
-          .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+          .filter((r): r is PromiseFulfilledResult<SecurityIssue[]> => r.status === 'fulfilled')
           .flatMap(r => r.value);
         
         if (securityResults.length > 0) {
@@ -974,7 +973,7 @@ Return a JSON object matching the AgentWorkReport structure:
         );
         
         const perfResults = perfScans
-          .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+          .filter((r): r is PromiseFulfilledResult<PerformanceOptimization[]> => r.status === 'fulfilled')
           .flatMap(r => r.value);
         
         if (perfResults.length > 0) {
@@ -1148,7 +1147,7 @@ async function applyAutoFixes(
 /**
  * Regenerate output for a specific agent with fixes applied
  */
-async function regenerateAgentOutput(
+async function _regenerateAgentOutput(
   session: GenerationSession,
   agentType: AgentType,
   fixes: WRunnerAnalysis['issues']
@@ -1163,7 +1162,7 @@ async function regenerateAgentOutput(
   }
 
   // Get relevant fixes for this agent
-  const agentFixes = fixes.filter((f) => f.affectedAgents.includes(agentType));
+  const _agentFixes = fixes.filter((f) => f.affectedAgents.includes(agentType));
 
   // In a full implementation, you would:
   // 1. Re-run the agent with fix instructions
@@ -1171,7 +1170,7 @@ async function regenerateAgentOutput(
   // 3. Regenerate work report
 
   // For now, return existing files
-  return session.generatedFiles?.filter((f) => {
+  return session.generatedFiles?.filter((_f) => {
     // Filter files by agent type (this is a simplified approach)
     return true;
   }) || [];
@@ -1310,7 +1309,7 @@ export async function executeCodeGeneration(
             specUiContext,
             systemPromptPrefix
           );
-          session.generatedFiles!.push(...frontendFiles);
+          (session.generatedFiles ??= []).push(...frontendFiles);
         })()
       );
     }
@@ -1328,7 +1327,7 @@ export async function executeCodeGeneration(
             masterContext,
             systemPromptPrefix
           );
-          session.generatedFiles!.push(...backendFiles);
+          (session.generatedFiles ??= []).push(...backendFiles);
         })()
       );
     }
@@ -1340,20 +1339,20 @@ export async function executeCodeGeneration(
 
     log.info({}, 'Running DevOps agent');
     const devopsFiles = await runDevOpsAgent(session, masterContext, systemPromptPrefix);
-    session.generatedFiles!.push(...devopsFiles);
+    (session.generatedFiles ??= []).push(...devopsFiles);
     await db.saveSession(session);
 
     if (session.preferences.includeTests !== false) {
       log.info({}, 'Running test agent');
       const testFiles = await runTestAgent(session, prd, undefined, undefined, masterContext, systemPromptPrefix);
-      session.generatedFiles!.push(...testFiles);
+      (session.generatedFiles ??= []).push(...testFiles);
       await db.saveSession(session);
     }
 
     if (session.preferences.includeDocs !== false) {
       log.info({}, 'Running docs agent');
       const docFiles = await runDocsAgent(session, prd, undefined, masterContext, systemPromptPrefix);
-      session.generatedFiles!.push(...docFiles);
+      (session.generatedFiles ??= []).push(...docFiles);
       await db.saveSession(session);
     }
 
@@ -1396,7 +1395,7 @@ export async function executeCodeGeneration(
       completedAt: session.completedAt,
     });
     log.info(
-      { sessionId: session.sessionId, fileCount: session.generatedFiles!.length },
+      { sessionId: session.sessionId, fileCount: (session.generatedFiles ?? []).length },
       'Code generation pipeline completed'
     );
   } catch (error) {
@@ -1463,7 +1462,7 @@ export async function executeCodeGenerationMulti(session: GenerationSession): Pr
             feSubTasks.length ? feSubTasks : undefined,
             masterContext
           );
-          session.generatedFiles!.push(...frontendFiles);
+          (session.generatedFiles ??= []).push(...frontendFiles);
         })()
       );
     }
@@ -1481,7 +1480,7 @@ export async function executeCodeGenerationMulti(session: GenerationSession): Pr
             beSubTasks.length ? beSubTasks : undefined,
             masterContext
           );
-          session.generatedFiles!.push(...backendFiles);
+          (session.generatedFiles ??= []).push(...backendFiles);
         })()
       );
     }
@@ -1493,7 +1492,7 @@ export async function executeCodeGenerationMulti(session: GenerationSession): Pr
 
     log.info({}, 'Running DevOps agent');
     const devopsFiles = await runDevOpsAgent(session, masterContext);
-    session.generatedFiles!.push(...devopsFiles);
+    (session.generatedFiles ??= []).push(...devopsFiles);
     await db.saveSession(session);
 
     if (session.preferences.includeTests !== false) {
@@ -1506,7 +1505,7 @@ export async function executeCodeGenerationMulti(session: GenerationSession): Pr
         testSubTasks.length ? testSubTasks : undefined,
         masterContext
       );
-      session.generatedFiles!.push(...testFiles);
+      (session.generatedFiles ??= []).push(...testFiles);
       await db.saveSession(session);
     }
 
@@ -1519,7 +1518,7 @@ export async function executeCodeGenerationMulti(session: GenerationSession): Pr
         docPrds.length ? docPrds : undefined,
         masterContext
       );
-      session.generatedFiles!.push(...docFiles);
+      (session.generatedFiles ??= []).push(...docFiles);
       await db.saveSession(session);
     }
 
@@ -1567,7 +1566,7 @@ export async function executeCodeGenerationMulti(session: GenerationSession): Pr
       completedAt: session.completedAt,
     });
     log.info(
-      { sessionId: session.sessionId, fileCount: session.generatedFiles!.length },
+      { sessionId: session.sessionId, fileCount: (session.generatedFiles ?? []).length },
       'Multi-PRD code generation completed'
     );
   } catch (error) {

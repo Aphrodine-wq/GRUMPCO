@@ -14,7 +14,7 @@ export interface AgentMessage {
   agentType: AgentType;
   type: 'request' | 'response' | 'error' | 'log';
   status: AgentStatus;
-  content: Record<string, any>;
+  content: Record<string, unknown>;
   timestamp: string;
   dependencies?: AgentType[];
 }
@@ -24,8 +24,8 @@ export interface AgentTask {
   agentType: AgentType;
   description: string;
   status: AgentStatus;
-  input: Record<string, any>;
-  output?: Record<string, any>;
+  input: Record<string, unknown>;
+  output?: Record<string, unknown>;
   error?: string;
   startedAt?: string;
   completedAt?: string;

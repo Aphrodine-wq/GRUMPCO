@@ -40,12 +40,12 @@ export interface APIEndpointSpec {
   requestBody?: {
     type: string;
     required: boolean;
-    example?: Record<string, any>;
+    example?: Record<string, unknown>;
   };
   responses: {
     status: number;
     description: string;
-    example?: Record<string, any>;
+    example?: Record<string, unknown>;
   }[];
 }
 

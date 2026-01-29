@@ -166,15 +166,15 @@ router.post('/stream', async (req: Request, res: Response) => {
     res.end();
 
     logger.debug({ requestId: req.id }, 'Chat stream completed successfully');
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (!isClientConnected) {
       return;
     }
 
     logger.error({ error, requestId: req.id }, 'Chat stream error');
 
-    // Enhanced error handling
-    const status = error.status || error.statusCode || 500;
+    const err = error as { status?: number; statusCode?: number; message?: string };
+    const status = err.status ?? err.statusCode ?? 500;
     const errorType = status === 401 ? 'auth_error' : 
                      status === 429 ? 'rate_limit' :
                      status >= 500 ? 'service_error' : 'api_error';
@@ -184,12 +184,12 @@ router.post('/stream', async (req: Request, res: Response) => {
       res.write(
         `data: ${JSON.stringify({
           type: 'error',
-          message: error.message || 'An error occurred',
+          message: err.message ?? (error instanceof Error ? error.message : 'An error occurred'),
           errorType,
           retryable: status >= 500 || status === 429,
           metadata: {
             status,
-            code: error.code,
+            code: (error as { code?: unknown }).code,
             requestId: req.id,
           },
         })}\n\n`

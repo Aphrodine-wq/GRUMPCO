@@ -2,8 +2,6 @@ import { writable, derived } from 'svelte/store';
 import { fetchApi } from '../lib/api.js';
 import type {
   Plan,
-  PlanStep,
-  Phase,
   PlanGenerationRequest,
   PlanEditRequest,
 } from '../types/plan';

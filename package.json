@@ -10,6 +10,7 @@
   "description": "AI-powered Mermaid diagram generator",
   "scripts": {
     "build": "npm run build --prefix frontend",
+    "check-all": "npm run type-check --prefix backend && npm run type-check --prefix frontend && npm run lint --prefix backend && npm run lint --prefix frontend",
     "lint": "npm run lint --prefix frontend && npm run lint --prefix backend",
     "lint:fix": "npm run lint:fix --prefix frontend && npm run lint:fix --prefix backend",
     "format": "npm run format --prefix frontend && npm run format --prefix backend",

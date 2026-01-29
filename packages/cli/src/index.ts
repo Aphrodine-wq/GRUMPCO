@@ -238,11 +238,14 @@ async function cmdAnalyze(url: string, rest: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const json = (await res.json()) as { success?: boolean; data?: { diagram?: string } };
-  const diagram = json?.data?.diagram;
+  const json = (await res.json()) as { success?: boolean; data?: { mermaidDiagram?: string; summary?: string } };
+  const diagram = json?.data?.mermaidDiagram;
   if (typeof diagram !== 'string') {
-    console.error('grump analyze: response missing data.diagram');
+    console.error('grump analyze: response missing data.mermaidDiagram');
     process.exit(1);
+  }
+  if (json?.data?.summary) {
+    console.error('Summary:', json.data.summary);
   }
 
   const outDir = path.dirname(output);

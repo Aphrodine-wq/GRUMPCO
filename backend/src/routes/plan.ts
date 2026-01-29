@@ -19,6 +19,7 @@ import type {
   PlanApprovalRequest,
   PlanEditRequest,
   PlanExecutionRequest,
+  PlanPhase,
 } from '../types/plan.js';
 import { logger } from '../utils/logger.js';
 import { sendServerError } from '../utils/errorResponse.js';
@@ -45,7 +46,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     const plan = await generatePlan(request);
 
     res.json({ plan });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Plan generation failed');
     sendServerError(res, error);
   }
@@ -68,7 +69,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     res.json({ plan });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Get plan failed');
     sendServerError(res, error);
   }
@@ -91,7 +92,7 @@ router.post('/:id/approve', async (req: Request, res: Response) => {
     const plan = await approvePlan(id, req.headers['x-user-id'] as string);
 
     res.json({ plan });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Plan approval failed');
     sendServerError(res, error);
   }
@@ -109,7 +110,7 @@ router.post('/:id/reject', async (req: Request, res: Response) => {
     const plan = await rejectPlan(id, comments);
 
     res.json({ plan });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Plan rejection failed');
     sendServerError(res, error);
   }
@@ -127,7 +128,7 @@ router.post('/:id/edit', async (req: Request, res: Response) => {
     const plan = await editPlan(id, edits);
 
     res.json({ plan });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Plan edit failed');
     sendServerError(res, error);
   }
@@ -157,8 +158,8 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
       if (phaseIndex > 0) {
         // Mark previous phases as completed
         for (let i = 0; i < phaseIndex; i++) {
-          if (!executionRequest.skipPhases?.includes(plan.phases[i].id as any)) {
-            await updatePhaseStatus(id, plan.phases[i].id as any, 'completed');
+          if (!executionRequest.skipPhases?.includes(plan.phases[i].id)) {
+            await updatePhaseStatus(id, plan.phases[i].id, 'completed');
           }
         }
       }
@@ -167,13 +168,13 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
     // Skip specified phases
     if (executionRequest.skipPhases) {
       for (const phaseId of executionRequest.skipPhases) {
-        await updatePhaseStatus(id, phaseId as any, 'skipped');
+        await updatePhaseStatus(id, phaseId as PlanPhase, 'skipped');
       }
     }
 
     const updatedPlan = await getPlan(id);
     res.json({ plan: updatedPlan });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Plan execution start failed');
     sendServerError(res, error);
   }
@@ -189,7 +190,7 @@ router.post('/:id/complete', async (req: Request, res: Response) => {
     const plan = completePlanExecution(id);
 
     res.json({ plan });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Plan completion failed');
     sendServerError(res, error);
   }
@@ -211,10 +212,10 @@ router.post('/:id/phase/:phaseId/status', async (req: Request, res: Response) =>
       });
     }
 
-    const plan = await updatePhaseStatus(id, phaseId as any, status);
+    const plan = await updatePhaseStatus(id, phaseId as PlanPhase, status);
 
     res.json({ plan });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Phase status update failed');
     sendServerError(res, error);
   }

@@ -121,7 +121,7 @@ Also provide a summary:
     if (jsonMatch) {
       summary = JSON.parse(jsonMatch[1]);
     }
-  } catch (err) {
+  } catch (_err) {
     // Use defaults
   }
 
@@ -233,7 +233,7 @@ Respond with:
       scenarios = data.scenarios || [];
       readme = data.readme || '';
     }
-  } catch (err) {
+  } catch (_err) {
     // Use defaults
   }
 
@@ -267,7 +267,7 @@ export async function analyzeCoverage(request: CoverageAnalysisRequest): Promise
           sourceFiles.push(fullPath);
         }
       }
-    } catch (err) {
+    } catch (_err) {
       // Skip unreadable dirs
     }
   }
@@ -288,7 +288,7 @@ export async function analyzeCoverage(request: CoverageAnalysisRequest): Promise
           testFiles.push(fullPath);
         }
       }
-    } catch (err) {
+    } catch (_err) {
       // Skip
     }
   }
@@ -402,14 +402,14 @@ Respond with:
     const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/);
     if (jsonMatch) {
       const data = JSON.parse(jsonMatch[1]);
-      mocks = (data.mocks || []).map((m: any) => ({
-        name: m.name,
+      mocks = ((data.mocks as Array<{ name?: string; description?: string }> | undefined) || []).map((m) => ({
+        name: m.name ?? 'mock',
         code: mockCode,
-        description: m.description,
+        description: m.description ?? '',
       }));
       setupCode = data.setupCode || '';
     }
-  } catch (err) {
+  } catch (_err) {
     // Use defaults
   }
 

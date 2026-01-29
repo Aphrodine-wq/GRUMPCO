@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { SpecSession, SpecQuestion, SpecAnswer } from '../types/spec';
+  import type { SpecSession, SpecQuestion } from '../types/spec';
   import { 
     currentSession, 
     isSpecLoading, 
@@ -93,12 +93,12 @@
                   <textarea
                     placeholder={question.placeholder}
                     value={answerValues[question.id] || ''}
-                    on:input={(e) => handleAnswer(question.id, e.target.value)}
+                    oninput={(e) => handleAnswer(question.id, (e.target as HTMLTextAreaElement).value)}
                   ></textarea>
                 {:else if question.type === 'choice'}
                   <select
                     value={answerValues[question.id] || ''}
-                    on:change={(e) => handleAnswer(question.id, e.target.value)}
+                    onchange={(e) => handleAnswer(question.id, (e.target as HTMLSelectElement).value)}
                   >
                     <option value="">Select an option</option>
                     {#each question.options || [] as option}
@@ -112,9 +112,9 @@
                         <input
                           type="checkbox"
                           checked={answerValues[question.id]?.includes(option) || false}
-                          on:change={(e) => {
+                          onchange={(e) => {
                             const current = answerValues[question.id] || [];
-                            if (e.target.checked) {
+                            if ((e.target as HTMLInputElement).checked) {
                               handleAnswer(question.id, [...current, option]);
                             } else {
                               handleAnswer(question.id, current.filter((v: string) => v !== option));
@@ -130,7 +130,7 @@
                     type="number"
                     placeholder={question.placeholder}
                     value={answerValues[question.id] || ''}
-                    on:input={(e) => handleAnswer(question.id, Number(e.target.value))}
+                    oninput={(e) => handleAnswer(question.id, Number((e.target as HTMLInputElement).value))}
                   />
                 {:else if question.type === 'boolean'}
                   <div class="boolean-group">
@@ -140,7 +140,7 @@
                         name={question.id}
                         value="true"
                         checked={answerValues[question.id] === true}
-                        on:change={() => handleAnswer(question.id, true)}
+                        onchange={() => handleAnswer(question.id, true)}
                       />
                       Yes
                     </label>
@@ -150,7 +150,7 @@
                         name={question.id}
                         value="false"
                         checked={answerValues[question.id] === false}
-                        on:change={() => handleAnswer(question.id, false)}
+                        onchange={() => handleAnswer(question.id, false)}
                       />
                       No
                     </label>
@@ -160,7 +160,7 @@
                 <button
                   class="btn btn-primary"
                   disabled={!answerValues[question.id]}
-                  on:click={() => submitAnswerForQuestion(question.id)}
+                  onclick={() => submitAnswerForQuestion(question.id)}
                 >
                   Submit Answer
                 </button>
@@ -172,7 +172,7 @@
 
       {#if nextQuestion === null && session.status === 'collecting'}
         <div class="generate-section">
-          <button class="btn btn-primary btn-large" on:click={handleGenerate}>
+          <button class="btn btn-primary btn-large" onclick={handleGenerate}>
             Generate Specification
           </button>
         </div>

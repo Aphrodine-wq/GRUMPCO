@@ -5,7 +5,13 @@
 
 import type { Response } from 'express';
 
-export type StreamEvent = 'ship.completed' | 'codegen.ready' | 'ship.failed' | 'codegen.failed';
+export type StreamEvent =
+  | 'ship.completed'
+  | 'codegen.ready'
+  | 'ship.failed'
+  | 'codegen.failed'
+  | 'architecture.generated'
+  | 'prd.generated';
 
 interface Subscriber {
   res: Response;

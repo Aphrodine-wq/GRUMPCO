@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { chatModeStore } from '../stores/chatModeStore';
+  import { showSettings } from '../stores/uiStore';
   import { get } from 'svelte/store';
 
   interface Command {
@@ -100,13 +101,24 @@
       },
       {
         id: 'focus-input',
-        label: 'Focus Input',
+        label: 'Focus Chat Input',
         category: 'navigation',
         icon: '⌨️',
-        shortcut: 'Ctrl+L',
+        shortcut: 'Ctrl+Shift+I',
         action: () => {
           const input = document.querySelector('.message-input') as HTMLInputElement;
           input?.focus();
+          close();
+        },
+      },
+      {
+        id: 'open-settings',
+        label: 'Open Settings',
+        category: 'settings',
+        icon: '⚙️',
+        shortcut: 'Ctrl+,',
+        action: () => {
+          showSettings.set(true);
           close();
         },
       },

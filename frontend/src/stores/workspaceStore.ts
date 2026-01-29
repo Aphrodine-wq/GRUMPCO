@@ -36,7 +36,7 @@ function persist(state: WorkspaceState) {
   } catch { /* ignore */ }
 }
 
-const { subscribe, set, update } = writable<WorkspaceState>(loadStored());
+const { subscribe, set } = writable<WorkspaceState>(loadStored());
 
 export const workspaceStore = {
   subscribe,

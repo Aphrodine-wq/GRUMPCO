@@ -29,7 +29,7 @@
   <header class="header">
     <div class="header-content">
       <div class="logo-area">
-        <GRumpBlob size={48} speed={1.2} />
+        <GRumpBlob size="md" state="idle" animated={true} />
         <h1>G-Rump</h1>
       </div>
       <div style="display: flex; gap: 12px;">

@@ -15,6 +15,7 @@
     type?: 'button' | 'submit' | 'reset';
     onclick?: (e: MouseEvent) => void;
     class?: string;
+    title?: string;
     children: Snippet;
   }
 
@@ -27,6 +28,7 @@
     type = 'button',
     onclick,
     class: className = '',
+    title,
     children,
   }: Props = $props();
 
@@ -35,6 +37,7 @@
 
 <button
   {type}
+  {title}
   class="btn btn-{variant} btn-{size} {className}"
   class:btn-full-width={fullWidth}
   class:btn-loading={loading}

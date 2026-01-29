@@ -17,9 +17,10 @@ import {
   FileInfo,
   CodeMetrics,
   TechStackItem,
-  ArchitectureComponent,
   CodeSmell,
   DependencyInfo,
+  ArchitectureComponent,
+  ArchitecturePattern,
 } from './types.js';
 import {
   CODEBASE_ANALYSIS_SYSTEM_PROMPT,
@@ -138,12 +139,12 @@ function scanDirectory(
             lines,
             language,
           });
-        } catch (err) {
+        } catch (_err) {
           // Skip files that can't be read
         }
       }
     }
-  } catch (err) {
+  } catch (_err) {
     // Skip directories that can't be read
   }
 
@@ -188,13 +189,13 @@ function calculateMetrics(files: FileInfo[]): CodeMetrics {
 /**
  * Read package.json if it exists
  */
-function readPackageJson(workspacePath: string): { content: string; parsed: any } | null {
+function readPackageJson(workspacePath: string): { content: string; parsed: Record<string, unknown> } | null {
   const pkgPath = path.join(workspacePath, 'package.json');
   if (fs.existsSync(pkgPath)) {
     try {
       const content = fs.readFileSync(pkgPath, 'utf-8');
       return { content, parsed: JSON.parse(content) };
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }
@@ -244,7 +245,7 @@ function findConfigFiles(workspacePath: string): string[] {
 /**
  * Extract dependencies from package.json
  */
-function extractDependencies(pkg: any): { production: DependencyInfo[]; development: DependencyInfo[] } {
+function extractDependencies(pkg: Record<string, unknown>): { production: DependencyInfo[]; development: DependencyInfo[] } {
   const production: DependencyInfo[] = [];
   const development: DependencyInfo[] = [];
 
@@ -276,7 +277,7 @@ function extractDependencies(pkg: any): { production: DependencyInfo[]; developm
  */
 export async function analyzeCodebase(request: AnalysisRequest): Promise<CodebaseAnalysisResult> {
   const { workspacePath, options = {} } = request;
-  const { maxDepth = 10, excludePatterns = [], analysisDepth = 'standard' } = options;
+  const { maxDepth = 10, excludePatterns = [] } = options;
 
   // Scan files
   const files = scanDirectory(workspacePath, maxDepth, 0, excludePatterns);
@@ -313,44 +314,50 @@ export async function analyzeCodebase(request: AnalysisRequest): Promise<Codebas
   const textContent = response.content.find((c) => c.type === 'text');
   const responseText = textContent?.type === 'text' ? textContent.text : '';
 
-  let analysisData: any = {};
+  let analysisData: Record<string, unknown> = {};
   try {
     const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/);
     if (jsonMatch) {
-      analysisData = JSON.parse(jsonMatch[1]);
+      analysisData = JSON.parse(jsonMatch[1]) as Record<string, unknown>;
     }
-  } catch (err) {
+  } catch (_err) {
     // Use defaults if parsing fails
   }
 
-  // Build result
+  const techStack = (analysisData.techStack as TechStackItem[] | undefined) ?? [];
+  const archRaw = analysisData.architecture as { pattern?: string; confidence?: number; indicators?: string[] } | undefined;
+  const componentsRaw = (analysisData.components as Array<{ name?: string; type?: string; path?: string; description?: string }> | undefined) ?? [];
+  const entryPoints = (analysisData.entryPoints as string[] | undefined) ?? [];
+  const recommendations = (analysisData.recommendations as string[] | undefined) ?? [];
+
+  const projectName = (pkg?.parsed && typeof pkg.parsed === 'object' && 'name' in pkg.parsed)
+    ? String((pkg.parsed as { name?: unknown }).name || path.basename(workspacePath))
+    : path.basename(workspacePath);
   const result: CodebaseAnalysisResult = {
-    projectName: pkg?.parsed?.name || path.basename(workspacePath),
+    projectName,
     projectPath: workspacePath,
     analyzedAt: new Date().toISOString(),
-    summary: analysisData.summary || 'Analysis complete',
-    projectType: analysisData.projectType || 'Unknown',
-    techStack: analysisData.techStack || [],
-    frameworks: (analysisData.techStack || [])
-      .filter((t: TechStackItem) => t.category === 'framework')
-      .map((t: TechStackItem) => t.name),
+    summary: typeof analysisData.summary === 'string' ? analysisData.summary : 'Analysis complete',
+    projectType: typeof analysisData.projectType === 'string' ? analysisData.projectType : 'Unknown',
+    techStack,
+    frameworks: techStack.filter((t) => t.category === 'framework').map((t) => t.name),
     languages: Object.keys(metrics.languages),
     architecture: {
       pattern: {
-        pattern: analysisData.architecture?.pattern || 'unknown',
-        confidence: analysisData.architecture?.confidence || 0,
-        indicators: analysisData.architecture?.indicators || [],
+        pattern: (archRaw?.pattern as ArchitecturePattern['pattern']) ?? 'unknown',
+        confidence: typeof archRaw?.confidence === 'number' ? archRaw.confidence : 0,
+        indicators: Array.isArray(archRaw?.indicators) ? archRaw.indicators : [],
       },
-      components: (analysisData.components || []).map((c: any) => ({
-        name: c.name,
-        type: c.type,
-        path: c.path,
-        description: c.description,
+      components: componentsRaw.map((c) => ({
+        name: c.name ?? '',
+        type: (c.type as ArchitectureComponent['type']) ?? 'library',
+        path: c.path ?? '',
+        description: c.description ?? '',
         dependencies: [],
         exports: [],
         complexity: 'medium' as const,
       })),
-      entryPoints: analysisData.entryPoints || [],
+      entryPoints,
       layers: [],
     },
     metrics,
@@ -360,7 +367,7 @@ export async function analyzeCodebase(request: AnalysisRequest): Promise<Codebas
       total: deps.production.length + deps.development.length,
     },
     codeSmells: [],
-    recommendations: analysisData.recommendations || [],
+    recommendations,
   };
 
   return result;
@@ -418,7 +425,7 @@ export async function generateArchitectureDiagram(
 /**
  * Analyze dependencies
  */
-export async function analyzeDependencies(request: DependencyGraphRequest): Promise<any> {
+export async function analyzeDependencies(request: DependencyGraphRequest): Promise<{ error?: string; dependencies?: DependencyInfo[]; raw?: string; [key: string]: unknown }> {
   const { workspacePath, includeDevDeps = true } = request;
 
   const pkg = readPackageJson(workspacePath);
@@ -439,7 +446,7 @@ export async function analyzeDependencies(request: DependencyGraphRequest): Prom
   if (fs.existsSync(lockPath)) {
     try {
       lockfile = fs.readFileSync(lockPath, 'utf-8');
-    } catch (err) {
+    } catch (_err) {
       // Ignore
     }
   }
@@ -461,7 +468,7 @@ export async function analyzeDependencies(request: DependencyGraphRequest): Prom
     if (jsonMatch) {
       return JSON.parse(jsonMatch[1]);
     }
-  } catch (err) {
+  } catch (_err) {
     // Return raw response
   }
 
@@ -511,7 +518,7 @@ export async function detectCodeSmells(workspacePath: string): Promise<CodeSmell
         try {
           const content = fs.readFileSync(f.path, 'utf-8');
           return `## ${f.path}\n\`\`\`${f.language.toLowerCase()}\n${content.substring(0, 2000)}\n\`\`\``;
-        } catch (err) {
+        } catch (_err) {
           return '';
         }
       })
@@ -537,7 +544,7 @@ export async function detectCodeSmells(workspacePath: string): Promise<CodeSmell
           const data = JSON.parse(jsonMatch[1]);
           smells.push(...(data.codeSmells || []));
         }
-      } catch (err) {
+      } catch (_err) {
         // Continue with basic smells
       }
     }

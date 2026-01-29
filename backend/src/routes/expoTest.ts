@@ -21,7 +21,7 @@ interface RunBody {
  * Body: { projectPath: string }
  * Returns: { jobId: string }
  */
-router.post('/run', async (req: Request<{}, {}, RunBody>, res: Response) => {
+router.post('/run', async (req: Request<Record<string, never>, object, RunBody>, res: Response) => {
   const log = getRequestLogger();
   const { projectPath } = req.body ?? {};
   if (!projectPath || typeof projectPath !== 'string') {

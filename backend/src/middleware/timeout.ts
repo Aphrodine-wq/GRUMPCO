@@ -10,7 +10,6 @@
 
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { getRequestLogger } from './logger.js';
-import { env } from '../config/env.js';
 
 /**
  * Timeout configuration for different route patterns.
@@ -34,10 +33,10 @@ const TIMEOUT_CONFIG: TimeoutConfig = {
     '/health/ready': 10_000,
 
     // AI endpoints need longer timeouts due to LLM response times
-    '/api/chat': 120_000, // 2 minutes - streaming responses
-    '/api/chat/stream': 300_000, // 5 minutes - long streaming sessions
-    '/api/codegen': 180_000, // 3 minutes - code generation can be slow
-    '/api/codegen/start': 180_000,
+    '/api/chat': 180_000, // 3 minutes - streaming responses
+    '/api/chat/stream': 600_000, // 10 minutes - long streaming sessions
+    '/api/codegen': 300_000, // 5 minutes - code generation can be slow
+    '/api/codegen/start': 300_000,
     '/api/ship': 300_000, // 5 minutes - full ship mode sessions
     '/api/ship/start': 300_000,
 
@@ -45,8 +44,10 @@ const TIMEOUT_CONFIG: TimeoutConfig = {
     '/api/diagram': 60_000, // 1 minute
     '/api/intent': 60_000,
 
-    // Architecture and PRD
-    '/api/architecture': 120_000, // 2 minutes
+    // Architecture and PRD (tuned for describe → Mermaid → PRD flow)
+    '/api/architecture': 180_000, // 3 minutes
+    '/api/architecture/generate': 180_000,
+    '/api/architecture/generate-stream': 300_000, // 5 minutes for stream
     '/api/prd': 120_000,
     '/api/spec': 120_000,
     '/api/plan': 120_000,

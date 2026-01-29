@@ -19,12 +19,12 @@ interface RateLimitConfig {
   skipFailedRequests?: boolean;
 }
 
-interface EndpointRateLimit {
+export interface EndpointRateLimit {
   path: string;
   config: RateLimitConfig;
 }
 
-interface UserRateLimit {
+export interface UserRateLimit {
   userId: string;
   config: RateLimitConfig;
 }
@@ -84,21 +84,18 @@ const GLOBAL_LIMIT: RateLimitConfig = {
   message: 'Too many requests. Please wait a moment.',
 };
 
+interface RequestWithAuth extends Request {
+  user?: { id?: string };
+  session?: { userId?: string };
+}
+
 /**
  * Get user ID from request (from auth middleware or session)
  */
 function getUserId(req: Request): string | null {
-  // Try to get from auth middleware
-  if ((req as any).user?.id) {
-    return (req as any).user.id;
-  }
-
-  // Try to get from session
-  if ((req as any).session?.userId) {
-    return (req as any).session.userId;
-  }
-
-  // Fallback to IP if no user ID
+  const r = req as RequestWithAuth;
+  if (r.user?.id) return r.user.id;
+  if (r.session?.userId) return r.session.userId;
   return null;
 }
 
@@ -149,7 +146,6 @@ function createRateLimiter(
       trustProxy: false,
       xForwardedForHeader: false,
       ip: false,
-      // @ts-ignore - suppress IPv6 validation error
       keyGeneratorIpFallback: false,
     },
     keyGenerator: keyGenerator || ((req: Request) => {
@@ -292,9 +288,11 @@ export async function applyRateLimiting(): Promise<RateLimitRequestHandler> {
     const pathKey = normalizePathForRateLimit(req.path);
     const endpointLimiter = tierLimiters.get(`${pathKey}:${tier}`);
     const globalLimiter = tierLimiters.get(`global:${tier}`);
-    (endpointLimiter ?? globalLimiter!)(req, res, next);
+    const limiter = endpointLimiter ?? globalLimiter;
+    if (limiter) limiter(req, res, next);
+    else next();
   };
-  return handler as any;
+  return handler as RateLimitRequestHandler;
 }
 
 /**
@@ -303,7 +301,7 @@ export async function applyRateLimiting(): Promise<RateLimitRequestHandler> {
  */
 export async function createRedisRateLimiter(
   config: RateLimitConfig,
-  redisClient?: any
+  _redisClient?: unknown
 ): Promise<RateLimitRequestHandler | null> {
   try {
     // Try to get Redis store if configured

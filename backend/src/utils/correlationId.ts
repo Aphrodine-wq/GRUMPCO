@@ -6,7 +6,7 @@
 import { randomUUID } from 'crypto';
 
 const CORRELATION_ID_HEADER = 'x-correlation-id';
-const CORRELATION_ID_CONTEXT_KEY = 'correlationId';
+const _CORRELATION_ID_CONTEXT_KEY = 'correlationId';
 
 /**
  * Generate a new correlation ID

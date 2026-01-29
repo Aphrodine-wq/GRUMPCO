@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Button from '$lib/design-system/components/Button/Button.svelte';
   import Card from '$lib/design-system/components/Card/Card.svelte';
-  import { preferencesStore, type UserPreferences } from '$lib/stores/preferencesStore';
+  import { preferencesStore, type UserPreferences } from '../stores/preferencesStore';
   import { trackSetupComplete, trackSetupSkipped } from '$lib/analytics';
 
   interface Props {
@@ -145,7 +145,10 @@
           <div class="text-center">
             <h2 class="text-3xl font-bold mb-4">Welcome to G-Rump</h2>
             <p class="text-gray-600 mb-6">
-              Let's set up your preferences to get you started quickly.
+              Let's set up your preferences to get you started quickly. Or try the one-click demo first.
+            </p>
+            <p class="text-sm text-gray-500 mb-4">
+              After completing or skipping setup, use <strong>Run demo</strong> in the chat to see Architecture → PRD with sample data (no API key required for demo).
             </p>
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 text-left space-y-3">
               <div class="flex items-start gap-3">
@@ -217,7 +220,7 @@
                         class:border-blue-500={preferences.primaryTechStack?.includes(tech)}
                         class:border-gray-300={!preferences.primaryTechStack?.includes(tech)}
                         class:hover:border-gray-400={!preferences.primaryTechStack?.includes(tech)}
-                        on:click={() => toggleTechStack(tech)}
+                        onclick={() => toggleTechStack(tech)}
                       >
                         {tech}
                       </button>
@@ -269,7 +272,7 @@
             <Button
               variant="ghost"
               size="sm"
-              on:click={goBack}
+              onclick={goBack}
               disabled={isSubmitting}
             >
               Back
@@ -281,7 +284,7 @@
             <Button
               variant="ghost"
               size="sm"
-              on:click={handleSkip}
+              onclick={handleSkip}
               disabled={isSubmitting}
             >
               Skip
@@ -290,7 +293,7 @@
           {#if currentStep < steps.length - 1}
             <Button
               size="sm"
-              on:click={goNext}
+              onclick={goNext}
               disabled={isSubmitting}
             >
               Next
@@ -298,7 +301,7 @@
           {:else}
             <Button
               size="sm"
-              on:click={handleComplete}
+              onclick={handleComplete}
               disabled={isSubmitting}
               loading={isSubmitting}
             >

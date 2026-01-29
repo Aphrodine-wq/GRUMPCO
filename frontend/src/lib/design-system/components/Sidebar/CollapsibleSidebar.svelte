@@ -173,4 +173,14 @@
   .toggle-icon.is-collapsed {
     transform: rotate(180deg);
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar {
+      transition: none;
+    }
+    .collapse-toggle,
+    .toggle-icon {
+      transition: none;
+    }
+  }
 </style>

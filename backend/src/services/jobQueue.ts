@@ -6,8 +6,11 @@
 
 import { getDatabase } from '../db/database.js';
 import { executeShipMode } from './shipModeService.js';
+import { executeCodeGeneration, executeCodeGenerationMulti, getSession } from './agentOrchestrator.js';
 import { runExpoTestsInDocker } from './expoTestService.js';
 import logger from '../middleware/logger.js';
+import { db as supabaseDb, isMockMode } from './supabaseClient.js';
+import { isServerlessRuntime } from '../config/runtime.js';
 
 const POLL_MS = 2000;
 const JOB_PREFIX = 'job_';
@@ -16,6 +19,65 @@ const EXPO_JOB_PREFIX = 'job_expo_';
 
 function useRedisQueue(): boolean {
   return !!(process.env.REDIS_HOST && process.env.REDIS_HOST.trim() !== '');
+}
+
+function getPublicBaseUrl(): string | null {
+  const explicit = process.env.PUBLIC_BASE_URL;
+  if (explicit && explicit.trim()) return explicit.replace(/\/$/, '');
+  const vercel = process.env.VERCEL_URL;
+  if (vercel && vercel.trim()) return `https://${vercel.replace(/^https?:\/\//, '')}`;
+  return null;
+}
+
+function getWorkerAuthHeader(): string | null {
+  const secret = process.env.JOB_WORKER_SECRET;
+  if (!secret) return null;
+  return `Bearer ${secret}`;
+}
+
+function supabaseTable(table: string) {
+  if (isMockMode) {
+    throw new Error('Supabase is required for serverless job processing');
+  }
+  return supabaseDb.from(table);
+}
+
+async function dispatchServerlessJob(path: string, payload: Record<string, unknown>): Promise<void> {
+  const baseUrl = getPublicBaseUrl();
+  if (!baseUrl) {
+    logger.error({ path }, 'PUBLIC_BASE_URL or VERCEL_URL is required for serverless job dispatch');
+    return;
+  }
+
+  const target = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+  const token = process.env.QSTASH_TOKEN;
+  const authHeader = getWorkerAuthHeader();
+
+  if (token && token.trim()) {
+    const qstashBase = process.env.QSTASH_URL || 'https://qstash.upstash.io/v2/publish';
+    const qstashUrl = `${qstashBase.replace(/\/$/, '')}/${encodeURIComponent(target)}`;
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+    if (authHeader) {
+      headers['Upstash-Forward-Authorization'] = authHeader;
+    }
+    await fetch(qstashUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+    return;
+  }
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (authHeader) headers.Authorization = authHeader;
+  await fetch(target, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
 }
 
 let bullQueue: import('bullmq').Queue | null = null;
@@ -36,6 +98,14 @@ async function getBullQueue(): Promise<import('bullmq').Queue> {
 
 export async function enqueueShipJob(sessionId: string): Promise<string> {
   const id = `${JOB_PREFIX}ship_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  if (isServerlessRuntime) {
+    const { error } = await supabaseTable('ship_jobs')
+      .insert({ id, session_id: sessionId, status: 'pending', created_at: new Date().toISOString() });
+    if (error) throw error;
+    await dispatchServerlessJob('/api/jobs/ship', { jobId: id, sessionId });
+    logger.info({ jobId: id, sessionId }, 'Ship job enqueued (serverless)');
+    return id;
+  }
   if (useRedisQueue()) {
     const q = await getBullQueue();
     await q.add('run', { sessionId }, { jobId: id });
@@ -47,6 +117,24 @@ export async function enqueueShipJob(sessionId: string): Promise<string> {
     `INSERT INTO ship_jobs (id, session_id, status, created_at) VALUES (?, ?, 'pending', datetime('now'))`
   ).run(id, sessionId);
   logger.info({ jobId: id, sessionId }, 'Ship job enqueued (SQLite)');
+  return id;
+}
+
+export async function enqueueCodegenJob(sessionId: string): Promise<string> {
+  const id = `${JOB_PREFIX}codegen_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  if (isServerlessRuntime) {
+    const { error } = await supabaseTable('codegen_jobs')
+      .insert({ id, session_id: sessionId, status: 'pending', created_at: new Date().toISOString() });
+    if (error) throw error;
+    await dispatchServerlessJob('/api/jobs/codegen', { jobId: id, sessionId });
+    logger.info({ jobId: id, sessionId }, 'Codegen job enqueued (serverless)');
+    return id;
+  }
+  const db = getDatabase().getDb();
+  db.prepare(
+    `INSERT INTO codegen_jobs (id, session_id, status, created_at) VALUES (?, ?, 'pending', datetime('now'))`
+  ).run(id, sessionId);
+  logger.info({ jobId: id, sessionId }, 'Codegen job enqueued (SQLite)');
   return id;
 }
 
@@ -76,6 +164,7 @@ function markShipJobFailed(id: string, error: string): void {
 }
 
 async function processOneShipJob(): Promise<boolean> {
+  if (isServerlessRuntime) return false;
   const job = getNextShipJob();
   if (!job) return false;
 
@@ -90,6 +179,37 @@ async function processOneShipJob(): Promise<boolean> {
     logger.error({ jobId: job.id, sessionId: job.session_id, error: msg }, 'Ship job failed');
   }
   return true;
+}
+
+export async function processShipJob(jobId: string): Promise<void> {
+  if (!isServerlessRuntime) {
+    logger.warn({ jobId }, 'processShipJob called outside serverless runtime');
+    return;
+  }
+  const now = new Date().toISOString();
+  const { data, error } = await supabaseTable('ship_jobs')
+    .select('*')
+    .eq('id', jobId)
+    .single();
+  if (error || !data) {
+    throw new Error(error?.message || 'Ship job not found');
+  }
+  if (data.status === 'completed' || data.status === 'failed') {
+    return;
+  }
+  await supabaseTable('ship_jobs').update({ status: 'running', updated_at: now }).eq('id', jobId);
+  try {
+    await executeShipMode(data.session_id as string);
+    await supabaseTable('ship_jobs').update({ status: 'completed', updated_at: now }).eq('id', jobId);
+    logger.info({ jobId, sessionId: data.session_id }, 'Ship job completed (serverless)');
+  } catch (err) {
+    const msg = (err as Error).message;
+    await supabaseTable('ship_jobs')
+      .update({ status: 'failed', updated_at: now, error: msg })
+      .eq('id', jobId);
+    logger.error({ jobId, sessionId: data.session_id, error: msg }, 'Ship job failed (serverless)');
+    throw err;
+  }
 }
 
 // ========== Expo test jobs ==========
@@ -132,6 +252,7 @@ function markExpoJobFailed(id: string, error: string): void {
 }
 
 async function processOneExpoJob(): Promise<boolean> {
+  if (isServerlessRuntime) return false;
   const job = getNextExpoTestJob();
   if (!job) return false;
 
@@ -157,6 +278,10 @@ async function processOneExpoJob(): Promise<boolean> {
 let workerTimer: ReturnType<typeof setInterval> | null = null;
 
 export async function startJobWorker(): Promise<void> {
+  if (isServerlessRuntime) {
+    logger.info('Job worker disabled in serverless runtime');
+    return;
+  }
   if (useRedisQueue()) {
     if (bullWorker) return;
     const { Worker } = await import('bullmq');
@@ -188,6 +313,45 @@ export async function startJobWorker(): Promise<void> {
     }
   }, POLL_MS);
   logger.info('Job worker started (SQLite)');
+}
+
+export async function processCodegenJob(jobId: string): Promise<void> {
+  if (!isServerlessRuntime) {
+    logger.warn({ jobId }, 'processCodegenJob called outside serverless runtime');
+    return;
+  }
+  const now = new Date().toISOString();
+  const { data, error } = await supabaseTable('codegen_jobs')
+    .select('*')
+    .eq('id', jobId)
+    .single();
+  if (error || !data) {
+    throw new Error(error?.message || 'Codegen job not found');
+  }
+  if (data.status === 'completed' || data.status === 'failed') {
+    return;
+  }
+  await supabaseTable('codegen_jobs').update({ status: 'running', updated_at: now }).eq('id', jobId);
+  try {
+    const session = await getSession(data.session_id as string);
+    if (!session) throw new Error('Codegen session not found');
+    if (session.prds && session.prds.length > 0 && session.architecture) {
+      await executeCodeGenerationMulti(session);
+    } else if (session.architecture && session.prds?.[0]) {
+      await executeCodeGeneration(session, session.prds[0], session.architecture);
+    } else {
+      throw new Error('Codegen session missing PRD or architecture');
+    }
+    await supabaseTable('codegen_jobs').update({ status: 'completed', updated_at: now }).eq('id', jobId);
+    logger.info({ jobId, sessionId: data.session_id }, 'Codegen job completed (serverless)');
+  } catch (err) {
+    const msg = (err as Error).message;
+    await supabaseTable('codegen_jobs')
+      .update({ status: 'failed', updated_at: now, error: msg })
+      .eq('id', jobId);
+    logger.error({ jobId, sessionId: data.session_id, error: msg }, 'Codegen job failed (serverless)');
+    throw err;
+  }
 }
 
 export async function stopJobWorker(): Promise<void> {

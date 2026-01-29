@@ -4,6 +4,15 @@ import logger from '../middleware/logger.js';
 let playwrightAvailable = false;
 let playwrightChromium: typeof import('playwright').chromium | null = null;
 
+/** Result shape for browserRunScript */
+export interface BrowserRunScriptResult {
+  ok: boolean;
+  error?: string;
+  logs?: string[];
+  lastUrl?: string;
+  screenshotBase64?: string;
+}
+
 async function ensurePlaywright(): Promise<boolean> {
   if (playwrightChromium != null) return true;
   if (!playwrightAvailable) {
@@ -20,6 +29,12 @@ async function ensurePlaywright(): Promise<boolean> {
   return !!playwrightChromium;
 }
 
+function getChromium(): typeof import('playwright').chromium {
+  const chromium = playwrightChromium;
+  if (!chromium) throw new Error('Playwright chromium not available');
+  return chromium;
+}
+
 export interface ScreenshotResult {
   ok: boolean;
   error?: string;
@@ -34,7 +49,7 @@ export async function screenshotUrl(url: string): Promise<ScreenshotResult> {
     return { ok: false, error: 'Browser not available.' };
   }
   try {
-    const browser = await playwrightChromium!.launch({ headless: true });
+    const browser = await getChromium().launch({ headless: true });
     try {
       const page = await browser.newPage();
       await page.goto(url, { waitUntil: 'networkidle', timeout: 15000 });
@@ -65,7 +80,7 @@ async function runWithPage<T>(
     return { ok: false, error: 'Browser not available.' };
   }
   try {
-    const browser = await playwrightChromium!.launch({ headless: true });
+    const browser = await getChromium().launch({ headless: true });
     try {
       const page = await browser.newPage();
       if (url) {
@@ -83,28 +98,32 @@ async function runWithPage<T>(
 
 export async function browserNavigate(url: string, timeout?: number) {
   return runWithPage(async (page) => {
-    return { url: page.url(), title: await (page as any).title() };
+    const p = page as { url(): string; title(): Promise<string> };
+    return { url: p.url(), title: await p.title() };
   }, url, timeout);
 }
 
 export async function browserClick(selector: string, url?: string, timeout?: number) {
   return runWithPage(async (page) => {
-    await (page as any).click(selector, { timeout: timeout ?? 10000 });
+    const p = page as { locator(sel: string): { click(opts?: { timeout?: number }): Promise<void> } };
+    await p.locator(selector).click({ timeout: timeout ?? 10000 });
     return { clicked: selector };
   }, url, timeout);
 }
 
 export async function browserType(selector: string, text: string, url?: string, timeout?: number) {
   return runWithPage(async (page) => {
-    await (page as any).fill(selector, text, { timeout: timeout ?? 10000 });
+    const p = page as { fill(sel: string, text: string, opts?: { timeout?: number }): Promise<void> };
+    await p.fill(selector, text, { timeout: timeout ?? 10000 });
     return { typed: selector, text };
   }, url, timeout);
 }
 
 export async function browserScreenshot(url?: string, fullPage: boolean = false): Promise<ScreenshotResult> {
   const res = await runWithPage(async (page) => {
-    const buf = await page.screenshot({ type: 'png', fullPage });
-    return Buffer.from(buf).toString('base64');
+    const p = page as { screenshot(opts: { type: string; fullPage?: boolean }): Promise<Buffer | string> };
+    const buf = await p.screenshot({ type: 'png', fullPage });
+    return Buffer.from(buf as Buffer).toString('base64');
   }, url);
 
   if (!res.ok) return { ok: false, error: res.error };
@@ -113,8 +132,9 @@ export async function browserScreenshot(url?: string, fullPage: boolean = false)
 
 export async function browserGetContent(url?: string): Promise<{ ok: boolean; error?: string; html?: string; text?: string }> {
   const res = await runWithPage(async (page) => {
-    const html = await (page as any).content();
-    const text = await (page as any).evaluate(() => (globalThis as any).document.body.innerText);
+    const p = page as unknown as { content(): Promise<string>; evaluate(expr: string): Promise<string> };
+    const html = await p.content();
+    const text = await p.evaluate('document.body?.innerText ?? ""');
     return { html, text };
   }, url);
   if (!res.ok) return { ok: false, error: res.error };
@@ -130,13 +150,13 @@ export interface BrowserStep {
   timeout?: number;
 }
 
-export async function browserRunScript(steps: BrowserStep[]): Promise<any> {
+export async function browserRunScript(steps: BrowserStep[]): Promise<BrowserRunScriptResult> {
   if (!(await ensurePlaywright())) {
     return { ok: false, error: 'Browser not available.' };
   }
   const logs: string[] = [];
   try {
-    const browser = await playwrightChromium!.launch({ headless: true });
+    const browser = await getChromium().launch({ headless: true });
     const page = await browser.newPage();
     let lastUrl = '';
     let screenshotBase64: string | undefined;

@@ -99,26 +99,27 @@ export async function getUsageForUser(
   toDate: Date
 ): Promise<UsageRecord[]> {
   try {
-    // Check cache first
-    const cachedRecords = recentUsageCache.filter(
+    // Check cache first (reserved for future cache-first path)
+    const _cachedRecords = recentUsageCache.filter(
       (r) => r.userId === userId && r.createdAt >= fromDate && r.createdAt <= toDate
     );
 
     // Query database for complete results
     const db = getDatabase();
     const records = await db.getUsageForUser(userId, fromDate, toDate);
+    const rows = records as Array<Record<string, unknown>>;
 
-    return records.map((r: any) => ({
-      userId: r.user_id,
-      endpoint: r.endpoint,
-      method: r.method,
-      model: r.model,
-      inputTokens: r.input_tokens,
-      outputTokens: r.output_tokens,
-      latencyMs: r.latency_ms,
+    return rows.map((r) => ({
+      userId: String(r.user_id ?? ''),
+      endpoint: String(r.endpoint ?? ''),
+      method: String(r.method ?? ''),
+      model: r.model != null ? String(r.model) : undefined,
+      inputTokens: r.input_tokens != null ? Number(r.input_tokens) : undefined,
+      outputTokens: r.output_tokens != null ? Number(r.output_tokens) : undefined,
+      latencyMs: r.latency_ms != null ? Number(r.latency_ms) : undefined,
       success: r.success === 1,
-      createdAt: new Date(r.created_at),
-    }));
+      createdAt: new Date(String(r.created_at ?? '')),
+    })) as UsageRecord[];
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error), userId },

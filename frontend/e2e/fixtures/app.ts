@@ -1,4 +1,5 @@
 import { test as base, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
  * Test fixtures for G-Rump application
@@ -9,14 +10,16 @@ export interface AppFixtures {
 }
 
 export class AppFixture {
-  constructor(private page: any) {}
+  constructor(private page: Page) {}
 
   /**
-   * Navigate to the app
+   * Navigate to the app and wait for it to be ready
    */
   async goto() {
-    await this.page.goto('/');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.goto('/', { waitUntil: 'domcontentloaded' });
+    // Wait for main content or chat/setup UI so Svelte has mounted
+    await this.page.locator('.main-content, .app, body').first().waitFor({ state: 'visible', timeout: 15000 });
+    await this.page.waitForLoadState('networkidle').catch(() => {});
   }
 
   /**
@@ -130,8 +133,8 @@ export class AppFixture {
   /**
    * Mock SSE stream response
    */
-  async mockSSEResponse(url: string, events: Array<{ type: string; data?: any }>) {
-    await this.page.route(url, async (route: any) => {
+  async mockSSEResponse(url: string, events: Array<{ type: string; data?: unknown }>) {
+    await this.page.route(url, async (route) => {
       const stream = new ReadableStream({
         async start(controller) {
           for (const event of events) {

@@ -34,7 +34,7 @@ export function getRequestLogger(): Logger {
 }
 
 // HTTP request logging middleware
-// @ts-expect-error - pino-http types are complex, but this works at runtime
+// @ts-expect-error - pino-http callback types don't match Express Request/Response; runtime behavior is correct (see docs/KNOWN_ISSUES.md)
 export const httpLogger = pinoHttpModule({
   logger,
   genReqId: (req: Request) =>

@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import type { Express, Router } from 'express';
+import type { Express } from 'express';
 import type Anthropic from '@anthropic-ai/sdk';
 import logger from '../middleware/logger.js';
 import type {
@@ -17,7 +17,6 @@ import type {
   SkillEvent,
   SkillExecutionInput,
   SkillExecutionResult,
-  SkillTools,
   ToolExecutionResult,
 } from './types.js';
 

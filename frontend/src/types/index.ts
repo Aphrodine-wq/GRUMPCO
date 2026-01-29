@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: replace with proper types (Phase 1.1) */
 // User preferences
 export interface UserPreferences {
   diagramType: 'flowchart' | 'sequence' | 'erd' | 'class';

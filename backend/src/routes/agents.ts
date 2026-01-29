@@ -50,7 +50,7 @@ router.post('/schedule', async (req: Request, res: Response) => {
  */
 router.get('/scheduled', async (_req: Request, res: Response) => {
   try {
-    const agents = listAllScheduledAgents();
+    const agents = await listAllScheduledAgents();
     res.json(agents);
   } catch (error) {
     log.error({ error: (error as Error).message }, 'Failed to list scheduled agents');
@@ -79,7 +79,7 @@ router.delete('/scheduled/:id', async (req: Request, res: Response) => {
 router.get('/scheduled/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const agent = getScheduledAgent(id);
+    const agent = await getScheduledAgent(id);
     if (!agent) return res.status(404).json({ error: 'Scheduled agent not found' });
     res.json(agent);
   } catch (error) {

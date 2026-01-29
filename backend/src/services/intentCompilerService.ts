@@ -178,7 +178,7 @@ export async function parseIntent(
         }
         settled = true;
         resolvePromise(parsed);
-      } catch (e) {
+      } catch (_e) {
         logger.error({ stdout: stdout.slice(0, 500) }, 'Intent compiler invalid JSON');
         killAndReject('Intent compiler returned invalid JSON');
       }
@@ -384,15 +384,11 @@ export function storeIntentCompilerFailure(
   rustError: string,
   claudeResult: StructuredIntent
 ): void {
-  try {
-    const db = getDatabase().getDb();
-    const id = randomUUID();
-    db.prepare(
-      `INSERT INTO intent_compiler_failures (id, input_text, rust_error, claude_result_json, created_at) VALUES (?, ?, ?, ?, datetime('now'))`
-    ).run(id, inputText, rustError, JSON.stringify(claudeResult));
-  } catch (e) {
-    throw e;
-  }
+  const db = getDatabase().getDb();
+  const id = randomUUID();
+  db.prepare(
+    `INSERT INTO intent_compiler_failures (id, input_text, rust_error, claude_result_json, created_at) VALUES (?, ?, ?, ?, datetime('now'))`
+  ).run(id, inputText, rustError, JSON.stringify(claudeResult));
 }
 
 /**

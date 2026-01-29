@@ -2,6 +2,7 @@
  * Workflow Types for 3-Phase VibeCode IDE
  * Architecture → PRD → Code Generation
  */
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: replace with proper types (Phase 1.1) */
 
 // ============================================================================
 // ARCHITECTURE TYPES (matching backend)

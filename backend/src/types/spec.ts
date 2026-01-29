@@ -79,7 +79,7 @@ export interface TechnicalSpec {
   name: string;
   description: string;
   type: 'framework' | 'library' | 'service' | 'pattern' | 'architecture';
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 export interface DataModelSpec {
@@ -103,10 +103,10 @@ export interface APISpec {
   path: string;
   description: string;
   requestBody?: {
-    schema: Record<string, any>;
+    schema: Record<string, unknown>;
   };
   responseBody?: {
-    schema: Record<string, any>;
+    schema: Record<string, unknown>;
   };
   authentication?: boolean;
 }

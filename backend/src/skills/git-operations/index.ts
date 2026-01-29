@@ -17,7 +17,7 @@ import type {
 } from '../types.js';
 import { GIT_OPERATIONS_SYSTEM_PROMPT, templates } from './prompts.js';
 import { definitions } from './tools.js';
-import type { CommitMessage, CommitType, GitStatusResult, BranchSuggestion } from './types.js';
+import type { CommitMessage, CommitType, BranchSuggestion } from './types.js';
 
 // Load manifest
 import manifest from './manifest.json' with { type: 'json' };
@@ -249,7 +249,7 @@ class GitOperationsSkill extends BaseSkill {
   /**
    * Handle branch flow
    */
-  private async handleBranchFlow(message: string, context: SkillContext): Promise<string> {
+  private async handleBranchFlow(message: string, _context: SkillContext): Promise<string> {
     // Extract task description from message
     const task = message.replace(/\/branch\s*/i, '').replace(/create\s+branch\s+(for\s+)?/i, '');
 
@@ -335,7 +335,7 @@ class GitOperationsSkill extends BaseSkill {
   /**
    * Generate commit subject
    */
-  private generateSubject(files: string[], diff: string, type: CommitType): string {
+  private generateSubject(files: string[], _diff: string, _type: CommitType): string {
     // Simple heuristic - in production, use Claude
     if (files.length === 1) {
       const fileName = files[0].split('/').pop() || files[0];
@@ -491,7 +491,7 @@ ${commits}
 
   private async handleSuggestBranchName(
     input: Record<string, unknown>,
-    context: SkillContext
+    _context: SkillContext
   ): Promise<ToolExecutionResult> {
     try {
       const task = input.task as string;

@@ -23,6 +23,7 @@ import type {
   RefactoringResult,
   RefactoringSuggestion,
   ExtractFunctionResult,
+  CodeChange,
 } from './types.js';
 import logger from '../../middleware/logger.js';
 import { withResilience } from '../../services/resilience.js';
@@ -70,7 +71,7 @@ class RefactoringSkill extends BaseSkill {
     // Refactor endpoint
     router.post('/refactor', async (req, res) => {
       try {
-        const { code, type, options, language } = req.body;
+        const { code, type, options: _options, language: _language } = req.body;
 
         if (!code) {
           return res.status(400).json({ error: 'Code is required' });
@@ -269,7 +270,8 @@ class RefactoringSkill extends BaseSkill {
     language: string
   ): Promise<RefactoringResult> {
     try {
-      const template = templates[type] || templates.simplifyCode;
+      const templateKey = (type === 'extract-function' ? 'extractFunction' : type === 'rename' ? 'renameSymbol' : type === 'apply-pattern' ? 'applyPattern' : 'simplifyCode') as keyof typeof templates;
+      const template = templates[templateKey] ?? templates.simplifyCode;
       const prompt = template
         .replace('{{language}}', language || 'code')
         .replace('{{code}}', code);
@@ -290,8 +292,9 @@ class RefactoringSkill extends BaseSkill {
       const response = await callClaude();
 
       // Parse Claude's response
+      const firstBlock = response.content[0];
       const responseText =
-        response.content[0].type === 'text' ? response.content[0].text : '';
+        firstBlock?.type === 'text' ? firstBlock.text : '';
 
       return this.parseRefactoringResponse(responseText, code);
     } catch (error) {
@@ -325,7 +328,7 @@ class RefactoringSkill extends BaseSkill {
     response: string,
     originalCode: string
   ): RefactoringResult {
-    const changes = [];
+    const changes: CodeChange[] = [];
     let refactoredCode = originalCode;
     let explanation = '';
 
@@ -334,8 +337,9 @@ class RefactoringSkill extends BaseSkill {
 
     if (codeBlocks.length > 0) {
       // Get the refactored code (usually the first code block)
-      const match = codeBlocks[0].match(/```(\w+)?\n([\s\S]*?)```/);
-      if (match) {
+      const firstBlock = codeBlocks[0];
+      const match = firstBlock?.match(/```(\w+)?\n([\s\S]*?)```/);
+      if (match && match[2] !== undefined) {
         refactoredCode = match[2].trim();
       }
     }
@@ -356,21 +360,25 @@ class RefactoringSkill extends BaseSkill {
       for (let i = 0; i < Math.min(originalLines.length, refactoredLines.length); i++) {
         if (originalLines[i] !== refactoredLines[i]) {
           changes.push({
+            type: 'replace' as const,
             startLine: i + 1,
             endLine: i + 1,
             description: `Modified line ${i + 1}`,
+            newText: refactoredLines[i] ?? '',
           });
         }
       }
 
       if (refactoredLines.length !== originalLines.length) {
         changes.push({
+          type: 'replace' as const,
           startLine: Math.min(originalLines.length, refactoredLines.length),
           endLine: Math.max(originalLines.length, refactoredLines.length),
           description:
             refactoredLines.length > originalLines.length
               ? `Added ${refactoredLines.length - originalLines.length} lines`
               : `Removed ${originalLines.length - refactoredLines.length} lines`,
+          newText: refactoredLines.slice(originalLines.length).join('\n') || originalLines.slice(refactoredLines.length).join('\n'),
         });
       }
     }
@@ -389,7 +397,7 @@ class RefactoringSkill extends BaseSkill {
   /**
    * Analyze code for potential refactorings
    */
-  private analyzeForRefactorings(code: string, language?: string): RefactoringSuggestion[] {
+  private analyzeForRefactorings(code: string, _language?: string): RefactoringSuggestion[] {
     const suggestions: RefactoringSuggestion[] = [];
     const lines = code.split('\n');
 
@@ -505,7 +513,7 @@ class RefactoringSkill extends BaseSkill {
 
   private async handleExtractFunction(
     input: Record<string, unknown>,
-    context: SkillContext
+    _context: SkillContext
   ): Promise<ToolExecutionResult> {
     try {
       const code = input.code as string;
@@ -533,7 +541,7 @@ class RefactoringSkill extends BaseSkill {
 
   private async handleExtractVariable(
     input: Record<string, unknown>,
-    context: SkillContext
+    _context: SkillContext
   ): Promise<ToolExecutionResult> {
     try {
       const code = input.code as string;
@@ -553,7 +561,7 @@ class RefactoringSkill extends BaseSkill {
 
   private async handleRenameSymbol(
     input: Record<string, unknown>,
-    context: SkillContext
+    _context: SkillContext
   ): Promise<ToolExecutionResult> {
     try {
       const code = input.code as string;
@@ -575,7 +583,7 @@ class RefactoringSkill extends BaseSkill {
 
   private async handleSimplifyCode(
     input: Record<string, unknown>,
-    context: SkillContext
+    _context: SkillContext
   ): Promise<ToolExecutionResult> {
     try {
       const code = input.code as string;
@@ -597,10 +605,10 @@ class RefactoringSkill extends BaseSkill {
 
   private async handleInlineFunction(
     input: Record<string, unknown>,
-    context: SkillContext
+    _context: SkillContext
   ): Promise<ToolExecutionResult> {
     try {
-      const code = input.code as string;
+      const _code = input.code as string;
       const functionName = input.functionName as string;
 
       // Find the function definition and calls
@@ -615,7 +623,7 @@ class RefactoringSkill extends BaseSkill {
 
   private async handleApplyPattern(
     input: Record<string, unknown>,
-    context: SkillContext
+    _context: SkillContext
   ): Promise<ToolExecutionResult> {
     try {
       const pattern = input.pattern as string;
@@ -641,7 +649,7 @@ class RefactoringSkill extends BaseSkill {
 
   private async handleSuggestRefactorings(
     input: Record<string, unknown>,
-    context: SkillContext
+    _context: SkillContext
   ): Promise<ToolExecutionResult> {
     try {
       const code = input.code as string;

@@ -155,7 +155,8 @@
   <div class="preview-content">
     {#if structure.length === 0}
       <div class="preview-empty">
-        No structure detected in diagram
+        <p>No structure detected.</p>
+        <p class="preview-empty-hint">Generate a diagram or paste Mermaid code to see the tree.</p>
       </div>
     {:else}
       <div class="preview-tree">
@@ -227,6 +228,12 @@
     color: #6B7280;
     font-size: 0.875rem;
     padding: 2rem;
+  }
+
+  .preview-empty-hint {
+    margin: 0.5rem 0 0;
+    font-size: 0.8125rem;
+    opacity: 0.9;
   }
 
   .preview-tree {

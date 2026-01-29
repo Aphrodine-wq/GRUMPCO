@@ -2,8 +2,6 @@
   /**
    * GRumpBlob - Enhanced fluid blob avatar
    */
-  import { onMount } from 'svelte';
-  import { colors } from '../lib/design-system/tokens/colors';
 
   type BlobState = 'idle' | 'thinking' | 'speaking' | 'success' | 'error';
   type BlobSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';

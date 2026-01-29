@@ -4,7 +4,11 @@
  * Core service that integrates the Claude API with tool execution capabilities.
  * Enables the AI to perform actions like file operations, code execution, database
  * schema generation, and browser automation.
- *
+ */
+/** Tool input schema shape for LLM gateway (default when tool has no input_schema). */
+const _DEFAULT_TOOL_INPUT_SCHEMA = { type: 'object' as const, properties: undefined as Record<string, unknown> | undefined, required: undefined as string[] | undefined };
+
+/**
  * ## Architecture
  * - Uses resilient patterns: circuit breakers, rate limiting, retry with backoff
  * - Supports multiple LLM providers via llmGateway (Anthropic, OpenRouter, etc.)
@@ -69,12 +73,13 @@ import {
   browserType,
   browserGetContent,
   browserScreenshot,
+  type BrowserStep,
 } from './browserService.js';
 import { toolExecutionService, ToolExecutionService } from './toolExecutionService.js';
 import { logger } from '../utils/logger.js';
 import { getPlan, startPlanExecution } from './planService.js';
 import { getSpecSession } from './specService.js';
-import { withResilience, withRetry, isRetryableError, type ErrorWithStatus } from './resilience.js';
+import { withRetry, isRetryableError, type ErrorWithStatus } from './resilience.js';
 import { checkRateLimit, getCircuitBreaker } from './bulkheads.js';
 import { skillRegistry } from '../skills/index.js';
 import { getMcpTools } from '../mcp/registry.js';
@@ -99,7 +104,7 @@ export type ChatStreamEvent =
     type: 'tool_call';
     id: string;
     name: string;
-    input: Record<string, any>;
+    input: Record<string, unknown>;
   }
   | {
     type: 'tool_result';
@@ -189,8 +194,8 @@ export class ClaudeServiceWithTools {
    */
   private async resilientStream(
     params: Parameters<typeof this.client.messages.stream>[0]
-  ): Promise<AsyncIterable<any>> {
-    const serviceType: 'claude-chat' = 'claude-chat';
+  ): Promise<AsyncIterable<unknown>> {
+    const serviceType = 'claude-chat' as const;
 
     // Check rate limit
     const rateLimitCheck = checkRateLimit(serviceType);
@@ -218,7 +223,7 @@ export class ClaudeServiceWithTools {
 
     try {
       const stream = await breaker.fire(params);
-      return stream;
+      return stream as unknown as AsyncIterable<unknown>;
     } catch (error) {
       const err = error as ErrorWithStatus;
 
@@ -361,7 +366,7 @@ export class ClaudeServiceWithTools {
             tools: requestParams.tools?.map((t) => ({
               name: t.name,
               description: 'description' in t ? (t.description ?? '') : '',
-              input_schema: (t as any).input_schema as { type: 'object'; properties?: Record<string, unknown>; required?: string[] },
+              input_schema: ('input_schema' in t ? t.input_schema : _DEFAULT_TOOL_INPUT_SCHEMA) as { type: 'object'; properties?: Record<string, unknown>; required?: string[] },
             })),
           },
           { provider: provider ?? 'anthropic', modelId: modelId ?? this.model }
@@ -370,7 +375,8 @@ export class ClaudeServiceWithTools {
 
       let currentTextBlock = '';
 
-      for await (const event of response) {
+      for await (const ev of response) {
+        const event = ev as { type?: string; delta?: { type?: string; text?: string }; content_block?: { type?: string; id?: string; name?: string; input?: Record<string, unknown> } };
         if (abortSignal?.aborted) {
           logger.debug({}, 'Stream aborted');
           yield { type: 'error', message: 'Stream aborted' };
@@ -378,40 +384,41 @@ export class ClaudeServiceWithTools {
         }
 
         // Handle content block deltas (text)
-        if (event.type === 'content_block_delta') {
-          if (event.delta.type === 'text_delta') {
-            const raw = event.delta.text;
-            currentTextBlock += raw;
-            yield { type: 'text', text: filterOutput(raw) };
-          }
+        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+          const raw = event.delta.text ?? '';
+          currentTextBlock += raw;
+          yield { type: 'text', text: filterOutput(raw) };
         }
 
         // Handle tool use blocks
         if (event.type === 'content_block_start') {
-          if (event.content_block.type === 'tool_use') {
+          const contentBlock = event.content_block;
+          if (contentBlock?.type === 'tool_use') {
             // Flush any accumulated text
             if (currentTextBlock.trim()) {
               currentTextBlock = '';
             }
 
-            const toolUse = event.content_block;
+            const toolUse = contentBlock;
+            const toolId = toolUse.id ?? '';
+            const toolName = toolUse.name ?? '';
             logger.debug(
-              { toolName: toolUse.name, toolId: toolUse.id },
+              { toolName, toolId },
               'Tool use started'
             );
 
             // Emit tool call event
             yield {
               type: 'tool_call',
-              id: toolUse.id,
-              name: toolUse.name,
-              input: toolUse.input as Record<string, any>,
+              id: toolId,
+              name: toolName,
+              input: (toolUse.input ?? {}) as Record<string, unknown>,
             };
 
             // Execute tool (uses request-scoped TES when workspaceRoot provided)
             const result = await this._executeTool(
-              toolUse.name,
-              toolUse.input as Record<string, any>,
+              toolName,
+              (toolUse.input ?? {}) as Record<string, unknown>,
               workspaceRoot
             );
 
@@ -419,8 +426,8 @@ export class ClaudeServiceWithTools {
             const rawOutput = result.output || result.error || '';
             yield {
               type: 'tool_result',
-              id: toolUse.id,
-              toolName: toolUse.name,
+              id: toolId,
+              toolName,
               output: filterOutput(rawOutput),
               success: result.success,
               executionTime: result.executionTime,
@@ -431,12 +438,13 @@ export class ClaudeServiceWithTools {
       }
 
       yield { type: 'done' };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ error, workspaceRoot, mode, agentProfile }, 'Chat stream error');
 
       // Enhanced error handling with structured error types
-      const status = error.status || error.statusCode;
-      const errorCode = error.code || error.name;
+      const err = error as { status?: number; statusCode?: number; code?: string; name?: string; message?: string; headers?: Record<string, string> };
+      const status = err.status ?? err.statusCode;
+      const errorCode = err.code ?? err.name;
 
       let errorType = 'api_error';
       let userMessage = 'An error occurred. Please try again.';
@@ -451,7 +459,7 @@ export class ClaudeServiceWithTools {
         errorType = 'rate_limit';
         userMessage = 'Rate limit exceeded. Please wait a moment and try again.';
         retryable = true;
-        retryAfter = parseInt(error.headers?.['retry-after'] || '60', 10);
+        retryAfter = parseInt(err.headers?.['retry-after'] ?? '60', 10);
       } else if (status === 500 || status === 502 || status === 503) {
         errorType = 'service_error';
         userMessage = 'Service temporarily unavailable. Please try again in a moment.';
@@ -460,12 +468,12 @@ export class ClaudeServiceWithTools {
         errorType = 'timeout';
         userMessage = 'Request timed out. The server may be busy. Please try again.';
         retryable = true;
-      } else if (error.message?.toLowerCase().includes('network') || errorCode === 'ENOTFOUND') {
+      } else if (err.message?.toLowerCase().includes('network') || errorCode === 'ENOTFOUND') {
         errorType = 'network_error';
         userMessage = 'Network error. Please check your connection and try again.';
         retryable = true;
-      } else if (error.message) {
-        userMessage = error.message;
+      } else if (err.message) {
+        userMessage = err.message;
         retryable = status ? status >= 500 : false;
       }
 
@@ -492,7 +500,7 @@ export class ClaudeServiceWithTools {
    */
   private async _executeTool(
     toolName: string,
-    input: Record<string, any>,
+    input: Record<string, unknown>,
     workspaceRoot?: string
   ): Promise<ToolExecutionResult> {
     try {
@@ -568,12 +576,12 @@ export class ClaudeServiceWithTools {
             executionTime: 0,
           };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ error, toolName }, 'Tool execution failed');
 
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         toolName,
         executionTime: 0,
       };
@@ -585,7 +593,7 @@ export class ClaudeServiceWithTools {
    */
   private async _executeSkillTool(
     toolName: string,
-    input: Record<string, any>,
+    input: Record<string, unknown>,
     workspaceRoot?: string
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
@@ -615,11 +623,11 @@ export class ClaudeServiceWithTools {
         toolName,
         executionTime: Date.now() - startTime,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ error, toolName, skillId: skill.manifest.id }, 'Skill tool execution failed');
       return {
         success: false,
-        error: error.message,
+        error: (error as Error).message,
         toolName,
         executionTime: Date.now() - startTime,
       };
@@ -629,7 +637,7 @@ export class ClaudeServiceWithTools {
   /**
    * Execute bash tool
    */
-  private async _executeBash(input: Record<string, any>): Promise<ToolExecutionResult> {
+  private async _executeBash(input: Record<string, unknown>): Promise<ToolExecutionResult> {
     const validation = bashExecuteInputSchema.safeParse(input);
     if (!validation.success) {
       return {
@@ -651,7 +659,7 @@ export class ClaudeServiceWithTools {
   /**
    * Execute file_read tool
    */
-  private async _executeFileRead(input: Record<string, any>): Promise<ToolExecutionResult> {
+  private async _executeFileRead(input: Record<string, unknown>): Promise<ToolExecutionResult> {
     const validation = fileReadInputSchema.safeParse(input);
     if (!validation.success) {
       return {
@@ -669,7 +677,7 @@ export class ClaudeServiceWithTools {
   /**
    * Execute file_write tool
    */
-  private async _executeFileWrite(input: Record<string, any>): Promise<ToolExecutionResult> {
+  private async _executeFileWrite(input: Record<string, unknown>): Promise<ToolExecutionResult> {
     const validation = fileWriteInputSchema.safeParse(input);
     if (!validation.success) {
       return {
@@ -687,7 +695,7 @@ export class ClaudeServiceWithTools {
   /**
    * Execute file_edit tool
    */
-  private async _executeFileEdit(input: Record<string, any>): Promise<ToolExecutionResult> {
+  private async _executeFileEdit(input: Record<string, unknown>): Promise<ToolExecutionResult> {
     const validation = fileEditInputSchema.safeParse(input);
     if (!validation.success) {
       return {
@@ -713,7 +721,7 @@ export class ClaudeServiceWithTools {
    * Execute list_directory tool
    */
   private async _executeListDirectory(
-    input: Record<string, any>
+    input: Record<string, unknown>
   ): Promise<ToolExecutionResult> {
     const validation = listDirectoryInputSchema.safeParse(input);
     if (!validation.success) {
@@ -832,8 +840,7 @@ export class ClaudeServiceWithTools {
     if (!validation.success) {
       return { success: false, error: `Invalid input: ${validation.error.message}`, toolName: 'browser_run_script', executionTime: 0 };
     }
-    // Cast to any to bypass strict type check for the internal action property mismatch
-    const result = await browserRunScript(validation.data.steps as any);
+    const result = await browserRunScript(validation.data.steps as BrowserStep[]);
     if (!result.ok) {
       return { success: false, error: result.error ?? 'Script failed', toolName: 'browser_run_script', executionTime: Date.now() - start };
     }

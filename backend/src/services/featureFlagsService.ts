@@ -75,7 +75,7 @@ function parseTier(s: string | undefined): TierId {
  * Resolve tier for a user/key. Uses TIER_DEFAULT when set; otherwise free.
  * When backend-web/billing is wired, lookup by userKey can be added (billing API or settings).
  */
-export function getTierForUser(userKey?: string): TierId {
+export function getTierForUser(_userKey?: string): TierId {
   const fromEnv = process.env.TIER_DEFAULT;
   if (fromEnv) return parseTier(fromEnv);
   return 'free';

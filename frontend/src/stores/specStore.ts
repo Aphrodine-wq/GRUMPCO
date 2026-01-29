@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- derived store (Phase 1.1) */
 import { writable, derived } from 'svelte/store';
 import { fetchApi } from '../lib/api.js';
 import type {
   SpecSession,
   SpecQuestion,
-  SpecAnswer,
   Specification,
   SpecStartRequest,
   SpecAnswerRequest,
@@ -197,9 +197,10 @@ export function getNextQuestion(): SpecQuestion | null {
 
   if (!session) return null;
 
-  const unanswered = session.questions
-    .filter(q => !session!.answers[q.id])
-    .sort((a, b) => a.order - b.order);
+  const s = session as SpecSession;
+  const unanswered = s.questions
+    .filter((q: SpecQuestion) => !s.answers[q.id])
+    .sort((a: SpecQuestion, b: SpecQuestion) => a.order - b.order);
 
   return unanswered[0] || null;
 }

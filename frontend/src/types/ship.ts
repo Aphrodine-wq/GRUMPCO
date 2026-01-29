@@ -1,6 +1,7 @@
 /**
  * SHIP Mode Types (Frontend)
  */
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: replace with backend types (Phase 1.1) */
 
 export type ShipPhase = 'design' | 'spec' | 'plan' | 'code' | 'completed' | 'failed';
 

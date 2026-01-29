@@ -8,6 +8,8 @@ import { generateArchitecture, generateArchitectureStream } from '../services/ar
 import { getRequestLogger } from '../middleware/logger.js';
 import { sendServerError, writeSSEError } from '../utils/errorResponse.js';
 import { validateArchitectureRequest, handleArchitectureValidationErrors } from '../middleware/validator.js';
+import { dispatchWebhook } from '../services/webhookService.js';
+import { DEMO_ARCHITECTURE } from '../demo/sampleData.js';
 import type { ArchitectureRequest, ConversationMessage } from '../types/index.js';
 import type { EnrichedIntent } from '../services/intentCompilerService.js';
 
@@ -16,6 +18,7 @@ const router: Router = express.Router();
 interface ArchitectureRequestBody extends ArchitectureRequest {
   conversationHistory?: ConversationMessage[];
   enrichedIntent?: EnrichedIntent;
+  demo?: boolean;
 }
 
 /**
@@ -31,6 +34,17 @@ router.post(
   const body = req.body as ArchitectureRequestBody;
 
   try {
+    if (body.demo === true) {
+      log.info({}, 'Demo mode: returning sample architecture');
+      res.json({
+        id: DEMO_ARCHITECTURE.id,
+        status: 'complete',
+        architecture: DEMO_ARCHITECTURE,
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
     const { projectDescription, projectType, techStack, complexity, refinements, conversationHistory, enrichedIntent } = body;
 
     const desc = (projectDescription ?? enrichedIntent?.raw) as string;
@@ -63,6 +77,15 @@ router.post(
       return;
     }
 
+    dispatchWebhook('architecture.generated', {
+      architectureId: response.architecture?.id,
+      projectName: response.architecture?.projectName,
+      hasDiagram: !!(
+        response.architecture?.c4Diagrams?.context ||
+        response.architecture?.c4Diagrams?.container ||
+        response.architecture?.c4Diagrams?.component
+      ),
+    });
     res.json(response);
   } catch (error) {
     const err = error as Error;
@@ -84,6 +107,17 @@ router.post(
   const body = req.body as ArchitectureRequestBody;
 
   try {
+    if (body.demo === true) {
+      log.info({}, 'Demo mode: returning sample architecture stream');
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.write(`data: ${JSON.stringify({ type: 'complete', architecture: DEMO_ARCHITECTURE })}\n\n`);
+      res.end();
+      return;
+    }
+
     const { projectDescription, projectType, techStack, complexity, refinements, conversationHistory, enrichedIntent } = body;
 
     const desc = (projectDescription ?? enrichedIntent?.raw) as string;
@@ -125,7 +159,7 @@ router.post(
  * POST /api/architecture/refine
  * Refine existing architecture
  */
-router.post('/refine', async (req: Request<{}, {}, { architectureId?: string; refinements: string[] }>, res: Response) => {
+router.post('/refine', async (req: Request<Record<string, never>, object, { architectureId?: string; refinements: string[] }>, res: Response) => {
   const log = getRequestLogger();
 
   try {

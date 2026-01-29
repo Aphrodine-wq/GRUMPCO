@@ -29,17 +29,6 @@
     }
   }
 
-  function escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    };
-    return text.replace(/[&<>"']/g, (char) => map[char]);
-  }
-
   async function copyBefore() {
     try {
       await navigator.clipboard.writeText(diff.beforeContent);

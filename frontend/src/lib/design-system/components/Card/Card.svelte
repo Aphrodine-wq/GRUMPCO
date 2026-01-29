@@ -15,6 +15,7 @@
     header?: Snippet;
     footer?: Snippet;
     title?: string;
+    class?: string;
   }
 
   let {
@@ -26,11 +27,12 @@
     header,
     footer,
     title = '',
+    class: className = '',
   }: Props = $props();
 </script>
 
 <div
-  class="card card-{variant} card-padding-{padding}"
+  class="card card-{variant} card-padding-{padding} {className}"
   class:card-interactive={interactive}
   onclick={interactive ? onclick : undefined}
   role={interactive ? 'button' : undefined}

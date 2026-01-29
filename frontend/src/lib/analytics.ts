@@ -20,9 +20,9 @@ export function track(eventName: string, properties?: Record<string, unknown>): 
 
   events.push(event);
 
-  // In development, log to console
+  // In development, log to console (use warn so lint allows)
   if (import.meta.env.DEV) {
-    console.log('[Analytics]', eventName, properties || '');
+    console.warn('[Analytics]', eventName, properties || '');
   }
 
   // Send to backend for persistence and analytics

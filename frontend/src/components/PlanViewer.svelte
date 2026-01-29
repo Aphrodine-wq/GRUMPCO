@@ -60,6 +60,37 @@
       console.error('Failed to execute plan:', error);
     }
   }
+
+  function exportAsMarkdown() {
+    const lines: string[] = [
+      `# ${plan.title}`,
+      '',
+      plan.description,
+      '',
+      `**${plan.steps.length} steps** · **${formatTime(plan.totalEstimatedTime)}** estimated · *${plan.status}*`,
+      '',
+      '---',
+      '',
+    ];
+    for (const phase of plan.phases) {
+      lines.push(`## ${phase.name}`);
+      lines.push('');
+      const phaseSteps = plan.steps.filter((s) => phase.steps?.includes(s.id));
+      for (const step of phaseSteps) {
+        lines.push(`### ${step.title}`);
+        lines.push('');
+        lines.push(step.description);
+        lines.push('');
+      }
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `plan-${plan.id || 'export'}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 </script>
 
 <div class="plan-viewer">
@@ -79,29 +110,29 @@
     </div>
   </div>
 
+  <div class="plan-actions">
+    <button type="button" class="btn btn-secondary" onclick={exportAsMarkdown}>
+      Export (Markdown)
+    </button>
   {#if plan.status === 'draft' || plan.status === 'pending_approval'}
-    <div class="plan-actions">
-      <button class="btn btn-primary" on:click={handleApprove}>
-        Approve Plan
-      </button>
-      <button class="btn btn-secondary">
-        Edit Plan
-      </button>
-    </div>
+    <button type="button" class="btn btn-primary" onclick={handleApprove}>
+      Approve Plan
+    </button>
+    <button type="button" class="btn btn-secondary">
+      Edit Plan
+    </button>
   {/if}
-
   {#if plan.status === 'approved'}
-    <div class="plan-actions">
-      <button class="btn btn-primary" on:click={handleExecute}>
-        Execute Plan
-      </button>
-    </div>
+    <button type="button" class="btn btn-primary" onclick={handleExecute}>
+      Execute Plan
+    </button>
   {/if}
+  </div>
 
   <div class="phases">
     {#each plan.phases as phase (phase.id)}
       <div class="phase">
-        <div class="phase-header" on:click={() => togglePhase(phase.id)}>
+        <div class="phase-header" onclick={() => togglePhase(phase.id)}>
           <div class="phase-info">
             <span class="phase-name">{phase.name}</span>
             <span class="phase-status" class:in-progress={phase.status === 'in_progress'} class:completed={phase.status === 'completed'}>
@@ -125,9 +156,9 @@
 
         {#if expandedPhases.has(phase.id)}
           <div class="phase-steps">
-            {#each phase.steps.map(id => plan.steps.find(s => s.id === id)).filter(Boolean) as step (step.id)}
+            {#each phase.steps.map(id => plan.steps.find(s => s.id === id)).filter((s): s is PlanStep => s != null) as step (step.id)}
               <div class="step" class:expanded={expandedSteps.has(step.id)}>
-                <div class="step-header" on:click={() => toggleStep(step.id)}>
+                <div class="step-header" onclick={() => toggleStep(step.id)}>
                   <div class="step-info">
                     <span class="step-number">{step.order}</span>
                     <span class="step-title">{step.title}</span>

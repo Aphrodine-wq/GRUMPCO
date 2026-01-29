@@ -3,8 +3,9 @@
  *
  * Handles: Codebase Analysis, Security & Compliance, Infrastructure Automation, Testing & QA
  */
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: replace with proper types (Phase 1.1) */
 
-import { writable, derived, get } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import { fetchApi } from '../lib/api.js';
 
 // ============ Types ============

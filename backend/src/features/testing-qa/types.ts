@@ -45,7 +45,7 @@ export interface LoadTestPlanRequest {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
     path: string;
     expectedRps?: number;
-    payload?: any;
+    payload?: unknown;
   }>;
   tool?: 'k6' | 'locust' | 'artillery';
   baseUrl?: string;

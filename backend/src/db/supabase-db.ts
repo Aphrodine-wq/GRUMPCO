@@ -331,7 +331,7 @@ export class SupabaseDatabaseService {
     }
   }
 
-  async getUsageForUser(userId: string, fromDate: Date, toDate: Date): Promise<any[]> {
+  async getUsageForUser(userId: string, fromDate: Date, toDate: Date): Promise<Record<string, unknown>[]> {
     const { data, error } = await this.client
       .from('usage_records')
       .select('*')

@@ -21,6 +21,13 @@ router.get('/quick', (_req: Request, res: Response) => {
     process.env.ANTHROPIC_API_KEY.startsWith('sk-')
   );
 
+  const authEnabled =
+    !!process.env.SUPABASE_URL &&
+    !!process.env.SUPABASE_SERVICE_KEY &&
+    process.env.SUPABASE_URL !== 'https://your-project.supabase.co';
+  const billingEnabled =
+    !!process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_');
+
   // Determine overall status
   let status: 'healthy' | 'unhealthy' = 'healthy';
   if (!apiKeyConfigured) {
@@ -32,6 +39,8 @@ router.get('/quick', (_req: Request, res: Response) => {
     checks: {
       api_key_configured: apiKeyConfigured,
       server_responsive: true,
+      auth_enabled: authEnabled,
+      billing_enabled: billingEnabled,
     },
     timestamp: new Date().toISOString(),
   });
@@ -144,8 +153,8 @@ router.get('/ready', async (_req: Request, res: Response) => {
 
 // Detailed health check with all component statuses
 router.get('/detailed', async (_req: Request, res: Response) => {
-  const log = getRequestLogger();
-  const checks: Record<string, { status: 'healthy' | 'unhealthy' | 'degraded'; details?: any }> = {};
+  const _log = getRequestLogger();
+  const checks: Record<string, { status: 'healthy' | 'unhealthy' | 'degraded'; details?: unknown }> = {};
 
   // Database check
   try {

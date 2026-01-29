@@ -48,8 +48,8 @@ class SQLiteSessionStorage implements SessionStorage {
     await db.deleteSession(sessionId);
   }
 
-  async listSessions(limit = 100): Promise<string[]> {
-    const db = getDatabase();
+  async listSessions(_limit = 100): Promise<string[]> {
+    const _db = getDatabase();
     // SQLite implementation would need to be added to database service
     return [];
   }

@@ -30,7 +30,7 @@ export async function loadRemoteWorkspace(repoUrl: string): Promise<RemoteWorksp
         try {
             logger.info('Updating existing cached workspace...');
             execSync('git pull', { cwd: targetDir, stdio: 'ignore' });
-        } catch (e) {
+        } catch (_e) {
             logger.warn('Failed to pull latest changes, using cached version.');
         }
         return { url: repoUrl, localPath: targetDir };

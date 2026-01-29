@@ -68,7 +68,7 @@ export class ToolExecutionService {
     if (result.ok) {
       return { valid: true, resolvedPath: result.resolved };
     }
-    return { valid: false, error: (result as any).reason };
+    return { valid: false, error: (result as { reason?: string }).reason };
   }
 
   /**
@@ -149,11 +149,11 @@ export class ToolExecutionService {
         toolName: 'bash_execute',
         executionTime: Date.now() - startTime,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ error, command }, 'Bash execution failed');
-
+      const err = error as { code?: string; status?: number; stdout?: unknown; stderr?: unknown; message?: string };
       // Handle timeout
-      if (error.code === 'ETIMEDOUT') {
+      if (err.code === 'ETIMEDOUT') {
         return {
           success: false,
           error: `Command timed out after ${timeout}ms`,
@@ -164,12 +164,12 @@ export class ToolExecutionService {
       }
 
       // Handle command execution errors
-      if (error.status) {
+      if (err.status) {
         return {
           success: false,
-          output: error.stdout?.toString() || '',
-          error: error.stderr?.toString() || error.message,
-          exitCode: error.status,
+          output: err.stdout != null ? String(err.stdout) : '',
+          error: err.stderr != null ? String(err.stderr) : (err.message ?? 'Unknown error'),
+          exitCode: err.status,
           toolName: 'bash_execute',
           executionTime: Date.now() - startTime,
         };
@@ -177,7 +177,7 @@ export class ToolExecutionService {
 
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         toolName: 'bash_execute',
         executionTime: Date.now() - startTime,
       };
@@ -204,7 +204,10 @@ export class ToolExecutionService {
         };
       }
 
-      const resolvedPath = validation.resolvedPath!;
+      const resolvedPath = validation.resolvedPath;
+      if (!resolvedPath) {
+        return { success: false, error: 'Path validation did not return resolved path', toolName: 'file_read', executionTime: Date.now() - startTime };
+      }
       const content = await fs.readFile(resolvedPath, encoding);
 
       return {
@@ -213,12 +216,12 @@ export class ToolExecutionService {
         toolName: 'file_read',
         executionTime: Date.now() - startTime,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ error, filePath }, 'File read failed');
 
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         toolName: 'file_read',
         executionTime: Date.now() - startTime,
       };
@@ -246,7 +249,10 @@ export class ToolExecutionService {
         };
       }
 
-      const resolvedPath = validation.resolvedPath!;
+      const resolvedPath = validation.resolvedPath;
+      if (!resolvedPath) {
+        return { success: false, error: 'Path validation did not return resolved path', toolName: 'file_write', executionTime: Date.now() - startTime };
+      }
 
       // Check if file exists to determine change type
       let beforeContent = '';
@@ -278,12 +284,12 @@ export class ToolExecutionService {
           changeType,
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ error, filePath }, 'File write failed');
 
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         toolName: 'file_write',
         executionTime: Date.now() - startTime,
       };
@@ -315,7 +321,10 @@ export class ToolExecutionService {
         };
       }
 
-      const resolvedPath = validation.resolvedPath!;
+      const resolvedPath = validation.resolvedPath;
+      if (!resolvedPath) {
+        return { success: false, error: 'Path validation did not return resolved path', toolName: 'file_edit', executionTime: Date.now() - startTime };
+      }
 
       // Read file - capture before content
       const beforeContent = await fs.readFile(resolvedPath, 'utf8');
@@ -367,12 +376,12 @@ export class ToolExecutionService {
           operations: operationDetails,
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ error, filePath }, 'File edit failed');
 
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         toolName: 'file_edit',
         executionTime: Date.now() - startTime,
       };
@@ -396,7 +405,10 @@ export class ToolExecutionService {
         };
       }
 
-      const resolvedPath = validation.resolvedPath!;
+      const resolvedPath = validation.resolvedPath;
+      if (!resolvedPath) {
+        return { success: false, error: 'Path validation did not return resolved path', toolName: 'list_directory', executionTime: Date.now() - startTime };
+      }
       const files = await this._listDir(resolvedPath, recursive, '');
 
       return {
@@ -405,12 +417,12 @@ export class ToolExecutionService {
         toolName: 'list_directory',
         executionTime: Date.now() - startTime,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ error, dirPath }, 'Directory listing failed');
 
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         toolName: 'list_directory',
         executionTime: Date.now() - startTime,
       };
@@ -438,7 +450,10 @@ export class ToolExecutionService {
       };
     }
     try {
-      const basePath = validation.resolvedPath!;
+      const basePath = validation.resolvedPath;
+      if (!basePath) {
+        return { success: false, error: 'Path validation did not return resolved path', toolName: 'codebase_search', executionTime: Date.now() - startTime };
+      }
       const q = query.toLowerCase().replace(/\*\./g, '.').replace(/\*\*/g, '');
       const collected: string[] = [];
       const walk = async (p: string): Promise<void> => {

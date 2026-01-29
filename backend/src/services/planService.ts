@@ -11,7 +11,6 @@ import type {
   PlanGenerationRequest,
   PlanEditRequest,
   PlanPhase,
-  FileChange,
 } from '../types/plan.js';
 import logger from '../middleware/logger.js';
 import { getDatabase } from '../db/database.js';
@@ -142,7 +141,7 @@ Generate a comprehensive plan with all necessary steps, file changes, and phases
       id: planId,
       title: planData.title || 'Implementation Plan',
       description: planData.description || '',
-      steps: (planData.steps || []).map((step: any, index: number) => ({
+      steps: (planData.steps || []).map((step: Record<string, unknown>, index: number) => ({
         id: step.id || `step_${index + 1}`,
         title: step.title || `Step ${index + 1}`,
         description: step.description || '',
@@ -153,7 +152,7 @@ Generate a comprehensive plan with all necessary steps, file changes, and phases
         phase: step.phase || 'implementation',
         order: step.order || index + 1,
       })),
-      phases: (planData.phases || []).map((phase: any) => ({
+      phases: (planData.phases || []).map((phase: Record<string, unknown>) => ({
         id: phase.id || 'implementation',
         name: phase.name || 'Implementation',
         description: phase.description || '',
@@ -287,7 +286,7 @@ export async function rejectPlan(planId: string, comments?: string): Promise<Pla
   plan.updatedAt = new Date().toISOString();
   if (comments) {
     plan.metadata = plan.metadata || {};
-    (plan.metadata as any).rejectionComments = comments;
+    (plan.metadata as Record<string, unknown>).rejectionComments = comments;
   }
 
   await db.savePlan(plan);

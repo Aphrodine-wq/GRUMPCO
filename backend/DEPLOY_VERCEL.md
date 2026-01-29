@@ -40,6 +40,12 @@ vercel env add SUPABASE_ANON_KEY production
 vercel env add SUPABASE_SERVICE_KEY production
 vercel env add REDIS_HOST production
 vercel env add REDIS_PORT production
+vercel env add SERVERLESS_MODE production
+vercel env add EVENTS_MODE production
+vercel env add PUBLIC_BASE_URL production
+vercel env add QSTASH_TOKEN production
+vercel env add QSTASH_URL production
+vercel env add JOB_WORKER_SECRET production
 ```
 
 ## Supabase Database Setup
@@ -72,8 +78,23 @@ vercel --prod
 
 > ⚠️ **Serverless Limitations**
 > - SQLite won't persist between function invocations (use Supabase/Postgres instead)
-> - Long-running tasks (BullMQ workers) need a separate service
-> - Function timeout is 10s on Hobby, 60s on Pro
+> - Long-running tasks require async job dispatch (QStash)
+> - Function timeout is 10s on Hobby, 60s on Pro (set maxDuration in vercel.json)
+
+## Serverless Job Dispatch (QStash)
+
+Codegen and SHIP run asynchronously in serverless mode. Configure Upstash QStash:
+
+1. Create a QStash app at https://console.upstash.com
+2. Copy the QStash token and set:
+   - `QSTASH_TOKEN`
+   - `PUBLIC_BASE_URL` (your Vercel URL)
+   - `JOB_WORKER_SECRET` (random secret)
+3. Set `EVENTS_MODE=poll` so clients use `/api/events/poll` instead of SSE.
+
+The backend will enqueue jobs and QStash will call:
+- `POST /api/jobs/ship`
+- `POST /api/jobs/codegen`
 
 ## Monitoring
 

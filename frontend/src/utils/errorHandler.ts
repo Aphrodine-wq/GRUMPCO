@@ -2,6 +2,7 @@
  * Centralized Error Handling Utility
  * Provides error classification, user-friendly messages, and recovery suggestions
  */
+/* eslint-disable @typescript-eslint/no-explicit-any -- error shape from API (Phase 1.1) */
 
 export type ErrorType = 'network' | 'validation' | 'api' | 'user' | 'timeout' | 'unknown';
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
@@ -183,8 +184,9 @@ export function isRetryable(error: unknown, type: ErrorType): boolean {
   }
   
   if (error instanceof Error) {
-    const msg = error.message.toLowerCase();
-    const status = (error as any).status || (error as any).statusCode;
+    const _msg = error.message.toLowerCase();
+    const errWithStatus = error as Error & { status?: number; statusCode?: number };
+    const status = errWithStatus.status ?? errWithStatus.statusCode;
     
     // Retryable status codes
     if (status && [429, 500, 502, 503, 504].includes(status)) {

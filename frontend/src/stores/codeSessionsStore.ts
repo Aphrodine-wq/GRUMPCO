@@ -34,7 +34,7 @@ function persist(sessions: CodeSession[]) {
   }
 }
 
-const { subscribe, set, update } = writable<CodeSession[]>(loadSessions());
+const { subscribe, set: _set, update } = writable<CodeSession[]>(loadSessions());
 
 export const codeSessionsStore = {
   subscribe,

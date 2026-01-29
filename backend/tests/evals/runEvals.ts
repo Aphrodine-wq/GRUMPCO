@@ -60,8 +60,7 @@ async function runShipEvals() {
   const results = [];
   for (const task of shipTasks) {
     const data = await postJson('/api/ship/start', {
-      description: task.prompt,
-      // Keep payload minimal; rely on backend defaults.
+      projectDescription: task.prompt,
     });
     results.push({ taskId: task.id, raw: data });
   }

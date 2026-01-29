@@ -3,7 +3,7 @@
  * Parses mixed content (text, code, tool calls, tool results) into structured blocks
  */
 
-import type { ContentBlock, TextBlock, CodeBlockType, ToolCallBlock, ToolResultBlock } from '../types';
+import type { ContentBlock, TextBlock, CodeBlockType } from '../types';
 
 /**
  * Parse message content into structured blocks
@@ -26,7 +26,7 @@ export function parseMessageContent(content: string | ContentBlock[]): ContentBl
   const mermaidRegex = /```mermaid\s*([\s\S]*?)```/g;
 
   let lastIndex = 0;
-  let match;
+  let match: RegExpExecArray | null = null;
 
   // First, find all code and mermaid blocks
   const allMatches: Array<{
@@ -50,16 +50,17 @@ export function parseMessageContent(content: string | ContentBlock[]): ContentBl
   // Find code blocks (non-mermaid)
   while ((match = codeBlockRegex.exec(content)) !== null) {
     // Check if this is already captured as mermaid
+    const currentMatch = match;
     const isMermaid = allMatches.some(
-      (m) => m.type === 'mermaid' && m.index === match.index
+      (m) => m.type === 'mermaid' && m.index === currentMatch.index
     );
     if (!isMermaid) {
       allMatches.push({
         type: 'code',
-        index: match.index,
-        endIndex: match.index + match[0].length,
-        language: match[1] || 'javascript',
-        content: match[2].trim(),
+        index: currentMatch.index,
+        endIndex: currentMatch.index + currentMatch[0].length,
+        language: currentMatch[1] || 'javascript',
+        content: currentMatch[2].trim(),
       });
     }
   }

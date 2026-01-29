@@ -31,21 +31,21 @@ export abstract class BaseSkill implements Skill {
   /**
    * Initialize the skill (called once on load)
    */
-  async initialize(context: Partial<SkillContext>): Promise<void> {
+  async initialize(_context: Partial<SkillContext>): Promise<void> {
     // Override in subclass if needed
   }
 
   /**
    * Activate for a session
    */
-  async activate(context: SkillContext): Promise<void> {
+  async activate(_context: SkillContext): Promise<void> {
     // Override in subclass if needed
   }
 
   /**
    * Deactivate from a session
    */
-  async deactivate(context: SkillContext): Promise<void> {
+  async deactivate(_context: SkillContext): Promise<void> {
     // Override in subclass if needed
   }
 
@@ -59,7 +59,7 @@ export abstract class BaseSkill implements Skill {
   /**
    * Check if this skill should handle the input
    */
-  shouldHandle(input: string, context: SkillContext): boolean {
+  shouldHandle(input: string, _context: SkillContext): boolean {
     const triggers = this.manifest.triggers;
     if (!triggers) return false;
 
@@ -117,8 +117,8 @@ export abstract class BaseSkill implements Skill {
    * Override this method for simple processing
    */
   protected async process(
-    input: SkillExecutionInput,
-    context: SkillContext
+    _input: SkillExecutionInput,
+    _context: SkillContext
   ): Promise<string> {
     throw new Error('Skill must implement process() or execute()');
   }

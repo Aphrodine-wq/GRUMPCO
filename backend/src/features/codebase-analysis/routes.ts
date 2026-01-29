@@ -81,9 +81,16 @@ router.post('/architecture', async (req: Request, res: Response) => {
   } catch (error) {
     const err = error as Error;
     console.error('Architecture diagram error:', err);
+    const hint =
+      err.message.includes('ENOENT') || err.message.includes('no such file')
+        ? 'Ensure workspacePath exists and is readable.'
+        : err.message.includes('timeout') || err.message.includes('ETIMEDOUT')
+          ? 'Analysis timed out; try a smaller workspace or increase timeout.'
+          : undefined;
     res.status(500).json({
       error: err.message,
       type: 'diagram_error',
+      ...(hint && { hint }),
     });
   }
 });

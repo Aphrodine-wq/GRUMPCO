@@ -5,7 +5,7 @@
  */
 
 import CircuitBreaker from 'opossum';
-import { createCircuitBreaker, CIRCUIT_BREAKER_OPTIONS } from './resilience.js';
+import { createCircuitBreaker } from './resilience.js';
 import logger from '../middleware/logger.js';
 
 export type ServiceType = 
@@ -69,7 +69,7 @@ const SERVICE_CONFIGS: Record<ServiceType, ServiceConfig> = {
 };
 
 // Circuit breakers per service type
-const circuitBreakers = new Map<ServiceType, CircuitBreaker<any, any>>();
+const circuitBreakers = new Map<ServiceType, CircuitBreaker<unknown[], unknown>>();
 
 // Rate limiting state per service
 interface RateLimitState {
@@ -87,7 +87,7 @@ export function getCircuitBreaker<T extends unknown[], R>(
   fn: (...args: T) => Promise<R>
 ): CircuitBreaker<T, R> {
   if (!circuitBreakers.has(serviceType)) {
-    const config = SERVICE_CONFIGS[serviceType];
+    const _config = SERVICE_CONFIGS[serviceType];
     const breaker = createCircuitBreaker(fn, serviceType);
     
     circuitBreakers.set(serviceType, breaker);
@@ -119,18 +119,19 @@ export function checkRateLimit(serviceType: ServiceType): { allowed: boolean; re
     rateLimitStates.set(serviceType, state);
   }
 
+  const rateLimit = config.rateLimit;
   // Remove old requests outside the window
   state.requests = state.requests.filter(
-    timestamp => now - timestamp < config.rateLimit.windowMs
+    timestamp => now - timestamp < rateLimit.windowMs
   );
 
-  if (state.requests.length >= config.rateLimit.requests) {
+  if (state.requests.length >= rateLimit.requests) {
     const oldestRequest = state.requests[0];
     const retryAfter = Math.ceil(
-      (config.rateLimit.windowMs - (now - oldestRequest)) / 1000
+      (rateLimit.windowMs - (now - oldestRequest)) / 1000
     );
     logger.warn(
-      { serviceType, count: state.requests.length, limit: config.rateLimit.requests },
+      { serviceType, count: state.requests.length, limit: rateLimit.requests },
       'Rate limit exceeded'
     );
     return { allowed: false, retryAfter };
@@ -161,7 +162,7 @@ export function getServiceState(serviceType: ServiceType): {
     ? (breaker.opened ? 'open' : breaker.halfOpen ? 'half-open' : 'closed')
     : 'closed';
 
-  const stats = breaker ? (breaker as any).stats ?? {} : {};
+  const stats = breaker && 'stats' in breaker ? (breaker.stats ?? {}) : {};
 
   const rateLimit = {
     current: rateLimitState?.requests.length || 0,

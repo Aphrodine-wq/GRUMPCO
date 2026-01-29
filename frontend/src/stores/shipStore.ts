@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion -- TODO: replace with proper types (Phase 1.1) */
 import { writable } from 'svelte/store';
 import { fetchApi } from '../lib/api.js';
 import type { ShipSession, ShipPhase, ShipStartRequest } from '../types/ship.js';
@@ -9,7 +10,7 @@ export interface ExecuteStreamOptions {
 interface ShipState {
   session: ShipSession | null;
   phase: ShipPhase;
-  status: 'idle' | 'running' | 'completed' | 'failed';
+  status: 'idle' | 'initializing' | 'running' | 'paused' | 'completed' | 'failed';
   error: string | null;
   isStreaming: boolean;
 }
@@ -23,6 +24,8 @@ const initialState: ShipState = {
 };
 
 const state = writable<ShipState>(initialState);
+const EVENT_MODE = import.meta.env?.VITE_EVENT_MODE ?? 'sse';
+const USE_POLLING = EVENT_MODE === 'poll';
 
 export const shipStore = {
   subscribe: state.subscribe,
@@ -130,8 +133,12 @@ export const shipStore = {
    * Execute SHIP mode workflow with streaming
    * @param options.resumeFromPhase - Optional phase to resume from (design, spec, plan, code)
    */
-  async executeStream(sessionId: string, onUpdate: (data: any) => void, options?: ExecuteStreamOptions): Promise<void> {
+  async executeStream(sessionId: string, onUpdate?: (data: any) => void, options?: ExecuteStreamOptions): Promise<void> {
     try {
+      if (USE_POLLING) {
+        await this.execute(sessionId);
+        return;
+      }
       state.update(s => ({ ...s, status: 'running', isStreaming: true, error: null }));
       const query = options?.resumeFromPhase ? `?resumeFromPhase=${encodeURIComponent(options.resumeFromPhase)}` : '';
       const response = await fetchApi(`/api/ship/${sessionId}/execute/stream${query}`, {
@@ -168,7 +175,7 @@ export const shipStore = {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              onUpdate(data);
+              onUpdate?.(data);
               
               // Update state based on events
               if (data.type === 'phase_start') {

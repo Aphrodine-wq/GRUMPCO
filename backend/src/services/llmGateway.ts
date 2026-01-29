@@ -44,18 +44,21 @@ async function* streamAnthropic(params: StreamParams): AsyncGenerator<StreamEven
   const stream = await anthropicClient.messages.stream({
     model: params.model || ANTHROPIC_DEFAULT,
     max_tokens: params.max_tokens,
-    system: params.system,
-    messages: params.messages,
+    system: params.system ?? '',
+    messages: params.messages ?? [],
     tools: params.tools,
   } as Parameters<typeof anthropicClient.messages.stream>[0]);
 
   for await (const event of stream) {
-    if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
-      yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: (event.delta as { text?: string }).text ?? '' } };
-    } else if (event.type === 'content_block_start' && (event as any).content_block?.type === 'tool_use') {
-      const blk = (event as any).content_block;
-      yield { type: 'content_block_start' as const, content_block: { type: 'tool_use' as const, id: blk.id, name: blk.name, input: blk.input ?? {} } };
-    } else if (event.type === 'message_stop') {
+    const ev = event as { type: string; delta?: { type?: string; text?: string }; content_block?: { type?: string; id?: string; name?: string; input?: Record<string, unknown> } };
+    if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+      yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: (ev.delta as { text?: string }).text ?? '' } };
+    } else if (ev.type === 'content_block_start') {
+      const blk = ev.content_block;
+      if (blk?.type === 'tool_use') {
+        yield { type: 'content_block_start' as const, content_block: { type: 'tool_use' as const, id: blk.id ?? '', name: blk.name ?? '', input: blk.input ?? {} } };
+      }
+    } else if (ev.type === 'message_stop') {
       yield { type: 'message_stop' as const };
     }
   }

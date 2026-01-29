@@ -1,6 +1,7 @@
 <script lang="ts">
   import Router, { push } from 'svelte-spa-router'
   import { authStore } from './stores/authStore'
+  import Dashboard from './routes/Dashboard.svelte'
   import Workspace from './routes/Workspace.svelte'
   import Login from './routes/Login.svelte'
   import Register from './routes/Register.svelte'

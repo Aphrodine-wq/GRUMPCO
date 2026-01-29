@@ -121,7 +121,8 @@ export function submitAnswers(): void {
 
   if (!resolveCallback || !current) return;
 
-  const formattedAnswers: ClarificationAnswer[] = current.questions.map(q => ({
+  const payload: ClarificationPayload = current;
+  const formattedAnswers: ClarificationAnswer[] = payload.questions.map((q: ClarificationQuestion) => ({
     questionId: q.id,
     selectedOptionIds: currentAnswers.get(q.id) || []
   }));

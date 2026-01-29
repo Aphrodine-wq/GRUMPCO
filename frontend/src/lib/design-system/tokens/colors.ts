@@ -14,6 +14,13 @@ export const colors = {
     sidebar: 'var(--color-bg-subtle)',   // Distinct sidebar
   },
 
+  // Border colors
+  border: {
+    default: 'rgba(0, 0, 0, 0.12)',
+    light: 'rgba(0, 0, 0, 0.06)',
+    focus: 'var(--color-primary)',
+  },
+
   // Text colors
   text: {
     primary: 'var(--color-text)',           // Pure Black

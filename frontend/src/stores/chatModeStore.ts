@@ -26,7 +26,7 @@ function persist(mode: ChatMode) {
   }
 }
 
-const { subscribe, set, update } = writable<ChatMode>(loadStored());
+const { subscribe, set } = writable<ChatMode>(loadStored());
 
 export const chatModeStore = {
   subscribe,

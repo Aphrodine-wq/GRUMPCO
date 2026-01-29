@@ -11,6 +11,9 @@ import {
   executeCodeGeneration,
   executeCodeGenerationMulti,
 } from '../services/agentOrchestrator.js';
+import { enqueueCodegenJob } from '../services/jobQueue.js';
+import { isServerlessRuntime } from '../config/runtime.js';
+import { getDatabase } from '../db/database.js';
 import { createCodegenZip } from '../services/zipService.js';
 import { getRequestLogger } from '../middleware/logger.js';
 import { sendServerError } from '../utils/errorResponse.js';
@@ -18,6 +21,17 @@ import { validateCodegenRequest, handleCodegenValidationErrors } from '../middle
 import type { CodeGenRequest, CodeGenRequestMulti } from '../types/agents.js';
 import type { PRD } from '../types/prd.js';
 import type { SystemArchitecture } from '../types/architecture.js';
+
+/** Agent status entry in codegen API responses */
+interface AgentStatusEntry {
+  taskId: string;
+  status: string;
+  description: string;
+  startedAt?: string;
+  completedAt?: string;
+  duration?: number;
+  error?: string;
+}
 
 const router: Router = express.Router();
 
@@ -80,15 +94,20 @@ router.post(
           componentMapping,
           projectId: (body as CodeGenRequestBodyMulti).projectId,
         });
-        setImmediate(() => {
-          executeCodeGenerationMulti(session).catch((error) => {
-            log.error({ sessionId: session.sessionId, error: error.message }, 'Multi-PRD codegen failed');
+        let jobId: string | null = null;
+        if (isServerlessRuntime) {
+          jobId = await enqueueCodegenJob(session.sessionId);
+        } else {
+          setImmediate(() => {
+            executeCodeGenerationMulti(session).catch((error) => {
+              log.error({ sessionId: session.sessionId, error: error.message }, 'Multi-PRD codegen failed');
+            });
           });
-        });
+        }
         res.json({
           sessionId: session.sessionId,
           status: session.status,
-          agents: Object.entries(session.agents).reduce(
+          agents: Object.entries(session.agents).reduce<Record<string, AgentStatusEntry>>(
             (acc, [type, task]) => {
               acc[type] = {
                 taskId: task.taskId,
@@ -97,9 +116,11 @@ router.post(
               };
               return acc;
             },
-            {} as Record<string, any>
+            Object.create(null) as Record<string, AgentStatusEntry>
           ),
           subTasksByPrdId: session.subTasksByPrdId,
+          jobQueued: isServerlessRuntime,
+          jobId,
           timestamp: new Date().toISOString(),
         });
         return;
@@ -126,16 +147,26 @@ router.post(
         preferences: preferences ?? DEFAULT_PREFERENCES,
       });
 
-      setImmediate(() => {
-        executeCodeGeneration(session, prd, architecture).catch((error) => {
-          log.error({ sessionId: session.sessionId, error: error.message }, 'Background code generation failed');
+      // Store PRD + architecture in session for serverless workers
+      session.prds = [prd];
+      session.architecture = architecture;
+      await getDatabase().saveSession(session);
+
+      let jobId: string | null = null;
+      if (isServerlessRuntime) {
+        jobId = await enqueueCodegenJob(session.sessionId);
+      } else {
+        setImmediate(() => {
+          executeCodeGeneration(session, prd, architecture).catch((error) => {
+            log.error({ sessionId: session.sessionId, error: error.message }, 'Background code generation failed');
+          });
         });
-      });
+      }
 
       res.json({
         sessionId: session.sessionId,
         status: session.status,
-        agents: Object.entries(session.agents).reduce(
+        agents: Object.entries(session.agents).reduce<Record<string, AgentStatusEntry>>(
           (acc, [type, task]) => {
             acc[type] = {
               taskId: task.taskId,
@@ -144,8 +175,10 @@ router.post(
             };
             return acc;
           },
-          {} as Record<string, any>
+            Object.create(null) as Record<string, AgentStatusEntry>
         ),
+        jobQueued: isServerlessRuntime,
+        jobId,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -182,11 +215,11 @@ router.get('/status/:sessionId', async (req: Request<{ sessionId: string }>, res
     ).length;
     const progress = (completedAgents / totalAgents) * 100;
 
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       sessionId,
       status: session.status,
       progress: Math.round(progress),
-      agents: Object.entries(session.agents).reduce((acc, [type, task]) => {
+      agents: Object.entries(session.agents).reduce<Record<string, AgentStatusEntry>>((acc, [type, task]) => {
         acc[type] = {
           taskId: task.taskId,
           status: task.status,
@@ -197,12 +230,12 @@ router.get('/status/:sessionId', async (req: Request<{ sessionId: string }>, res
           error: task.error,
         };
         return acc;
-      }, {} as Record<string, any>),
+      }, Object.create(null) as Record<string, AgentStatusEntry>),
       generatedFileCount: session.generatedFiles?.length || 0,
       error: session.error,
       timestamp: new Date().toISOString(),
     };
-    if (session.subTasksByPrdId) payload.subTasksByPrdId = session.subTasksByPrdId;
+    if (session.subTasksByPrdId) (payload as Record<string, unknown>).subTasksByPrdId = session.subTasksByPrdId;
     res.json(payload);
   } catch (error) {
     const err = error as Error;
@@ -269,7 +302,7 @@ router.get('/download/:sessionId', async (req: Request<{ sessionId: string }>, r
  * POST /api/codegen/preview/:sessionId
  * Get preview of generated files
  */
-router.post('/preview/:sessionId', async (req: Request<{ sessionId: string }, {}, { filePath: string }>, res: Response) => {
+router.post('/preview/:sessionId', async (req: Request<{ sessionId: string }, object, { filePath: string }>, res: Response) => {
   const log = getRequestLogger();
 
   try {

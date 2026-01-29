@@ -25,7 +25,7 @@ interface TriggerBody {
  * Inbound trigger: enqueue job, return 202 + jobId.
  * In production, GRUMP_WEBHOOK_SECRET must be set; otherwise requests are rejected.
  */
-router.post('/trigger', async (req: Request<{}, {}, TriggerBody>, res: Response) => {
+router.post('/trigger', async (req: Request<Record<string, never>, object, TriggerBody>, res: Response) => {
   const log = getRequestLogger();
   if (isProduction && !WEBHOOK_SECRET) {
     log.warn('Webhook secret not configured in production');
@@ -71,7 +71,7 @@ router.post('/trigger', async (req: Request<{}, {}, TriggerBody>, res: Response)
  * Register outbound webhook URL (in-memory). Body: { url: string, events?: string[], secret?: string }
  * In production, GRUMP_WEBHOOK_SECRET must be set.
  */
-router.post('/outbound', (req: Request<{}, {}, { url?: string; events?: string[]; secret?: string }>, res: Response) => {
+router.post('/outbound', (req: Request<Record<string, never>, object, { url?: string; events?: string[]; secret?: string }>, res: Response) => {
   const log = getRequestLogger();
   if (isProduction && !WEBHOOK_SECRET) {
     log.warn('Webhook secret not configured in production');
@@ -89,7 +89,13 @@ router.post('/outbound', (req: Request<{}, {}, { url?: string; events?: string[]
     return;
   }
   registerWebhook(url, events as WebhookEvent[] | undefined);
-  res.json({ ok: true, url, events: events ?? ['ship.completed', 'codegen.ready'] });
+  res.json({
+    ok: true,
+    url,
+    events:
+      events ??
+      ['ship.completed', 'codegen.ready', 'architecture.generated', 'prd.generated'],
+  });
 });
 
 export default router;

@@ -33,14 +33,20 @@ if (MOCK_MODE) {
   logger.info('Supabase client configured');
 }
 
-const supabaseClient: SupabaseClient | null = MOCK_MODE
-  ? null
-  : createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+const supabaseClient: SupabaseClient | null = (() => {
+  if (MOCK_MODE) return null;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY are required');
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+})();
+
+function getSupabaseClient(): SupabaseClient {
+  if (!supabaseClient) throw new Error('Supabase not configured');
+  return supabaseClient;
+}
 
 interface MockUser {
   id: string;
@@ -129,7 +135,7 @@ export async function getUser(
     }
     return { data: { user: toPublicUser(user) }, error: null };
   }
-  return supabaseClient!.auth.getUser(token);
+  return getSupabaseClient().auth.getUser(token);
 }
 
 export async function signUp({
@@ -161,7 +167,7 @@ export async function signUp({
       error: null,
     };
   }
-  return supabaseClient!.auth.signUp({ email, password, options });
+  return getSupabaseClient().auth.signUp({ email, password, options });
 }
 
 export async function signInWithPassword({
@@ -185,7 +191,7 @@ export async function signInWithPassword({
       error: null,
     };
   }
-  return supabaseClient!.auth.signInWithPassword({ email, password });
+  return getSupabaseClient().auth.signInWithPassword({ email, password });
 }
 
 export async function signOut(token?: string): Promise<{ error: { message: string } | null }> {
@@ -194,33 +200,69 @@ export async function signOut(token?: string): Promise<{ error: { message: strin
     if (token) mockSessions.delete(token);
     return { error: null };
   }
-  return supabaseClient!.auth.signOut();
+  return getSupabaseClient().auth.signOut();
 }
 
-interface MockQueryBuilder {
-  select: () => { data: unknown[]; error: null };
-  insert: () => { data: null; error: null };
-  update: () => { data: null; error: null };
-  delete: () => { data: null; error: null };
-  eq: () => MockQueryBuilder;
-  single: () => { data: null; error: null };
+interface MockQueryResult {
+  data: unknown[] | null;
+  error: { message: string } | null;
+}
+
+interface MockQueryBuilder extends PromiseLike<MockQueryResult> {
+  data?: MockQueryResult['data'];
+  error?: MockQueryResult['error'];
+  select: (_columns?: string) => MockQueryBuilder;
+  insert: (_values?: Record<string, unknown> | Record<string, unknown>[]) => MockQueryBuilder;
+  update: (_values?: Record<string, unknown>) => MockQueryBuilder;
+  delete: () => MockQueryBuilder;
+  eq: (_column: string, _value: unknown) => MockQueryBuilder;
+  gt: (_column: string, _value: unknown) => MockQueryBuilder;
+  order: (_column: string, _opts?: { ascending?: boolean }) => MockQueryBuilder;
+  limit: (_count: number) => MockQueryBuilder;
+  single: () => MockQueryBuilder;
 }
 
 export function from(table: string): MockQueryBuilder | ReturnType<SupabaseClient['from']> {
   if (MOCK_MODE) {
     const mockBuilder: MockQueryBuilder = {
-      select: () => ({ data: [], error: null }),
-      insert: () => ({ data: null, error: null }),
-      update: () => ({ data: null, error: null }),
-      delete: () => ({ data: null, error: null }),
-      eq: function () {
-        return this;
+      data: [],
+      error: null,
+      select: () => {
+        mockBuilder.data = [];
+        mockBuilder.error = null;
+        return mockBuilder;
       },
-      single: () => ({ data: null, error: null }),
+      insert: () => {
+        mockBuilder.data = null;
+        mockBuilder.error = null;
+        return mockBuilder;
+      },
+      update: () => {
+        mockBuilder.data = null;
+        mockBuilder.error = null;
+        return mockBuilder;
+      },
+      delete: () => {
+        mockBuilder.data = null;
+        mockBuilder.error = null;
+        return mockBuilder;
+      },
+      eq: () => mockBuilder,
+      gt: () => mockBuilder,
+      order: () => mockBuilder,
+      limit: () => mockBuilder,
+      single: () => {
+        mockBuilder.data = null;
+        mockBuilder.error = null;
+        return mockBuilder;
+      },
+      then: (onfulfilled, onrejected) =>
+        Promise.resolve({ data: mockBuilder.data ?? null, error: mockBuilder.error ?? null })
+          .then(onfulfilled, onrejected),
     };
     return mockBuilder;
   }
-  return supabaseClient!.from(table);
+  return getSupabaseClient().from(table);
 }
 
 export const auth = {

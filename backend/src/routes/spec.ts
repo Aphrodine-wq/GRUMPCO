@@ -42,7 +42,7 @@ router.post('/start', async (req: Request, res: Response) => {
     const session = await startSpecSession(request);
 
     res.json({ session });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Spec session start failed');
     sendServerError(res, error);
   }
@@ -72,7 +72,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       isComplete: complete,
       nextQuestion,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Get spec session failed');
     sendServerError(res, error);
   }
@@ -104,7 +104,7 @@ router.post('/:id/answer', async (req: Request, res: Response) => {
       isComplete: complete,
       nextQuestion,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Answer submission failed');
     sendServerError(res, error);
   }
@@ -132,7 +132,7 @@ router.post('/:id/generate', async (req: Request, res: Response) => {
     const { specification, session } = await generateSpecification(request);
 
     res.json({ specification, session });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error, requestId: req.id }, 'Spec generation failed');
     sendServerError(res, error);
   }

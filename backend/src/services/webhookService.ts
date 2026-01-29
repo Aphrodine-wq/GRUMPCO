@@ -6,8 +6,16 @@
 
 import logger from '../middleware/logger.js';
 import { broadcastEvent } from './eventsStreamService.js';
+import { db as supabaseDb, isMockMode } from './supabaseClient.js';
+import { isServerlessRuntime } from '../config/runtime.js';
 
-export type WebhookEvent = 'ship.completed' | 'codegen.ready' | 'ship.failed' | 'codegen.failed';
+export type WebhookEvent =
+  | 'ship.completed'
+  | 'codegen.ready'
+  | 'ship.failed'
+  | 'codegen.failed'
+  | 'architecture.generated'
+  | 'prd.generated';
 
 const webhookUrls: { url: string; events?: WebhookEvent[] }[] = [];
 
@@ -31,12 +39,32 @@ export function registerWebhook(url: string, events?: WebhookEvent[]): void {
   }
 }
 
+async function recordEvent(event: WebhookEvent, payload: Record<string, unknown>): Promise<void> {
+  if (!isServerlessRuntime || isMockMode) return;
+  try {
+    const table = supabaseDb.from('events');
+    const { error } = await table.insert({
+      id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      session_id: (payload as Record<string, unknown>).sessionId ?? null,
+      event,
+      payload,
+      created_at: new Date().toISOString(),
+    });
+    if (error) {
+      logger.warn({ error: error.message, event }, 'Event log insert failed');
+    }
+  } catch (err) {
+    logger.warn({ err: (err as Error).message, event }, 'Event log insert error');
+  }
+}
+
 /**
  * Dispatch an event to all registered URLs and to SSE subscribers (desktop).
  * Runs async so caller is not blocked.
  */
 export function dispatchWebhook(event: WebhookEvent, payload: Record<string, unknown>): void {
   broadcastEvent(event, payload);
+  void recordEvent(event, payload);
 
   const urls = getUrls();
   if (urls.length === 0) return;

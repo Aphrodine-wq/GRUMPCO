@@ -163,7 +163,7 @@ export interface APIDoc {
   method: string;
   description: string;
   parameters: ParameterDoc[];
-  requestBody?: any;
+  requestBody?: unknown;
   responses: ResponseDoc[];
   examples: string[];
 }
@@ -171,7 +171,7 @@ export interface APIDoc {
 export interface ResponseDoc {
   status: number;
   description: string;
-  schema?: any;
+  schema?: unknown;
 }
 
 export interface ArchitectureDoc {

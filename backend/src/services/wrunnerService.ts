@@ -11,6 +11,7 @@ import { getWRunnerAgentPrompt } from '../prompts/agents/wrunner-agent.js';
 import type { AgentWorkReport, WRunnerAnalysis, GenerationSession, AgentType } from '../types/agents.js';
 import type { PRD } from '../types/prd.js';
 import { scanSecurity, optimizePerformance, analyzeCode } from './claudeCodeService.js';
+import type { CodeAnalysis, SecurityIssue, PerformanceOptimization } from '../types/claudeCode.js';
 import { withResilience } from './resilience.js';
 
 if (!process.env.ANTHROPIC_API_KEY) {
@@ -23,7 +24,7 @@ const client = new Anthropic({
 });
 
 // Create resilient wrapper for Claude API calls
-const resilientClaudeCall = withResilience(
+const _resilientClaudeCall = withResilience(
   async (params: Parameters<typeof client.messages.create>[0]) => {
     return await client.messages.create(params);
   },
@@ -76,15 +77,15 @@ export async function analyzeAgentReports(
           ]);
           
           const analysisResults = analyses
-            .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+            .filter((r): r is PromiseFulfilledResult<CodeAnalysis> => r.status === 'fulfilled')
             .flatMap(r => r.value);
           
           const securityResults = securityScans
-            .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+            .filter((r): r is PromiseFulfilledResult<SecurityIssue[]> => r.status === 'fulfilled')
             .flatMap(r => r.value);
           
           const perfResults = perfScans
-            .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+            .filter((r): r is PromiseFulfilledResult<PerformanceOptimization[]> => r.status === 'fulfilled')
             .flatMap(r => r.value);
           
           if (analysisResults.length > 0 || securityResults.length > 0 || perfResults.length > 0) {

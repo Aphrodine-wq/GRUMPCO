@@ -11,7 +11,7 @@ export interface K8sManifest {
     labels?: Record<string, string>;
     annotations?: Record<string, string>;
   };
-  spec: any;
+  spec: Record<string, unknown>;
 }
 
 export interface K8sGenerationRequest {
@@ -49,7 +49,7 @@ export interface K8sGenerationResult {
 export interface TerraformResource {
   type: string;
   name: string;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 export interface TerraformGenerationRequest {
@@ -59,7 +59,7 @@ export interface TerraformGenerationRequest {
     type: 'vpc' | 'subnet' | 'ec2' | 'rds' | 's3' | 'eks' | 'ecs' | 'lambda' |
           'api-gateway' | 'cloudfront' | 'elb' | 'security-group' | 'iam' | 'custom';
     name: string;
-    config?: Record<string, any>;
+    config?: Record<string, unknown>;
   }>;
   region?: string;
   environment?: 'development' | 'staging' | 'production';

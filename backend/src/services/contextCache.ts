@@ -7,6 +7,12 @@ import crypto from 'crypto';
 import logger from '../middleware/logger.js';
 import type { MasterContext } from '../types/context.js';
 
+export interface ContextCacheOptions {
+  enrichedIntent?: unknown;
+  architecture?: unknown;
+  prd?: unknown;
+}
+
 interface CachedContext {
   context: MasterContext;
   hash: string;
@@ -25,9 +31,9 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
  * Generate hash from project description for cache key
  */
 function generateCacheKey(projectDescription: string, options?: {
-  enrichedIntent?: any;
-  architecture?: any;
-  prd?: any;
+  enrichedIntent?: unknown;
+  architecture?: unknown;
+  prd?: unknown;
 }): string {
   const data = {
     projectDescription,
@@ -44,11 +50,7 @@ function generateCacheKey(projectDescription: string, options?: {
  */
 export function getCachedContext(
   projectDescription: string,
-  options?: {
-    enrichedIntent?: any;
-    architecture?: any;
-    prd?: any;
-  }
+  options?: ContextCacheOptions
 ): MasterContext | null {
   const cacheKey = generateCacheKey(projectDescription, options);
   const cached = contextCache.get(cacheKey);
@@ -77,11 +79,7 @@ export function getCachedContext(
 export function cacheContext(
   projectDescription: string,
   context: MasterContext,
-  options?: {
-    enrichedIntent?: any;
-    architecture?: any;
-    prd?: any;
-  }
+  options?: ContextCacheOptions
 ): void {
   const cacheKey = generateCacheKey(projectDescription, options);
   const now = new Date();

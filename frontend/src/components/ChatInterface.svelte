@@ -10,7 +10,7 @@
   import ToolResultCard from './ToolResultCard.svelte';
   import ShipMode from './ShipMode.svelte';
   import SettingsScreen from './SettingsScreen.svelte';
-  import { Badge, Button } from '../lib/design-system';
+  import { Badge, Button, Card } from '../lib/design-system';
   import { exportAsSvg, downloadFile } from '../lib/mermaid';
   import {
     trackMessageSent,
@@ -26,7 +26,14 @@
   import { workspaceStore } from '../stores/workspaceStore'; // Already enabled
   import { codeSessionsStore } from '../stores/codeSessionsStore';
   import { openModal } from '../stores/clarificationStore';
-  import { reset as resetWorkflow } from '../stores/workflowStore';
+  import {
+    reset as resetWorkflow,
+    runDemo,
+    architecture as workflowArchitecture,
+    prd as workflowPrd,
+    exportArchitectureJson,
+    exportPrdMarkdown,
+  } from '../stores/workflowStore';
   import { parseAssistantResponse } from '../utils/responseParser';
   import { flattenTextContent } from '../utils/contentParser';
   import { generatePlan } from '../stores/planStore';
@@ -34,7 +41,7 @@
   import { fetchApi } from '../lib/api.js';
   import { settingsStore } from '../stores/settingsStore';
   import { colors } from '../lib/design-system/tokens/colors';
-  import { showSettings } from '../stores/uiStore';
+  import { showSettings, focusChatTrigger } from '../stores/uiStore';
   import type { Message, ContentBlock } from '../types';
 
   interface Props {
@@ -68,14 +75,21 @@
   let commandPaletteOpen = $state(false);
   let typingTimeout: ReturnType<typeof setTimeout> | null = null;
   let editingMessageIndex = $state<number | null>(null);
+  let demoRunning = $state(false);
 
   // Use the global showSettings store
   const showSettingsValue = $derived($showSettings);
 
   $effect(() => {
     if (chatModeStore) {
-      chatMode = $chatModeStore as any;
+      chatMode = $chatModeStore as 'normal' | 'plan' | 'spec' | 'ship' | 'execute' | 'design' | 'argument' | 'code';
     }
+  });
+
+  // Keyboard shortcut: focus chat input when focusChatTrigger increments (skip initial 0)
+  $effect(() => {
+    const t = $focusChatTrigger;
+    if (t > 0 && inputRef) inputRef.focus();
   });
 
   $effect(() => {
@@ -135,10 +149,20 @@
       commandPaletteOpen = !commandPaletteOpen;
       return;
     }
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'i') {
+      event.preventDefault();
+      inputRef?.focus();
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key === ',') {
+      event.preventDefault();
+      showSettings.set(true);
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
       event.preventDefault();
       showToast(
-        'Keyboard Shortcuts:\nCtrl/Cmd+K: Command Palette\nCtrl/Cmd+/: Show Shortcuts\nEscape: Cancel\nArrow Up: Edit Last Message',
+        'Keyboard Shortcuts:\nCtrl/Cmd+K: Command Palette\nCtrl/Cmd+Shift+I: Focus input\nCtrl/Cmd+,: Settings\nCtrl/Cmd+/: Show Shortcuts\nEscape: Cancel\nArrow Up: Edit Last Message',
         'info',
         5000
       );
@@ -236,12 +260,11 @@
     await tick();
     scrollToBottom();
     scrollToBottom();
-    // activeController is already set at the top, reusing it.
-    const timeoutMs = mode === 'code' || mode === 'argument' ? 120000 : 60000;
+    // activeController is already set at the top, reusing it. (At this point mode is 'argument' after early returns.)
+    const timeoutMs = 120000;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      if (mode === 'design') await runDesignModeStream(controller.signal);
-      else await runCodeModeStream(controller.signal);
+      await runCodeModeStream(controller.signal);
     } catch (err: any) {
       streaming = false;
       const errorContext = processError(err, async () => {
@@ -488,6 +511,39 @@
     sendMessage();
   }
 
+  async function handleTryDemo() {
+    if (demoRunning) return;
+    demoRunning = true;
+    try {
+      await runDemo();
+      const arch = get(workflowArchitecture);
+      const prdDoc = get(workflowPrd);
+      const blocks: ContentBlock[] = [];
+      if (arch?.c4Diagrams?.context) {
+        blocks.push({ type: 'mermaid', content: arch.c4Diagrams.context });
+      }
+      if (prdDoc?.sections?.overview) {
+        const o = prdDoc.sections.overview;
+        blocks.push({
+          type: 'text',
+          content: `**${prdDoc.projectName}** (Demo)\n\n**Vision:** ${o.vision}\n\n**Problem:** ${o.problem}\n\n**Solution:** ${o.solution}`,
+        });
+      }
+      if (blocks.length > 0) {
+        messages = [
+          ...messages,
+          { role: 'user', content: 'Run the demo: Architecture → PRD' },
+          { role: 'assistant', content: blocks, timestamp: Date.now() },
+        ];
+      }
+      showToast('Demo complete. Architecture and PRD are ready.', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Demo failed', 'error');
+    } finally {
+      demoRunning = false;
+    }
+  }
+
   function handleSaveSession() {
     const name = window.prompt('Session name', `Session ${new Date().toLocaleString()}`);
     if (name) {
@@ -538,15 +594,34 @@
             <div class="messages-inner">
               {#if messages.length <= 1 && !streaming}
                 <div class="empty-state">
-                  <GRumpBlob size="lg" state="idle" animated={true} />
-                  <h1 class="empty-title">What are we building?</h1>
-                  <p class="empty-text">
-                    I can design your system architecture, create requirements, and write the
-                    full-stack code. Just tell me your idea.
-                  </p>
-                  <div class="suggestion-chips">
-                    <SuggestionChips on:select={handleTemplateSelect} />
-                  </div>
+                  <Card variant="flat" padding="lg">
+                    <GRumpBlob size="lg" state="idle" animated={true} />
+                    <h1 class="empty-title">What are we building?</h1>
+                    <p class="empty-text">
+                      I can design your system architecture, create requirements, and write the
+                      full-stack code. Just describe your idea below or pick a suggestion.
+                    </p>
+                    <p class="empty-tip">Tip: Use <strong>Design</strong> for diagrams and specs, <strong>Code</strong> for implementation and tools.</p>
+                    <p class="empty-shortcut">Press <kbd>Ctrl+K</kbd> (or <kbd>⌘K</kbd>) for quick actions.</p>
+                    <div class="empty-actions">
+                      <Button variant="primary" onclick={handleTryDemo} disabled={demoRunning}>
+                        {demoRunning ? 'Running demo…' : 'Try Demo'}
+                      </Button>
+                      {#if $workflowArchitecture}
+                        <Button variant="secondary" onclick={exportArchitectureJson}>
+                          Export Architecture
+                        </Button>
+                      {/if}
+                      {#if $workflowPrd}
+                        <Button variant="secondary" onclick={exportPrdMarkdown}>
+                          Export PRD
+                        </Button>
+                      {/if}
+                    </div>
+                    <div class="suggestion-chips">
+                      <SuggestionChips on:select={handleTemplateSelect} />
+                    </div>
+                  </Card>
                 </div>
               {/if}
 
@@ -830,6 +905,44 @@
     margin: 0;
   }
 
+  .empty-tip {
+    font-size: 0.9rem;
+    color: #9ca3af;
+    max-width: 500px;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .empty-tip strong {
+    color: #6b7280;
+  }
+
+  .empty-shortcut {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    margin: 0.5rem 0 0;
+  }
+
+  .empty-shortcut kbd {
+    display: inline-block;
+    padding: 0.15rem 0.4rem;
+    font-family: ui-monospace, monospace;
+    font-size: 0.8em;
+    background: #e5e7eb;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    box-shadow: 0 1px 0 #d1d5db;
+  }
+
+  .empty-actions {
+    margin: 1rem 0 0;
+  }
+
+  .empty-state :global(.card) {
+    width: 100%;
+    max-width: 560px;
+  }
+
   .suggestion-chips {
     margin-top: 1rem;
     display: flex;
@@ -1110,6 +1223,22 @@
 
     .messages-scroll {
       padding-bottom: 10rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .messages-scroll {
+      scroll-behavior: auto;
+    }
+    .message-wrapper,
+    .input-container,
+    .send-button,
+    .mode-btn {
+      transition: none;
+    }
+    .streaming-dots,
+    .thinking-indicator {
+      animation: none;
     }
   }
 </style>

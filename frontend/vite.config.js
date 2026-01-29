@@ -4,6 +4,11 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 export default defineConfig({
   plugins: [svelte()],
+  resolve: {
+    alias: {
+      $lib: resolve(__dirname, 'src/lib'),
+    },
+  },
   server: {
     port: 5173,
     proxy: {
@@ -15,6 +20,7 @@ export default defineConfig({
     }
   },
   build: {
+    sourcemap: true,
     rollupOptions: {
       input: {
         app: resolve(__dirname, 'index.html'),
@@ -22,8 +28,7 @@ export default defineConfig({
       },
       output: {
         // manualChunks removed to prevent circular dependency/loading issues
-      },
-      sourcemap: true
+      }
     }
   },
   test: {

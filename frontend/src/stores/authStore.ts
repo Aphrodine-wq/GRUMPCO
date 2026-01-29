@@ -123,7 +123,7 @@ export async function signup(email: string, password: string, name?: string): Pr
     session.set(data.session);
 
     return true;
-  } catch (e) {
+  } catch (_e) {
     error.set('Network error - please try again');
     return false;
   } finally {
@@ -152,7 +152,7 @@ export async function login(email: string, password: string): Promise<boolean> {
     session.set(data.session);
 
     return true;
-  } catch (e) {
+  } catch (_e) {
     error.set('Network error - please try again');
     return false;
   } finally {

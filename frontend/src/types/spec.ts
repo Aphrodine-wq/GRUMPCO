@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: replace with proper types (Phase 1.1) */
 // Frontend spec types (mirror of backend types)
 export type SpecStatus = 'collecting' | 'generating' | 'completed' | 'cancelled';
 export type QuestionType = 'text' | 'choice' | 'multi-choice' | 'number' | 'boolean' | 'code';

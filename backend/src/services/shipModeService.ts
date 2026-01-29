@@ -10,7 +10,7 @@ import { generateArchitecture } from './architectureService.js';
 import { generatePRD } from './prdGeneratorService.js';
 import { generateCreativeDesignDoc } from './creativeDesignDocService.js';
 import { startSpecSession, generateSpecification } from './specService.js';
-import { generatePlan, approvePlan, startPlanExecution } from './planService.js';
+import { generatePlan, approvePlan } from './planService.js';
 import { initializeSession, executeCodeGeneration } from './agentOrchestrator.js';
 import { dispatchWebhook } from './webhookService.js';
 import { getHeadSystemPrompt } from '../prompts/head.js';
@@ -19,7 +19,6 @@ import type {
   ShipSession,
   ShipPhase,
   ShipStartRequest,
-  ShipPreferences,
   DesignPhaseResult,
   SpecPhaseResult,
   PlanPhaseResult,
@@ -29,6 +28,91 @@ import type {
 import type { SystemArchitecture } from '../types/architecture.js';
 import type { PRD } from '../types/prd.js';
 import type { Plan } from '../types/plan.js';
+import type { Specification } from '../types/spec.js';
+import type { GenerationSession, AgentType, AgentTask, GenerationPreferences } from '../types/agents.js';
+
+const ISO_NOW = (): string => new Date().toISOString();
+
+/** Minimal placeholders for failed-phase results (satisfy type, not used at runtime). */
+function minimalPlaceholderArchitecture(): SystemArchitecture {
+  return {
+    id: '',
+    projectName: '',
+    projectDescription: '',
+    projectType: 'general',
+    complexity: 'mvp',
+    techStack: [],
+    c4Diagrams: { context: '', container: '', component: '' },
+    metadata: { components: [], integrations: [], dataModels: [], apiEndpoints: [], technologies: {} },
+    createdAt: ISO_NOW(),
+    updatedAt: ISO_NOW(),
+  };
+}
+
+function minimalPlaceholderPrd(): PRD {
+  return {
+    id: '',
+    projectName: '',
+    projectDescription: '',
+    version: '1.0',
+    createdAt: ISO_NOW(),
+    updatedAt: ISO_NOW(),
+    sections: {
+      overview: { vision: '', problem: '', solution: '', targetMarket: '' },
+      personas: [],
+      features: [],
+      userStories: [],
+      nonFunctionalRequirements: [],
+      apis: [],
+      dataModels: [],
+      successMetrics: [],
+    },
+  };
+}
+
+function emptySpecification(): Specification {
+  return {
+    id: '',
+    title: '',
+    description: '',
+    sections: {},
+    metadata: { generatedAt: ISO_NOW(), sessionId: '' },
+  };
+}
+
+function minimalPlaceholderPlan(): Plan {
+  return {
+    id: '',
+    title: '',
+    description: '',
+    steps: [],
+    phases: [],
+    totalEstimatedTime: 0,
+    status: 'cancelled',
+    createdAt: ISO_NOW(),
+    updatedAt: ISO_NOW(),
+  };
+}
+
+function emptyGenerationSession(): GenerationSession {
+  const agentTypes: AgentType[] = ['architect', 'frontend', 'backend', 'devops', 'test', 'docs', 'security', 'i18n', 'wrunner'];
+  const agents = Object.fromEntries(
+    agentTypes.map((t): [AgentType, AgentTask] => [
+      t,
+      { taskId: '', agentType: t, description: '', status: 'failed', input: {} },
+    ])
+  ) as Record<AgentType, AgentTask>;
+  const prefs: GenerationPreferences = {};
+  return {
+    sessionId: '',
+    status: 'failed',
+    prdId: '',
+    architectureId: '',
+    createdAt: ISO_NOW(),
+    agents,
+    preferences: prefs,
+  };
+}
 
 /**
  * Start a new SHIP mode session
@@ -146,8 +230,8 @@ export async function executeDesignPhase(session: ShipSession): Promise<DesignPh
     const result: DesignPhaseResult = {
       phase: 'design',
       status: 'failed',
-      architecture: {} as SystemArchitecture,
-      prd: {} as PRD,
+      architecture: minimalPlaceholderArchitecture(),
+      prd: minimalPlaceholderPrd(),
       completedAt: new Date().toISOString(),
       error: err.message,
     };
@@ -227,7 +311,7 @@ export async function executeSpecPhase(
     const result: SpecPhaseResult = {
       phase: 'spec',
       status: 'failed',
-      specification: {} as any,
+      specification: emptySpecification(),
       completedAt: new Date().toISOString(),
       error: err.message,
     };
@@ -296,7 +380,7 @@ export async function executePlanPhase(
     const result: PlanPhaseResult = {
       phase: 'plan',
       status: 'failed',
-      plan: {} as Plan,
+      plan: minimalPlaceholderPlan(),
       completedAt: new Date().toISOString(),
       error: err.message,
     };
@@ -375,7 +459,7 @@ export async function executeCodePhase(
     const result: CodePhaseResult = {
       phase: 'code',
       status: 'failed',
-      session: {} as any,
+      session: emptyGenerationSession(),
       completedAt: new Date().toISOString(),
       error: err.message,
     };

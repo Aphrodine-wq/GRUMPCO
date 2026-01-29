@@ -51,6 +51,9 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
   CORS_ORIGINS: z.string().optional(),
+  SERVERLESS_MODE: z.enum(['vercel']).optional(),
+  EVENTS_MODE: z.enum(['sse', 'poll']).optional(),
+  PUBLIC_BASE_URL: z.string().url().optional(),
 
   // Database
   DB_PATH: z.string().default('./data/grump.db'),
@@ -74,6 +77,11 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_ANON_KEY: z.string().optional(),
   SUPABASE_SERVICE_KEY: z.string().optional(),
+
+  // Serverless jobs (QStash)
+  QSTASH_TOKEN: z.string().optional(),
+  QSTASH_URL: z.string().optional(),
+  JOB_WORKER_SECRET: z.string().optional(),
 
   // Stripe (optional)
   STRIPE_SECRET_KEY: z.string().optional(),

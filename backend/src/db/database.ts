@@ -9,7 +9,7 @@ import path from 'path';
 // This avoids loading native modules in serverless environments
 import type DatabaseType from 'better-sqlite3';
 import { SupabaseDatabaseService } from './supabase-db.js';
-import { SCHEMA_POSTGRESQL, type SessionRow, type PlanRow, type SpecRow, type ShipSessionRow, type WorkReportRow } from './schema.js';
+import { type SessionRow, type PlanRow, type SpecRow, type ShipSessionRow, type WorkReportRow } from './schema.js';
 import logger from '../middleware/logger.js';
 import { recordDbOperation } from '../middleware/metrics.js';
 import type { GenerationSession } from '../types/agents.js';
@@ -33,6 +33,19 @@ interface DatabaseConfig {
     user: string;
     password: string;
   };
+}
+
+interface UsageRecordRow {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  method: string;
+  model?: string | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  latency_ms?: number | null;
+  success: number;
+  created_at: string;
 }
 
 class DatabaseService {
@@ -173,7 +186,7 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     let query = 'SELECT * FROM sessions WHERE 1=1';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (options.type) {
       query += ' AND type = ?';
@@ -271,7 +284,7 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     let query = 'SELECT * FROM ship_sessions WHERE 1=1';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (options.phase) {
       query += ' AND phase = ?';
@@ -360,7 +373,7 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     let query = 'SELECT * FROM plans WHERE 1=1';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (options.status) {
       query += ' AND json_extract(data, "$.status") = ?';
@@ -559,7 +572,7 @@ class DatabaseService {
     userId: string,
     fromDate: Date,
     toDate: Date
-  ): Promise<any[]> {
+  ): Promise<UsageRecordRow[]> {
     if (!this.db) throw new Error('Database not initialized');
 
     const stmt = this.db.prepare(`
@@ -568,7 +581,7 @@ class DatabaseService {
       ORDER BY created_at DESC
     `);
 
-    return stmt.all(userId, fromDate.toISOString(), toDate.toISOString()) as any[];
+    return stmt.all(userId, fromDate.toISOString(), toDate.toISOString()) as UsageRecordRow[];
   }
 
   /**
@@ -588,10 +601,10 @@ class DatabaseService {
       WHERE user_id = ? AND created_at >= ?
     `);
 
-    const result = stmt.get(userId, startOfMonth.toISOString()) as any;
+    const result = stmt.get(userId, startOfMonth.toISOString()) as { input?: number; output?: number } | undefined;
     return {
-      input: result?.input || 0,
-      output: result?.output || 0,
+      input: result?.input ?? 0,
+      output: result?.output ?? 0,
     };
   }
 
@@ -623,14 +636,17 @@ class DatabaseService {
       WHERE user_id = ? AND created_at >= ?
     `);
 
-    const result = stmt.get(userId, startOfMonth.toISOString()) as any;
+    const result = stmt.get(userId, startOfMonth.toISOString()) as {
+      total?: number; successful?: number; failed?: number;
+      input_tokens?: number; output_tokens?: number; avg_latency?: number;
+    } | undefined;
     return {
-      totalRequests: result?.total || 0,
-      successfulRequests: result?.successful || 0,
-      failedRequests: result?.failed || 0,
-      monthlyInputTokens: result?.input_tokens || 0,
-      monthlyOutputTokens: result?.output_tokens || 0,
-      avgLatencyMs: result?.avg_latency || 0,
+      totalRequests: result?.total ?? 0,
+      successfulRequests: result?.successful ?? 0,
+      failedRequests: result?.failed ?? 0,
+      monthlyInputTokens: result?.input_tokens ?? 0,
+      monthlyOutputTokens: result?.output_tokens ?? 0,
+      avgLatencyMs: result?.avg_latency ?? 0,
     };
   }
 
@@ -666,7 +682,7 @@ function shouldUseSupabase(): boolean {
     process.env.SUPABASE_SERVICE_KEY &&
     process.env.SUPABASE_URL !== 'https://your-project.supabase.co';
 
-  return isProduction && hasSupabaseConfig;
+  return Boolean(isProduction && hasSupabaseConfig);
 }
 
 /**
@@ -675,10 +691,10 @@ function shouldUseSupabase(): boolean {
 export function getDatabase(): DatabaseInterface {
   if (shouldUseSupabase()) {
     if (!supabaseDbInstance) {
-      supabaseDbInstance = new SupabaseDatabaseService(
-        process.env.SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_KEY!
-      );
+      const url = process.env.SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_KEY;
+      if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY are required when using Supabase');
+      supabaseDbInstance = new SupabaseDatabaseService(url, key);
     }
     return supabaseDbInstance;
   }

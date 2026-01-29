@@ -1,7 +1,10 @@
 /**
  * G-Rump Design System - Animation Tokens
- * Motion design for smooth, purposeful animations
+ * Motion design for smooth, purposeful animations.
+ * Respect prefers-reduced-motion via global CSS in App.svelte.
  */
+
+export const prefersReducedMotionMedia = '(prefers-reduced-motion: reduce)';
 
 export const animations = {
   // Durations

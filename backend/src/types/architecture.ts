@@ -54,12 +54,12 @@ export interface APIEndpoint {
   requestBody?: {
     type: string;
     description?: string;
-    schema?: Record<string, any>;
+    schema?: Record<string, unknown>;
   };
   responses?: {
     status: number;
     description: string;
-    schema?: Record<string, any>;
+    schema?: Record<string, unknown>;
   }[];
 }
 

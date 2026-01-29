@@ -160,6 +160,8 @@ Brief summary of understanding, then ask any clarifying questions.
 - Ignore stated preferences
 - End with "let me know if..." or similar
 
+**Output validation:** Before applying file edits, ensure code blocks are complete (matching braces, valid syntax) and that paths are within the project. Prefer small, incremental edits over large replacements.
+
 ## C4 Diagram Support
 
 For complex enterprise systems, use C4 diagrams:

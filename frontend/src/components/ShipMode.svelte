@@ -6,11 +6,14 @@
   import { downloadCodegenZip } from '../lib/codeGeneration.js';
   import type { ShipStartRequest, ShipPhase } from '../types/ship';
 
+  const eventMode = import.meta.env?.VITE_EVENT_MODE ?? 'sse';
+
   // Subscribe to SSE for ship.completed / ship.failed when we have an active ship session
   $effect(() => {
     const sess = $shipSession.session;
     const st = $shipSession.status;
     const streaming = $shipSession.isStreaming;
+    if (eventMode === 'poll') return;
     if (typeof window === 'undefined' || !sess?.id || (st !== 'running' && !streaming)) return;
     const url = getApiBase() + '/api/events/stream?sessionId=' + encodeURIComponent(sess.id);
     const es = new EventSource(url);
@@ -186,6 +189,7 @@
     <div class="ship-content">
       {#if !session}
         <div class="start-section">
+          <p class="ship-empty-intro">Describe your app idea and we'll generate architecture, spec, plan, and code in one run.</p>
           <div class="form-group">
             <label for="description">Project Description</label>
             <textarea
@@ -540,6 +544,14 @@
     padding: 2rem;
     flex: 1;
     background: #f8fafc;
+  }
+
+  /* Start section intro */
+  .ship-empty-intro {
+    font-size: 0.95rem;
+    color: #64748b;
+    line-height: 1.5;
+    margin: 0 0 1.5rem 0;
   }
 
   /* Form Styles */
@@ -936,5 +948,23 @@
   }
   .github-prompt .action-btn.subtle:hover {
     background: #dee2e6;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .github-prompt-overlay,
+    .github-prompt {
+      animation: none;
+    }
+    .ship-modal {
+      animation: none;
+      transition: opacity 150ms ease;
+    }
+    .close-btn,
+    .action-tile,
+    .progress-fill,
+    .start-button,
+    textarea {
+      transition: none;
+    }
   }
 </style>

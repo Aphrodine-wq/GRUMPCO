@@ -35,6 +35,7 @@ import expoTestRoutes from './routes/expoTest.js';
 import webhookRoutes from './routes/webhooks.js';
 import eventsRoutes from './routes/events.js';
 import agentsRoutes from './routes/agents.js';
+import jobsRoutes from './routes/jobs.js';
 import { handleStripeWebhook } from './routes/billingWebhook.js';
 import collaborationRoutes from './routes/collaboration.js';
 import analyticsRoutes from './routes/analytics.js';
@@ -43,9 +44,9 @@ import workspaceRoutes from './routes/workspace.js';
 import { findAvailablePort } from './utils/portUtils.js';
 import { skillRegistry } from './skills/index.js';
 import { startJobWorker, stopJobWorker } from './services/jobQueue.js';
+import { isServerlessRuntime } from './config/runtime.js';
 import { startScheduledAgentsWorker, stopScheduledAgentsWorker, loadRepeatableJobsFromDb } from './services/scheduledAgentsQueue.js';
 import { apiAuthMiddleware } from './middleware/authMiddleware.js';
-import { usageTrackingMiddleware } from './middleware/usageTrackingMiddleware.js';
 import type { Server } from 'http';
 
 const app: Express = express();
@@ -53,7 +54,7 @@ const PREFERRED_PORT = parseInt(process.env.PORT || '3000', 10) || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 let resolveAppReady: (() => void) | null = null;
 export const appReady = new Promise<void>((resolve) => {
-  resolveAppReady = resolve;
+  resolveAppReady = resolve as () => void;
 });
 
 // Determine allowed origins (production: require CORS_ORIGINS or use minimal default)
@@ -146,16 +147,20 @@ let server: Server | undefined;
     await initializeDatabase();
     logger.info('Database initialized');
 
-    // Start job worker for SHIP (and later codegen) long-running work
-    await startJobWorker();
+    // Start job worker for SHIP/codegen (skip in serverless runtime)
+    if (!isServerlessRuntime) {
+      await startJobWorker();
 
-    // Scheduled agents: Redis = BullMQ repeatable jobs; no Redis = node-cron
-    if (process.env.REDIS_HOST?.trim()) {
-      await startScheduledAgentsWorker();
-      await loadRepeatableJobsFromDb();
+      // Scheduled agents: Redis = BullMQ repeatable jobs; no Redis = node-cron
+      if (process.env.REDIS_HOST?.trim()) {
+        await startScheduledAgentsWorker();
+        await loadRepeatableJobsFromDb();
+      } else {
+        const { loadAllFromDbAndSchedule: loadCron } = await import('./services/scheduledAgentsCron.js');
+        await loadCron();
+      }
     } else {
-      const { loadAllFromDbAndSchedule: loadCron } = await import('./services/scheduledAgentsCron.js');
-      await loadCron();
+      logger.info('Serverless runtime: job workers and schedulers disabled');
     }
 
     // Rate limiting (uses Redis store when REDIS_HOST is set)
@@ -185,6 +190,7 @@ let server: Server | undefined;
     app.use('/api/expo-test', expoTestRoutes);
     app.use('/api/webhooks', webhookRoutes);
     app.use('/api/events', eventsRoutes);
+    app.use('/api/jobs', jobsRoutes);
     app.use('/api/agents', agentsRoutes);
     app.use('/api/collaboration', collaborationRoutes);
     app.use('/api/analytics', analyticsRoutes);
@@ -224,7 +230,7 @@ let server: Server | undefined;
       });
     });
 
-    resolveAppReady?.();
+    (resolveAppReady as (() => void) | null)?.();
 
     // Initialize alerting
     initializeAlerting(60000); // Check every minute
