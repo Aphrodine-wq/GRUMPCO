@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: ClarificationPayload type (Phase 1.1) */
-// import type { ClarificationPayload } from '../stores/clarificationStore';
+import type { ClarificationPayload } from '@grump/shared-types';
 
 export interface ParsedResponse {
   type: 'diagram' | 'clarification' | 'text' | 'mixed';
   mermaidCode?: string;
-  clarification?: any; // ClarificationPayload;
+  clarification?: ClarificationPayload;
   textContent?: string;
 }
 
@@ -20,7 +19,7 @@ export function parseAssistantResponse(content: string): ParsedResponse {
 
   if (clarificationMatch) {
     try {
-      const clarification = JSON.parse(clarificationMatch[1]); // as ClarificationPayload;
+      const clarification = JSON.parse(clarificationMatch[1]) as ClarificationPayload;
       // Validate the structure
       if (clarification.questions && Array.isArray(clarification.questions)) {
         return { type: 'clarification', clarification };

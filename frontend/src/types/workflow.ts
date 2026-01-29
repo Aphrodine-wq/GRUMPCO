@@ -1,135 +1,54 @@
 /**
  * Workflow Types for 3-Phase VibeCode IDE
- * Architecture → PRD → Code Generation
+ * Architecture -> PRD -> Code Generation
+ * Re-exports from shared-types with frontend-specific additions
  */
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: replace with proper types (Phase 1.1) */
+
+// Re-export architecture types from shared package
+export type {
+  C4Level,
+  ProjectType,
+  Complexity,
+  C4Diagrams,
+  Component,
+  Integration,
+  DataModel,
+  APIEndpoint,
+  ArchitectureMetadata,
+  SystemArchitecture,
+} from '@grump/shared-types';
+
+// Re-export PRD types from shared package
+export type {
+  Feature,
+  UserStory,
+  Persona,
+  NonFunctionalRequirement,
+  APIEndpointSpec,
+  SuccessMetric,
+  PRD,
+} from '@grump/shared-types';
+
+// Re-export agent types from shared package
+export type {
+  AgentType,
+  AgentStatus,
+  AgentTask,
+  GenerationPreferences,
+  GeneratedFile,
+} from '@grump/shared-types';
 
 // ============================================================================
-// ARCHITECTURE TYPES (matching backend)
+// CODE GENERATION SESSION (Frontend view - subset of full GenerationSession)
 // ============================================================================
-
-export type C4Level = 'context' | 'container' | 'component' | 'code';
-export type ProjectType = 'web' | 'mobile' | 'api' | 'fullstack' | 'saas' | 'general';
-export type Complexity = 'mvp' | 'standard' | 'enterprise';
-
-export interface C4Diagrams {
-    context: string;
-    container: string;
-    component: string;
-}
-
-export interface Component {
-    id: string;
-    name: string;
-    description: string;
-    type: 'frontend' | 'backend' | 'database' | 'service' | 'external' | 'queue';
-    technology?: string[];
-}
-
-export interface SystemArchitecture {
-    id: string;
-    projectName: string;
-    projectDescription: string;
-    projectType: ProjectType;
-    complexity: Complexity;
-    techStack: string[];
-    c4Diagrams: C4Diagrams;
-    metadata: {
-        components: Component[];
-        integrations: any[];
-        dataModels: any[];
-        apiEndpoints: any[];
-    };
-    createdAt: string;
-    updatedAt: string;
-}
-
-// ============================================================================
-// PRD TYPES (matching backend)
-// ============================================================================
-
-export interface Feature {
-    id: string;
-    name: string;
-    description: string;
-    priority: 'must' | 'should' | 'could' | 'wont';
-    userStories: string[];
-    acceptanceCriteria: string[];
-}
-
-export interface UserStory {
-    id: string;
-    title: string;
-    asA: string;
-    iWant: string;
-    soThat: string;
-    acceptanceCriteria: string[];
-}
-
-export interface PRD {
-    id: string;
-    projectName: string;
-    projectDescription: string;
-    version: string;
-    createdAt: string;
-    updatedAt: string;
-    sections: {
-        overview: {
-            vision: string;
-            problem: string;
-            solution: string;
-            targetMarket: string;
-        };
-        personas: any[];
-        features: Feature[];
-        userStories: UserStory[];
-        nonFunctionalRequirements: any[];
-        apis: any[];
-        dataModels: any[];
-        successMetrics: any[];
-    };
-}
-
-// ============================================================================
-// CODE GENERATION TYPES (matching backend)
-// ============================================================================
-
-export type AgentType = 'architect' | 'frontend' | 'backend' | 'devops' | 'test' | 'docs';
-export type AgentStatus = 'pending' | 'running' | 'completed' | 'failed' | 'blocked';
-
-export interface AgentTask {
-    taskId: string;
-    agentType: AgentType;
-    description: string;
-    status: AgentStatus;
-    startedAt?: string;
-    completedAt?: string;
-    duration?: number;
-    error?: string;
-}
-
-export interface GenerationPreferences {
-    frontendFramework: 'vue' | 'react';
-    backendRuntime: 'node' | 'python' | 'go';
-    database: 'postgres' | 'mongodb';
-    includeTests: boolean;
-    includeDocs: boolean;
-}
-
-export interface GeneratedFile {
-    path: string;
-    type: 'source' | 'test' | 'config' | 'doc';
-    language: string;
-    size: number;
-}
 
 export interface CodeGenSession {
-    sessionId: string;
-    status: 'initializing' | 'running' | 'completed' | 'failed';
-    progress: number;
-    agents: Record<AgentType, AgentTask>;
-    generatedFileCount: number;
-    error?: string;
+  sessionId: string;
+  status: 'initializing' | 'running' | 'completed' | 'failed';
+  progress: number;
+  agents: Record<import('@grump/shared-types').AgentType, import('@grump/shared-types').AgentTask>;
+  generatedFileCount: number;
+  error?: string;
 }
 
 // ============================================================================
@@ -139,27 +58,27 @@ export interface CodeGenSession {
 export type WorkflowPhase = 'idle' | 'architecture' | 'prd' | 'codegen' | 'complete';
 
 export interface WorkflowState {
-    phase: WorkflowPhase;
-    isStreaming: boolean;
-    error: string | null;
+  phase: WorkflowPhase;
+  isStreaming: boolean;
+  error: string | null;
 
-    // Phase 1: Architecture
-    architecture: SystemArchitecture | null;
-    architectureRaw: string; // Raw streamed content
+  // Phase 1: Architecture
+  architecture: import('@grump/shared-types').SystemArchitecture | null;
+  architectureRaw: string; // Raw streamed content
 
-    // Phase 2: PRD
-    prd: PRD | null;
-    prdRaw: string; // Raw streamed content
+  // Phase 2: PRD
+  prd: import('@grump/shared-types').PRD | null;
+  prdRaw: string; // Raw streamed content
 
-    // Phase 3: Code Generation
-    codegenSession: CodeGenSession | null;
-    preferences: GenerationPreferences;
+  // Phase 3: Code Generation
+  codegenSession: CodeGenSession | null;
+  preferences: import('@grump/shared-types').GenerationPreferences;
 }
 
-export const DEFAULT_PREFERENCES: GenerationPreferences = {
-    frontendFramework: 'vue',
-    backendRuntime: 'node',
-    database: 'postgres',
-    includeTests: true,
-    includeDocs: true,
+export const DEFAULT_PREFERENCES: import('@grump/shared-types').GenerationPreferences = {
+  frontendFramework: 'vue',
+  backendRuntime: 'node',
+  database: 'postgres',
+  includeTests: true,
+  includeDocs: true,
 };

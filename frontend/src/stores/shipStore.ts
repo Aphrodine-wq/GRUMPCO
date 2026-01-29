@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion -- TODO: replace with proper types (Phase 1.1) */
 import { writable } from 'svelte/store';
 import { fetchApi } from '../lib/api.js';
-import type { ShipSession, ShipPhase, ShipStartRequest } from '../types/ship.js';
+import type { ShipSession, ShipPhase, ShipStartRequest, ShipStreamEvent } from '../types/ship.js';
 
 export interface ExecuteStreamOptions {
   resumeFromPhase?: ShipPhase;
@@ -133,7 +132,7 @@ export const shipStore = {
    * Execute SHIP mode workflow with streaming
    * @param options.resumeFromPhase - Optional phase to resume from (design, spec, plan, code)
    */
-  async executeStream(sessionId: string, onUpdate?: (data: any) => void, options?: ExecuteStreamOptions): Promise<void> {
+  async executeStream(sessionId: string, onUpdate?: (data: ShipStreamEvent) => void, options?: ExecuteStreamOptions): Promise<void> {
     try {
       if (USE_POLLING) {
         await this.execute(sessionId);
@@ -243,9 +242,9 @@ export const shipStore = {
 
 export const shipSession = {
   subscribe: state.subscribe,
-  get value() {
-    let val: ShipState;
+  get value(): ShipState {
+    let val: ShipState = initialState;
     state.subscribe(v => val = v)();
-    return val!;
+    return val;
   },
 };

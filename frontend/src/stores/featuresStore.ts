@@ -3,7 +3,6 @@
  *
  * Handles: Codebase Analysis, Security & Compliance, Infrastructure Automation, Testing & QA
  */
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: replace with proper types (Phase 1.1) */
 
 import { writable, derived } from 'svelte/store';
 import { fetchApi } from '../lib/api.js';
@@ -12,10 +11,13 @@ import { fetchApi } from '../lib/api.js';
 
 export type FeatureCategory = 'analyze' | 'security' | 'infra' | 'testing';
 
+/** Result can be any of the feature-specific result types */
+export type FeatureResult = AnalysisResult | SecurityScanResult | SBOMResult | InfraResult | TestGenerationResult | unknown;
+
 export interface FeatureState {
   loading: boolean;
   error: string | null;
-  result: any | null;
+  result: FeatureResult | null;
 }
 
 interface FeaturesState {
@@ -119,7 +121,7 @@ function updateFeature(category: FeatureCategory, update: Partial<FeatureState>)
 
 // ============ API Functions ============
 
-async function apiCall<T>(endpoint: string, method: 'GET' | 'POST' = 'POST', body?: any): Promise<T> {
+async function apiCall<T>(endpoint: string, method: 'GET' | 'POST' = 'POST', body?: unknown): Promise<T> {
   const response = await fetchApi(endpoint, {
     method,
     body: body ? JSON.stringify(body) : undefined,
@@ -166,7 +168,7 @@ export async function analyzeArchitecture(workspacePath: string): Promise<{ merm
   }
 }
 
-export async function analyzeDependencies(workspacePath: string): Promise<any> {
+export async function analyzeDependencies(workspacePath: string): Promise<unknown> {
   updateFeature('analyze', { loading: true, error: null });
 
   try {
@@ -212,7 +214,7 @@ export async function generateSBOM(workspacePath: string, format: 'cyclonedx' | 
   }
 }
 
-export async function complianceCheck(workspacePath: string, standard?: string): Promise<any> {
+export async function complianceCheck(workspacePath: string, standard?: string): Promise<unknown> {
   updateFeature('security', { loading: true, error: null });
 
   try {
@@ -226,7 +228,7 @@ export async function complianceCheck(workspacePath: string, standard?: string):
   }
 }
 
-export async function secretsAudit(workspacePath: string): Promise<any> {
+export async function secretsAudit(workspacePath: string): Promise<unknown> {
   updateFeature('security', { loading: true, error: null });
 
   try {
@@ -275,7 +277,7 @@ export interface TerraformRequest {
   resources: Array<{
     type: string;
     name: string;
-    config?: Record<string, any>;
+    config?: Record<string, unknown>;
   }>;
   region?: string;
   environment?: string;
@@ -371,13 +373,13 @@ export interface LoadTestRequest {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
     path: string;
     expectedRps?: number;
-    payload?: any;
+    payload?: unknown;
   }>;
   tool?: 'k6' | 'locust' | 'artillery';
   baseUrl?: string;
 }
 
-export async function generateLoadTestPlan(request: LoadTestRequest): Promise<any> {
+export async function generateLoadTestPlan(request: LoadTestRequest): Promise<unknown> {
   updateFeature('testing', { loading: true, error: null });
   state.update(s => ({ ...s, activeFeature: 'testing' }));
 
@@ -392,7 +394,7 @@ export async function generateLoadTestPlan(request: LoadTestRequest): Promise<an
   }
 }
 
-export async function analyzeCoverage(workspacePath: string): Promise<any> {
+export async function analyzeCoverage(workspacePath: string): Promise<unknown> {
   updateFeature('testing', { loading: true, error: null });
 
   try {

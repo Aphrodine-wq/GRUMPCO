@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: replace with proper types (Phase 1.1) */
+// Types for frontend application
 // User preferences
 export interface UserPreferences {
   diagramType: 'flowchart' | 'sequence' | 'erd' | 'class';
@@ -30,7 +30,7 @@ export interface ToolCallBlock {
   type: 'tool_call';
   id: string;
   name: string;
-  input: Record<string, any>;
+  input: Record<string, unknown>;
   status: 'pending' | 'executing' | 'success' | 'error';
 }
 

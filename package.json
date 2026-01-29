@@ -5,7 +5,8 @@
   "workspaces": [
     "frontend",
     "backend",
-    "docs-site"
+    "docs-site",
+    "packages/shared-types"
   ],
   "description": "AI-powered Mermaid diagram generator",
   "scripts": {

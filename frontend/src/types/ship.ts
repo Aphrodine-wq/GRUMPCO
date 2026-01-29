@@ -1,43 +1,26 @@
 /**
  * SHIP Mode Types (Frontend)
+ * Re-exports from shared-types with frontend-specific additions
  */
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: replace with backend types (Phase 1.1) */
 
-export type ShipPhase = 'design' | 'spec' | 'plan' | 'code' | 'completed' | 'failed';
+// Re-export all SHIP types from shared package
+export type {
+  ShipPhase,
+  ShipSession,
+  ShipPreferences,
+  DesignPhaseResult,
+  SpecPhaseResult,
+  PlanPhaseResult,
+  CodePhaseResult,
+  ShipStartRequest,
+  ShipPhaseResponse,
+  ShipStreamEvent,
+} from '@grump/shared-types';
 
-export interface ShipSession {
-  id: string;
-  projectDescription: string;
-  phase: ShipPhase;
-  status: 'initializing' | 'running' | 'paused' | 'completed' | 'failed';
-  createdAt: string;
-  updatedAt: string;
-  /** Optional project/workspace id linking chat, ship, and codegen */
-  projectId?: string;
+// Import types needed for CreativeDesignDocSummary
+import type { CreativeDesignDoc } from '@grump/shared-types';
 
-  // Phase results
-  designResult?: DesignPhaseResult;
-  specResult?: SpecPhaseResult;
-  planResult?: PlanPhaseResult;
-  codeResult?: CodePhaseResult;
-
-  // Preferences
-  preferences?: ShipPreferences;
-
-  // Error tracking
-  error?: string;
-}
-
-export interface ShipPreferences {
-  frontendFramework?: 'vue' | 'react';
-  backendRuntime?: 'node' | 'python' | 'go';
-  database?: 'postgres' | 'mongodb';
-  includeTests?: boolean;
-  includeDocs?: boolean;
-  workspaceRoot?: string;
-}
-
-/** Minimal Creative Design Document shape for UI display (full type lives in backend) */
+/** Minimal Creative Design Document shape for UI display (subset of full CreativeDesignDoc) */
 export interface CreativeDesignDocSummary {
   layout?: { gridDescription?: string; regions?: Array<{ name: string; description: string }> };
   uiPrinciples?: { visualHierarchy?: string[]; keyInteractions?: string[] };
@@ -47,43 +30,20 @@ export interface CreativeDesignDocSummary {
   responsivenessNotes?: string[];
 }
 
-export interface DesignPhaseResult {
-  phase: 'design';
-  status: 'completed' | 'failed';
-  architecture: any; // SystemArchitecture
-  prd: any; // PRD
-  creativeDesignDoc?: CreativeDesignDocSummary;
-  completedAt: string;
-  error?: string;
-}
-
-export interface SpecPhaseResult {
-  phase: 'spec';
-  status: 'completed' | 'failed';
-  specification: any; // Specification
-  completedAt: string;
-  error?: string;
-}
-
-export interface PlanPhaseResult {
-  phase: 'plan';
-  status: 'completed' | 'failed';
-  plan: any; // Plan
-  completedAt: string;
-  error?: string;
-}
-
-export interface CodePhaseResult {
-  phase: 'code';
-  status: 'completed' | 'failed';
-  session: any; // GenerationSession
-  completedAt: string;
-  error?: string;
-}
-
-export interface ShipStartRequest {
-  projectDescription: string;
-  preferences?: ShipPreferences;
-  /** Optional project/workspace id to associate with this session */
-  projectId?: string;
+/** Helper to convert full CreativeDesignDoc to summary for UI display */
+export function toCreativeDesignDocSummary(doc: CreativeDesignDoc): CreativeDesignDocSummary {
+  return {
+    layout: {
+      gridDescription: doc.layout.gridDescription,
+      regions: doc.layout.regions.map(r => ({ name: r.name, description: r.description })),
+    },
+    uiPrinciples: {
+      visualHierarchy: doc.uiPrinciples.visualHierarchy,
+      keyInteractions: doc.uiPrinciples.keyInteractions,
+    },
+    keyScreens: doc.keyScreens.map(s => ({ name: s.name, purpose: s.purpose })),
+    uxFlows: doc.uxFlows.map(f => ({ name: f.name, steps: f.steps })),
+    accessibilityNotes: doc.accessibilityNotes,
+    responsivenessNotes: doc.responsivenessNotes,
+  };
 }
