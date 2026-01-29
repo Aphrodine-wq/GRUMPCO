@@ -39,10 +39,11 @@ Actionable checklist for the Vercel Serverless deployment. Tick items as you com
 
 ## 3. Resolve Conflicting Configurations
 
-- [ ] **Clean up `vercel.json` files**:
-    - [ ] Decide on a deployment strategy: monorepo (from root) or separate frontend/backend deployments.
-    - [ ] The `backend/DEPLOY_VERCEL.md` guide implies separate deployments.
-    - [ ] Remove or consolidate the conflicting `vercel.json` files to match the chosen strategy.
+- [x] **Clean up `vercel.json` files**:
+    - [x] Decide on a deployment strategy: monorepo (from root) or separate frontend/backend deployments.
+    - [x] The `backend/DEPLOY_VERCEL.md` guide implies separate deployments.
+    - [x] Remove or consolidate the conflicting `vercel.json` files to match the chosen strategy.
+    - **DONE:** Root `vercel.json` deleted. Using separate frontend/backend deployments.
 
 ---
 

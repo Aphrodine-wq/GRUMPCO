@@ -28,9 +28,8 @@ The critical path forward is to set up the necessary cloud services and deploy t
         *   Deploy the backend from the `/backend` directory to Vercel, ensuring all environment variables (Supabase, QStash, etc.) are set.
         *   Deploy the frontend from the `/frontend` directory to Vercel, ensuring the `VITE_API_URL` points to the live backend.
 
-4.  **Resolve Conflicting Configurations:**
-    *   **Objective:** Ensure a clear and single deployment strategy.
-    *   **Action:** Address the conflicting `vercel.json` files at the project root vs. the `frontend` and `backend` directories. The documentation points towards separate deployments.
+4.  ~~**Resolve Conflicting Configurations:**~~ **DONE**
+    *   Root `vercel.json` deleted. Using separate frontend/backend deployments as documented.
 
 ## Key Documentation
 
