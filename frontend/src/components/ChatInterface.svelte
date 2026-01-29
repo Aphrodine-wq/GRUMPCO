@@ -11,9 +11,7 @@
   import ShipMode from './ShipMode.svelte';
   import SettingsScreen from './SettingsScreen.svelte';
   import { Badge, Button } from '../lib/design-system';
-  import { exportAsSvg } from '../lib/mermaid';
-  // import {
-  //   trackMessageSent,
+  import { exportAsSvg, downloadFile } from '../lib/mermaid';
   import {
     trackMessageSent,
     trackDiagramGenerated,
@@ -23,18 +21,12 @@
   import { showToast } from '../stores/toastStore';
   import { processError, logError } from '../utils/errorHandler';
   import { sessionsStore, currentSession } from '../stores/sessionsStore';
-  import { getCurrentProjectId } from '../stores/projectStore';
+  // Removed unused imports
   import { chatModeStore } from '../stores/chatModeStore';
   import { workspaceStore } from '../stores/workspaceStore'; // Already enabled
   import { codeSessionsStore } from '../stores/codeSessionsStore';
   import { openModal } from '../stores/clarificationStore';
-  import {
-    streamPrd,
-    startCodeGeneration,
-    downloadProject,
-    reset as resetWorkflow,
-    codegenSession,
-  } from '../stores/workflowStore';
+  import { reset as resetWorkflow } from '../stores/workflowStore';
   import { parseAssistantResponse } from '../utils/responseParser';
   import { flattenTextContent } from '../utils/contentParser';
   import { generatePlan } from '../stores/planStore';
@@ -69,30 +61,27 @@
   let lastUserMessage = $state('');
   let activeController: AbortController | null = $state(null);
   let workspaceInput = $state('');
-  let chatMode: 'normal' | 'plan' | 'spec' | 'ship' | 'execute' = $state('normal');
+  let chatMode: 'normal' | 'plan' | 'spec' | 'ship' | 'execute' | 'design' | 'argument' | 'code' =
+    $state('normal');
   let currentPlanId = $state<string | null>(null);
   let currentSpecSessionId = $state<string | null>(null);
   let commandPaletteOpen = $state(false);
   let typingTimeout: ReturnType<typeof setTimeout> | null = null;
   let editingMessageIndex = $state<number | null>(null);
-  let isTyping = $state(false);
-  let lastError = $state(false);
-  let loadSessionModalOpen = $state(false);
 
   // Use the global showSettings store
   const showSettingsValue = $derived($showSettings);
 
-  // Re-enabled projectStore usage
-  const projectId = getCurrentProjectId();
-
   $effect(() => {
     if (chatModeStore) {
-      chatMode = $chatModeStore;
+      chatMode = $chatModeStore as any;
     }
   });
 
   $effect(() => {
-    if (onmessagesUpdated) {
+    // Only fire update when messages actually change and we aren't mid-stream appending
+    // This prevents massive amounts of storage writes and reactive loops during streaming
+    if (onmessagesUpdated && !streaming) {
       onmessagesUpdated(messages);
     }
   });
@@ -100,7 +89,7 @@
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
     if (Array.isArray(content)) return content;
     // Basic text content might contain mermaid code blocks
-    return flattenTextContent(content);
+    return flattenTextContent(content) as unknown as ContentBlock[];
   }
 
   function flattenMessagesForChatApi(
@@ -113,20 +102,6 @@
         content: typeof m.content === 'string' ? m.content : flattenTextContent(m.content),
       }))
       .filter((m) => (m.content || '').trim().length > 0);
-  }
-
-  function hasMermaidInStream(): boolean {
-    return streamingContent.includes('```mermaid');
-  }
-
-  function getBuildingPhase(): string {
-    const content = streamingContent.toLowerCase();
-    if (!content) return 'Understanding your idea...';
-    if (content.includes('```mermaid')) return 'Building architecture...';
-    if (content.includes('frontend') || content.includes('backend') || content.includes('api')) {
-      return 'Designing system...';
-    }
-    return 'Analyzing requirements...';
   }
 
   function scrollToBottom() {
@@ -151,11 +126,7 @@
   }
 
   function handleInputChange() {
-    isTyping = true;
-    if (typingTimeout) clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      isTyping = false;
-    }, 500);
+    // Input handle
   }
 
   function handleGlobalKeydown(event: KeyboardEvent) {
@@ -201,7 +172,6 @@
     // --- Mode Switching Logic ---
     const mode = get(chatModeStore);
     lastUserMessage = text;
-    lastError = false;
     trackMessageSent(text.length);
 
     // Initialize controller for this request
@@ -215,7 +185,6 @@
         await generatePlan({ userRequest: text, workspaceRoot: ws });
         streaming = false;
       } catch (e: any) {
-        lastError = true;
         streaming = false;
         showToast(e.message || 'Error generating plan', 'error');
       }
@@ -228,7 +197,6 @@
         await startSpecSession({ userRequest: text, workspaceRoot: ws });
         streaming = false;
       } catch (e: any) {
-        lastError = true;
         streaming = false;
         showToast(e.message || 'Error starting spec session', 'error');
       }
@@ -262,8 +230,6 @@
       messages = [...messages, { role: 'user', content: text, timestamp: Date.now() }];
     }
     inputText = '';
-    isTyping = false;
-    if (typingTimeout) clearTimeout(typingTimeout);
     streaming = true;
     streamingContent = '';
     streamingBlocks = [];
@@ -278,7 +244,6 @@
       else await runCodeModeStream(controller.signal);
     } catch (err: any) {
       streaming = false;
-      lastError = true;
       const errorContext = processError(err, async () => {
         if (lastUserMessage) {
           inputText = lastUserMessage;
@@ -472,13 +437,6 @@
     streamingBlocks = [];
   }
 
-  function retryLastMessage() {
-    if (lastUserMessage) {
-      inputText = lastUserMessage;
-      sendMessage();
-    }
-  }
-
   function handleTemplateSelect(event: CustomEvent) {
     if (event.detail.id === 'ship-mode') {
       chatMode = 'ship';
@@ -490,10 +448,13 @@
     inputRef?.focus();
   }
 
-  function exportSvg(msgIndex: number, blockIndex: number) {
+  async function exportSvg(msgIndex: number, blockIndex: number) {
     const key = `${msgIndex}-${blockIndex}`;
     const svgElement = diagramRefs[key]?.querySelector('svg') as SVGElement;
-    if (svgElement) exportAsSvg(svgElement, 'diagram.svg');
+    if (svgElement) {
+      const svgData = await exportAsSvg(svgElement);
+      downloadFile(svgData, 'diagram.svg', 'image/svg+xml');
+    }
   }
 
   function setupDiagramRef(el: HTMLElement, params: { index: number; blockIdx: number }) {
@@ -506,45 +467,6 @@
   }
 
   const dispatch = createEventDispatcher<{ 'messages-updated': Message[] }>();
-
-  async function handleProceedToPrd() {
-    for await (const _ of streamPrd()) {
-    }
-  }
-  async function handleProceedToCodegen() {
-    await startCodeGeneration(get(currentSession)?.projectId ?? getCurrentProjectId() ?? undefined);
-  }
-  async function handleDownload() {
-    await downloadProject();
-  }
-
-  async function handlePushToGitHub(detail: { repoName: string }) {
-    const sessionId = get(codegenSession)?.sessionId;
-    if (!sessionId) {
-      showToast('No code generation session to push', 'error');
-      return;
-    }
-    try {
-      const res = await fetchApi('/api/github/create-and-push', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId, repoName: detail.repoName }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        showToast((data as any).error ?? 'Push to GitHub failed', 'error');
-        return;
-      }
-      showToast(`Pushed to GitHub as ${detail.repoName}`, 'success');
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Push to GitHub failed', 'error');
-    }
-  }
-
-  function handleOpenInIde(e: CustomEvent<{ ide?: string }>) {
-    const ide = e?.detail?.ide ?? 'cursor';
-    showToast(`Opening in ${ide}...`, 'info');
-    handleDownload();
-  }
 
   function handleWorkflowReset() {
     resetWorkflow();
@@ -566,22 +488,6 @@
     sendMessage();
   }
 
-  function loadSessionById(id: string) {
-    const session = codeSessionsStore.load(id);
-    if (session) {
-      messages = JSON.parse(JSON.stringify(session.messages));
-      workspaceInput = session.workspaceRoot ?? '';
-      if (session.workspaceRoot) workspaceStore.setWorkspace(session.workspaceRoot);
-      showToast(`Loaded: ${session.name}`, 'success');
-      loadSessionModalOpen = false;
-    }
-  }
-
-  function handleClearChat() {
-    messages = [defaultMessage];
-    inputText = '';
-    showToast('Chat cleared', 'info');
-  }
   function handleSaveSession() {
     const name = window.prompt('Session name', `Session ${new Date().toLocaleString()}`);
     if (name) {

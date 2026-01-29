@@ -35,22 +35,38 @@ export async function renderDiagram(id: string, code: string): Promise<{ svg: st
   }
 }
 
-export async function exportAsSvg(id: string): Promise<string> {
-  const element = document.getElementById(id);
-  if (!element) throw new Error('Diagram element not found');
+/**
+ * Export a diagram as SVG string
+ */
+export async function exportAsSvg(elementOrId: string | SVGElement): Promise<string> {
+  let svg: SVGElement | null = null;
 
-  const svg = element.querySelector('svg');
+  if (elementOrId instanceof SVGElement) {
+    svg = elementOrId;
+  } else {
+    const element = document.getElementById(elementOrId);
+    if (!element) throw new Error('Diagram element not found');
+    svg = element.querySelector('svg');
+  }
+
   if (!svg) throw new Error('SVG not found in diagram');
 
   // Clone to avoid modifying the displayed diagram
   const clone = svg.cloneNode(true) as SVGElement;
 
-  // Ensure styles are inline or included
+  // Basic cleanup/ensuring attributes
+  if (!clone.getAttribute('xmlns')) {
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  }
+
   return clone.outerHTML;
 }
 
-export async function exportAsPng(id: string): Promise<Blob> {
-  const svgData = await exportAsSvg(id);
+/**
+ * Export a diagram as PNG blob
+ */
+export async function exportAsPng(elementOrId: string | SVGElement): Promise<Blob> {
+  const svgData = await exportAsSvg(elementOrId);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const img = new Image();
@@ -68,12 +84,29 @@ export async function exportAsPng(id: string): Promise<Blob> {
         if (blob) resolve(blob);
         else reject(new Error('Failed to create PNG blob'));
       }, 'image/png');
+      URL.revokeObjectURL(img.src);
     };
-    img.onerror = reject;
+    img.onerror = (e) => {
+      URL.revokeObjectURL(img.src);
+      reject(e);
+    };
 
     // Convert SVG to data URL
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
     img.src = url;
   });
+}
+
+/**
+ * Helper to download a blob or string as a file
+ */
+export function downloadFile(content: Blob | string, filename: string, type: string) {
+  const blob = typeof content === 'string' ? new Blob([content], { type }) : content;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
