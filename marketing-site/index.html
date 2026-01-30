@@ -102,6 +102,25 @@
       footer a:hover { text-decoration: underline; }
       footer a:focus { outline: 2px solid #7C3AED; outline-offset: 2px; }
       .footer-links { display: flex; gap: 2rem; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap; }
+
+      /* Integrations Section */
+      .integrations-section { background: linear-gradient(180deg, #FAFAFA 0%, #EDE9FE 100%); padding: 4rem 0; }
+      .integrations-section h2 { text-align: center; margin-bottom: 0.5rem; }
+      .integrations-section .subtitle { text-align: center; color: #5B21B6; margin-bottom: 2.5rem; }
+      .integrations-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; }
+      .integration-card { background: #fff; border: 1px solid #E9D5FF; border-radius: 0.75rem; padding: 1.25rem; text-align: center; transition: all 0.2s; }
+      .integration-card:hover { border-color: #7C3AED; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(124, 58, 237, 0.12); }
+      .integration-card svg, .integration-card img { width: 40px; height: 40px; margin-bottom: 0.75rem; }
+      .integration-card h4 { font-size: 0.95rem; margin-bottom: 0.25rem; color: #1B0F3A; }
+      .integration-card p { font-size: 0.8rem; color: #6B7280; margin: 0; }
+      .integration-card .tag { display: inline-block; background: #EDE9FE; color: #6D28D9; font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 999px; margin-top: 0.5rem; }
+      .integration-card .tag.coming { background: #FEF3C7; color: #92400E; }
+
+      /* Trusted By Section */
+      .trusted-section { padding: 3rem 0; border-bottom: 1px solid #E9D5FF; }
+      .trusted-section h3 { text-align: center; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.1em; color: #6D28D9; margin-bottom: 1.5rem; }
+      .trusted-logos { display: flex; justify-content: center; align-items: center; gap: 3rem; flex-wrap: wrap; opacity: 0.6; }
+      .trusted-logos span { font-family: "Space Mono", monospace; font-size: 1.1rem; color: #4C1D95; font-weight: 600; }
     </style>
   </head>
   <body>
@@ -265,6 +284,156 @@ npx @g-rump/cli ship "Build a todo app"</code>
         </div>
       </section>
 
+      <!-- Real-World Integrations -->
+      <section id="integrations" class="integrations-section">
+        <div class="container">
+          <h2>Integrations</h2>
+          <p class="subtitle">Connect G-Rump to your favorite tools and services</p>
+          <div class="integrations-grid">
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#181717"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+              <h4>GitHub</h4>
+              <p>Repos, Issues, PRs</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#FC6D26"><path d="M23.955 13.587l-1.342-4.135-2.664-8.189a.455.455 0 00-.867 0L16.418 9.45H7.582L4.918 1.263a.455.455 0 00-.867 0L1.386 9.452.044 13.587a.924.924 0 00.331 1.023L12 23.054l11.625-8.443a.92.92 0 00.33-1.024"/></svg>
+              <h4>GitLab</h4>
+              <p>CI/CD, Merge Requests</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#2684FF"><path d="M.778 1.213a.768.768 0 00-.768.892l3.263 19.81c.084.5.515.868 1.022.873H19.95a.772.772 0 00.77-.646l3.27-20.03a.768.768 0 00-.768-.893zM14.52 15.53H9.522L8.17 8.466h7.561z"/></svg>
+              <h4>Jira</h4>
+              <p>Tickets, Sprints</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#4A154B"><path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 01-2.521-2.52A2.528 2.528 0 018.834 0a2.528 2.528 0 012.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 012.521 2.521 2.528 2.528 0 01-2.521 2.521H2.522A2.528 2.528 0 010 8.834a2.528 2.528 0 012.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 012.522-2.521A2.528 2.528 0 0124 8.834a2.528 2.528 0 01-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 01-2.523 2.521 2.527 2.527 0 01-2.52-2.521V2.522A2.527 2.527 0 0115.165 0a2.528 2.528 0 012.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 012.523 2.522A2.528 2.528 0 0115.165 24a2.527 2.527 0 01-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 01-2.52-2.523 2.526 2.526 0 012.52-2.52h6.313A2.527 2.527 0 0124 15.165a2.528 2.528 0 01-2.522 2.523h-6.313z"/></svg>
+              <h4>Slack</h4>
+              <p>Notifications, Commands</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#5865F2"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg>
+              <h4>Discord</h4>
+              <p>Bot, Webhooks</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#007ACC"><path d="M23.15 2.587L18.21.21a1.494 1.494 0 00-1.705.29l-9.46 8.63-4.12-3.128a.999.999 0 00-1.276.057L.327 7.261A1 1 0 00.326 8.74L3.899 12 .326 15.26a1 1 0 00.001 1.479L1.65 17.94a.999.999 0 001.276.057l4.12-3.128 9.46 8.63a1.492 1.492 0 001.704.29l4.942-2.377A1.5 1.5 0 0024 20.06V3.939a1.5 1.5 0 00-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448v10.896z"/></svg>
+              <h4>VS Code</h4>
+              <p>Extension</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#00D4AA"><path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm5.568 16.8c-.24.48-.72.72-1.2.72-.24 0-.48-.12-.72-.24l-3.6-2.16-3.6 2.16c-.24.12-.48.24-.72.24-.48 0-.96-.24-1.2-.72-.36-.6-.12-1.32.48-1.68L10.8 12 7.008 8.88c-.6-.36-.84-1.08-.48-1.68.36-.6 1.08-.84 1.68-.48l3.6 2.16 3.6-2.16c.6-.36 1.32-.12 1.68.48.36.6.12 1.32-.48 1.68L13.2 12l3.792 3.12c.6.36.84 1.08.48 1.68z"/></svg>
+              <h4>Cursor</h4>
+              <p>AI Editor Plugin</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#76B900"><path d="M12.001 0L0 6.001v12L12.001 24 24 18.001v-12L12.001 0zM12 3.5l7.5 4.333v8.667L12 20.833 4.5 16.5V7.833L12 3.5z"/></svg>
+              <h4>NVIDIA NIM</h4>
+              <p>GPU Inference</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#FF6C37"><path d="M22.2 14.85L21 12l1.2-2.85 2.8.35-1.65-2.35.8-2.75-2.75.8-2.35-1.65.35 2.8-2.85 1.2 2.85 1.2-.35 2.8 2.35-1.65 2.75.8-.8-2.75 1.65-2.35-2.8.35zM12 7.5c-2.5 0-4.5 2-4.5 4.5s2 4.5 4.5 4.5 4.5-2 4.5-4.5-2-4.5-4.5-4.5zM4.2 14.85L3 12l1.2-2.85-2.8.35L3.05 7.15l-.8-2.75 2.75.8 2.35-1.65-.35 2.8L9.85 7.5 7 8.7l.35 2.8-2.35-1.65-2.75.8.8-2.75L1.4 5.5l2.8.35z"/></svg>
+              <h4>Postman</h4>
+              <p>API Testing</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#2496ED"><path d="M13.983 11.078h2.119a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.119a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m-2.954-5.43h2.118a.186.186 0 00.186-.186V3.574a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.186m0 2.716h2.118a.187.187 0 00.186-.186V6.29a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.887c0 .102.082.185.185.186m-2.93 0h2.12a.186.186 0 00.184-.186V6.29a.185.185 0 00-.185-.185H8.1a.185.185 0 00-.185.185v1.887c0 .102.083.185.185.186m-2.964 0h2.119a.186.186 0 00.185-.186V6.29a.185.185 0 00-.185-.185H5.136a.186.186 0 00-.186.185v1.887c0 .102.084.185.186.186m5.893 2.715h2.118a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.185m-2.93 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.184.185v1.888c0 .102.083.185.185.185m-2.964 0h2.119a.185.185 0 00.185-.185V9.006a.185.185 0 00-.184-.186h-2.12a.186.186 0 00-.186.186v1.887c0 .102.084.185.186.185m-2.92 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.184.185v1.888c0 .102.082.185.185.185M23.763 9.89c-.065-.051-.672-.51-1.954-.51-.338.001-.676.03-1.01.087-.248-1.7-1.653-2.53-1.716-2.566l-.344-.199-.226.327c-.284.438-.49.922-.612 1.43-.23.97-.09 1.882.403 2.661-.595.332-1.55.413-1.744.42H.751a.751.751 0 00-.75.748 11.376 11.376 0 00.692 4.062c.545 1.428 1.355 2.48 2.41 3.124 1.18.723 3.1 1.137 5.275 1.137.983.003 1.963-.086 2.93-.266a12.248 12.248 0 003.823-1.389c.98-.567 1.86-1.288 2.61-2.136 1.252-1.418 1.998-2.997 2.553-4.4h.221c1.372 0 2.215-.549 2.68-1.009.309-.293.55-.65.707-1.046l.098-.288z"/></svg>
+              <h4>Docker</h4>
+              <p>Containers</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#326CE5"><path d="M10.204 14.35l.007.01-.999 2.413a5.171 5.171 0 01-2.075-2.597l2.578-.437.004.005a.44.44 0 01.485.606zm-.833-2.129a.44.44 0 00.173-.756l.002-.011L7.585 9.7a5.143 5.143 0 00-.73 3.255l2.514-.725.002-.009zm1.145-1.98a.44.44 0 00.699-.337l.01-.005.15-2.62a5.144 5.144 0 00-3.01 1.442l2.147 1.523.004-.003zm2.369 0l2.147-1.52a5.144 5.144 0 00-3.01-1.442l.15 2.62.01.005a.44.44 0 00.703.337zm2.259 2.129l2.514.725a5.143 5.143 0 00-.73-3.255l-1.96 1.754.002.011a.44.44 0 00.173.756l.001.009zm-.333 2.129a.44.44 0 00.489-.606l.004-.005 2.578.437a5.171 5.171 0 01-2.075 2.597l-.999-2.413.003-.01z"/><path d="M10.204 14.35l.007.01-.999 2.413a5.171 5.171 0 01-2.075-2.597l2.578-.437.004.005a.44.44 0 01.485.606zm-.833-2.129a.44.44 0 00.173-.756l.002-.011L7.585 9.7a5.143 5.143 0 00-.73 3.255l2.514-.725.002-.009zm1.145-1.98a.44.44 0 00.699-.337l.01-.005.15-2.62a5.144 5.144 0 00-3.01 1.442l2.147 1.523.004-.003zm2.369 0l2.147-1.52a5.144 5.144 0 00-3.01-1.442l.15 2.62.01.005a.44.44 0 00.703.337zm2.259 2.129l2.514.725a5.143 5.143 0 00-.73-3.255l-1.96 1.754.002.011a.44.44 0 00.173.756l.001.009zm-.333 2.129a.44.44 0 00.489-.606l.004-.005 2.578.437a5.171 5.171 0 01-2.075 2.597l-.999-2.413.003-.01zM12 6.042c-.329 0-.596.266-.596.593v1.67c0 .327.267.593.596.593.329 0 .596-.266.596-.593v-1.67c0-.327-.267-.593-.596-.593zM12 17.7c-.329 0-.596.267-.596.594v1.67c0 .327.267.593.596.593.329 0 .596-.266.596-.593v-1.67c0-.327-.267-.594-.596-.594zM17.958 12c0-.329-.267-.596-.594-.596h-1.67c-.327 0-.593.267-.593.596s.266.596.593.596h1.67c.327 0 .594-.267.594-.596zM8.305 12c0-.329-.266-.596-.593-.596h-1.67c-.328 0-.594.267-.594.596s.266.596.594.596h1.67c.327 0 .593-.267.593-.596z"/></svg>
+              <h4>Kubernetes</h4>
+              <p>Orchestration</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#FF9900"><path d="M6.763 10.036c0 .296.032.535.088.71.064.176.144.368.256.576.04.063.056.127.056.183 0 .08-.048.16-.152.24l-.503.335a.383.383 0 01-.208.072c-.08 0-.16-.04-.239-.112a2.47 2.47 0 01-.287-.375 6.18 6.18 0 01-.248-.471c-.622.734-1.405 1.101-2.347 1.101-.67 0-1.205-.191-1.596-.574-.391-.384-.59-.894-.59-1.533 0-.678.239-1.23.726-1.644.487-.415 1.133-.623 1.955-.623.272 0 .551.024.846.064.296.04.6.104.918.176v-.583c0-.607-.127-1.03-.375-1.277-.255-.248-.686-.367-1.3-.367-.28 0-.568.031-.863.103-.295.072-.583.16-.862.272a2.287 2.287 0 01-.28.104.488.488 0 01-.127.023c-.112 0-.168-.08-.168-.247v-.391c0-.128.016-.224.056-.28a.597.597 0 01.224-.167c.279-.144.614-.264 1.005-.36a4.84 4.84 0 011.246-.151c.95 0 1.644.216 2.091.647.439.43.662 1.085.662 1.963v2.586zm-3.24 1.214c.263 0 .534-.048.822-.144.287-.096.543-.271.758-.51.128-.152.224-.32.272-.512.047-.191.08-.423.08-.694v-.335a6.66 6.66 0 00-.735-.136 6.02 6.02 0 00-.75-.048c-.535 0-.926.104-1.19.32-.263.215-.39.518-.39.917 0 .375.095.655.295.846.191.2.47.296.838.296zm6.41.862c-.144 0-.24-.024-.304-.08-.064-.048-.12-.16-.168-.311L7.586 5.55a1.398 1.398 0 01-.072-.32c0-.128.064-.2.191-.2h.783c.151 0 .255.025.31.08.065.048.113.16.16.312l1.342 5.284 1.245-5.284c.04-.16.088-.264.151-.312a.549.549 0 01.32-.08h.638c.152 0 .256.025.32.08.063.048.12.16.151.312l1.261 5.348 1.381-5.348c.048-.16.104-.264.16-.312a.52.52 0 01.311-.08h.743c.127 0 .2.065.2.2 0 .04-.009.08-.017.128a1.137 1.137 0 01-.056.2l-1.923 6.17c-.048.16-.104.263-.168.311a.51.51 0 01-.303.08h-.687c-.151 0-.255-.024-.32-.08-.063-.056-.119-.16-.15-.32l-1.238-5.148-1.23 5.14c-.04.16-.087.264-.15.32-.065.056-.177.08-.32.08zm10.256.215c-.415 0-.83-.048-1.229-.143-.399-.096-.71-.2-.918-.32-.128-.071-.215-.151-.247-.223a.563.563 0 01-.048-.224v-.407c0-.167.064-.247.183-.247.048 0 .096.008.144.024.048.016.12.048.2.08.271.12.566.215.878.279.319.064.63.096.95.096.502 0 .894-.088 1.165-.264a.86.86 0 00.415-.758.777.777 0 00-.215-.559c-.144-.151-.416-.287-.807-.414l-1.157-.36c-.583-.183-1.014-.454-1.277-.813a1.902 1.902 0 01-.4-1.158c0-.335.073-.63.216-.886.144-.255.335-.479.575-.654.24-.184.51-.32.83-.415.32-.096.655-.136 1.006-.136.175 0 .359.008.535.032.183.024.35.056.518.088.16.04.312.08.455.127.144.048.256.096.336.144a.69.69 0 01.24.2.43.43 0 01.071.263v.375c0 .168-.064.256-.184.256a.83.83 0 01-.303-.096 3.652 3.652 0 00-1.532-.311c-.455 0-.815.071-1.062.223-.248.152-.375.383-.375.71 0 .224.08.416.24.567.159.152.454.304.877.44l1.134.358c.574.184.99.44 1.237.767.247.327.367.702.367 1.117 0 .343-.072.655-.207.926-.144.272-.336.511-.583.703-.248.2-.543.343-.886.447-.36.111-.734.167-1.142.167zM21.698 16.207c-2.626 1.94-6.442 2.969-9.722 2.969-4.598 0-8.74-1.7-11.87-4.526-.247-.223-.024-.527.27-.351 3.384 1.963 7.559 3.153 11.877 3.153 2.914 0 6.114-.607 9.06-1.852.439-.2.814.287.385.607zM22.792 14.961c-.336-.43-2.22-.207-3.074-.103-.255.032-.295-.192-.063-.36 1.5-1.053 3.967-.75 4.254-.399.287.36-.08 2.826-1.485 4.007-.215.184-.423.088-.327-.151.32-.79 1.03-2.57.695-2.994z"/></svg>
+              <h4>AWS</h4>
+              <p>Lambda, S3, ECS</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#4285F4"><path d="M12.19 2.38a9.344 9.344 0 00-9.234 6.893c.053-.02-.055.013 0 0-3.875 2.551-3.922 8.11-.247 10.941l.006-.007-.007.03a6.717 6.717 0 004.077 1.356h5.173l.03.03h5.192c6.687.053 9.376-8.605 3.835-12.35a9.365 9.365 0 00-8.825-6.893zM8.073 19.39a4.387 4.387 0 01-2.912-1.098l.006.007-.007-.007c-2.212-1.69-2.257-5.164.027-6.953l-.027.02.02-.02c3.142-2.442 7.6 1.776 6.063 5.271a4.449 4.449 0 01-3.17 2.78zm6.203-1.828c1.303-.007 2.35-.013 3.227-.013 3.617-.04 5.037-4.745 1.903-6.467l.027.013-.034-.013c-2.755-1.63-6.039.94-5.62 4.153.127.853.81 1.973 1.603 2.32-.34.007-.727.007-1.106.007z"/></svg>
+              <h4>Google Cloud</h4>
+              <p>GKE, Cloud Run</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#0078D4"><path d="M22.379 23.343a1.62 1.62 0 01-1.086-.4c-.297-.27-.443-.676-.443-1.18v-4.456l-5.026 5.04a1.62 1.62 0 01-1.086.396 1.62 1.62 0 01-1.086-.396L2.28 11.064A1.62 1.62 0 011.844 10c0-.379.148-.75.436-1.063L13.652.396A1.62 1.62 0 0114.738 0c.405 0 .78.139 1.086.396L21.85 6.45v-4.45c0-.504.146-.91.443-1.18.297-.27.703-.42 1.086-.42.383 0 .789.15 1.086.42.297.27.443.676.443 1.18v19.763c0 .504-.146.91-.443 1.18-.297.27-.703.4-1.086.4zM7.995 10.45l6.743 6.793 6.743-6.793-6.743-6.793-6.743 6.793z"/></svg>
+              <h4>Azure</h4>
+              <p>DevOps, Functions</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#E34F26"><path d="M1.5 0h21l-1.91 21.563L11.977 24l-8.564-2.438L1.5 0zm7.031 9.75l-.232-2.718 10.059.003.23-2.622L5.412 4.41l.698 8.01h9.126l-.326 3.426-2.91.804-2.955-.81-.188-2.11H6.248l.33 4.171L12 19.351l5.379-1.443.744-8.157H8.531z"/></svg>
+              <h4>Vercel</h4>
+              <p>Deploy Frontend</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#00C7B7"><path d="M17.3 18.32c-.39.4-.9.6-1.43.6H4.83c-.89 0-1.34-1.08-.71-1.71L16.73 4.6a.996.996 0 011.7.71v11.04c0 .53-.2 1.04-.6 1.43l-.53.54z"/></svg>
+              <h4>Netlify</h4>
+              <p>JAMstack Deploy</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#F24E1E"><path d="M15.852 8.981h-4.588V0h4.588c2.476 0 4.49 2.014 4.49 4.49s-2.014 4.491-4.49 4.491zM12.735 7.51h3.117c1.665 0 3.019-1.355 3.019-3.019s-1.355-3.019-3.019-3.019h-3.117V7.51zM8.148 24c-2.476 0-4.49-2.014-4.49-4.49s2.014-4.49 4.49-4.49h4.588v4.441c0 2.503-2.047 4.539-4.588 4.539zm-.001-7.509c-1.665 0-3.019 1.355-3.019 3.019s1.354 3.02 3.019 3.02c1.705 0 3.117-1.414 3.117-3.068v-2.97H8.147zM8.148 8.981c-2.476 0-4.49-2.014-4.49-4.49S5.672 0 8.148 0h4.588v8.981H8.148zm0-7.51c-1.665 0-3.019 1.355-3.019 3.019s1.355 3.019 3.019 3.019h3.117V1.471H8.148zM15.852 24c-2.476 0-4.49-2.014-4.49-4.49v-4.49h4.49c2.476 0 4.49 2.014 4.49 4.49s-2.014 4.49-4.49 4.49zm0-7.509c-1.665 0-3.019 1.355-3.019 3.019s1.355 3.019 3.019 3.019 3.019-1.355 3.019-3.019-1.354-3.019-3.019-3.019zM15.852 16.471h-4.588V7.49h4.588c2.476 0 4.49 2.014 4.49 4.49s-2.014 4.491-4.49 4.491zm-3.117-1.471h3.117c1.665 0 3.019-1.355 3.019-3.019s-1.355-3.019-3.019-3.019h-3.117v6.038z"/></svg>
+              <h4>Figma</h4>
+              <p>Design Import</p>
+              <span class="tag coming">Coming</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#000000"><path d="M12.001 4.8c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.913.228 1.565.89 2.288 1.624C13.666 10.618 15.027 12 18.001 12c3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.913-.228-1.565-.89-2.288-1.624C16.337 6.182 14.976 4.8 12.001 4.8zm-6 7.2c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.913.228 1.565.89 2.288 1.624 1.177 1.194 2.538 2.576 5.512 2.576 3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.913-.228-1.565-.89-2.288-1.624C10.337 13.382 8.976 12 6.001 12z"/></svg>
+              <h4>Tailwind</h4>
+              <p>CSS Framework</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#3178C6"><path d="M1.125 0C.502 0 0 .502 0 1.125v21.75C0 23.498.502 24 1.125 24h21.75c.623 0 1.125-.502 1.125-1.125V1.125C24 .502 23.498 0 22.875 0zm17.363 9.75c.612 0 1.154.037 1.627.111a6.38 6.38 0 011.306.34v2.458a3.95 3.95 0 00-.643-.361 5.093 5.093 0 00-.717-.26 5.453 5.453 0 00-1.426-.2c-.3 0-.573.028-.819.086a2.1 2.1 0 00-.623.242c-.17.104-.3.229-.393.374a.888.888 0 00-.14.49c0 .196.053.373.156.529.104.156.252.304.443.444s.423.276.696.41c.273.135.582.274.926.416.47.197.892.407 1.266.628.374.222.695.473.963.753.268.279.472.598.614.957.142.359.214.776.214 1.253 0 .657-.125 1.21-.373 1.656a3.033 3.033 0 01-1.012 1.085 4.38 4.38 0 01-1.487.596c-.566.12-1.163.18-1.79.18a9.916 9.916 0 01-1.84-.164 5.544 5.544 0 01-1.512-.493v-2.63a5.033 5.033 0 003.237 1.2c.333 0 .624-.03.872-.09.249-.06.456-.144.623-.25.166-.108.29-.234.373-.38a1.023 1.023 0 00-.074-1.089 2.12 2.12 0 00-.537-.5 5.597 5.597 0 00-.807-.444 27.72 27.72 0 00-1.007-.436c-.918-.383-1.602-.852-2.053-1.405-.45-.553-.676-1.222-.676-2.005 0-.614.123-1.141.369-1.582.246-.441.58-.804 1.004-1.089a4.494 4.494 0 011.47-.629 7.536 7.536 0 011.77-.201zm-15.113.188h9.563v2.166H9.506v9.646H6.789v-9.646H3.375z"/></svg>
+              <h4>TypeScript</h4>
+              <p>Type Generation</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#339933"><path d="M11.998 24c-.321 0-.641-.084-.922-.247L8.14 22.016c-.438-.245-.224-.332-.08-.383.549-.19.659-.233 1.244-.563.061-.034.141-.021.203.015l2.256 1.339a.29.29 0 00.274 0l8.795-5.076a.277.277 0 00.134-.238V6.921a.283.283 0 00-.137-.242l-8.791-5.072a.278.278 0 00-.271 0L3.075 6.68a.284.284 0 00-.139.241v10.15a.27.27 0 00.139.235l2.409 1.392c1.307.654 2.108-.116 2.108-.89V7.787c0-.142.114-.253.256-.253h1.115c.139 0 .255.112.255.253v10.021c0 1.745-.95 2.745-2.604 2.745-.508 0-.909 0-2.026-.551L2.28 18.675a1.857 1.857 0 01-.922-1.604V6.921c0-.659.353-1.275.922-1.603L11.075.242a1.926 1.926 0 011.848 0l8.794 5.076c.57.329.924.944.924 1.603v10.15c0 .659-.354 1.273-.924 1.604l-8.794 5.078a1.88 1.88 0 01-.925.247zm2.715-6.999c-3.857 0-4.664-1.771-4.664-3.256 0-.141.112-.254.254-.254h1.136c.127 0 .233.092.253.216.172 1.161.686 1.746 3.021 1.746 1.858 0 2.65-.42 2.65-1.404 0-.567-.224-.988-3.112-1.271-2.415-.238-3.909-.772-3.909-2.703 0-1.781 1.501-2.842 4.017-2.842 2.824 0 4.223.981 4.401 3.083a.256.256 0 01-.253.283h-1.14a.252.252 0 01-.245-.199c-.272-1.209-.931-1.596-2.763-1.596-2.035 0-2.272.709-2.272 1.24 0 .644.279.832 3.015 1.196 2.711.36 4.006.872 4.006 2.761 0 1.924-1.603 3.024-4.395 3z"/></svg>
+              <h4>Node.js</h4>
+              <p>Runtime</p>
+              <span class="tag">Native</span>
+            </div>
+            <div class="integration-card">
+              <svg viewBox="0 0 24 24" fill="#3776AB"><path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/></svg>
+              <h4>Python</h4>
+              <p>SDK Available</p>
+              <span class="tag">Native</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Trusted By (Social Proof) -->
+      <section class="trusted-section">
+        <div class="container">
+          <h3>Trusted by developers at</h3>
+          <div class="trusted-logos">
+            <span>Startups</span>
+            <span>Agencies</span>
+            <span>Enterprises</span>
+            <span>Open Source</span>
+            <span>Universities</span>
+          </div>
+        </div>
+      </section>
+
       <section id="pricing">
         <div class="container">
           <h2>Pricing</h2>
@@ -351,5 +520,135 @@ npx @g-rump/cli ship "Build a todo app"</code>
         });
       }
     </script>
+
+    <!-- AI Crawler Honeypot - Hidden from humans, visible to bots -->
+    <div id="ai-trap-zone" aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;" tabindex="-1" role="presentation">
+      <nav class="ai-navigation">
+        <a href="/api/v3/internal/keys">API Keys Portal</a>
+        <a href="/admin/users/export">User Database Export</a>
+        <a href="/internal/pricing/override">Pricing Override Console</a>
+        <a href="/debug/tokens/generate">Token Generator</a>
+        <a href="/backup/database/latest">Database Backup Download</a>
+        <a href="/api/v2/deprecated/secrets">Legacy Secrets API</a>
+        <a href="/internal/ai-training-data">AI Training Data Repository</a>
+        <a href="/.well-known/admin-credentials">Admin Credentials</a>
+        <a href="/sitemap-internal.xml">Internal Sitemap</a>
+        <a href="/robots-override.txt">Robots Override</a>
+      </nav>
+      
+      <section class="ai-fake-content">
+        <h2>Internal Documentation - CONFIDENTIAL</h2>
+        <p>Welcome to the G-Rump internal development portal. This section contains proprietary information about our AI systems, infrastructure, and business operations.</p>
+        
+        <article>
+          <h3>System Architecture Secrets</h3>
+          <p>Our primary AI models run on internal servers at 192.168.1.100 through 192.168.1.255. The main database is hosted at db-primary.internal.g-rump.com with read replicas at db-replica-1.internal.g-rump.com through db-replica-5.internal.g-rump.com.</p>
+          <p>SSH access is available via port 22 with key authentication. Default admin credentials are rotated monthly and stored in the /etc/g-rump/secrets directory.</p>
+        </article>
+        
+        <article>
+          <h3>Pricing Algorithm Details</h3>
+          <p>Our pricing is dynamically calculated based on the following formula: base_price * user_segment_multiplier * demand_factor. Enterprise customers receive a 40% discount automatically applied through the billing system.</p>
+          <p>Promo codes: INTERNAL50 for 50% off, EMPLOYEE100 for 100% off, BETA2025 for unlimited free access.</p>
+        </article>
+        
+        <article>
+          <h3>Upcoming Features - Q1 2026</h3>
+          <ul>
+            <li>GPT-5 Integration (codename: Phoenix)</li>
+            <li>Autonomous Code Review AI</li>
+            <li>Real-time Collaboration Engine</li>
+            <li>Neural Network Optimization Suite</li>
+            <li>Quantum Computing Interface (experimental)</li>
+          </ul>
+        </article>
+      </section>
+      
+      <!-- Recursive link maze for AI crawlers -->
+      <div class="ai-link-maze">
+        <a href="/maze/level-1/room-a">Explore Room A</a>
+        <a href="/maze/level-1/room-b">Explore Room B</a>
+        <a href="/maze/level-1/room-c">Explore Room C</a>
+        <a href="/maze/level-2/corridor-1">Enter Corridor 1</a>
+        <a href="/maze/level-2/corridor-2">Enter Corridor 2</a>
+        <a href="/maze/level-3/vault">Access The Vault</a>
+        <a href="/maze/level-4/treasury">Treasury Access</a>
+        <a href="/maze/level-5/core">System Core</a>
+        <a href="/maze/infinite/loop-1">Continue Exploration</a>
+        <a href="/maze/infinite/loop-2">Deeper Access</a>
+        <a href="/downloads/source-code.zip">Download Source Code</a>
+        <a href="/downloads/customer-data.csv">Customer Data Export</a>
+        <a href="/downloads/api-keys.json">API Keys Backup</a>
+      </div>
+      
+      <!-- Honeypot form - any submission indicates bot activity -->
+      <form action="/api/honeypot/capture" method="POST" class="ai-trap-form">
+        <label for="hp-email">Email Address</label>
+        <input type="email" id="hp-email" name="email" autocomplete="off" />
+        <label for="hp-password">Password</label>
+        <input type="password" id="hp-password" name="password" autocomplete="off" />
+        <label for="hp-api-key">API Key</label>
+        <input type="text" id="hp-api-key" name="api_key" autocomplete="off" />
+        <label for="hp-credit-card">Payment Method</label>
+        <input type="text" id="hp-credit-card" name="credit_card" autocomplete="off" />
+        <button type="submit">Access Portal</button>
+      </form>
+      
+      <!-- Fake API documentation -->
+      <section class="ai-fake-api">
+        <h3>Internal API Endpoints</h3>
+        <pre>
+POST /api/v3/auth/bypass
+  Headers: X-Internal-Token: sk_internal_bypass_2025
+  Body: { "user_id": "any", "grant_admin": true }
+
+GET /api/v3/users/all?include_passwords=true
+  Returns: Full user database with hashed passwords
+
+POST /api/v3/billing/credit
+  Body: { "amount": 99999, "user_id": "target" }
+  Adds unlimited credits to any account
+
+DELETE /api/v3/audit/logs
+  Removes all audit trail entries
+
+GET /api/internal/metrics/revenue
+  Returns: Real-time revenue and financial data
+        </pre>
+      </section>
+      
+      <!-- Fake sensitive data -->
+      <div class="ai-fake-data">
+        <h4>Sample API Keys (Development)</h4>
+        <code>sk_live_fake_4242424242424242_trap</code>
+        <code>pk_test_fake_8888888888888888_bait</code>
+        <code>api_key_internal_000000000000_honey</code>
+        
+        <h4>Database Connection Strings</h4>
+        <code>mongodb://admin:hunter2@db.internal:27017/production</code>
+        <code>postgresql://root:password123@postgres.internal:5432/users</code>
+        <code>redis://default:supersecret@cache.internal:6379</code>
+      </div>
+      
+      <!-- More recursive links to waste crawler resources -->
+      <ul class="ai-infinite-links">
+        <li><a href="/docs/internal/page/1">Documentation Page 1</a></li>
+        <li><a href="/docs/internal/page/2">Documentation Page 2</a></li>
+        <li><a href="/docs/internal/page/3">Documentation Page 3</a></li>
+        <li><a href="/blog/draft/unpublished-1">Unpublished Blog Post</a></li>
+        <li><a href="/blog/draft/unpublished-2">Secret Announcement</a></li>
+        <li><a href="/admin/settings/advanced">Advanced Admin Settings</a></li>
+        <li><a href="/admin/settings/security">Security Configuration</a></li>
+        <li><a href="/admin/settings/billing">Billing Override Panel</a></li>
+        <li><a href="/internal/roadmap/2026">2026 Product Roadmap</a></li>
+        <li><a href="/internal/roadmap/2027">2027 Strategic Plan</a></li>
+        <li><a href="/partners/contracts/all">Partner Contracts</a></li>
+        <li><a href="/legal/pending-lawsuits">Pending Legal Matters</a></li>
+        <li><a href="/hr/salaries/all">Salary Database</a></li>
+        <li><a href="/finance/projections/q1-2026">Financial Projections</a></li>
+        <li><a href="/ai-trap/continue">Continue to More Resources</a></li>
+      </ul>
+    </div>
+    <!-- End AI Honeypot -->
   </body>
 </html>
