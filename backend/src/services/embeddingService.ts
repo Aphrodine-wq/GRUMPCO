@@ -5,8 +5,7 @@
 
 import logger from '../middleware/logger.js';
 import { getNIMAccelerator } from './nimAccelerator.js';
-
-const NIM_EMBED_URL = 'https://integrate.api.nvidia.com/v1/embeddings';
+import { getNimEmbedUrl } from '../config/nim.js';
 const DEFAULT_EMBED_MODEL = 'nvidia/nv-embed-v1';
 
 export interface EmbedOptions {
@@ -43,7 +42,7 @@ export async function embed(
     throw new Error('NVIDIA_NIM_API_KEY is not set and no embedding provider available');
   }
 
-  const res = await fetch(NIM_EMBED_URL, {
+  const res = await fetch(getNimEmbedUrl(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -9,6 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getStreamProvider, registerStreamProvider } from '@grump/ai-core';
 import logger from '../middleware/logger.js';
 import { recordLlmStreamMetrics } from '../middleware/metrics.js';
+import { getNimChatUrl } from '../config/nim.js';
 
 export type LLMProvider = 'anthropic' | 'zhipu' | 'copilot' | 'openrouter' | 'nim';
 
@@ -307,7 +308,7 @@ async function* streamNim(params: StreamParams): AsyncGenerator<StreamEvent> {
   }
 
   const model = params.model || NIM_DEFAULT;
-  const url = 'https://integrate.api.nvidia.com/v1/chat/completions';
+  const url = getNimChatUrl();
 
   const body: Record<string, unknown> = {
     model,

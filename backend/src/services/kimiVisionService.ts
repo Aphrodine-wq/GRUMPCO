@@ -4,8 +4,7 @@
  */
 
 import logger from '../middleware/logger.js';
-
-const NIM_CHAT_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
+import { getNimChatUrl } from '../config/nim.js';
 const NIM_MODEL = 'moonshotai/kimi-k2.5';
 
 export type DesignToCodeFramework = 'svelte' | 'react' | 'vue' | 'flutter';
@@ -56,7 +55,7 @@ Framework: ${input.targetFramework}. Follow best practices for that framework.`;
     },
   ];
 
-  const res = await fetch(NIM_CHAT_URL, {
+  const res = await fetch(getNimChatUrl(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

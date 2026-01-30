@@ -6,6 +6,7 @@
 import logger from '../middleware/logger.js';
 import { createEmbeddingBatchProcessor } from './batchProcessor.js';
 import { updateGpuMetrics } from '../middleware/metrics.js';
+import { getNimApiBase } from '../config/nim.js';
 
 export interface NIMConfig {
   apiKey: string;
@@ -374,11 +375,15 @@ export class NIMAccelerator {
       };
 
       if (data.gpu) {
-        // Update Prometheus metrics
         updateGpuMetrics(`nim-${gpuId}`, data.gpu.utilization, data.gpu.memory_used);
+        return {
+          utilization: data.gpu.utilization,
+          memoryUsed: data.gpu.memory_used,
+          memoryTotal: data.gpu.memory_total,
+        };
       }
 
-      return data.gpu || null;
+      return null;
     } catch (error) {
       logger.debug({ gpuId }, 'GPU metrics not available');
       return null;
@@ -460,7 +465,7 @@ export function getNIMAccelerator(): NIMAccelerator | null {
   }
 
   if (!nimAccelerator) {
-    nimAccelerator = new NIMAccelerator({ apiKey });
+    nimAccelerator = new NIMAccelerator({ apiKey, baseUrl: getNimApiBase() });
   }
 
   return nimAccelerator;

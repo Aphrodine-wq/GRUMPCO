@@ -11,8 +11,7 @@ import { getVectorStore } from './vectorStoreAdapter.js';
 import type { ChunkWithScore, VectorChunk } from './vectorStoreAdapter.js';
 import { chunkGrumpByAST } from './grumpParser.js';
 import { embed as embedViaService } from './embeddingService.js';
-
-const NIM_CHAT_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
+import { getNimChatUrl } from '../config/nim.js';
 const RAG_EMBED_MODEL_DEFAULT = 'nvidia/nv-embedqa-e5-v5';
 const DEFAULT_INDEX_PATH = './data/rag-index.json';
 const CHUNK_SIZE = 1000;
@@ -319,7 +318,7 @@ export async function ragQuery(
   }
   const user = `Context:\n\n${context}\n\nQuestion: ${query}`;
 
-  const res = await fetch(NIM_CHAT_URL, {
+  const res = await fetch(getNimChatUrl(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

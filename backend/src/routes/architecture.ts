@@ -3,15 +3,36 @@
  * Endpoints for system architecture generation
  */
 
+import { createHash } from 'crypto';
 import express, { Request, Response, Router } from 'express';
 import { generateArchitecture, generateArchitectureStream } from '../services/architectureService.js';
 import { getRequestLogger } from '../middleware/logger.js';
 import { sendServerError, writeSSEError } from '../utils/errorResponse.js';
 import { validateArchitectureRequest, handleArchitectureValidationErrors } from '../middleware/validator.js';
 import { dispatchWebhook } from '../services/webhookService.js';
+import { getTieredCache } from '../services/tieredCache.js';
 import { DEMO_ARCHITECTURE } from '../demo/sampleData.js';
 import type { ArchitectureRequest, ConversationMessage } from '../types/index.js';
 import type { EnrichedIntent } from '../services/intentCompilerService.js';
+
+const ARCHITECTURE_CACHE_TTL_SEC = 60 * 60; // 1 hour (seconds for tiered cache)
+
+function architectureCacheKey(
+  req: ArchitectureRequest,
+  conversationHistory?: ConversationMessage[],
+  enrichedIntent?: EnrichedIntent
+): string {
+  const payload = JSON.stringify({
+    projectDescription: req.projectDescription?.trim(),
+    projectType: req.projectType,
+    techStack: req.techStack ?? [],
+    complexity: req.complexity,
+    refinements: req.refinements ?? [],
+    historyLen: conversationHistory?.length ?? 0,
+    enrichedRaw: enrichedIntent?.raw?.trim().slice(0, 500),
+  });
+  return createHash('sha256').update(payload).digest('hex').substring(0, 32);
+}
 
 const router: Router = express.Router();
 
@@ -48,6 +69,13 @@ router.post(
     const { projectDescription, projectType, techStack, complexity, refinements, conversationHistory, enrichedIntent } = body;
 
     const desc = (projectDescription ?? enrichedIntent?.raw) as string;
+    const archRequest = {
+      projectDescription: desc,
+      projectType,
+      techStack,
+      complexity,
+      refinements,
+    };
 
     log.info(
       {
@@ -60,22 +88,21 @@ router.post(
       'Architecture generation requested'
     );
 
-    const response = await generateArchitecture(
-      {
-        projectDescription: desc,
-        projectType,
-        techStack,
-        complexity,
-        refinements,
-      },
-      conversationHistory,
-      enrichedIntent
-    );
+    const key = architectureCacheKey(archRequest, conversationHistory, enrichedIntent);
+    const cache = getTieredCache();
+    const cached = await cache.get<ReturnType<typeof generateArchitecture>>('architecture:generate', key);
+    if (cached && cached.status !== 'error') {
+      return res.json(cached);
+    }
+
+    const response = await generateArchitecture(archRequest, conversationHistory, enrichedIntent);
 
     if (response.status === 'error') {
       res.status(400).json(response);
       return;
     }
+
+    cache.set('architecture:generate', key, response, ARCHITECTURE_CACHE_TTL_SEC).catch(() => {});
 
     dispatchWebhook('architecture.generated', {
       architectureId: response.architecture?.id,

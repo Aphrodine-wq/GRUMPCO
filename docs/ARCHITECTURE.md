@@ -186,9 +186,14 @@ User Input → ChatInterface → POST /api/chat/stream
 - Tiered cache (L1/L2/L3), worker pool, model router (cost-aware), NIM batching
 - See [docs/PERFORMANCE_GUIDE.md](./docs/PERFORMANCE_GUIDE.md) and [docs/OPTIMIZATION_SUMMARY.md](./docs/OPTIMIZATION_SUMMARY.md)
 
+### NIM, Cost Dashboard, and Intent
+
+- **Local NIM:** Set `NVIDIA_NIM_URL` (e.g. `http://nim:8000`) when using a self-hosted or local NIM stack (e.g. `docker compose -f docker-compose.yml -f docker-compose.gpu.yml`). Omitting it uses the cloud default.
+- **Cost dashboard:** The backend mounts `/api/cost` (see [costDashboard](../backend/src/routes/costDashboard.ts)). The frontend exposes a lazy-loaded Cost dashboard (Settings → Cost dashboard, or via the cost snippet in the sidebar).
+- **WASM intent:** Optional. Set `GRUMP_USE_WASM_INTENT=true` to prefer the WASM intent parser when available; otherwise the CLI is used. Build the WASM module with `./build-wasm.sh` or `build-wasm.bat` in `intent-compiler/`.
+
 ## Future Improvements
 
 - [ ] Code splitting for backend services
-- [ ] Lazy loading for intent compiler
-- [ ] Caching for generated architectures
+- [ ] Caching for generated architectures (architecture and PRD outputs are now cached via tiered cache)
 - [ ] Offline mode support

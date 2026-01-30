@@ -3,9 +3,6 @@
  * Spawns Rust grump-intent CLI, parses output, optionally enriches via Claude.
  */
 
-import fs from 'fs';
-import { spawn } from 'child_process';
-import { resolve } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import logger from '../middleware/logger.js';
 import { getIntentCompilerPrompt, getIntentExtractionFallbackPrompt } from '../prompts/intent-compiler.js';
@@ -13,6 +10,10 @@ import { withResilience } from './resilience.js';
 import { withCache } from './cacheService.js';
 import { getDatabase } from '../db/database.js';
 import { randomUUID } from 'crypto';
+import { parseIntentWasm } from './intentParserWasm.js';
+import { runIntentCli } from './intentCliRunner.js';
+import { getWorkerPool } from './workerPool.js';
+import { TaskPriority } from './workerPool.js';
 
 export interface StructuredIntent {
   actors: string[];
@@ -75,115 +76,38 @@ export interface EnrichedIntent extends StructuredIntent {
 // Version tag for intent caching/normalization so we can safely evolve the schema
 const INTENT_CACHE_VERSION = 'v1';
 
-function getIntentCompilerPath(): string {
-  const override = process.env.GRUMP_INTENT_PATH;
-  if (override) return override;
+function useWasmIntent(): boolean {
+  return process.env.GRUMP_USE_WASM_INTENT === 'true' || process.env.GRUMP_USE_WASM_INTENT === '1';
+}
 
-  // Production: Check if running from bundled executable (app data directory)
-  if (process.env.NODE_ENV === 'production') {
-    // When bundled, grump-intent should be in the same directory as the backend executable
-    // or in a known location relative to the executable
-    const appDataDir = process.env.APPDATA || process.env.LOCALAPPDATA || process.cwd();
-    const bundledPath = resolve(appDataDir, 'grump-intent.exe');
-    if (fs.existsSync(bundledPath)) {
-      return bundledPath;
-    }
-  }
-
-  // Development: backend runs from backend/; project root = ..
-  const root = resolve(process.cwd(), '..');
-  const exe = process.platform === 'win32' ? 'grump-intent.exe' : 'grump-intent';
-  const devPath = resolve(root, 'intent-compiler', 'target', 'release', exe);
-
-  // Fallback to x86_64-pc-windows-msvc target for Windows
-  if (process.platform === 'win32' && !fs.existsSync(devPath)) {
-    const msvcPath = resolve(root, 'intent-compiler', 'target', 'x86_64-pc-windows-msvc', 'release', exe);
-    if (fs.existsSync(msvcPath)) {
-      return msvcPath;
-    }
-  }
-
-  return devPath;
+function useWorkerPoolIntent(): boolean {
+  return process.env.GRUMP_USE_WORKER_POOL_INTENT === 'true' || process.env.GRUMP_USE_WORKER_POOL_INTENT === '1';
 }
 
 /**
  * Run grump-intent CLI with raw NL + optional constraints.
+ * When GRUMP_USE_WASM_INTENT=true, tries WASM first (same process); falls back to CLI if unavailable or on error.
  * Returns structured intent JSON.
  */
 export async function parseIntent(
   raw: string,
   constraints?: Record<string, unknown>
 ): Promise<StructuredIntent> {
-  const bin = getIntentCompilerPath();
-
-  const args: string[] = ['--input', raw.trim()];
-  if (constraints && Object.keys(constraints).length > 0) {
-    args.push('--constraints', JSON.stringify(constraints));
+  if (useWasmIntent()) {
+    try {
+      const wasmResult = await parseIntentWasm(raw.trim(), constraints);
+      if (wasmResult && Array.isArray(wasmResult.actors)) {
+        return wasmResult as StructuredIntent;
+      }
+    } catch (e) {
+      logger.debug(
+        { err: e instanceof Error ? e.message : String(e) },
+        'WASM intent parse failed, falling back to CLI'
+      );
+    }
   }
 
-  return new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn(bin, args, {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      windowsHide: true,
-    });
-
-    let stdout = '';
-    let stderr = '';
-    let settled = false;
-
-    const killAndReject = (reason: string) => {
-      if (settled) return;
-      settled = true;
-      try {
-        child.kill('SIGKILL');
-      } catch {
-        // ignore
-      }
-      rejectPromise(new Error(reason));
-    };
-
-    // Hard timeout to avoid hanging processes
-    const timeoutMs = 20_000;
-    const timer = setTimeout(() => {
-      logger.warn({ timeoutMs }, 'Intent compiler timed out, killing process');
-      killAndReject(`Intent compiler timed out after ${timeoutMs}ms`);
-    }, timeoutMs);
-
-    child.stdout?.on('data', (chunk: Buffer) => {
-      stdout += chunk.toString('utf8');
-    });
-    child.stderr?.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString('utf8');
-    });
-
-    child.on('error', (err) => {
-      clearTimeout(timer);
-      logger.error({ err, bin }, 'Intent compiler spawn failed');
-      killAndReject(`Intent compiler failed: ${err.message}`);
-    });
-
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      if (settled) return;
-      if (code !== 0) {
-        logger.warn({ code, stderr }, 'Intent compiler non-zero exit');
-        killAndReject(`Intent compiler exited ${code}: ${stderr || 'see logs'}`);
-        return;
-      }
-      try {
-        const parsed = JSON.parse(stdout) as StructuredIntent;
-        if (!parsed.raw || !Array.isArray(parsed.actors)) {
-          killAndReject('Invalid intent compiler output');
-          return;
-        }
-        settled = true;
-        resolvePromise(parsed);
-      } catch (_e) {
-        logger.error({ stdout: stdout.slice(0, 500) }, 'Intent compiler invalid JSON');
-        killAndReject('Intent compiler returned invalid JSON');
-      }
-    });
-  });
+  return runIntentCli(raw, constraints);
 }
 
 /**
@@ -248,12 +172,29 @@ export async function enrichIntentViaClaude(intent: StructuredIntent): Promise<E
 
 /**
  * When Rust intent compiler fails, extract structured intent via Claude and optionally store for analysis.
+ * When GRUMP_USE_WORKER_POOL_INTENT=true, offloads parsing to worker pool (CLI in worker) first.
  */
 export async function parseIntentWithFallback(
   raw: string,
   constraints?: Record<string, unknown>
 ): Promise<StructuredIntent> {
   try {
+    if (useWorkerPoolIntent()) {
+      try {
+        const pool = getWorkerPool();
+        return await pool.execute<{ text: string; constraints?: Record<string, unknown> }, StructuredIntent>(
+          'parseIntent',
+          { text: raw.trim(), constraints },
+          TaskPriority.NORMAL
+        );
+      } catch (poolErr) {
+        logger.debug(
+          { err: poolErr instanceof Error ? poolErr.message : String(poolErr) },
+          'Worker pool intent parse failed, falling back to main-thread'
+        );
+        return await parseIntent(raw, constraints);
+      }
+    }
     return await parseIntent(raw, constraints);
   } catch (rustErr) {
     const err = rustErr as Error;

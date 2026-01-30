@@ -86,8 +86,12 @@ cd intent-compiler
 # Standard release build
 cargo build --release
 
-# SIMD-optimized build (Linux only)
-./build-simd.sh
+# SIMD-optimized build
+./build-simd.sh   # Linux (uses /proc/cpuinfo for AVX2/AVX-512)
+./build-simd.bat  # Windows (uses target-cpu=native; set RUSTFLAGS for haswell/skylake-avx512 if desired)
+
+# macOS: no build-simd script. Use RUSTFLAGS="-C target-cpu=native" then cargo build --release.
+# Native is Rosetta-friendly on Apple Silicon.
 
 # Benchmark
 cargo bench
@@ -240,6 +244,8 @@ const embedding2 = await processor.add('embeddings', 'text 2');
 export NVIDIA_NIM_API_KEY=your_key_here
 ```
 
+**Local / self-hosted NIM:** Set `NVIDIA_NIM_URL` (e.g. `http://nim:8000`) when using a self-hosted or local NIM stack (e.g. `docker compose -f docker-compose.yml -f docker-compose.gpu.yml`). The app uses this base for embeddings and chat; `/v1` is appended if missing. Omitting `NVIDIA_NIM_URL` uses the cloud default.
+
 **Usage:**
 ```typescript
 import { getNIMAccelerator } from './backend/src/services/nimAccelerator.ts';
@@ -309,7 +315,7 @@ curl http://localhost:3000/api/cost/recommendations?userId=default
 
 ### Cost Dashboard
 
-Access the cost dashboard at: `http://localhost:5173/cost-dashboard`
+The backend mounts `/api/cost` (summary, budget, stats, etc.). The frontend exposes a **lazy-loaded** Cost dashboard: open **Settings → Cost dashboard**, or click the cost snippet in the sidebar (Today’s usage). The dashboard is not a separate route; it’s an in-app view.
 
 **Features:**
 - Real-time cost metrics

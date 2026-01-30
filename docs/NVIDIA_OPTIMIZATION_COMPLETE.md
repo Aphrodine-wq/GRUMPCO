@@ -77,8 +77,10 @@ cargo build --release
 ### 3. WASM Module
 ```bash
 # Run in browser or Node.js
-./build-wasm.sh
+./build-wasm.sh   # Linux/Mac
+./build-wasm.bat  # Windows
 ```
+Set `GRUMP_USE_WASM_INTENT=true` to prefer WASM when available; otherwise the CLI is used.
 
 ### 4. Worker Threads
 ```typescript
@@ -113,6 +115,7 @@ const embeddings = await nim.generateEmbeddings(texts);
 const nim = getNIMAccelerator();
 await nim.parallelInference({ prompts: [...] });
 ```
+**Local NIM:** Set `NVIDIA_NIM_URL` (e.g. `http://nim:8000`) when using `docker compose -f docker-compose.yml -f docker-compose.gpu.yml` or another self-hosted NIM deployment. Omit for cloud default.
 
 ### 9. SIMD Processing
 ```bash
@@ -124,7 +127,7 @@ await nim.parallelInference({ prompts: [...] });
 - Real-time cost tracking
 - Budget alerts
 - Optimization recommendations
-- Access: `http://localhost:5173/cost-dashboard`
+- **Cost routes** are mounted at `/api/cost` (see backend index). Access via the app: Settings → Cost dashboard, or the cost snippet in the sidebar. Cost dashboard is lazy-loaded.
 
 ## Quick Start
 
