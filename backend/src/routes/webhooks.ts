@@ -9,6 +9,7 @@ import { enqueueShipJob } from '../services/jobQueue.js';
 import { getRequestLogger } from '../middleware/logger.js';
 import { sendServerError } from '../utils/errorResponse.js';
 import { registerWebhook, type WebhookEvent } from '../services/webhookService.js';
+import { timingSafeEqualString } from '../utils/security.js';
 
 const router = Router();
 const WEBHOOK_SECRET = process.env.GRUMP_WEBHOOK_SECRET || '';
@@ -33,7 +34,7 @@ router.post('/trigger', async (req: Request<Record<string, never>, object, Trigg
     return;
   }
   const secret = (req.headers['x-webhook-secret'] as string) || req.body?.secret || '';
-  if (WEBHOOK_SECRET && secret !== WEBHOOK_SECRET) {
+  if (WEBHOOK_SECRET && !timingSafeEqualString(secret, WEBHOOK_SECRET)) {
     res.status(401).json({ error: 'Invalid webhook secret', type: 'auth_error' });
     return;
   }
@@ -79,7 +80,7 @@ router.post('/outbound', (req: Request<Record<string, never>, object, { url?: st
     return;
   }
   const secret = (req.headers['x-webhook-secret'] as string) || req.body?.secret || '';
-  if (WEBHOOK_SECRET && secret !== WEBHOOK_SECRET) {
+  if (WEBHOOK_SECRET && !timingSafeEqualString(secret, WEBHOOK_SECRET)) {
     res.status(401).json({ error: 'Invalid webhook secret', type: 'auth_error' });
     return;
   }

@@ -250,6 +250,14 @@ const envSchema = z.object({
     });
   }
 
+  if (!data.MASTER_KEY || data.MASTER_KEY.length < 32) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['MASTER_KEY'],
+      message: 'MASTER_KEY (32+ chars) is required in production when SECURITY_STRICT_PROD=true',
+    });
+  }
+
   if (!data.SECURITY_SCAN_ROOT || !data.SECURITY_SCAN_ROOT.trim()) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

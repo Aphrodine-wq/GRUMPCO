@@ -67,6 +67,7 @@ import { startScheduledAgentsWorker, stopScheduledAgentsWorker, loadRepeatableJo
 import { apiAuthMiddleware } from './middleware/authMiddleware.js';
 import { kimiOptimizationMiddleware, kimiPromptOptimizationMiddleware } from './middleware/kimiMiddleware.js';
 import { env } from './config/env.js';
+import { timingSafeEqualString } from './utils/security.js';
 import type { Server } from 'http';
 
 const app: Express = express();
@@ -305,7 +306,7 @@ let gpuMetricsInterval: ReturnType<typeof setInterval> | null = null;
           }
           const auth = req.headers.authorization;
           const expected = `Basic ${Buffer.from(env.METRICS_AUTH).toString('base64')}`;
-          if (auth !== expected) {
+          if (!auth || !timingSafeEqualString(auth, expected)) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
           }

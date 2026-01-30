@@ -7,9 +7,13 @@ import { Router, Request, Response } from 'express';
 import { ragQuery, runIndexer } from '../services/ragService.js';
 import { getTieredCache } from '../services/tieredCache.js';
 import logger from '../middleware/logger.js';
+import { timingSafeEqualString } from '../utils/security.js';
 
 const router = Router();
 const RAG_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_QUERY_LENGTH = 4000;
+const MAX_SCHEMA_LENGTH = 4000;
+const ALLOWED_TYPES = ['doc', 'code', 'spec'] as const;
 
 function getRagCacheKey(
   query: string,
@@ -42,19 +46,33 @@ router.post('/query', async (req: Request, res: Response) => {
     if (typeof query !== 'string' || !query.trim()) {
       return res.status(400).json({ error: 'query is required and must be a non-empty string' });
     }
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length > MAX_QUERY_LENGTH) {
+      return res.status(413).json({ error: `query exceeds ${MAX_QUERY_LENGTH} characters` });
+    }
+    if (structuredSchema && typeof structuredSchema === 'string' && structuredSchema.length > MAX_SCHEMA_LENGTH) {
+      return res.status(413).json({ error: `structuredSchema exceeds ${MAX_SCHEMA_LENGTH} characters` });
+    }
+    if (types !== undefined) {
+      const arr = Array.isArray(types) ? types : [types];
+      const invalid = arr.some((t) => !ALLOWED_TYPES.includes(t as (typeof ALLOWED_TYPES)[number]));
+      if (invalid) {
+        return res.status(400).json({ error: 'types must be one of doc|code|spec' });
+      }
+    }
     const opts = {
       ...(outputFormat && { outputFormat }),
       ...(structuredSchema && typeof structuredSchema === 'string' && { structuredSchema }),
       ...(types !== undefined && { types }),
       ...(hybrid === true && { hybrid: true }),
     };
-    const key = getRagCacheKey(query.trim(), opts);
+    const key = getRagCacheKey(trimmedQuery, opts);
     const cache = getTieredCache();
     const cached = await cache.get<Awaited<ReturnType<typeof ragQuery>>>('rag:query', key);
     if (cached) {
       return res.json({ ...cached, fromCache: true });
     }
-    const result = await ragQuery(query.trim(), opts);
+    const result = await ragQuery(trimmedQuery, opts);
     await cache.set('rag:query', key, result, RAG_CACHE_TTL_MS);
     return res.json({ ...result, fromCache: false });
   } catch (e) {
@@ -73,7 +91,8 @@ router.post('/reindex', async (req: Request, res: Response) => {
   const secret = process.env.REINDEX_SECRET;
   if (secret) {
     const h = req.headers['x-reindex-secret'] ?? req.headers.authorization?.replace(/^Bearer\s+/i, '');
-    if (h !== secret) {
+    const provided = typeof h === 'string' ? h : '';
+    if (!timingSafeEqualString(provided, secret)) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
   }

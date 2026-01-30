@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { processShipJob, processCodegenJob } from '../services/jobQueue.js';
 import logger from '../middleware/logger.js';
+import { timingSafeEqualString } from '../utils/security.js';
 
 const router = Router();
 
@@ -10,7 +11,9 @@ function verifyWorkerAuth(req: Request, res: Response): boolean {
   const auth = req.headers.authorization;
   const token = typeof auth === 'string' ? auth.replace(/^Bearer\s+/i, '') : null;
   const alt = typeof req.headers['x-job-secret'] === 'string' ? req.headers['x-job-secret'] : null;
-  if (token === secret || alt === secret) return true;
+  const tokenMatch = token ? timingSafeEqualString(token, secret) : false;
+  const altMatch = alt ? timingSafeEqualString(alt, secret) : false;
+  if (tokenMatch || altMatch) return true;
   res.status(401).json({ error: 'Unauthorized' });
   return false;
 }

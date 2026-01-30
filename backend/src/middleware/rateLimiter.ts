@@ -38,8 +38,18 @@ const TIER_MULTIPLIERS: Record<TierId, number> = {
 };
 
 function getTierFromRequest(req: Request): TierId {
-  const h = (req.headers['x-tier'] as string)?.toLowerCase();
-  if (h === 'pro' || h === 'team' || h === 'enterprise') return h;
+  // SECURITY: Only trust tier from authenticated user context, never from client header
+  // The tier must be set by auth middleware after verifying JWT claims or database lookup
+  const authReq = req as RequestWithAuth;
+  const userTier = authReq.user?.tier as TierId | undefined;
+  if (userTier && ['pro', 'team', 'enterprise'].includes(userTier)) {
+    return userTier;
+  }
+  // Fallback: check if tier was set by auth middleware on session
+  const sessionTier = authReq.session?.tier as TierId | undefined;
+  if (sessionTier && ['pro', 'team', 'enterprise'].includes(sessionTier)) {
+    return sessionTier;
+  }
   return 'free';
 }
 
@@ -90,8 +100,8 @@ const GLOBAL_LIMIT: RateLimitConfig = {
 };
 
 interface RequestWithAuth extends Request {
-  user?: { id?: string };
-  session?: { userId?: string };
+  user?: { id?: string; tier?: TierId };
+  session?: { userId?: string; tier?: TierId };
 }
 
 /**

@@ -10,6 +10,7 @@
 import { Router, Request, Response } from 'express';
 import { claudeServiceWithTools } from '../services/claudeServiceWithTools.js';
 import logger from '../middleware/logger.js';
+import { timingSafeEqualString } from '../utils/security.js';
 
 const router = Router();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -21,7 +22,8 @@ function verifyWebhook(req: Request): { ok: boolean; missingInProd?: boolean } {
   }
   if (!secret) return { ok: true };
   const header = req.headers['x-webhook-secret'] ?? req.headers['x-twilio-secret'];
-  return { ok: header === secret };
+  const provided = typeof header === 'string' ? header : '';
+  return { ok: timingSafeEqualString(provided, secret) };
 }
 
 /** Resolve phone number to user key (default: 'default' for now). */

@@ -14,7 +14,7 @@ export function initializeMermaid(config?: MermaidConfig) {
     startOnLoad: false,
     theme: theme as any,
     darkMode: isDark,
-    securityLevel: 'loose',
+    securityLevel: 'strict',
     fontFamily: 'Inter, sans-serif',
     ...config,
   });
