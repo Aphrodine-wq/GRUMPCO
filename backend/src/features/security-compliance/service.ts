@@ -31,6 +31,29 @@ import {
 
 const anthropic = new Anthropic();
 
+/** Allowed root for security scans. Resolved path must be under this root to prevent path traversal. */
+function getSecurityScanRoot(): string {
+  const root = process.env.SECURITY_SCAN_ROOT || process.cwd();
+  return path.resolve(root);
+}
+
+/**
+ * Validate workspacePath: must resolve to a path under the allowed scan root.
+ * Prevents path traversal (e.g. ../../etc) and absolute paths outside root.
+ */
+export function validateWorkspacePath(workspacePath: string): { ok: true; resolved: string } | { ok: false; reason: string } {
+  const root = getSecurityScanRoot();
+  const resolved = path.resolve(workspacePath);
+  const rootSep = root + path.sep;
+  if (resolved !== root && !resolved.startsWith(rootSep)) {
+    return {
+      ok: false,
+      reason: 'workspacePath must be under the allowed scan root (set SECURITY_SCAN_ROOT or use a path under the current working directory)',
+    };
+  }
+  return { ok: true, resolved };
+}
+
 // Known secret patterns (regex)
 const SECRET_PATTERNS: Array<{ name: string; pattern: RegExp; type: SecretFinding['type']; severity: SecretFinding['severity'] }> = [
   { name: 'AWS Access Key', pattern: /AKIA[0-9A-Z]{16}/g, type: 'api-key', severity: 'critical' },

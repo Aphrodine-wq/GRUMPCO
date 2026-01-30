@@ -2,6 +2,19 @@
 
 Use this checklist to get G-Rump up and running and ready for production.
 
+## Security (required when API is reachable by untrusted users)
+
+When the backend is publicly reachable (e.g. web app, public API), you **must**:
+
+- [ ] Set `BLOCK_SUSPICIOUS_PROMPTS=true` so prompt-injection–style patterns in user input are rejected (see [validator](../backend/src/middleware/validator.ts)). Diagram, ship, PRD, architecture, and codegen routes use the validator.
+- [ ] Set `REQUIRE_AUTH_FOR_API=true` so `/api/chat`, `/api/ship`, and `/api/codegen` require authentication. Unauthenticated requests to those paths will receive 401.
+- [ ] **Secrets (production-only):** Set webhook and service secrets for any feature you enable:
+  - `GRUMP_WEBHOOK_SECRET` – required in production if you use inbound/outbound webhooks; when unset, webhook routes return 503.
+  - `TWILIO_WEBHOOK_SECRET` – required in production when `MESSAGING_PROVIDER=twilio`; when unset, the messaging inbound route returns 503.
+  - `STRIPE_WEBHOOK_SECRET` (and `STRIPE_SECRET_KEY`) – required if you use Stripe billing; `POST /api/billing/webhook` uses raw body for signature verification.
+- [ ] For security scan endpoints (`/api/security/*`), set `SECURITY_SCAN_ROOT` to restrict scan paths; otherwise the current working directory is used as the allowed root. See [security-compliance](../backend/src/features/security-compliance/service.ts).
+- [ ] Restrict **metrics** (`/metrics`) with `METRICS_AUTH` (Basic auth) and firewall so only your monitoring can reach it.
+
 ## Environment and Secrets
 
 - [ ] Set `NODE_ENV=production`.
@@ -21,8 +34,8 @@ Use this checklist to get G-Rump up and running and ready for production.
 
 ## Abuse Prevention
 
-- [ ] Set `BLOCK_SUSPICIOUS_PROMPTS=true` in production so that prompt-injection–style patterns in user input are rejected (see [validator](backend/src/middleware/validator.ts)). Diagram, ship, PRD, architecture, and codegen routes use the validator.
-- [ ] Use Redis for rate limiting (see above). Ensure `REQUIRE_AUTH_FOR_API=true` when the backend is public so `/api/chat`, `/api/ship`, and `/api/codegen` require auth.
+- [ ] Set `BLOCK_SUSPICIOUS_PROMPTS=true` in production (see **Security** section above).
+- [ ] Use Redis for rate limiting (see above). Set `REQUIRE_AUTH_FOR_API=true` when the backend is public (see **Security** section above).
 
 ## Database
 

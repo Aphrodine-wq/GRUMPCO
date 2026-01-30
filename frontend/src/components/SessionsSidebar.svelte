@@ -1,7 +1,7 @@
 <script lang="ts">
   import { CollapsibleSidebar, Button } from '../lib/design-system';
   import { sessionsStore, sortedSessions, currentSession } from '../stores/sessionsStore';
-  import { showSettings, sidebarCollapsed } from '../stores/uiStore';
+  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, sidebarCollapsed } from '../stores/uiStore';
   import OpenRepoModal from './OpenRepoModal.svelte';
   import type { Session } from '../types';
 
@@ -26,6 +26,9 @@
   function handleSelectSession(id: string) {
     sessionsStore.switchSession(id);
     showSettings.set(false);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
     if (window.innerWidth < 768) {
       mobileMenuOpen = false;
     }
@@ -40,6 +43,41 @@
 
   function openSettings() {
     showSettings.set(true);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
+    showDesignToCode.set(false);
+  }
+
+  function openAskDocs() {
+    showAskDocs.set(true);
+    showSettings.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
+    showDesignToCode.set(false);
+  }
+
+  function openVoiceCode() {
+    showVoiceCode.set(true);
+    showSettings.set(false);
+    showAskDocs.set(false);
+    showSwarm.set(false);
+    showDesignToCode.set(false);
+  }
+
+  function openDesignToCode() {
+    showDesignToCode.set(true);
+    showSettings.set(false);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
+  }
+
+  function openSwarm() {
+    showSwarm.set(true);
+    showSettings.set(false);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
   }
 
   function formatDate(timestamp: number): string {
@@ -228,6 +266,92 @@
     </div>
     {#snippet footer()}
       <div class="sidebar-footer-content" class:collapsed>
+        <div class="cost-snippet-wrap">
+          <CostSnippet compact={collapsed} refreshMs={60000} />
+        </div>
+        <button class="settings-btn" title="Voice code" aria-label="Voice code" onclick={openVoiceCode}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 1a3 3 0 0 1 3 3v8a3 3 0 0 1-6 0V4a3 3 0 0 1 3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+          {#if !collapsed}
+            <span>Voice code</span>
+          {/if}
+        </button>
+        <button class="settings-btn" title="Agent swarm" aria-label="Agent swarm" onclick={openSwarm}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          {#if !collapsed}
+            <span>Agent swarm</span>
+          {/if}
+        </button>
+        <button class="settings-btn" title="Design to code" aria-label="Design to code" onclick={openDesignToCode}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <line x1="3" y1="9" x2="21" y2="9" />
+            <line x1="9" y1="21" x2="9" y2="9" />
+          </svg>
+          {#if !collapsed}
+            <span>Design to code</span>
+          {/if}
+        </button>
+        <button class="settings-btn" title="Ask docs" aria-label="Ask docs" onclick={openAskDocs}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            <path d="M8 7h8" />
+            <path d="M8 11h8" />
+          </svg>
+          {#if !collapsed}
+            <span>Ask docs</span>
+          {/if}
+        </button>
         <button class="settings-btn" title="Settings" aria-label="Settings" onclick={openSettings}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -434,6 +558,17 @@
 
   .sidebar-footer-content.collapsed {
     align-items: center;
+  }
+
+  .cost-snippet-wrap {
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+  }
+
+  .sidebar-footer-content.collapsed .cost-snippet-wrap {
+    justify-content: center;
   }
 
   .settings-btn {

@@ -1,6 +1,11 @@
 /**
  * Database Service Layer
  * Provides database abstraction with SQLite (desktop) and PostgreSQL (scale) support
+ * 
+ * Optimizations:
+ * - Prepared statement caching (statements compiled once, reused)
+ * - Query result caching for frequently accessed data
+ * - WAL mode for better concurrency
  */
 
 import fs from 'fs';
@@ -20,6 +25,19 @@ import type { AgentWorkReport } from '../types/agents.js';
 import type { Settings } from '../types/settings.js';
 
 type DbType = 'sqlite' | 'postgresql' | 'supabase';
+
+// Query result cache entry
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+// Cache TTL configuration (in milliseconds)
+const CACHE_TTL = {
+  settings: 5 * 60 * 1000,      // 5 minutes for settings
+  session: 30 * 1000,           // 30 seconds for sessions
+  usage: 60 * 1000,             // 1 minute for usage stats
+};
 
 interface DatabaseConfig {
   type: DbType;
@@ -52,9 +70,107 @@ class DatabaseService {
   private db: DatabaseType.Database | null = null;
   private config: DatabaseConfig;
   private initialized = false;
+  
+  // Prepared statement cache (compiled once, reused)
+  private statementCache = new Map<string, DatabaseType.Statement>();
+  
+  // Query result cache for frequently accessed data
+  private resultCache = new Map<string, CacheEntry<unknown>>();
+  
+  // Cache statistics
+  private cacheStats = {
+    hits: 0,
+    misses: 0,
+    statementsCompiled: 0,
+    statementsCached: 0,
+  };
 
   constructor(config: DatabaseConfig) {
     this.config = config;
+  }
+
+  /**
+   * Get or create a prepared statement (cached for reuse)
+   */
+  private getStatement(sql: string): DatabaseType.Statement {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    let stmt = this.statementCache.get(sql);
+    if (!stmt) {
+      stmt = this.db.prepare(sql);
+      this.statementCache.set(sql, stmt);
+      this.cacheStats.statementsCompiled++;
+      this.cacheStats.statementsCached = this.statementCache.size;
+    }
+    return stmt;
+  }
+
+  /**
+   * Get cached result or execute query
+   */
+  private getCachedOrFetch<T>(
+    cacheKey: string,
+    ttl: number,
+    fetchFn: () => T
+  ): T {
+    const cached = this.resultCache.get(cacheKey) as CacheEntry<T> | undefined;
+    const now = Date.now();
+    
+    if (cached && cached.expiresAt > now) {
+      this.cacheStats.hits++;
+      return cached.data;
+    }
+    
+    this.cacheStats.misses++;
+    const data = fetchFn();
+    this.resultCache.set(cacheKey, {
+      data,
+      expiresAt: now + ttl,
+    });
+    
+    return data;
+  }
+
+  /**
+   * Invalidate cache entries matching a prefix
+   */
+  private invalidateCache(prefix: string): void {
+    for (const key of this.resultCache.keys()) {
+      if (key.startsWith(prefix)) {
+        this.resultCache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStats(): {
+    resultCache: { hits: number; misses: number; hitRate: number; size: number };
+    statementCache: { compiled: number; cached: number };
+  } {
+    const total = this.cacheStats.hits + this.cacheStats.misses;
+    return {
+      resultCache: {
+        hits: this.cacheStats.hits,
+        misses: this.cacheStats.misses,
+        hitRate: total > 0 ? this.cacheStats.hits / total : 0,
+        size: this.resultCache.size,
+      },
+      statementCache: {
+        compiled: this.cacheStats.statementsCompiled,
+        cached: this.cacheStats.statementsCached,
+      },
+    };
+  }
+
+  /**
+   * Clear all caches
+   */
+  clearCaches(): void {
+    this.resultCache.clear();
+    // Don't clear statement cache - statements remain valid
+    logger.debug('Database result cache cleared');
   }
 
   /**
@@ -74,11 +190,29 @@ class DatabaseService {
         const dir = path.dirname(path.resolve(dbPath));
         fs.mkdirSync(dir, { recursive: true });
         this.db = new Database(dbPath);
-        this.db.pragma('journal_mode = WAL'); // Better concurrency
-        this.db.pragma('foreign_keys = ON'); // Enable foreign keys
+        
+        // Performance pragmas
+        this.db.pragma('journal_mode = WAL');           // Better concurrency
+        this.db.pragma('synchronous = NORMAL');         // Balance safety/speed
+        this.db.pragma('cache_size = -64000');          // 64MB cache
+        this.db.pragma('temp_store = MEMORY');          // Temp tables in memory
+        this.db.pragma('mmap_size = 268435456');        // 256MB memory-mapped I/O
+        this.db.pragma('foreign_keys = ON');            // Enable foreign keys
+        this.db.pragma('busy_timeout = 5000');          // 5s timeout for locks
+        
+        // Verify WAL mode
+        const journalMode = this.db.pragma('journal_mode');
+        logger.debug({ journalMode }, 'SQLite journal mode');
 
         runMigrations(this.db);
-        logger.info({ path: dbPath }, 'SQLite database initialized');
+        logger.info({ 
+          path: dbPath,
+          pragmas: {
+            journalMode: 'WAL',
+            cacheSize: '64MB',
+            mmapSize: '256MB',
+          }
+        }, 'SQLite database initialized with optimizations');
       } else if (this.config.type === 'postgresql') {
         // PostgreSQL would use pg library
         // For now, we'll implement SQLite as primary
@@ -98,10 +232,16 @@ class DatabaseService {
    */
   async close(): Promise<void> {
     if (this.db) {
+      // Clear caches before closing
+      this.resultCache.clear();
+      this.statementCache.clear();
+      
       this.db.close();
       this.db = null;
       this.initialized = false;
-      logger.info('Database connection closed');
+      logger.info({
+        cacheStats: this.getCacheStats(),
+      }, 'Database connection closed');
     }
   }
 
@@ -491,16 +631,23 @@ class DatabaseService {
 
   /**
    * Get settings by user key (e.g. userId or 'default')
+   * Uses result caching for frequently accessed settings
    */
   async getSettings(userKey: string): Promise<Settings | null> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare('SELECT data FROM settings WHERE id = ?');
-    const row = stmt.get(userKey) as { data: string } | undefined;
-    if (!row) return null;
-
-    const data = JSON.parse(row.data) as Settings;
-    return data;
+    const cacheKey = `settings:${userKey}`;
+    
+    return this.getCachedOrFetch<Settings | null>(
+      cacheKey,
+      CACHE_TTL.settings,
+      () => {
+        const stmt = this.getStatement('SELECT data FROM settings WHERE id = ?');
+        const row = stmt.get(userKey) as { data: string } | undefined;
+        if (!row) return null;
+        return JSON.parse(row.data) as Settings;
+      }
+    );
   }
 
   /**
@@ -511,11 +658,14 @@ class DatabaseService {
 
     const updatedAt = new Date().toISOString();
     const payload = { ...data, updatedAt };
-    const stmt = this.db.prepare(`
+    const stmt = this.getStatement(`
       INSERT INTO settings (id, data, updated_at) VALUES (?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
     `);
     stmt.run(userKey, JSON.stringify(payload), updatedAt);
+    
+    // Invalidate cache
+    this.invalidateCache(`settings:${userKey}`);
   }
 
   // ========== Usage Records ==========
@@ -609,7 +759,7 @@ class DatabaseService {
   }
 
   /**
-   * Get API usage summary
+   * Get API usage summary (cached for 1 minute)
    */
   async getUsageSummary(userId: string): Promise<{
     totalRequests: number;
@@ -623,31 +773,115 @@ class DatabaseService {
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const cacheKey = `usage:summary:${userId}:${startOfMonth.toISOString().slice(0, 7)}`;
 
+    return this.getCachedOrFetch(
+      cacheKey,
+      CACHE_TTL.usage,
+      () => {
+        const stmt = this.getStatement(`
+          SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful,
+            SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failed,
+            COALESCE(SUM(input_tokens), 0) as input_tokens,
+            COALESCE(SUM(output_tokens), 0) as output_tokens,
+            COALESCE(ROUND(AVG(latency_ms)), 0) as avg_latency
+          FROM usage_records
+          WHERE user_id = ? AND created_at >= ?
+        `);
+
+        const result = stmt.get(userId, startOfMonth.toISOString()) as {
+          total?: number; successful?: number; failed?: number;
+          input_tokens?: number; output_tokens?: number; avg_latency?: number;
+        } | undefined;
+        
+        return {
+          totalRequests: result?.total ?? 0,
+          successfulRequests: result?.successful ?? 0,
+          failedRequests: result?.failed ?? 0,
+          monthlyInputTokens: result?.input_tokens ?? 0,
+          monthlyOutputTokens: result?.output_tokens ?? 0,
+          avgLatencyMs: result?.avg_latency ?? 0,
+        };
+      }
+    );
+  }
+
+  // ========== Comments & Version History ==========
+
+  /** Insert a comment (requires migration 010). */
+  insertComment(p: {
+    id: string;
+    project_id: string;
+    entity_type: string;
+    entity_id: string;
+    user_id: string;
+    parent_id?: string | null;
+    body: string;
+  }): void {
+    if (!this.db) throw new Error('Database not initialized');
     const stmt = this.db.prepare(`
-      SELECT
-        COUNT(*) as total,
-        SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful,
-        SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failed,
-        COALESCE(SUM(input_tokens), 0) as input_tokens,
-        COALESCE(SUM(output_tokens), 0) as output_tokens,
-        COALESCE(ROUND(AVG(latency_ms)), 0) as avg_latency
-      FROM usage_records
-      WHERE user_id = ? AND created_at >= ?
+      INSERT INTO comments (id, project_id, entity_type, entity_id, user_id, parent_id, body, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `);
+    stmt.run(p.id, p.project_id, p.entity_type, p.entity_id, p.user_id, p.parent_id ?? null, p.body);
+  }
 
-    const result = stmt.get(userId, startOfMonth.toISOString()) as {
-      total?: number; successful?: number; failed?: number;
-      input_tokens?: number; output_tokens?: number; avg_latency?: number;
-    } | undefined;
-    return {
-      totalRequests: result?.total ?? 0,
-      successfulRequests: result?.successful ?? 0,
-      failedRequests: result?.failed ?? 0,
-      monthlyInputTokens: result?.input_tokens ?? 0,
-      monthlyOutputTokens: result?.output_tokens ?? 0,
-      avgLatencyMs: result?.avg_latency ?? 0,
-    };
+  /** List comments for an entity (requires migration 010). */
+  listComments(entity_type: string, entity_id: string): { id: string; project_id: string; entity_type: string; entity_id: string; user_id: string; parent_id: string | null; body: string; created_at: string; updated_at: string }[] {
+    if (!this.db) throw new Error('Database not initialized');
+    try {
+      const stmt = this.db.prepare('SELECT * FROM comments WHERE entity_type = ? AND entity_id = ? ORDER BY created_at');
+      return stmt.all(entity_type, entity_id) as { id: string; project_id: string; entity_type: string; entity_id: string; user_id: string; parent_id: string | null; body: string; created_at: string; updated_at: string }[];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Insert a version snapshot (requires migration 010). */
+  insertVersion(p: {
+    id: string;
+    project_id: string;
+    entity_type: string;
+    entity_id: string;
+    version: number;
+    data: string;
+    created_by?: string | null;
+  }): void {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.db.prepare(`
+      INSERT INTO version_history (id, project_id, entity_type, entity_id, version, data, created_at, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)
+    `);
+    stmt.run(p.id, p.project_id, p.entity_type, p.entity_id, p.version, p.data, p.created_by ?? null);
+  }
+
+  /** List version history for an entity (requires migration 010). */
+  listVersions(entity_type: string, entity_id: string, limit?: number): { id: string; version: number; data: string; created_at: string; created_by: string | null }[] {
+    if (!this.db) throw new Error('Database not initialized');
+    try {
+      const sql = limit
+        ? 'SELECT id, version, data, created_at, created_by FROM version_history WHERE entity_type = ? AND entity_id = ? ORDER BY version DESC LIMIT ?'
+        : 'SELECT id, version, data, created_at, created_by FROM version_history WHERE entity_type = ? AND entity_id = ? ORDER BY version DESC';
+      const stmt = this.db.prepare(sql);
+      const args = limit ? [entity_type, entity_id, limit] : [entity_type, entity_id];
+      return stmt.all(...args) as { id: string; version: number; data: string; created_at: string; created_by: string | null }[];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Get next version number for entity (requires migration 010). */
+  getNextVersionNumber(entity_type: string, entity_id: string): number {
+    if (!this.db) throw new Error('Database not initialized');
+    try {
+      const stmt = this.db.prepare('SELECT COALESCE(MAX(version), 0) + 1 AS next FROM version_history WHERE entity_type = ? AND entity_id = ?');
+      const row = stmt.get(entity_type, entity_id) as { next: number } | undefined;
+      return row?.next ?? 1;
+    } catch {
+      return 1;
+    }
   }
 
   /**

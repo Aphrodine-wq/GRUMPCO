@@ -75,6 +75,11 @@ const ENDPOINT_LIMITS: Record<string, RateLimitConfig> = {
     max: 10,
     message: 'Too many PRD requests. Please wait a moment.',
   },
+  '/api/voice': {
+    windowMs: 60 * 1000, // 1 minute
+    max: 20,
+    message: 'Too many voice requests. Please wait a moment.',
+  },
 };
 
 // Global fallback rate limit (max scaled by tier)

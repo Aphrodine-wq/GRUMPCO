@@ -1,6 +1,8 @@
+import { createHash } from 'crypto';
 import express, { Request, Response, Router } from 'express';
 import { generateDiagram, generateDiagramStream } from '../services/claudeService.js';
 import { generateProjectZip } from '../services/codeGeneratorService.js';
+import { getTieredCache } from '../services/tieredCache.js';
 import { getRequestLogger } from '../middleware/logger.js';
 import { validateDiagramRequest, handleDiagramValidationErrors } from '../middleware/validator.js';
 import { activeSseConnections } from '../middleware/metrics.js';
@@ -159,6 +161,13 @@ interface CodeGenRequestBody extends Request {
   };
 }
 
+const DIAGRAM_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+function getDiagramCacheKey(message: string, preferences?: UserPreferences): string {
+  const payload = JSON.stringify({ message: message.trim(), preferences: preferences ?? {} });
+  return createHash('sha256').update(payload).digest('hex').substring(0, 32);
+}
+
 // Non-streaming endpoint with validation
 router.post(
   '/generate-diagram',
@@ -180,13 +189,22 @@ router.post(
     }, REQUEST_TIMEOUT);
 
     try {
+      const key = getDiagramCacheKey(message, preferences);
+      const cache = getTieredCache();
+      const cached = await cache.get<string>('diagram:completion', key);
+      if (cached) {
+        clearTimeout(timeoutId);
+        if (res.headersSent) return;
+        return res.json({ success: true, mermaidCode: cached, fromCache: true });
+      }
       const mermaidCode = await generateDiagram(message, preferences);
       clearTimeout(timeoutId);
       if (res.headersSent) return;
-
+      await cache.set('diagram:completion', key, mermaidCode, DIAGRAM_CACHE_TTL_MS);
       res.json({
         success: true,
         mermaidCode,
+        fromCache: false,
       });
     } catch (error) {
       clearTimeout(timeoutId);

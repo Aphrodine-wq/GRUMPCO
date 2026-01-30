@@ -9,6 +9,7 @@
   import type {
     Settings,
     ModelsSettings,
+    ModelPreset,
     AccessibilitySettings,
     GuardRailsSettings,
   } from '../types/settings';
@@ -68,6 +69,8 @@
       label: 'OpenRouter Claude 3.5 Sonnet',
     },
     { provider: 'openrouter' as const, modelId: 'openai/gpt-4o', label: 'OpenRouter GPT-4o' },
+    { provider: 'nim' as const, modelId: 'moonshotai/kimi-k2.5', label: 'Kimi K2.5' },
+    { provider: 'nim' as const, modelId: 'nvidia/nemotron-3-nano-30b-a3b', label: 'Nemotron 3 Nano 30B' },
   ];
 
   onMount(() => {
@@ -203,7 +206,25 @@
       <Card title="Models" padding="md">
         <p class="section-desc">Default AI model for code generation and chat.</p>
         <div class="field-group">
-          <label class="field-label" for="model-select">AI Model</label>
+          <label class="field-label" for="model-preset">Quality vs speed</label>
+          <select
+            id="model-preset"
+            class="custom-select"
+            value={settings?.models?.modelPreset ?? 'balanced'}
+            onchange={(e) => {
+              const v = (e.target as HTMLSelectElement).value as ModelPreset;
+              saveModels({ ...settings?.models, modelPreset: v });
+            }}
+            disabled={saving}
+          >
+            <option value="balanced">Balanced (router default)</option>
+            <option value="fast">Fast (NIM / Kimi)</option>
+            <option value="quality">Quality (Claude)</option>
+          </select>
+          <p class="field-hint">Fast = cheaper and lower latency; Quality = best capability; Balanced = auto by task.</p>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="model-select">AI Model (override)</label>
           <select
             id="model-select"
             class="custom-select"

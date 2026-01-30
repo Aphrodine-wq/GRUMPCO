@@ -1,17 +1,39 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   interface Stage {
     id: string;
     label: string;
     status: 'pending' | 'active' | 'completed' | 'error';
     timeEstimate?: number; // in seconds
+    startTime?: number; // timestamp
+    endTime?: number; // timestamp
   }
 
   interface Props {
     stages: Stage[];
     showTimeEstimates?: boolean;
+    showElapsedTime?: boolean;
   }
 
-  let { stages, showTimeEstimates = false }: Props = $props();
+  let { stages, showTimeEstimates = false, showElapsedTime = true }: Props = $props();
+
+  let elapsedSeconds = $state(0);
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+
+  onMount(() => {
+    // Update elapsed time every second
+    intervalId = setInterval(() => {
+      const activeStage = stages.find(s => s.status === 'active');
+      if (activeStage?.startTime) {
+        elapsedSeconds = Math.floor((Date.now() - activeStage.startTime) / 1000);
+      }
+    }, 1000);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  });
 
   function getStageIndex(id: string): number {
     return stages.findIndex(s => s.id === id);
@@ -29,6 +51,32 @@
   function hasError(): boolean {
     return stages.some(s => s.status === 'error');
   }
+
+  function getTotalEstimatedTime(): number {
+    return stages.reduce((sum, stage) => sum + (stage.timeEstimate || 0), 0);
+  }
+
+  function getRemainingTime(): number {
+    const remaining = stages
+      .filter(s => s.status === 'pending' || s.status === 'active')
+      .reduce((sum, stage) => sum + (stage.timeEstimate || 0), 0);
+    return Math.max(0, remaining - elapsedSeconds);
+  }
+
+  function formatTime(seconds: number): string {
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}m ${secs}s`;
+  }
+
+  function getActualDuration(stage: Stage): string {
+    if (stage.startTime && stage.endTime) {
+      const duration = Math.floor((stage.endTime - stage.startTime) / 1000);
+      return formatTime(duration);
+    }
+    return '';
+  }
 </script>
 
 <div class="progress-indicator">
@@ -36,9 +84,16 @@
     <div class="progress-title">
       Progress: {getCompletedCount()} / {stages.length} stages
     </div>
-    {#if hasError()}
-      <div class="progress-error-badge">Error</div>
-    {/if}
+    <div class="progress-header-right">
+      {#if showElapsedTime && getRemainingTime() > 0}
+        <div class="progress-time-estimate">
+          ~{formatTime(getRemainingTime())} remaining
+        </div>
+      {/if}
+      {#if hasError()}
+        <div class="progress-error-badge">Error</div>
+      {/if}
+    </div>
   </div>
 
   <div class="progress-bar-container">
@@ -49,6 +104,12 @@
         style="width: {getProgressPercentage()}%"
       ></div>
     </div>
+    {#if showTimeEstimates && getTotalEstimatedTime() > 0}
+      <div class="progress-bar-labels">
+        <span class="progress-bar-label">0s</span>
+        <span class="progress-bar-label">{formatTime(getTotalEstimatedTime())}</span>
+      </div>
+    {/if}
   </div>
 
   <div class="stages-list">
@@ -73,9 +134,22 @@
         </div>
         <div class="stage-content">
           <div class="stage-label">{stage.label}</div>
-          {#if showTimeEstimates && stage.timeEstimate}
-            <div class="stage-time">~{stage.timeEstimate}s</div>
-          {/if}
+          <div class="stage-meta">
+            {#if stage.status === 'active' && showElapsedTime}
+              <div class="stage-time active">
+                {formatTime(elapsedSeconds)}
+                {#if stage.timeEstimate}
+                  / ~{formatTime(stage.timeEstimate)}
+                {/if}
+              </div>
+            {:else if stage.status === 'completed' && getActualDuration(stage)}
+              <div class="stage-time completed">
+                ✓ {getActualDuration(stage)}
+              </div>
+            {:else if showTimeEstimates && stage.timeEstimate}
+              <div class="stage-time">~{formatTime(stage.timeEstimate)}</div>
+            {/if}
+          </div>
         </div>
         {#if stage.status === 'active'}
           <div class="stage-pulse"></div>
@@ -99,12 +173,25 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
+    gap: 1rem;
   }
 
   .progress-title {
     font-size: 0.875rem;
     font-weight: 600;
     color: #E5E5E5;
+  }
+
+  .progress-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .progress-time-estimate {
+    font-size: 0.75rem;
+    color: #0EA5E9;
+    font-weight: 500;
   }
 
   .progress-error-badge {
@@ -236,8 +323,9 @@
   .stage-content {
     flex: 1;
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
   }
 
   .stage-label {
@@ -249,8 +337,35 @@
     color: #6B7280;
   }
 
+  .stage-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
   .stage-time {
     font-size: 0.75rem;
+    color: #6B7280;
+    white-space: nowrap;
+  }
+
+  .stage-time.active {
+    color: #0EA5E9;
+    font-weight: 500;
+  }
+
+  .stage-time.completed {
+    color: #10B981;
+  }
+
+  .progress-bar-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.25rem;
+  }
+
+  .progress-bar-label {
+    font-size: 0.625rem;
     color: #6B7280;
   }
 

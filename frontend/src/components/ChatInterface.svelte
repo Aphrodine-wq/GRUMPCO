@@ -76,9 +76,12 @@
   let typingTimeout: ReturnType<typeof setTimeout> | null = null;
   let editingMessageIndex = $state<number | null>(null);
   let demoRunning = $state(false);
+  let pendingImageDataUrl = $state<string | null>(null);
+  let imageInputRef = $state<HTMLInputElement | null>(null);
 
   // Use the global showSettings store
   const showSettingsValue = $derived($showSettings);
+  let isNimProvider = $state(false);
 
   $effect(() => {
     if (chatModeStore) {
@@ -107,15 +110,32 @@
   }
 
   function flattenMessagesForChatApi(
-    msgs: Message[]
-  ): Array<{ role: 'user' | 'assistant'; content: string }> {
-    return msgs
-      .filter((m) => m.role === 'user' || m.role === 'assistant')
-      .map((m) => ({
-        role: m.role as 'user' | 'assistant',
-        content: typeof m.content === 'string' ? m.content : flattenTextContent(m.content),
-      }))
-      .filter((m) => (m.content || '').trim().length > 0);
+    msgs: Message[],
+    opts?: { lastUserMessageImage?: string | null; provider?: string }
+  ): Array<{ role: 'user' | 'assistant'; content: string | { type: 'text'; text: string }[] | ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[] }> {
+    const filtered = msgs.filter((m) => m.role === 'user' || m.role === 'assistant');
+    const nim = opts?.provider === 'nim';
+    const img = opts?.lastUserMessageImage;
+    const lastUserIdx = filtered.map((m) => m.role).lastIndexOf('user');
+
+    return filtered
+      .map((m, i) => {
+        const role = m.role as 'user' | 'assistant';
+        const raw = typeof m.content === 'string' ? m.content : flattenTextContent(m.content);
+        const text = (raw || '').trim();
+        if (role === 'assistant') return { role, content: text };
+        if (nim && img && i === lastUserIdx) {
+          const parts: ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[] = [];
+          if (text) parts.push({ type: 'text', text });
+          parts.push({ type: 'image_url', image_url: { url: img } });
+          return { role, content: parts };
+        }
+        return { role, content: text };
+      })
+      .filter((m) => {
+        if (typeof m.content === 'string') return m.content.length > 0;
+        return (m.content as { type: string; text?: string }[]).some((p) => p.type === 'text' ? (p.text ?? '').trim().length > 0 : true);
+      });
   }
 
   function scrollToBottom() {
@@ -190,9 +210,32 @@
     return index === messages.length - 1 && messages[index].role === 'assistant';
   }
 
+  function triggerImageUpload() {
+    imageInputRef?.click();
+  }
+
+  async function onImageFileChange(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !file.type.startsWith('image/')) return;
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+    pendingImageDataUrl = dataUrl;
+    showToast('Image attached', 'success');
+  }
+
   async function sendMessage() {
     const text = inputText.trim();
-    if (!text || streaming) return;
+    const s = settingsStore.getCurrent();
+    const isNim = (s?.models?.defaultProvider ?? '') === 'nim';
+    const hasImage = Boolean(pendingImageDataUrl);
+    const canSend = text || (isNim && hasImage);
+    if (!canSend || streaming) return;
     // --- Mode Switching Logic ---
     const mode = get(chatModeStore);
     lastUserMessage = text;
@@ -228,13 +271,17 @@
     }
 
     if (mode === 'code') {
-      // Standard code mode message
-      // We'll treat 'code' mode in 'normal' chat submode as a regular chat
-      // unless we want to trigger specific coding actions.
-      // For now, let's route to standard stream for 'normal' submode,
-      // or specialized streams for others if implemented.
-      // However, pure "Code Mode" usually implies `codeSessionsStore`.
-      // Let's use runCodeModeStream if intended.
+      if (editingMessageIndex != null && editingMessageIndex >= 0) {
+        const updated = [...messages];
+        updated[editingMessageIndex] = { role: 'user', content: text, timestamp: Date.now() };
+        messages = updated;
+        editingMessageIndex = null;
+      } else {
+        messages = [...messages, { role: 'user', content: text, timestamp: Date.now() }];
+      }
+      inputText = '';
+      await tick();
+      scrollToBottom();
       await runCodeModeStream(controller.signal);
       return;
     }
@@ -340,8 +387,15 @@
   }
 
   async function runCodeModeStream(signal: AbortSignal) {
-    const apiMessages = flattenMessagesForChatApi(messages);
+    let fromCacheThisStream = false;
+    const s = settingsStore.getCurrent();
+    const provider = s?.models?.defaultProvider ?? 'anthropic';
+    const apiMessages = flattenMessagesForChatApi(messages, {
+      lastUserMessageImage: pendingImageDataUrl,
+      provider,
+    });
     if (apiMessages.length === 0) throw new Error('No messages to send');
+    pendingImageDataUrl = null;
     let ws = workspaceInput.trim() || get(workspaceStore).root || undefined;
     if (ws) workspaceStore.setWorkspace(ws);
     const body: Record<string, unknown> = {
@@ -356,9 +410,9 @@
       planId: currentPlanId || undefined,
       specSessionId: currentSpecSessionId || undefined,
     };
-    const s = settingsStore.getCurrent();
     if (s?.models?.defaultProvider) body.provider = s.models.defaultProvider;
     if (s?.models?.defaultModelId) body.modelId = s.models.defaultModelId;
+    if (s?.models?.modelPreset) body.modelPreset = s.models.modelPreset;
     if (s?.guardRails?.autonomousMode) body.autonomous = true;
     if (s?.guardRails?.useLargeContext) body.largeContext = true;
     const response = await fetchApi('/api/chat/stream', {
@@ -384,9 +438,15 @@
           const ev = JSON.parse(raw);
           if (ev.type === 'autonomous' && ev.value) {
             /* Yolo mode: backend signaled autonomous; confirmations are skipped by backend. */
+          } else if (ev.type === 'from_cache' && ev.value) {
+            /* Backend served from cache; next text event will be full content – show immediately. */
+            fromCacheThisStream = true;
           } else if (ev.type === 'text' && ev.text) {
             const last = streamingBlocks[streamingBlocks.length - 1];
-            if (last?.type === 'text') {
+            if (fromCacheThisStream) {
+              streamingBlocks = [...streamingBlocks, { type: 'text', content: ev.text }];
+              fromCacheThisStream = false;
+            } else if (last?.type === 'text') {
               streamingBlocks = [
                 ...streamingBlocks.slice(0, -1),
                 { type: 'text', content: last.content + ev.text },
@@ -557,6 +617,9 @@
     const w = get(workspaceStore).root;
     if (w) workspaceInput = w;
     document.addEventListener('keydown', handleGlobalKeydown);
+    const unsubSettings = settingsStore.subscribe((s) => {
+      isNimProvider = (s?.models?.defaultProvider ?? '') === 'nim';
+    });
     const handleOpenShipMode = () => {
       chatMode = 'ship';
     };
@@ -568,6 +631,7 @@
     window.addEventListener('close-ship-mode', handleCloseShipMode);
 
     return () => {
+      unsubSettings();
       document.removeEventListener('keydown', handleGlobalKeydown);
       window.removeEventListener('open-ship-mode', handleOpenShipMode);
       window.removeEventListener('close-ship-mode', handleCloseShipMode);
@@ -740,7 +804,38 @@
                     disabled={streaming}
                   />
                 </div>
-                <button class="send-button" type="submit" disabled={!inputText.trim() || streaming}>
+                {#if isNimProvider}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="hidden-file-input"
+                    bind:this={imageInputRef}
+                    onchange={onImageFileChange}
+                    aria-label="Attach image"
+                  />
+                  <button
+                    type="button"
+                    class="attach-image-btn"
+                    title="Attach image (Kimi)"
+                    aria-label="Attach image"
+                    onclick={triggerImageUpload}
+                    disabled={streaming}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    {#if pendingImageDataUrl}
+                      <span class="attach-badge">1</span>
+                    {/if}
+                  </button>
+                {/if}
+                <button
+                  class="send-button"
+                  type="submit"
+                  disabled={(!inputText.trim() && !(isNimProvider && pendingImageDataUrl)) || streaming}
+                >
                   {#if streaming}
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -1178,6 +1273,56 @@
   .send-button:disabled {
     background: #d1d5db;
     cursor: not-allowed;
+  }
+
+  .hidden-file-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .attach-image-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e5e7eb;
+    color: #4b5563;
+    border: none;
+    border-radius: 0.5rem;
+    width: 2rem;
+    height: 2rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    padding: 0;
+  }
+
+  .attach-image-btn:hover:not(:disabled) {
+    background: #d1d5db;
+  }
+
+  .attach-image-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .attach-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: #3b82f6;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 600;
+    min-width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
   }
 
   /* Mode Selector */

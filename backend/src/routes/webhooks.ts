@@ -88,6 +88,21 @@ router.post('/outbound', (req: Request<Record<string, never>, object, { url?: st
     res.status(400).json({ error: 'Missing or invalid url', type: 'validation_error' });
     return;
   }
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    res.status(400).json({ error: 'Invalid url format', type: 'validation_error' });
+    return;
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    res.status(400).json({ error: 'url must use http or https', type: 'validation_error' });
+    return;
+  }
+  if (isProduction && parsed.protocol !== 'https:') {
+    res.status(400).json({ error: 'In production, outbound webhook url must use https', type: 'validation_error' });
+    return;
+  }
   registerWebhook(url, events as WebhookEvent[] | undefined);
   res.json({
     ok: true,

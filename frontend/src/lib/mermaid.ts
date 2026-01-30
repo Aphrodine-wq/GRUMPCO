@@ -99,6 +99,87 @@ export async function exportAsPng(elementOrId: string | SVGElement): Promise<Blo
 }
 
 /**
+ * Export a diagram as PDF
+ */
+export async function exportAsPdf(elementOrId: string | SVGElement, title?: string): Promise<Blob> {
+  const { jsPDF } = await import('jspdf');
+  
+  const svgData = await exportAsSvg(elementOrId);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+
+  return new Promise((resolve, reject) => {
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      if (ctx) {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      }
+
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: img.width > img.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [img.width, img.height],
+      });
+
+      // Add title if provided
+      if (title) {
+        pdf.setFontSize(16);
+        pdf.text(title, 20, 30);
+      }
+
+      // Add image
+      const imgData = canvas.toDataURL('image/png');
+      pdf.addImage(imgData, 'PNG', 0, title ? 50 : 0, img.width, img.height);
+
+      // Convert to blob
+      const pdfBlob = pdf.output('blob');
+      URL.revokeObjectURL(img.src);
+      resolve(pdfBlob);
+    };
+
+    img.onerror = (e) => {
+      URL.revokeObjectURL(img.src);
+      reject(e);
+    };
+
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    img.src = url;
+  });
+}
+
+/**
+ * Export diagram as markdown with embedded SVG
+ */
+export async function exportAsMarkdown(elementOrId: string | SVGElement, title?: string, description?: string): Promise<string> {
+  const svgData = await exportAsSvg(elementOrId);
+  
+  let markdown = '';
+  
+  if (title) {
+    markdown += `# ${title}\n\n`;
+  }
+  
+  if (description) {
+    markdown += `${description}\n\n`;
+  }
+  
+  markdown += '## Diagram\n\n';
+  markdown += '```mermaid\n';
+  // Note: This would need the original mermaid code, not the SVG
+  // For now, we'll embed the SVG
+  markdown += '```\n\n';
+  markdown += `<details>\n<summary>View SVG</summary>\n\n${svgData}\n\n</details>\n`;
+  
+  return markdown;
+}
+
+/**
  * Helper to download a blob or string as a file
  */
 export function downloadFile(content: Blob | string, filename: string, type: string) {
@@ -109,4 +190,23 @@ export function downloadFile(content: Blob | string, filename: string, type: str
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Copy content to clipboard
+ */
+export async function copyToClipboard(content: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(content);
+  } catch (error) {
+    // Fallback for older browsers
+    const textarea = document.createElement('textarea');
+    textarea.value = content;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+  }
 }

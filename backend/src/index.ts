@@ -4,6 +4,7 @@ import { initializeDatabase, closeDatabase } from './db/database.js';
 import express, { Request, Response, NextFunction, Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import { requestIdMiddleware, httpLogger } from './middleware/logger.js';
 import { applyRateLimiting } from './middleware/rateLimiter.js';
 import { metricsMiddleware, getMetrics } from './middleware/metrics.js';
@@ -41,9 +42,17 @@ import collaborationRoutes from './routes/collaboration.js';
 import analyticsRoutes from './routes/analytics.js';
 import templatesRoutes from './routes/templates.js';
 import workspaceRoutes from './routes/workspace.js';
+import demoRoutes from './routes/demo.js';
+import integrationsRoutes from './features/integrations/routes.js';
+import ragRoutes from './routes/rag.js';
+import voiceRoutes from './routes/voice.js';
+import memoryRoutes from './routes/memory.js';
+import visionRoutes from './routes/vision.js';
 import { findAvailablePort } from './utils/portUtils.js';
 import { skillRegistry } from './skills/index.js';
 import { startJobWorker, stopJobWorker } from './services/jobQueue.js';
+import { getNIMAccelerator } from './services/nimAccelerator.js';
+import { updateGpuMetrics } from './middleware/metrics.js';
 import { isServerlessRuntime } from './config/runtime.js';
 import { startScheduledAgentsWorker, stopScheduledAgentsWorker, loadRepeatableJobsFromDb } from './services/scheduledAgentsQueue.js';
 import { apiAuthMiddleware } from './middleware/authMiddleware.js';
@@ -126,6 +135,25 @@ app.use(httpLogger);
 // Metrics middleware
 app.use(metricsMiddleware);
 
+// Compression middleware (Brotli + gzip)
+app.use(
+  compression({
+    level: 6, // Balance between speed and compression ratio
+    threshold: 1024, // Only compress responses > 1KB
+    filter: (req, res) => {
+      // Don't compress if client doesn't support it
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      // Don't compress SSE streams
+      if (res.getHeader('Content-Type')?.toString().includes('text/event-stream')) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+  })
+);
+
 // Stripe webhook (raw body required for signature verification) – must be before express.json
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
@@ -140,6 +168,7 @@ app.use(requestTimeout);
 
 // Graceful shutdown with automatic port detection
 let server: Server | undefined;
+let gpuMetricsInterval: ReturnType<typeof setInterval> | null = null;
 
 (async () => {
   try {
@@ -196,6 +225,12 @@ let server: Server | undefined;
     app.use('/api/analytics', analyticsRoutes);
     app.use('/api/templates', templatesRoutes);
     app.use('/api/workspace', workspaceRoutes);
+    app.use('/api/demo', demoRoutes);
+    app.use('/api/integrations', integrationsRoutes);
+    app.use('/api/rag', ragRoutes);
+    app.use('/api/memory', memoryRoutes);
+    app.use('/api/vision', visionRoutes);
+    app.use('/api/voice', voiceRoutes);
     app.use('/health', healthRoutes);
 
     // Metrics endpoint
@@ -250,11 +285,28 @@ let server: Server | undefined;
           { port: PORT, host, env: process.env.NODE_ENV || 'development' },
           'Server started'
         );
+        // Periodic GPU metrics (every 45s) when NIM is configured
+        const nim = getNIMAccelerator();
+        if (nim) {
+          gpuMetricsInterval = setInterval(async () => {
+            try {
+              const gpu = await nim.getGpuMetrics();
+              if (gpu) {
+                updateGpuMetrics('nim-0', gpu.utilization, gpu.memoryUsed);
+              } else {
+                updateGpuMetrics('nim-0', 0, 0);
+              }
+            } catch {
+              updateGpuMetrics('nim-0', 0, 0);
+            }
+          }, 45_000);
+        }
       });
     }
 
     process.on('SIGTERM', async () => {
       logger.info('SIGTERM received, shutting down gracefully');
+      if (gpuMetricsInterval) clearInterval(gpuMetricsInterval);
       await stopJobWorker();
       await stopScheduledAgentsWorker();
       server?.close(async () => {
@@ -268,6 +320,7 @@ let server: Server | undefined;
 
     process.on('SIGINT', async () => {
       logger.info('SIGINT received, shutting down gracefully');
+      if (gpuMetricsInterval) clearInterval(gpuMetricsInterval);
       await stopJobWorker();
       await stopScheduledAgentsWorker();
       server?.close(async () => {

@@ -1,0 +1,309 @@
+{
+  "dashboard": {
+    "title": "G-Rump Performance & Cost Dashboard",
+    "tags": ["grump", "performance", "cost", "gpu"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Request Rate",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{route}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "reqps", "label": "Requests/sec" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "API Latency (P50, P95, P99)",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P99",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          { "format": "ms", "label": "Latency" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Cache Hit Rate by Layer",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 8, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(tiered_cache_hits_total{layer=\"L1\"}[5m]) / (rate(tiered_cache_hits_total{layer=\"L1\"}[5m]) + rate(tiered_cache_misses_total{layer=\"L1\"}[5m])) * 100",
+            "legendFormat": "L1 (Memory)",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(tiered_cache_hits_total{layer=\"L2\"}[5m]) / (rate(tiered_cache_hits_total{layer=\"L2\"}[5m]) + rate(tiered_cache_misses_total{layer=\"L2\"}[5m])) * 100",
+            "legendFormat": "L2 (Redis)",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(tiered_cache_hits_total{layer=\"L3\"}[5m]) / (rate(tiered_cache_hits_total{layer=\"L3\"}[5m]) + rate(tiered_cache_misses_total{layer=\"L3\"}[5m])) * 100",
+            "legendFormat": "L3 (Disk)",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          { "format": "percent", "label": "Hit Rate", "min": 0, "max": 100 },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "GPU Utilization",
+        "type": "graph",
+        "gridPos": { "x": 8, "y": 8, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "gpu_utilization_percent",
+            "legendFormat": "GPU {{gpu_id}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "percent", "label": "Utilization", "min": 0, "max": 100 },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "GPU Memory Usage",
+        "type": "graph",
+        "gridPos": { "x": 16, "y": 8, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "gpu_memory_used_bytes / 1024 / 1024 / 1024",
+            "legendFormat": "GPU {{gpu_id}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "decgbytes", "label": "Memory Used" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "LLM Cost per Hour",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(llm_cost_total[1h])",
+            "legendFormat": "{{provider}} - {{model}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "currencyUSD", "label": "Cost/Hour" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "LLM Token Usage",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(llm_tokens_total{type=\"input\"}[5m])",
+            "legendFormat": "Input - {{model}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(llm_tokens_total{type=\"output\"}[5m])",
+            "legendFormat": "Output - {{model}}",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          { "format": "short", "label": "Tokens/sec" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Worker Pool Queue Depth",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 24, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "worker_pool_queue_depth",
+            "legendFormat": "Queue Depth",
+            "refId": "A"
+          },
+          {
+            "expr": "worker_pool_active_workers",
+            "legendFormat": "Active Workers",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          { "format": "short", "label": "Count" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Cost Savings from Cache",
+        "type": "stat",
+        "gridPos": { "x": 8, "y": 24, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(cache_cost_savings_total)",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "unit": "currencyUSD",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 100, "color": "yellow" },
+                { "value": 1000, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "System Resource Usage",
+        "type": "graph",
+        "gridPos": { "x": 16, "y": 24, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "process_cpu_usage_percent",
+            "legendFormat": "CPU %",
+            "refId": "A"
+          },
+          {
+            "expr": "process_memory_usage_bytes / 1024 / 1024",
+            "legendFormat": "Memory (MB)",
+            "refId": "B"
+          },
+          {
+            "expr": "nodejs_eventloop_lag_seconds * 1000",
+            "legendFormat": "Event Loop Lag (ms)",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          { "format": "short", "label": "Usage" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Cache Operations per Second",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(tiered_cache_hits_total[5m])",
+            "legendFormat": "Hits - {{layer}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(tiered_cache_misses_total[5m])",
+            "legendFormat": "Misses - {{layer}}",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          { "format": "ops", "label": "Operations/sec" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Model Router Decisions",
+        "type": "piechart",
+        "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by (model) (model_router_selections_total)",
+            "legendFormat": "{{model}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          }
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "datasource",
+          "type": "datasource",
+          "query": "prometheus"
+        },
+        {
+          "name": "interval",
+          "type": "interval",
+          "query": "5m,10m,30m,1h,6h,12h,1d",
+          "current": {
+            "text": "5m",
+            "value": "5m"
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "iconColor": "blue",
+          "tags": ["deployment"]
+        }
+      ]
+    }
+  }
+}

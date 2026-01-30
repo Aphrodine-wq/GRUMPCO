@@ -1,0 +1,90 @@
+# syntax=docker/dockerfile:1.4
+# Highly optimized Alpine-based Dockerfile with multi-stage builds
+
+# Stage 1: Rust builder for intent compiler
+FROM rust:1.77-alpine AS rust-builder
+
+RUN apk add --no-cache musl-dev
+
+WORKDIR /build
+
+# Copy Rust project
+COPY ../intent-compiler/Cargo.toml ../intent-compiler/Cargo.lock ./
+COPY ../intent-compiler/src ./src
+
+# Build with release optimizations
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/build/target \
+    cargo build --release --target x86_64-unknown-linux-musl && \
+    cp target/x86_64-unknown-linux-musl/release/grump-intent /grump-intent
+
+# Stage 2: Node.js builder
+FROM node:20-alpine AS node-builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies with cache
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
+
+# Copy source and build config
+COPY tsconfig.json .swcrc ./
+COPY src ./src
+COPY scripts ./scripts
+
+# Build with SWC
+RUN --mount=type=cache,target=/app/.swc \
+    npm run build && \
+    npm prune --production
+
+# Stage 3: Final production image
+FROM alpine:3.19
+
+# Install Node.js runtime and minimal dependencies
+RUN apk add --no-cache \
+    nodejs \
+    tini \
+    curl \
+    ca-certificates \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+
+# Copy Node.js dependencies from builder
+COPY --from=node-builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+# Copy built application
+COPY --from=node-builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=node-builder --chown=nodejs:nodejs /app/package.json ./
+
+# Copy Rust binary
+COPY --from=rust-builder --chown=nodejs:nodejs /grump-intent /usr/local/bin/
+
+# Create data directory
+RUN mkdir -p /app/data && chown nodejs:nodejs /app/data
+
+# Set environment
+ENV NODE_ENV=production \
+    PORT=3000 \
+    NODE_OPTIONS="--max-old-space-size=2048" \
+    GRUMP_INTENT_PATH=/usr/local/bin/grump-intent
+
+USER nodejs
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health/quick || exit 1
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "dist/index.js"]

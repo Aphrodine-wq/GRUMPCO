@@ -6,7 +6,12 @@
     "frontend",
     "backend",
     "docs-site",
-    "packages/shared-types"
+    "packages/shared-types",
+    "packages/ai-core",
+    "packages/rag",
+    "packages/voice",
+    "packages/memory",
+    "packages/kimi"
   ],
   "description": "AI-powered Mermaid diagram generator",
   "scripts": {

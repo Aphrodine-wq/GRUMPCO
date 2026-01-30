@@ -2,10 +2,14 @@
 
 ## System Overview
 
-G-Rump is a desktop application built with Tauri that combines:
-- **Svelte 5** frontend for the UI
-- **Node.js/Express** backend for API services
-- **Rust** intent compiler for natural language processing
+G-Rump is a high-performance AI development platform (Architecture-as-Code) that combines:
+- **Svelte 5** frontend for the UI (web and Tauri desktop)
+- **Node.js/Express** backend for API services (SWC-compiled)
+- **Rust** intent compiler for natural language processing (parallel + SIMD)
+- **NVIDIA NIM** (optional) for embeddings and inference (Kimi K2.5)
+- **Multi-tier cache** (L1/L2/L3), **worker pool**, **model router** (cost-aware), **rate limiting**, **Supabase** auth, **Stripe** billing, **webhooks**, **SSE** events
+
+For a file-level map of the codebase, see [CODEBASE.md](./CODEBASE.md).
 
 ## Architecture Diagram
 
@@ -52,24 +56,18 @@ G-Rump is a desktop application built with Tauri that combines:
 
 ### Backend (Node.js/Express)
 
-**Services:**
-- `claudeService` - Anthropic API integration
-- `claudeServiceWithTools` - Tool-enabled chat (bash, file read/write/edit, list_dir)
-- `toolExecutionService` - Tool execution (workspace-scoped)
-- `intentCompilerService` - Intent parsing via Rust CLI with Claude Code enrichment
-- `architectureService` - Architecture generation
-- `prdGeneratorService` - PRD generation
-- `codeGeneratorService` - Code generation
-- `agentOrchestrator` - Multi-agent coordination with work report generation
-- `wrunnerService` - Quality assurance and auto-fix system
+**Key entry point:** `backend/src/index.ts` – mounts routes, middleware (auth, rate limit, timeout, metrics), DB, job worker, optional Redis.
 
-**Routes:**
-- `/api/diagram` - Diagram generation
-- `/api/intent` - Intent parsing
-- `/api/architecture` - Architecture generation
-- `/api/prd` - PRD generation
-- `/api/codegen` - Code generation
-- `POST /api/chat/stream` - Tool-enabled chat (workspaceRoot, planMode, agentProfile)
+**Services:**
+- `claudeServiceWithTools` - Tool-enabled chat (bash, file read/write/edit, list_dir); streams via LLM gateway
+- `llmGateway` - Unified streaming for Anthropic, OpenRouter, Zhipu, NIM (model router from `@grump/ai-core`)
+- `toolExecutionService` - Tool execution (workspace-scoped); path policy via `pathPolicyService`
+- `intentCompilerService` - Intent parsing via Rust CLI or WASM, with Claude enrichment
+- `architectureService`, `prdGeneratorService`, `codeGeneratorService` - Architecture, PRD, codegen
+- `agentOrchestrator`, `wrunnerService` - Multi-agent coordination and quality assurance
+- `tieredCache`, `workerPool`, `batchProcessor`, `nimAccelerator` - Cache, workers, batching, NIM
+
+**Routes:** See [docs/API.md](./docs/API.md) and README. Core: `/api/chat/stream`, `/api/ship`, `/api/codegen`, `/api/plan`, `/api/spec`, `/api/diagram`, `/api/intent`, `/api/architecture`, `/api/prd`, `/api/security/*`, `/api/webhooks`, `/api/events`, `/health`, `/metrics`.
 
 ### Intent Compiler (Rust)
 
@@ -176,17 +174,17 @@ User Input → ChatInterface → POST /api/chat/stream
 
 ## Security
 
-- CSP configured in `tauri.conf.json`
-- API keys stored in `.env` (not bundled)
-- Backend runs locally (no external exposure)
-- Tauri security model enforced
+- CSP configured in `tauri.conf.json`; Helmet on backend
+- API keys and secrets in `.env` (see [PRODUCTION_CHECKLIST](./docs/PRODUCTION_CHECKLIST.md))
+- Path validation for security scan (`workspacePath` under `SECURITY_SCAN_ROOT` or cwd)
+- Outbound webhook URLs: https-only in production
+- Auth: Supabase JWT; optional auth for API (`REQUIRE_AUTH_FOR_API`); webhook secrets required in prod
 
 ## Performance Considerations
 
-- Backend bundling adds ~50-100MB (includes Node.js)
-- Intent compiler is lightweight (~5-10MB)
-- Frontend bundle optimized with code splitting
-- Mermaid diagrams rendered client-side
+- Backend build: SWC (fast); intent compiler: Rust with LTO/SIMD
+- Tiered cache (L1/L2/L3), worker pool, model router (cost-aware), NIM batching
+- See [docs/PERFORMANCE_GUIDE.md](./docs/PERFORMANCE_GUIDE.md) and [docs/OPTIMIZATION_SUMMARY.md](./docs/OPTIMIZATION_SUMMARY.md)
 
 ## Future Improvements
 

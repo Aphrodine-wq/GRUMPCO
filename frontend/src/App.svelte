@@ -2,16 +2,26 @@
   import { onMount } from 'svelte';
   import ChatInterface from './components/ChatInterface.svelte';
   import SessionsSidebar from './components/SessionsSidebar.svelte';
+  import MobileNav from './components/MobileNav.svelte';
   import Toast from './components/Toast.svelte';
   import QuestionModal from './components/QuestionModal.svelte';
   import PricingModal from './components/PricingModal.svelte';
   import SettingsScreen from './components/SettingsScreen.svelte';
   import SetupScreen from './components/SetupScreen.svelte';
+  import AskDocsScreen from './components/AskDocsScreen.svelte';
+  import VoiceCodeScreen from './components/VoiceCodeScreen.svelte';
+  import AgentSwarmVisualizer from './components/AgentSwarmVisualizer.svelte';
+  import DesignToCodeScreen from './components/DesignToCodeScreen.svelte';
   import { sessionsStore, currentSession } from './stores/sessionsStore';
   import { settingsStore } from './stores/settingsStore';
   import { preferencesStore, setupComplete } from './stores/preferencesStore';
-  import { showSettings, sidebarCollapsed, focusChatTrigger } from './stores/uiStore';
+  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, sidebarCollapsed, focusChatTrigger } from './stores/uiStore';
+  import { demoStore } from './stores/demoStore';
+  import TutorialOverlay from './components/TutorialOverlay.svelte';
+  import { isMobileDevice } from './utils/touchGestures';
   import type { Message } from './types';
+
+  let isMobile = $state(false);
 
   let showPricing = $state(false);
 
@@ -21,6 +31,14 @@
 
     if (!$currentSession) {
       sessionsStore.createSession([]);
+    }
+
+    // Detect mobile device
+    isMobile = isMobileDevice();
+    
+    // Auto-collapse sidebar on mobile
+    if (isMobile) {
+      sidebarCollapsed.set(true);
     }
 
     function onKeydown(e: KeyboardEvent) {
@@ -80,6 +98,14 @@
   <div class="main-content">
     {#if $showSettings}
       <SettingsScreen onBack={() => showSettings.set(false)} />
+    {:else if $showAskDocs}
+      <AskDocsScreen onBack={() => showAskDocs.set(false)} />
+    {:else if $showVoiceCode}
+      <VoiceCodeScreen onBack={() => showVoiceCode.set(false)} />
+    {:else if $showSwarm}
+      <AgentSwarmVisualizer onBack={() => showSwarm.set(false)} />
+    {:else if $showDesignToCode}
+      <DesignToCodeScreen onBack={() => showDesignToCode.set(false)} />
     {:else if !$setupComplete}
       <SetupScreen
         onComplete={() => preferencesStore.completeSetup()}
@@ -99,6 +125,19 @@
   <QuestionModal />
   {#if showPricing}
     <PricingModal onClose={() => (showPricing = false)} />
+  {/if}
+
+  {#if $demoStore.active && $demoStore.steps.length > 0}
+    <TutorialOverlay
+      steps={$demoStore.steps}
+      onComplete={() => demoStore.reset()}
+      onSkip={() => demoStore.reset()}
+    />
+  {/if}
+  
+  <!-- Mobile Navigation -->
+  {#if isMobile}
+    <MobileNav activeView={$showSettings ? 'settings' : 'chat'} />
   {/if}
 </div>
 
@@ -151,11 +190,35 @@
       flex-direction: column;
       height: 100dvh;
     }
+    
+    .main-content {
+      padding-bottom: 70px; /* Space for mobile nav */
+    }
   }
 
   @media (max-width: 480px) {
     .app {
       height: 100dvh;
+    }
+  }
+
+  /* Touch-friendly adjustments */
+  @media (hover: none) and (pointer: coarse) {
+    /* Increase touch target sizes */
+    :global(button) {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    :global(input), :global(textarea) {
+      font-size: 16px; /* Prevent zoom on iOS */
+    }
+  }
+
+  /* Landscape mobile */
+  @media (max-width: 768px) and (orientation: landscape) {
+    .main-content {
+      padding-bottom: 60px;
     }
   }
 </style>

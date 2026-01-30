@@ -99,6 +99,19 @@ export class ToolExecutionService {
   }
 
   /**
+   * Execute a terminal command (run and return output). Same security as bash_execute; toolName is terminal_execute.
+   */
+  async executeTerminal(
+    command: string,
+    workingDirectory?: string,
+    timeout: number = 60000
+  ): Promise<ToolExecutionResult> {
+    const result = await this.executeBash(command, workingDirectory, Math.min(timeout, 60000));
+    result.toolName = 'terminal_execute';
+    return result;
+  }
+
+  /**
    * Execute a bash command with timeout and security checks
    */
   async executeBash(
@@ -513,6 +526,175 @@ export class ToolExecutionService {
     }
 
     return files;
+  }
+
+  /**
+   * Resolve working directory for git (must be under workspace). Returns cwd string.
+   */
+  private resolveGitCwd(workingDirectory?: string): { valid: boolean; error?: string; cwd?: string } {
+    const dir = workingDirectory ?? '.';
+    const validation = this.validatePath(dir, 'list');
+    if (!validation.valid) {
+      return { valid: false, error: validation.error };
+    }
+    const cwd = validation.resolvedPath ?? path.resolve(this.workspaceRoot, dir);
+    return { valid: true, cwd };
+  }
+
+  /**
+   * Run git command in workspace; returns output or error.
+   */
+  private runGit(args: string[], cwd: string, timeout: number = 10000): ToolExecutionResult {
+    const startTime = Date.now();
+    const cmd = `git ${args.join(' ')}`;
+    try {
+      const output = execSync(cmd, {
+        cwd,
+        encoding: 'utf8',
+        timeout,
+        maxBuffer: 2 * 1024 * 1024,
+      });
+      return {
+        success: true,
+        output: output?.trim() ?? '',
+        toolName: 'git',
+        executionTime: Date.now() - startTime,
+      };
+    } catch (err: unknown) {
+      const e = err as { status?: number; stdout?: string; stderr?: string; message?: string };
+      const stderr = e.stderr ?? e.message ?? String(err);
+      return {
+        success: false,
+        error: stderr,
+        output: e.stdout?.trim(),
+        exitCode: e.status ?? -1,
+        toolName: 'git',
+        executionTime: Date.now() - startTime,
+      };
+    }
+  }
+
+  async gitStatus(workingDirectory?: string): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+    const resolved = this.resolveGitCwd(workingDirectory);
+    if (!resolved.valid || !resolved.cwd) {
+      return {
+        success: false,
+        error: resolved.error,
+        toolName: 'git_status',
+        executionTime: Date.now() - startTime,
+      };
+    }
+    const result = this.runGit(['status', '--short', '-b'], resolved.cwd);
+    result.toolName = 'git_status';
+    return result;
+  }
+
+  async gitDiff(workingDirectory?: string, staged?: boolean, file?: string): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+    const resolved = this.resolveGitCwd(workingDirectory);
+    if (!resolved.valid || !resolved.cwd) {
+      return {
+        success: false,
+        error: resolved.error,
+        toolName: 'git_diff',
+        executionTime: Date.now() - startTime,
+      };
+    }
+    const args = ['diff'];
+    if (staged) args.push('--staged');
+    if (file) args.push('--', file);
+    const result = this.runGit(args, resolved.cwd);
+    result.toolName = 'git_diff';
+    return result;
+  }
+
+  async gitLog(workingDirectory?: string, maxCount: number = 20, oneline: boolean = true): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+    const resolved = this.resolveGitCwd(workingDirectory);
+    if (!resolved.valid || !resolved.cwd) {
+      return {
+        success: false,
+        error: resolved.error,
+        toolName: 'git_log',
+        executionTime: Date.now() - startTime,
+      };
+    }
+    const args = ['log', `-n`, String(maxCount)];
+    if (oneline) args.push('--oneline');
+    const result = this.runGit(args, resolved.cwd);
+    result.toolName = 'git_log';
+    return result;
+  }
+
+  async gitCommit(message: string, workingDirectory?: string, addAll: boolean = false): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+    const resolved = this.resolveGitCwd(workingDirectory);
+    if (!resolved.valid || !resolved.cwd) {
+      return {
+        success: false,
+        error: resolved.error,
+        toolName: 'git_commit',
+        executionTime: Date.now() - startTime,
+      };
+    }
+    if (addAll) {
+      const addResult = this.runGit(['add', '-A'], resolved.cwd);
+      if (!addResult.success) {
+        addResult.toolName = 'git_commit';
+        return addResult;
+      }
+    }
+    const result = this.runGit(['commit', '-m', message], resolved.cwd);
+    result.toolName = 'git_commit';
+    return result;
+  }
+
+  async gitBranch(workingDirectory?: string, list: boolean = true, create?: string): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+    const resolved = this.resolveGitCwd(workingDirectory);
+    if (!resolved.valid || !resolved.cwd) {
+      return {
+        success: false,
+        error: resolved.error,
+        toolName: 'git_branch',
+        executionTime: Date.now() - startTime,
+      };
+    }
+    if (create) {
+      const result = this.runGit(['checkout', '-b', create], resolved.cwd);
+      result.toolName = 'git_branch';
+      return result;
+    }
+    const result = this.runGit(['branch', '-a'], resolved.cwd);
+    result.toolName = 'git_branch';
+    return result;
+  }
+
+  async gitPush(workingDirectory?: string, remote: string = 'origin', branch?: string): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+    if (process.env.ENABLE_GIT_PUSH !== 'true') {
+      return {
+        success: false,
+        error: 'git_push is disabled. Set ENABLE_GIT_PUSH=true to enable.',
+        toolName: 'git_push',
+        executionTime: Date.now() - startTime,
+      };
+    }
+    const resolved = this.resolveGitCwd(workingDirectory);
+    if (!resolved.valid || !resolved.cwd) {
+      return {
+        success: false,
+        error: resolved.error,
+        toolName: 'git_push',
+        executionTime: Date.now() - startTime,
+      };
+    }
+    const args = ['push', remote];
+    if (branch) args.push(branch);
+    const result = this.runGit(args, resolved.cwd, 60000);
+    result.toolName = 'git_push';
+    return result;
   }
 }
 

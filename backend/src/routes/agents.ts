@@ -1,5 +1,6 @@
 /**
  * Scheduled agents API: create, list, cancel cron-based SHIP/codegen/chat runs.
+ * Swarm API: POST /api/agents/swarm – Kimi-orchestrated multi-agent task decomposition and execution.
  */
 
 import { Router, Request, Response } from 'express';
@@ -11,9 +12,40 @@ import {
   getScheduledAgent,
   type ScheduledAction,
 } from '../services/scheduledAgentsService.js';
+import { runSwarm } from '../services/swarmService.js';
 
 const router = Router();
 const log = getRequestLogger();
+
+/**
+ * POST /api/agents/swarm
+ * Body: { prompt: string, workspaceRoot?: string }
+ * Streams SSE: decompose_start, decompose_done, agent_start, agent_done, summary_start, summary_done, error.
+ */
+router.post('/swarm', async (req: Request, res: Response) => {
+  const { prompt, workspaceRoot } = req.body as { prompt?: string; workspaceRoot?: string };
+  if (typeof prompt !== 'string' || !prompt.trim()) {
+    return res.status(400).json({ error: 'prompt is required and must be a non-empty string' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  try {
+    const swarm = runSwarm(prompt.trim(), { workspaceRoot: typeof workspaceRoot === 'string' ? workspaceRoot : undefined });
+    for await (const event of swarm) {
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    }
+    res.write('data: {"type":"done"}\n\n');
+    res.end();
+  } catch (error) {
+    log.error({ error: (error as Error).message }, 'Swarm error');
+    res.write(`data: ${JSON.stringify({ type: 'error', message: (error as Error).message })}\n\n`);
+    res.end();
+  }
+});
 
 /**
  * POST /api/agents/schedule

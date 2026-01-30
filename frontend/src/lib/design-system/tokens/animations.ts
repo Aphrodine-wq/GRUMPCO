@@ -174,6 +174,99 @@ export const keyframes = {
       75% { transform: scale(1.02) rotate(1deg); }
     }
   `,
+
+  // Success checkmark animation
+  successCheck: `
+    @keyframes successCheck {
+      0% {
+        transform: scale(0) rotate(-45deg);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.2) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+      }
+    }
+  `,
+
+  // Error shake animation
+  shake: `
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+      20%, 40%, 60%, 80% { transform: translateX(4px); }
+    }
+  `,
+
+  // Button ripple effect
+  ripple: `
+    @keyframes ripple {
+      0% {
+        transform: scale(0);
+        opacity: 0.5;
+      }
+      100% {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+  `,
+
+  // Message send animation
+  messageSend: `
+    @keyframes messageSend {
+      0% {
+        transform: translateY(10px) scale(0.95);
+        opacity: 0;
+      }
+      60% {
+        transform: translateY(-3px) scale(1.02);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+    }
+  `,
+
+  // Pop-in animation for notifications
+  popIn: `
+    @keyframes popIn {
+      0% {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+  `,
+
+  // Checkmark draw animation
+  drawCheck: `
+    @keyframes drawCheck {
+      0% { stroke-dashoffset: 24; }
+      100% { stroke-dashoffset: 0; }
+    }
+  `,
+
+  // Loading dots animation
+  loadingDots: `
+    @keyframes loadingDots {
+      0%, 20% { opacity: 0; }
+      40% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  `,
 } as const;
 
 // Animation presets for common use cases
@@ -199,6 +292,13 @@ export const animationPresets = {
 
   // Thinking state
   thinking: `thinkingBlob 2.2s ${animations.easing.easeInOut} infinite`,
+
+  // Micro-interactions
+  successCheck: `successCheck 400ms ${animations.easing.spring} forwards`,
+  shake: `shake 400ms ${animations.easing.easeInOut}`,
+  ripple: `ripple 600ms ${animations.easing.easeOut} forwards`,
+  messageSend: `messageSend 300ms ${animations.easing.spring} forwards`,
+  popIn: `popIn 200ms ${animations.easing.bounce} forwards`,
 } as const;
 
 export type Animations = typeof animations;

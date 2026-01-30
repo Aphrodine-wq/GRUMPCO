@@ -60,6 +60,9 @@ const TIMEOUT_CONFIG: TimeoutConfig = {
 
     // GitHub operations can be slow
     '/api/github': 60_000,
+
+    // Voice (ASR + RAG + chat + TTS)
+    '/api/voice': 120_000,
   },
 };
 

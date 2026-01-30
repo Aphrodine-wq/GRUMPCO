@@ -99,6 +99,149 @@ export const contextCacheMissesTotal = new client.Counter({
   registers: [register],
 });
 
+// Cost metrics
+export const llmCostUsdTotal = new client.Counter({
+  name: 'llm_cost_usd_total',
+  help: 'Total LLM API cost in USD',
+  labelNames: ['model', 'provider', 'operation'] as const,
+  registers: [register],
+});
+
+export const llmCostPerRequest = new client.Histogram({
+  name: 'llm_cost_per_request_usd',
+  help: 'LLM API cost per request in USD',
+  labelNames: ['model', 'provider', 'operation'] as const,
+  buckets: [0.0001, 0.001, 0.01, 0.05, 0.1, 0.5, 1, 5],
+  registers: [register],
+});
+
+export const cacheSavingsUsdTotal = new client.Counter({
+  name: 'cache_savings_usd_total',
+  help: 'Total cost savings from cache hits in USD',
+  labelNames: ['type'] as const,
+  registers: [register],
+});
+
+export const modelRoutingSavingsUsd = new client.Counter({
+  name: 'model_routing_savings_usd_total',
+  help: 'Total cost savings from smart model routing in USD',
+  registers: [register],
+});
+
+// Performance metrics
+export const compilationDuration = new client.Histogram({
+  name: 'compilation_duration_seconds',
+  help: 'Duration of TypeScript/Rust compilation in seconds',
+  labelNames: ['compiler', 'target'] as const,
+  buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60],
+  registers: [register],
+});
+
+export const workerQueueDepth = new client.Gauge({
+  name: 'worker_queue_depth',
+  help: 'Number of tasks in worker thread queue',
+  registers: [register],
+});
+
+export const workerPoolUtilization = new client.Gauge({
+  name: 'worker_pool_utilization_percent',
+  help: 'Worker pool utilization percentage',
+  registers: [register],
+});
+
+export const gpuUtilizationPercent = new client.Gauge({
+  name: 'gpu_utilization_percent',
+  help: 'GPU utilization percentage (if available)',
+  labelNames: ['gpu_id'] as const,
+  registers: [register],
+});
+
+export const gpuMemoryUsedBytes = new client.Gauge({
+  name: 'gpu_memory_used_bytes',
+  help: 'GPU memory used in bytes',
+  labelNames: ['gpu_id'] as const,
+  registers: [register],
+});
+
+// Tiered cache metrics (layer + namespace for per-namespace hit rate)
+export const tieredCacheHits = new client.Counter({
+  name: 'tiered_cache_hits_total',
+  help: 'Total number of tiered cache hits',
+  labelNames: ['layer', 'namespace'] as const,
+  registers: [register],
+});
+
+export const tieredCacheMisses = new client.Counter({
+  name: 'tiered_cache_misses_total',
+  help: 'Total number of tiered cache misses',
+  labelNames: ['layer', 'namespace'] as const,
+  registers: [register],
+});
+
+export const tieredCacheSize = new client.Gauge({
+  name: 'tiered_cache_size_bytes',
+  help: 'Size of tiered cache in bytes',
+  labelNames: ['layer'] as const,
+  registers: [register],
+});
+
+// Batch processing metrics
+export const batchProcessingRequests = new client.Counter({
+  name: 'batch_processing_requests_total',
+  help: 'Total number of batch processing requests',
+  labelNames: ['batch_type', 'status'] as const,
+  registers: [register],
+});
+
+export const batchSize = new client.Histogram({
+  name: 'batch_size',
+  help: 'Size of processed batches',
+  labelNames: ['batch_type'] as const,
+  buckets: [1, 5, 10, 20, 50, 100, 256],
+  registers: [register],
+});
+
+// Model selection metrics
+export const modelSelectionTotal = new client.Counter({
+  name: 'model_selection_total',
+  help: 'Total number of model selections',
+  labelNames: ['selected_model', 'complexity_level'] as const,
+  registers: [register],
+});
+
+// LLM stream duration (per provider/model)
+export const llmStreamDurationSeconds = new client.Histogram({
+  name: 'llm_stream_duration_seconds',
+  help: 'Duration of LLM stream from first chunk to message_stop',
+  labelNames: ['provider', 'model'] as const,
+  buckets: [0.5, 1, 2, 5, 10, 30, 60],
+  registers: [register],
+});
+
+// LLM token usage (input/output)
+export const llmTokensTotal = new client.Counter({
+  name: 'llm_tokens_total',
+  help: 'Total LLM tokens by provider, model, and type',
+  labelNames: ['provider', 'model', 'type'] as const,
+  registers: [register],
+});
+
+// LLM router selections (provider + model_id)
+export const llmRouterSelectionsTotal = new client.Counter({
+  name: 'llm_router_selections_total',
+  help: 'Total number of LLM router selections',
+  labelNames: ['provider', 'model_id'] as const,
+  registers: [register],
+});
+
+export const taskComplexityScore = new client.Histogram({
+  name: 'task_complexity_score',
+  help: 'Task complexity score (0-100)',
+  labelNames: ['operation'] as const,
+  buckets: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+  registers: [register],
+});
+
 // Session created counter
 export const sessionCreatedTotal = new client.Counter({
   name: 'session_created_total',
@@ -238,6 +381,103 @@ export function recordSessionCreated(type: string): void {
 export function recordSessionCompleted(type: string, status: string, duration: number): void {
   sessionCompletedTotal.inc({ type, status });
   sessionDuration.observe({ type }, duration);
+}
+
+// Helper to record LLM cost
+export function recordLlmCost(
+  model: string,
+  provider: string,
+  operation: string,
+  costUsd: number
+): void {
+  llmCostUsdTotal.inc({ model, provider, operation }, costUsd);
+  llmCostPerRequest.observe({ model, provider, operation }, costUsd);
+}
+
+// Helper to record cache savings
+export function recordCacheSavings(type: string, savingsUsd: number): void {
+  cacheSavingsUsdTotal.inc({ type }, savingsUsd);
+}
+
+// Helper to record model routing savings
+export function recordModelRoutingSavings(savingsUsd: number): void {
+  modelRoutingSavingsUsd.inc(savingsUsd);
+}
+
+// Helper to record compilation duration
+export function recordCompilation(compiler: string, target: string, duration: number): void {
+  compilationDuration.observe({ compiler, target }, duration);
+}
+
+// Helper to update worker pool metrics
+export function updateWorkerPoolMetrics(queueDepth: number, utilization: number): void {
+  workerQueueDepth.set(queueDepth);
+  workerPoolUtilization.set(utilization);
+}
+
+// Helper to update GPU metrics
+export function updateGpuMetrics(gpuId: string, utilization: number, memoryUsed: number): void {
+  gpuUtilizationPercent.set({ gpu_id: gpuId }, utilization);
+  gpuMemoryUsedBytes.set({ gpu_id: gpuId }, memoryUsed);
+}
+
+// Helper to record tiered cache hit/miss (namespace for per-namespace hit rate)
+export function recordTieredCacheAccess(layer: string, hit: boolean, namespace: string = 'default'): void {
+  const labels = { layer, namespace };
+  if (hit) {
+    tieredCacheHits.inc(labels);
+  } else {
+    tieredCacheMisses.inc(labels);
+  }
+}
+
+// Helper to record LLM router selection
+export function recordLlmRouterSelection(provider: string, modelId: string): void {
+  llmRouterSelectionsTotal.inc({ provider, model_id: modelId });
+}
+
+// Helper to record LLM stream duration and optional token usage
+export function recordLlmStreamMetrics(
+  provider: string,
+  model: string,
+  durationSeconds: number,
+  inputTokens?: number,
+  outputTokens?: number
+): void {
+  llmStreamDurationSeconds.observe({ provider, model }, durationSeconds);
+  if (typeof inputTokens === 'number' && inputTokens > 0) {
+    llmTokensTotal.inc({ provider, model, type: 'input' }, inputTokens);
+  }
+  if (typeof outputTokens === 'number' && outputTokens > 0) {
+    llmTokensTotal.inc({ provider, model, type: 'output' }, outputTokens);
+  }
+}
+
+// Helper to update tiered cache size
+export function updateTieredCacheSize(layer: string, sizeBytes: number): void {
+  tieredCacheSize.set({ layer }, sizeBytes);
+}
+
+// Helper to record batch processing
+export function recordBatchProcessing(
+  batchType: string,
+  size: number,
+  status: 'success' | 'error'
+): void {
+  batchProcessingRequests.inc({ batch_type: batchType, status });
+  batchSize.observe({ batch_type: batchType }, size);
+}
+
+// Helper to record model selection
+export function recordModelSelection(
+  selectedModel: string,
+  complexityScore: number,
+  operation: string
+): void {
+  const complexityLevel =
+    complexityScore < 30 ? 'simple' : complexityScore < 60 ? 'medium' : 'complex';
+  modelSelectionTotal.inc({ selected_model: selectedModel, complexity_level: complexityLevel });
+  taskComplexityScore.observe({ operation }, complexityScore);
 }
 
 // Get metrics endpoint handler

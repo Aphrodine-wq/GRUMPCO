@@ -145,19 +145,18 @@ export const env: Env = parseResult.success
   ? parseResult.data
   : envSchema.parse({ ...process.env, ANTHROPIC_API_KEY: 'invalid-key-see-errors-above' });
 
-// Log successful validation
+// Log successful validation (never log raw secrets or key material in production)
 if (parseResult.success) {
-  const keyPreview = env.ANTHROPIC_API_KEY.substring(0, 12) + '...' + env.ANTHROPIC_API_KEY.slice(-4);
-  console.log(`[env] ANTHROPIC_API_KEY loaded: ${keyPreview}`);
-
-  if (env.OPENROUTER_API_KEY) {
-    console.log('[env] OPENROUTER_API_KEY set (OpenRouter provider available)');
+  if (process.env.NODE_ENV !== 'production') {
+    const keyPreview = env.ANTHROPIC_API_KEY.substring(0, 12) + '...' + env.ANTHROPIC_API_KEY.slice(-4);
+    console.log(`[env] ANTHROPIC_API_KEY loaded: ${keyPreview}`);
+    if (env.OPENROUTER_API_KEY) {
+      console.log('[env] OPENROUTER_API_KEY set (OpenRouter provider available)');
+    }
+    if (env.REDIS_HOST) {
+      console.log(`[env] Redis configured at ${env.REDIS_HOST}:${env.REDIS_PORT}`);
+    }
   }
-
-  if (env.REDIS_HOST) {
-    console.log(`[env] Redis configured at ${env.REDIS_HOST}:${env.REDIS_PORT}`);
-  }
-
   console.log(`[env] Environment validated successfully (${env.NODE_ENV} mode)`);
 }
 

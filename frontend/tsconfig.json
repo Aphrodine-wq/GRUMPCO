@@ -24,6 +24,10 @@
     "allowJs": true,
     "checkJs": false,
 
+    /* Performance */
+    "incremental": true,
+    "tsBuildInfoFile": "./.tsbuildinfo",
+
     /* Path aliases */
     "baseUrl": ".",
     "paths": {

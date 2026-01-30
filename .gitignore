@@ -15,6 +15,10 @@ frontend/.env
 dist/
 dist-bundle/
 *.js.map
+.tsbuildinfo
+.swcinfo
+*.tsbuildinfo
+.swc/
 
 # Rust build artifacts
 intent-compiler/target/
@@ -47,3 +51,17 @@ Thumbs.db
 frontend/playwright-report/
 playwright-report/
 frontend/test-results/
+
+# Archived/deprecated code
+archive/
+
+# Untracked feature folders
+marketing-site/
+infrastructure/
+integrations/
+
+# IDE-generated task tracking
+.trae/
+
+# Vercel
+.vercel/

@@ -92,6 +92,30 @@ export function getRedisClient(): Redis {
 }
 
 /**
+ * Create a new Redis client instance (for pub/sub subscribers that need separate connections)
+ */
+export function createRedisClient(config?: RedisConfig): Redis {
+  const redisConfig = { ...DEFAULT_CONFIG, ...config };
+
+  const client = new Redis({
+    host: redisConfig.host,
+    port: redisConfig.port,
+    password: redisConfig.password,
+    db: redisConfig.db,
+    maxRetriesPerRequest: redisConfig.maxRetriesPerRequest,
+    enableReadyCheck: redisConfig.enableReadyCheck,
+    lazyConnect: redisConfig.lazyConnect,
+    retryStrategy: redisConfig.retryStrategy,
+  });
+
+  client.on('error', (error) => {
+    logger.error({ error: error.message }, 'Redis subscriber connection error');
+  });
+
+  return client;
+}
+
+/**
  * Check if Redis is connected
  */
 export async function isRedisConnected(): Promise<boolean> {

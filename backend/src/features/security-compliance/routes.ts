@@ -10,6 +10,7 @@ import {
   generateSBOM,
   generateComplianceReport,
   auditSecrets,
+  validateWorkspacePath,
 } from './service.js';
 import {
   SecurityScanRequest,
@@ -36,8 +37,17 @@ router.post('/scan', async (req: Request, res: Response) => {
       return;
     }
 
+    const pathValidation = validateWorkspacePath(workspacePath);
+    if (!pathValidation.ok) {
+      res.status(400).json({
+        error: pathValidation.reason,
+        type: 'validation_error',
+      });
+      return;
+    }
+
     const result = await performSecurityScan({
-      workspacePath,
+      workspacePath: pathValidation.resolved,
       scanTypes,
       severity,
       excludePatterns,
@@ -73,8 +83,17 @@ router.post('/sbom', async (req: Request, res: Response) => {
       return;
     }
 
+    const pathValidation = validateWorkspacePath(workspacePath);
+    if (!pathValidation.ok) {
+      res.status(400).json({
+        error: pathValidation.reason,
+        type: 'validation_error',
+      });
+      return;
+    }
+
     const result = await generateSBOM({
-      workspacePath,
+      workspacePath: pathValidation.resolved,
       format,
       includeDevDeps,
     });
@@ -117,6 +136,15 @@ router.post('/compliance', async (req: Request, res: Response) => {
       return;
     }
 
+    const pathValidation = validateWorkspacePath(workspacePath);
+    if (!pathValidation.ok) {
+      res.status(400).json({
+        error: pathValidation.reason,
+        type: 'validation_error',
+      });
+      return;
+    }
+
     if (!standard) {
       res.status(400).json({
         error: 'Missing standard (soc2, gdpr, hipaa, pci-dss, iso27001, owasp-top10)',
@@ -135,7 +163,7 @@ router.post('/compliance', async (req: Request, res: Response) => {
     }
 
     const result = await generateComplianceReport({
-      workspacePath,
+      workspacePath: pathValidation.resolved,
       standard,
       projectType,
     });
@@ -170,8 +198,17 @@ router.post('/secrets-audit', async (req: Request, res: Response) => {
       return;
     }
 
+    const pathValidation = validateWorkspacePath(workspacePath);
+    if (!pathValidation.ok) {
+      res.status(400).json({
+        error: pathValidation.reason,
+        type: 'validation_error',
+      });
+      return;
+    }
+
     const result = await auditSecrets({
-      workspacePath,
+      workspacePath: pathValidation.resolved,
       excludePatterns,
       customPatterns,
     });

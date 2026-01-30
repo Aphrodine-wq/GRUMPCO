@@ -1,0 +1,25 @@
+{
+  "id": "lint",
+  "name": "Code Linter",
+  "version": "1.0.0",
+  "description": "AI-powered code linting to identify and fix issues in your code.",
+  "author": "G-Rump Team",
+  "category": "code",
+  "icon": "shield-check",
+  "tags": ["lint", "linter", "code quality", "formatter"],
+  "capabilities": {
+    "providesTools": true,
+    "providesRoutes": false,
+    "providesPrompts": true,
+    "requiresWorkspace": true,
+    "supportsStreaming": true,
+    "supportsBackground": false
+  },
+  "permissions": ["file_read", "file_write"],
+  "triggers": {
+    "keywords": ["lint", "linter", "check my code", "format my code"],
+    "patterns": ["lint\s+(my|this|the)?\s*code", "fix\s+my\s+code"],
+    "commands": ["/lint", "/format"],
+    "fileExtensions": [".ts", ".js", ".tsx", ".jsx", ".py", ".go", ".rs", ".java", ".cpp", ".c"]
+  }
+}

@@ -4,18 +4,157 @@
  * Usage: grump <command> [options]
  * Commands: ship, argument, plan, code, analyze
  * Default backend: http://localhost:3000 (or GRUMP_API_URL)
+ * 
+ * Enhanced with:
+ * - Concurrent request support
+ * - Client-side caching
+ * - Progress indicators
+ * - Retry logic with exponential backoff
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 const DEFAULT_URL = (process.env.GRUMP_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const API_KEY = process.env.GRUMP_API_KEY;
+const CACHE_DIR = path.join(process.env.HOME || process.env.USERPROFILE || '.', '.grump-cache');
+const CACHE_TTL = 3600 * 1000; // 1 hour
+
+// Ensure cache directory exists
+if (!fs.existsSync(CACHE_DIR)) {
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
+}
 
 function headers(): Record<string, string> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
   if (API_KEY) h['Authorization'] = `Bearer ${API_KEY}`;
   return h;
+}
+
+/**
+ * Generate cache key from request
+ */
+function getCacheKey(url: string, body: unknown): string {
+  const hash = crypto.createHash('sha256');
+  hash.update(url);
+  hash.update(JSON.stringify(body));
+  return hash.digest('hex').substring(0, 16);
+}
+
+/**
+ * Get cached response
+ */
+function getCached<T>(key: string): T | null {
+  try {
+    const cachePath = path.join(CACHE_DIR, `${key}.json`);
+    if (!fs.existsSync(cachePath)) {
+      return null;
+    }
+
+    const data = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+    
+    // Check expiration
+    if (data.expiresAt && Date.now() > data.expiresAt) {
+      fs.unlinkSync(cachePath);
+      return null;
+    }
+
+    return data.value as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Set cached response
+ */
+function setCache<T>(key: string, value: T, ttl = CACHE_TTL): void {
+  try {
+    const cachePath = path.join(CACHE_DIR, `${key}.json`);
+    const data = {
+      value,
+      cachedAt: Date.now(),
+      expiresAt: Date.now() + ttl,
+    };
+    fs.writeFileSync(cachePath, JSON.stringify(data), 'utf-8');
+  } catch (error) {
+    // Fail silently
+  }
+}
+
+/**
+ * Fetch with retry and exponential backoff
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries = 3
+): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      
+      // Retry on 5xx errors
+      if (response.status >= 500 && attempt < maxRetries - 1) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+        console.error(`Request failed with ${response.status}, retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      if (attempt < maxRetries - 1) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+        console.error(`Request failed: ${lastError.message}, retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError || new Error('Request failed after retries');
+}
+
+/**
+ * Cached fetch with retry
+ */
+async function cachedFetch<T>(
+  url: string,
+  options: RequestInit,
+  useCache = true
+): Promise<T> {
+  const cacheKey = getCacheKey(url, options.body);
+
+  // Try cache first
+  if (useCache) {
+    const cached = getCached<T>(cacheKey);
+    if (cached) {
+      console.log('(cached)');
+      return cached;
+    }
+  }
+
+  // Fetch with retry
+  const response = await fetchWithRetry(url, options);
+  
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`${response.status} – ${text.slice(0, 300)}`);
+  }
+
+  const data = (await response.json()) as T;
+
+  // Cache successful response
+  if (useCache && response.ok) {
+    setCache(cacheKey, data);
+  }
+
+  return data;
 }
 
 function parseCommon(argv: string[]): { url: string; rest: string[] } {
@@ -68,7 +207,8 @@ async function cmdShip(url: string, rest: string[]): Promise<void> {
   }
   const stream = hasOpt(rest, 'stream');
   if (stream) {
-    const resExec = await fetch(`${url}/api/ship/${sessionId}/execute/stream`, {
+    console.log('Executing (streaming)...');
+    const resExec = await fetchWithRetry(`${url}/api/ship/${sessionId}/execute/stream`, {
       method: 'POST',
       headers: headers(),
     });
@@ -119,7 +259,7 @@ async function cmdShip(url: string, rest: string[]): Promise<void> {
 // --- argument ---
 async function cmdArgument(url: string, rest: string[]): Promise<void> {
   const msg = getOpt(rest, 'message', '-m') ?? '';
-  const res = await fetch(`${url}/api/chat/stream`, {
+  const res = await fetchWithRetry(`${url}/api/chat/stream`, {
     method: 'POST',
     headers: { ...headers(), Accept: 'text/event-stream' },
     body: JSON.stringify({
@@ -223,22 +363,21 @@ async function cmdAnalyze(url: string, rest: string[]): Promise<void> {
   const output = getOpt(rest, 'output') ?? path.join(process.cwd(), 'architecture.mmd');
   const diagramType = getOpt(rest, 'diagram-type') ?? 'component';
 
-  const res = await fetch(`${url}/api/analyze/architecture`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({
-      workspacePath: path.resolve(workspace),
-      diagramType,
-    }),
-  });
+  console.log('Analyzing codebase...');
 
-  if (!res.ok) {
-    const text = await res.text();
-    console.error(`grump analyze: API error ${res.status} – ${text.slice(0, 300)}`);
-    process.exit(1);
-  }
+  const json = await cachedFetch<{ success: boolean; data: { mermaidDiagram: string; summary: string } }>(
+    `${url}/api/analyze/architecture`,
+    {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({
+        workspacePath: path.resolve(workspace),
+        diagramType,
+      }),
+    },
+    true // Cache analysis results
+  );
 
-  const json = (await res.json()) as { success?: boolean; data?: { mermaidDiagram?: string; summary?: string } };
   const diagram = json?.data?.mermaidDiagram;
   if (typeof diagram !== 'string') {
     console.error('grump analyze: response missing data.mermaidDiagram');
@@ -258,29 +397,63 @@ async function cmdAnalyze(url: string, rest: string[]): Promise<void> {
 
 function showHelp(): void {
   console.log(`
-grump – G-Rump CLI
+grump – G-Rump CLI (Optimized)
 
 Usage: grump <command> [options]
        grump-analyze [options]   (alias for grump analyze)
 
 Commands:
-  ship      Start SHIP workflow (--message <description>, --stream)
-  argument  Chat in argument mode (--message <text>)
-  plan      Generate a plan (--message <description>)
-  code      Download codegen result (--session <id> [--output <dir>])
-  analyze   Analyze codebase, write Mermaid diagram (--workspace, --output, --diagram-type)
+  ship           Start SHIP workflow (--message <description>, --stream)
+  ship-parallel  Start multiple SHIP workflows in parallel (--messages <desc1,desc2,...>)
+  argument       Chat in argument mode (--message <text>)
+  plan           Generate a plan (--message <description>)
+  code           Download codegen result (--session <id> [--output <dir>])
+  analyze        Analyze codebase, write Mermaid diagram (--workspace, --output, --diagram-type)
+  cache-clear    Clear CLI cache
 
 Common options:
   --url <base>   Backend URL (default: GRUMP_API_URL or http://localhost:3000)
 
+Performance features:
+  - Automatic retry with exponential backoff
+  - Client-side caching (1 hour TTL)
+  - Concurrent request support
+  - Progress indicators
+
 Examples:
   grump ship --message "A todo app with React and SQLite"
   grump ship --message "CRUD API" --stream
+  grump ship-parallel --messages "Todo app,Blog platform,E-commerce site"
   grump argument --message "Should we use REST or GraphQL?"
   grump plan --message "Add auth to the API"
   grump code --session abc123 --output ./out
   grump analyze --workspace . --output ./docs/arch.mmd
+  grump cache-clear
+
+Environment variables:
+  GRUMP_API_URL    Backend URL (default: http://localhost:3000)
+  GRUMP_API_KEY    API key for authentication
 `);
+}
+
+// --- cache-clear ---
+async function cmdCacheClear(): Promise<void> {
+  try {
+    const files = fs.readdirSync(CACHE_DIR);
+    let cleared = 0;
+    
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        fs.unlinkSync(path.join(CACHE_DIR, file));
+        cleared++;
+      }
+    }
+    
+    console.log(`Cleared ${cleared} cached items`);
+  } catch (error) {
+    console.error('Failed to clear cache:', error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
 }
 
 const COMMANDS = ['ship', 'argument', 'plan', 'code', 'analyze'];
@@ -312,6 +485,9 @@ async function main(): Promise<void> {
     case 'ship':
       await cmdShip(url, rest);
       break;
+    case 'ship-parallel':
+      await cmdShipParallel(url, rest);
+      break;
     case 'argument':
       await cmdArgument(url, rest);
       break;
@@ -323,6 +499,9 @@ async function main(): Promise<void> {
       break;
     case 'analyze':
       await cmdAnalyze(url, rest);
+      break;
+    case 'cache-clear':
+      await cmdCacheClear();
       break;
     default:
       console.error(`grump: unknown command "${cmd}". Use grump --help.`);

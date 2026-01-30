@@ -10,14 +10,18 @@ export interface UserSettings {
 }
 
 export interface ModelOption {
-  provider: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter';
+  provider: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter' | 'nim';
   modelId: string;
   label?: string;
 }
 
+export type ModelPreset = 'fast' | 'quality' | 'balanced';
+
 export interface ModelsSettings {
-  defaultProvider?: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter';
+  defaultProvider?: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter' | 'nim';
   defaultModelId?: string;
+  /** Quality vs speed: fast = NIM/Kimi, quality = Claude, balanced = router default */
+  modelPreset?: ModelPreset;
   options?: ModelOption[];
 }
 

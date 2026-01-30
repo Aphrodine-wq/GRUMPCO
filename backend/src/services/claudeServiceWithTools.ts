@@ -62,6 +62,13 @@ import {
   browserTypeInputSchema,
   browserGetContentInputSchema,
   browserScreenshotInputSchema,
+  gitStatusInputSchema,
+  gitDiffInputSchema,
+  gitLogInputSchema,
+  gitCommitInputSchema,
+  gitBranchInputSchema,
+  gitPushInputSchema,
+  terminalExecuteInputSchema,
 } from '../tools/definitions.js';
 import { generateSchemaFromDescription } from './dbSchemaService.js';
 import { generateMigrations } from './migrationService.js';
@@ -353,23 +360,29 @@ export class ClaudeServiceWithTools {
       }
 
       const useGateway = provider != null || modelId != null;
+      const gwProvider = provider ?? 'anthropic';
+      const isNim = gwProvider === 'nim';
+      const gwMessages = requestParams.messages.map((m) => {
+        const role = m.role as 'user' | 'assistant';
+        const c = m.content;
+        if (typeof c === 'string') return { role, content: c };
+        if (isNim && Array.isArray(c)) return { role, content: c };
+        return { role, content: JSON.stringify(c) };
+      });
       const response = useGateway
         ? getStream(
           {
             model: requestParams.model,
             max_tokens: requestParams.max_tokens,
             system: typeof requestParams.system === 'string' ? requestParams.system : JSON.stringify(requestParams.system),
-            messages: requestParams.messages.map((m) => ({
-              role: m.role as 'user' | 'assistant',
-              content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
-            })),
+            messages: gwMessages,
             tools: requestParams.tools?.map((t) => ({
               name: t.name,
               description: 'description' in t ? (t.description ?? '') : '',
               input_schema: ('input_schema' in t ? t.input_schema : _DEFAULT_TOOL_INPUT_SCHEMA) as { type: 'object'; properties?: Record<string, unknown>; required?: string[] },
             })),
           },
-          { provider: provider ?? 'anthropic', modelId: modelId ?? this.model }
+          { provider: gwProvider, modelId: modelId ?? this.model }
         )
         : await this.resilientStream(requestParams);
 
@@ -568,6 +581,27 @@ export class ClaudeServiceWithTools {
         case 'browser_screenshot':
           return await this._executeBrowserScreenshot(input);
 
+        case 'git_status':
+          return await this._executeGitStatus(input);
+
+        case 'git_diff':
+          return await this._executeGitDiff(input);
+
+        case 'git_log':
+          return await this._executeGitLog(input);
+
+        case 'git_commit':
+          return await this._executeGitCommit(input);
+
+        case 'git_branch':
+          return await this._executeGitBranch(input);
+
+        case 'git_push':
+          return await this._executeGitPush(input);
+
+        case 'terminal_execute':
+          return await this._executeTerminalExecute(input);
+
         default:
           return {
             success: false,
@@ -752,6 +786,73 @@ export class ClaudeServiceWithTools {
     }
     const { query, workingDirectory, maxResults } = validation.data;
     return await this.getTes().searchCodebase(query, workingDirectory, maxResults);
+  }
+
+  private async _executeGitStatus(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const validation = gitStatusInputSchema.safeParse(input);
+    if (!validation.success) {
+      return { success: false, error: `Invalid input: ${validation.error.message}`, toolName: 'git_status', executionTime: 0 };
+    }
+    return await this.getTes().gitStatus(validation.data.workingDirectory);
+  }
+
+  private async _executeGitDiff(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const validation = gitDiffInputSchema.safeParse(input);
+    if (!validation.success) {
+      return { success: false, error: `Invalid input: ${validation.error.message}`, toolName: 'git_diff', executionTime: 0 };
+    }
+    const { workingDirectory, staged, file } = validation.data;
+    return await this.getTes().gitDiff(workingDirectory, staged, file);
+  }
+
+  private async _executeGitLog(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const validation = gitLogInputSchema.safeParse(input);
+    if (!validation.success) {
+      return { success: false, error: `Invalid input: ${validation.error.message}`, toolName: 'git_log', executionTime: 0 };
+    }
+    const { workingDirectory, maxCount, oneline } = validation.data;
+    return await this.getTes().gitLog(workingDirectory, maxCount, oneline);
+  }
+
+  private async _executeGitCommit(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const validation = gitCommitInputSchema.safeParse(input);
+    if (!validation.success) {
+      return { success: false, error: `Invalid input: ${validation.error.message}`, toolName: 'git_commit', executionTime: 0 };
+    }
+    const { message, workingDirectory, addAll } = validation.data;
+    return await this.getTes().gitCommit(message, workingDirectory, addAll);
+  }
+
+  private async _executeGitBranch(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const validation = gitBranchInputSchema.safeParse(input);
+    if (!validation.success) {
+      return { success: false, error: `Invalid input: ${validation.error.message}`, toolName: 'git_branch', executionTime: 0 };
+    }
+    const { workingDirectory, list, create } = validation.data;
+    return await this.getTes().gitBranch(workingDirectory, list ?? true, create);
+  }
+
+  private async _executeGitPush(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const validation = gitPushInputSchema.safeParse(input);
+    if (!validation.success) {
+      return { success: false, error: `Invalid input: ${validation.error.message}`, toolName: 'git_push', executionTime: 0 };
+    }
+    const { workingDirectory, remote, branch } = validation.data;
+    return await this.getTes().gitPush(workingDirectory, remote, branch);
+  }
+
+  private async _executeTerminalExecute(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+    const validation = terminalExecuteInputSchema.safeParse(input);
+    if (!validation.success) {
+      return {
+        success: false,
+        error: `Invalid input: ${validation.error.message}`,
+        toolName: 'terminal_execute',
+        executionTime: 0,
+      };
+    }
+    const { command, workingDirectory, timeout } = validation.data;
+    return await this.getTes().executeTerminal(command, workingDirectory, timeout);
   }
 
   private async _executeGenerateDbSchema(input: Record<string, unknown>): Promise<ToolExecutionResult> {

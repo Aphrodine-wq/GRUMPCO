@@ -8,9 +8,13 @@ export interface UserSettings {
   timezone?: string;
 }
 
+export type ModelPreset = 'fast' | 'quality' | 'balanced';
+
 export interface ModelsSettings {
-  defaultProvider?: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter';
+  defaultProvider?: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter' | 'nim';
   defaultModelId?: string;
+  /** Quality vs speed: fast = NIM/Kimi, quality = Claude, balanced = router default */
+  modelPreset?: ModelPreset;
 }
 
 export interface McpServerConfig {

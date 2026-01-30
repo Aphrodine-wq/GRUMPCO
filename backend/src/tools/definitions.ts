@@ -499,11 +499,190 @@ export const browserScreenshotTool: Anthropic.Tool = {
 };
 
 // ============================================================================
+// GIT TOOLS (first-class in chat; workspace-scoped)
+// ============================================================================
+
+export const gitStatusInputSchema = z.object({
+  workingDirectory: z
+    .string()
+    .optional()
+    .describe('Working directory (default: workspace root)'),
+});
+
+export type GitStatusInput = z.infer<typeof gitStatusInputSchema>;
+
+export const gitStatusTool: Anthropic.Tool = {
+  name: 'git_status',
+  description: 'Get git status (branch, staged/unstaged changes, untracked files) for the workspace.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      workingDirectory: { type: 'string', description: 'Working directory (default: workspace root)' },
+    },
+    required: [],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+export const gitDiffInputSchema = z.object({
+  workingDirectory: z.string().optional().describe('Working directory (default: workspace root)'),
+  staged: z.boolean().optional().default(false).describe('Show staged changes only'),
+  file: z.string().optional().describe('Limit diff to a single file path'),
+});
+
+export type GitDiffInput = z.infer<typeof gitDiffInputSchema>;
+
+export const gitDiffTool: Anthropic.Tool = {
+  name: 'git_diff',
+  description: 'Show git diff (unstaged by default; use staged: true for staged changes). Optionally limit to one file.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      workingDirectory: { type: 'string', description: 'Working directory (default: workspace root)' },
+      staged: { type: 'boolean', description: 'Show staged changes only (default false)' },
+      file: { type: 'string', description: 'Limit diff to a single file path' },
+    },
+    required: [],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+export const gitLogInputSchema = z.object({
+  workingDirectory: z.string().optional().describe('Working directory (default: workspace root)'),
+  maxCount: z.number().optional().default(20).describe('Max number of commits to show'),
+  oneline: z.boolean().optional().default(true).describe('One line per commit'),
+});
+
+export type GitLogInput = z.infer<typeof gitLogInputSchema>;
+
+export const gitLogTool: Anthropic.Tool = {
+  name: 'git_log',
+  description: 'Show git log (recent commits). Use for history and context.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      workingDirectory: { type: 'string', description: 'Working directory (default: workspace root)' },
+      maxCount: { type: 'number', description: 'Max number of commits (default 20)' },
+      oneline: { type: 'boolean', description: 'One line per commit (default true)' },
+    },
+    required: [],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+export const gitCommitInputSchema = z.object({
+  message: z.string().describe('Commit message'),
+  workingDirectory: z.string().optional().describe('Working directory (default: workspace root)'),
+  addAll: z.boolean().optional().default(false).describe('Stage all changes before commit (git add -A)'),
+});
+
+export type GitCommitInput = z.infer<typeof gitCommitInputSchema>;
+
+export const gitCommitTool: Anthropic.Tool = {
+  name: 'git_commit',
+  description: 'Create a git commit. Optionally stage all changes first with addAll: true.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      message: { type: 'string', description: 'Commit message' },
+      workingDirectory: { type: 'string', description: 'Working directory (default: workspace root)' },
+      addAll: { type: 'boolean', description: 'Stage all changes before commit (default false)' },
+    },
+    required: ['message'],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+export const gitBranchInputSchema = z.object({
+  workingDirectory: z.string().optional().describe('Working directory (default: workspace root)'),
+  list: z.boolean().optional().default(true).describe('List branches (default true)'),
+  create: z.string().optional().describe('Create a new branch with this name'),
+});
+
+export type GitBranchInput = z.infer<typeof gitBranchInputSchema>;
+
+export const gitBranchTool: Anthropic.Tool = {
+  name: 'git_branch',
+  description: 'List git branches, or create a new branch. Use list: true to see branches, or create: "branch-name" to create one.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      workingDirectory: { type: 'string', description: 'Working directory (default: workspace root)' },
+      list: { type: 'boolean', description: 'List branches (default true)' },
+      create: { type: 'string', description: 'Create a new branch with this name' },
+    },
+    required: [],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+export const gitPushInputSchema = z.object({
+  workingDirectory: z.string().optional().describe('Working directory (default: workspace root)'),
+  remote: z.string().optional().default('origin').describe('Remote name'),
+  branch: z.string().optional().describe('Branch to push (default: current branch)'),
+});
+
+export type GitPushInput = z.infer<typeof gitPushInputSchema>;
+
+export const gitPushTool: Anthropic.Tool = {
+  name: 'git_push',
+  description: 'Push commits to remote. Only available when ENABLE_GIT_PUSH=true.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      workingDirectory: { type: 'string', description: 'Working directory (default: workspace root)' },
+      remote: { type: 'string', description: 'Remote name (default origin)' },
+      branch: { type: 'string', description: 'Branch to push (default current branch)' },
+    },
+    required: [],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+// ============================================================================
+// TERMINAL TOOL (run command and return output; workspace-scoped)
+// ============================================================================
+
+export const terminalExecuteInputSchema = z.object({
+  command: z.string().describe('Shell command to run (e.g. npm test, python -c "print(1)")'),
+  workingDirectory: z
+    .string()
+    .optional()
+    .describe('Working directory for command (default: workspace root)'),
+  timeout: z
+    .number()
+    .optional()
+    .default(60000)
+    .describe('Timeout in milliseconds (max 60000)'),
+});
+
+export type TerminalExecuteInput = z.infer<typeof terminalExecuteInputSchema>;
+
+export const terminalExecuteTool: Anthropic.Tool = {
+  name: 'terminal_execute',
+  description:
+    'Run a single shell command and get stdout/stderr and exit code. Use for running tests, scripts, or any one-off command. Working directory is workspace root unless specified.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      command: { type: 'string', description: 'Shell command to run' },
+      workingDirectory: { type: 'string', description: 'Working directory (default: workspace root)' },
+      timeout: { type: 'number', description: 'Timeout in milliseconds (max 60000)' },
+    },
+    required: ['command'],
+  } as unknown as Anthropic.Tool['input_schema'],
+};
+
+// ============================================================================
 // ALL TOOLS ARRAY (base tools; MCP/dynamic tools can be added via getTools())
 // ============================================================================
 
+const GIT_TOOLS: Anthropic.Tool[] = [
+  gitStatusTool,
+  gitDiffTool,
+  gitLogTool,
+  gitCommitTool,
+  gitBranchTool,
+  ...(process.env.ENABLE_GIT_PUSH === 'true' ? [gitPushTool] : []),
+];
+
 const BASE_TOOLS: Anthropic.Tool[] = [
   bashExecuteTool,
+  terminalExecuteTool,
   fileReadTool,
   fileWriteTool,
   fileEditTool,
@@ -518,6 +697,7 @@ const BASE_TOOLS: Anthropic.Tool[] = [
   browserTypeTool,
   browserGetContentTool,
   browserScreenshotTool,
+  ...GIT_TOOLS,
 ];
 
 /** Tools that can be extended by MCP or dynamic registration. */

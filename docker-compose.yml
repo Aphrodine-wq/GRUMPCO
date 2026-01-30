@@ -1,94 +1,121 @@
-# Beta: single backend replica for "one copy of truth" with SQLite.
-# For horizontal scaling, use PostgreSQL and multiple replicas.
 version: '3.8'
 
-services:
-  redis:
-    image: redis:7-alpine
-    container_name: grump-redis
-    ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - mermaid-network
+# G-Rump Docker Compose Configuration
+# 
+# Standard: docker compose up -d
+# With GPU: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
 
+services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      cache_from:
+        - ghcr.io/your-org/grump-backend:latest
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    image: grump-backend:latest
     container_name: grump-backend
-    env_file:
-      - ./backend/.env
+    ports:
+      - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - SESSION_STORAGE=redis
+      - DB_TYPE=sqlite
       - DB_PATH=/app/data/grump.db
+      # Cache settings
+      - TIERED_CACHE_L1_MAX=500
+      - TIERED_CACHE_L1_TTL_MS=300000
+      # Worker pool settings
+      - WORKER_POOL_MIN=2
+      - WORKER_POOL_MAX=8
     volumes:
       - backend-data:/app/data
-    expose:
-      - "3000"
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health/quick"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    restart: unless-stopped
+      - backend-cache:/app/.cache
     depends_on:
       redis:
         condition: service_healthy
-    networks:
-      - mermaid-network
-    deploy:
-      replicas: 1
-
-  loadbalancer:
-    image: nginx:alpine
-    container_name: grump-loadbalancer
-    ports:
-      - "3000:80"
-    volumes:
-      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health/quick"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
-      - mermaid-network
+      - grump-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    container_name: grump-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 512mb 
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --timeout 0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - grump-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: mermaid-frontend
+      cache_from:
+        - ghcr.io/your-org/grump-frontend:latest
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    image: grump-frontend:latest
+    container_name: grump-frontend
     ports:
-      - "8080:80"
+      - "5173:80"
+    environment:
+      - VITE_API_URL=http://backend:3000
     depends_on:
-      - loadbalancer
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      - backend
     restart: unless-stopped
     networks:
-      - mermaid-network
+      - grump-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
 
 volumes:
-  redis-data:
   backend-data:
+    driver: local
+  backend-cache:
+    driver: local
+  redis-data:
+    driver: local
 
 networks:
-  mermaid-network:
+  grump-network:
     driver: bridge
