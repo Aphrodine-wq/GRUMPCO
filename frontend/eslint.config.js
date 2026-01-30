@@ -49,6 +49,8 @@ const browserGlobals = {
   confirm: 'readonly',
   alert: 'readonly',
   prompt: 'readonly',
+  URLSearchParams: 'readonly',
+  TouchEvent: 'readonly',
 };
 
 

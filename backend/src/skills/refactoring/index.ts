@@ -63,12 +63,13 @@ class RefactoringSkill extends BaseSkill {
     const router = Router();
 
     // Refactor endpoint
-    router.post('/refactor', async (req, res) => {
+    router.post('/refactor', async (req, res): Promise<void> => {
       try {
         const { code, type, options: _options, language: _language } = req.body;
 
         if (!code) {
-          return res.status(400).json({ error: 'Code is required' });
+          res.status(400).json({ error: 'Code is required' });
+          return;
         }
 
         res.json({ message: 'Refactoring started', type });
@@ -80,12 +81,13 @@ class RefactoringSkill extends BaseSkill {
     });
 
     // Suggest refactorings endpoint
-    router.post('/suggest', async (req, res) => {
+    router.post('/suggest', async (req, res): Promise<void> => {
       try {
         const { code, language } = req.body;
 
         if (!code) {
-          return res.status(400).json({ error: 'Code is required' });
+          res.status(400).json({ error: 'Code is required' });
+          return;
         }
 
         const suggestions = this.analyzeForRefactorings(code, language);

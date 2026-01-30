@@ -1,22 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Space Grotesk", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: light dark;
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color: #1B0F3A;
+  background-color: #FFFFFF;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: #f8fafc;
+  background: radial-gradient(900px 500px at 10% -10%, #EDE9FE 0%, #FFFFFF 60%),
+              radial-gradient(800px 480px at 90% -20%, #DDD6FE 0%, #FFFFFF 60%),
+              #FFFFFF;
 }
 
 #app {

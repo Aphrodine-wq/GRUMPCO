@@ -15,11 +15,12 @@ const router = Router();
  * Body: { description: string }
  * Returns: { content: string } – the SKILL.md body to save to .cursor/skills/ or similar.
  */
-router.post('/generate-skill-md', async (req: Request, res: Response) => {
+router.post('/generate-skill-md', async (req: Request, res: Response): Promise<void> => {
   try {
     const { description } = req.body as { description?: string };
     if (!description || typeof description !== 'string') {
-      return res.status(400).json({ error: 'description (string) required' });
+      res.status(400).json({ error: 'description (string) required' });
+      return;
     }
     const content = `# Skill: ${description.slice(0, 80)}${description.length > 80 ? '...' : ''}
 

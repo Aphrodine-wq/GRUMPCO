@@ -1,0 +1,80 @@
+{
+  "name": "@grump/compiler-enhanced",
+  "version": "1.0.0",
+  "description": "Enhanced compiler system for G-Rump with incremental compilation, watch mode, bundle analysis, and more",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./incremental": {
+      "import": "./dist/incremental.js",
+      "types": "./dist/incremental.d.ts"
+    },
+    "./watch": {
+      "import": "./dist/watch.js",
+      "types": "./dist/watch.d.ts"
+    },
+    "./analyzer": {
+      "import": "./dist/analyzer.js",
+      "types": "./dist/analyzer.d.ts"
+    },
+    "./dce": {
+      "import": "./dist/dce.js",
+      "types": "./dist/dce.d.ts"
+    },
+    "./parallel": {
+      "import": "./dist/parallel.js",
+      "types": "./dist/parallel.d.ts"
+    },
+    "./transforms": {
+      "import": "./dist/transforms.js",
+      "types": "./dist/transforms.d.ts"
+    },
+    "./sourcemaps": {
+      "import": "./dist/sourcemaps.js",
+      "types": "./dist/sourcemaps.d.ts"
+    },
+    "./hotreload": {
+      "import": "./dist/hotreload.js",
+      "types": "./dist/hotreload.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.0",
+    "ws": "^8.18.0",
+    "xxhash-addon": "^2.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  },
+  "peerDependencies": {
+    "@grump/shared-types": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "compiler",
+    "intent-compiler",
+    "g-rump",
+    "incremental-compilation",
+    "watch-mode",
+    "bundle-analyzer"
+  ],
+  "license": "MIT"
+}

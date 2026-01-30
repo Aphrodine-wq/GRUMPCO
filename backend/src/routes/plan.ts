@@ -30,15 +30,16 @@ const router = Router();
  * POST /api/plan/generate
  * Generate a structured plan from user request
  */
-router.post('/generate', async (req: Request, res: Response) => {
+router.post('/generate', async (req: Request, res: Response): Promise<void> => {
   try {
     const request: PlanGenerationRequest = req.body;
 
     if (!request.userRequest) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Invalid request',
         message: 'userRequest is required',
       });
+      return;
     }
 
     logger.debug({ requestId: req.id }, 'Plan generation request');
@@ -56,16 +57,17 @@ router.post('/generate', async (req: Request, res: Response) => {
  * GET /api/plan/:id
  * Get plan details
  */
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const plan = await getPlan(id);
 
     if (!plan) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Plan not found',
         message: `Plan ${id} does not exist`,
       });
+      return;
     }
 
     res.json({ plan });
@@ -79,14 +81,15 @@ router.get('/:id', async (req: Request, res: Response) => {
  * POST /api/plan/:id/approve
  * Approve plan for execution
  */
-router.post('/:id/approve', async (req: Request, res: Response) => {
+router.post('/:id/approve', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { approved, comments }: PlanApprovalRequest = req.body;
 
     if (approved === false) {
       const plan = await rejectPlan(id, comments);
-      return res.json({ plan });
+      res.json({ plan });
+      return;
     }
 
     const plan = await approvePlan(id, req.headers['x-user-id'] as string);
@@ -102,7 +105,7 @@ router.post('/:id/approve', async (req: Request, res: Response) => {
  * POST /api/plan/:id/reject
  * Reject plan
  */
-router.post('/:id/reject', async (req: Request, res: Response) => {
+router.post('/:id/reject', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { comments }: { comments?: string } = req.body;
@@ -120,7 +123,7 @@ router.post('/:id/reject', async (req: Request, res: Response) => {
  * POST /api/plan/:id/edit
  * Edit plan before approval
  */
-router.post('/:id/edit', async (req: Request, res: Response) => {
+router.post('/:id/edit', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const edits: PlanEditRequest = req.body;
@@ -138,16 +141,17 @@ router.post('/:id/edit', async (req: Request, res: Response) => {
  * POST /api/plan/:id/execute
  * Start plan execution
  */
-router.post('/:id/execute', async (req: Request, res: Response) => {
+router.post('/:id/execute', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const executionRequest: PlanExecutionRequest = req.body;
 
     if (executionRequest.planId !== id) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Invalid request',
         message: 'planId in body must match URL parameter',
       });
+      return;
     }
 
     const plan = await startPlanExecution(id);
@@ -184,7 +188,7 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
  * POST /api/plan/:id/complete
  * Complete plan execution
  */
-router.post('/:id/complete', async (req: Request, res: Response) => {
+router.post('/:id/complete', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const plan = completePlanExecution(id);
@@ -200,16 +204,17 @@ router.post('/:id/complete', async (req: Request, res: Response) => {
  * POST /api/plan/:id/phase/:phaseId/status
  * Update phase status
  */
-router.post('/:id/phase/:phaseId/status', async (req: Request, res: Response) => {
+router.post('/:id/phase/:phaseId/status', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id, phaseId } = req.params;
     const { status }: { status: 'pending' | 'in_progress' | 'completed' | 'skipped' } = req.body;
 
     if (!['pending', 'in_progress', 'completed', 'skipped'].includes(status)) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Invalid status',
         message: 'Status must be one of: pending, in_progress, completed, skipped',
       });
+      return;
     }
 
     const plan = await updatePhaseStatus(id, phaseId as PlanPhase, status);

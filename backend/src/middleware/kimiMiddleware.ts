@@ -24,6 +24,7 @@ import logger from '../middleware/logger.js';
 
 // Extend Express Request type to include Kimi optimization context
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       kimiOptimization?: {

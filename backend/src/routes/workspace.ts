@@ -8,11 +8,12 @@ const router = Router();
  * POST /api/workspace/remote
  * Body: { repoUrl: string }
  */
-router.post('/remote', async (req: Request, res: Response) => {
+router.post('/remote', async (req: Request, res: Response): Promise<void> => {
     const { repoUrl } = req.body;
 
     if (!repoUrl) {
-        return res.status(400).json({ error: 'repoUrl is required' });
+        res.status(400).json({ error: 'repoUrl is required' });
+        return;
     }
 
     try {

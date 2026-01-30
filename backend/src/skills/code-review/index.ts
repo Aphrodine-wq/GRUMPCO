@@ -53,12 +53,13 @@ class CodeReviewSkill extends BaseSkill {
     const router = Router();
 
     // Review code endpoint
-    router.post('/review', async (req, res) => {
+    router.post('/review', async (req, res): Promise<void> => {
       try {
         const { code, language, reviewType, context } = req.body as ReviewRequest;
 
         if (!code) {
-          return res.status(400).json({ error: 'Code is required' });
+          res.status(400).json({ error: 'Code is required' });
+          return;
         }
 
         const result = await this.reviewCode({
@@ -77,12 +78,13 @@ class CodeReviewSkill extends BaseSkill {
     });
 
     // Analyze file endpoint
-    router.post('/analyze', async (req, res) => {
+    router.post('/analyze', async (req, res): Promise<void> => {
       try {
         const { filePath, reviewType: _reviewType, workspacePath } = req.body;
 
         if (!filePath || !workspacePath) {
-          return res.status(400).json({ error: 'filePath and workspacePath are required' });
+          res.status(400).json({ error: 'filePath and workspacePath are required' });
+          return;
         }
 
         res.json({ message: 'File analysis started', filePath });

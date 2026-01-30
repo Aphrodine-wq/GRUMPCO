@@ -26,15 +26,16 @@ const router = Router();
  * POST /api/spec/start
  * Start a new spec session and generate initial questions
  */
-router.post('/start', async (req: Request, res: Response) => {
+router.post('/start', async (req: Request, res: Response): Promise<void> => {
   try {
     const request: SpecStartRequest = req.body;
 
     if (!request.userRequest) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Invalid request',
         message: 'userRequest is required',
       });
+      return;
     }
 
     logger.debug({ requestId: req.id }, 'Spec session start request');
@@ -52,16 +53,17 @@ router.post('/start', async (req: Request, res: Response) => {
  * GET /api/spec/:id
  * Get spec session status
  */
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const session = await getSpecSession(id);
 
     if (!session) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Spec session not found',
         message: `Spec session ${id} does not exist`,
       });
+      return;
     }
 
     const complete = await isSessionComplete(id);
@@ -82,16 +84,17 @@ router.get('/:id', async (req: Request, res: Response) => {
  * POST /api/spec/:id/answer
  * Submit answer to a question
  */
-router.post('/:id/answer', async (req: Request, res: Response) => {
+router.post('/:id/answer', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const answerRequest: SpecAnswerRequest = req.body;
 
     if (!answerRequest.questionId || answerRequest.value === undefined) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Invalid request',
         message: 'questionId and value are required',
       });
+      return;
     }
 
     const session = await submitAnswer(id, answerRequest);
@@ -114,17 +117,20 @@ router.post('/:id/answer', async (req: Request, res: Response) => {
  * POST /api/spec/:id/generate
  * Generate specification from answered questions
  */
-router.post('/:id/generate', async (req: Request, res: Response) => {
+router.post('/:id/generate', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const request: SpecGenerateRequest = { sessionId: id };
 
-    if (!isSessionComplete(id)) {
-      return res.status(400).json({
+    const complete = await isSessionComplete(id);
+    if (!complete) {
+      const nextQuestion = await getNextQuestion(id);
+      res.status(400).json({
         error: 'Session incomplete',
         message: 'Not all required questions are answered',
-        nextQuestion: getNextQuestion(id),
+        nextQuestion,
       });
+      return;
     }
 
     logger.debug({ requestId: req.id, sessionId: id }, 'Spec generation request');

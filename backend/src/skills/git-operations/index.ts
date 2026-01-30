@@ -54,12 +54,13 @@ class GitOperationsSkill extends BaseSkill {
     const router = Router();
 
     // Generate commit message
-    router.post('/commit-message', async (req, res) => {
+    router.post('/commit-message', async (req, res): Promise<void> => {
       try {
         const { workspacePath } = req.body;
 
         if (!workspacePath) {
-          return res.status(400).json({ error: 'workspacePath is required' });
+          res.status(400).json({ error: 'workspacePath is required' });
+          return;
         }
 
         res.json({ message: 'Commit message generation started' });

@@ -314,10 +314,11 @@ class SkillRegistry {
       res.json({ skills });
     });
 
-    app.get('/api/skills/:id', (req, res) => {
+    app.get('/api/skills/:id', (req, res): void => {
       const skill = this.getSkill(req.params.id);
       if (!skill) {
-        return res.status(404).json({ error: 'Skill not found' });
+        res.status(404).json({ error: 'Skill not found' });
+        return;
       }
       res.json({
         ...skill.manifest,

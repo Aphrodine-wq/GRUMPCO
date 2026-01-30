@@ -50,7 +50,7 @@ router.post(
   '/generate',
   validateArchitectureRequest,
   handleArchitectureValidationErrors,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
   const log = getRequestLogger();
   const body = req.body as ArchitectureRequestBody;
 
@@ -92,7 +92,8 @@ router.post(
     const cache = getTieredCache();
     const cached = await cache.get<ReturnType<typeof generateArchitecture>>('architecture:generate', key);
     if (cached && cached.status !== 'error') {
-      return res.json(cached);
+      res.json(cached);
+      return;
     }
 
     const response = await generateArchitecture(archRequest, conversationHistory, enrichedIntent);
@@ -129,7 +130,7 @@ router.post(
   '/generate-stream',
   validateArchitectureRequest,
   handleArchitectureValidationErrors,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
   const log = getRequestLogger();
   const body = req.body as ArchitectureRequestBody;
 
@@ -186,7 +187,7 @@ router.post(
  * POST /api/architecture/refine
  * Refine existing architecture
  */
-router.post('/refine', async (req: Request<Record<string, never>, object, { architectureId?: string; refinements: string[] }>, res: Response) => {
+router.post('/refine', async (req: Request<Record<string, never>, object, { architectureId?: string; refinements: string[] }>, res: Response): Promise<void> => {
   const log = getRequestLogger();
 
   try {

@@ -1,7 +1,7 @@
 {
     "name": "milesproject-docs",
     "version": "1.0.0",
-    "description": "Documentation site for Miles Project",
+    "description": "Documentation site for G-Rump",
     "license": "MIT",
     "main": "index.js",
     "scripts": {

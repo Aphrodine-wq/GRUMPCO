@@ -78,6 +78,10 @@ export default [
         AbortController: 'readonly',
         AbortSignal: 'readonly',
         crypto: 'readonly',
+        require: 'readonly',
+        module: 'readonly',
+        exports: 'readonly',
+        global: 'readonly',
       },
     },
     rules: {

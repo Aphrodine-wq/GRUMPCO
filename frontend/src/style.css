@@ -1,30 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Claude Code-style Modern Theme */
+  /* G-Rump Purple Theme */
 
   /* Backgrounds */
-  --color-bg-app: #F9FAFB;
-  --color-bg-subtle: #F3F4F6;
-  /* iOS grouped secondary background */
+  --color-bg-app: #FFFFFF;
+  --color-bg-subtle: #F5F3FF;
   --color-bg-card: #FFFFFF;
-  --color-bg-card-hover: #F9FAFB;
-  --color-bg-input: #F3F4F6;
+  --color-bg-card-hover: #F8F5FF;
+  --color-bg-input: #F3E8FF;
 
   /* Text - High Contrast */
-  --color-text: #111827;
-  --color-text-secondary: #6B7280;
-  /* Apple-style gray */
-  --color-text-muted: #9CA3AF;
+  --color-text: #1F1147;
+  --color-text-secondary: #4C1D95;
+  --color-text-muted: #6D28D9;
   --color-text-inverse: #FFFFFF;
 
-  /* Brand / Accents - Claude Blue */
-  --color-primary: #0EA5E9;
-  /* System Blue */
-  --color-primary-glow: rgba(14, 165, 233, 0.3);
-  --color-primary-hover: #0284C7;
+  /* Brand / Accents */
+  --color-primary: #7C3AED;
+  --color-primary-glow: rgba(124, 58, 237, 0.32);
+  --color-primary-hover: #6D28D9;
 
   /* Status */
   --color-success: #34C759;
@@ -32,14 +31,14 @@
   --color-warning: #FF9500;
 
   /* Borders */
-  --color-border: #E5E5EA;
-  --color-border-light: #F2F2F7;
-  --color-border-highlight: #D1D1D6;
+  --color-border: #E9D5FF;
+  --color-border-light: #F3E8FF;
+  --color-border-highlight: #D8B4FE;
 
   /* Glassmorphism (Light) - Enhanced */
-  --glass-bg: rgba(255, 255, 255, 0.9);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(124, 58, 237, 0.12);
+  --glass-shadow: 0 10px 36px rgba(76, 29, 149, 0.12);
   --glass-backdrop: blur(24px);
 
   /* Radius - Continuous Curvature */
@@ -53,11 +52,11 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.15);
-  --shadow-glow: 0 4px 24px rgba(14, 165, 233, 0.3);
+  --shadow-glow: 0 6px 26px rgba(124, 58, 237, 0.35);
 
   /* Typography */
-  --font-sans: "Architects Daughter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: "Fira Code", "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+  --font-sans: "Space Grotesk", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Space Mono", "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
 }
 
 *,
@@ -85,7 +84,9 @@ body {
   /* Slightly larger for readability */
   line-height: 1.5;
   color: var(--color-text);
-  background-color: var(--color-bg-app);
+  background: radial-gradient(1200px 600px at 10% -10%, #EDE9FE 0%, #FFFFFF 55%),
+              radial-gradient(900px 520px at 90% -20%, #DDD6FE 0%, #FFFFFF 60%),
+              var(--color-bg-app);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -101,12 +102,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #C7C7CC;
+  background: #C4B5FD;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #AEAEB2;
+  background: #A78BFA;
 }
 
 *:focus-visible {
@@ -129,11 +130,9 @@ select,
   margin: 0;
   font-family: var(--font-sans);
   font-weight: 600;
-  color: #1D1D1F;
-  letter-spacing: 0.02em;
-  /* Slightly wider for handwritten font */
-  font-size: 1.1em;
-  /* Bump visual size slightly for Caveat */
+  color: #1B0F3A;
+  letter-spacing: 0.01em;
+  font-size: 1.05em;
 }
 
 a {

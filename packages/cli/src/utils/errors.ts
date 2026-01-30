@@ -2,7 +2,8 @@ import chalk from 'chalk';
 import { branding } from '../branding.js';
 
 /**
- * Error handling utilities with grumpy branding
+ * Error handling utilities with purple/white branding
+ * STRICT purple theme: #6B46C1, #8B5CF6, #A855F7, #FFFFFF
  */
 
 interface ErrorWithCode extends Error {
@@ -15,14 +16,14 @@ interface ErrorWithCode extends Error {
 }
 
 /**
- * Display an error with the grumpy frowny face
+ * Display an error with the purple frowny face (STRICT: purple bg, white text)
  */
 export function displayError(error: Error | string, context?: string): void {
   console.error('\n' + branding.getErrorFace());
-  console.error(chalk.redBright.bold('\n  Oh no! Something went wrong.\n'));
+  console.error(chalk.bgHex(branding.colors.darkPurple).whiteBright.bold('\n  Oh no! Something went wrong.\n'));
   
   if (context) {
-    console.error(chalk.red(`  Context: ${context}\n`));
+    console.error(chalk.bgHex(branding.colors.darkPurple).white(`  Context: ${context}\n`));
   }
   
   const message = typeof error === 'string' ? error : error.message;
@@ -31,22 +32,22 @@ export function displayError(error: Error | string, context?: string): void {
   // Provide helpful suggestions based on error type
   const suggestions = getErrorSuggestions(error);
   if (suggestions.length > 0) {
-    console.error(chalk.yellow('  Suggestions:'));
+    console.error(chalk.hex(branding.colors.mediumPurple)('  Suggestions:'));
     suggestions.forEach(suggestion => {
-      console.error(chalk.yellow(`    • ${suggestion}`));
+      console.error(chalk.hex(branding.colors.lightPurple)(`    • ${suggestion}`));
     });
     console.error();
   }
   
-  console.error(chalk.dim('  Run with --verbose for more details.\n'));
+  console.error(chalk.hex(branding.colors.lightPurple)('  Run with --verbose for more details.\n'));
   console.error(branding.getDivider());
 }
 
 /**
- * Display a warning message
+ * Display a warning message (purple theme)
  */
 export function displayWarning(message: string): void {
-  console.warn(chalk.yellowBright(`\n  ⚠ ${message}\n`));
+  console.warn(chalk.hex(branding.colors.mediumPurple)(`\n  ⚠ ${message}\n`));
 }
 
 /**

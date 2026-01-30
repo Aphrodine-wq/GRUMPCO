@@ -38,14 +38,15 @@ function getDemoTemplatePath(): string | null {
  * POST /api/demo/start
  * Creates a copy of the demo template in a temp dir and returns workspace path + steps.
  */
-router.post('/start', async (req: Request, res: Response) => {
+router.post('/start', async (req: Request, res: Response): Promise<void> => {
   try {
     const templatePath = getDemoTemplatePath();
     if (!templatePath) {
       logger.warn('Demo template not found (templates/demo-project)');
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Demo template not available. Ensure templates/demo-project exists.',
       });
+      return;
     }
 
     const prefix = path.join(os.tmpdir(), 'grump-demo-');

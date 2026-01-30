@@ -22,10 +22,11 @@ const log = getRequestLogger();
  * Body: { prompt: string, workspaceRoot?: string }
  * Streams SSE: decompose_start, decompose_done, agent_start, agent_done, summary_start, summary_done, error.
  */
-router.post('/swarm', async (req: Request, res: Response) => {
+router.post('/swarm', async (req: Request, res: Response): Promise<void> => {
   const { prompt, workspaceRoot } = req.body as { prompt?: string; workspaceRoot?: string };
   if (typeof prompt !== 'string' || !prompt.trim()) {
-    return res.status(400).json({ error: 'prompt is required and must be a non-empty string' });
+    res.status(400).json({ error: 'prompt is required and must be a non-empty string' });
+    return;
   }
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -51,7 +52,7 @@ router.post('/swarm', async (req: Request, res: Response) => {
  * POST /api/agents/schedule
  * Body: { name: string, cronExpression: string, action: 'ship' | 'codegen' | 'chat', params?: object }
  */
-router.post('/schedule', async (req: Request, res: Response) => {
+router.post('/schedule', async (req: Request, res: Response): Promise<void> => {
   try {
     const name = (req.body.name as string)?.trim();
     const cronExpression = (req.body.cronExpression as string)?.trim();
@@ -59,13 +60,16 @@ router.post('/schedule', async (req: Request, res: Response) => {
     const params = (req.body.params as Record<string, unknown>) ?? {};
 
     if (!name || !cronExpression) {
-      return res.status(400).json({ error: 'name and cronExpression are required' });
+      res.status(400).json({ error: 'name and cronExpression are required' });
+      return;
     }
     if (!['ship', 'codegen', 'chat'].includes(action)) {
-      return res.status(400).json({ error: 'action must be ship, codegen, or chat' });
+      res.status(400).json({ error: 'action must be ship, codegen, or chat' });
+      return;
     }
     if (action === 'ship' && typeof (params as { projectDescription?: string }).projectDescription !== 'string') {
-      return res.status(400).json({ error: 'params.projectDescription is required for action ship' });
+      res.status(400).json({ error: 'params.projectDescription is required for action ship' });
+      return;
     }
 
     const agent = await createScheduledAgent(name, cronExpression, action, params as { projectDescription?: string; preferences?: Record<string, unknown> });
@@ -80,7 +84,7 @@ router.post('/schedule', async (req: Request, res: Response) => {
 /**
  * GET /api/agents/scheduled
  */
-router.get('/scheduled', async (_req: Request, res: Response) => {
+router.get('/scheduled', async (_req: Request, res: Response): Promise<void> => {
   try {
     const agents = await listAllScheduledAgents();
     res.json(agents);
@@ -93,11 +97,14 @@ router.get('/scheduled', async (_req: Request, res: Response) => {
 /**
  * DELETE /api/agents/scheduled/:id
  */
-router.delete('/scheduled/:id', async (req: Request, res: Response) => {
+router.delete('/scheduled/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const ok = await cancelScheduledAgent(id);
-    if (!ok) return res.status(404).json({ error: 'Scheduled agent not found' });
+    if (!ok) {
+      res.status(404).json({ error: 'Scheduled agent not found' });
+      return;
+    }
     res.status(204).send();
   } catch (error) {
     log.error({ error: (error as Error).message }, 'Failed to cancel scheduled agent');
@@ -108,11 +115,14 @@ router.delete('/scheduled/:id', async (req: Request, res: Response) => {
 /**
  * GET /api/agents/scheduled/:id
  */
-router.get('/scheduled/:id', async (req: Request, res: Response) => {
+router.get('/scheduled/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const agent = await getScheduledAgent(id);
-    if (!agent) return res.status(404).json({ error: 'Scheduled agent not found' });
+    if (!agent) {
+      res.status(404).json({ error: 'Scheduled agent not found' });
+      return;
+    }
     res.json(agent);
   } catch (error) {
     log.error({ error: (error as Error).message }, 'Failed to get scheduled agent');

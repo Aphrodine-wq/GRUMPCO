@@ -51,7 +51,7 @@ router.post(
   '/generate',
   validatePrdGenerateRequest,
   handlePrdValidationErrors,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
   const log = getRequestLogger();
   const body = req.body as PRDRequestBody;
 
@@ -98,7 +98,8 @@ router.post(
     const cache = getTieredCache();
     const cached = await cache.get<Awaited<ReturnType<typeof generatePRD>>>('prd:generate', key);
     if (cached && cached.status !== 'error') {
-      return res.json(cached);
+      res.json(cached);
+      return;
     }
 
     const response = await generatePRD(prdRequest, arch, conversationHistory);

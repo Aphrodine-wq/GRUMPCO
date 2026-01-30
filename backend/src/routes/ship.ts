@@ -32,7 +32,7 @@ router.post(
   '/start',
   validateShipRequest,
   handleShipValidationErrors,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
   try {
     const desc = (req.body.projectDescription as string).trim();
     const request: ShipStartRequest = {
@@ -60,13 +60,14 @@ router.post(
  * GET /api/ship/:sessionId
  * Get SHIP mode session status
  */
-router.get('/:sessionId', async (req, res) => {
+router.get('/:sessionId', async (req, res): Promise<void> => {
   try {
     const { sessionId } = req.params;
     const session = await getShipSession(sessionId);
     
     if (!session) {
-      return res.status(404).json({ error: 'Session not found' });
+      res.status(404).json({ error: 'Session not found' });
+      return;
     }
     
     res.json({
@@ -94,12 +95,13 @@ router.get('/:sessionId', async (req, res) => {
  * POST /api/ship/:sessionId/execute
  * Enqueue SHIP mode workflow; worker runs it. Returns immediately.
  */
-router.post('/:sessionId/execute', async (req, res) => {
+router.post('/:sessionId/execute', async (req, res): Promise<void> => {
   try {
     const { sessionId } = req.params;
     const session = await getShipSession(sessionId);
     if (!session) {
-      return res.status(404).json({ error: 'Session not found' });
+      res.status(404).json({ error: 'Session not found' });
+      return;
     }
     const jobId = await enqueueShipJob(sessionId);
     log.info({ sessionId, jobId }, 'SHIP mode job enqueued');

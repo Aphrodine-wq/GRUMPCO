@@ -25,14 +25,15 @@ function getUserKey(req: Request): string {
  * GET /api/settings
  * Returns settings for the current user key.
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const userKey = getUserKey(req);
     const db = getDatabase();
     const settings = await db.getSettings(userKey);
 
     if (!settings) {
-      return res.json({ settings: {} as Settings });
+      res.json({ settings: {} as Settings });
+      return;
     }
 
     res.json({ settings });
@@ -47,16 +48,17 @@ router.get('/', async (req: Request, res: Response) => {
  * PUT /api/settings
  * Upserts settings. Body can be full Settings or a partial (merged with existing).
  */
-router.put('/', async (req: Request, res: Response) => {
+router.put('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const userKey = getUserKey(req);
     const body = req.body as Partial<Settings>;
 
     if (!body || typeof body !== 'object') {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Invalid request',
         message: 'Request body must be a Settings object (or partial)',
       });
+      return;
     }
 
     const db = getDatabase();

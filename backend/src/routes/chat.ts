@@ -40,15 +40,16 @@ const router = Router();
 const PRESET_FAST = { provider: 'nim' as const, modelId: 'moonshotai/kimi-k2.5' };
 const PRESET_QUALITY = { provider: 'openrouter' as const, modelId: 'openrouter/google/gemini-2.5-pro' };
 
-router.post('/stream', async (req: Request, res: Response) => {
+router.post('/stream', async (req: Request, res: Response): Promise<void> => {
   const { messages, workspaceRoot, mode, planMode, planId, specSessionId, agentProfile, provider, modelId, modelKey, guardRailOptions, tier, autonomous, largeContext, preferNim, maxLatencyMs, modelPreset } = req.body;
 
   // Validate request
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return res.status(400).json({
+    res.status(400).json({
       error: 'Invalid request',
       message: 'messages array is required and must not be empty',
     });
+    return;
   }
 
   const useLargeContext = Boolean(largeContext);
@@ -56,11 +57,12 @@ router.post('/stream', async (req: Request, res: Response) => {
   const maxMessageLength = useLargeContext ? MAX_CHAT_MESSAGE_LENGTH_LARGE : MAX_CHAT_MESSAGE_LENGTH;
 
   if (messages.length > maxMessages) {
-    return res.status(400).json({
+    res.status(400).json({
       error: 'Invalid request',
       message: `Too many messages. Maximum ${maxMessages} messages per request.`,
       type: 'validation_error',
     });
+    return;
   }
 
   // Resolve provider for validation (multimodal allowed only for nim)
@@ -76,11 +78,12 @@ router.post('/stream', async (req: Request, res: Response) => {
   // Validate message format and length
   for (const msg of messages) {
     if (!msg.role || msg.content == null) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Invalid message format',
         message: 'Each message must have role and content',
         type: 'validation_error',
       });
+      return;
     }
     if (allowMultimodal && Array.isArray(msg.content)) {
       let ok = true;
@@ -92,21 +95,23 @@ router.post('/stream', async (req: Request, res: Response) => {
         if (p.type === 'image_url' && !p.image_url?.url) ok = false;
       }
       if (!ok) {
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Invalid message format',
           message: 'Multimodal content must be [{ type: "text", text }] or [{ type: "image_url", image_url: { url } }]',
           type: 'validation_error',
         });
+        return;
       }
       continue;
     }
     const content = typeof msg.content === 'string' ? msg.content : String(msg.content);
     if (content.length > maxMessageLength) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Invalid request',
         message: `Message content exceeds maximum length of ${maxMessageLength} characters.`,
         type: 'validation_error',
       });
+      return;
     }
   }
 

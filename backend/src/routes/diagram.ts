@@ -173,7 +173,7 @@ router.post(
   '/generate-diagram',
   validateDiagramRequest,
   handleDiagramValidationErrors,
-  async (req: DiagramRequestBody, res: Response) => {
+  async (req: DiagramRequestBody, res: Response): Promise<void> => {
     const log = getRequestLogger();
     const { message, preferences } = req.body;
 
@@ -195,7 +195,8 @@ router.post(
       if (cached) {
         clearTimeout(timeoutId);
         if (res.headersSent) return;
-        return res.json({ success: true, mermaidCode: cached, fromCache: true });
+        res.json({ success: true, mermaidCode: cached, fromCache: true });
+        return;
       }
       const mermaidCode = await generateDiagram(message, preferences);
       clearTimeout(timeoutId);

@@ -38,8 +38,8 @@ export default {
         lg: 'var(--shadow-lg)',
       },
       fontFamily: {
-        sans: ['"SF Pro Text"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        mono: ['"SF Mono"', 'Menlo', 'monospace'],
+        sans: ['"Space Grotesk"', '"Segoe UI"', 'Arial', 'sans-serif'],
+        mono: ['"Space Mono"', '"SF Mono"', 'Menlo', 'monospace'],
       },
       borderRadius: {
         sm: 'var(--radius-sm)',
