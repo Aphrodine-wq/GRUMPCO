@@ -11,6 +11,7 @@ import { sendServerError, writeSSEError } from '../utils/errorResponse.js';
 import { validateArchitectureRequest, handleArchitectureValidationErrors } from '../middleware/validator.js';
 import { dispatchWebhook } from '../services/webhookService.js';
 import { getTieredCache } from '../services/tieredCache.js';
+import { logOnError } from '../utils/safeAsync.js';
 import { DEMO_ARCHITECTURE } from '../demo/sampleData.js';
 import type { ArchitectureRequest, ConversationMessage } from '../types/index.js';
 import type { EnrichedIntent } from '../services/intentCompilerService.js';
@@ -103,7 +104,11 @@ router.post(
       return;
     }
 
-    cache.set('architecture:generate', key, response, ARCHITECTURE_CACHE_TTL_SEC).catch(() => {});
+    logOnError(
+      cache.set('architecture:generate', key, response, ARCHITECTURE_CACHE_TTL_SEC),
+      'Architecture cache set',
+      { key }
+    );
 
     dispatchWebhook('architecture.generated', {
       architectureId: response.architecture?.id,

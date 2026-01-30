@@ -30,7 +30,7 @@ const DEFAULT_IGNORED = [
  */
 export class WatchCompiler extends EventEmitter {
   private config: CompilerConfig;
-  private incremental: IncrementalCompiler | null;
+  private incremental: IncrementalCompiler | undefined;
   private watcher: chokidar.FSWatcher | null = null;
   private debounceTimer: NodeJS.Timeout | null = null;
   private debounceMs: number;
@@ -40,12 +40,12 @@ export class WatchCompiler extends EventEmitter {
 
   constructor(
     config: CompilerConfig,
-    incremental: IncrementalCompiler | null = null
+    incremental?: IncrementalCompiler
   ) {
     super();
     this.config = config;
     this.incremental = incremental;
-    this.debounceMs = config.watch === true ? DEFAULT_DEBOUNCE_MS : (config.watch as number) || DEFAULT_DEBOUNCE_MS;
+    this.debounceMs = typeof config.watch === 'number' ? config.watch : DEFAULT_DEBOUNCE_MS;
   }
 
   /**
@@ -330,7 +330,7 @@ export async function watch(
   onChange?: (event: WatchEvent) => void,
   onCompile?: (result: unknown) => void
 ): Promise<WatchCompiler> {
-  const incremental = config.incremental ? new (await import('./incremental.js')).IncrementalCompiler(config) : null;
+  const incremental = config.incremental ? new (await import('./incremental.js')).IncrementalCompiler(config) : undefined;
   const watcher = createWatchCompiler(config, incremental);
 
   if (onChange) {

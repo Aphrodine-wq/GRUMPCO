@@ -16,6 +16,7 @@ import { sendServerError, writeSSEError } from '../utils/errorResponse.js';
 import { validatePrdGenerateRequest, handlePrdValidationErrors } from '../middleware/validator.js';
 import { dispatchWebhook } from '../services/webhookService.js';
 import { getTieredCache } from '../services/tieredCache.js';
+import { logOnError } from '../utils/safeAsync.js';
 import { DEMO_PRD } from '../demo/sampleData.js';
 import type { PRDRequest, ConversationMessage } from '../types/index.js';
 import type { SystemArchitecture } from '../types/architecture.js';
@@ -109,7 +110,11 @@ router.post(
       return;
     }
 
-    cache.set('prd:generate', key, response, PRD_CACHE_TTL_SEC).catch(() => {});
+    logOnError(
+      cache.set('prd:generate', key, response, PRD_CACHE_TTL_SEC),
+      'PRD cache set',
+      { key }
+    );
 
     dispatchWebhook('prd.generated', {
       architectureId: arch.id,

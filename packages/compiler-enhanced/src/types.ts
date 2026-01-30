@@ -206,6 +206,8 @@ export interface TransformPlugin {
 export interface TransformResult {
   /** Transformed content */
   content: string;
+  /** Transformed AST (for postParse transforms) */
+  ast?: unknown;
   /** Updated source map (if applicable) */
   sourceMap?: SourceMap;
   /** Whether the transform made changes */

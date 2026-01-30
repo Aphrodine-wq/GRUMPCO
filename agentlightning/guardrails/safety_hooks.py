@@ -11,9 +11,16 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Union, TYPE_CHECKING
 
-from ..agtypes import AttemptedRollout, Hook, Span
+from opentelemetry.sdk.trace import ReadableSpan
+
+from ..agtypes import Rollout, Hook, Span
+
+if TYPE_CHECKING:
+    from agentlightning.litagent import LitAgent
+    from agentlightning.runner.base import Runner
+    from agentlightning.tracer.base import Tracer
 
 from .content_filter import ContentFilter, ContentFilterResult
 from .prompt_guard import InjectionDetector, InjectionDetectionResult, PromptGuard
@@ -226,9 +233,10 @@ class SafetyHook(Hook):
     
     async def on_rollout_start(
         self,
+        *,
         agent: Any,
         runner: Any,
-        rollout: AttemptedRollout,
+        rollout: Rollout,
     ) -> None:
         """Hook called before rollout execution.
         
@@ -241,30 +249,33 @@ class SafetyHook(Hook):
         """
         # Extract input content for checking
         input_content = ""
-        if isinstance(rollout.input, str):
-            input_content = rollout.input
-        elif isinstance(rollout.input, dict):
+        rollout_input = rollout.input if hasattr(rollout, 'input') else None
+        
+        if isinstance(rollout_input, str):
+            input_content = rollout_input
+        elif isinstance(rollout_input, dict):
             # Try common keys for user input
             for key in ["content", "message", "prompt", "query", "text", "input"]:
-                if key in rollout.input:
-                    input_content = str(rollout.input[key])
+                if key in rollout_input:
+                    input_content = str(rollout_input[key])
                     break
             if not input_content:
-                input_content = str(rollout.input)
-        else:
-            input_content = str(rollout.input)
+                input_content = str(rollout_input)
+        elif rollout_input is not None:
+            input_content = str(rollout_input)
         
         # Extract user_id if available
         user_id = "anonymous"
-        if isinstance(rollout.input, dict):
-            user_id = rollout.input.get("user_id", rollout.input.get("userId", "anonymous"))
+        if isinstance(rollout_input, dict):
+            user_id = rollout_input.get("user_id", rollout_input.get("userId", "anonymous"))
         
         # Run safety check
         result = await self.check_safety(input_content, user_id)
         
+        rollout_id = getattr(rollout, 'rollout_id', 'unknown')
         if not result.passed:
             logger.warning(
-                f"Safety check failed for rollout {rollout.rollout_id}: "
+                f"Safety check failed for rollout {rollout_id}: "
                 f"category={result.failure_category}, reason={result.failure_reason}"
             )
             # Note: In a full implementation, we would raise an exception here
@@ -272,10 +283,11 @@ class SafetyHook(Hook):
     
     async def on_rollout_end(
         self,
+        *,
         agent: Any,
         runner: Any,
-        rollout: AttemptedRollout,
-        spans: Sequence[Span],
+        rollout: Rollout,
+        spans: Union[List[ReadableSpan], Sequence[Span]],
     ) -> None:
         """Hook called after rollout completion.
         
@@ -289,14 +301,17 @@ class SafetyHook(Hook):
         """
         # Extract user_id
         user_id = "anonymous"
-        if isinstance(rollout.input, dict):
-            user_id = rollout.input.get("user_id", rollout.input.get("userId", "anonymous"))
+        rollout_input = rollout.input if hasattr(rollout, 'input') else None
+        if isinstance(rollout_input, dict):
+            user_id = rollout_input.get("user_id", rollout_input.get("userId", "anonymous"))
         
         # Estimate tokens from spans
-        tokens_used = 0
+        tokens_used: int = 0
         for span in spans:
-            if hasattr(span, "attributes"):
-                tokens_used += span.attributes.get("tokens", 0)
+            if hasattr(span, "attributes") and span.attributes is not None:
+                token_value = span.attributes.get("tokens", 0)
+                if isinstance(token_value, (int, float)):
+                    tokens_used += int(token_value)
         
         # Record the request
         await self.user_monitor.record_request(user_id, was_blocked=False, tokens_used=tokens_used)
@@ -304,20 +319,22 @@ class SafetyHook(Hook):
     
     async def on_trace_start(
         self,
+        *,
         agent: Any,
         runner: Any,
         tracer: Any,
-        rollout: AttemptedRollout,
+        rollout: Rollout,
     ) -> None:
         """Hook called when trace starts (no-op for safety)."""
         pass
     
     async def on_trace_end(
         self,
+        *,
         agent: Any,
         runner: Any,
         tracer: Any,
-        rollout: AttemptedRollout,
+        rollout: Rollout,
     ) -> None:
         """Hook called when trace ends (no-op for safety)."""
         pass

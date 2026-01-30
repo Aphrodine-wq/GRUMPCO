@@ -40,7 +40,7 @@
 
     return () => {
       window.removeEventListener('error', handleError);
-      window.removeEventListener('unhandledrejection', handleError as any);
+      window.removeEventListener('unhandledrejection', handleError as EventListener);
     };
   });
 </script>

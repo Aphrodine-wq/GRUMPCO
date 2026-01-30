@@ -13,9 +13,15 @@ import logging
 import time
 import urllib.parse
 import warnings
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
 
-import aiohttp
+try:
+    import aiohttp
+    HAS_AIOHTTP = True
+except ImportError:
+    aiohttp = None  # type: ignore[assignment]
+    HAS_AIOHTTP = False
+
 import requests
 
 from .agtypes import NamedResources, ResourcesUpdate, RolloutLegacy, Task, TaskIfAny, TaskInput
@@ -76,6 +82,8 @@ class AgentLightningClient:
         Returns:
             Parsed JSON body as a dictionary if the request succeeds; otherwise ``None``.
         """
+        if not HAS_AIOHTTP or aiohttp is None:
+            raise RuntimeError("aiohttp is required for async operations. Install with: pip install aiohttp")
         timeout = aiohttp.ClientTimeout(total=self.timeout)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             try:
@@ -96,6 +104,8 @@ class AgentLightningClient:
         Returns:
             Parsed JSON body as a dictionary if the request succeeds; otherwise ``None``.
         """
+        if not HAS_AIOHTTP or aiohttp is None:
+            raise RuntimeError("aiohttp is required for async operations. Install with: pip install aiohttp")
         timeout = aiohttp.ClientTimeout(total=self.timeout)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             try:

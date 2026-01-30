@@ -286,7 +286,10 @@ export function kimiAnalyticsMiddleware(): (req: Request, res: Response, next: N
     const originalEnd = res.end.bind(res);
     
     // Override end to capture completion
-    res.end = function(chunk?: any, encoding?: any, cb?: any): Response {
+    // Express Response.end has multiple overloads, we handle them all via spread args
+    type EndArgs = Parameters<typeof res.end>;
+    
+    res.end = ((...args: EndArgs): Response => {
       const duration = Date.now() - startTime;
       
       // Log analytics data
@@ -308,9 +311,9 @@ export function kimiAnalyticsMiddleware(): (req: Request, res: Response, next: N
         );
       }
       
-      // Call original end
-      return originalEnd(chunk, encoding, cb);
-    } as any;
+      // Call original end with all arguments
+      return originalEnd(...args);
+    }) as typeof res.end;
     
     next();
   };

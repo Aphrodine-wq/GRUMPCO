@@ -18,6 +18,7 @@ import { gzip, gunzip } from 'zlib';
 import { promisify } from 'util';
 import logger from '../middleware/logger.js';
 import { recordTieredCacheAccess } from '../middleware/metrics.js';
+import { safeCleanup } from '../utils/safeAsync.js';
 import type { Redis } from 'ioredis';
 
 const gzipAsync = promisify(gzip);
@@ -410,7 +411,7 @@ export class TieredCache {
       
       // Check expiration
       if (metadata.expiresAt && Date.now() > metadata.expiresAt) {
-        await fs.unlink(l3Path).catch(() => {});
+        safeCleanup(() => fs.unlink(l3Path), 'Remove expired L3 cache file');
         this.stats.l3.misses++;
         this.recordNamespaceAccess(namespace, false);
         recordTieredCacheAccess('L3', false, namespace);

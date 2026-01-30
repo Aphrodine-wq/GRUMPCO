@@ -11,7 +11,10 @@
     "build": "swc src -d dist --copy-files && node scripts/copy-migrations.mjs",
     "build:tsc": "tsc && node scripts/copy-migrations.mjs",
     "vercel-build": "swc src -d dist --copy-files || true && node scripts/copy-migrations.mjs",
-    "bundle": "npm run build && pkg . --out-path dist-bundle",
+    "bundle": "node scripts/esbuild-bundle.mjs",
+    "bundle:windows": "node scripts/esbuild-bundle.mjs --platform=win32 --arch=x64",
+    "bundle:linux": "node scripts/esbuild-bundle.mjs --platform=linux --arch=x64",
+    "bundle:macos": "node scripts/esbuild-bundle.mjs --platform=darwin --arch=x64",
     "type-check": "tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
@@ -32,28 +35,18 @@
     "deploy:preview": "vercel",
     "env:add": "vercel env add"
   },
-  "pkg": {
-    "scripts": [
-      "dist/**/*.js"
-    ],
-    "assets": [
-      "dist/**/*"
-    ],
-    "targets": [
-      "node18-win-x64"
-    ],
-    "outputPath": "dist-bundle"
-  },
   "dependencies": {
     "@grump/ai-core": "*",
     "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.52.0",
-    "@opentelemetry/resources": "^1.28.0",
-    "@opentelemetry/sdk-node": "^0.211.0",
-    "@opentelemetry/sdk-trace-base": "^1.28.0",
-    "@opentelemetry/semantic-conventions": "^1.28.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
+    "@opentelemetry/resources": "^1.30.0",
+    "@opentelemetry/sdk-node": "^0.57.0",
+    "@opentelemetry/sdk-trace-base": "^1.30.0",
+    "@opentelemetry/semantic-conventions": "^1.30.0",
     "@supabase/supabase-js": "^2.91.1",
     "@types/archiver": "^7.0.0",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
     "archiver": "^7.0.1",
     "async-retry": "^1.3.3",
     "bullmq": "^5.34.5",
@@ -74,12 +67,14 @@
     "prom-client": "^15.1.3",
     "rate-limit-redis": "^4.3.1",
     "stripe": "^17.4.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "zod": "^3.22.4"
   },
   "optionalDependencies": {
-    "playwright": "^1.58.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.57.0",
     "better-sqlite3": "^11.7.0",
-    "@opentelemetry/auto-instrumentations-node": "^0.42.0"
+    "playwright": "^1.58.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -98,11 +93,11 @@
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
     "@vitest/coverage-v8": "^1.6.0",
+    "esbuild": "^0.24.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.1.0",
     "pino-pretty": "^13.1.3",
-    "pkg": "^5.8.0",
     "prettier": "^3.8.1",
     "supertest": "^7.2.2",
     "tsx": "^4.21.0",

@@ -527,7 +527,7 @@ export function composePlugins(name: string, plugins: TransformPlugin[]): Transf
       return result;
     },
     postParse: async (context) => {
-      let result: TransformResult & { ast?: unknown } = { content: context.content, ast: context.ast, changed: false };
+      let result: TransformResult = { content: context.content, ast: context.ast, changed: false };
       
       for (const plugin of plugins) {
         if (plugin.postParse) {
