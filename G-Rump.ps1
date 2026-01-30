@@ -1,13 +1,21 @@
 #!/usr/bin/env pwsh
-# G-Rump Auto-Updating Launcher
+# G-Rump Auto-Updating Launcher - Lightning Fast Edition
 # This PowerShell script acts as the main launcher for G-Rump with auto-update capability
 # It can be compiled to an .exe using ps2exe or similar tools
+#
+# PERFORMANCE OPTIMIZATIONS:
+# - Fast-launch mode (-Fast) skips UI and update checks
+# - Background update checking (non-blocking)
+# - Cached configuration
+# - Minimal assembly loading
 
 param(
     [switch]$SkipUpdateCheck,
     [switch]$Install,
     [switch]$Uninstall,
-    [switch]$ForceUpdate
+    [switch]$ForceUpdate,
+    [switch]$Fast,           # Lightning fast mode - skip all checks
+    [switch]$NoUI            # CLI mode - no GUI
 )
 
 # Configuration
@@ -501,8 +509,92 @@ function Show-LauncherWindow {
     $form.ShowDialog() | Out-Null
 }
 
+# Lightning Fast Launch - Skip everything and launch immediately
+function Start-FastLaunch {
+    $scriptDir = Split-Path -Parent $MyInvocation.ScriptName
+    $electronPath = Join-Path $scriptDir "frontend"
+    
+    # Try multiple possible locations for the Electron app
+    $possiblePaths = @(
+        (Join-Path $electronPath "node_modules\.bin\electron.cmd"),
+        (Join-Path $electronPath "node_modules\electron\dist\electron.exe"),
+        $Config.ExePath
+    )
+    
+    foreach ($path in $possiblePaths) {
+        if (Test-Path $path) {
+            if ($path -like "*.cmd") {
+                # Run electron dev mode
+                $env:GRUMP_FAST = "true"
+                Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $path, "." -WorkingDirectory $electronPath -WindowStyle Hidden
+            } else {
+                # Run compiled exe
+                Start-Process -FilePath $path -WindowStyle Normal
+            }
+            return $true
+        }
+    }
+    
+    # Fallback: try npm run electron:fast
+    if (Test-Path (Join-Path $electronPath "package.json")) {
+        $env:GRUMP_FAST = "true"
+        Start-Process -FilePath "npm" -ArgumentList "run", "electron:fast" -WorkingDirectory $electronPath -WindowStyle Hidden
+        return $true
+    }
+    
+    return $false
+}
+
+# CLI Mode - No GUI, just commands
+function Start-CliMode {
+    $scriptDir = Split-Path -Parent $MyInvocation.ScriptName
+    $cliPath = Join-Path $scriptDir "packages\cli"
+    
+    if (Test-Path (Join-Path $cliPath "package.json")) {
+        $env:GRUMP_FAST = "true"
+        $env:GRUMP_NO_BRANDING = "true"
+        
+        # Run CLI directly
+        $nodePath = Join-Path $cliPath "dist\index.js"
+        if (Test-Path $nodePath) {
+            node $nodePath @args
+        } else {
+            # Fallback to npm
+            Push-Location $cliPath
+            npm run start:fast -- @args
+            Pop-Location
+        }
+        return $true
+    }
+    
+    Write-Host "CLI not found. Run 'npm install' in packages/cli first." -ForegroundColor Red
+    return $false
+}
+
 # Main entry point
 function Main {
+    # LIGHTNING FAST MODE - Skip everything
+    if ($Fast) {
+        if ($NoUI) {
+            # CLI mode - fastest possible
+            Start-CliMode
+        } else {
+            # GUI mode - direct Electron launch
+            if (!(Start-FastLaunch)) {
+                Write-Host "Fast launch failed. Falling back to normal launch..." -ForegroundColor Yellow
+                Start-Gump
+            }
+        }
+        return
+    }
+    
+    # NO-UI MODE (but not fast) - CLI with normal startup
+    if ($NoUI) {
+        Start-CliMode
+        return
+    }
+    
+    # Normal mode with logging
     Write-Log "=== G-Rump Launcher v$($Config.Version) ==="
     
     # Handle command line arguments
@@ -531,8 +623,10 @@ function Main {
     Show-LauncherWindow
 }
 
-# Load Windows Forms assembly
-Add-Type -AssemblyName System.Windows.Forms
+# Only load Windows Forms if we need GUI (not in fast mode)
+if (!$Fast -and !$NoUI) {
+    Add-Type -AssemblyName System.Windows.Forms
+}
 
 # Run main
 Main

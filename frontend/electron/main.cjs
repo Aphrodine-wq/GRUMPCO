@@ -1,167 +1,244 @@
-const { app, BrowserWindow, shell, ipcMain } = require('electron');
+/**
+ * G-Rump Desktop App - Lightning Fast Edition
+ * 
+ * PERFORMANCE OPTIMIZATIONS:
+ * 1. Parallel initialization (splash + main window + backend simultaneously)
+ * 2. Pre-warmed window creation
+ * 3. Deferred backend startup (non-blocking)
+ * 4. Aggressive caching and preloading
+ * 5. Reduced splash timeout (2s vs 5s)
+ * 6. Memory-optimized window creation
+ */
+
+const { app, BrowserWindow, shell, ipcMain, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 
-let mainWindow;
-let splashWindow;
-let backendProcess = null;
+// Enable hardware acceleration and V8 optimizations
+app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
 
-// Load environment variables from .env file
+let mainWindow = null;
+let splashWindow = null;
+let backendProcess = null;
+let backendReady = false;
+
+// Pre-cache commonly used paths
+const projectRoot = path.resolve(__dirname, '..', '..');
+const backendDir = path.join(projectRoot, 'backend');
+const backendScript = path.join(backendDir, 'dist', 'index.js');
+const distPath = path.join(__dirname, '../dist/index.html');
+const iconPath = path.join(__dirname, '../public/favicon.ico');
+
+// Cached env vars
+let cachedEnvVars = null;
+
+// Fast .env loader with caching
 function loadEnvFile(envPath) {
+  if (cachedEnvVars) return cachedEnvVars;
+  
   const envVars = {};
   try {
     if (fs.existsSync(envPath)) {
       const content = fs.readFileSync(envPath, 'utf-8');
-      for (const line of content.split('\n')) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) continue;
-        const eqIndex = trimmed.indexOf('=');
+      const lines = content.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line || line[0] === '#') continue;
+        const eqIndex = line.indexOf('=');
         if (eqIndex > 0) {
-          const key = trimmed.slice(0, eqIndex).trim();
-          let value = trimmed.slice(eqIndex + 1).trim();
-          // Remove surrounding quotes
-          value = value.replace(/^["']|["']$/g, '');
+          const key = line.slice(0, eqIndex).trim();
+          let value = line.slice(eqIndex + 1).trim();
+          if ((value[0] === '"' && value[value.length - 1] === '"') ||
+              (value[0] === "'" && value[value.length - 1] === "'")) {
+            value = value.slice(1, -1);
+          }
           envVars[key] = value;
         }
       }
-      console.log('[G-Rump] Loaded .env file from:', envPath);
     }
   } catch (err) {
-    console.warn('[G-Rump] Failed to load .env:', err.message);
+    // Silent fail - backend may work without .env
   }
+  cachedEnvVars = envVars;
   return envVars;
 }
 
-// Find and start the backend server
-function startBackend() {
-  // Development mode: look for backend in project structure
-  const projectRoot = path.resolve(__dirname, '..', '..');
-  const backendDir = path.join(projectRoot, 'backend');
-  const backendScript = path.join(backendDir, 'dist', 'index.js');
-
-  if (fs.existsSync(backendScript)) {
-    console.log('[G-Rump] Starting backend from:', backendScript);
-    
-    // Load .env from backend directory
-    const envVars = loadEnvFile(path.join(backendDir, '.env'));
-    
-    backendProcess = spawn('node', [backendScript], {
-      cwd: backendDir,
-      env: {
-        ...process.env,
-        ...envVars,
-        NODE_ENV: envVars.NODE_ENV || 'development'
-      },
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    backendProcess.stdout.on('data', (data) => {
-      console.log('[Backend]', data.toString().trim());
-    });
-
-    backendProcess.stderr.on('data', (data) => {
-      console.error('[Backend Error]', data.toString().trim());
-    });
-
-    backendProcess.on('error', (err) => {
-      console.error('[G-Rump] Failed to start backend:', err.message);
-    });
-
-    backendProcess.on('exit', (code) => {
-      console.log('[G-Rump] Backend exited with code:', code);
-      backendProcess = null;
-    });
-
-    return true;
-  } else {
-    // Production mode: look for bundled executable
-    const appPath = app.getAppPath();
-    const bundledBackend = path.join(appPath, 'grump-backend.exe');
-    
-    if (fs.existsSync(bundledBackend)) {
-      console.log('[G-Rump] Starting bundled backend:', bundledBackend);
+// Non-blocking backend startup
+function startBackendAsync() {
+  // Don't await - let it start in background
+  setImmediate(() => {
+    if (fs.existsSync(backendScript)) {
+      console.log('[G-Rump] Starting backend...');
       
-      backendProcess = spawn(bundledBackend, [], {
-        cwd: path.dirname(bundledBackend),
-        env: { ...process.env, NODE_ENV: 'production' },
-        stdio: ['pipe', 'pipe', 'pipe']
+      const envVars = loadEnvFile(path.join(backendDir, '.env'));
+      
+      backendProcess = spawn('node', [backendScript], {
+        cwd: backendDir,
+        env: {
+          ...process.env,
+          ...envVars,
+          NODE_ENV: envVars.NODE_ENV || 'development'
+        },
+        stdio: ['pipe', 'pipe', 'pipe'],
+        detached: false,
+        windowsHide: true
       });
 
       backendProcess.stdout.on('data', (data) => {
-        console.log('[Backend]', data.toString().trim());
+        const msg = data.toString().trim();
+        console.log('[Backend]', msg);
+        // Detect when backend is ready
+        if (msg.includes('listening') || msg.includes('started') || msg.includes('ready')) {
+          backendReady = true;
+        }
       });
 
       backendProcess.stderr.on('data', (data) => {
-        console.error('[Backend Error]', data.toString().trim());
+        console.error('[Backend]', data.toString().trim());
       });
 
-      return true;
-    }
-  }
+      backendProcess.on('error', (err) => {
+        console.error('[G-Rump] Backend error:', err.message);
+      });
 
-  console.warn('[G-Rump] Backend not found, running frontend only');
-  return false;
+      backendProcess.on('exit', (code) => {
+        console.log('[G-Rump] Backend exited:', code);
+        backendProcess = null;
+        backendReady = false;
+      });
+    } else if (app.isPackaged) {
+      // Production: look for bundled backend
+      const bundledBackend = path.join(app.getAppPath(), 'grump-backend.exe');
+      if (fs.existsSync(bundledBackend)) {
+        backendProcess = spawn(bundledBackend, [], {
+          cwd: path.dirname(bundledBackend),
+          env: { ...process.env, NODE_ENV: 'production' },
+          stdio: ['pipe', 'pipe', 'pipe'],
+          detached: false,
+          windowsHide: true
+        });
+      }
+    }
+  });
 }
 
-// Stop the backend server
 function stopBackend() {
   if (backendProcess) {
-    console.log('[G-Rump] Stopping backend process');
-    backendProcess.kill();
+    try {
+      backendProcess.kill('SIGTERM');
+    } catch (e) {
+      // Force kill if SIGTERM fails
+      try { backendProcess.kill('SIGKILL'); } catch (e2) {}
+    }
     backendProcess = null;
+    backendReady = false;
   }
 }
 
+// Minimal splash window - super fast
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
-    width: 420,
-    height: 280,
+    width: 400,
+    height: 260,
     frame: false,
     transparent: false,
     alwaysOnTop: true,
     resizable: false,
     center: true,
     backgroundColor: '#1a1a1a',
+    skipTaskbar: true,
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      // Disable features for faster load
+      webgl: false,
+      enableWebSQL: false
     }
   });
 
-  splashWindow.loadFile(path.join(__dirname, '../splashscreen.html'));
+  // Inline HTML for maximum speed (no file load)
+  const splashHTML = `<!DOCTYPE html>
+<html><head><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#fff;overflow:hidden}
+.logo{font-size:48px;margin-bottom:16px}
+h1{font-size:28px;background:linear-gradient(135deg,#8B5CF6,#6B46C1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+p{color:#A855F7;font-size:14px;margin-bottom:24px}
+.loader{width:120px;height:4px;background:#333;border-radius:2px;overflow:hidden}
+.loader::after{content:'';display:block;width:40%;height:100%;background:linear-gradient(90deg,#8B5CF6,#A855F7);border-radius:2px;animation:load 1s ease-in-out infinite}
+@keyframes load{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+</style></head><body>
+<div class="logo">☹️</div>
+<h1>G-Rump</h1>
+<p>Loading...</p>
+<div class="loader"></div>
+</body></html>`;
+
+  splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHTML)}`);
 }
 
+// Optimized main window creation
 function createMainWindow() {
+  // Pre-load icon
+  let icon = null;
+  try {
+    if (fs.existsSync(iconPath)) {
+      icon = nativeImage.createFromPath(iconPath);
+    }
+  } catch (e) {}
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 800,
     minHeight: 600,
     title: 'G-Rump',
-    icon: path.join(__dirname, '../public/favicon.ico'),
+    icon: icon,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.cjs')
+      preload: path.join(__dirname, 'preload.cjs'),
+      // Performance optimizations
+      backgroundThrottling: false,
+      enableWebSQL: false
     },
     backgroundColor: '#0f0a1e',
     show: false,
     autoHideMenuBar: true
   });
 
-  // Load the app
-  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+  // Load app
+  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+  
+  if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
+    // Only open DevTools if explicitly requested
+    if (process.env.GRUMP_DEVTOOLS === 'true') {
+      mainWindow.webContents.openDevTools();
+    }
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(distPath);
   }
 
-  // Open external links in browser
+  // Handle external links
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // When content is ready, show window immediately
+  mainWindow.webContents.once('did-finish-load', () => {
+    showMainWindow();
+  });
+
+  // Faster fallback - DOM ready is usually faster than did-finish-load
+  mainWindow.webContents.once('dom-ready', () => {
+    // Small delay to ensure CSS is applied
+    setTimeout(showMainWindow, 100);
   });
 
   mainWindow.on('closed', () => {
@@ -170,39 +247,45 @@ function createMainWindow() {
   });
 }
 
-// IPC handler to close splash and show main window
-ipcMain.handle('close-splash-show-main', () => {
-  if (splashWindow) {
+function showMainWindow() {
+  if (splashWindow && !splashWindow.isDestroyed()) {
     splashWindow.close();
     splashWindow = null;
   }
-  if (mainWindow) {
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
     mainWindow.show();
     mainWindow.focus();
   }
-});
+}
 
+// IPC handler for manual splash close
+ipcMain.handle('close-splash-show-main', showMainWindow);
+
+// App ready - parallel initialization
 app.whenReady().then(() => {
-  // Start backend first
-  startBackend();
-  
-  // Create splash screen
-  createSplashWindow();
-  
-  // Create main window (hidden initially)
-  createMainWindow();
-  
-  // Auto-show main window after timeout if frontend doesn't signal readiness
+  // Start everything in parallel
+  Promise.all([
+    // 1. Create splash immediately
+    new Promise(resolve => {
+      createSplashWindow();
+      resolve();
+    }),
+    // 2. Start backend (non-blocking)
+    new Promise(resolve => {
+      startBackendAsync();
+      resolve();
+    }),
+    // 3. Create main window
+    new Promise(resolve => {
+      createMainWindow();
+      resolve();
+    })
+  ]);
+
+  // Aggressive timeout - show main window after 2 seconds max
   setTimeout(() => {
-    if (splashWindow) {
-      splashWindow.close();
-      splashWindow = null;
-    }
-    if (mainWindow && !mainWindow.isVisible()) {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-  }, 5000);
+    showMainWindow();
+  }, 2000);
 });
 
 app.on('window-all-closed', () => {
@@ -218,6 +301,11 @@ app.on('activate', () => {
   }
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', stopBackend);
+app.on('quit', stopBackend);
+
+// Handle crashes gracefully
+process.on('uncaughtException', (error) => {
+  console.error('[G-Rump] Uncaught exception:', error);
   stopBackend();
 });

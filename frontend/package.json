@@ -9,8 +9,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:fast": "vite build --minify terser",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:fast": "concurrently \"vite\" \"wait-on http://localhost:5173 -t 3000 && electron .\"",
     "electron:build": "vite build && electron-builder",
     "electron:pack": "electron-builder --dir",
     "type-check": "svelte-check --tsconfig ./tsconfig.json",
@@ -91,6 +93,11 @@
     },
     "portable": {
       "artifactName": "G-Rump.exe"
-    }
+    },
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "asar": true,
+    "compression": "maximum"
   }
 }

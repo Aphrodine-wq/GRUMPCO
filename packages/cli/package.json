@@ -13,9 +13,11 @@
   ],
   "scripts": {
     "build": "swc src -d dist --copy-files",
+    "build:fast": "swc src -d dist --copy-files -C jsc.minify.mangle=true -C jsc.minify.compress=true",
     "build:tsc": "tsc",
     "build:native": "npm run build && pkg . --out-path dist-native",
-    "start": "node dist/index.js",
+    "start": "GRUMP_FAST=true node dist/index.js",
+    "start:fast": "GRUMP_NO_BRANDING=true GRUMP_FAST=true node dist/index.js",
     "run": "node --import tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
