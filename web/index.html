@@ -2,8 +2,126 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>G-Rump - AI-Powered Development Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <title>G-Rump Web Platform | AI Development Workspace</title>
+    <meta name="description" content="G-Rump Web: Browser-based AI development platform with SHIP workflow, multi-agent code generation, architecture design, and PRD creation. Access from anywhere, collaborate in real-time." />
+    <meta name="keywords" content="web-based IDE, online code editor, AI code assistant, browser development tool, cloud coding platform, collaborative programming" />
+    <meta name="author" content="G-Rump Team" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Mobile-specific meta tags -->
+    <meta name="theme-color" content="#0284c7" />
+    <meta name="msapplication-TileColor" content="#0284c7" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="G-Rump" />
+    <meta name="format-detection" content="telephone=no" />
+    
+    <link rel="canonical" href="https://app.g-rump.com" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="G-Rump Web Platform | Browser-Based AI Development" />
+    <meta property="og:description" content="Access G-Rump's powerful AI development tools from any browser. Create architectures, generate code, and collaborate in real-time." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://app.g-rump.com" />
+    <meta property="og:site_name" content="G-Rump" />
+    <meta property="og:image" content="https://g-rump.com/web-platform-og.png" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@grump_ai" />
+    <meta name="twitter:title" content="G-Rump Web Platform" />
+    <meta name="twitter:description" content="Browser-based AI development workspace. Code from anywhere." />
+    <meta name="twitter:image" content="https://g-rump.com/web-platform-twitter.png" />
+    
+    <!-- Google Analytics 4 - Consent Mode (loads conditionally) -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      
+      // Default consent state - denied until user grants consent
+      gtag('consent', 'default', {
+        'ad_storage': 'denied',
+        'analytics_storage': 'denied',
+        'ad_user_data': 'denied',
+        'ad_personalization': 'denied',
+        'wait_for_update': 500
+      });
+      
+      // Set additional config options
+      gtag('config', '%VITE_GA4_MEASUREMENT_ID%', {
+        'anonymize_ip': true,
+        'cookie_expires': 7776000, // 90 days
+        'cookie_update': false,
+        'send_page_view': false, // We handle this manually for SPA
+        'transport_type': 'beacon',
+        'custom_map': {
+          'dimension1': 'user_tier',
+          'dimension2': 'session_type'
+        }
+      });
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=%VITE_GA4_MEASUREMENT_ID%"></script>
+    
+    <!-- Performance Monitoring -->
+    <script>
+      window.__GRUMP_PERF_START = performance.now();
+      
+      // Performance Observer polyfill check
+      if ('PerformanceObserver' in window) {
+        // Mark initial page load start
+        performance.mark('grump_init_start');
+      }
+    </script>
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+    
+    <!-- DNS Prefetch for API endpoints -->
+    <link rel="dns-prefetch" href="//localhost:3000" />
+    <link rel="dns-prefetch" href="//api.g-rump.com" />
+    
+    <!-- Preload critical resources -->
+    <link rel="modulepreload" href="/src/main.ts" />
+    
+    <!-- Favicon for mobile -->
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <style>
+      /* Critical CSS for fast mobile rendering */
+      html {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      /* Prevent text zoom on orientation change */
+      body {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+      
+      /* Safe area support for notched devices */
+      .safe-area-top {
+        padding-top: env(safe-area-inset-top);
+      }
+      
+      .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      
+      .safe-area-left {
+        padding-left: env(safe-area-inset-left);
+      }
+      
+      .safe-area-right {
+        padding-right: env(safe-area-inset-right);
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>

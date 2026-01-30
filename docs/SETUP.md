@@ -15,23 +15,35 @@ This guide will help you get G-Rump running in local development or as a bundled
 
 Best for teams or shared use.
 
-1. Deploy backend + frontend (see `backend/DEPLOY_VERCEL.md` or `DEPLOYMENT_SUMMARY.md`).
+1. Deploy backend + frontend (see `backend/DEPLOY_VERCEL.md`).
 2. Set production security flags (see `docs/SECURITY_BASELINE.md`).
 3. Point users to your web URL and have them sign in (example: `https://app.g-rump.com`).
 
-### 2) Windows Desktop App (Tauri)
+### 2) Desktop App (Electron - Recommended)
 
-Best for a local, no‑browser experience.
+Best for a local, no‑browser experience with easy setup.
 
-1. Build or download the installer:
-   - Build locally: run `build-windows.bat` (see `docs/BUILD.md`).
-2. Install the app.
-3. Create a local `.env` for the desktop app:
-   - Location: `%APPDATA%\\com.grump.app\\.env`
+1. Clone repository and install dependencies:
+   ```bash
+   cd frontend
+   npm install
+   cd ../backend
+   npm install && npm run build
+   ```
+2. Run in development mode:
+   ```bash
+   cd frontend
+   npm run electron:dev
+   ```
+3. Or build a portable executable:
+   ```bash
+   npm run electron:build
+   # Output: frontend/electron-dist/G-Rump.exe
+   ```
+4. Configure API key in `backend/.env`:
    - Required: `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY`
-4. Launch G‑Rump from the Start Menu.
 
-### 3) CLI (power users)
+## 3) CLI (power users)
 
 Best for scripts and terminal workflows.
 
@@ -125,13 +137,13 @@ npm run dev
 
 The frontend will start on `http://localhost:5173`. 
 
-**For Tauri Desktop App:**
+**For Electron Desktop App (Recommended):**
 ```bash
 cd frontend
-npm run tauri:dev
+npm run electron:dev
 ```
 
-This starts the Tauri desktop application with hot-reload.
+This starts the Electron desktop application with hot-reload. The backend is started automatically.
 
 ### Step 4: Verify Connection
 
@@ -182,7 +194,7 @@ On Windows, you can use the provided batch script:
 start-app.bat
 ```
 
-This starts the G-Rump backend and frontend dev server in separate windows. To run the Tauri desktop app, open a new terminal, run `cd frontend && npm run tauri:dev`, or uncomment the Tauri line in `start-app.bat`.
+This starts the G-Rump backend and frontend dev server in separate windows. To run the Electron desktop app, use `cd frontend && npm run electron:dev`.
 
 ## Smoke test after boot
 
@@ -287,7 +299,7 @@ From the project root, run `scripts\smoke-check.bat` (Windows). It checks backen
 2. **Frontend Changes**:
    - Edit Svelte/TypeScript files in `frontend/src/`
    - Vite dev server hot-reloads automatically
-   - Tauri app hot-reloads in dev mode
+   - Electron app hot-reloads in dev mode
    - Restart if you change environment variables
 
 ### Running Tests
@@ -304,34 +316,24 @@ npm run test:run
 
 ### Building for Production
 
-**Windows Bundle:**
+**Electron App (Recommended):**
 ```bash
-# From project root
-build-windows.bat
+cd frontend
+npm run electron:build
+# Output: frontend/electron-dist/G-Rump.exe (portable)
 ```
 
-This creates a Windows installer with:
-- Bundled backend (embedded Node.js)
-- Bundled intent compiler
-- Svelte frontend
-
-**Manual Build:**
+**Electron App:**
 ```bash
-# Backend bundle
-cd backend
-npm run bundle
-# Output: backend/dist-bundle/grump-backend.exe
-
-# Frontend
 cd frontend
-npm run build
-# Output: frontend/dist/
-
-# Tauri app
-cd frontend
-npm run tauri:build
-# Output: frontend/src-tauri/target/release/bundle/
+npm run electron:build
+# Output: frontend/electron-dist/G-Rump.exe (portable)
 ```
+
+This creates a Windows executable with:
+- Bundled frontend
+- Splash screen
+- Auto-starts backend
 
 ## Next Steps
 
@@ -367,5 +369,5 @@ See `docker-compose.yml` for production-ready Docker configuration.
 - **CORS**: Set `CORS_ORIGINS` to the exact origins your app uses. In production the backend uses a minimal default when unset. See `BUILD.md` for production defaults.
 - **Binding**: With `NODE_ENV=production`, the backend listens on `127.0.0.1` by default (override with `HOST`). Keeps the API off the network when run as the packaged app.
 - **Metrics**: Set `METRICS_AUTH` in production so `/metrics` requires basic auth.
-- **Tauri**: CSP and capabilities are in `frontend/src-tauri/tauri.conf.json` and `frontend/src-tauri/capabilities/`. Only the `main` and `splashscreen` windows use the default capability set.
+- **Electron**: The preload script uses `contextIsolation: true` and exposes minimal APIs via `contextBridge`. External links open in the default browser.
 - **Code signing**: For Windows distribution trust, see the "Code Signing (Windows)" section in `BUILD.md`.

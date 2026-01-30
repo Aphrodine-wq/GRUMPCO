@@ -142,10 +142,9 @@
   }
 
   function handleShipOpenInIde(ide: 'cursor' | 'vscode' | 'jetbrains') {
-    const isTauri =
-      typeof window !== 'undefined' &&
-      (!!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__);
-    const base = isTauri
+    const grump = (window as { grump?: { isElectron?: boolean } }).grump;
+    const isElectron = !!grump?.isElectron;
+    const base = isElectron
       ? 'Download the project, then open the folder in '
       : 'Download the ZIP, extract it, then open the folder in ';
     const msg = {

@@ -198,7 +198,7 @@ All documentation is complete and located in `docs/`:
 graph TB
     subgraph client [Client Layer]
         CLI[CLI Tool<br/>19x faster]
-        Desktop[Tauri Desktop]
+        Desktop[Electron Desktop]
         Web[Web Frontend]
     end
     

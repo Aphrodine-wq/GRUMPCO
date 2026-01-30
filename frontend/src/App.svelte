@@ -8,29 +8,32 @@
   import PricingModal from './components/PricingModal.svelte';
   import SettingsScreen from './components/SettingsScreen.svelte';
   import SetupScreen from './components/SetupScreen.svelte';
-  import AskDocsScreen from './components/AskDocsScreen.svelte';
-  import VoiceCodeScreen from './components/VoiceCodeScreen.svelte';
-  import AgentSwarmVisualizer from './components/AgentSwarmVisualizer.svelte';
-  import DesignToCodeScreen from './components/DesignToCodeScreen.svelte';
-  import LazyCostDashboard from './components/LazyCostDashboard.svelte';
-  // Integrations platform components
-  import IntegrationsHub from './components/IntegrationsHub.svelte';
-  import ApprovalsCenter from './components/ApprovalsCenter.svelte';
-  import HeartbeatsManager from './components/HeartbeatsManager.svelte';
-  import MemoryManager from './components/MemoryManager.svelte';
-  import AuditLogViewer from './components/AuditLogViewer.svelte';
-  import AdvancedAIDashboard from './components/AdvancedAIDashboard.svelte';
+  
+  // Lazy load heavy components for better initial load performance
+  const AskDocsScreen = () => import('./components/AskDocsScreen.svelte');
+  const VoiceCodeScreen = () => import('./components/VoiceCodeScreen.svelte');
+  const AgentSwarmVisualizer = () => import('./components/AgentSwarmVisualizer.svelte');
+  const DesignToCodeScreen = () => import('./components/DesignToCodeScreen.svelte');
+  const LazyCostDashboard = () => import('./components/LazyCostDashboard.svelte');
+  
+  // Integrations platform components - lazy loaded
+  const IntegrationsHub = () => import('./components/IntegrationsHub.svelte');
+  const ApprovalsCenter = () => import('./components/ApprovalsCenter.svelte');
+  const HeartbeatsManager = () => import('./components/HeartbeatsManager.svelte');
+  const MemoryManager = () => import('./components/MemoryManager.svelte');
+  const AuditLogViewer = () => import('./components/AuditLogViewer.svelte');
+  const AdvancedAIDashboard = () => import('./components/AdvancedAIDashboard.svelte');
+  const TutorialOverlay = () => import('./components/TutorialOverlay.svelte');
+  
   import { sessionsStore, currentSession } from './stores/sessionsStore';
   import { settingsStore } from './stores/settingsStore';
   import { preferencesStore, setupComplete } from './stores/preferencesStore';
   import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, showCostDashboard, showIntegrations, showApprovals, showHeartbeats, showMemory, showAuditLog, showAdvancedAI, sidebarCollapsed, focusChatTrigger } from './stores/uiStore';
   import { demoStore } from './stores/demoStore';
-  import TutorialOverlay from './components/TutorialOverlay.svelte';
   import { isMobileDevice } from './utils/touchGestures';
   import type { Message } from './types';
 
   let isMobile = $state(false);
-
   let showPricing = $state(false);
 
   onMount(() => {
@@ -65,22 +68,11 @@
     }
     window.addEventListener('keydown', onKeydown);
 
-    const isTauri =
-      typeof window !== 'undefined' &&
-      (!!(window as { __TAURI__?: unknown }).__TAURI__ || !!(window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
-    if (isTauri) {
+    // Signal readiness to Electron (close splash, show main window)
+    const grump = (window as { grump?: { isElectron?: boolean; closeSplashShowMain?: () => Promise<void> } }).grump;
+    if (grump?.isElectron && grump.closeSplashShowMain) {
       setTimeout(() => {
-        import('@tauri-apps/api/core')
-          .then(({ invoke }) => {
-            invoke('close_splash_show_main').catch((err: unknown) => console.error(err));
-          })
-          .catch(() => {
-            import('@tauri-apps/api').then((mod: unknown) => {
-              const m = mod as { invoke?: (cmd: string) => Promise<unknown>; tauri?: { invoke: (cmd: string) => Promise<unknown> } };
-              const invoke = m.invoke ?? m.tauri?.invoke;
-              if (invoke) invoke('close_splash_show_main').catch((err: unknown) => console.error(err));
-            });
-          });
+        grump.closeSplashShowMain!().catch((err: unknown) => console.error('[App] Failed to close splash:', err));
       }, 400);
     }
 
@@ -107,27 +99,49 @@
     {#if $showSettings}
       <SettingsScreen onBack={() => showSettings.set(false)} />
     {:else if $showAskDocs}
-      <AskDocsScreen onBack={() => showAskDocs.set(false)} />
+      {#await AskDocsScreen() then { default: Component }}
+        <Component onBack={() => showAskDocs.set(false)} />
+      {/await}
     {:else if $showVoiceCode}
-      <VoiceCodeScreen onBack={() => showVoiceCode.set(false)} />
+      {#await VoiceCodeScreen() then { default: Component }}
+        <Component onBack={() => showVoiceCode.set(false)} />
+      {/await}
     {:else if $showSwarm}
-      <AgentSwarmVisualizer onBack={() => showSwarm.set(false)} />
+      {#await AgentSwarmVisualizer() then { default: Component }}
+        <Component onBack={() => showSwarm.set(false)} />
+      {/await}
     {:else if $showDesignToCode}
-      <DesignToCodeScreen onBack={() => showDesignToCode.set(false)} />
+      {#await DesignToCodeScreen() then { default: Component }}
+        <Component onBack={() => showDesignToCode.set(false)} />
+      {/await}
     {:else if $showCostDashboard}
-      <LazyCostDashboard onBack={() => showCostDashboard.set(false)} />
+      {#await LazyCostDashboard() then { default: Component }}
+        <Component onBack={() => showCostDashboard.set(false)} />
+      {/await}
     {:else if $showIntegrations}
-      <IntegrationsHub onBack={() => showIntegrations.set(false)} />
+      {#await IntegrationsHub() then { default: Component }}
+        <Component onBack={() => showIntegrations.set(false)} />
+      {/await}
     {:else if $showApprovals}
-      <ApprovalsCenter onBack={() => showApprovals.set(false)} />
+      {#await ApprovalsCenter() then { default: Component }}
+        <Component onBack={() => showApprovals.set(false)} />
+      {/await}
     {:else if $showHeartbeats}
-      <HeartbeatsManager onBack={() => showHeartbeats.set(false)} />
+      {#await HeartbeatsManager() then { default: Component }}
+        <Component onBack={() => showHeartbeats.set(false)} />
+      {/await}
     {:else if $showMemory}
-      <MemoryManager onBack={() => showMemory.set(false)} />
+      {#await MemoryManager() then { default: Component }}
+        <Component onBack={() => showMemory.set(false)} />
+      {/await}
     {:else if $showAuditLog}
-      <AuditLogViewer onBack={() => showAuditLog.set(false)} />
+      {#await AuditLogViewer() then { default: Component }}
+        <Component onBack={() => showAuditLog.set(false)} />
+      {/await}
     {:else if $showAdvancedAI}
-      <AdvancedAIDashboard onBack={() => showAdvancedAI.set(false)} />
+      {#await AdvancedAIDashboard() then { default: Component }}
+        <Component onBack={() => showAdvancedAI.set(false)} />
+      {/await}
     {:else if !$setupComplete}
       <SetupScreen
         onComplete={() => preferencesStore.completeSetup()}
@@ -150,11 +164,13 @@
   {/if}
 
   {#if $demoStore.active && $demoStore.steps.length > 0}
-    <TutorialOverlay
-      steps={$demoStore.steps}
-      onComplete={() => demoStore.reset()}
-      onSkip={() => demoStore.reset()}
-    />
+    {#await TutorialOverlay() then { default: Component }}
+      <Component
+        steps={$demoStore.steps}
+        onComplete={() => demoStore.reset()}
+        onSkip={() => demoStore.reset()}
+      />
+    {/await}
   {/if}
   
   <!-- Mobile Navigation -->

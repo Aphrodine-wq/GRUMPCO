@@ -1,8 +1,10 @@
 import chalk from 'chalk';
 import ora from 'ora';
-import type { Options, Ora as OraType } from 'ora';
 import { branding } from '../branding.js';
 import { config } from '../config.js';
+
+// Get the return type of ora()
+type OraInstance = ReturnType<typeof ora>;
 
 /**
  * Progress indicator utilities using ora spinners
@@ -17,24 +19,24 @@ interface SpinnerOptions {
 /**
  * Create a themed spinner with grumpy colors
  */
-export function createSpinner(options: SpinnerOptions = {}): OraType {
+export function createSpinner(options: SpinnerOptions = {}): OraInstance {
   const enabled = config.get('features').progressIndicators;
   
   if (!enabled) {
     return {
-      start: () => ({ text: options.text } as OraType),
-      succeed: () => ({} as OraType),
-      fail: () => ({} as OraType),
-      warn: () => ({} as OraType),
-      info: () => ({} as OraType),
-      stop: () => ({} as OraType),
-      clear: () => ({} as OraType),
-      render: () => ({} as OraType),
+      start: () => ({ text: options.text } as OraInstance),
+      succeed: () => ({} as OraInstance),
+      fail: () => ({} as OraInstance),
+      warn: () => ({} as OraInstance),
+      info: () => ({} as OraInstance),
+      stop: () => ({} as OraInstance),
+      clear: () => ({} as OraInstance),
+      render: () => ({} as OraInstance),
       frame: () => '',
       text: options.text || '',
       color: 'red',
       spinner: { interval: 80, frames: ['◐', '◓', '◑', '◒'] }
-    } as OraType;
+    } as OraInstance;
   }
   
   const spinner = ora({
@@ -46,10 +48,18 @@ export function createSpinner(options: SpinnerOptions = {}): OraType {
   return spinner;
 }
 
+interface ProgressSpinner {
+  start: () => void;
+  update: (text: string, step?: number) => void;
+  succeed: (text?: string) => void;
+  fail: (text?: string) => void;
+  stop: () => void;
+}
+
 /**
  * Show progress with percentage
  */
-export function createProgressSpinner(initialText: string, totalSteps: number) {
+export function createProgressSpinner(initialText: string, totalSteps: number): ProgressSpinner {
   let currentStep = 0;
   const spinner = createSpinner({ text: initialText });
   
@@ -85,7 +95,7 @@ export function createProgressSpinner(initialText: string, totalSteps: number) {
  */
 export async function withSpinner<T>(
   text: string,
-  task: (spinner: OraType) => Promise<T>,
+  task: (spinner: OraInstance) => Promise<T>,
   successText?: string
 ): Promise<T> {
   const spinner = createSpinner({ text });

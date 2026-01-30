@@ -4,16 +4,67 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>G-Rump - AI-Powered Development Assistant</title>
+  <title>G-Rump Desktop App | AI-Powered Development Environment</title>
+  <meta name="description" content="G-Rump Desktop: Cross-platform Electron app for AI-powered development. Built-in SHIP workflow, multi-agent code generation, and real-time collaboration. Download for Windows, macOS, and Linux." />
+  <meta name="keywords" content="AI IDE, desktop development app, code generator, Electron app, AI programming assistant, cross-platform development tool" />
+  <meta name="author" content="G-Rump Team" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#7C3AED" />
+  <link rel="canonical" href="https://g-rump.com/app" />
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="G-Rump Desktop App | AI Development Environment" />
+  <meta property="og:description" content="Cross-platform AI development desktop app with built-in code generation, architecture design, and multi-agent workflows." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://g-rump.com/app" />
+  <meta property="og:site_name" content="G-Rump" />
+  <meta property="og:image" content="https://g-rump.com/desktop-app-og.png" />
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@grump_ai" />
+  <meta name="twitter:title" content="G-Rump Desktop App" />
+  <meta name="twitter:description" content="AI-powered desktop development environment for Windows, macOS, and Linux." />
+  <meta name="twitter:image" content="https://g-rump.com/desktop-app-twitter.png" />
 
-  <!-- Font preconnect -->
+  <!-- Font preconnect for faster loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <!-- Font imports: Space Grotesk + Space Mono -->
-  <link
-    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
-    rel="stylesheet">
+  
+  <!-- DNS prefetch for API endpoints -->
+  <link rel="dns-prefetch" href="//localhost:3000">
+  <link rel="dns-prefetch" href="//api.g-rump.com">
+  
+  <!-- Preload critical fonts with display=swap -->
+  <link rel="preload" 
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" 
+        as="style"
+        onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet" 
+          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+  </noscript>
+  
+  <!-- Critical CSS inline for above-the-fold content -->
+  <style>
+    /* Critical rendering path optimizations */
+    html { font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; min-height: 100vh; background: #fafafa; }
+    #app { min-height: 100vh; }
+    /* Prevent FOUC */
+    .loading { opacity: 0; animation: fadeIn 0.2s ease-in forwards; }
+    @keyframes fadeIn { to { opacity: 1; } }
+    /* Mobile viewport fix */
+    @supports (height: 100dvh) {
+      body, #app { min-height: 100dvh; }
+    }
+  </style>
+  
+  <!-- Deferred font loading -->
+  <link rel="stylesheet" 
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+        media="print" 
+        onload="this.media='all'">
 </head>
 
 <body>

@@ -9,7 +9,7 @@ This document gives a concise, human-readable assessment of the G-Rump codebase:
 ## 1. Scope
 
 - **Single backend** (grump-backend): one Node/Express service deployed on Vercel. Serves desktop, web app, VS Code extension, CLI, and Moltbot. The former backend-web was merged into backend and retired (see [BACKENDS.md](BACKENDS.md)).
-- **Desktop app:** Tauri + Svelte, full UX: chat, diagrams, PRD, codegen, ship, settings, GitHub. Receives `ship.completed` / `codegen.ready` via `GET /api/events/stream` (SSE).
+- **Desktop app:** Electron + Svelte, full UX: chat, diagrams, PRD, codegen, ship, settings, GitHub. Receives `ship.completed` / `codegen.ready` via `GET /api/events/stream` (SSE).
 - **Web app:** Svelte; uses the same backend for auth, billing, chat, codegen, collaboration, templates.
 - **Integrations:** VS Code extension, grump-analyze CLI, Moltbot skill.
 - **intent-compiler:** Rust binary for intent parsing; invoked by backend.
@@ -36,7 +36,7 @@ Total application code (backend + frontend) is on the order of **45,000+ lines**
 | Layer | Technologies |
 |-------|----------------|
 | **Backend** | Node.js, Express, TypeScript, SQLite (better-sqlite3), optional Redis (ioredis), Supabase (auth), Stripe (billing/webhook), Anthropic + LLM gateway (Zhipu, OpenRouter, Copilot), BullMQ (job queue when Redis set) |
-| **Frontend** | Svelte, TypeScript, Tauri (desktop) |
+| **Frontend** | Svelte, TypeScript, Electron (desktop) |
 | **Integrations** | VS Code extension (TS), Moltbot skill, grump-analyze CLI |
 | **Intent parsing** | Rust (intent-compiler binary) |
 
@@ -55,4 +55,4 @@ See [SYSTEM_EVALUATION.md](SYSTEM_EVALUATION.md) for “how done” each area is
 
 ## 5. Valuation summary (narrative)
 
-Recreating this system from scratch would be a **multi‑month effort for a small team**. Main assets include: (1) the end‑to‑end “idea → diagram → PRD → code → ship” pipeline and multi‑agent codegen; (2) the Tauri + Svelte desktop app with real‑time events; (3) a single backend that serves all clients (desktop, web, VS Code, CLI, Moltbot); (4) skills (code‑review, refactoring, git), analytics, collaboration, and template surfaces. The codebase is structured, documented, and deployable to Vercel with one backend. This valuation is a qualitative assessment for stakeholders, not a formal appraisal or price estimate.
+Recreating this system from scratch would be a **multi‑month effort for a small team**. Main assets include: (1) the end‑to‑end “idea → diagram → PRD → code → ship” pipeline and multi‑agent codegen; (2) the Electron + Svelte desktop app with real‑time events; (3) a single backend that serves all clients (desktop, web, VS Code, CLI, Moltbot); (4) skills (code‑review, refactoring, git), analytics, collaboration, and template surfaces. The codebase is structured, documented, and deployable to Vercel with one backend. This valuation is a qualitative assessment for stakeholders, not a formal appraisal or price estimate.

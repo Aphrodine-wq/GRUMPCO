@@ -364,34 +364,39 @@ export async function ragQuery(
     canClaudeFallback &&
     (Boolean(nimError) || confidence < CONFIDENCE_LOW_THRESHOLD || !rawAnswer.trim());
   if (useClaudeFallback) {
-    try {
-      const claudeRes = await fetch(ANTHROPIC_CHAT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
-          system: sys,
-          messages: [{ role: 'user', content: user }],
-        }),
-        signal: AbortSignal.timeout(60_000),
-      });
-      if (claudeRes.ok) {
-        const claudeData = (await claudeRes.json()) as {
-          content?: Array<{ type?: string; text?: string }>;
-        };
-        const claudeText = claudeData.content?.find((c) => c.type === 'text')?.text?.trim();
-        if (claudeText) {
-          rawAnswer = claudeText;
-          fallbackProvider = 'claude';
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicApiKey) {
+      logger.warn('Claude fallback requested but ANTHROPIC_API_KEY not configured');
+    } else {
+      try {
+        const claudeRes = await fetch(ANTHROPIC_CHAT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': anthropicApiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1024,
+            system: sys,
+            messages: [{ role: 'user', content: user }],
+          }),
+          signal: AbortSignal.timeout(60_000),
+        });
+        if (claudeRes.ok) {
+          const claudeData = (await claudeRes.json()) as {
+            content?: Array<{ type?: string; text?: string }>;
+          };
+          const claudeText = claudeData.content?.find((c) => c.type === 'text')?.text?.trim();
+          if (claudeText) {
+            rawAnswer = claudeText;
+            fallbackProvider = 'claude';
+          }
         }
+      } catch (e) {
+        logger.warn({ error: (e as Error).message }, 'RAG Claude fallback failed');
       }
-    } catch (e) {
-      logger.warn({ error: (e as Error).message }, 'RAG Claude fallback failed');
     }
   }
   if (nimError && !fallbackProvider) {

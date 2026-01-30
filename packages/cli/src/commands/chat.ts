@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import inquirer from 'inquirer';
+import { prompt as askUser } from '../utils/prompt.js';
 import { config } from '../config.js';
 import { branding } from '../branding.js';
 import { createSpinner } from '../utils/progress.js';
@@ -140,7 +140,7 @@ async function interactiveChat(
   let currentSessionId = sessionId;
   
   while (true) {
-    const { input } = await inquirer.prompt([{
+    const { input } = await askUser<{ input: string }>([{
       type: 'input',
       name: 'input',
       message: chalk.hex('#FF6B35')('You'),

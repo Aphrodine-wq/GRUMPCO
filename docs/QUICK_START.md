@@ -7,7 +7,7 @@ G-Rump transforms natural language into complete, production-ready applications 
 ## Pick a Setup
 
 - **Website (self-hosted)**: deploy backend + frontend, then use the web app.
-- **Windows Desktop App**: install the Tauri app and add your API key to `%APPDATA%\\com.grump.app\\.env`.
+- **Electron Desktop App**: run `npm run electron:dev` or build with `npm run electron:build`.
 - **CLI**: install `grump-cli` and point it at your API URL.
 
 See `docs/SETUP.md` for the shortest path by user type.

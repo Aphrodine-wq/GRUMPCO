@@ -79,6 +79,7 @@ body,
 body {
   font-family: var(--font-sans);
   font-size: 15px;
+  font-weight: 500;
   /* Slightly larger for readability */
   line-height: 1.5;
   color: var(--color-text);
@@ -127,7 +128,7 @@ select,
 .popover {
   margin: 0;
   font-family: var(--font-sans);
-  font-weight: 600;
+  font-weight: 700;
   color: #1B0F3A;
   letter-spacing: 0.01em;
   font-size: 1.05em;
@@ -159,4 +160,99 @@ pre {
   -webkit-backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
+}
+
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+/* Font display optimization - prevent FOIT/FOUT */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-display: swap;
+  src: local('Space Grotesk'), local('Segoe UI'), local('Roboto');
+}
+
+@font-face {
+  font-family: 'Space Mono';
+  font-display: swap;
+  src: local('Space Mono'), local('SF Mono'), local('Menlo');
+}
+
+/* Content visibility for off-screen content - huge performance gain */
+.off-screen {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
+}
+
+/* CSS containment for complex components */
+.contain-layout {
+  contain: layout;
+}
+
+.contain-paint {
+  contain: paint;
+}
+
+.contain-strict {
+  contain: strict;
+}
+
+/* Optimize repaints with will-change (use sparingly) */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+/* GPU acceleration for animated elements */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Lazy loading placeholder optimization */
+.lazy-placeholder {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Optimize images with object-fit */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+img[loading="lazy"] {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+img[loading="lazy"].loaded {
+  opacity: 1;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .lazy-placeholder {
+    animation: none;
+    background: #f0f0f0;
+  }
 }

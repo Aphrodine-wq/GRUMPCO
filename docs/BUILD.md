@@ -2,90 +2,49 @@
 
 This guide explains how to build G-Rump for Windows production distribution.
 
-## Prerequisites
+## Desktop App
 
-1. **Rust Toolchain**
-   - Install from https://rustup.rs/
-   - Ensure `rustc` and `cargo` are in PATH
-   - Add Windows MSVC target: `rustup target add x86_64-pc-windows-msvc`
+G-Rump uses Electron as the desktop runtime:
 
-2. **Node.js 20+**
+- **Electron**: Cross-platform, easy setup, single portable executable
+
+## Electron Build
+
+### Prerequisites
+
+1. **Node.js 20+**
    - Install from https://nodejs.org/
    - Ensure `node` and `npm` are in PATH
 
-3. **Visual Studio Build Tools** (for MSVC target)
-   - Install "Desktop development with C++" workload
-   - Or install Visual Studio Community with C++ support
-
-## Build Process
-
-### Automated Build
-
-Run the build script:
-```bash
-build-windows.bat
-```
-
-This script automates all build steps.
-
-### Manual Build Steps
-
-#### 1. Build Intent Compiler
-
-```bash
-cd intent-compiler
-cargo build --release --target x86_64-pc-windows-msvc
-```
-
-Output: `intent-compiler/target/x86_64-pc-windows-msvc/release/grump-intent.exe`
-
-#### 2. Bundle Backend
-
-```bash
-cd backend
-npm install
-npm run bundle
-```
-
-Output: `backend/dist-bundle/grump-backend.exe`
-
-This creates a standalone executable with embedded Node.js runtime.
-
-#### 3. Build Frontend
+### Build Process
 
 ```bash
 cd frontend
 npm install
 npm run build
+npm run electron:build
 ```
 
-Output: `frontend/dist/` (static files)
+Output: `frontend/electron-dist/G-Rump.exe` (portable executable)
 
-#### 4. Build Tauri App
+The Electron build:
+- Creates a single portable `.exe` file
+- Bundles the Svelte frontend
+- Includes splash screen
+- Auto-starts the backend (if found in `../backend/dist/`)
 
-```bash
-cd frontend
-npm run tauri:build
-```
+### Electron Configuration
 
-Output: `frontend/src-tauri/target/release/bundle/`
-
-Installers:
-- MSI: `bundle/msi/G-Rump_0.1.0_x64_en-US.msi`
-- NSIS: `bundle/nsis/G-Rump_0.1.0_x64-setup.exe`
-
-## Resource Bundling
-
-The Tauri build automatically includes:
-- `grump-backend.exe` - Bundled backend executable
-- `grump-intent.exe` - Intent compiler binary
-
-These are extracted to the app data directory on first run.
+The Electron build configuration is in `frontend/package.json` under the `build` key:
+- `appId`: `com.grump.app`
+- `productName`: `G-Rump`
+- `win.target`: `portable` (single `.exe`)
+- `win.icon`: `public/favicon.ico`
 
 ## Environment Configuration
 
-For production builds, create a `.env` file in the app data directory:
-- Windows: `%APPDATA%\com.grump.app\.env`
+For production builds, create a `.env` file in the backend directory:
+- `backend/.env`
 
 Example:
 ```
@@ -93,29 +52,27 @@ NVIDIA_NIM_API_KEY=your-key-here
 # Or use OPENROUTER_API_KEY=your-key-here
 NODE_ENV=production
 PORT=3000
-CORS_ORIGINS=tauri://localhost,http://tauri.localhost,http://127.0.0.1:3000
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:3000
 ```
 
-Secrets are not bundled: the frontend and Tauri app do not include `.env` or API keys. The bundled backend reads env at runtime from the app data directory or from a `.env` file placed there by the user or installer.
+Secrets are not bundled: the frontend and Electron app do not include `.env` or API keys. The backend reads env at runtime from the backend directory.
 
 ## Code Signing (Windows)
 
-For distribution trust and fewer SmartScreen warnings, sign the Windows installers:
+For distribution trust and fewer SmartScreen warnings, sign the Windows executable:
 
 1. Obtain a Windows code-signing certificate (e.g. from DigiCert, Sectigo, or your CA).
-2. In `frontend/src-tauri/tauri.conf.json`, under `bundle.windows`:
-   - Set `certificateThumbprint` to the thumbprint of your certificate.
-   - Set `timestampUrl` to a trusted timestamp server, e.g. `http://timestamp.digicert.com` or `http://timestamp.sectigo.com`.
-3. Rebuild the app; the generated MSI/NSIS installers will be signed.
+2. Configure electron-builder in `frontend/package.json` for signing.
+3. Rebuild the app; the generated executable will be signed.
 
-If these values are left `null`/empty, installers are built but unsigned; users may see SmartScreen warnings.
+If signing is not configured, the executable is built but unsigned; users may see SmartScreen warnings.
 
 ## Security (production)
 
-- **CORS**: In production, set `CORS_ORIGINS` to the exact origins the Tauri app uses (e.g. `tauri://localhost`, `http://127.0.0.1:3000`). The backend defaults to a minimal list when `NODE_ENV=production` and `CORS_ORIGINS` is unset.
+- **CORS**: In production, set `CORS_ORIGINS` to the exact origins the Electron app uses (e.g. `http://localhost:5173`, `http://127.0.0.1:3000`). The backend defaults to a minimal list when `NODE_ENV=production` and `CORS_ORIGINS` is unset.
 - **Binding**: The backend listens on `127.0.0.1` when `NODE_ENV=production` (or when `HOST=127.0.0.1` is set), so it is not exposed on the network. Set `HOST` explicitly if you need to override.
 - **Metrics**: Protect the `/metrics` endpoint in production by setting `METRICS_AUTH` (basic auth). The backend enforces this when `NODE_ENV=production`.
-- **Tauri**: CSP and capabilities are configured in `frontend/src-tauri/tauri.conf.json` and `frontend/src-tauri/capabilities/default.json`. Only the `main` and `splashscreen` windows use the default capability set.
+- **Electron**: The preload script uses `contextIsolation: true` and exposes minimal APIs via `contextBridge`. External links open in the default browser.
 
 ## Troubleshooting
 
@@ -124,33 +81,24 @@ If these values are left `null`/empty, installers are built but unsigned; users 
 - Ensure all dependencies are installed: `npm install` in both backend and frontend
 - Clear node_modules and reinstall if needed
 
-### Rust Build Fails
-
-- Ensure MSVC target is installed: `rustup target add x86_64-pc-windows-msvc`
-- Check Visual Studio Build Tools are installed
-
 ### Backend Bundle Too Large
 
 - The bundled executable includes Node.js runtime (~50-100MB)
 - This is expected for standalone distribution
 
-### Tauri Build Fails
-
-- Check `frontend/src-tauri/tauri.conf.json` has correct resource paths
-- Ensure all resources exist before building
-
 ## Testing the Build
 
-1. Install the generated MSI or NSIS installer
-2. Launch G-Rump
-3. Check that backend starts automatically
-4. Verify API connectivity
+### Electron
+
+1. Run `frontend/electron-dist/G-Rump.exe`
+2. The splash screen should appear briefly
+3. Main window loads with the app
+4. Backend starts automatically (check console for "[Backend]" logs)
 
 ## Distribution
 
-The installers can be distributed directly. Users do not need:
-- Node.js installed
-- Rust toolchain
-- Any development dependencies
+### Electron
 
-All required components are bundled in the installer.
+The portable `G-Rump.exe` can be distributed directly. Users need:
+- The backend built and available (or bundled separately)
+- API key configured in `backend/.env`

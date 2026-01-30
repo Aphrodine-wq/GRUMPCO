@@ -1,4 +1,4 @@
-# macOS App Plan (Tauri)
+# macOS App Plan (Electron)
 
 We do not currently have a Mac for local testing. This plan focuses on getting a
 build pipeline and docs in place so we can start macOS work safely.
@@ -17,18 +17,18 @@ build pipeline and docs in place so we can start macOS work safely.
 
 ## CI Build Strategy (No‑Mac Local)
 
-We use a macOS GitHub Actions runner to build the Tauri app:
+We use a macOS GitHub Actions runner to build the Electron app:
 
-1. Install Node 20 and Rust.
+1. Install Node 20.
 2. Install frontend dependencies.
-3. Run `npm run tauri:build` in `frontend/`.
+3. Run `npm run electron:build` in `frontend/`.
 
 This verifies the build path and catches compilation issues.
 
-Workflow: `.github/workflows/tauri-macos.yml`
+Workflow: `.github/workflows/electron-macos.yml`
 
 ## Next Steps
 
 1. Create a macOS signing plan (developer ID + notarization).
 2. Add a simple QA checklist for macOS UI verification.
-3. When a Mac is available, run `npm run tauri:dev` and validate core flows.
+3. When a Mac is available, run `npm run electron:dev` and validate core flows.

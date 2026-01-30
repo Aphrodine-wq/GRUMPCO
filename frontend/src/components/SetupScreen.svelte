@@ -72,10 +72,10 @@
     }
   }
 
-  async function handleComplete() {
+  function handleComplete() {
     isSubmitting = true;
     try {
-      // Save preferences
+      // Save preferences and mark setup complete
       preferencesStore.update({
         diagramStyle: preferences.diagramStyle as 'minimal' | 'detailed' | 'comprehensive',
         primaryTechStack: preferences.primaryTechStack || [],
@@ -91,7 +91,7 @@
       });
 
       // Call completion callback
-      await onComplete?.();
+      onComplete?.();
     } catch (error) {
       console.error('Failed to complete setup:', error);
     } finally {

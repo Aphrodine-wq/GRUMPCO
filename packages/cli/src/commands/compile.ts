@@ -7,7 +7,21 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { resolve } from 'path';
 import { existsSync } from 'fs';
-import type { CompilerConfig } from '@grump/compiler-enhanced';
+// Type definition for compiler (loaded dynamically)
+interface CompilerConfig {
+  entryPoints?: string[];
+  outDir?: string;
+  minify?: boolean;
+  sourceMaps?: boolean;
+  target?: string;
+  parallel?: boolean;
+  incremental?: boolean;
+  dce?: boolean;
+  workers?: number;
+  analyze?: boolean;
+  watch?: boolean;
+  hotReload?: boolean;
+}
 
 interface CompileOptions {
   watch?: boolean;
@@ -30,7 +44,17 @@ interface CompileOptions {
  */
 export async function execute(entryPoints: string[], options: CompileOptions): Promise<void> {
   // Load compiler dynamically
-  const { createCompiler, loadConfig } = await import('@grump/compiler-enhanced');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { createCompiler, loadConfig } = await import('@grump/compiler-enhanced' as any) as {
+    createCompiler: (config: CompilerConfig) => { 
+      compile: (entries?: string[]) => Promise<{ success: boolean; errors?: string[]; warnings?: string[]; files?: string[] }>; 
+      analyze: () => void; 
+      startHotReload: () => void; 
+      watch: (patterns: string[], cb: (files: string[]) => void) => Promise<void>; 
+      dispose: () => void 
+    };
+    loadConfig: (path?: string) => CompilerConfig;
+  };
   
   // Load configuration
   const configFile = options.config ? resolve(options.config) : undefined;

@@ -1,9 +1,22 @@
 <script lang="ts"></script>
 
 <div class="mx-auto max-w-3xl px-4 py-8">
-  <a href="/#/register" class="text-primary-600 hover:underline">Back to registration</a>
-  <article class="prose prose-gray mt-4 whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-6 text-left">
-    <h1>Privacy Policy</h1>
+  <!-- Breadcrumb navigation - WCAG 2.4.5 Multiple Ways -->
+  <nav aria-label="Breadcrumb" class="mb-4">
+    <ol class="flex items-center space-x-2 text-sm text-gray-500">
+      <li>
+        <a href="/#/register" class="text-primary-600 hover:underline focus:underline">Back to registration</a>
+      </li>
+      <li aria-hidden="true">&rsaquo;</li>
+      <li aria-current="page" class="text-gray-900">Privacy Policy</li>
+    </ol>
+  </nav>
+  
+  <article 
+    class="prose prose-gray mt-4 whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-6 text-left"
+    aria-labelledby="privacy-heading"
+  >
+    <h1 id="privacy-heading">Privacy Policy</h1>
     <p><strong>Last updated:</strong> See docs/legal/PRIVACY_POLICY.md for current date.</p>
     <h2>1. Information We Collect</h2>
     <p>Account and profile (email, name, hashed password), usage and sessions (e.g., chat, code generation), and technical data (logs, IP, request identifiers).</p>

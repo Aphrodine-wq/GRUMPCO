@@ -1,14 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "name": "grump",
+  "name": "g-rump",
   "builds": [
     {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "src": "marketing-site/**",
+      "use": "@vercel/static"
     },
     {
       "src": "backend/package.json",
@@ -26,7 +23,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/dist/$1"
+      "dest": "marketing-site/$1"
     }
   ],
   "env": {

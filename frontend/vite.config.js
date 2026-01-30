@@ -41,69 +41,96 @@ export default defineConfig(({ mode }) => {
       minify: isProduction ? 'terser' : false,
       cssMinify: isProduction,
       
-      terserOptions: {
-        compress: {
-          drop_console: isProduction,
-          drop_debugger: isProduction,
-          pure_funcs: isProduction ? ['console.log', 'console.info', 'console.debug'] : [],
-        },
-        mangle: {
-          safari10: true,
-        },
-      },
-      
       rollupOptions: {
         input: {
           app: resolve(__dirname, 'index.html'),
           splashscreen: resolve(__dirname, 'splashscreen.html')
         },
         output: {
-          manualChunks: {
-            // Vendor chunk for third-party libraries
-            'vendor': [
-              'svelte',
-              'mermaid',
-            ],
-            // Heavy dependencies in separate chunks
-            'pdf': ['jspdf'],
-            'syntax-highlight': ['shiki'],
-            'diff': ['diff'],
+          manualChunks(id) {
+            // Dynamic chunking based on module type
+            if (id.includes('node_modules')) {
+              // Vendor libraries
+              if (id.includes('svelte') && !id.includes('svelte-spa-router')) {
+                return 'vendor-svelte'
+              }
+              if (id.includes('@supabase')) {
+                return 'vendor-supabase'
+              }
+              if (id.includes('mermaid')) {
+                return 'vendor-mermaid'
+              }
+              if (id.includes('jspdf')) {
+                return 'vendor-pdf'
+              }
+              if (id.includes('shiki')) {
+                return 'vendor-shiki'
+              }
+              if (id.includes('diff')) {
+                return 'vendor-diff'
+              }
+              return 'vendor'
+            }
+            // Route-based chunking for large components
+            if (id.includes('/components/')) {
+              if (id.includes('AgentSwarmVisualizer') || 
+                  id.includes('DesignToCodeScreen') ||
+                  id.includes('VoiceCodeScreen')) {
+                return 'feature-heavy'
+              }
+            }
           },
-          // Optimize chunk file naming
+          // Optimize chunk file naming with content hash
           entryFileNames: 'assets/[name]-[hash].js',
           chunkFileNames: 'assets/[name]-[hash].js',
           assetFileNames: (assetInfo) => {
             const info = assetInfo.name || ''
             if (info.endsWith('.css')) {
-              return 'assets/[name]-[hash][extname]'
+              return 'assets/css/[name]-[hash][extname]'
             }
-            if (info.endsWith('.woff2') || info.endsWith('.woff')) {
+            if (info.endsWith('.woff2') || info.endsWith('.woff') || info.endsWith('.ttf')) {
               return 'assets/fonts/[name][extname]'
+            }
+            if (/\.(png|jpe?g|gif|svg|webp|ico)$/i.test(info)) {
+              return 'assets/images/[name]-[hash][extname]'
             }
             return 'assets/[name]-[hash][extname]'
           },
         },
       },
       
-      // Optimize build output
-      target: 'es2022',
-      cssTarget: 'es2022',
+      // Optimize build output for modern browsers
+      target: 'esnext',
+      cssTarget: 'esnext',
       
-      // Reduce chunk size warnings
+      // Reduce chunk size warnings (500KB threshold)
       chunkSizeWarningLimit: 500,
+      
+      // Report compressed sizes for accurate metrics
+      reportCompressedSize: true,
     },
     
     optimizeDeps: {
       // Pre-bundle these dependencies for faster dev server start
       include: [
         'svelte',
-        'mermaid',
+        'svelte/animate',
+        'svelte/easing',
+        'svelte/internal',
+        'svelte/motion',
+        'svelte/store',
+        'svelte/transition',
+        '@supabase/supabase-js',
       ],
-      // Exclude heavy dependencies from pre-bundling
+      // Exclude heavy dependencies from pre-bundling (loaded on demand)
       exclude: [
         'jspdf',
         'shiki',
+        'mermaid',
+        'diff',
       ],
+      // Force optimize on cold start
+      force: true,
     },
     
     test: {

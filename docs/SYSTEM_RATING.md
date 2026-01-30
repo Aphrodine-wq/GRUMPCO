@@ -182,7 +182,7 @@ This is a sophisticated, well-architected AI-powered development assistant with 
 - ✅ Combines multiple AI capabilities
 
 **Technical Sophistication (85/100)**
-- ✅ Modern tech stack (TypeScript, Svelte 5, Rust, Tauri)
+- ✅ Modern tech stack (TypeScript, Svelte 5, Rust, Electron)
 - ✅ Production-grade patterns (circuit breakers, resilience)
 - ✅ Comprehensive architecture
 - ✅ Good separation of concerns

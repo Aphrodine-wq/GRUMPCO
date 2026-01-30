@@ -11,7 +11,7 @@ This document summarizes how “done” the system is: what works end‑to‑end
 | Area | Completeness | Notes |
 |------|--------------|--------|
 | **Core product (design → code)** | **~85–90%** | Intent → architecture → PRD → codegen → ship works. Chat, phase bar, SHIP all functional. |
-| **Desktop app (Tauri + Svelte)** | **~90%** | Full UX: chat, diagrams, PRD, codegen, ship, settings, GitHub. |
+| **Desktop app (Electron + Svelte)** | **~90%** | Full UX: chat, diagrams, PRD, codegen, ship, settings, GitHub. |
 | **Backend (grump-backend)** | **~85%** | All major routes implemented. Billing/tier resolution and some optional features still TODO. |
 | **Web app + backend** | **~60%** | Single backend serves web and desktop; Stripe webhook, collaboration, analytics, templates live in backend. Auth and real Supabase/Stripe usage depend on config. |
 | **Integrations (VS Code, CLI, Moltbot)** | **~70%** | Present and usable; some wiring and polish remain. |
@@ -43,7 +43,7 @@ This document summarizes how “done” the system is: what works end‑to‑end
 - **Observability:** Logging, metrics, tracing, optional alerting (email placeholder).
 - **Skills:** Registry, discovery, mount at `/api/skills`, tool wiring.
 
-### Desktop app (Tauri + Svelte)
+### Desktop app (Electron + Svelte)
 
 - Chat, workflow phase bar, diagram renderer, PRD/codegen UI, ShipMode, settings, GitHub create‑and‑push, load/save sessions (localStorage).
 

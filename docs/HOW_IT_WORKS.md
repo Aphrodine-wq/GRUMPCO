@@ -9,7 +9,7 @@ G-Rump is an AI-powered development assistant that transforms natural language d
 ```mermaid
 graph TB
     subgraph User["User Interface"]
-        UI[Desktop App<br/>Tauri + Svelte]
+        UI[Desktop App<br/>Electron + Svelte]
     end
 
     subgraph Backend["Backend Services"]
@@ -310,7 +310,9 @@ start-app.bat
 
 # Or manually
 cd backend && npm start
-cd frontend && npm run tauri dev
+
+# Desktop app (Electron)
+cd frontend && npm run electron:dev
 ```
 
 ### 2. Create a Project

@@ -3,7 +3,8 @@
 ## System Overview
 
 G-Rump is a high-performance AI development platform (Architecture-as-Code) that combines:
-- **Svelte 5** frontend for the UI (web and Tauri desktop)
+- **Svelte 5** frontend for the UI (web and desktop)
+- **Desktop runtime**: Electron
 - **Node.js/Express** backend for API services (SWC-compiled)
 - **Rust** intent compiler for natural language processing (parallel + SIMD)
 - **NVIDIA NIM** (optional) for embeddings and inference (Kimi K2.5)
@@ -16,7 +17,7 @@ For a file-level map of the codebase, see [CODEBASE.md](./CODEBASE.md).
 ```
 ┌─────────────────────────────────────────────────┐
 │           G-Rump Desktop Application            │
-│                  (Tauri + Svelte)               │
+│            (Electron + Svelte)                  │
 ├─────────────────────────────────────────────────┤
 │                                                 │
 │  ┌──────────────┐         ┌──────────────┐      │
@@ -78,35 +79,35 @@ CLI tool that:
 
 ## Resource Bundling
 
-### Production Build
+### Electron Production Build
 
-1. **Backend Bundle**
-   - Uses `pkg` to bundle Node.js backend
-   - Includes embedded Node.js runtime
-   - Output: `grump-backend.exe` (~50-100MB)
+1. **Frontend Bundle**
+   - Built with Vite: `npm run build`
+   - Output: `frontend/dist/` (static files)
 
-2. **Intent Compiler**
-   - Built with `cargo build --release`
-   - Target: `x86_64-pc-windows-msvc`
-   - Output: `grump-intent.exe` (~5-10MB)
+2. **Electron Packaging**
+   - Uses electron-builder
+   - Creates portable executable
+   - Output: `frontend/electron-dist/G-Rump.exe`
 
-3. **Tauri Resources**
-   - Both executables included as resources
-   - Extracted to app data directory on first run
-   - Windows: `%APPDATA%\com.grump.app\`
+3. **Backend** (separate)
+   - Run from source or bundle separately
+   - Electron auto-starts backend from `../backend/dist/`
 
-### Resource Extraction Flow
+### Electron Resource Extraction Flow
 
 ```
 App Launch
     │
-    ├─▶ Check app data directory
+    ├─▶ Load splash screen
     │
-    ├─▶ Extract grump-backend.exe (if not exists)
+    ├─▶ Look for backend at ../backend/dist/index.js
     │
-    ├─▶ Extract grump-intent.exe (if not exists)
+    ├─▶ Start backend process (if found)
     │
-    └─▶ Start backend process
+    ├─▶ Load frontend from localhost:5173 (dev) or dist/ (prod)
+    │
+    └─▶ Close splash, show main window
 ```
 
 ## Data Flow
@@ -168,13 +169,15 @@ User Input → ChatInterface → POST /api/chat/stream
 
 ### Production
 
-- Backend runs as bundled executable
-- Intent compiler from app data directory
-- Frontend bundled in Tauri app
+- Backend runs as Node.js process (Electron)
+- Intent compiler from project root (Electron)
+- Frontend bundled in desktop app
 
 ## Security
 
-- CSP configured in `tauri.conf.json`; Helmet on backend
+- Electron uses `contextIsolation: true` and `nodeIntegration: false` via BrowserWindow options
+- Electron uses `contextIsolation: true` and `nodeIntegration: false`
+- Helmet middleware on backend
 - API keys and secrets in `.env` (see [PRODUCTION_CHECKLIST](./docs/PRODUCTION_CHECKLIST.md))
 - Path validation for security scan (`workspacePath` under `SECURITY_SCAN_ROOT` or cwd)
 - Outbound webhook URLs: https-only in production

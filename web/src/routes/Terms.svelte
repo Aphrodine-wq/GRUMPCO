@@ -1,9 +1,22 @@
 <script lang="ts"></script>
 
 <div class="mx-auto max-w-3xl px-4 py-8">
-  <a href="/#/register" class="text-primary-600 hover:underline">Back to registration</a>
-  <article class="prose prose-gray mt-4 whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-6 text-left">
-    <h1>Terms of Service</h1>
+  <!-- Breadcrumb navigation - WCAG 2.4.5 Multiple Ways -->
+  <nav aria-label="Breadcrumb" class="mb-4">
+    <ol class="flex items-center space-x-2 text-sm text-gray-500">
+      <li>
+        <a href="/#/register" class="text-primary-600 hover:underline focus:underline">Back to registration</a>
+      </li>
+      <li aria-hidden="true">&rsaquo;</li>
+      <li aria-current="page" class="text-gray-900">Terms of Service</li>
+    </ol>
+  </nav>
+  
+  <article 
+    class="prose prose-gray mt-4 whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-6 text-left"
+    aria-labelledby="terms-heading"
+  >
+    <h1 id="terms-heading">Terms of Service</h1>
     <p><strong>Last updated:</strong> See docs/legal/TERMS_OF_SERVICE.md for current date.</p>
     <h2>1. Acceptance</h2>
     <p>By creating an account or using G-Rump ("Service"), you agree to these Terms of Service ("Terms") and our Privacy Policy. If you do not agree, do not use the Service.</p>

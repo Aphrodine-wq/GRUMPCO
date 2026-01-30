@@ -4,7 +4,7 @@
 
 **G-Rump is Architecture-as-Code: Terraform for application architecture.** Your diagram and spec are the source of truth; code generation is optional. Living documentation that can generate code—not an AI code generator. Teams can use the architecture output (Mermaid diagram, intent, tech stack, task breakdown) without ever generating code.
 
-Built as a Tauri desktop app with Svelte frontend and Node.js/Express backend (plus a Rust Intent Compiler), G-Rump uses NVIDIA NIM (Kimi K2.5) and OpenRouter to automate intent understanding, architecture diagrams, spec (PRD) generation, and optional multi-agent code generation. It combines spec-first architecture, full pipeline (SHIP: design → spec → plan → code), and tool-enabled code chat. Use it from Desktop, Web, VS Code, CLI, or chat bots. See [ARCHITECTURE_AS_CODE.md](ARCHITECTURE_AS_CODE.md) for philosophy and use-without-codegen workflows.
+Built as a desktop app (Electron) with Svelte frontend and Node.js/Express backend (plus a Rust Intent Compiler), G-Rump uses NVIDIA NIM (Kimi K2.5) and OpenRouter to automate intent understanding, architecture diagrams, spec (PRD) generation, and optional multi-agent code generation. It combines spec-first architecture, full pipeline (SHIP: design → spec → plan → code), and tool-enabled code chat. Use it from Desktop, Web, VS Code, CLI, or chat bots. See [ARCHITECTURE_AS_CODE.md](ARCHITECTURE_AS_CODE.md) for philosophy and use-without-codegen workflows.
 
 **Two modes:**
 - **Architecture**: Describe → Architecture (Mermaid) → Spec (PRD) → (optional) Code. Phased workflow or full SHIP run. Lead with the diagram; code is optional.
@@ -18,7 +18,7 @@ One app, one backend: Architecture-as-Code first (diagram + spec + plan), then o
 
 ## Clients and backend
 
-G-Rump uses **one backend** (grump-backend) for all clients. It is not only a standalone Windows desktop app: the same backend is used by the **Desktop app** (Tauri), **Web app**, **VS Code extension**, **CLI** (`grump-analyze`), and **Moltbot/Clawdbot** skill. The backend is deployed to Vercel or runs locally at `VITE_API_URL` (default `http://localhost:3000`). It uses SQLite for persistence and optionally Redis for rate limiting, cache, session storage, and job queues. Optional integrations include Stripe (billing), Supabase (auth/collaboration), and an LLM gateway (Anthropic, OpenRouter, Zhipu, etc.). Clients receive ship and codegen completion events in real time via `GET /api/events/stream` (SSE).
+G-Rump uses **one backend** (grump-backend) for all clients. It is not only a standalone Windows desktop app: the same backend is used by the **Desktop app** (Electron), **Web app**, **VS Code extension**, **CLI** (`grump-analyze`), and **Moltbot/Clawdbot** skill. The backend is deployed to Vercel or runs locally at `VITE_API_URL` (default `http://localhost:3000`). It uses SQLite for persistence and optionally Redis for rate limiting, cache, session storage, and job queues. Optional integrations include Stripe (billing), Supabase (auth/collaboration), and an LLM gateway (Anthropic, OpenRouter, Zhipu, etc.). Clients receive ship and codegen completion events in real time via `GET /api/events/stream` (SSE).
 
 ---
 
@@ -58,7 +58,7 @@ There is no shared project or workspace id linking chat, ship, and codegen today
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    G-RUMP TAURI DESKTOP APP                         │
+│                    G-RUMP DESKTOP APP (ELECTRON)                      │
 ├─────────────────────────────────────────────────────────────────────┤
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │                 SVELTE FRONTEND (5173)                        │   │
@@ -86,7 +86,7 @@ There is no shared project or workspace id linking chat, ship, and codegen today
 
 | Layer | Technology |
 |-------|------------|
-| Desktop | Tauri 2.x (Rust), Windows |
+| Desktop | Electron |
 | Frontend | Svelte, TypeScript, Vite |
 | Backend | Node.js 20+, Express, TypeScript |
 | Intent | Rust Intent Compiler (grump-intent) |
@@ -99,12 +99,12 @@ There is no shared project or workspace id linking chat, ship, and codegen today
 
 ```
 grump/
-├── frontend/                 # Svelte + Vite (Tauri desktop)
+├── frontend/                 # Svelte + Vite (Electron desktop)
 │   ├── src/
 │   │   ├── App.svelte
 │   │   ├── lib/              # API client, stores
 │   │   └── ...
-│   └── src-tauri/            # Tauri config
+│   ├── electron/             # Electron main process
 ├── web/                      # Svelte web app (same backend)
 ├── backend/                  # Node.js + Express (grump-backend)
 │   ├── src/
@@ -132,7 +132,7 @@ grump/
 This opens:
 - G-Rump Backend on `http://localhost:3000`
 - G-Rump Frontend on `http://localhost:5173`
-- (For Tauri desktop: `cd frontend && npm run tauri:dev`)
+- (For Electron desktop: `cd frontend && npm run electron:dev`)
 
 ### Ship path (MVP)
 
@@ -144,7 +144,7 @@ The minimal path to validate a release: **Web** — run `.\start-app.bat` (Windo
 
 **Optional:** `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` for rate limiting, cache, BullMQ, and session storage; omit for in-memory fallback. `CORS_ORIGINS` for production (comma-separated origins; set for web deploy). `GRUMP_INTENT_PATH` for the Rust intent compiler; omit to use Claude-only intent. See `backend/.env.example` for full list (Supabase, Stripe, Twilio, etc.).
 
-**Recommended deploy path (MVP):** Local — run `.\start-app.bat` (backend 3000, frontend 5173). For production: backend on Vercel with `NODE_ENV=production`, `CORS_ORIGINS` set to your frontend URL; frontend as static build (e.g. Vercel or same host). Desktop: `cd frontend && npm run tauri:dev` (dev) or `npm run tauri:build` (installer).
+**Recommended deploy path (MVP):** Local — run `.\start-app.bat` (backend 3000, frontend 5173). For production: backend on Vercel with `NODE_ENV=production`, `CORS_ORIGINS` set to your frontend URL; frontend as static build (e.g. Vercel or same host). Desktop: `cd frontend && npm run electron:dev` (Electron). Build: `npm run electron:build` (Electron installer).
 
 **Tests:** Backend: `cd backend && npm run test` and `npm run type-check`. Frontend: `cd frontend && npm run test:run`. E2E: start backend, then `cd frontend && npm run test:e2e` (or `npm run test:e2e:ci` in CI). In CI, E2E job starts the backend and global-setup waits for backend health. Evals: run `cd backend && npm run evals` with backend up; results in `frontend/test-results/agent-evals.json`. CI (when API keys are set) runs evals and publishes a score summary to the job summary.
 

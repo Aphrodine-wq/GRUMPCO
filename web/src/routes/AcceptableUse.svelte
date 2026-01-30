@@ -1,9 +1,22 @@
 <script lang="ts"></script>
 
 <div class="mx-auto max-w-3xl px-4 py-8">
-  <a href="/#/register" class="text-primary-600 hover:underline">Back to registration</a>
-  <article class="prose prose-gray mt-4 whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-6 text-left">
-    <h1>Acceptable Use Policy</h1>
+  <!-- Breadcrumb navigation - WCAG 2.4.5 Multiple Ways -->
+  <nav aria-label="Breadcrumb" class="mb-4">
+    <ol class="flex items-center space-x-2 text-sm text-gray-500">
+      <li>
+        <a href="/#/register" class="text-primary-600 hover:underline focus:underline">Back to registration</a>
+      </li>
+      <li aria-hidden="true">&rsaquo;</li>
+      <li aria-current="page" class="text-gray-900">Acceptable Use Policy</li>
+    </ol>
+  </nav>
+  
+  <article 
+    class="prose prose-gray mt-4 whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-6 text-left"
+    aria-labelledby="aup-heading"
+  >
+    <h1 id="aup-heading">Acceptable Use Policy</h1>
     <p><strong>Last updated:</strong> See docs/legal/ACCEPTABLE_USE_POLICY.md for current date.</p>
     <p>This policy applies to your use of G-Rump. Violation may result in suspension or termination of access.</p>
     <h2>Prohibited Uses</h2>

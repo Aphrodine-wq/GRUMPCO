@@ -15,6 +15,17 @@ import { configCommand } from './commands/config.js';
 import { authCommand } from './commands/auth.js';
 import { compileCommand } from './commands/compile.js';
 
+// Import practical commands
+import { generateCommand } from './commands/generate.js';
+import { buildCommand } from './commands/build.js';
+import { cloudDeployCommand } from './commands/cloud-deploy.js';
+import { testCommand } from './commands/test.js';
+import { lintCommand } from './commands/lint.js';
+import { formatCommand } from './commands/format.js';
+import { creditsCommand } from './commands/credits.js';
+import { syncCommand } from './commands/sync.js';
+import { templatesCommand } from './commands/templates.js';
+
 // Import new funny commands
 import { rantCommand } from './commands/rant.js';
 import { roastCommand } from './commands/roast.js';
@@ -255,8 +266,175 @@ program
     } catch (error) {
       displayError(error as Error);
       process.exit(1);
-    }
-  });
+      }
+    });
+
+  // Generate command - Generate code from natural language
+  program
+    .command('generate')
+    .alias('gen')
+    .description('Generate code from natural language prompt')
+    .argument('<prompt>', 'Natural language description of what to generate')
+    .option('-o, --output <path>', 'Output directory', process.cwd())
+    .option('-l, --language <lang>', 'Target language (typescript, python, rust, etc.)')
+    .option('-f, --framework <fw>', 'Framework to use (react, nextjs, express, etc.)')
+    .option('-t, --template <name>', 'Template to use')
+    .option('-s, --stream', 'Stream output in real-time', false)
+    .action(async (prompt, options) => {
+      try {
+        await generateCommand.execute(prompt, options);
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Build command - Build the current project
+  program
+    .command('build')
+    .description('Build the current project')
+    .option('-w, --watch', 'Watch mode - rebuild on changes', false)
+    .option('-a, --analyze', 'Run bundle analyzer', false)
+    .option('-p, --production', 'Production build', true)
+    .option('-t, --target <target>', 'Build target')
+    .option('-o, --output <path>', 'Output directory')
+    .option('-c, --clean', 'Clean previous build first', false)
+    .action(async (options) => {
+      try {
+        await buildCommand.execute(options);
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Deploy command - Deploy to cloud (Vercel/Netlify/Railway)
+  program
+    .command('deploy')
+    .alias('cloud-deploy')
+    .description('Deploy to cloud platform (Vercel, Netlify, Railway, etc.)')
+    .option('-p, --platform <name>', 'Deployment platform')
+    .option('--prod', 'Production deployment', false)
+    .option('--preview', 'Create preview deployment', true)
+    .option('-e, --env <environment>', 'Environment to deploy')
+    .option('-d, --build-dir <path>', 'Build directory to deploy')
+    .option('--skip-build', 'Skip build step', false)
+    .action(async (options) => {
+      try {
+        await cloudDeployCommand.execute(options);
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Test command - Run tests with AI suggestions
+  program
+    .command('test')
+    .description('Run tests with AI-generated test suggestions')
+    .option('-w, --watch', 'Watch mode', false)
+    .option('-c, --coverage', 'Generate coverage report', false)
+    .option('--ai', 'Enable AI test generation/suggestions', false)
+    .option('-u, --update', 'Update snapshots', false)
+    .option('-f, --file <pattern>', 'Test file pattern to run')
+    .option('--generate', 'Generate tests for untested files', false)
+    .action(async (options) => {
+      try {
+        await testCommand.execute(options);
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Lint command - Lint code with AI fixes
+  program
+    .command('lint')
+    .description('Lint code with AI-powered fixes')
+    .option('--fix', 'Auto-fix issues', false)
+    .option('--ai', 'Enable AI-powered fix suggestions', false)
+    .option('--staged', 'Lint only staged files', false)
+    .option('-f, --file <path>', 'Specific file to lint')
+    .option('--format <format>', 'Output format (stylish, compact, json)')
+    .action(async (options) => {
+      try {
+        await lintCommand.execute(options);
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Format command - Format code
+  program
+    .command('format')
+    .description('Format code using configured formatters')
+    .option('--write', 'Write formatted output to files', true)
+    .option('--check', 'Check if files are formatted', false)
+    .option('-f, --file <path>', 'Specific file to format')
+    .option('-p, --pattern <pattern>', 'File pattern to format')
+    .option('--cache', 'Use caching for faster formatting', false)
+    .action(async (options) => {
+      try {
+        await formatCommand.execute(options);
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Credits command - Check credit balance and buy more
+  program
+    .command('credits')
+    .description('Check credit balance and purchase more')
+    .option('--buy', 'Purchase credits', false)
+    .option('-a, --amount <number>', 'Amount of credits to buy')
+    .option('--history', 'Show transaction history', false)
+    .action(async (options) => {
+      try {
+        await creditsCommand.execute(options);
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Sync command - Sync project with cloud
+  program
+    .command('sync')
+    .description('Sync project files with cloud storage')
+    .option('--push', 'Push local changes to cloud')
+    .option('--pull', 'Pull changes from cloud to local')
+    .option('--watch', 'Watch for changes and auto-sync', false)
+    .option('--force', 'Force sync (overwrite conflicts)', false)
+    .option('--dry-run', 'Show what would be synced without making changes', false)
+    .action(async (options) => {
+      try {
+        await syncCommand.execute(options);
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Templates command - List and use project templates
+  program
+    .command('templates')
+    .alias('template')
+    .description('List and use project templates')
+    .option('--list', 'List all available templates', true)
+    .option('--use <name>', 'Use a specific template')
+    .option('-o, --output <path>', 'Output directory for new project')
+    .option('--search <keyword>', 'Search templates by keyword')
+    .option('--category <name>', 'Filter by category')
+    .action(async (options) => {
+      try {
+        await templatesCommand.execute(options);
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
 
   // Rant command - AI complains about your code
   program

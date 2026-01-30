@@ -30,7 +30,7 @@ G-Rump is an AI-powered development assistant that transforms natural language i
 ```mermaid
 graph TB
     subgraph UI["User Interface Layer"]
-        Desktop[Tauri Desktop App<br/>Svelte 5]
+        Desktop[Electron Desktop App<br/>Svelte 5]
     end
 
     subgraph API["API Layer"]

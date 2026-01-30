@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import inquirer from 'inquirer';
+import { prompt as askUser } from '../utils/prompt.js';
 import { config } from '../config.js';
 import { branding } from '../branding.js';
 import { withSpinner } from '../utils/progress.js';
@@ -36,7 +36,7 @@ async function login(): Promise<void> {
   console.log(branding.getLogo('compact'));
   console.log(branding.format('Authentication', 'subtitle'));
   
-  const { apiKey } = await inquirer.prompt([{
+  const { apiKey } = await askUser<{ apiKey: string }>([{
     type: 'password',
     name: 'apiKey',
     message: 'Enter your API key:',
@@ -178,7 +178,7 @@ async function fetchUserInfo(): Promise<{ name?: string; email?: string } | null
       return null;
     }
     
-    return response.json();
+    return response.json() as Promise<{ name?: string; email?: string }>;
   } catch {
     return null;
   }

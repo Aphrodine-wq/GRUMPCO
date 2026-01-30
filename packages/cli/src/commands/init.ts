@@ -1,7 +1,7 @@
 import { existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
-import inquirer from 'inquirer';
+import { prompt as askUser } from '../utils/prompt.js';
 import { config } from '../config.js';
 import { branding } from '../branding.js';
 import { GrumpError } from '../utils/errors.js';
@@ -42,7 +42,7 @@ export async function execute(options: InitOptions): Promise<void> {
 async function interactiveSetup(configPath: string): Promise<void> {
   console.log('\n' + chalk.hex('#F7931E')('Let\'s configure G-Rump:'));
   
-  const answers = await inquirer.prompt([
+  const answers = await askUser<{ apiUrl: string; apiKey: string; theme: string; defaultOutputDir: string; autoStream: boolean; progressIndicators: boolean }>([
     {
       type: 'input',
       name: 'apiUrl',

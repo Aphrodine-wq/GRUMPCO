@@ -1,83 +1,84 @@
-# G-Rump Documentation Index
+# G-Rump Documentation
 
-Central index for all documentation. Start here or from the [main README](../README.md).
+Welcome to the G-Rump documentation. This index will help you find what you need quickly.
 
-## Getting started
+## 🚀 Getting Started (Pick One)
 
-| Doc | Description |
-|-----|--------------|
-| [GETTING_STARTED.md](GETTING_STARTED.md) | User-friendly setup paths (Web, Windows, CLI) |
-| [QUICK_START.md](QUICK_START.md) | Minimal steps to run G-Rump |
-| [OVERVIEW.md](OVERVIEW.md) | What G-Rump is, clients, flows, sessions |
-| [COMPLETE_SYSTEM_GUIDE.md](COMPLETE_SYSTEM_GUIDE.md) | End-to-end system guide and usage |
+New to G-Rump? Start here based on your use case:
 
-## Architecture and design
+| Path | Best For | Document |
+|------|----------|----------|
+| **Desktop App** | Local development, easiest setup | [GETTING_STARTED.md](GETTING_STARTED.md) |
+| **Web (Self-Hosted)** | Teams, shared access | [SETUP.md](SETUP.md) → Website section |
+| **CLI** | Scripts, automation, power users | [QUICK_START.md](QUICK_START.md) → CLI section |
+| **Docker** | Containerized deployment, Linux | [SETUP.md](SETUP.md) → Docker section |
 
-| Doc | Description |
-|-----|--------------|
-| [ARCHITECTURE_AS_CODE.md](ARCHITECTURE_AS_CODE.md) | Philosophy and use-without-codegen workflows |
-| [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) | System architecture details |
-| [HOW_IT_WORKS.md](HOW_IT_WORKS.md) | How the system works |
-| [CAPABILITIES.md](CAPABILITIES.md) | Architecture, data flow, API domains |
-| [BACKENDS.md](BACKENDS.md) | One backend (Vercel), clients, summary |
+## 📚 Documentation Sections
 
-## Operations and deployment
+### Quick Reference
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Command cheat sheet and quick lookups
+- **[API.md](API.md)** - Complete API reference by domain
+- **[CURSOR_GRUMP_API.md](CURSOR_GRUMP_API.md)** - Using G-Rump from Cursor IDE
 
-| Doc | Description |
-|-----|--------------|
-| [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) | Security, env, Redis, abuse prevention, deployment |
-| [SECURITY_BASELINE.md](SECURITY_BASELINE.md) | Required security posture for production |
-| [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) | Fast path to a clean release |
-| [PERFORMANCE_GUIDE.md](PERFORMANCE_GUIDE.md) | Performance features (SWC, Rust, cache, NIM, etc.) |
-| [OPTIMIZATION_SUMMARY.md](OPTIMIZATION_SUMMARY.md) | Implementation details for optimizations |
-| [LINUX_SETUP.md](LINUX_SETUP.md) | WSL2 and Linux optimization |
-| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick command reference |
+### Understanding G-Rump
+- **[OVERVIEW.md](OVERVIEW.md)** - What is G-Rump, architecture philosophy, core concepts
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, data flow, component details
+- **[HOW_IT_WORKS.md](HOW_IT_WORKS.md)** - Complete workflow walkthrough with diagrams
+- **[CAPABILITIES.md](CAPABILITIES.md)** - Feature overview and API domains
 
-## Platforms
+### Setup & Installation
+- **[SETUP.md](SETUP.md)** - Complete setup guide (all platforms)
+- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Fastest path to first use
+- **[BUILD.md](BUILD.md)** - Building from source (Electron app)
+- **[LINUX_SETUP.md](LINUX_SETUP.md)** - Linux and WSL2 optimization
+- **[MACOS_APP.md](MACOS_APP.md)** - macOS-specific information
 
-| Doc | Description |
-|-----|--------------|
-| [MACOS_APP.md](MACOS_APP.md) | macOS app plan (CI build + future signing) |
+### Development & Operations
+- **[CODEBASE.md](CODEBASE.md)** - Repository structure and entry points
+- **[TESTING.md](TESTING.md)** - Testing guide and best practices
+- **[PERFORMANCE_GUIDE.md](PERFORMANCE_GUIDE.md)** - Performance features and optimization
 
-## Reference
+### Production & Security
+- **[PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)** - Essential checklist for production
+- **[SECURITY_BASELINE.md](SECURITY_BASELINE.md)** - Required security posture
+- **[RUNBOOK.md](RUNBOOK.md)** - Operational runbook for incidents
+- **[RUNBOOK_REDIS.md](RUNBOOK_REDIS.md)** - Redis-specific operations
 
-| Doc | Description |
-|-----|--------------|
-| [API.md](API.md) | API endpoints by domain (see also README and CURSOR_GRUMP_API) |
-| [CURSOR_GRUMP_API.md](CURSOR_GRUMP_API.md) | G-Rump API for Cursor integration |
-| [INTENT_COMPILER.md](INTENT_COMPILER.md) | Intent compiler (Rust) |
-| [AGENT_SYSTEM.md](AGENT_SYSTEM.md) | Agent system |
-| [AGENTLIGHTNING.md](AGENTLIGHTNING.md) | AgentLightning setup (agent trace overwatch) |
-| [AI_WORKFLOWS.md](AI_WORKFLOWS.md) | AI workflows |
-| [TESTING.md](TESTING.md) | Testing |
-| [ROADMAP.md](ROADMAP.md) | Future enhancements |
-| [KNOWN_ISSUES.md](KNOWN_ISSUES.md) | Known issues |
-| [THINGS_TO_DO.md](THINGS_TO_DO.md) | To-do list |
+### Advanced Topics
+- **[AGENT_SYSTEM.md](AGENT_SYSTEM.md)** - Multi-agent architecture details
+- **[INTENT_COMPILER.md](INTENT_COMPILER.md)** - Intent parsing and Rust compiler
+- **[AI_WORKFLOWS.md](AI_WORKFLOWS.md)** - AI workflow patterns
+- **[AGENTLIGHTNING.md](AGENTLIGHTNING.md)** - Agent observability setup
 
-## Legal
+### Project Information
+- **[ROADMAP.md](ROADMAP.md)** - Future enhancements and plans
+- **[KNOWN_ISSUES.md](KNOWN_ISSUES.md)** - Known issues and workarounds
+- **[MIGRATION.md](MIGRATION.md)** - Migration guides between versions
 
-| Doc | Description |
-|-----|--------------|
-| [legal/TERMS_OF_SERVICE.md](legal/TERMS_OF_SERVICE.md) | Terms of Service |
-| [legal/PRIVACY_POLICY.md](legal/PRIVACY_POLICY.md) | Privacy Policy |
-| [legal/ACCEPTABLE_USE_POLICY.md](legal/ACCEPTABLE_USE_POLICY.md) | Acceptable Use Policy |
+### Legal
+- **[legal/TERMS_OF_SERVICE.md](legal/TERMS_OF_SERVICE.md)** - Terms of Service
+- **[legal/PRIVACY_POLICY.md](legal/PRIVACY_POLICY.md)** - Privacy Policy
+- **[legal/ACCEPTABLE_USE_POLICY.md](legal/ACCEPTABLE_USE_POLICY.md)** - Acceptable Use Policy
 
-## Other
+## 🗺️ Documentation Site
 
-| Doc | Description |
-|-----|--------------|
-| [cursor-grump-skill.md](cursor-grump-skill.md) | Cursor skill for G-Rump |
-| [SYSTEM_EVALUATION.md](SYSTEM_EVALUATION.md) | System evaluation |
-| [CODEBASE_VALUATION.md](CODEBASE_VALUATION.md) | Codebase valuation |
-| [BEFORE_AFTER.md](BEFORE_AFTER.md) | Before/after comparisons |
+For a better browsing experience, visit our documentation site: `/docs-site/index.md`
 
-## Legacy (root-level)
+## 🆘 Getting Help
 
-These docs live at repo root; linked here for discoverability. Prefer the docs above for current workflows.
+1. Check [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for common problems
+2. Review the [troubleshooting section in SETUP.md](SETUP.md#troubleshooting)
+3. See [RUNBOOK.md](RUNBOOK.md) for operational issues
+4. Check component-specific READMEs in `frontend/`, `backend/`, etc.
 
-| Doc | Location | Description |
-|-----|----------|-------------|
-| SETUP | [../SETUP.md](../SETUP.md) | Setup guide |
-| BUILD | [../BUILD.md](../BUILD.md) | Build guide |
-| PROJECT_STATUS | [../PROJECT_STATUS.md](../PROJECT_STATUS.md) | Project status |
-| Overview | [../Overview.md](../Overview.md) | Overview (lowercase; see OVERVIEW.md above for main overview) |
+## 📝 Contributing to Documentation
+
+- Keep docs in the `docs/` folder (not root)
+- Use clear, concise language
+- Include code examples where helpful
+- Update links when moving files
+- Test all code snippets
+
+---
+
+**Quick Links**: [Main README](../README.md) | [API Reference](API.md) | [Quick Start](QUICK_START.md)

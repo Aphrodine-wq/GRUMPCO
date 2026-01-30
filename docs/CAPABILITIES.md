@@ -44,7 +44,7 @@ G-Rump uses **one backend** (grump-backend) for all clients. See [BACKENDS.md](B
 ```mermaid
 flowchart TB
   subgraph clients [Clients]
-    Desktop[Tauri + Svelte\nDesktop App]
+    Desktop[Electron + Svelte\nDesktop App]
     Web[Svelte Web App]
     VSCode[VS Code Extension]
     CLI[grump-analyze CLI]
@@ -413,7 +413,7 @@ Additional routes may be mounted by the **skills** system at runtime (see backen
 ## Requirements
 
 - Node.js 20+
-- Rust (Tauri + Intent Compiler)
+- Rust (Intent Compiler)
 - Anthropic API key
 - Windows (standalone app target)
 

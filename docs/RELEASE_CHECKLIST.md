@@ -15,9 +15,9 @@ Use this checklist to ship quickly without missing critical steps.
 - [ ] `/health` and `/metrics` verify OK
 
 ## 2) Windows Desktop App
-- [ ] `build-windows.bat` succeeds
-- [ ] Installer created (`frontend/src-tauri/target/release/bundle`)
-- [ ] `%APPDATA%\\com.grump.app\\.env` path documented
+- [ ] `npm run electron:build` succeeds
+- [ ] Installer created (`frontend/electron-dist/G-Rump.exe`)
+- [ ] `backend/.env` path documented
 - [ ] Smoke test: app launches and connects to backend
 
 ## 3) CLI

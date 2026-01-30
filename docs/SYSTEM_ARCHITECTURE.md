@@ -601,7 +601,7 @@ mindmap
             Mermaid.js 10.9
                 SVG rendering
                 Multiple diagram types
-            Tauri 2.9
+            Electron
                 Desktop app support
                 Native APIs
         Backend

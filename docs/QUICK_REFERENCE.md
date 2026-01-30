@@ -1,162 +1,380 @@
-# G-Rump Performance Optimization - Quick Reference
+# G-Rump Quick Reference
 
-## Build Commands
+Essential commands, configuration, and troubleshooting for G-Rump developers and users.
 
-```bash
-# Fast builds (SWC - 18x faster)
-npm run build
-
-# Fallback (TypeScript)
-npm run build:tsc
-
-# Rust (optimized)
-cargo build --release
-
-# WASM
-./build-wasm.sh
-
-# CLI native binary
-npm run build:native
-
-# Docker (optimized)
-bash scripts/build-docker-optimized.sh
-```
-
-## Performance Metrics
-
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| Backend build | 45s | 2.5s | **18x** |
-| Intent parsing | 120ms | 8ms | **15x** |
-| CLI startup | 850ms | 45ms | **19x** |
-| Docker build | 180s | 25s | **7x** |
-| API p95 latency | 450ms | 150ms | **3x** |
-
-## Cost Savings
-
-| Category | Reduction | Annual Savings |
-|----------|-----------|----------------|
-| LLM API (caching) | 40% | $14,400 |
-| LLM API (routing) | 30% | $10,800 |
-| Infrastructure | 25% | $1,500 |
-| **Total** | **60-70%** | **$23,700** |
-
-## Quick Commands
+## 🚀 Quick Start Commands
 
 ```bash
-# Start development
-npm run dev
+# Desktop app (recommended for local development)
+cd frontend && npm run electron:dev
 
-# Build for production
-npm run build
+# Or build portable executable
+cd frontend && npm run electron:build
 
-# Run tests
-npm test
+# Backend only
+cd backend && npm run dev
 
-# Run benchmarks
-cargo bench
+# Full stack (Windows batch script)
+start-app.bat
 
-# View metrics
-curl http://localhost:3000/metrics
+# Docker (Linux, containerized)
+docker-compose up
 
-# Check cost
-curl http://localhost:3000/api/cost/summary
-
-# Clear cache
-grump cache-clear
+# CLI install and use
+npm install -g grump-cli
+grump ship "Build a todo app with React and Node.js"
 ```
 
-## Configuration Files
+## ⚙️ Environment Variables
 
-- `backend/.swcrc` - SWC compiler config
-- `intent-compiler/Cargo.toml` - Rust optimizations
-- `docker-compose.yml` - Optimized stack
-- `.github/workflows/ci.yml` - Parallel CI pipeline
+### Backend (`backend/.env`) - Required
 
-## Key Services
+```env
+# AI Provider (at least one required)
+NVIDIA_NIM_API_KEY=nvapi-your-key-here
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
 
-```typescript
-// Worker pool
-import { getWorkerPool } from './services/workerPool.ts';
-const pool = getWorkerPool();
-await pool.execute('parseIntent', data);
-
-// Tiered cache
-import { withTieredCache } from './services/tieredCache.ts';
-const result = await withTieredCache('namespace', 'key', async () => {...});
-
-// Cost optimizer
-import { getCostOptimizer } from './services/costOptimizer.ts';
-const optimizer = getCostOptimizer();
-const selection = optimizer.selectModel(complexity);
-
-// NIM accelerator
-import { getNIMAccelerator } from './services/nimAccelerator.ts';
-const nim = getNIMAccelerator();
-const embeddings = await nim.generateEmbeddings(texts);
+# Basic server config
+PORT=3000
+NODE_ENV=development
 ```
 
-## Environment Variables
+### Backend (`backend/.env`) - Production Security
 
-```bash
-# Required (at least one)
-NVIDIA_NIM_API_KEY=...
-OPENROUTER_API_KEY=...
+```env
+# Required for production when API is public
+NODE_ENV=production
+REQUIRE_AUTH_FOR_API=true
+BLOCK_SUSPICIOUS_PROMPTS=true
+SECURITY_STRICT_PROD=true
+CORS_ORIGINS=https://yourdomain.com
+METRICS_AUTH=username:password
+GRUMP_WEBHOOK_SECRET=your-secret
+```
 
-# Optional (for caching and performance)
+### Backend (`backend/.env`) - Optional
+
+```env
+# Redis (for shared rate limiting and caching)
 REDIS_HOST=localhost
 REDIS_PORT=6379
+REDIS_PASSWORD=optional
 
-# Performance
-NODE_OPTIONS="--max-old-space-size=2048"
-GRUMP_INTENT_PATH=/path/to/grump-intent
+# Supabase (for auth)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-key
+
+# Cost tracking
+COST_DASHBOARD_ENABLED=true
 ```
 
-## Troubleshooting
+### Frontend (`frontend/.env`)
+
+```env
+VITE_API_URL=http://localhost:3000/api
+```
+
+## 🌐 Common API Endpoints
 
 ```bash
-# Build fails
-npm run build:tsc  # Fallback to TypeScript
+# Chat with AI (streaming)
+curl -X POST http://localhost:3000/api/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Hello"}]}'
 
-# Rust errors
-cargo clean && cargo build --release
+# Start SHIP workflow
+curl -X POST http://localhost:3000/api/ship/start \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Build a todo app"}'
 
-# Cache issues
-rm -rf backend/data/cache/ && redis-cli FLUSHALL
+# Health checks
+curl http://localhost:3000/health
+curl http://localhost:3000/health/quick
 
-# Worker issues
+# Cost dashboard data
+curl http://localhost:3000/api/cost/summary
 curl http://localhost:3000/api/cost/stats
+
+# Prometheus metrics
+curl http://localhost:3000/metrics
 ```
 
-## Monitoring URLs
+## 🛠️ CLI Commands
 
-- Metrics: `http://localhost:3000/metrics`
-- Cost Dashboard: `http://localhost:5173/cost-dashboard`
-- Health: `http://localhost:3000/health`
-- Stats: `http://localhost:3000/api/cost/stats`
+```bash
+# Core workflow commands
+grump ship "Your project description"           # Full SHIP workflow
+grump ship-parallel "App 1,App 2,App 3"         # Multiple parallel ships
+grump plan "Feature description"                # Generate implementation plan
+grump analyze --workspace . --output arch.mmd   # Analyze codebase
 
-## Best Practices
+# Cache and maintenance
+grump cache-clear                               # Clear all caches
+grump cache-stats                               # Show cache statistics
 
-1. ✅ Use `npm run build` (SWC) not `npm run build:tsc`
-2. ✅ Enable Redis for L2 caching
-3. ✅ Set cost budgets and alerts
-4. ✅ Monitor cache hit rates (target: 50%+)
-5. ✅ Use native Linux in production
-6. ✅ Enable cost-aware routing
-7. ✅ Batch embedding requests
-8. ✅ Review cost dashboard weekly
+# Configuration
+grump config set apiUrl http://localhost:3000   # Set API URL
+grump config get apiUrl                         # Get current API URL
+grump auth login                                # Authenticate
+grump auth status                               # Check auth status
 
-## Performance Targets
+# Help
+grump --help                                    # Show all commands
+grump ship --help                               # Ship command help
+```
 
-- Build time: < 3s
-- Intent parsing: < 10ms
-- API p95 latency: < 150ms
-- Cache hit rate: > 50%
-- Cost per request: < $0.01
-- GPU utilization: > 70%
+## 📦 NPM Scripts by Component
 
-## Support
+### Backend (`cd backend`)
 
+```bash
+npm run dev              # Development with hot reload (tsx watch)
+npm run build            # Build with SWC (18x faster than tsc)
+npm run start            # Run from source (tsx)
+npm run start:prod       # Run built dist/index.js
+npm run test             # Run Vitest tests
+npm run test:watch       # Run tests in watch mode
+npm run type-check       # TypeScript type checking
+npm run lint             # ESLint check
+npm run lint:fix         # ESLint fix
+npm run load-test        # K6 load testing
+```
+
+### Frontend (`cd frontend`)
+
+```bash
+npm run dev              # Vite dev server (port 5173)
+npm run build            # Production build
+npm run preview          # Preview production build
+npm run electron:dev     # Electron desktop dev mode
+npm run electron:build   # Build portable EXE (output: electron-dist/)
+npm run electron:pack    # Pack without installer
+npm run test:run         # Unit tests (Vitest)
+npm run test:e2e         # E2E tests (Playwright)
+npm run type-check       # Svelte/TypeScript check
+npm run lint             # ESLint
+```
+
+### Intent Compiler (`cd intent-compiler`)
+
+```bash
+cargo build --release    # Build optimized binary
+cargo test               # Run Rust tests
+cargo bench              # Run benchmarks
+./build-wasm.sh          # Build WASM module
+```
+
+### Root (`/`)
+
+```bash
+npm run check-all        # Run all checks (lint, type-check, test)
+npm run format           # Format all code
+```
+
+## 🐳 Docker Commands
+
+```bash
+# Build and start all services
+docker-compose up --build
+
+# Start in background (detached)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+docker-compose logs -f backend
+docker-compose logs -f frontend
+
+# Rebuild specific service
+docker-compose build --no-cache backend
+docker-compose build --no-cache frontend
+
+# Stop and remove
+docker-compose down
+
+# Remove volumes (careful - deletes data)
+docker-compose down -v
+```
+
+## 🗄️ Database & Cache
+
+### SQLite (Default)
+
+```bash
+# Database location
+backend/data/grump.db
+
+# Migrations run automatically on startup
+```
+
+### Redis (Optional)
+
+```bash
+# Check Redis connection
+curl http://localhost:3000/health/quick
+
+# Clear Redis cache
+redis-cli FLUSHALL
+
+# View Redis stats (if connected)
+redis-cli INFO
+```
+
+### Clear All Caches
+
+```bash
+# Via CLI
+grump cache-clear
+
+# Manual - file cache
+rm -rf backend/data/cache/
+
+# Manual - Redis
+redis-cli FLUSHALL
+```
+
+## ✅ Testing & Quality
+
+```bash
+# Backend tests
+cd backend && npm test
+
+# Frontend unit tests
+cd frontend && npm run test:run
+
+# Frontend E2E tests (requires backend running)
+cd frontend && npm run test:e2e
+
+# Type checking
+cd backend && npm run type-check
+cd frontend && npm run type-check
+
+# Linting
+cd backend && npm run lint
+cd frontend && npm run lint
+
+# All checks (from root)
+npm run check-all
+```
+
+## 📊 Monitoring & Debugging
+
+### URLs
+
+| Service | URL |
+|---------|-----|
+| Backend API | http://localhost:3000 |
+| Frontend Dev | http://localhost:5173 |
+| Cost Dashboard | http://localhost:5173/cost-dashboard |
+| Health Check | http://localhost:3000/health |
+| Quick Health | http://localhost:3000/health/quick |
+| Prometheus Metrics | http://localhost:3000/metrics |
+| Stats API | http://localhost:3000/api/cost/stats |
+
+### Debugging
+
+```bash
+# Check if backend is running
+curl http://localhost:3000/health/quick
+
+# Test API key configuration
+curl http://localhost:3000/health/quick | grep api_key_configured
+
+# View recent backend logs
+cd backend && cat logs/app.log | tail -50
+
+# Check port usage
+netstat -ano | findstr :3000
+netstat -ano | findstr :5173
+```
+
+## 🚨 Troubleshooting
+
+### Common Issues & Fixes
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| "At least one AI provider required" | Missing API key | Add NVIDIA_NIM_API_KEY or OPENROUTER_API_KEY to backend/.env |
+| "Port 3000 already in use" | Port conflict | Backend auto-finds next port; check console output |
+| "Cannot connect to backend" | Backend not running | Run `cd backend && npm run dev` |
+| CORS errors in browser | Origin not allowed | Add your origin to CORS_ORIGINS in backend/.env |
+| Frontend shows "Disconnected" | Wrong API URL | Check VITE_API_URL in frontend/.env matches backend port |
+| Redis connection failed | Redis not running | App uses in-memory fallback; optional for local dev |
+| Docker containers won't start | Missing .env | Ensure backend/.env exists with API key |
+| Build fails | TypeScript errors | Run `npm run type-check` to identify issues |
+| Tests fail | Dependencies missing | Run `npm install` in backend and frontend |
+
+### Reset Everything
+
+```bash
+# Kill all Node processes
+taskkill /F /IM node.exe  # Windows
+pkill -f node             # Linux/Mac
+
+# Clear all caches and data
+rm -rf backend/data/cache/
+rm -rf backend/dist/
+rm -rf frontend/dist/
+redis-cli FLUSHALL  # If using Redis
+
+# Reinstall dependencies
+cd backend && rm -rf node_modules && npm install
+cd frontend && rm -rf node_modules && npm install
+
+# Restart
+start-app.bat  # Windows
+# Or manually start backend and frontend
+```
+
+## 🔐 Production Checklist (Quick)
+
+Before deploying to production:
+
+```bash
+# Environment
+NODE_ENV=production
+
+# Security (required when API is public)
+REQUIRE_AUTH_FOR_API=true
+BLOCK_SUSPICIOUS_PROMPTS=true
+SECURITY_STRICT_PROD=true
+
+# CORS (exact origins, no wildcards)
+CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+
+# Secrets (set these)
+GRUMP_WEBHOOK_SECRET=...
+METRICS_AUTH=username:password
+
+# Full checklist: see docs/PRODUCTION_CHECKLIST.md
+```
+
+## 📖 Session Types
+
+| Type | Storage | Use Case |
+|------|---------|----------|
+| **Chat** | localStorage | Frontend-only conversations |
+| **Ship** | Backend DB | SHIP workflow runs |
+| **Codegen** | Backend DB | Code generation jobs |
+
+## 🔗 Quick Links
+
+- [Full Documentation Index](./README.md)
+- [Getting Started Guide](./GETTING_STARTED.md)
+- [Setup Guide](./SETUP.md)
+- [API Reference](./API.md)
+- [Production Checklist](./PRODUCTION_CHECKLIST.md)
 - [Performance Guide](./PERFORMANCE_GUIDE.md)
-- [Linux Setup](./LINUX_SETUP.md)
-- [Optimization Summary](./OPTIMIZATION_SUMMARY.md)
+- [Troubleshooting](./SETUP.md#troubleshooting)
+
+## 💡 Tips
+
+1. **Use the Desktop App** - Easiest way to get started locally
+2. **Start with Docker** - If you want isolation or are on Linux
+3. **Enable Redis** - For better performance with caching and rate limiting
+4. **Set Cost Budgets** - Use the cost dashboard to track spending
+5. **Check Health First** - Always verify `/health/quick` before debugging
+
+---
+
+**Last Updated:** 2026-01-30 | **Version:** 3.0.0

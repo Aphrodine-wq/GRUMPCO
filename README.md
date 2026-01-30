@@ -1,12 +1,33 @@
 <p align="center">
-  <img src="docs/assets/grump-logo.svg" width="120" alt="G-Rump logo" />
+  <img src="docs/assets/grump-logo.svg" width="120" alt="G-Rump AI Development Platform Logo - AI-powered code generation and architecture design" />
 </p>
 
-# G-Rump - High-Performance AI Development Platform
+<h1 align="center">G-Rump - Enterprise AI Development Platform</h1>
 
-> NVIDIA-optimized AI platform with 18x faster builds, 60-70% cost reduction, and enterprise-grade performance
+<p align="center">
+  <strong>NVIDIA-optimized AI platform delivering 18x faster builds, 60-70% LLM cost reduction, and enterprise-grade performance</strong>
+</p>
 
-## Features
+<p align="center">
+  <a href="https://g-rump.com">🌐 Website</a> •
+  <a href="https://github.com/Aphrodine-wq/G-rump.com/releases">⬇️ Download</a> •
+  <a href="https://docs.g-rump.com">📚 Documentation</a> •
+  <a href="https://www.npmjs.com/package/@g-rump/cli">📦 NPM</a> •
+  <a href="https://hub.docker.com/r/grump/cli">🐳 Docker</a>
+</p>
+
+## 🚀 Overview
+
+**G-Rump** is an AI-powered development platform that transforms natural language into production-ready applications. Built with enterprise-grade architecture and optimized by NVIDIA-level engineering practices, G-Rump delivers unprecedented speed and cost efficiency for modern software development teams.
+
+### Key Benefits
+- ⚡ **18x Faster Compilation** via SWC compiler (45s → 2.5s build times)
+- 💰 **60-70% Cost Savings** through intelligent LLM routing and caching
+- 🚀 **NVIDIA GPU Acceleration** for inference and embeddings
+- 🛡️ **Enterprise Security** with built-in guardrails and monitoring
+- 🔧 **Multi-Platform Support**: Windows, macOS, Linux, Docker, Web
+
+## ✨ Features
 
 - **Lightning-Fast Builds**: SWC compiler (18x faster than TypeScript)
 - **GPU Acceleration**: NVIDIA NIM integration for embeddings and inference
@@ -16,84 +37,147 @@
 - **SIMD Optimizations**: AVX2/AVX-512 accelerated text processing
 - **Real-Time Analytics**: Comprehensive cost tracking and performance monitoring
 
-## Get Started (Users)
+## 📦 Installation Options
 
-Pick your path:
-- **Windows Desktop App** (Primary): Install the Tauri app and add your API key to `%APPDATA%\\com.grump.app\\.env`.
-- **Docker Container** (Linux): `docker run -it grump/cli:latest ship "Build a todo app"` — full isolation, no dependencies.
-- **CLI**: `npm install -g grump-cli` and run `grump ship "..."`.
-- **macOS App**: Coming soon — see `docs/MACOS_APP.md` for progress.
+Choose the deployment method that fits your workflow:
 
-See `docs/GETTING_STARTED.md` for the shortest path (Windows app, Docker, or CLI).
+### 🖥️ Desktop Application (Recommended)
+**Best for**: Individual developers, offline work, maximum performance
+```bash
+# Windows - Download portable .exe
+# Linux - AppImage or package manager
+# macOS - Universal binary (Coming Q1 2026)
+```
+[Download Latest Release](https://github.com/Aphrodine-wq/G-rump.com/releases)
 
-## Quick Start
+### 🐳 Docker Container
+**Best for**: CI/CD pipelines, server deployment, isolated environments
+```bash
+docker run -it grump/cli:latest ship "Build a REST API with authentication"
+```
+[View on Docker Hub](https://hub.docker.com/r/grump/cli)
+
+### 📟 Command Line Interface (CLI)
+**Best for**: Terminal workflows, automation, scripting
+```bash
+npm install -g @g-rump/cli
+grump ship "Create a React component library"
+```
+[View on NPM](https://www.npmjs.com/package/@g-rump/cli)
+
+### 🌐 Web Platform
+**Best for**: Browser-based development, collaboration, quick access
+Visit [app.g-rump.com](https://app.g-rump.com) to get started instantly.
+
+<details>
+<summary>📖 Need detailed setup instructions?</summary>
+
+See our comprehensive guides:
+- [Getting Started Guide](docs/GETTING_STARTED.md) - Step-by-step setup
+- [Linux Setup](docs/LINUX_SETUP.md) - WSL2 and native Linux optimization
+- [macOS Setup](docs/MACOS_APP.md) - macOS-specific configuration
+- [Production Checklist](docs/PRODUCTION_CHECKLIST.md) - Enterprise deployment
+</details>
+
+## 🚀 Quick Start Guide
+
+Get G-Rump running locally in under 5 minutes:
 
 ### Prerequisites
 
-- Node.js 20+
-- Rust 1.77+ (optional, for intent compiler)
-- Docker (optional, for containerized deployment)
+| Requirement | Version | Purpose |
+|------------|---------|---------|
+| Node.js | 20+ | Runtime environment |
+| Rust | 1.77+ | Intent compiler (optional) |
+| Docker | Latest | Containerized deployment (optional) |
 
-### Installation
+### Installation from Source
 
 ```bash
-# Clone repository
+# 1. Clone the monorepo
 git clone https://github.com/Aphrodine-wq/G-rump.com.git
 cd G-rump.com
 
-# Install dependencies
+# 2. Install dependencies
 npm install
 
-# Build backend (uses SWC - 18x faster)
+# 3. Build backend with SWC (18x faster compilation)
 cd backend
 npm run build
 
-# Build Windows desktop app
+# 4. Build Windows desktop app (Electron)
 cd ../frontend
 npm run build
-npm run tauri build
+npm run electron:build
 
-# Build Rust intent compiler (optional)
+# 5. Build Rust intent compiler (optional, for maximum performance)
 cd ../intent-compiler
 cargo build --release
 ```
 
-### Running
+### Running G-Rump
 
+**Development Mode:**
 ```bash
-# Development mode (backend)
+# Backend API server
 cd backend && npm run dev
 
-# Development mode (desktop app)
-cd frontend && npm run tauri dev
+# Desktop application
+cd frontend && npm run electron:dev
 
-# Production mode (backend)
+# Web platform
+cd web && npm run dev
+```
+
+**Production Mode:**
+```bash
+# Backend
 cd backend && npm start
 
-# Docker (Linux - optimized)
-docker-compose up
+# Docker (recommended for servers)
+docker-compose up -d
 ```
 
-## Performance Highlights
-
-### Build Performance
-- Backend build: **45s → 2.5s** (18x faster)
-- Intent parsing: **120ms → 8ms** (15x faster)
-- CLI startup: **850ms → 45ms** (19x faster)
-- Docker build: **180s → 25s** (7x faster)
-
-### Cost Optimization
-- LLM API costs: **-40%** (via caching)
-- LLM API costs: **-30%** (via smart routing)
-- Infrastructure: **-25%** (via optimization)
-- **Total savings: 60-70%**
-
-### Example Cost Savings
+**Quick Test:**
+```bash
+# Verify installation
+grump ship "Create a hello world Express API"
 ```
-Before: $3,600/month
-After:  $1,625/month
-Savings: $1,975/month ($23,700/year)
+
+## 📊 Performance Benchmarks & ROI
+
+### Compilation Speed Comparison
+
+| Operation | Traditional | G-Rump | Improvement |
+|-----------|-------------|--------|-------------|
+| **Backend Build** | 45s | 2.5s | **18x faster** |
+| **Intent Parsing** | 120ms | 8ms | **15x faster** |
+| **CLI Startup** | 850ms | 45ms | **19x faster** |
+| **Docker Build** | 180s | 25s | **7x faster** |
+
+### AI Cost Optimization
+
+**How G-Rump Reduces Your AI Infrastructure Costs:**
+
+- 🗄️ **Intelligent Caching** - 40% cost reduction via L1/L2/L3 cache hierarchy (50%+ hit rate)
+- 🧠 **Smart Model Routing** - 30% savings through automatic LLM selection (Kimi, NVIDIA NIM, OpenRouter)
+- ⚙️ **Infrastructure Optimization** - 25% reduction via parallel processing and SIMD optimizations
+
+**💰 Total Cost Savings: 60-70%**
+
+### Real-World ROI Example
+
 ```
+Monthly AI Infrastructure Costs:
+├─ Before G-Rump:    $3,600/month
+├─ After G-Rump:     $1,625/month
+└─ Annual Savings:   $23,700/year
+
+Payback Period: Immediate (free tier available)
+Break-even: Day 1
+```
+
+**[View detailed performance guide →](docs/PERFORMANCE_GUIDE.md)**
 
 ## Architecture
 
@@ -101,7 +185,7 @@ Savings: $1,975/month ($23,700/year)
 graph TB
     subgraph clients [Client Layer]
         CLI[CLI Tool<br/>Windows/Linux/macOS]
-        Desktop[Tauri Desktop<br/>Windows Primary]
+        Desktop[Desktop App<br/>Electron]
         Docker[Docker Container<br/>Linux Primary]
     end
     
@@ -181,7 +265,7 @@ graph TB
 
 ## Key Technologies
 
-- **Desktop App**: Tauri 2.0, Svelte 5, Vite, TailwindCSS (Windows primary, macOS coming)
+- **Desktop App**: Electron, Svelte 5, Vite, TailwindCSS (Windows primary, macOS coming)
 - **Backend**: Express, TypeScript (compiled with SWC)
 - **AgentLightning**: Python agent framework with guardrails and eval
 - **Compiler**: Rust with rayon, LTO, SIMD
@@ -196,14 +280,15 @@ For production deployments, see [Production Checklist](./docs/PRODUCTION_CHECKLI
 
 ## Documentation
 
-- [Docs index](./docs/README.md) - All documentation
-- [ARCHITECTURE](./ARCHITECTURE.md) - System architecture
-- [CODEBASE](./CODEBASE.md) - Codebase map and entry points
-- [Performance Guide](./docs/PERFORMANCE_GUIDE.md) - Detailed performance features
-- [Optimization Summary](./docs/OPTIMIZATION_SUMMARY.md) - Implementation details
-- [Linux Setup](./docs/LINUX_SETUP.md) - WSL2 and Linux optimization
-- [Roadmap](./docs/ROADMAP.md) - Future enhancements
-- [API reference](./docs/API.md) - API endpoints by domain
+- **[Docs Index](./docs/README.md)** - Central documentation hub
+- **[Getting Started](./docs/GETTING_STARTED.md)** - Fastest path to first use
+- **[Architecture](./docs/ARCHITECTURE.md)** - System architecture and design
+- **[Codebase Map](./docs/CODEBASE.md)** - Repository structure and entry points
+- **[API Reference](./docs/API.md)** - Complete API documentation
+- **[Quick Reference](./docs/QUICK_REFERENCE.md)** - Command cheat sheet
+- **[Performance Guide](./docs/PERFORMANCE_GUIDE.md)** - Optimization details
+- **[Production Checklist](./docs/PRODUCTION_CHECKLIST.md)** - Deployment readiness
+- **[Roadmap](./docs/ROADMAP.md)** - Future plans and enhancements
 
 ## CLI Usage
 
@@ -333,14 +418,61 @@ Run the local AgentLightning store and set `OTLP_ENDPOINT` to collect OpenTeleme
 
 MIT
 
-## Contributing
+## 🤝 Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to build, test, and submit changes. In short: fork the repository, create a feature branch, run `npm run check-all` and tests, then submit a pull request.
+We welcome contributions from the community! Whether you're fixing bugs, adding features, or improving documentation, your help makes G-Rump better for everyone.
 
-## Acknowledgments
+**Quick Contribution Guide:**
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and run quality checks: `npm run check-all`
+4. Run tests: `npm test`
+5. Submit a pull request
 
-Built with NVIDIA-level engineering practices:
-- Compiler optimization
-- Parallel processing
-- GPU acceleration
-- Cost optimization at every layer
+**📖 Detailed guidelines:** [CONTRIBUTING.md](./CONTRIBUTING.md)
+
+## ❓ Frequently Asked Questions
+
+**Q: What makes G-Rump different from other AI coding assistants?**
+A: G-Rump focuses on enterprise-grade performance with 18x faster builds, 60-70% cost savings through intelligent caching and model routing, and comprehensive safety guardrails for production deployments.
+
+**Q: Can I use G-Rump for commercial projects?**
+A: Yes! G-Rump is open-source (MIT license) and offers both free and paid tiers for commercial use.
+
+**Q: Does G-Rump require an internet connection?**
+A: The desktop app can work offline for code generation. Cloud features like advanced model inference require connectivity.
+
+**Q: What programming languages does G-Rump support?**
+A: G-Rump generates code in TypeScript, JavaScript, Python, Rust, Go, and more. The platform is language-agnostic.
+
+**Q: How does G-Rump ensure code quality?**
+A: Through multi-agent coordination, automated testing generation, architecture validation, and built-in evaluation systems.
+
+## 🏆 Acknowledgments & Tech Stack
+
+G-Rump is built with enterprise-grade engineering practices inspired by NVIDIA's optimization methodologies:
+
+| Layer | Technologies |
+|-------|-------------|
+| **Compiler** | SWC (Rust-based), 18x faster than TypeScript |
+| **Runtime** | Node.js 20+, Worker Threads, SIMD (AVX2/AVX-512) |
+| **AI/ML** | NVIDIA NIM, Kimi K2.5, OpenRouter, Multi-model routing |
+| **Storage** | Redis Cluster, SQLite, MongoDB |
+| **Monitoring** | Prometheus, Grafana, OpenTelemetry, AgentOps |
+| **Desktop** | Electron, Svelte 5, Vite |
+| **Container** | Docker, Docker Compose |
+
+---
+
+<div align="center">
+
+**[⬆ Back to Top](#g-rump---enterprise-ai-development-platform)**
+
+Made with ❤️ by the G-Rump Team
+
+[![GitHub stars](https://img.shields.io/github/stars/Aphrodine-wq/G-rump.com?style=social)](https://github.com/Aphrodine-wq/G-rump.com/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Aphrodine-wq/G-rump.com?style=social)](https://github.com/Aphrodine-wq/G-rump.com/network/members)
+
+</div>
+
+<!-- SEO Keywords: AI development platform, code generation, SWC compiler, GPU acceleration, NVIDIA NIM, LLM optimization, full-stack development, natural language programming, enterprise AI tools, automated coding, developer productivity, AI programming assistant -->

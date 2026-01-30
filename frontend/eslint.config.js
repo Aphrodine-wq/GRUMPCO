@@ -8,6 +8,7 @@ const browserGlobals = {
   window: 'readonly',
   document: 'readonly',
   localStorage: 'readonly',
+  sessionStorage: 'readonly',
   fetch: 'readonly',
   AbortController: 'readonly',
   setTimeout: 'readonly',
