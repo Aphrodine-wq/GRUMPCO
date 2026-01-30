@@ -6,23 +6,42 @@
     <title>G-Rump – AI-Powered Development Assistant</title>
     <meta name="description" content="Generate architectures, PRDs, and full-stack apps from natural language. Claude Code quality." />
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@500;700&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: "Space Grotesk", "Segoe UI", sans-serif; line-height: 1.6; color: #1B0F3A; background: radial-gradient(1200px 600px at 10% -10%, #EDE9FE 0%, #FFFFFF 55%), radial-gradient(900px 520px at 90% -20%, #DDD6FE 0%, #FFFFFF 60%), #FFFFFF; }
       .container { max-width: 1040px; margin: 0 auto; padding: 0 1.75rem; }
       header { padding: 1.5rem 0; border-bottom: 1px solid #E9D5FF; backdrop-filter: blur(12px); position: sticky; top: 0; background: rgba(255, 255, 255, 0.75); z-index: 10; }
-      nav { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+      nav { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
       .logo { font-weight: 700; font-size: 1.35rem; letter-spacing: 0.01em; }
-      .nav-links { display: flex; gap: 1.5rem; }
+      .nav-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
       .nav-links a { color: #4C1D95; text-decoration: none; font-weight: 500; }
       .nav-links a:hover { color: #7C3AED; }
       .hero { padding: 5rem 0 4rem; text-align: center; }
       .hero h1 { font-size: clamp(2.5rem, 4vw, 3.5rem); margin-bottom: 1rem; }
       .hero p { font-size: 1.2rem; color: #5B21B6; max-width: 38rem; margin: 0 auto 2rem; }
-      .cta { display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #7C3AED, #5B21B6); color: #fff; padding: 0.8rem 1.75rem; border-radius: 999px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 24px rgba(124, 58, 237, 0.28); }
-      .cta:hover { transform: translateY(-1px); }
+      .cta { display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #7C3AED, #5B21B6); color: #fff; padding: 0.8rem 1.75rem; border-radius: 999px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 24px rgba(124, 58, 237, 0.28); transition: transform 0.2s; }
+      .cta:hover { transform: translateY(-2px); }
+      .cta-secondary { background: transparent; border: 2px solid #7C3AED; color: #7C3AED; box-shadow: none; }
+      .cta-secondary:hover { background: #7C3AED; color: #fff; }
+      .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
       section { padding: 3.5rem 0; }
       section h2 { font-size: 1.85rem; margin-bottom: 1.5rem; }
+
+      /* Install Boxes */
+      .install-section { background: linear-gradient(135deg, #1B0F3A 0%, #2D1B69 100%); padding: 4rem 0; color: #fff; }
+      .install-section h2 { color: #E9D5FF; text-align: center; }
+      .install-section p.subtitle { text-align: center; color: #C4B5FD; margin-bottom: 2rem; }
+      .install-boxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+      .install-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 1rem; padding: 1.5rem; }
+      .install-box h3 { color: #A78BFA; font-size: 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+      .install-box h3 svg { width: 20px; height: 20px; }
+      .install-code { background: #0D0620; border-radius: 0.5rem; padding: 1rem; font-family: "Space Mono", monospace; font-size: 0.9rem; color: #C4B5FD; overflow-x: auto; position: relative; }
+      .install-code code { display: block; white-space: pre; }
+      .install-code .comment { color: #6D28D9; }
+      .copy-btn { position: absolute; top: 0.5rem; right: 0.5rem; background: #7C3AED; border: none; color: #fff; padding: 0.35rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; cursor: pointer; opacity: 0.8; transition: opacity 0.2s; }
+      .copy-btn:hover { opacity: 1; }
+      .install-note { color: #A78BFA; font-size: 0.85rem; margin-top: 0.75rem; }
+
       .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
       .mode { border: 1px solid #E9D5FF; border-radius: 1rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.8); }
       .mode h3 { font-size: 1.1rem; margin-bottom: 0.35rem; }
@@ -32,14 +51,27 @@
       .feature { border: 1px solid #E9D5FF; border-radius: 1rem; padding: 1.75rem; background: rgba(255, 255, 255, 0.7); box-shadow: 0 12px 30px rgba(91, 33, 182, 0.08); }
       .feature h3 { font-size: 1.15rem; margin-bottom: 0.5rem; }
       .feature p { color: #5B21B6; font-size: 0.95rem; }
+
+      /* Pricing */
       .pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
-      .plan { border: 2px solid #E9D5FF; border-radius: 1rem; padding: 1.75rem; background: #FFFFFF; }
+      .plan { border: 2px solid #E9D5FF; border-radius: 1rem; padding: 1.75rem; background: #FFFFFF; position: relative; }
       .plan.highlight { border-color: #7C3AED; box-shadow: 0 12px 28px rgba(124, 58, 237, 0.2); }
+      .plan .badge { position: absolute; top: -12px; right: 1rem; background: linear-gradient(135deg, #7C3AED, #5B21B6); color: #fff; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
       .plan h3 { font-size: 1.25rem; margin-bottom: 0.25rem; }
       .plan .price { font-size: 1.6rem; font-weight: 700; margin: 0.5rem 0; color: #5B21B6; }
-      .plan ul { list-style: none; font-size: 0.95rem; color: #4C1D95; }
-      .plan li { margin: 0.25rem 0; }
+      .plan .price span { font-size: 0.9rem; font-weight: 400; color: #6D28D9; }
+      .plan ul { list-style: none; font-size: 0.95rem; color: #4C1D95; margin: 1rem 0; }
+      .plan li { margin: 0.5rem 0; padding-left: 1.25rem; position: relative; }
+      .plan li::before { content: "✓"; position: absolute; left: 0; color: #7C3AED; font-weight: 700; }
+      .plan .plan-cta { display: block; text-align: center; margin-top: 1.25rem; padding: 0.6rem 1rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; transition: all 0.2s; }
+      .plan .plan-cta.primary { background: linear-gradient(135deg, #7C3AED, #5B21B6); color: #fff; }
+      .plan .plan-cta.secondary { background: transparent; border: 2px solid #7C3AED; color: #7C3AED; }
+      .plan .plan-cta:hover { transform: translateY(-1px); }
+
       footer { padding: 2rem 0; border-top: 1px solid #E9D5FF; color: #6D28D9; font-size: 0.875rem; text-align: center; }
+      footer a { color: #7C3AED; text-decoration: none; }
+      footer a:hover { text-decoration: underline; }
+      .footer-links { display: flex; gap: 2rem; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap; }
     </style>
   </head>
   <body>
@@ -48,9 +80,11 @@
         <nav>
           <span class="logo">G-Rump</span>
           <div class="nav-links">
+            <a href="#install">Install</a>
             <a href="#features">Features</a>
             <a href="#modes">Ways to use</a>
             <a href="#pricing">Pricing</a>
+            <a href="docs.html">Docs</a>
             <a href="https://app.g-rump.com/#/register" target="_blank" rel="noopener">Sign up</a>
           </div>
         </nav>
@@ -61,38 +95,118 @@
         <div class="container">
           <h1>AI-Powered Development Assistant</h1>
           <p>Generate architectures, PRDs, and full-stack applications from natural language. Claude Code quality, multi-agent pipeline, and production-ready output.</p>
-          <a href="https://app.g-rump.com/#/register" class="cta" target="_blank" rel="noopener">Get started</a>
+          <div class="hero-buttons">
+            <a href="https://app.g-rump.com/#/register" class="cta" target="_blank" rel="noopener">Get started free</a>
+            <a href="#install" class="cta cta-secondary">View install options</a>
+          </div>
         </div>
       </section>
-      <section id="modes">
+
+      <!-- Install Section -->
+      <section id="install" class="install-section">
         <div class="container">
-          <h2>Ways to use G‑Rump</h2>
-          <div class="modes">
-            <div class="mode">
-              <h3>Website</h3>
-              <p>Deploy the backend + frontend once, then use the web app from anywhere.</p>
-              <a href="https://app.g-rump.com" target="_blank" rel="noopener">Open web app →</a>
+          <h2>Quick Install</h2>
+          <p class="subtitle">Get G-Rump CLI running in seconds</p>
+          <div class="install-boxes">
+            <div class="install-box">
+              <h3>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                NPM (Node.js)
+              </h3>
+              <div class="install-code">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <code><span class="comment"># Install globally via npm</span>
+npm install -g @g-rump/cli
+
+<span class="comment"># Or use npx without installing</span>
+npx @g-rump/cli ship "Build a todo app"</code>
+              </div>
+              <p class="install-note">Requires Node.js 18+ installed</p>
             </div>
-            <div class="mode">
-              <h3>Windows App</h3>
-              <p>Install the Tauri desktop app for a fast local experience.</p>
-              <a href="https://github.com/Aphrodine-wq/G-rump.com" target="_blank" rel="noopener">Get installer →</a>
+            <div class="install-box">
+              <h3>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
+                Linux / macOS
+              </h3>
+              <div class="install-code">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <code><span class="comment"># One-line install script</span>
+curl -fsSL https://get.g-rump.com | bash
+
+<span class="comment"># Or with wget</span>
+wget -qO- https://get.g-rump.com | bash</code>
+              </div>
+              <p class="install-note">Installs to ~/.g-rump/bin and adds to PATH</p>
             </div>
-            <div class="mode">
-              <h3>CLI</h3>
-              <p>Automate workflows with `grump ship`, `grump codegen`, and more.</p>
-              <a href="https://github.com/Aphrodine-wq/G-rump.com" target="_blank" rel="noopener">Install CLI →</a>
+            <div class="install-box">
+              <h3>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l6-3.25 6 3.25v5.25l-6 3.25-6-3.25zm6-5.19L5.08 8.5 9 10.31l3.92-1.81L9 6.81zm4 4.69v2.94l-4 2.18V14.5l4-1.81zm-5 2.18L4 11.5v2.94l4 2.18v-2.94zM21 18H3v2h18v-2zm0-6H3v2h18v-2zm0-6H3v2h18V6z"/></svg>
+                Windows
+              </h3>
+              <div class="install-code">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <code><span class="comment"># PowerShell (run as Administrator)</span>
+irm https://get.g-rump.com/win | iex
+
+<span class="comment"># Or download the installer</span>
+<span class="comment"># from GitHub Releases</span></code>
+              </div>
+              <p class="install-note">Or download <a href="https://github.com/Aphrodine-wq/G-rump.com/releases" style="color:#A78BFA;">Windows installer</a></p>
+            </div>
+            <div class="install-box">
+              <h3>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                Docker
+              </h3>
+              <div class="install-code">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <code><span class="comment"># Pull and run the container</span>
+docker pull grump/cli:latest
+
+docker run -it --rm grump/cli ship \
+  "Build a REST API"</code>
+              </div>
+              <p class="install-note">Full isolation, no local dependencies</p>
             </div>
           </div>
         </div>
       </section>
+
+      <section id="modes">
+        <div class="container">
+          <h2>Ways to use G-Rump</h2>
+          <div class="modes">
+            <div class="mode">
+              <h3>Website</h3>
+              <p>Deploy the backend + frontend once, then use the web app from anywhere.</p>
+              <a href="https://app.g-rump.com" target="_blank" rel="noopener">Open web app &rarr;</a>
+            </div>
+            <div class="mode">
+              <h3>Desktop App</h3>
+              <p>Install the Tauri desktop app for Windows, macOS, or Linux.</p>
+              <a href="https://github.com/Aphrodine-wq/G-rump.com/releases" target="_blank" rel="noopener">Download &rarr;</a>
+            </div>
+            <div class="mode">
+              <h3>CLI</h3>
+              <p>Automate workflows with <code>grump ship</code>, <code>grump codegen</code>, and 40+ commands.</p>
+              <a href="#install">Install CLI &rarr;</a>
+            </div>
+            <div class="mode">
+              <h3>API</h3>
+              <p>Integrate G-Rump into your existing tools with our REST API.</p>
+              <a href="docs.html#api">API Reference &rarr;</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="features">
         <div class="container">
           <h2>Features</h2>
           <div class="features">
             <div class="feature">
-              <h3>Architecture & PRD</h3>
-              <p>Describe your product in plain language and get C4-style diagrams and structured PRDs.</p>
+              <h3>SHIP Workflow</h3>
+              <p>Design &rarr; Spec &rarr; Plan &rarr; Code. Structured AI pipeline that produces consistent, production-ready output.</p>
             </div>
             <div class="feature">
               <h3>Multi-Agent Codegen</h3>
@@ -102,46 +216,107 @@
               <h3>Claude Code Quality</h3>
               <p>Type safety, testing, security, and maintainability built into every plan and artifact.</p>
             </div>
+            <div class="feature">
+              <h3>Architecture & PRD</h3>
+              <p>Describe your product in plain language and get C4-style diagrams and structured PRDs.</p>
+            </div>
+            <div class="feature">
+              <h3>Safety Guardrails</h3>
+              <p>Built-in content filtering, prompt injection detection, rate limiting, and user monitoring.</p>
+            </div>
+            <div class="feature">
+              <h3>GPU Acceleration</h3>
+              <p>NVIDIA NIM integration for blazing-fast inference. Kimi K2.5 optimization for cost savings.</p>
+            </div>
           </div>
         </div>
       </section>
+
       <section id="pricing">
         <div class="container">
           <h2>Pricing</h2>
+          <p style="color:#5B21B6; margin-bottom: 1rem;">Simple, transparent pricing. No hidden fees.</p>
           <div class="pricing">
             <div class="plan">
               <h3>Free</h3>
-              <div class="price">$0</div>
+              <div class="price">$0 <span>/month</span></div>
               <ul>
                 <li>50 API calls/month</li>
-                <li>Basic features</li>
+                <li>Basic SHIP workflow</li>
                 <li>Community support</li>
+                <li>Public projects only</li>
+                <li>Standard response time</li>
               </ul>
+              <a href="https://app.g-rump.com/#/register" class="plan-cta secondary" target="_blank" rel="noopener">Get started</a>
             </div>
             <div class="plan highlight">
+              <span class="badge">Most Popular</span>
               <h3>Pro</h3>
-              <div class="price">$29/mo</div>
+              <div class="price">$29 <span>/month</span></div>
               <ul>
                 <li>1,000 API calls/month</li>
-                <li>All features</li>
+                <li>All features unlocked</li>
                 <li>Priority support</li>
+                <li>Private projects</li>
+                <li>GPU-accelerated inference</li>
+                <li>Advanced guardrails</li>
               </ul>
+              <a href="https://app.g-rump.com/#/register?plan=pro" class="plan-cta primary" target="_blank" rel="noopener">Start Pro trial</a>
             </div>
             <div class="plan">
               <h3>Team</h3>
-              <div class="price">$99/mo</div>
+              <div class="price">$99 <span>/month</span></div>
               <ul>
                 <li>5,000 API calls/month</li>
+                <li>Up to 10 team members</li>
                 <li>Team collaboration</li>
                 <li>Admin dashboard</li>
+                <li>SSO integration</li>
+                <li>Audit logs</li>
               </ul>
+              <a href="https://app.g-rump.com/#/register?plan=team" class="plan-cta secondary" target="_blank" rel="noopener">Start Team trial</a>
+            </div>
+            <div class="plan">
+              <h3>Enterprise</h3>
+              <div class="price">Custom</div>
+              <ul>
+                <li>Unlimited API calls</li>
+                <li>Unlimited team members</li>
+                <li>Dedicated support</li>
+                <li>Custom SLAs</li>
+                <li>On-premise deployment</li>
+                <li>Custom integrations</li>
+                <li>Training & onboarding</li>
+              </ul>
+              <a href="mailto:enterprise@g-rump.com" class="plan-cta secondary">Contact sales</a>
             </div>
           </div>
         </div>
       </section>
     </main>
+
     <footer>
-      <div class="container">G-Rump – AI-Powered Development Assistant.</div>
+      <div class="container">
+        <div class="footer-links">
+          <a href="docs.html">Documentation</a>
+          <a href="https://github.com/Aphrodine-wq/G-rump.com" target="_blank" rel="noopener">GitHub</a>
+          <a href="docs.html#api">API Reference</a>
+          <a href="docs.html#legal">Legal</a>
+          <a href="mailto:support@g-rump.com">Support</a>
+        </div>
+        <p>&copy; 2025 G-Rump. AI-Powered Development Assistant.</p>
+      </div>
     </footer>
+
+    <script>
+      function copyCode(btn) {
+        const codeBlock = btn.parentElement.querySelector('code');
+        const text = codeBlock.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+        });
+      }
+    </script>
   </body>
 </html>

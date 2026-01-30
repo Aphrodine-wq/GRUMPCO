@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Documentation – G-Rump</title>
+    <meta name="description" content="G-Rump documentation: guides, API reference, architecture, and more." />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: "Space Grotesk", "Segoe UI", sans-serif; line-height: 1.6; color: #1B0F3A; background: #FAFAFA; }
+      .container { max-width: 1200px; margin: 0 auto; padding: 0 1.75rem; }
+      header { padding: 1.5rem 0; border-bottom: 1px solid #E9D5FF; backdrop-filter: blur(12px); position: sticky; top: 0; background: rgba(255, 255, 255, 0.95); z-index: 10; }
+      nav { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+      .logo { font-weight: 700; font-size: 1.35rem; letter-spacing: 0.01em; text-decoration: none; color: #1B0F3A; }
+      .nav-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+      .nav-links a { color: #4C1D95; text-decoration: none; font-weight: 500; }
+      .nav-links a:hover { color: #7C3AED; }
+      
+      .docs-layout { display: grid; grid-template-columns: 260px 1fr; gap: 2rem; padding: 2rem 0; min-height: calc(100vh - 200px); }
+      
+      /* Sidebar */
+      .sidebar { background: #fff; border-radius: 1rem; padding: 1.5rem; border: 1px solid #E9D5FF; height: fit-content; position: sticky; top: 100px; }
+      .sidebar h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6D28D9; margin: 1.25rem 0 0.5rem; }
+      .sidebar h3:first-child { margin-top: 0; }
+      .sidebar ul { list-style: none; }
+      .sidebar li { margin: 0.35rem 0; }
+      .sidebar a { color: #4C1D95; text-decoration: none; font-size: 0.95rem; display: block; padding: 0.35rem 0.75rem; border-radius: 0.5rem; transition: all 0.15s; }
+      .sidebar a:hover { background: #EDE9FE; color: #7C3AED; }
+      .sidebar a.active { background: #7C3AED; color: #fff; }
+      
+      /* Main content */
+      .docs-content { background: #fff; border-radius: 1rem; padding: 2rem; border: 1px solid #E9D5FF; }
+      .docs-content h1 { font-size: 2rem; margin-bottom: 1rem; color: #1B0F3A; }
+      .docs-content h2 { font-size: 1.5rem; margin: 2rem 0 1rem; color: #4C1D95; border-bottom: 2px solid #E9D5FF; padding-bottom: 0.5rem; }
+      .docs-content p { margin: 1rem 0; color: #374151; }
+      
+      /* Doc cards grid */
+      .doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+      .doc-card { background: #FAFAFA; border: 1px solid #E9D5FF; border-radius: 0.75rem; padding: 1.25rem; transition: all 0.2s; }
+      .doc-card:hover { border-color: #7C3AED; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1); transform: translateY(-2px); }
+      .doc-card h4 { font-size: 1rem; margin-bottom: 0.35rem; }
+      .doc-card h4 a { color: #1B0F3A; text-decoration: none; }
+      .doc-card h4 a:hover { color: #7C3AED; }
+      .doc-card p { font-size: 0.875rem; color: #6B7280; margin: 0; }
+      .doc-card .tag { display: inline-block; background: #EDE9FE; color: #6D28D9; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; margin-top: 0.5rem; }
+      
+      /* Code blocks */
+      .code-block { background: #1B0F3A; border-radius: 0.5rem; padding: 1rem 1.25rem; margin: 1rem 0; overflow-x: auto; }
+      .code-block code { font-family: "Space Mono", monospace; font-size: 0.875rem; color: #C4B5FD; }
+      
+      footer { padding: 2rem 0; border-top: 1px solid #E9D5FF; color: #6D28D9; font-size: 0.875rem; text-align: center; background: #fff; }
+      footer a { color: #7C3AED; text-decoration: none; }
+      
+      @media (max-width: 768px) {
+        .docs-layout { grid-template-columns: 1fr; }
+        .sidebar { position: static; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <nav>
+          <a href="index.html" class="logo">G-Rump</a>
+          <div class="nav-links">
+            <a href="index.html#install">Install</a>
+            <a href="index.html#features">Features</a>
+            <a href="index.html#pricing">Pricing</a>
+            <a href="docs.html" style="color:#7C3AED;">Docs</a>
+            <a href="https://app.g-rump.com" target="_blank" rel="noopener">App</a>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="docs-layout">
+        <aside class="sidebar">
+          <h3>Getting Started</h3>
+          <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#quick-start">Quick Start</a></li>
+            <li><a href="#setup">Setup Guide</a></li>
+            <li><a href="#linux-setup">Linux Setup</a></li>
+          </ul>
+          
+          <h3>Guides</h3>
+          <ul>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#ship-workflow">SHIP Workflow</a></li>
+            <li><a href="#agents">Agent System</a></li>
+            <li><a href="#ai-workflows">AI Workflows</a></li>
+          </ul>
+          
+          <h3 id="api">API Reference</h3>
+          <ul>
+            <li><a href="#api-reference">API Docs</a></li>
+            <li><a href="#vibecode-api">VibeCode API</a></li>
+            <li><a href="#cursor-api">Cursor Integration</a></li>
+          </ul>
+          
+          <h3>Advanced</h3>
+          <ul>
+            <li><a href="#performance">Performance</a></li>
+            <li><a href="#security">Security</a></li>
+            <li><a href="#testing">Testing</a></li>
+            <li><a href="#deployment">Deployment</a></li>
+          </ul>
+          
+          <h3 id="legal">Legal</h3>
+          <ul>
+            <li><a href="#terms">Terms of Service</a></li>
+            <li><a href="#privacy">Privacy Policy</a></li>
+            <li><a href="#acceptable-use">Acceptable Use</a></li>
+          </ul>
+        </aside>
+
+        <div class="docs-content">
+          <h1>Documentation</h1>
+          <p>Welcome to the G-Rump documentation. Here you'll find comprehensive guides, API references, and resources to help you build with G-Rump.</p>
+
+          <h2 id="overview">Getting Started</h2>
+          <p>New to G-Rump? Start here to understand the platform and get up and running quickly.</p>
+          <div class="doc-grid">
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/OVERVIEW.md" target="_blank">Overview</a></h4>
+              <p>High-level introduction to G-Rump and its capabilities.</p>
+              <span class="tag">Start Here</span>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/QUICK_START.md" target="_blank">Quick Start</a></h4>
+              <p>Get your first project running in under 5 minutes.</p>
+              <span class="tag">Beginner</span>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/SETUP.md" target="_blank">Setup Guide</a></h4>
+              <p>Complete installation and configuration instructions.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/GETTING_STARTED.md" target="_blank">Getting Started</a></h4>
+              <p>Step-by-step guide for new users.</p>
+            </div>
+            <div class="doc-card" id="linux-setup">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/LINUX_SETUP.md" target="_blank">Linux Setup</a></h4>
+              <p>Linux-specific installation and configuration.</p>
+              <span class="tag">Linux</span>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/MACOS_APP.md" target="_blank">macOS App</a></h4>
+              <p>Installing and using the macOS desktop app.</p>
+              <span class="tag">macOS</span>
+            </div>
+          </div>
+
+          <h2 id="architecture">Architecture & System Design</h2>
+          <p>Understand how G-Rump is built and how the components work together.</p>
+          <div class="doc-grid">
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/ARCHITECTURE.md" target="_blank">Architecture</a></h4>
+              <p>System architecture and component overview.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/SYSTEM_ARCHITECTURE.md" target="_blank">System Architecture</a></h4>
+              <p>Detailed technical architecture documentation.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/HOW_IT_WORKS.md" target="_blank">How It Works</a></h4>
+              <p>Under-the-hood explanation of the AI pipeline.</p>
+            </div>
+            <div class="doc-card" id="agents">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/AGENT_SYSTEM.md" target="_blank">Agent System</a></h4>
+              <p>Multi-agent orchestration and specialized agents.</p>
+              <span class="tag">Advanced</span>
+            </div>
+            <div class="doc-card" id="ship-workflow">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/COMPLETE_SYSTEM_GUIDE.md" target="_blank">Complete System Guide</a></h4>
+              <p>Comprehensive guide to the entire system.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/INTENT_COMPILER.md" target="_blank">Intent Compiler</a></h4>
+              <p>How natural language is compiled into actions.</p>
+            </div>
+          </div>
+
+          <h2 id="ai-workflows">AI & Workflows</h2>
+          <p>Learn about the AI capabilities and how to create effective workflows.</p>
+          <div class="doc-grid">
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/AI_WORKFLOWS.md" target="_blank">AI Workflows</a></h4>
+              <p>Creating and customizing AI-powered workflows.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/CAPABILITIES.md" target="_blank">Capabilities</a></h4>
+              <p>Full list of G-Rump capabilities and features.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/AGENTLIGHTNING.md" target="_blank">AgentLightning</a></h4>
+              <p>Python agent framework for custom agents.</p>
+              <span class="tag">Python</span>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/KIMI_OPTIMIZATIONS.md" target="_blank">Kimi Optimizations</a></h4>
+              <p>Cost optimization with Kimi K2.5 routing.</p>
+            </div>
+          </div>
+
+          <h2 id="api-reference">API Reference</h2>
+          <p>Complete API documentation for integrating G-Rump into your applications.</p>
+          <div class="doc-grid">
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/API.md" target="_blank">API Documentation</a></h4>
+              <p>Complete REST API reference.</p>
+              <span class="tag">API</span>
+            </div>
+            <div class="doc-card" id="vibecode-api">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/VIBECODE_API_REFERENCE.md" target="_blank">VibeCode API</a></h4>
+              <p>VibeCode IDE integration API.</p>
+            </div>
+            <div class="doc-card" id="cursor-api">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/CURSOR_GRUMP_API.md" target="_blank">Cursor Integration</a></h4>
+              <p>Using G-Rump with Cursor editor.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/BACKENDS.md" target="_blank">Backend Configuration</a></h4>
+              <p>Configuring different AI backends.</p>
+            </div>
+          </div>
+
+          <h2 id="performance">Operations & Performance</h2>
+          <p>Optimize, deploy, and maintain your G-Rump installation.</p>
+          <div class="doc-grid">
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/PERFORMANCE_GUIDE.md" target="_blank">Performance Guide</a></h4>
+              <p>Optimizing for speed and efficiency.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/NVIDIA_OPTIMIZATION_COMPLETE.md" target="_blank">NVIDIA Optimization</a></h4>
+              <p>GPU acceleration with NVIDIA NIM.</p>
+              <span class="tag">GPU</span>
+            </div>
+            <div class="doc-card" id="deployment">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/PRODUCTION_CHECKLIST.md" target="_blank">Production Checklist</a></h4>
+              <p>Pre-deployment checklist for production.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/RUNBOOK.md" target="_blank">Runbook</a></h4>
+              <p>Operations runbook for common tasks.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/RUNBOOK_REDIS.md" target="_blank">Redis Runbook</a></h4>
+              <p>Redis-specific operations guide.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/BUILD.md" target="_blank">Build Guide</a></h4>
+              <p>Building from source.</p>
+            </div>
+          </div>
+
+          <h2 id="security">Security</h2>
+          <p>Security best practices and baseline configurations.</p>
+          <div class="doc-grid">
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/SECURITY_BASELINE.md" target="_blank">Security Baseline</a></h4>
+              <p>Security configuration and best practices.</p>
+              <span class="tag">Security</span>
+            </div>
+          </div>
+
+          <h2 id="testing">Testing</h2>
+          <p>Testing strategies and guides for G-Rump.</p>
+          <div class="doc-grid">
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/TESTING.md" target="_blank">Testing Guide</a></h4>
+              <p>Running and writing tests.</p>
+            </div>
+          </div>
+
+          <h2 id="reference">Reference</h2>
+          <p>Quick references and additional resources.</p>
+          <div class="doc-grid">
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/QUICK_REFERENCE.md" target="_blank">Quick Reference</a></h4>
+              <p>Cheat sheet for common commands.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/KNOWN_ISSUES.md" target="_blank">Known Issues</a></h4>
+              <p>Current known issues and workarounds.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/ROADMAP.md" target="_blank">Roadmap</a></h4>
+              <p>Planned features and improvements.</p>
+            </div>
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/MIGRATION.md" target="_blank">Migration Guide</a></h4>
+              <p>Upgrading between versions.</p>
+            </div>
+          </div>
+
+          <h2 id="terms">Legal</h2>
+          <p>Terms, policies, and legal documentation.</p>
+          <div class="doc-grid">
+            <div class="doc-card">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/legal/TERMS_OF_SERVICE.md" target="_blank">Terms of Service</a></h4>
+              <p>Terms and conditions for using G-Rump.</p>
+            </div>
+            <div class="doc-card" id="privacy">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/legal/PRIVACY_POLICY.md" target="_blank">Privacy Policy</a></h4>
+              <p>How we handle your data.</p>
+            </div>
+            <div class="doc-card" id="acceptable-use">
+              <h4><a href="https://github.com/Aphrodine-wq/G-rump.com/blob/main/docs/legal/ACCEPTABLE_USE_POLICY.md" target="_blank">Acceptable Use Policy</a></h4>
+              <p>Guidelines for acceptable use.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <div class="container">
+        <p>&copy; 2025 G-Rump. <a href="index.html">Home</a> &middot; <a href="https://github.com/Aphrodine-wq/G-rump.com" target="_blank">GitHub</a> &middot; <a href="mailto:support@g-rump.com">Support</a></p>
+      </div>
+    </footer>
+  </body>
+</html>

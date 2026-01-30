@@ -31,6 +31,7 @@ Set these in production before exposing the API to untrusted users:
 - Store secrets in your host's secret manager (never in `.env` committed to git).
 - Use HTTPS-only in production (terminate TLS at your edge or platform).
 - Restrict `/metrics` via firewall or VPC in addition to Basic auth.
+- Configure frontend auth storage via `VITE_AUTH_STORAGE` (e.g., `session`) so access tokens are scoped to a browser session instead of living in long-running local storage.
 
 ## High-Risk Features
 

@@ -21,6 +21,7 @@ When the backend is publicly reachable (e.g. web app, public API), you **must**:
 - [ ] Set `NODE_ENV=production`.
 - [ ] Set `CORS_ORIGINS` to the exact origins of your web/desktop clients (no wildcards in prod).
 - [ ] Configure **Anthropic** API key and any other LLM/usage keys.
+- [ ] Set `VITE_AUTH_STORAGE=session` (or another safe storage) to avoid persisting access tokens across browser sessions unless you explicitly want that; fallback storage is in-memory if the configured storage is unavailable.
 - **Backend (single service):**
   - [ ] Set `GRUMP_WEBHOOK_SECRET` if you use webhooks. When unset in production, webhook routes return 503.
   - [ ] Set `TWILIO_WEBHOOK_SECRET` when using Twilio inbound messaging (`MESSAGING_PROVIDER=twilio`). When unset in production, the messaging inbound route returns 503.

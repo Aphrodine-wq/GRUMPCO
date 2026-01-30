@@ -2,6 +2,40 @@ import { writable, derived, get } from 'svelte/store';
 import { fetchApi } from '../lib/api.js';
 
 const AUTH_STORAGE_KEY = 'mermaid-auth';
+const AUTH_STORAGE_PREFERENCE = import.meta.env?.VITE_AUTH_STORAGE?.toLowerCase?.();
+
+interface StorageAdapter {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+const memoryStore = new Map<string, string>();
+
+function resolveAuthStorage(): StorageAdapter {
+  if (AUTH_STORAGE_PREFERENCE === 'session') {
+    try {
+      return sessionStorage;
+    } catch {
+      return {
+        getItem: (key) => memoryStore.get(key) ?? null,
+        setItem: (key, value) => memoryStore.set(key, value),
+        removeItem: (key) => memoryStore.delete(key),
+      };
+    }
+  }
+  try {
+    return localStorage;
+  } catch {
+    return {
+      getItem: (key) => memoryStore.get(key) ?? null,
+      setItem: (key, value) => memoryStore.set(key, value),
+      removeItem: (key) => memoryStore.delete(key),
+    };
+  }
+}
+
+const authStorage = resolveAuthStorage();
 
 // Types
 export interface User {
@@ -41,7 +75,7 @@ export const accessToken = derived(
 // Load persisted auth
 function loadAuth(): void {
   try {
-    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    const stored = authStorage.getItem(AUTH_STORAGE_KEY);
     if (stored) {
       const auth: StoredAuth = JSON.parse(stored);
       user.set(auth.user);
@@ -62,9 +96,9 @@ function saveAuth(): void {
         user: u,
         session: s
       };
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+      authStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
     } else {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+      authStorage.removeItem(AUTH_STORAGE_KEY);
     }
   } catch (e) {
     console.warn('Failed to save auth state:', e);
@@ -213,7 +247,7 @@ export function resetAuthState(): void {
   session.set(null);
   loading.set(false);
   error.set(null);
-  localStorage.removeItem(AUTH_STORAGE_KEY);
+  authStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
 // Initialize on load
