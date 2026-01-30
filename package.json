@@ -35,7 +35,7 @@
   "devDependencies": {
     "concurrently": "^8.2.0",
     "husky": "^9.0.0",
-    "lint-staged": "^15.0.0"
+    "lint-staged": "^16.2.7"
   },
   "lint-staged": {
     "frontend/src/**/*.{ts,js,vue}": [
