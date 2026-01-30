@@ -24,11 +24,17 @@ export default defineConfig({
       { text: 'Home', link: '/' },
       { text: 'Guide', link: '/guide/getting-started' },
       { 
-        text: 'Reference', 
+        text: 'Docs', 
         items: [
-          { text: 'CLI Reference', link: '/guide/cli-reference' },
-          { text: 'API Reference', link: '/guide/api-reference' },
-          { text: 'Configuration', link: '/guide/configuration' },
+          { text: 'Architecture', link: '/docs/architecture' },
+          { text: 'API Reference', link: '/docs/api' },
+          { text: 'Capabilities', link: '/docs/capabilities' },
+          { text: 'How It Works', link: '/docs/how-it-works' },
+          { text: 'Agent System', link: '/docs/agent-system' },
+          { text: 'AI Workflows', link: '/docs/ai-workflows' },
+          { text: 'Performance', link: '/docs/performance' },
+          { text: 'Security', link: '/docs/security' },
+          { text: 'NVIDIA Optimization', link: '/docs/nvidia-optimization' },
         ]
       },
       { text: 'Downloads', link: '/downloads' },
@@ -41,10 +47,59 @@ export default defineConfig({
           { text: 'Templates', link: '/guide/templates' },
         ]
       },
+      {
+        text: 'Legal',
+        items: [
+          { text: 'Terms of Service', link: '/legal/terms' },
+          { text: 'Privacy Policy', link: '/legal/privacy' },
+          { text: 'Acceptable Use', link: '/legal/acceptable-use' },
+        ]
+      },
     ],
 
     // Sidebar navigation
     sidebar: {
+      '/docs/': [
+        {
+          text: 'Documentation',
+          collapsed: false,
+          items: [
+            { text: 'Architecture', link: '/docs/architecture' },
+            { text: 'API Reference', link: '/docs/api' },
+            { text: 'Capabilities', link: '/docs/capabilities' },
+            { text: 'How It Works', link: '/docs/how-it-works' },
+            { text: 'Backend Architecture', link: '/docs/backends' },
+          ]
+        },
+        {
+          text: 'AI & Agents',
+          collapsed: false,
+          items: [
+            { text: 'Agent System', link: '/docs/agent-system' },
+            { text: 'AI Workflows', link: '/docs/ai-workflows' },
+          ]
+        },
+        {
+          text: 'Performance & Security',
+          collapsed: false,
+          items: [
+            { text: 'Performance Guide', link: '/docs/performance' },
+            { text: 'Security Baseline', link: '/docs/security' },
+            { text: 'NVIDIA Optimization', link: '/docs/nvidia-optimization' },
+          ]
+        },
+      ],
+      '/legal/': [
+        {
+          text: 'Legal',
+          collapsed: false,
+          items: [
+            { text: 'Terms of Service', link: '/legal/terms' },
+            { text: 'Privacy Policy', link: '/legal/privacy' },
+            { text: 'Acceptable Use', link: '/legal/acceptable-use' },
+          ]
+        },
+      ],
       '/guide/': [
         {
           text: 'Introduction',

@@ -41,6 +41,7 @@ frontend/.svelte-kit/
 frontend/.vite/
 frontend/.turbo/
 backend/.turbo/
+frontend/electron-dist/
 
 # Test and coverage artifacts
 .nyc_output/
@@ -103,3 +104,5 @@ integrations/
 
 # Vercel
 .vercel/
+.vercel
+.env*.local

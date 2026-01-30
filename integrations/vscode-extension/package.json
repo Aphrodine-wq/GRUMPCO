@@ -4,13 +4,34 @@
   "description": "Connect to G-Rump API for chat, codegen, and full app generation",
   "version": "0.1.0",
   "publisher": "grump",
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Other", "Machine Learning", "Snippets"],
-  "keywords": ["g-rump", "grump", "codegen", "ship", "ai", "chat", "full-stack"],
-  "repository": { "type": "git", "url": "https://github.com/your-org/milesproject" },
-  "bugs": { "url": "https://github.com/your-org/milesproject/issues" },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Snippets"
+  ],
+  "keywords": [
+    "g-rump",
+    "grump",
+    "codegen",
+    "ship",
+    "ai",
+    "chat",
+    "full-stack"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/milesproject"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/milesproject/issues"
+  },
   "homepage": "https://github.com/your-org/milesproject#readme",
-  "activationEvents": ["onCommand:grump.newFromDescription", "onView:grump.chatView", "onCommand:grump.statusBarOpenChat", "onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [

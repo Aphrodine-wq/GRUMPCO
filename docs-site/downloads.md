@@ -343,7 +343,21 @@ See the [Building Guide](/guide/building) for detailed instructions.
 </div>
 
 <style>
-/* Ensure custom styles are applied */
+/* Prevent horizontal scroll */
+.downloads-page-header,
+.downloads-section {
+  overflow-x: hidden;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+/* Ensure code blocks don't cause overflow */
+pre, code {
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
 .downloads-page-header {
   text-align: center;
   padding: 4rem 2rem 2rem;
@@ -398,8 +412,9 @@ See the [Building Guide](/guide/building) for detailed instructions.
 
 .platform-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 1.5rem;
+  overflow: hidden;
 }
 
 .platform-card {
@@ -409,6 +424,9 @@ See the [Building Guide](/guide/building) for detailed instructions.
   border: 1px solid rgba(124, 58, 237, 0.12);
   box-shadow: 0 4px 12px rgba(124, 58, 237, 0.06);
   transition: all 0.3s ease;
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .platform-card:hover {
@@ -445,6 +463,8 @@ See the [Building Guide](/guide/building) for detailed instructions.
   border-radius: 12px;
   border: 1px solid rgba(124, 58, 237, 0.08);
   transition: all 0.2s ease;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .download-option:hover {
@@ -456,17 +476,21 @@ See the [Building Guide](/guide/building) for detailed instructions.
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
 }
 
 .download-option-name {
   font-weight: 600;
   color: #4C1D95;
   font-size: 0.9375rem;
+  word-break: break-word;
 }
 
 .download-option-meta {
   font-size: 0.8125rem;
   color: #7C3AED;
+  word-break: break-word;
 }
 
 .download-option-btn {
@@ -518,8 +542,9 @@ See the [Building Guide](/guide/building) for detailed instructions.
 
 .requirements-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
   gap: 1.5rem;
+  overflow: hidden;
 }
 
 .requirement-card {
