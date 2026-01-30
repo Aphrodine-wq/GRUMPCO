@@ -30,7 +30,7 @@
     "format:check": "npm run format:check --prefix frontend && npm run format:check --prefix backend",
     "type-check": "npm run type-check --prefix frontend && npm run type-check --prefix backend",
     "test": "npm run test:run --prefix frontend && npm test --prefix backend",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "concurrently": "^8.2.0",
