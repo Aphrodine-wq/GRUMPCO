@@ -56,6 +56,7 @@ import advancedAiRoutes from './routes/advanced-ai.js';
 import shareRoutes from './routes/share.js';
 import intentOptimizerRoutes from './features/intent-optimizer/routes.js';
 import cloudRoutes from './routes/cloud.js';
+import dockerRoutes from './routes/docker.js';
 import { findAvailablePort } from './utils/portUtils.js';
 import { skillRegistry } from './skills/index.js';
 import { startJobWorker, stopJobWorker } from './services/jobQueue.js';
@@ -297,6 +298,7 @@ let gpuMetricsInterval: ReturnType<typeof setInterval> | null = null;
     app.use('/api/share', shareRoutes);
     app.use('/api/intent', intentOptimizerRoutes);
     app.use('/api/cloud', cloudRoutes);
+    app.use('/api/docker', dockerRoutes);
     app.use('/health', healthRoutes);
 
     // Metrics endpoint

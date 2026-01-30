@@ -71,8 +71,9 @@
   const runningContainers = derived(containers, $c => $c.filter(c => c.status === 'running'));
   const stoppedContainers = derived(containers, $c => $c.filter(c => c.status !== 'running'));
 
-  // IPC functions (will call Electron)
+  // IPC functions (will call Electron or Backend API)
   async function invokeDocker(method: string, args: unknown = {}): Promise<unknown> {
+    // Priority 1: Electron IPC
     if (typeof window !== 'undefined' && 'electronAPI' in window) {
       try {
         return await (window as { electronAPI: { docker: (method: string, args: unknown) => Promise<unknown> } }).electronAPI.docker(method, args);
@@ -81,9 +82,105 @@
         throw err;
       }
     }
-    // Fallback for development
-    console.warn('Docker IPC not available, using mock data');
-    return mockDockerCall(method, args);
+    
+    // Priority 2: Backend API (for browser-based access)
+    try {
+      return await invokeDockerViaApi(method, args);
+    } catch (err) {
+      console.warn('Docker API not available, using mock data:', err);
+      return mockDockerCall(method, args);
+    }
+  }
+  
+  // Call Docker operations via backend API
+  async function invokeDockerViaApi(method: string, args: unknown = {}): Promise<unknown> {
+    const baseUrl = '/api/docker';
+    
+    switch (method) {
+      case 'listContainers': {
+        const res = await fetch(`${baseUrl}/containers`);
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      case 'listImages': {
+        const res = await fetch(`${baseUrl}/images`);
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      case 'listVolumes': {
+        const res = await fetch(`${baseUrl}/volumes`);
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      case 'listNetworks': {
+        const res = await fetch(`${baseUrl}/networks`);
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      case 'startContainer': {
+        const { id } = args as { id: string };
+        const res = await fetch(`${baseUrl}/containers/${id}/start`, { method: 'POST' });
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      case 'stopContainer': {
+        const { id } = args as { id: string };
+        const res = await fetch(`${baseUrl}/containers/${id}/stop`, { method: 'POST' });
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      case 'restartContainer': {
+        const { id } = args as { id: string };
+        const res = await fetch(`${baseUrl}/containers/${id}/restart`, { method: 'POST' });
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      case 'removeContainer': {
+        const { id } = args as { id: string };
+        const res = await fetch(`${baseUrl}/containers/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      case 'removeImage': {
+        const { id } = args as { id: string };
+        const res = await fetch(`${baseUrl}/images/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      case 'removeVolume': {
+        const { name } = args as { name: string };
+        const res = await fetch(`${baseUrl}/volumes/${name}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      case 'getLogs': {
+        const { id, tail } = args as { id: string; tail?: number };
+        const res = await fetch(`${baseUrl}/containers/${id}/logs?tail=${tail || 100}`);
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const data = await res.json();
+        return data.logs;
+      }
+      case 'composeUp': {
+        const res = await fetch(`${baseUrl}/compose/up`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(args)
+        });
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      case 'composeDown': {
+        const res = await fetch(`${baseUrl}/compose/down`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(args)
+        });
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+      default:
+        throw new Error(`Unknown Docker method: ${method}`);
+    }
   }
 
   function mockDockerCall(method: string, _args: unknown): unknown {
