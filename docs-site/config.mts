@@ -33,6 +33,7 @@ export default defineConfig({
         items: [
           { text: 'Testing', link: '/TESTING' },
           { text: 'Capabilities', link: '/CAPABILITIES' },
+          { text: 'AgentLightning', link: '/AGENTLIGHTNING' },
           { text: 'Production Checklist', link: '/PRODUCTION_CHECKLIST' },
           { text: 'Security Baseline', link: '/SECURITY_BASELINE' },
           { text: 'Release Checklist', link: '/RELEASE_CHECKLIST' },

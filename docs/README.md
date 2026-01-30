@@ -47,6 +47,7 @@ Central index for all documentation. Start here or from the [main README](../REA
 | [CURSOR_GRUMP_API.md](CURSOR_GRUMP_API.md) | G-Rump API for Cursor integration |
 | [INTENT_COMPILER.md](INTENT_COMPILER.md) | Intent compiler (Rust) |
 | [AGENT_SYSTEM.md](AGENT_SYSTEM.md) | Agent system |
+| [AGENTLIGHTNING.md](AGENTLIGHTNING.md) | AgentLightning setup (agent trace overwatch) |
 | [AI_WORKFLOWS.md](AI_WORKFLOWS.md) | AI workflows |
 | [TESTING.md](TESTING.md) | Testing |
 | [ROADMAP.md](ROADMAP.md) | Future enhancements |

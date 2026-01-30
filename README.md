@@ -277,6 +277,10 @@ Import the included Grafana dashboard for visualization:
 - Worker pool utilization
 - GPU utilization (if available)
 
+### Agent Overwatch (AgentLightning)
+
+Run the local AgentLightning store and set `OTLP_ENDPOINT` to collect OpenTelemetry traces for agent runs. See `docs/AGENTLIGHTNING.md` for setup.
+
 ## License
 
 MIT

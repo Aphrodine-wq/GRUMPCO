@@ -114,6 +114,13 @@
         check: 'http://localhost:3000/health/quick',
       },
       {
+        id: 'agentlightning',
+        name: 'AgentLightning Store',
+        desc: 'OTLP trace store for agent monitoring',
+        url: 'http://localhost:4747/docs',
+        check: 'http://localhost:4747/v1/agl/health',
+      },
+      {
         id: 'frontend',
         name: 'Frontend dev server',
         desc: 'Vite + Svelte on 5173',
