@@ -27,16 +27,22 @@ vi.mock('../../src/services/intentParser.ts', () => ({
   getIntentAugmentation: vi.fn(),
 }));
 
+vi.mock('../../src/services/llmGateway.ts', () => ({
+  getStream: vi.fn(),
+}));
+
 vi.mock('../../src/middleware/logger.ts', () => ({
   getRequestLogger: vi.fn(() => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   })),
   default: {
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
@@ -45,6 +51,7 @@ vi.mock('../../src/middleware/metrics.ts', () => ({
     success: vi.fn(),
     failure: vi.fn(),
   })),
+  updateCircuitState: vi.fn(),
 }));
 
 vi.mock('../../src/prompts/index.ts', () => ({
@@ -62,19 +69,18 @@ describe('claudeService', () => {
 
   describe('generateDiagram', () => {
     it('should generate diagram from valid response', async () => {
-      const Anthropic = (await import('@anthropic-ai/sdk')).default;
-      const mockClient = new Anthropic({ apiKey: 'test-key' });
+      const { getStream } = await import('../../src/services/llmGateway.ts');
 
-      const mockResponse = {
-        content: [
-          {
-            type: 'text',
-            text: '```mermaid\nflowchart TD\n  A --> B\n```',
-          },
-        ],
+      const mockStream = {
+        [Symbol.asyncIterator]: async function* () {
+          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: '```mermaid\nflowchart TD\n  A --> B\n```' } };
+        },
+        controller: {
+          abort: vi.fn(),
+        },
       };
 
-      vi.mocked(mockClient.messages.create).mockResolvedValue(mockResponse as never);
+      vi.mocked(getStream).mockReturnValue(mockStream as never);
       vi.mocked(mermaidUtils.extractMermaidCode).mockReturnValue({
         extracted: true,
         code: 'flowchart TD\n  A --> B',
@@ -92,23 +98,22 @@ describe('claudeService', () => {
       const result = await generateDiagram('Create a flowchart');
 
       expect(result).toBe('flowchart TD\n  A --> B');
-      expect(mockClient.messages.create).toHaveBeenCalled();
+      expect(getStream).toHaveBeenCalled();
     });
 
     it('should handle extraction failure', async () => {
-      const Anthropic = (await import('@anthropic-ai/sdk')).default;
-      const mockClient = new Anthropic({ apiKey: 'test-key' });
+      const { getStream } = await import('../../src/services/llmGateway.ts');
 
-      const mockResponse = {
-        content: [
-          {
-            type: 'text',
-            text: 'I cannot create a diagram for this request.',
-          },
-        ],
+      const mockStream = {
+        [Symbol.asyncIterator]: async function* () {
+          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'I cannot create a diagram for this request.' } };
+        },
+        controller: {
+          abort: vi.fn(),
+        },
       };
 
-      vi.mocked(mockClient.messages.create).mockResolvedValue(mockResponse as never);
+      vi.mocked(getStream).mockReturnValue(mockStream as never);
       vi.mocked(mermaidUtils.extractMermaidCode).mockReturnValue({
         extracted: false,
         code: null,
@@ -126,19 +131,18 @@ describe('claudeService', () => {
     });
 
     it('should include conversation history', async () => {
-      const Anthropic = (await import('@anthropic-ai/sdk')).default;
-      const mockClient = new Anthropic({ apiKey: 'test-key' });
+      const { getStream } = await import('../../src/services/llmGateway.ts');
 
-      const mockResponse = {
-        content: [
-          {
-            type: 'text',
-            text: '```mermaid\nflowchart TD\n  A --> B\n```',
-          },
-        ],
+      const mockStream = {
+        [Symbol.asyncIterator]: async function* () {
+          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: '```mermaid\nflowchart TD\n  A --> B\n```' } };
+        },
+        controller: {
+          abort: vi.fn(),
+        },
       };
 
-      vi.mocked(mockClient.messages.create).mockResolvedValue(mockResponse as never);
+      vi.mocked(getStream).mockReturnValue(mockStream as never);
       vi.mocked(mermaidUtils.extractMermaidCode).mockReturnValue({
         extracted: true,
         code: 'flowchart TD\n  A --> B',
@@ -159,7 +163,8 @@ describe('claudeService', () => {
 
       await generateDiagram('Create a diagram', undefined, conversationHistory);
 
-      const callArgs = vi.mocked(mockClient.messages.create).mock.calls[0][0];
+      expect(getStream).toHaveBeenCalled();
+      const callArgs = vi.mocked(getStream).mock.calls[0][0];
       expect(callArgs.messages).toBeDefined();
       expect(Array.isArray(callArgs.messages)).toBe(true);
     });
@@ -167,22 +172,21 @@ describe('claudeService', () => {
 
   describe('generateDiagramStream', () => {
     it('should stream diagram chunks', async () => {
-      const Anthropic = (await import('@anthropic-ai/sdk')).default;
-      const mockClient = new Anthropic({ apiKey: 'test-key' });
+      const { getStream } = await import('../../src/services/llmGateway.ts');
 
       const mockStream = {
         [Symbol.asyncIterator]: async function* () {
-          yield { type: 'content_block_delta', delta: { text: '```mermaid\n' } };
-          yield { type: 'content_block_delta', delta: { text: 'flowchart TD\n' } };
-          yield { type: 'content_block_delta', delta: { text: '  A --> B\n' } };
-          yield { type: 'content_block_delta', delta: { text: '```' } };
+          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: '```mermaid\n' } };
+          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'flowchart TD\n' } };
+          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: '  A --> B\n' } };
+          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: '```' } };
         },
         controller: {
           abort: vi.fn(),
         },
       };
 
-      vi.mocked(mockClient.messages.stream).mockReturnValue(mockStream as never);
+      vi.mocked(getStream).mockReturnValue(mockStream as never);
       vi.mocked(intentParser.analyzeIntent).mockReturnValue({
         isValid: true,
         confidence: 0.9,
@@ -201,22 +205,21 @@ describe('claudeService', () => {
     });
 
     it('should handle abort signal', async () => {
-      const Anthropic = (await import('@anthropic-ai/sdk')).default;
-      const mockClient = new Anthropic({ apiKey: 'test-key' });
+      const { getStream } = await import('../../src/services/llmGateway.ts');
 
       const abortController = new AbortController();
       const mockStream = {
         [Symbol.asyncIterator]: async function* () {
-          yield { type: 'content_block_delta', delta: { text: 'chunk1' } };
+          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'chunk1' } };
           abortController.abort();
-          yield { type: 'content_block_delta', delta: { text: 'chunk2' } };
+          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'chunk2' } };
         },
         controller: {
           abort: vi.fn(),
         },
       };
 
-      vi.mocked(mockClient.messages.stream).mockReturnValue(mockStream as never);
+      vi.mocked(getStream).mockReturnValue(mockStream as never);
       vi.mocked(intentParser.analyzeIntent).mockReturnValue({
         isValid: true,
         confidence: 0.9,

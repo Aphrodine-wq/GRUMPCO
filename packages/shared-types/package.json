@@ -1,6 +1,7 @@
 {
   "name": "@grump/shared-types",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Shared TypeScript types for G-Rump frontend and backend",
   "type": "module",
   "main": "./dist/index.js",

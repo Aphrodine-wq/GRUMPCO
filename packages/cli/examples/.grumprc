@@ -1,0 +1,16 @@
+{
+  "apiUrl": "http://localhost:3000",
+  "apiKey": null,
+  "theme": "dark",
+  "defaultOutputDir": "./output",
+  "colors": {
+    "primary": "#FF6B35",
+    "secondary": "#F7931E",
+    "error": "#FF4136"
+  },
+  "features": {
+    "autoStream": false,
+    "cacheEnabled": true,
+    "progressIndicators": true
+  }
+}

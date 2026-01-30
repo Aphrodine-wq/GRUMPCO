@@ -8,14 +8,17 @@
     "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
-    "sourceMap": true,
+    "declarationMap": false,
+    "sourceMap": false,
     "incremental": true,
-    "tsBuildInfoFile": "./.tsbuildinfo"
+    "tsBuildInfoFile": "./.tsbuildinfo",
+    "preserveSymlinks": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "dist-native"]
+  "exclude": ["node_modules", "dist", "dist-native", "**/*.test.ts", "**/*.spec.ts"]
 }

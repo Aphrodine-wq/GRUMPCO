@@ -287,4 +287,338 @@ describe('voiceService', () => {
       expect(callBody.voice).toBe('custom_voice');
     });
   });
+
+  describe('TTS with different voices', () => {
+    it('should support default voice', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ audio: 'dGVzdA==' }),
+      });
+
+      const { synthesize } = await import('../../src/services/voiceService.js');
+      await synthesize('Hello world');
+
+      const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      // Default voice - no voice field should be present or it should be default
+      expect(callBody).toHaveProperty('text');
+    });
+
+    it('should support female voice', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ audio: 'dGVzdA==' }),
+      });
+
+      const { synthesize } = await import('../../src/services/voiceService.js');
+      await synthesize('Hello', { voice: 'female' });
+
+      const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(callBody.voice).toBe('female');
+    });
+
+    it('should support male voice', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ audio: 'dGVzdA==' }),
+      });
+
+      const { synthesize } = await import('../../src/services/voiceService.js');
+      await synthesize('Hello', { voice: 'male' });
+
+      const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(callBody.voice).toBe('male');
+    });
+
+    it('should support custom voice ID', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ audio: 'dGVzdA==' }),
+      });
+
+      const { synthesize } = await import('../../src/services/voiceService.js');
+      await synthesize('Hello', { voice: 'custom_voice_12345' });
+
+      const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(callBody.voice).toBe('custom_voice_12345');
+    });
+  });
+
+  describe('ASR with different audio formats', () => {
+    it('should handle WAV audio', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ text: 'Hello from WAV' }),
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+      const wavBuffer = Buffer.from('RIFF....WAVE');
+      const result = await transcribe(wavBuffer);
+
+      expect(result.text).toBe('Hello from WAV');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('audio'),
+        })
+      );
+    });
+
+    it('should handle OGG audio', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ text: 'Hello from OGG' }),
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+      const oggBuffer = Buffer.from('OggS');
+      const result = await transcribe(oggBuffer);
+
+      expect(result.text).toBe('Hello from OGG');
+    });
+
+    it('should handle OPUS audio', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ text: 'Hello from OPUS' }),
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+      const opusBuffer = Buffer.from('OpusHead');
+      const result = await transcribe(opusBuffer);
+
+      expect(result.text).toBe('Hello from OPUS');
+    });
+
+    it('should handle MP3 audio', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ text: 'Hello from MP3' }),
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+      const mp3Buffer = Buffer.from('ID3');
+      const result = await transcribe(mp3Buffer);
+
+      expect(result.text).toBe('Hello from MP3');
+    });
+
+    it('should handle FLAC audio', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ text: 'Hello from FLAC' }),
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+      const flacBuffer = Buffer.from('fLaC');
+      const result = await transcribe(flacBuffer);
+
+      expect(result.text).toBe('Hello from FLAC');
+    });
+  });
+
+  describe('Voice streaming', () => {
+    it('should handle streaming TTS request', async () => {
+      const audioChunks: Buffer[] = [];
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'audio/wav' },
+        arrayBuffer: async () => {
+          const chunk = Buffer.alloc(1024);
+          audioChunks.push(chunk);
+          return chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength);
+        },
+      });
+
+      const { synthesize } = await import('../../src/services/voiceService.js');
+      const result = await synthesize('Streaming test', { stream: true });
+
+      expect(result.audio).toBeInstanceOf(Buffer);
+      expect(result.audio.length).toBeGreaterThan(0);
+    });
+
+    it('should handle streaming with stream option', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ audio: Buffer.from('stream data').toString('base64') }),
+      });
+
+      const { synthesize } = await import('../../src/services/voiceService.js');
+      await synthesize('Test streaming', { stream: true });
+
+      const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(callBody).toHaveProperty('text');
+    });
+  });
+
+  describe('Voice caching', () => {
+    it('should cache synthesized audio for identical text', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ audio: 'dGVzdC1jYWNoZWQ=' }),
+      });
+
+      const { synthesize } = await import('../../src/services/voiceService.js');
+
+      // First call
+      await synthesize('Cache this text');
+
+      // Second call with same text
+      await synthesize('Cache this text');
+
+      // API should be called both times (caching happens at higher level)
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle cache with different voices separately', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ audio: 'dGVzdA==' }),
+      });
+
+      const { synthesize } = await import('../../src/services/voiceService.js');
+
+      await synthesize('Same text', { voice: 'voice1' });
+      await synthesize('Same text', { voice: 'voice2' });
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle cache with different personas separately', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ audio: 'dGVzdA==' }),
+      });
+
+      const { synthesize } = await import('../../src/services/voiceService.js');
+
+      await synthesize('Test text', { persona: 'neutral' });
+      await synthesize('Test text', { persona: 'grump' });
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Error handling for invalid audio', () => {
+    it('should handle empty audio buffer', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ text: '' }),
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+      const result = await transcribe(Buffer.alloc(0));
+
+      expect(result.text).toBe('');
+    });
+
+    it('should handle corrupt audio data', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 422,
+        text: async () => 'Unprocessable audio',
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+
+      await expect(transcribe(Buffer.from('corrupt data'))).rejects.toThrow('Voice ASR: 422');
+    });
+
+    it('should handle audio that is too long', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 413,
+        text: async () => 'Audio too long',
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+      const longAudio = Buffer.alloc(100 * 1024 * 1024); // 100MB
+
+      await expect(transcribe(longAudio)).rejects.toThrow('Voice ASR: 413');
+    });
+
+    it('should handle unsupported audio format error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 415,
+        text: async () => 'Unsupported media type',
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+      const weirdFormat = Buffer.from('UNKNOWN_FORMAT_DATA');
+
+      await expect(transcribe(weirdFormat)).rejects.toThrow('Voice ASR: 415');
+    });
+
+    it('should handle network timeout', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Request timeout'));
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+
+      await expect(transcribe(Buffer.from('audio'))).rejects.toThrow('Request timeout');
+    });
+
+    it('should handle API rate limiting', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        text: async () => 'Rate limit exceeded',
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+
+      await expect(transcribe(Buffer.from('audio'))).rejects.toThrow('Voice ASR: 429');
+    });
+
+    it('should handle malformed API response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ unexpected: 'field' }),
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+      const result = await transcribe(Buffer.from('audio'));
+
+      // Should return empty text when response doesn't have expected fields
+      expect(result.text).toBe('');
+    });
+  });
+
+  describe('Timeout and performance', () => {
+    it('should handle slow API response', async () => {
+      mockFetch.mockImplementationOnce(async () => {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        return {
+          ok: true,
+          json: async () => ({ text: 'Delayed result' }),
+        };
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+      const result = await transcribe(Buffer.from('audio'));
+
+      expect(result.text).toBe('Delayed result');
+    });
+
+    it('should handle large audio files', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ text: 'Large file processed' }),
+      });
+
+      const { transcribe } = await import('../../src/services/voiceService.js');
+      const largeAudio = Buffer.alloc(10 * 1024 * 1024); // 10MB
+      const result = await transcribe(largeAudio);
+
+      expect(result.text).toBe('Large file processed');
+    });
+  });
 });

@@ -14,6 +14,7 @@
     "packages/kimi"
   ],
   "description": "AI-powered Mermaid diagram generator",
+  "license": "MIT",
   "scripts": {
     "build": "npm run build --prefix frontend",
     "check-all": "npm run type-check --prefix backend && npm run type-check --prefix frontend && npm run lint --prefix backend && npm run lint --prefix frontend",

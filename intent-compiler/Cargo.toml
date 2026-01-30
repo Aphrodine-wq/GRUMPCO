@@ -38,6 +38,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 default = []
 wasm = ["wasm-bindgen", "serde-wasm-bindgen"]
 
+# Optimized Release Profile
 [profile.release]
 opt-level = 3
 lto = "fat"
@@ -45,10 +46,16 @@ codegen-units = 1
 strip = true
 panic = "abort"
 
+# Additional optimization flags
+overflow-checks = false
+incremental = false
+
 # Enable CPU-specific optimizations
 # For AVX2: RUSTFLAGS="-C target-cpu=haswell"
 # For AVX-512: RUSTFLAGS="-C target-cpu=skylake-avx512"
 # For native: RUSTFLAGS="-C target-cpu=native"
 
+# Benchmark profile inherits release optimizations
 [profile.bench]
 inherits = "release"
+debug = false

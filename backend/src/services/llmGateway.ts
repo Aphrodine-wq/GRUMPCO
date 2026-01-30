@@ -10,7 +10,7 @@ import logger from '../middleware/logger.js';
 import { recordLlmStreamMetrics } from '../middleware/metrics.js';
 import { getNimChatUrl } from '../config/nim.js';
 
-export type LLMProvider = 'nim' | 'zhipu' | 'copilot' | 'openrouter';
+export type LLMProvider = 'nim' | 'zhipu' | 'copilot' | 'openrouter' | 'groq' | 'together' | 'ollama';
 
 export type MultimodalContentPart =
   | { type: 'text'; text: string }
@@ -44,6 +44,9 @@ export const COPILOT_SUB_MODELS = ['copilot-codex', 'copilot-codebase'] as const
 const COPILOT_DEFAULT = 'copilot-codex';
 const OPENROUTER_DEFAULT = 'openrouter/moonshotai/kimi-k2.5';
 const NIM_DEFAULT = 'moonshotai/kimi-k2.5';
+const GROQ_DEFAULT = 'llama-3.1-70b-versatile';
+const TOGETHER_DEFAULT = 'togethercomputer/llama-3-70b';
+const OLLAMA_DEFAULT = 'llama3.1';
 
 /**
  * Stream from Zhipu (GLM-4) via REST SSE. Tools not mapped in this stub; text only.
@@ -416,6 +419,225 @@ async function* streamNim(params: StreamParams): AsyncGenerator<StreamEvent> {
 }
 
 /**
+ * Stream from Groq (fast inference provider). Uses GROQ_API_KEY.
+ * Model: llama-3.1-70b-versatile (default). OpenAI-compatible API.
+ */
+async function* streamGroq(params: StreamParams): AsyncGenerator<StreamEvent> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    logger.warn({}, 'Groq provider skipped: GROQ_API_KEY not set');
+    yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: '[Groq not configured. Set GROQ_API_KEY.]' } };
+    yield { type: 'message_stop' as const };
+    return;
+  }
+
+  const model = params.model || GROQ_DEFAULT;
+  const url = 'https://api.groq.com/openai/v1/chat/completions';
+
+  const body = {
+    model,
+    max_tokens: params.max_tokens,
+    stream: true,
+    messages: [
+      ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
+      ...params.messages.map((m) => ({ role: m.role, content: m.content })),
+    ],
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(120_000),
+  });
+
+  if (!res.ok) {
+    const t = await res.text();
+    logger.warn({ status: res.status, body: t.slice(0, 500) }, 'Groq API error');
+    throw new Error(`Groq API error: ${res.status} ${t.slice(0, 200)}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('Groq: no response body');
+
+  const dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() ?? '';
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const j = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
+          const text = j.choices?.[0]?.delta?.content;
+          if (typeof text === 'string' && text.length > 0) {
+            yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text } };
+          }
+        } catch {
+          // skip malformed chunk
+        }
+      }
+    }
+  }
+  yield { type: 'message_stop' as const };
+}
+
+/**
+ * Stream from Together AI (open source model provider). Uses TOGETHER_API_KEY.
+ * Model: togethercomputer/llama-3-70b (default). OpenAI-compatible API.
+ */
+async function* streamTogether(params: StreamParams): AsyncGenerator<StreamEvent> {
+  const apiKey = process.env.TOGETHER_API_KEY;
+  if (!apiKey) {
+    logger.warn({}, 'Together AI provider skipped: TOGETHER_API_KEY not set');
+    yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: '[Together AI not configured. Set TOGETHER_API_KEY.]' } };
+    yield { type: 'message_stop' as const };
+    return;
+  }
+
+  const model = params.model || TOGETHER_DEFAULT;
+  const url = 'https://api.together.xyz/v1/chat/completions';
+
+  const body = {
+    model,
+    max_tokens: params.max_tokens,
+    stream: true,
+    messages: [
+      ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
+      ...params.messages.map((m) => ({ role: m.role, content: m.content })),
+    ],
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(120_000),
+  });
+
+  if (!res.ok) {
+    const t = await res.text();
+    logger.warn({ status: res.status, body: t.slice(0, 500) }, 'Together AI API error');
+    throw new Error(`Together AI API error: ${res.status} ${t.slice(0, 200)}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('Together AI: no response body');
+
+  const dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() ?? '';
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const j = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
+          const text = j.choices?.[0]?.delta?.content;
+          if (typeof text === 'string' && text.length > 0) {
+            yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text } };
+          }
+        } catch {
+          // skip malformed chunk
+        }
+      }
+    }
+  }
+  yield { type: 'message_stop' as const };
+}
+
+/**
+ * Stream from Ollama (local model runner). Uses OLLAMA_HOST (defaults to localhost:11434).
+ * Model: llama3.1 (default). No API key required for local instances.
+ */
+async function* streamOllama(params: StreamParams): AsyncGenerator<StreamEvent> {
+  const ollamaHost = process.env.OLLAMA_HOST || 'localhost:11434';
+  const url = `http://${ollamaHost}/api/chat`;
+
+  const model = params.model || OLLAMA_DEFAULT;
+
+  const body = {
+    model,
+    stream: true,
+    messages: [
+      ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
+      ...params.messages.map((m) => ({ role: m.role, content: m.content })),
+    ],
+    options: {
+      num_predict: params.max_tokens,
+    },
+  };
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120_000),
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      logger.warn({ status: res.status, body: t.slice(0, 500) }, 'Ollama API error');
+      throw new Error(`Ollama API error: ${res.status} ${t.slice(0, 200)}`);
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error('Ollama: no response body');
+
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop() ?? '';
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const j = JSON.parse(line) as { message?: { content?: string }; done?: boolean };
+          if (j.done) continue;
+          const text = j.message?.content;
+          if (typeof text === 'string' && text.length > 0) {
+            yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text } };
+          }
+        } catch {
+          // skip malformed chunk
+        }
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('fetch failed')) {
+      logger.warn({ ollamaHost }, 'Ollama connection failed - ensure Ollama is running');
+      yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: `[Ollama connection failed. Ensure Ollama is running at ${ollamaHost}]` } };
+      yield { type: 'message_stop' as const };
+      return;
+    }
+    throw error;
+  }
+  yield { type: 'message_stop' as const };
+}
+
+/**
  * Wraps an async iterable of StreamEvent to record duration (and optional tokens) on message_stop.
  */
 async function* withStreamMetrics(
@@ -452,7 +674,13 @@ export function getStream(
         ? COPILOT_DEFAULT
         : provider === 'openrouter'
           ? OPENROUTER_DEFAULT
-          : NIM_DEFAULT);
+          : provider === 'groq'
+            ? GROQ_DEFAULT
+            : provider === 'together'
+              ? TOGETHER_DEFAULT
+              : provider === 'ollama'
+                ? OLLAMA_DEFAULT
+                : NIM_DEFAULT);
   const merged = { ...params, model: modelId };
 
   const adapter = getStreamProvider(provider);
@@ -464,7 +692,13 @@ export function getStream(
         ? streamCopilot(merged)
         : provider === 'openrouter'
           ? streamOpenRouter(merged)
-          : streamNim(merged);
+          : provider === 'groq'
+            ? streamGroq(merged)
+            : provider === 'together'
+              ? streamTogether(merged)
+              : provider === 'ollama'
+                ? streamOllama(merged)
+                : streamNim(merged);
   return withStreamMetrics(source, provider, modelId);
 }
 
@@ -474,6 +708,9 @@ try {
   registerStreamProvider('zhipu', { name: 'zhipu', supportsTools: false, stream: streamZhipu });
   registerStreamProvider('copilot', { name: 'copilot', supportsTools: false, stream: streamCopilot });
   registerStreamProvider('openrouter', { name: 'openrouter', supportsTools: false, stream: streamOpenRouter });
+  registerStreamProvider('groq', { name: 'groq', supportsTools: false, stream: streamGroq });
+  registerStreamProvider('together', { name: 'together', supportsTools: false, stream: streamTogether });
+  registerStreamProvider('ollama', { name: 'ollama', supportsTools: false, stream: streamOllama });
 } catch {
   // ai-core may not be available in all environments
 }

@@ -24,9 +24,10 @@
     "allowJs": true,
     "checkJs": false,
 
-    /* Performance */
+    /* Performance Optimizations */
     "incremental": true,
     "tsBuildInfoFile": "./.tsbuildinfo",
+    "preserveSymlinks": true,
 
     /* Path aliases */
     "baseUrl": ".",
@@ -34,8 +35,16 @@
       "@/*": ["src/*"],
       "$lib/*": ["src/lib/*"],
       "$lib/stores/*": ["src/stores/*"]
-    }
+    },
+
+    /* Additional Optimizations */
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "exactOptionalPropertyTypes": false,
+    "useUnknownInCatchVariables": true
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.svelte"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "coverage"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

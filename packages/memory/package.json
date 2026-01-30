@@ -1,6 +1,7 @@
 {
   "name": "@grump/memory",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Long-term memory client for G-Rump",
   "type": "module",
   "main": "./dist/index.js",

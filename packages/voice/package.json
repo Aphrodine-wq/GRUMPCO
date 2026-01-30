@@ -1,6 +1,7 @@
 {
   "name": "@grump/voice",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Shared types for G-Rump voice ASR/TTS",
   "type": "module",
   "main": "./dist/index.js",

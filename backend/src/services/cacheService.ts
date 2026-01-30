@@ -7,7 +7,7 @@ import { getRedisClient, isRedisConnected } from './redis.js';
 import logger from '../middleware/logger.js';
 import crypto from 'crypto';
 
-export type CacheType = 'intent' | 'architecture' | 'prd' | 'work_report' | 'context';
+export type CacheType = 'intent' | 'architecture' | 'prd' | 'work_report' | 'context' | 'intent-optimization';
 
 export interface CacheConfig {
   ttl: number; // Time to live in seconds
@@ -20,6 +20,7 @@ const CACHE_CONFIGS: Record<CacheType, CacheConfig> = {
   prd: { ttl: 7200, prefix: 'cache:prd:' }, // 2 hours
   work_report: { ttl: 86400, prefix: 'cache:report:' }, // 24 hours
   context: { ttl: 1800, prefix: 'cache:context:' }, // 30 minutes
+  'intent-optimization': { ttl: 3600, prefix: 'cache:intent-opt:' }, // 1 hour
 };
 
 /**
@@ -134,6 +135,7 @@ export async function getCacheStats(): Promise<Record<CacheType, number>> {
       prd: 0,
       work_report: 0,
       context: 0,
+      'intent-optimization': 0,
     };
   }
 
@@ -145,6 +147,7 @@ export async function getCacheStats(): Promise<Record<CacheType, number>> {
       prd: 0,
       work_report: 0,
       context: 0,
+      'intent-optimization': 0,
     };
 
     for (const [type, config] of Object.entries(CACHE_CONFIGS) as [CacheType, CacheConfig][]) {
@@ -161,6 +164,7 @@ export async function getCacheStats(): Promise<Record<CacheType, number>> {
       prd: 0,
       work_report: 0,
       context: 0,
+      'intent-optimization': 0,
     };
   }
 }

@@ -1,6 +1,7 @@
 {
   "name": "@grump/rag",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "RAG vector store adapters and chunkers for G-Rump",
   "type": "module",
   "main": "./dist/index.js",

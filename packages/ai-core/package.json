@@ -1,6 +1,7 @@
 {
   "name": "@grump/ai-core",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Model registry and router for G-Rump LLM selection",
   "type": "module",
   "main": "./dist/index.js",

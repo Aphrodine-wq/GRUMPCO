@@ -1,6 +1,7 @@
 {
   "name": "@grump/kimi",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Kimi/NIM vision and swarm helpers for G-Rump",
   "type": "module",
   "main": "./dist/index.js",

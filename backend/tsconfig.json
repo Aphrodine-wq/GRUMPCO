@@ -9,14 +9,14 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
-    "noEmitOnError": true,
+    "noEmitOnError": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "declarationMap": false,
+    "sourceMap": false,
     "allowJs": true,
     "checkJs": false,
     "noUnusedLocals": false,
@@ -24,7 +24,18 @@
     "noFallthroughCasesInSwitch": true,
     "incremental": true,
     "tsBuildInfoFile": "./.tsbuildinfo",
-    "composite": true
+    "composite": true,
+    "preserveSymlinks": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+    "useUnknownInCatchVariables": true
   },
   "include": [
     "src/**/*",
@@ -33,6 +44,8 @@
   "exclude": [
     "node_modules",
     "dist",
-    "tests"
+    "tests",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

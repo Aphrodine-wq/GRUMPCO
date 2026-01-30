@@ -352,6 +352,90 @@ export interface TestGenRequest {
   coverageGoal?: number;
 }
 
+// ============ Intent Optimizer Types ============
+
+export type OptimizationMode = 'codegen' | 'architecture';
+
+export interface OptimizedIntent {
+  features: string[];
+  constraints: Array<{
+    type: 'technical' | 'business' | 'regulatory' | 'resource';
+    description: string;
+    priority: 'must' | 'should' | 'nice_to_have';
+    impact: string;
+  }>;
+  nonFunctionalRequirements: Array<{
+    category: 'performance' | 'security' | 'scalability' | 'reliability' | 'usability' | 'maintainability';
+    requirement: string;
+    metric?: string;
+    priority: 'critical' | 'high' | 'medium' | 'low';
+  }>;
+  techStack: Array<{
+    technology: string;
+    category: string;
+    rationale: string;
+    confidence: number;
+  }>;
+  actors: Array<{
+    id: string;
+    name: string;
+    type: 'human' | 'system' | 'external_service';
+    responsibilities: string[];
+    priority: 'primary' | 'secondary' | 'tertiary';
+  }>;
+  dataFlows: Array<{
+    name: string;
+    source: string;
+    target: string;
+    data: string;
+    direction: 'inbound' | 'outbound' | 'bidirectional';
+  }>;
+  ambiguity: {
+    score: number;
+    reason: string;
+    ambiguousAreas: string[];
+  };
+  reasoning: string;
+  clarifications: Array<{
+    id: string;
+    question: string;
+    importance: string;
+    suggestedOptions?: string[];
+  }>;
+  confidence: number;
+}
+
+export interface IntentOptimizerResult {
+  optimized: OptimizedIntent;
+  original: string;
+  confidence: number;
+  metadata: {
+    processingTime: number;
+    model: string;
+    mode: OptimizationMode;
+  };
+}
+
+export interface OptimizeIntentRequest {
+  intent: string;
+  mode: OptimizationMode;
+  projectContext?: {
+    name?: string;
+    existingTechStack?: string[];
+    phase?: 'greenfield' | 'maintenance' | 'migration';
+    teamSize?: number;
+    timeline?: string;
+    budget?: string;
+  };
+  options?: {
+    includeImplementationDetails?: boolean;
+    includeDesignPatterns?: boolean;
+    clarificationQuestionsCount?: number;
+    includeNFRs?: boolean;
+    maxFeatures?: number;
+  };
+}
+
 export async function generateTests(request: TestGenRequest): Promise<TestGenerationResult> {
   updateFeature('testing', { loading: true, error: null });
   state.update(s => ({ ...s, activeFeature: 'testing' }));
@@ -406,6 +490,33 @@ export async function analyzeCoverage(workspacePath: string): Promise<unknown> {
     updateFeature('testing', { loading: false, error });
     throw err;
   }
+}
+
+// ============ Intent Optimizer ============
+
+export async function optimizeIntent(
+  intent: string,
+  mode: OptimizationMode,
+  projectContext?: OptimizeIntentRequest['projectContext'],
+  options?: OptimizeIntentRequest['options']
+): Promise<IntentOptimizerResult> {
+  const response = await fetchApi('/api/intent/optimize', {
+    method: 'POST',
+    body: JSON.stringify({
+      intent,
+      mode,
+      projectContext,
+      options,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.data || data;
 }
 
 // ============ Store Export ============
