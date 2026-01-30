@@ -9,15 +9,10 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+
 // Cache version to avoid repeated file reads
-let cachedVersion = null;
+let cachedVersion = '1.0.0';
 function getVersion() {
-  if (cachedVersion) return cachedVersion;
-  try {
-    cachedVersion = require('../package.json').version;
-  } catch (e) {
-    cachedVersion = '1.0.0';
-  }
   return cachedVersion;
 }
 
@@ -26,10 +21,10 @@ contextBridge.exposeInMainWorld('grump', {
   platform: process.platform,
   isElectron: true,
   version: getVersion(),
-  
+
   // Signal that the app is ready, close splash and show main window
   closeSplashShowMain: () => ipcRenderer.invoke('close-splash-show-main'),
-  
+
   // Fast ready signal - call this ASAP in your app
   ready: () => {
     // Immediately signal ready

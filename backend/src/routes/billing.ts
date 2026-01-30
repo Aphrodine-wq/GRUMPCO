@@ -9,6 +9,7 @@ import { TIERS, getTier } from '../config/pricing.js';
 import { getTierForUser } from '../services/featureFlagsService.js';
 import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { createCheckoutSession } from '../services/stripeService.js';
+import { licenseService } from '../services/licenseService.js';
 
 const router = Router();
 
@@ -25,25 +26,50 @@ router.get('/tiers', (_req: Request, res: Response) => {
  * Returns current user tier and usage. Uses optionalAuth (via /api); when no user, returns null.
  * Desktop can show "Sign in to see usage" when tier/usage are null.
  */
-router.get('/me', (req: Request, res: Response) => {
+router.get('/me', async (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
+
+  const license = await licenseService.getLicenseStatus(authReq.user?.id);
+  const tierDef = getTier(license.tier);
+
+  res.json({
+    tier: license.tier,
+    usage: null, // metrics service integration needed here
+    limit: tierDef.apiCallsPerMonth,
+    features: license.features,
+    message: !authReq.user?.id ? 'Sign in to see usage and manage billing.' : null,
+  });
+});
+
+/**
+ * POST /api/billing/activate-license
+ * Foundation endpoint for Activating a license key (offline/one-time purchase model)
+ */
+router.post('/activate-license', async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   if (!authReq.user?.id) {
-    res.json({
-      tier: null as string | null,
-      usage: null as number | null,
-      limit: null as number | null,
-      message: 'Sign in to see usage and manage billing.',
-    });
+    res.status(401).json({ error: 'Unauthorized' });
     return;
   }
-  const tier = getTierForUser(authReq.user.id);
-  const tierDef = getTier(tier);
-  res.json({
-    tier,
-    usage: null as number | null,
-    limit: tierDef.apiCallsPerMonth,
-    message: null as string | null,
-  });
+  const { key } = req.body;
+  if (!key || typeof key !== 'string') {
+    res.status(400).json({ error: 'License key required' });
+    return;
+  }
+
+  // Validate license key format: GRUMP-{TIER}-{hex hash}
+  const LICENSE_KEY_RE = /^GRUMP-(FREE|PRO|TEAM|ENTERPRISE)-[a-f0-9]{16,64}$/i;
+  if (!LICENSE_KEY_RE.test(key)) {
+    res.status(400).json({ error: 'Invalid license key format' });
+    return;
+  }
+
+  const success = await licenseService.activateLicense(authReq.user.id, key);
+  if (success) {
+    res.json({ success: true, message: 'License activated' });
+  } else {
+    res.status(400).json({ error: 'Invalid license key' });
+  }
 });
 
 

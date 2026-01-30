@@ -39,7 +39,7 @@ let cachedEnvVars = null;
 // Fast .env loader with caching
 function loadEnvFile(envPath) {
   if (cachedEnvVars) return cachedEnvVars;
-  
+
   const envVars = {};
   try {
     if (fs.existsSync(envPath)) {
@@ -53,7 +53,7 @@ function loadEnvFile(envPath) {
           const key = line.slice(0, eqIndex).trim();
           let value = line.slice(eqIndex + 1).trim();
           if ((value[0] === '"' && value[value.length - 1] === '"') ||
-              (value[0] === "'" && value[value.length - 1] === "'")) {
+            (value[0] === "'" && value[value.length - 1] === "'")) {
             value = value.slice(1, -1);
           }
           envVars[key] = value;
@@ -73,9 +73,9 @@ function startBackendAsync() {
   setImmediate(() => {
     if (fs.existsSync(backendScript)) {
       console.log('[G-Rump] Starting backend...');
-      
+
       const envVars = loadEnvFile(path.join(backendDir, '.env'));
-      
+
       backendProcess = spawn('node', [backendScript], {
         cwd: backendDir,
         env: {
@@ -132,7 +132,7 @@ function stopBackend() {
       backendProcess.kill('SIGTERM');
     } catch (e) {
       // Force kill if SIGTERM fails
-      try { backendProcess.kill('SIGKILL'); } catch (e2) {}
+      try { backendProcess.kill('SIGKILL'); } catch (e2) { }
     }
     backendProcess = null;
     backendReady = false;
@@ -189,7 +189,7 @@ function createMainWindow() {
     if (fs.existsSync(iconPath)) {
       icon = nativeImage.createFromPath(iconPath);
     }
-  } catch (e) {}
+  } catch (e) { }
 
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -202,7 +202,6 @@ function createMainWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.cjs'),
-      // Performance optimizations
       backgroundThrottling: false,
       enableWebSQL: false
     },
@@ -213,13 +212,26 @@ function createMainWindow() {
 
   // Load app
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-  
+
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
-    // Only open DevTools if explicitly requested
-    if (process.env.GRUMP_DEVTOOLS === 'true') {
-      mainWindow.webContents.openDevTools();
+    // Retry loading the dev server URL until it's available
+    const devURL = 'http://localhost:5173';
+    const maxRetries = 30;
+    let retries = 0;
+
+    function loadDevURL() {
+      mainWindow.loadURL(devURL).catch(() => {
+        retries++;
+        if (retries < maxRetries) {
+          console.log(`[G-Rump] Vite dev server not ready, retrying (${retries}/${maxRetries})...`);
+          setTimeout(loadDevURL, 1000);
+        } else {
+          console.error('[G-Rump] Could not connect to Vite dev server at', devURL);
+        }
+      });
     }
+    loadDevURL();
+    mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(distPath);
   }
@@ -230,15 +242,14 @@ function createMainWindow() {
     return { action: 'deny' };
   });
 
-  // When content is ready, show window immediately
+  // Show window only after the page has actually rendered content
   mainWindow.webContents.once('did-finish-load', () => {
     showMainWindow();
   });
 
-  // Faster fallback - DOM ready is usually faster than did-finish-load
-  mainWindow.webContents.once('dom-ready', () => {
-    // Small delay to ensure CSS is applied
-    setTimeout(showMainWindow, 100);
+  // Handle load failures so the window doesn't stay hidden forever
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    console.error(`[G-Rump] Page load failed: ${errorDescription} (${errorCode})`);
   });
 
   mainWindow.on('closed', () => {
@@ -282,10 +293,10 @@ app.whenReady().then(() => {
     })
   ]);
 
-  // Aggressive timeout - show main window after 2 seconds max
+  // Fallback timeout - show main window after 10 seconds max to avoid infinite splash
   setTimeout(() => {
     showMainWindow();
-  }, 2000);
+  }, 10000);
 });
 
 app.on('window-all-closed', () => {

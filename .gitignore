@@ -106,3 +106,8 @@ integrations/
 .vercel/
 .vercel
 .env*.local
+
+# Build artifacts / installers
+*.exe
+*.zip
+G-Rump-dist/

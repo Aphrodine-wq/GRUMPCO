@@ -5,8 +5,9 @@ import { visualizer } from 'rollup-plugin-visualizer'
 
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production'
-  
+
   return {
+    base: './',
     plugins: [
       svelte(),
       // Bundle visualizer for production builds
@@ -17,14 +18,14 @@ export default defineConfig(({ mode }) => {
         brotliSize: true,
       }),
     ].filter(Boolean),
-    
+
     resolve: {
       alias: {
         $lib: resolve(__dirname, 'src/lib'),
         '@': resolve(__dirname, 'src'),
       },
     },
-    
+
     server: {
       port: 5173,
       proxy: {
@@ -35,15 +36,15 @@ export default defineConfig(({ mode }) => {
         }
       }
     },
-    
+
     build: {
       sourcemap: !isProduction,
       minify: isProduction ? 'terser' : false,
       cssMinify: isProduction,
-      
+
       rollupOptions: {
         input: {
-          app: resolve(__dirname, 'index.html'),
+          index: resolve(__dirname, 'index.html'),
           splashscreen: resolve(__dirname, 'splashscreen.html')
         },
         output: {
@@ -73,9 +74,9 @@ export default defineConfig(({ mode }) => {
             }
             // Route-based chunking for large components
             if (id.includes('/components/')) {
-              if (id.includes('AgentSwarmVisualizer') || 
-                  id.includes('DesignToCodeScreen') ||
-                  id.includes('VoiceCodeScreen')) {
+              if (id.includes('AgentSwarmVisualizer') ||
+                id.includes('DesignToCodeScreen') ||
+                id.includes('VoiceCodeScreen')) {
                 return 'feature-heavy'
               }
             }
@@ -98,18 +99,18 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
-      
+
       // Optimize build output for modern browsers
       target: 'esnext',
       cssTarget: 'esnext',
-      
+
       // Reduce chunk size warnings (500KB threshold)
       chunkSizeWarningLimit: 500,
-      
+
       // Report compressed sizes for accurate metrics
       reportCompressedSize: true,
     },
-    
+
     optimizeDeps: {
       // Pre-bundle these dependencies for faster dev server start
       include: [
@@ -132,7 +133,7 @@ export default defineConfig(({ mode }) => {
       // Force optimize on cold start
       force: true,
     },
-    
+
     test: {
       environment: 'jsdom',
       globals: true,

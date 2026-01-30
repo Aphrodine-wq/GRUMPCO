@@ -149,8 +149,12 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, Postman)
-      if (!origin) return callback(null, true);
+      // Allow requests with no origin (mobile apps, curl, Postman) only in development
+      if (!origin) {
+        if (!isProduction) return callback(null, true);
+        // In production, reject requests with no origin
+        return callback(new Error('Not allowed by CORS'));
+      }
 
       // In development, allow all localhost origins
       if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
