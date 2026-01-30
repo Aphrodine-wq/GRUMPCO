@@ -25,3 +25,8 @@ Please do not open public issues for security vulnerabilities.
 
 We try to acknowledge reports within 72 hours and provide a status update within 7 days.
 Fix timelines depend on complexity and impact.
+
+## Production Security Baseline
+
+If you are running G-Rump in production, follow `docs/SECURITY_BASELINE.md` and
+`docs/PRODUCTION_CHECKLIST.md` to ensure required controls are enabled.

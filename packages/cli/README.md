@@ -30,6 +30,41 @@ npm install -g grump-cli
 npx grump-cli
 ```
 
+## ✅ Quick Start (3 steps)
+
+1) Point the CLI at your server (default is local):
+```bash
+grump config set apiUrl http://localhost:3000
+```
+
+2) Authenticate (required if your server enforces auth):
+```bash
+grump auth login
+```
+
+3) Run your first job:
+```bash
+grump ship "Build a todo app with auth and a dashboard"
+```
+
+## 🔧 Configuration
+
+Configuration sources (highest priority first):
+1) Environment variables: `GRUMP_API_URL`, `GRUMP_API_KEY`, `GRUMP_THEME`
+2) Local config file: `.grumprc` or `grump.config.js` (project root)
+3) Global config: `~/.config/grump/config.json`
+
+Create a local config:
+```bash
+grump init
+```
+
+Or set values directly:
+```bash
+grump config set apiUrl https://your-grump-api.example.com
+grump auth set-key YOUR_API_KEY
+```
+
 ### Local Development
 
 ```bash

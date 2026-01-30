@@ -516,7 +516,7 @@
   }
 
   .custom-select:focus {
-    border-color: #0ea5e9;
+    border-color: var(--color-primary);
   }
 
   .custom-textarea {
@@ -532,7 +532,7 @@
   }
 
   .custom-textarea:focus {
-    border-color: #0ea5e9;
+    border-color: var(--color-primary);
   }
 
   .checkbox-field {
@@ -586,3 +586,4 @@
     justify-content: flex-end;
   }
 </style>
+

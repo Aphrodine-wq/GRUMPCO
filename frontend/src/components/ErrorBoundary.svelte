@@ -145,13 +145,13 @@
 
   .error-action-btn:hover {
     background: #30363d;
-    border-color: #0ea5e9;
-    color: #0ea5e9;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
   }
 
   .error-action-btn.primary {
-    background: #0ea5e9;
-    border-color: #0ea5e9;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
     color: #ffffff;
   }
 
@@ -186,3 +186,4 @@
     word-break: break-word;
   }
 </style>
+

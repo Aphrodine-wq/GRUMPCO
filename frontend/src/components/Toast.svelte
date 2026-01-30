@@ -90,11 +90,11 @@
   }
 
   .toast--success {
-    border-color: #0EA5E9;
+    border-color: var(--color-primary);
   }
 
   .toast--success .toast-icon {
-    color: #0EA5E9;
+    color: var(--color-primary);
   }
 
   .toast--error {
@@ -185,7 +185,7 @@
   }
 
   .toast--success .toast-progress {
-    background: #0EA5E9;
+    background: var(--color-primary);
   }
 
   .toast--error .toast-progress {

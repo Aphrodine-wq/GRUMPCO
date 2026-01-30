@@ -226,7 +226,7 @@
   }
   
   .plan-card.recommended {
-    border-color: #0EA5E9;
+    border-color: var(--color-primary);
     box-shadow: 0 10px 30px -10px rgba(14, 165, 233, 0.2);
   }
   
@@ -239,7 +239,7 @@
     top: -12px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(135deg, #0EA5E9, #0284c7);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
     color: white;
     font-size: 11px;
     font-weight: 700;
@@ -296,7 +296,7 @@
   }
   
   .plan-card.recommended .features-list svg {
-    color: #0EA5E9;
+    color: var(--color-primary);
   }
   
   .modal-footer {
@@ -343,3 +343,4 @@
     }
   }
 </style>
+

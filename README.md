@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/grump-logo.svg" width="120" alt="G-Rump logo" />
+</p>
+
 # G-Rump - High-Performance AI Development Platform
 
 > NVIDIA-optimized AI platform with 18x faster builds, 60-70% cost reduction, and enterprise-grade performance
@@ -11,6 +15,16 @@
 - **Parallel Processing**: Worker threads and Rust with rayon
 - **SIMD Optimizations**: AVX2/AVX-512 accelerated text processing
 - **Real-Time Analytics**: Comprehensive cost tracking and performance monitoring
+
+## Get Started (Users)
+
+Pick your path:
+- **Website (self‑hosted)**: deploy backend + frontend and use the web app.
+- **Windows Desktop App**: install the Tauri app and add your API key to `%APPDATA%\\com.grump.app\\.env`.
+- **CLI**: `npm install -g grump-cli` and run `grump ship "..."`.
+- **macOS App**: in progress (CI build only) — see `docs/MACOS_APP.md`.
+
+See `docs/GETTING_STARTED.md` for the shortest path.
 
 ## Quick Start
 
@@ -130,7 +144,7 @@ graph TB
 
 ## Security
 
-For production deployments, see [Production Checklist](./docs/PRODUCTION_CHECKLIST.md). When the API is reachable by untrusted users you **must** set `BLOCK_SUSPICIOUS_PROMPTS=true` and `REQUIRE_AUTH_FOR_API=true`. Webhook secrets (`GRUMP_WEBHOOK_SECRET`, `TWILIO_WEBHOOK_SECRET`, `STRIPE_WEBHOOK_SECRET`) are required in production for the features that use them. Security scan endpoints (`/api/security/*`) validate `workspacePath` against an allowed root (`SECURITY_SCAN_ROOT` or current working directory).
+For production deployments, see [Production Checklist](./docs/PRODUCTION_CHECKLIST.md) and the [Security Baseline](./docs/SECURITY_BASELINE.md). When the API is reachable by untrusted users you **must** set `BLOCK_SUSPICIOUS_PROMPTS=true`, `REQUIRE_AUTH_FOR_API=true`, and enable `SECURITY_STRICT_PROD=true` so the required security gates are enforced. Webhook secrets (`GRUMP_WEBHOOK_SECRET`, `TWILIO_WEBHOOK_SECRET`, `STRIPE_WEBHOOK_SECRET`) are required in production for the features that use them. Security scan endpoints (`/api/security/*`) validate `workspacePath` against an allowed root (`SECURITY_SCAN_ROOT`).
 
 ## Documentation
 

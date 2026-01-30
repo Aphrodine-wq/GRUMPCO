@@ -300,7 +300,7 @@
   }
 
   .btn-primary {
-    background: #0EA5E9;
+    background: var(--color-primary);
     color: #FFFFFF;
   }
 
@@ -522,3 +522,4 @@
     color: #6B7280;
   }
 </style>
+

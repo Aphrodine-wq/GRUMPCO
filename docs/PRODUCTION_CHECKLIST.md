@@ -8,6 +8,7 @@ When the backend is publicly reachable (e.g. web app, public API), you **must**:
 
 - [ ] Set `BLOCK_SUSPICIOUS_PROMPTS=true` so prompt-injection–style patterns in user input are rejected (see [validator](../backend/src/middleware/validator.ts)). Diagram, ship, PRD, architecture, and codegen routes use the validator.
 - [ ] Set `REQUIRE_AUTH_FOR_API=true` so `/api/chat`, `/api/ship`, and `/api/codegen` require authentication. Unauthenticated requests to those paths will receive 401.
+- [ ] Set `SECURITY_STRICT_PROD=true` to enforce production security gates (see Security Baseline below).
 - [ ] **Secrets (production-only):** Set webhook and service secrets for any feature you enable:
   - `GRUMP_WEBHOOK_SECRET` – required in production if you use inbound/outbound webhooks; when unset, webhook routes return 503.
   - `TWILIO_WEBHOOK_SECRET` – required in production when `MESSAGING_PROVIDER=twilio`; when unset, the messaging inbound route returns 503.
@@ -37,6 +38,19 @@ When the backend is publicly reachable (e.g. web app, public API), you **must**:
 
 - [ ] Set `BLOCK_SUSPICIOUS_PROMPTS=true` in production (see **Security** section above).
 - [ ] Use Redis for rate limiting (see above). Set `REQUIRE_AUTH_FOR_API=true` when the backend is public (see **Security** section above).
+
+## Security Baseline (required in production when `SECURITY_STRICT_PROD=true`)
+
+These are enforced by config validation when `NODE_ENV=production`:
+
+- [ ] `CORS_ORIGINS` set (no wildcards).
+- [ ] `ALLOWED_HOSTS` set to your production hostnames (comma-separated).
+- [ ] `BLOCK_SUSPICIOUS_PROMPTS=true`
+- [ ] `REQUIRE_AUTH_FOR_API=true`
+- [ ] `OUTPUT_FILTER_PII=true` and `OUTPUT_FILTER_HARMFUL=true`
+- [ ] `STRICT_COMMAND_ALLOWLIST=true`
+- [ ] `SECURITY_SCAN_ROOT` set to a safe base directory
+- [ ] `METRICS_AUTH` set (Basic auth) to lock `/metrics`
 
 ## Database
 

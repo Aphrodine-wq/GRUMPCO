@@ -19,7 +19,7 @@
 
   .refine-btn {
     padding: 0.5rem 1rem;
-    background: #0EA5E9;
+    background: var(--color-primary);
     color: #FFFFFF;
     border: none;
     border-radius: 4px;
@@ -28,3 +28,4 @@
     cursor: pointer;
   }
 </style>
+

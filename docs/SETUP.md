@@ -9,6 +9,39 @@ This guide will help you get G-Rump running in local development or as a bundled
 - NVIDIA NIM API key ([Get one here](https://build.nvidia.com/)) or OpenRouter API key ([Get one here](https://openrouter.ai/))
 - (Optional) Docker and Docker Compose for containerized deployment
 
+## Choose Your Setup (Users)
+
+### 1) Website (self-hosted)
+
+Best for teams or shared use.
+
+1. Deploy backend + frontend (see `backend/DEPLOY_VERCEL.md` or `DEPLOYMENT_SUMMARY.md`).
+2. Set production security flags (see `docs/SECURITY_BASELINE.md`).
+3. Point users to your web URL and have them sign in.
+
+### 2) Windows Desktop App (Tauri)
+
+Best for a local, no‑browser experience.
+
+1. Build or download the installer:
+   - Build locally: run `build-windows.bat` (see `docs/BUILD.md`).
+2. Install the app.
+3. Create a local `.env` for the desktop app:
+   - Location: `%APPDATA%\\com.grump.app\\.env`
+   - Required: `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY`
+4. Launch G‑Rump from the Start Menu.
+
+### 3) CLI (power users)
+
+Best for scripts and terminal workflows.
+
+```bash
+npm install -g grump-cli
+grump config set apiUrl http://localhost:3000
+grump auth login
+grump ship "Build a todo app with auth"
+```
+
 ## Quick Start
 
 ### 1. Get Your AI Provider API Key
@@ -49,6 +82,9 @@ VITE_API_URL=http://localhost:3000/api
 The Docker setup uses `backend/.env` automatically. Ensure the file exists with your API key.
 
 ## Local Development Setup
+
+This section is for contributors and local development. If you just want to use
+G‑Rump, use one of the three options above.
 
 ### Step 1: Install Dependencies
 

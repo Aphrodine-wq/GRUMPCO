@@ -195,13 +195,13 @@
 
   .recovery-btn:hover {
     background: #262626;
-    border-color: #0EA5E9;
+    border-color: var(--color-primary);
     color: #fff;
   }
 
   .recovery-btn.primary {
-    background: #0EA5E9;
-    border-color: #0EA5E9;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
     color: #fff;
   }
 
@@ -284,7 +284,8 @@
 
   .copy-details-btn:hover {
     background: #262626;
-    border-color: #0EA5E9;
-    color: #0EA5E9;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
   }
 </style>
+

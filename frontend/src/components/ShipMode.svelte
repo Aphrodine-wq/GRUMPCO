@@ -746,7 +746,7 @@
 
   .status-badge.running {
     background: #e0f2fe;
-    color: #0284c7;
+    color: var(--color-primary-hover);
   }
   .status-badge.completed {
     background: #dcfce7;
@@ -936,7 +936,7 @@
     border: none;
   }
   .github-prompt .action-btn.primary {
-    background: #0ea5e9;
+    background: var(--color-primary);
     color: #fff;
   }
   .github-prompt .action-btn.primary:hover:not(:disabled) {
@@ -968,3 +968,4 @@
     }
   }
 </style>
+

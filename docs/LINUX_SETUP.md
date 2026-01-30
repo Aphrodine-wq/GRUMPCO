@@ -34,7 +34,7 @@ sudo apt update && sudo apt upgrade -y
 Run the automated setup script:
 
 ```bash
-cd /mnt/c/Users/Walt/Desktop/milesproject
+cd /mnt/c/Users/Walt/Desktop/grump
 bash scripts/setup-wsl2.sh
 ```
 
@@ -328,7 +328,7 @@ server {
    ```bash
    # Work in /home/user instead of /mnt/c
    cd ~
-   git clone /mnt/c/Users/Walt/Desktop/milesproject
+   git clone /mnt/c/Users/Walt/Desktop/grump
    ```
 
 ### Build Failures

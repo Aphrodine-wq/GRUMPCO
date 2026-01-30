@@ -52,6 +52,7 @@ const envSchema = z.object({
   SERVERLESS_MODE: z.enum(['vercel']).optional(),
   EVENTS_MODE: z.enum(['sse', 'poll']).optional(),
   PUBLIC_BASE_URL: z.string().url().optional(),
+  ALLOWED_HOSTS: z.string().optional(),
 
   // Database
   DB_PATH: z.string().default('./data/grump.db'),
@@ -64,9 +65,15 @@ const envSchema = z.object({
   // Abuse prevention
   BLOCK_SUSPICIOUS_PROMPTS: z.enum(['true', 'false']).default('false').transform(v => v === 'true'),
   REQUIRE_AUTH_FOR_API: z.enum(['true', 'false']).default('false').transform(v => v === 'true'),
+  SECURITY_STRICT_PROD: z.enum(['true', 'false']).default('true').transform(v => v === 'true'),
+  OUTPUT_FILTER_PII: z.enum(['true', 'false']).default('false').transform(v => v === 'true'),
+  OUTPUT_FILTER_HARMFUL: z.enum(['true', 'false']).default('false').transform(v => v === 'true'),
+  STRICT_COMMAND_ALLOWLIST: z.enum(['true', 'false']).default('false').transform(v => v === 'true'),
+  SECURITY_SCAN_ROOT: z.string().optional(),
 
   // Webhooks
   GRUMP_WEBHOOK_SECRET: z.string().optional(),
+  GRUMP_WEBHOOK_URLS: z.string().optional(),
 
   // Intent compiler
   GRUMP_INTENT_PATH: z.string().optional(),
@@ -165,6 +172,91 @@ const envSchema = z.object({
   return isTestEnv || data.NVIDIA_NIM_API_KEY || data.OPENROUTER_API_KEY;
 }, {
   message: 'At least one AI provider API key is required (NVIDIA_NIM_API_KEY or OPENROUTER_API_KEY)',
+}).superRefine((data, ctx) => {
+  const isProd = data.NODE_ENV === 'production';
+  const strict = isProd && data.SECURITY_STRICT_PROD;
+
+  if (!strict) return;
+
+  if (!data.CORS_ORIGINS || !data.CORS_ORIGINS.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['CORS_ORIGINS'],
+      message: 'CORS_ORIGINS is required in production when SECURITY_STRICT_PROD=true',
+    });
+  }
+
+  if (data.CORS_ORIGINS?.includes('*')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['CORS_ORIGINS'],
+      message: 'CORS_ORIGINS must not include "*" in production',
+    });
+  }
+
+  if (!data.ALLOWED_HOSTS || !data.ALLOWED_HOSTS.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['ALLOWED_HOSTS'],
+      message: 'ALLOWED_HOSTS is required in production when SECURITY_STRICT_PROD=true',
+    });
+  }
+
+  if (!data.REQUIRE_AUTH_FOR_API) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['REQUIRE_AUTH_FOR_API'],
+      message: 'REQUIRE_AUTH_FOR_API must be true in production when SECURITY_STRICT_PROD=true',
+    });
+  }
+
+  if (!data.BLOCK_SUSPICIOUS_PROMPTS) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['BLOCK_SUSPICIOUS_PROMPTS'],
+      message: 'BLOCK_SUSPICIOUS_PROMPTS must be true in production when SECURITY_STRICT_PROD=true',
+    });
+  }
+
+  if (!data.OUTPUT_FILTER_PII) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['OUTPUT_FILTER_PII'],
+      message: 'OUTPUT_FILTER_PII must be true in production when SECURITY_STRICT_PROD=true',
+    });
+  }
+
+  if (!data.OUTPUT_FILTER_HARMFUL) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['OUTPUT_FILTER_HARMFUL'],
+      message: 'OUTPUT_FILTER_HARMFUL must be true in production when SECURITY_STRICT_PROD=true',
+    });
+  }
+
+  if (!data.STRICT_COMMAND_ALLOWLIST) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['STRICT_COMMAND_ALLOWLIST'],
+      message: 'STRICT_COMMAND_ALLOWLIST must be true in production when SECURITY_STRICT_PROD=true',
+    });
+  }
+
+  if (!data.METRICS_AUTH || !data.METRICS_AUTH.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['METRICS_AUTH'],
+      message: 'METRICS_AUTH is required in production when SECURITY_STRICT_PROD=true',
+    });
+  }
+
+  if (!data.SECURITY_SCAN_ROOT || !data.SECURITY_SCAN_ROOT.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['SECURITY_SCAN_ROOT'],
+      message: 'SECURITY_SCAN_ROOT is required in production when SECURITY_STRICT_PROD=true',
+    });
+  }
 });
 
 // Type for validated environment

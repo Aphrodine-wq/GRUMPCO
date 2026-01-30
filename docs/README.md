@@ -6,6 +6,7 @@ Central index for all documentation. Start here or from the [main README](../REA
 
 | Doc | Description |
 |-----|--------------|
+| [GETTING_STARTED.md](GETTING_STARTED.md) | User-friendly setup paths (Web, Windows, CLI) |
 | [QUICK_START.md](QUICK_START.md) | Minimal steps to run G-Rump |
 | [OVERVIEW.md](OVERVIEW.md) | What G-Rump is, clients, flows, sessions |
 | [COMPLETE_SYSTEM_GUIDE.md](COMPLETE_SYSTEM_GUIDE.md) | End-to-end system guide and usage |
@@ -25,10 +26,18 @@ Central index for all documentation. Start here or from the [main README](../REA
 | Doc | Description |
 |-----|--------------|
 | [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) | Security, env, Redis, abuse prevention, deployment |
+| [SECURITY_BASELINE.md](SECURITY_BASELINE.md) | Required security posture for production |
+| [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) | Fast path to a clean release |
 | [PERFORMANCE_GUIDE.md](PERFORMANCE_GUIDE.md) | Performance features (SWC, Rust, cache, NIM, etc.) |
 | [OPTIMIZATION_SUMMARY.md](OPTIMIZATION_SUMMARY.md) | Implementation details for optimizations |
 | [LINUX_SETUP.md](LINUX_SETUP.md) | WSL2 and Linux optimization |
 | [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick command reference |
+
+## Platforms
+
+| Doc | Description |
+|-----|--------------|
+| [MACOS_APP.md](MACOS_APP.md) | macOS app plan (CI build + future signing) |
 
 ## Reference
 

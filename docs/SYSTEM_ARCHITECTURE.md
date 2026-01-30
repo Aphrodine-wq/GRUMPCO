@@ -1,4 +1,4 @@
-# Mermaid AI Diagram Generator - System Architecture
+# G-Rump (Legacy) - System Architecture
 
 > **⚠️ LEGACY DOCUMENT**: This document is outdated and references the old Vue.js frontend and Anthropic Claude as the primary LLM. The current stack uses **Svelte 5** for the frontend and **NVIDIA NIM (Kimi K2.5)** or **OpenRouter** as the LLM provider. For up-to-date architecture documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md) and [OVERVIEW.md](./OVERVIEW.md).
 
@@ -23,7 +23,7 @@
 
 ## 1. System Context (C4 Level 1)
 
-Shows the system boundaries and external actors/systems that interact with the Mermaid AI Diagram Generator.
+Shows the system boundaries and external actors/systems that interact with the G-Rump (Legacy).
 
 ```mermaid
 flowchart TB
@@ -32,8 +32,8 @@ flowchart TB
         developer["<b>Developer</b><br/>Uses VS Code extension<br/>(Planned)"]
     end
 
-    subgraph system["Mermaid AI Diagram Generator"]
-        app["<b>Mermaid AI</b><br/>AI-powered diagram<br/>generation platform<br/><br/>Vue 3 + Express"]
+    subgraph system["G-Rump (Legacy)"]
+        app["<b>G-Rump</b><br/>AI-powered diagram<br/>generation platform<br/><br/>Vue 3 + Express"]
     end
 
     subgraph external["External Systems"]
@@ -70,7 +70,7 @@ flowchart TB
         vscodeUser["<b>Developer</b><br/>VS Code"]
     end
 
-    subgraph system["Mermaid AI System"]
+    subgraph system["G-Rump System"]
         subgraph frontend["Frontend Container"]
             vue["<b>Vue 3 SPA</b><br/>Vite + TypeScript<br/><br/>Chat interface,<br/>Session management,<br/>Diagram rendering"]
         end
@@ -583,7 +583,7 @@ Complete technology inventory with versions.
 
 ```mermaid
 mindmap
-    root(("Mermaid AI<br/>Tech Stack"))
+    root(("G-Rump<br/>Tech Stack"))
         Frontend
             Vue 3.4
                 Composition API
@@ -653,7 +653,7 @@ Visual overview of upgrade phases.
 
 ```mermaid
 timeline
-    title Mermaid AI Upgrade Roadmap
+    title G-Rump Upgrade Roadmap
 
     section Phase 1 - Foundation
         Quality Tooling : ESLint strict, Prettier, TypeScript strict mode
@@ -725,7 +725,7 @@ timeline
 ## File Structure Summary
 
 ```
-milesproject/
+grump/
 ├── frontend/                      # Vue 3 SPA
 │   ├── src/
 │   │   ├── App.vue               # Root component
@@ -793,5 +793,6 @@ milesproject/
 
 ---
 
-*Generated for Mermaid AI Diagram Generator v1.0*
+*Generated for G-Rump (Legacy) v1.0*
 *Last Updated: January 2026*
+

@@ -5,6 +5,9 @@ hero:
   name: "G-Rump Documentation"
   text: "The AI-Powered Development Assistant"
   tagline: "Build architectures, PRDs, and full-stack apps with ease."
+  image:
+    src: /grump-logo.svg
+    alt: G-Rump logo
   actions:
     - theme: brand
       text: Get Started

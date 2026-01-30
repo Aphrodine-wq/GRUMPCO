@@ -190,7 +190,7 @@
 
   .progress-time-estimate {
     font-size: 0.75rem;
-    color: #0EA5E9;
+    color: var(--color-primary);
     font-weight: 500;
   }
 
@@ -217,7 +217,7 @@
 
   .progress-fill {
     height: 100%;
-    background: #0EA5E9;
+    background: var(--color-primary);
     transition: width 0.3s ease;
     border-radius: 2px;
   }
@@ -249,12 +249,12 @@
   }
 
   .stage-item.active {
-    border-color: #0EA5E9;
+    border-color: var(--color-primary);
     background: rgba(0, 102, 255, 0.1);
   }
 
   .stage-item.completed {
-    border-color: #0EA5E9;
+    border-color: var(--color-primary);
     background: rgba(0, 102, 255, 0.05);
   }
 
@@ -281,12 +281,12 @@
   }
 
   .stage-item.active .stage-indicator {
-    border-color: #0EA5E9;
+    border-color: var(--color-primary);
   }
 
   .stage-item.completed .stage-indicator {
-    background: #0EA5E9;
-    border-color: #0EA5E9;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .stage-item.error .stage-indicator {
@@ -309,7 +309,7 @@
     width: 12px;
     height: 12px;
     border: 2px solid rgba(0, 102, 255, 0.3);
-    border-top-color: #0EA5E9;
+    border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
   }
@@ -350,7 +350,7 @@
   }
 
   .stage-time.active {
-    color: #0EA5E9;
+    color: var(--color-primary);
     font-weight: 500;
   }
 
@@ -390,3 +390,4 @@
     }
   }
 </style>
+

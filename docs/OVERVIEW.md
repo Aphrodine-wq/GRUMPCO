@@ -98,7 +98,7 @@ There is no shared project or workspace id linking chat, ship, and codegen today
 ## Directory Structure
 
 ```
-milesproject/
+grump/
 ├── frontend/                 # Svelte + Vite (Tauri desktop)
 │   ├── src/
 │   │   ├── App.svelte

@@ -209,7 +209,7 @@
   }
 
   .action-btn.primary {
-    background: #0EA5E9;
+    background: var(--color-primary);
     color: #FFFFFF;
   }
 
@@ -228,11 +228,11 @@
 
   .action-btn.secondary {
     background: #EBEBEB;
-    color: #0EA5E9;
+    color: var(--color-primary);
   }
 
   .action-btn.secondary:hover {
-    background: #0EA5E9;
+    background: var(--color-primary);
     color: #FFFFFF;
   }
 
@@ -292,3 +292,4 @@
     justify-content: flex-end;
   }
 </style>
+

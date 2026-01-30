@@ -161,7 +161,7 @@
   }
 
   .phase-step.active .phase-icon {
-    background: #0EA5E9;
+    background: var(--color-primary);
     color: white;
     box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
   }
@@ -180,7 +180,7 @@
   }
 
   .phase-step.active .phase-label {
-    color: #0EA5E9;
+    color: var(--color-primary);
     font-weight: 600;
   }
 
@@ -244,7 +244,7 @@
   }
 
   .agent-status.running .agent-status-dot {
-    background: #0EA5E9;
+    background: var(--color-primary);
     animation: pulse 1.5s infinite;
   }
 
@@ -265,3 +265,4 @@
     }
   }
 </style>
+

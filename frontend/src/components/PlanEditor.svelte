@@ -121,7 +121,7 @@
   }
 
   .btn-primary {
-    background: #0EA5E9;
+    background: var(--color-primary);
     color: #FFFFFF;
   }
 
@@ -130,3 +130,4 @@
     color: #000000;
   }
 </style>
+

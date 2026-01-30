@@ -416,8 +416,8 @@
 
   .mic-btn:hover:not(:disabled) {
     background: #f4f4f5;
-    border-color: #0ea5e9;
-    color: #0ea5e9;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
   }
 
   .mic-btn:disabled {
@@ -449,7 +449,7 @@
 
   .query-input:focus {
     outline: none;
-    border-color: #0ea5e9;
+    border-color: var(--color-primary);
   }
 
   .result-card {
@@ -538,7 +538,7 @@
 
   .confidence-fill {
     height: 100%;
-    background: #0ea5e9;
+    background: var(--color-primary);
     border-radius: 4px;
     transition: width 0.2s ease;
   }
@@ -571,12 +571,12 @@
 
   .citations .citation-id {
     font-weight: 700;
-    color: #0ea5e9;
+    color: var(--color-primary);
     margin-right: 6px;
   }
 
   .citation-link {
-    color: #0ea5e9;
+    color: var(--color-primary);
     text-decoration: none;
   }
 
@@ -584,3 +584,4 @@
     text-decoration: underline;
   }
 </style>
+

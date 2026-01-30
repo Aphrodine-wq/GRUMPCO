@@ -170,7 +170,7 @@
 
   .quick-action-item.primary {
     background: rgba(0, 102, 255, 0.1);
-    border-color: #0EA5E9;
+    border-color: var(--color-primary);
   }
 
   .quick-action-item.primary:hover {
@@ -190,7 +190,7 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: #0EA5E9;
+    background: var(--color-primary);
     border: none;
     color: #fff;
     font-size: 1.5rem;
@@ -249,3 +249,4 @@
     }
   }
 </style>
+

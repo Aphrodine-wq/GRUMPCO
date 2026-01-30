@@ -66,6 +66,7 @@ import { isServerlessRuntime } from './config/runtime.js';
 import { startScheduledAgentsWorker, stopScheduledAgentsWorker, loadRepeatableJobsFromDb } from './services/scheduledAgentsQueue.js';
 import { apiAuthMiddleware } from './middleware/authMiddleware.js';
 import { kimiOptimizationMiddleware, kimiPromptOptimizationMiddleware } from './middleware/kimiMiddleware.js';
+import { env } from './config/env.js';
 import type { Server } from 'http';
 
 const app: Express = express();
@@ -76,9 +77,17 @@ export const appReady = new Promise<void>((resolve) => {
   resolveAppReady = resolve as () => void;
 });
 
+// Trust proxy headers in production (needed for correct client IP / HTTPS behind proxies)
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
+
+// Hide framework signature
+app.disable('x-powered-by');
+
 // Determine allowed origins (production: require CORS_ORIGINS or use minimal default)
-const allowedOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+const allowedOrigins = env.CORS_ORIGINS
+  ? env.CORS_ORIGINS.split(',').map((o) => o.trim())
   : isProduction
     ? ['tauri://localhost', 'http://tauri.localhost', 'http://127.0.0.1:3000']
     : [
@@ -102,8 +111,36 @@ app.use(
       },
     },
     crossOriginEmbedderPolicy: false, // Allow embedding for diagrams
+    referrerPolicy: { policy: 'no-referrer' },
+    frameguard: { action: 'sameorigin' },
+    hsts: isProduction
+      ? {
+        maxAge: 15552000,
+        includeSubDomains: true,
+        preload: true,
+      }
+      : false,
   })
 );
+
+// Host header allowlist (production hardening)
+const allowedHosts = env.ALLOWED_HOSTS
+  ? env.ALLOWED_HOSTS.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean)
+  : [];
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (!isProduction || allowedHosts.length === 0) {
+    return next();
+  }
+  const hostHeader = (req.headers.host || '').toString().toLowerCase();
+  const host = hostHeader.split(':')[0];
+  if (!allowedHosts.includes(host)) {
+    logger.warn({ host }, 'Blocked by Host allowlist');
+    res.status(400).json({ error: 'Invalid Host header', type: 'bad_request' });
+    return;
+  }
+  next();
+});
 
 // CORS configuration
 app.use(
@@ -205,6 +242,7 @@ let gpuMetricsInterval: ReturnType<typeof setInterval> | null = null;
     // Rate limiting (uses Redis store when REDIS_HOST is set)
     const rateLimitMw = await applyRateLimiting();
     app.use('/api', rateLimitMw);
+    app.use('/auth', rateLimitMw);
     // When REQUIRE_AUTH_FOR_API=true, chat/ship/codegen require auth; else optionalAuth
     app.use('/api', apiAuthMiddleware);
     
@@ -259,17 +297,21 @@ let gpuMetricsInterval: ReturnType<typeof setInterval> | null = null;
     app.use('/health', healthRoutes);
 
     // Metrics endpoint
-    app.get('/metrics', (req: Request, res: Response, next: NextFunction) => {
-      if (process.env.NODE_ENV === 'production' && process.env.METRICS_AUTH) {
-        const auth = req.headers.authorization;
-        const expected = `Basic ${Buffer.from(process.env.METRICS_AUTH).toString('base64')}`;
-        if (auth !== expected) {
-          res.status(401).json({ error: 'Unauthorized' });
-          return;
+      app.get('/metrics', (req: Request, res: Response, next: NextFunction) => {
+        if (process.env.NODE_ENV === 'production') {
+          if (!env.METRICS_AUTH) {
+            res.status(403).json({ error: 'Metrics disabled in production without METRICS_AUTH' });
+            return;
+          }
+          const auth = req.headers.authorization;
+          const expected = `Basic ${Buffer.from(env.METRICS_AUTH).toString('base64')}`;
+          if (auth !== expected) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+          }
         }
-      }
-      next();
-    }, getMetrics);
+        next();
+      }, getMetrics);
 
     // 404 handler
     app.use((_req: Request, res: Response) => {

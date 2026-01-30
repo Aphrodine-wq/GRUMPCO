@@ -506,7 +506,7 @@
   }
 
   .toggle-btn.active {
-    background: #0EA5E9;
+    background: var(--color-primary);
     color: white;
   }
 
@@ -685,7 +685,7 @@
 
   .action-btn:hover {
     background: #F5F5F5;
-    color: #0EA5E9;
+    color: var(--color-primary);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   }
 
@@ -821,3 +821,4 @@
     }
   }
 </style>
+

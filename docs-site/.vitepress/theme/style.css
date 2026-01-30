@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --vp-font-family-base: "Space Grotesk", "Segoe UI", Arial, sans-serif;
+  --vp-font-family-mono: "Space Mono", "SF Mono", Menlo, monospace;
+
+  --vp-c-brand-1: #7C3AED;
+  --vp-c-brand-2: #6D28D9;
+  --vp-c-brand-3: #8B5CF6;
+
+  --vp-c-bg: #FFFFFF;
+  --vp-c-bg-alt: #F5F3FF;
+  --vp-c-bg-soft: #F3E8FF;
+  --vp-c-divider: #E9D5FF;
+
+  --vp-c-text-1: #1B0F3A;
+  --vp-c-text-2: #4C1D95;
+  --vp-c-text-3: #6D28D9;
+
+  --vp-button-brand-bg: linear-gradient(135deg, #7C3AED, #5B21B6);
+  --vp-button-brand-hover-bg: #6D28D9;
+  --vp-button-brand-active-bg: #5B21B6;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #EDE9FE 0%, #FFFFFF 55%),
+    radial-gradient(900px 520px at 90% -20%, #DDD6FE 0%, #FFFFFF 60%),
+    #FFFFFF;
+}
+
+.VPNav {
+  backdrop-filter: blur(12px);
+  background-color: rgba(255, 255, 255, 0.8);
+  border-bottom: 1px solid #E9D5FF;
+}
+
+.VPHome .VPImage {
+  filter: drop-shadow(0 14px 24px rgba(124, 58, 237, 0.2));
+}
+
+.VPHome .VPHero .text {
+  color: #4C1D95;
+}
+
+.VPHome .VPHero .tagline {
+  color: #6D28D9;
+}
+
+.VPHome .VPFeature {
+  border: 1px solid #E9D5FF;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 12px 28px rgba(91, 33, 182, 0.08);
+}
+
+.VPHome .VPFeature .title {
+  color: #4C1D95;
+}
+
+.VPHome .VPFeature .details {
+  color: #5B21B6;
+}

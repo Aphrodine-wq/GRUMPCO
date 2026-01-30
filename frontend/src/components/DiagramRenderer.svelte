@@ -382,10 +382,10 @@
         style.setAttribute('data-node-highlight', 'true');
         style.textContent = `
           .selected-node {
-            filter: drop-shadow(0 0 4px #0EA5E9);
+            filter: drop-shadow(0 0 4px var(--color-primary));
           }
           .selected-node > * {
-            stroke: #0EA5E9 !important;
+            stroke: var(--color-primary) !important;
             stroke-width: 2px !important;
           }
         `;
@@ -636,8 +636,8 @@
 
   .action-btn:hover {
     background: #f5f5f5;
-    border-color: #0ea5e9;
-    color: #0ea5e9;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
   }
 
   .action-btn svg {
@@ -646,8 +646,8 @@
   }
 
   .generate-code-btn {
-    background: #0ea5e9;
-    border-color: #0ea5e9;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
     color: #ffffff;
   }
 
@@ -768,3 +768,4 @@
     }
   }
 </style>
+

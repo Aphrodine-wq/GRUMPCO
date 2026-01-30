@@ -317,11 +317,11 @@
   }
 
   .form-select:hover:not(:disabled) {
-    border-color: #0ea5e9;
+    border-color: var(--color-primary);
   }
 
   .form-select:focus {
-    border-color: #0ea5e9;
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
   }
 
@@ -332,7 +332,7 @@
 
   .generate-btn {
     padding: 0.75rem 1.5rem;
-    background: #0ea5e9;
+    background: var(--color-primary);
     color: #ffffff;
     border: none;
     border-radius: 4px;
@@ -393,3 +393,4 @@
     margin-bottom: 0.5rem;
   }
 </style>
+

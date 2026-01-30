@@ -100,7 +100,7 @@ npm run dev
 
   return `# ${projectName}
 
-Generated with Mermaid AI Code Generator
+Generated with G-Rump Code Generator
 
 ${stackInstructions[techStack]}
 

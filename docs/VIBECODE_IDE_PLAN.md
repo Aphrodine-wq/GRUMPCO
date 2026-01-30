@@ -1,7 +1,7 @@
 # VibeCode IDE: Software Engineer's Standpoint - Implementation Plan
 
 ## 🎯 Vision
-Transform the current Mermaid AI into a comprehensive **VibeCode IDE** that generates full-stack software projects through three sequential phases:
+Transform the current G-Rump into a comprehensive **VibeCode IDE** that generates full-stack software projects through three sequential phases:
 1. **Systems Architecture** (Mermaid C4 diagrams)
 2. **Product Requirements** (PRD generation)
 3. **Multi-Agent Code Generation** (Architect + Agent team)
@@ -538,3 +538,4 @@ README.md with setup instructions
 3. Do you want streaming agent updates or just final results?
 4. Any specific code generation preferences (file structure, patterns)?
 5. Should generated code include example data/seeding?
+
