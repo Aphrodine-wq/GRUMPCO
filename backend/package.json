@@ -50,7 +50,7 @@
     "@opentelemetry/auto-instrumentations-node": "^0.42.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.52.0",
     "@opentelemetry/resources": "^1.28.0",
-    "@opentelemetry/sdk-node": "^0.52.0",
+    "@opentelemetry/sdk-node": "^0.211.0",
     "@opentelemetry/sdk-trace-base": "^1.28.0",
     "@opentelemetry/semantic-conventions": "^1.28.0",
     "@supabase/supabase-js": "^2.91.1",
