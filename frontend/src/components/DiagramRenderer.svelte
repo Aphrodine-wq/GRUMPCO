@@ -5,6 +5,7 @@
   import ComponentInfoPanel from './ComponentInfoPanel.svelte';
   import { createEventDispatcher } from 'svelte';
   import { showToast } from '../stores/toastStore';
+  import DOMPurify from 'dompurify';
   import type { Component } from '../types/workflow';
 
   interface ArchitectureMetadata {
@@ -30,6 +31,7 @@
   }
 
   let svgContent = $state('');
+  let sanitizedSvgContent = $state('');
   let diagramRef: HTMLElement | null = $state(null);
   let isRendering = $state(false);
   let error = $state<string | null>(null);
@@ -64,6 +66,14 @@
       const elementId = `mermaid-diagram-${renderCount}`;
       const { svg } = await renderDiagram(elementId, mermaidCode);
       svgContent = svg;
+      
+      // Sanitize SVG content with DOMPurify before rendering
+      // Allow SVG-specific elements and attributes for Mermaid diagrams
+      sanitizedSvgContent = DOMPurify.sanitize(svg, {
+        USE_PROFILES: { svg: true, svgFilters: true },
+        ADD_TAGS: ['foreignObject'],
+        ADD_ATTR: ['dominant-baseline', 'text-anchor', 'transform', 'marker-end', 'marker-start']
+      });
 
       // Wait for DOM update
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -412,6 +422,7 @@
       performRender(code);
     } else {
       svgContent = '';
+      sanitizedSvgContent = '';
       isValidSyntax = true;
       selectedComponent = null;
     }
@@ -550,7 +561,7 @@
         }
       }}
     >
-      {@html svgContent}
+      {@html sanitizedSvgContent}
       {#if selectedComponent}
         <ComponentInfoPanel component={selectedComponent} onClose={closeComponentPanel} />
       {/if}

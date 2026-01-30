@@ -19,12 +19,12 @@
 ## Get Started (Users)
 
 Pick your path:
-- **Website (self‑hosted)**: deploy backend + frontend and use the web app.
-- **Windows Desktop App**: install the Tauri app and add your API key to `%APPDATA%\\com.grump.app\\.env`.
+- **Windows Desktop App** (Primary): Install the Tauri app and add your API key to `%APPDATA%\\com.grump.app\\.env`.
+- **Docker Container** (Linux): `docker run -it grump/cli:latest ship "Build a todo app"` — full isolation, no dependencies.
 - **CLI**: `npm install -g grump-cli` and run `grump ship "..."`.
-- **macOS App**: in progress (CI build only) — see `docs/MACOS_APP.md`.
+- **macOS App**: Coming soon — see `docs/MACOS_APP.md` for progress.
 
-See `docs/GETTING_STARTED.md` for the shortest path (website, Windows app, or CLI).
+See `docs/GETTING_STARTED.md` for the shortest path (Windows app, Docker, or CLI).
 
 ## Quick Start
 
@@ -38,8 +38,8 @@ See `docs/GETTING_STARTED.md` for the shortest path (website, Windows app, or CL
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/grump.git
-cd grump
+git clone https://github.com/Aphrodine-wq/G-rump.com.git
+cd G-rump.com
 
 # Install dependencies
 npm install
@@ -48,9 +48,10 @@ npm install
 cd backend
 npm run build
 
-# Build frontend
+# Build Windows desktop app
 cd ../frontend
 npm run build
+npm run tauri build
 
 # Build Rust intent compiler (optional)
 cd ../intent-compiler
@@ -60,14 +61,16 @@ cargo build --release
 ### Running
 
 ```bash
-# Development mode
+# Development mode (backend)
 cd backend && npm run dev
-cd frontend && npm run dev
 
-# Production mode
+# Development mode (desktop app)
+cd frontend && npm run tauri dev
+
+# Production mode (backend)
 cd backend && npm start
 
-# Docker (optimized)
+# Docker (Linux - optimized)
 docker-compose up
 ```
 
@@ -97,9 +100,43 @@ Savings: $1,975/month ($23,700/year)
 ```mermaid
 graph TB
     subgraph clients [Client Layer]
-        CLI[CLI Tool]
-        Desktop[Tauri Desktop]
-        Web[Web Frontend]
+        CLI[CLI Tool<br/>Windows/Linux/macOS]
+        Desktop[Tauri Desktop<br/>Windows Primary]
+        Docker[Docker Container<br/>Linux Primary]
+    end
+    
+    subgraph api [API Layer - Express]
+        Ship[/ship]
+        Chat[/chat]
+        Plan[/plan]
+        Codegen[/codegen]
+        RAG[/rag]
+        Agents[/agents]
+    end
+    
+    subgraph agentlightning [AgentLightning Core]
+        LitAgent[LitAgent<br/>Base Agent]
+        Runner[AgentRunner<br/>Execution]
+        Store[LightningStore<br/>SQLite/MongoDB]
+        
+        subgraph guardrails [Safety Guardrails]
+            ContentFilter[Content Filter]
+            PromptGuard[Prompt Guard]
+            RateLimiter[Rate Limiter]
+            UserMonitor[User Monitor]
+        end
+        
+        subgraph eval [Evaluation System]
+            Evaluator[Evaluator]
+            Benchmarks[Benchmarks]
+            Scorers[Scorers]
+        end
+    end
+    
+    subgraph ship [SHIP Workflow]
+        Spec[Spec] --> Hypothesis[Hypothesis]
+        Hypothesis --> Implement[Implement]
+        Implement --> Prove[Prove]
     end
     
     subgraph compiler [Compiler Layer]
@@ -111,36 +148,47 @@ graph TB
     subgraph runtime [Runtime Layer]
         Workers[Worker Threads]
         Cache[3-Tier Cache<br/>50% hit rate]
-        Router[Smart Router<br/>48% savings]
+        SmartRouter[Smart Router<br/>48% savings]
     end
     
     subgraph infra [Infrastructure]
         NIM[NVIDIA NIM GPU]
+        Kimi[Kimi K2.5]
+        OpenRouter[OpenRouter]
         Redis[Redis Cluster]
         Metrics[Cost Tracking]
     end
     
-    CLI --> WASM
-    Desktop --> WASM
-    Web --> WASM
+    CLI --> api
+    Desktop --> api
+    Docker --> api
     
-    WASM --> Workers
-    Workers --> Cache
-    Cache --> Router
+    api --> agentlightning
+    agentlightning --> ship
     
-    Router --> NIM
-    Router --> Metrics
+    Runner --> guardrails
+    Runner --> eval
+    
+    ship --> compiler
+    compiler --> runtime
+    
+    SmartRouter --> NIM
+    SmartRouter --> Kimi
+    SmartRouter --> OpenRouter
+    runtime --> Redis
+    runtime --> Metrics
 ```
 
 ## Key Technologies
 
-- **Frontend**: Svelte 5, Vite, TailwindCSS
+- **Desktop App**: Tauri 2.0, Svelte 5, Vite, TailwindCSS (Windows primary, macOS coming)
 - **Backend**: Express, TypeScript (compiled with SWC)
+- **AgentLightning**: Python agent framework with guardrails and eval
 - **Compiler**: Rust with rayon, LTO, SIMD
 - **Runtime**: Worker threads, multi-tier caching
-- **LLM**: NVIDIA NIM (Kimi K2.5), OpenRouter (multi-model)
-- **Infrastructure**: Docker, Redis, PostgreSQL/SQLite
-- **Monitoring**: Prometheus, OpenTelemetry
+- **LLM**: NVIDIA NIM, Kimi K2.5, OpenRouter (multi-model routing)
+- **Infrastructure**: Docker (Linux), Redis, SQLite/MongoDB
+- **Monitoring**: Prometheus, OpenTelemetry, AgentOps
 
 ## Security
 

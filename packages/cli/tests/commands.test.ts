@@ -61,8 +61,12 @@ describe('CLI Commands', () => {
     });
 
     it('should execute shipit command', async () => {
+      vi.useFakeTimers();
       const { shipitCommand } = await import('../src/commands/shipit.js');
-      await expect(shipitCommand.execute({ yolo: false, force: false })).resolves.not.toThrow();
+      const promise = shipitCommand.execute({ yolo: true, force: false });
+      await vi.runAllTimersAsync();
+      await expect(promise).resolves.not.toThrow();
+      vi.useRealTimers();
     });
   });
 

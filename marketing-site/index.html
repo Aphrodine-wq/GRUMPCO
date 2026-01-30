@@ -5,22 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>G-Rump – AI-Powered Development Assistant</title>
     <meta name="description" content="Generate architectures, PRDs, and full-stack apps from natural language. Claude Code quality." />
+    <meta name="theme-color" content="#7C3AED" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>G</text></svg>" />
+    <!-- Open Graph -->
+    <meta property="og:title" content="G-Rump – AI-Powered Development Assistant" />
+    <meta property="og:description" content="Generate architectures, PRDs, and full-stack apps from natural language." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://g-rump.com" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="G-Rump – AI-Powered Development Assistant" />
+    <meta name="twitter:description" content="Generate architectures, PRDs, and full-stack apps from natural language." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: "Space Grotesk", "Segoe UI", sans-serif; line-height: 1.6; color: #1B0F3A; background: radial-gradient(1200px 600px at 10% -10%, #EDE9FE 0%, #FFFFFF 55%), radial-gradient(900px 520px at 90% -20%, #DDD6FE 0%, #FFFFFF 60%), #FFFFFF; }
+      .skip-link { position: absolute; top: -100px; left: 0; background: #7C3AED; color: #fff; padding: 0.75rem 1.5rem; z-index: 100; border-radius: 0 0 0.5rem 0; transition: top 0.3s; }
+      .skip-link:focus { top: 0; }
       .container { max-width: 1040px; margin: 0 auto; padding: 0 1.75rem; }
       header { padding: 1.5rem 0; border-bottom: 1px solid #E9D5FF; backdrop-filter: blur(12px); position: sticky; top: 0; background: rgba(255, 255, 255, 0.75); z-index: 10; }
       nav { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-      .logo { font-weight: 700; font-size: 1.35rem; letter-spacing: 0.01em; }
+      .logo { font-weight: 700; font-size: 1.35rem; letter-spacing: 0.01em; text-decoration: none; color: #1B0F3A; }
+      .logo:focus { outline: 2px solid #7C3AED; outline-offset: 2px; }
       .nav-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-      .nav-links a { color: #4C1D95; text-decoration: none; font-weight: 500; }
+      .nav-links a { color: #4C1D95; text-decoration: none; font-weight: 500; padding: 0.5rem; border-radius: 0.25rem; }
       .nav-links a:hover { color: #7C3AED; }
+      .nav-links a:focus { outline: 2px solid #7C3AED; outline-offset: 2px; }
+      /* Mobile menu */
+      .menu-toggle { display: none; background: none; border: none; cursor: pointer; padding: 0.5rem; }
+      .menu-toggle svg { width: 24px; height: 24px; stroke: #4C1D95; }
+      @media (max-width: 640px) {
+        .menu-toggle { display: block; }
+        .nav-links { display: none; flex-direction: column; width: 100%; gap: 0.5rem; padding-top: 1rem; }
+        .nav-links.open { display: flex; }
+        .nav-links a { padding: 0.75rem 1rem; min-height: 44px; display: flex; align-items: center; }
+      }
       .hero { padding: 5rem 0 4rem; text-align: center; }
-      .hero h1 { font-size: clamp(2.5rem, 4vw, 3.5rem); margin-bottom: 1rem; }
+      .hero h1 { font-size: clamp(2rem, 4vw, 3.5rem); margin-bottom: 1rem; }
       .hero p { font-size: 1.2rem; color: #5B21B6; max-width: 38rem; margin: 0 auto 2rem; }
-      .cta { display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #7C3AED, #5B21B6); color: #fff; padding: 0.8rem 1.75rem; border-radius: 999px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 24px rgba(124, 58, 237, 0.28); transition: transform 0.2s; }
+      .cta { display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #7C3AED, #5B21B6); color: #fff; padding: 0.8rem 1.75rem; border-radius: 999px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 24px rgba(124, 58, 237, 0.28); transition: transform 0.2s; min-height: 44px; }
       .cta:hover { transform: translateY(-2px); }
+      .cta:focus { outline: 2px solid #7C3AED; outline-offset: 2px; }
       .cta-secondary { background: transparent; border: 2px solid #7C3AED; color: #7C3AED; box-shadow: none; }
       .cta-secondary:hover { background: #7C3AED; color: #fff; }
       .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
@@ -68,36 +95,45 @@
       .plan .plan-cta.secondary { background: transparent; border: 2px solid #7C3AED; color: #7C3AED; }
       .plan .plan-cta:hover { transform: translateY(-1px); }
 
+      .action-btn:focus, .plan-cta:focus, .copy-btn:focus { outline: 2px solid #7C3AED; outline-offset: 2px; }
+
       footer { padding: 2rem 0; border-top: 1px solid #E9D5FF; color: #6D28D9; font-size: 0.875rem; text-align: center; }
-      footer a { color: #7C3AED; text-decoration: none; }
+      footer a { color: #7C3AED; text-decoration: none; padding: 0.25rem; }
       footer a:hover { text-decoration: underline; }
+      footer a:focus { outline: 2px solid #7C3AED; outline-offset: 2px; }
       .footer-links { display: flex; gap: 2rem; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap; }
     </style>
   </head>
   <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <header>
       <div class="container">
         <nav>
-          <span class="logo">G-Rump</span>
+          <a href="index.html" class="logo">G-Rump</a>
+          <button class="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false" onclick="this.nextElementSibling.classList.toggle('open'); this.setAttribute('aria-expanded', this.nextElementSibling.classList.contains('open'));">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M3 12h18M3 6h18M3 18h18"/>
+            </svg>
+          </button>
           <div class="nav-links">
             <a href="#install">Install</a>
             <a href="#features">Features</a>
             <a href="#modes">Ways to use</a>
             <a href="#pricing">Pricing</a>
             <a href="docs.html">Docs</a>
-            <a href="https://app.g-rump.com/#/register" target="_blank" rel="noopener">Sign up</a>
+            <a href="https://github.com/Aphrodine-wq/G-rump.com/releases" target="_blank" rel="noopener">Download</a>
           </div>
         </nav>
       </div>
     </header>
-    <main>
+    <main id="main-content">
       <section class="hero">
         <div class="container">
           <h1>AI-Powered Development Assistant</h1>
           <p>Generate architectures, PRDs, and full-stack applications from natural language. Claude Code quality, multi-agent pipeline, and production-ready output.</p>
           <div class="hero-buttons">
-            <a href="https://app.g-rump.com/#/register" class="cta" target="_blank" rel="noopener">Get started free</a>
-            <a href="#install" class="cta cta-secondary">View install options</a>
+            <a href="https://github.com/Aphrodine-wq/G-rump.com/releases" class="cta" target="_blank" rel="noopener">Download for Windows</a>
+            <a href="#install" class="cta cta-secondary">View all options</a>
           </div>
         </div>
       </section>
@@ -110,38 +146,8 @@
           <div class="install-boxes">
             <div class="install-box">
               <h3>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                NPM (Node.js)
-              </h3>
-              <div class="install-code">
-                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                <code><span class="comment"># Install globally via npm</span>
-npm install -g @g-rump/cli
-
-<span class="comment"># Or use npx without installing</span>
-npx @g-rump/cli ship "Build a todo app"</code>
-              </div>
-              <p class="install-note">Requires Node.js 18+ installed</p>
-            </div>
-            <div class="install-box">
-              <h3>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
-                Linux / macOS
-              </h3>
-              <div class="install-code">
-                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                <code><span class="comment"># One-line install script</span>
-curl -fsSL https://get.g-rump.com | bash
-
-<span class="comment"># Or with wget</span>
-wget -qO- https://get.g-rump.com | bash</code>
-              </div>
-              <p class="install-note">Installs to ~/.g-rump/bin and adds to PATH</p>
-            </div>
-            <div class="install-box">
-              <h3>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l6-3.25 6 3.25v5.25l-6 3.25-6-3.25zm6-5.19L5.08 8.5 9 10.31l3.92-1.81L9 6.81zm4 4.69v2.94l-4 2.18V14.5l4-1.81zm-5 2.18L4 11.5v2.94l4 2.18v-2.94zM21 18H3v2h18v-2zm0-6H3v2h18v-2zm0-6H3v2h18V6z"/></svg>
-                Windows
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-label="Windows icon"><path d="M3 12V6.75l6-3.25 6 3.25v5.25l-6 3.25-6-3.25zm6-5.19L5.08 8.5 9 10.31l3.92-1.81L9 6.81zm4 4.69v2.94l-4 2.18V14.5l4-1.81zm-5 2.18L4 11.5v2.94l4 2.18v-2.94zM21 18H3v2h18v-2zm0-6H3v2h18v-2zm0-6H3v2h18V6z"/></svg>
+                Windows (Primary)
               </h3>
               <div class="install-code">
                 <button class="copy-btn" onclick="copyCode(this)">Copy</button>
@@ -151,12 +157,12 @@ irm https://get.g-rump.com/win | iex
 <span class="comment"># Or download the installer</span>
 <span class="comment"># from GitHub Releases</span></code>
               </div>
-              <p class="install-note">Or download <a href="https://github.com/Aphrodine-wq/G-rump.com/releases" style="color:#A78BFA;">Windows installer</a></p>
+              <p class="install-note">Or download <a href="https://github.com/Aphrodine-wq/G-rump.com/releases" style="color:#A78BFA;">Windows installer (.msi)</a></p>
             </div>
             <div class="install-box">
               <h3>
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
-                Docker
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-label="Docker icon"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                Docker (Linux)
               </h3>
               <div class="install-code">
                 <button class="copy-btn" onclick="copyCode(this)">Copy</button>
@@ -168,6 +174,33 @@ docker run -it --rm grump/cli ship \
               </div>
               <p class="install-note">Full isolation, no local dependencies</p>
             </div>
+            <div class="install-box">
+              <h3>
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-label="NPM icon"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                NPM (Node.js CLI)
+              </h3>
+              <div class="install-code">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <code><span class="comment"># Install globally via npm</span>
+npm install -g @g-rump/cli
+
+<span class="comment"># Or use npx without installing</span>
+npx @g-rump/cli ship "Build a todo app"</code>
+              </div>
+              <p class="install-note">Requires Node.js 18+ installed</p>
+            </div>
+            <div class="install-box" style="border-color: rgba(168, 85, 247, 0.3);">
+              <h3>
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-label="macOS icon"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                macOS (Coming Soon)
+              </h3>
+              <div class="install-code" style="opacity: 0.7;">
+                <code><span class="comment"># macOS app in development</span>
+<span class="comment"># Sign up to be notified:</span>
+<span class="comment"># g-rump.com/macos-beta</span></code>
+              </div>
+              <p class="install-note">Universal binary (Intel + Apple Silicon) coming Q1 2026</p>
+            </div>
           </div>
         </div>
       </section>
@@ -177,14 +210,14 @@ docker run -it --rm grump/cli ship \
           <h2>Ways to use G-Rump</h2>
           <div class="modes">
             <div class="mode">
-              <h3>Website</h3>
-              <p>Deploy the backend + frontend once, then use the web app from anywhere.</p>
-              <a href="https://app.g-rump.com" target="_blank" rel="noopener">Open web app &rarr;</a>
+              <h3>Windows Desktop</h3>
+              <p>Native Tauri app with full system integration. Our primary platform.</p>
+              <a href="https://github.com/Aphrodine-wq/G-rump.com/releases" target="_blank" rel="noopener">Download for Windows &rarr;</a>
             </div>
             <div class="mode">
-              <h3>Desktop App</h3>
-              <p>Install the Tauri desktop app for Windows, macOS, or Linux.</p>
-              <a href="https://github.com/Aphrodine-wq/G-rump.com/releases" target="_blank" rel="noopener">Download &rarr;</a>
+              <h3>Docker (Linux)</h3>
+              <p>Full isolation in a container. Perfect for CI/CD and server deployments.</p>
+              <a href="#install">View Docker commands &rarr;</a>
             </div>
             <div class="mode">
               <h3>CLI</h3>

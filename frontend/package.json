@@ -32,7 +32,9 @@
   "dependencies": {
     "@grump/shared-types": "*",
     "@supabase/supabase-js": "^2.91.1",
+    "@types/dompurify": "^3.0.5",
     "diff": "^5.2.0",
+    "dompurify": "^3.3.1",
     "jspdf": "^4.0.0",
     "mermaid": "^10.9.0",
     "shiki": "^1.1.0",
