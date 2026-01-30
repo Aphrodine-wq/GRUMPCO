@@ -16,6 +16,10 @@
   "description": "G-Rump AI development platform monorepo",
   "license": "MIT",
   "scripts": {
+    "setup": "node scripts/setup.js",
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
     "build": "npm run build --prefix frontend",
     "build:packages": "npm run build --prefix packages/shared-types && npm run build --prefix packages/ai-core",
     "vercel-build": "npm run build:packages && npm run build --prefix backend",
@@ -29,6 +33,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "concurrently": "^8.2.0",
     "husky": "^9.0.0",
     "lint-staged": "^15.0.0"
   },
