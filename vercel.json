@@ -2,6 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "name": "g-rump",
+  "public": true,
+  "cleanUrls": true,
+  "trailingSlash": false,
   "builds": [
     {
       "src": "marketing-site/**",
@@ -20,6 +23,14 @@
     {
       "src": "/health(.*)",
       "dest": "backend/dist/index.js"
+    },
+    {
+      "src": "/",
+      "dest": "marketing-site/index.html"
+    },
+    {
+      "src": "/(docs\\.html|robots\\.txt|sitemap\\.xml)",
+      "dest": "marketing-site/$1"
     },
     {
       "src": "/(.*)",
@@ -52,6 +63,24 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        }
+      ]
+    },
+    {
+      "source": "/marketing-site/(.*\\.html)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(robots\\.txt|sitemap\\.xml)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
         }
       ]
     }
