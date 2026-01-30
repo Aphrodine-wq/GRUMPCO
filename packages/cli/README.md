@@ -37,6 +37,11 @@ npx grump-cli
 grump config set apiUrl http://localhost:3000
 ```
 
+If you host G‑Rump, use your production API URL:
+```bash
+grump config set apiUrl https://api.g-rump.com
+```
+
 2) Authenticate (required if your server enforces auth):
 ```bash
 grump auth login

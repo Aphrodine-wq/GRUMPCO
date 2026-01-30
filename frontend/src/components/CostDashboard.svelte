@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { getApiBase } from '../lib/api';
 
   interface CostSummary {
     totalCost: number;
@@ -35,7 +36,7 @@
   let error: string | null = null;
   let refreshInterval: number | null = null;
 
-  const API_BASE = 'http://localhost:3000/api/cost';
+  const API_BASE = `${getApiBase()}/api/cost`;
 
   async function fetchData() {
     try {

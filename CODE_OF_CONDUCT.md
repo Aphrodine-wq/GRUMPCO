@@ -48,7 +48,7 @@ appointed representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the
-project team responsible for enforcement at: security@grump.example.
+project team responsible for enforcement at: security@g-rump.com.
 
 All complaints will be reviewed and investigated promptly and fairly. The project team is
 obligated to respect the privacy and security of the reporter of any incident.

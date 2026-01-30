@@ -11,7 +11,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /QUICK_START
+      link: /GETTING_STARTED
     - theme: alt
       text: View Architecture
       link: /SYSTEM_ARCHITECTURE

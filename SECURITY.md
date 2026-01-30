@@ -10,7 +10,7 @@ version, please upgrade before reporting an issue unless the issue is clearly st
 Please report security issues via one of the following:
 
 - GitHub Security Advisories (preferred)
-- Email: security@grump.example
+- Email: security@g-rump.com
 
 Please do not open public issues for security vulnerabilities.
 

@@ -29,6 +29,18 @@ import { refactorCommand } from './commands/refactor.js';
 import { whyCommand } from './commands/why.js';
 import { fortuneCommand } from './commands/fortune.js';
 
+// Import batch 2 funny commands
+import { overtimeCommand } from './commands/overtime.js';
+import { meetingCommand } from './commands/meeting.js';
+import { stackoverflowCommand } from './commands/stackoverflow.js';
+import { fmlCommand } from './commands/fml.js';
+import { internCommand } from './commands/intern.js';
+import { legacyCommand } from './commands/legacy.js';
+import { yeetCommand } from './commands/yeet.js';
+import { techDebtCommand } from './commands/techdebt.js';
+import { fridayCommand } from './commands/friday.js';
+import { imposterCommand } from './commands/imposter.js';
+
 import { displayError } from './utils/errors.js';
 
 const program = new Command();
@@ -465,6 +477,202 @@ program
         await fortuneCommand.execute({
           category: options.category,
           sign: options.sign
+        });
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Overtime command - Calculate unpaid overtime
+  program
+    .command('overtime')
+    .description('Calculate how much unpaid overtime you\'ve worked')
+    .option('-h, --hours <number>', 'Weekly hours worked', '45')
+    .option('-r, --rate <number>', 'Hourly rate', '50')
+    .option('-w, --weeks <number>', 'Weeks per year', '52')
+    .action(async (options) => {
+      try {
+        await overtimeCommand.execute({
+          hours: parseInt(options.hours),
+          rate: parseInt(options.rate),
+          weeks: parseInt(options.weeks)
+        });
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Meeting command - Meeting survival guide
+  program
+    .command('meeting')
+    .description('Meeting survival guide and excuse generator')
+    .option('-e, --excuse', 'Generate meeting excuse', false)
+    .option('-t, --tip', 'Get survival tip', false)
+    .option('--type <type>', 'Meeting type: standup, planning, retro, allhands, oneOnOne, brainstorm')
+    .action(async (options) => {
+      try {
+        await meetingCommand.execute({
+          excuse: options.excuse,
+          tip: options.tip,
+          type: options.type
+        });
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // StackOverflow command - Simulate SO experience
+  program
+    .command('stackoverflow')
+    .alias('so')
+    .description('Simulate the StackOverflow experience')
+    .option('-q, --question <question>', 'Simulate asking a question')
+    .option('-e, --experience', 'Full SO experience', false)
+    .action(async (options) => {
+      try {
+        await stackoverflowCommand.execute({
+          question: options.question,
+          experience: options.experience
+        });
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // FML command - Fix My Life mode
+  program
+    .command('fml')
+    .description('FML (Fix My Life) mode for when everything is broken')
+    .option('-v, --vent', 'Venting mode', false)
+    .option('-h, --help-me', 'Show survival kit', false)
+    .action(async (options) => {
+      try {
+        await fmlCommand.execute({
+          vent: options.vent,
+          help: options.helpMe
+        });
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Intern command - Intern simulator
+  program
+    .command('intern')
+    .description('Intern simulator and code patterns')
+    .option('-e, --excuse', 'Generate intern excuse', false)
+    .option('-a, --achievement', 'Show achievements', false)
+    .action(async (options) => {
+      try {
+        await internCommand.execute({
+          excuse: options.excuse,
+          achievement: options.achievement
+        });
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Legacy command - Legacy code therapy
+  program
+    .command('legacy')
+    .description('Legacy code therapy and archaeology')
+    .option('-h, --horror', 'Show legacy horrors', false)
+    .option('-e, --excuse', 'Excuse for not refactoring', false)
+    .option('-t, --tips', 'Code archaeology tips', false)
+    .option('-a, --age <years>', 'Estimated code age')
+    .action(async (options) => {
+      try {
+        await legacyCommand.execute({
+          horror: options.horror,
+          excuse: options.excuse,
+          tips: options.tips,
+          age: options.age ? parseInt(options.age) : undefined
+        });
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Yeet command - Dramatically delete code
+  program
+    .command('yeet')
+    .description('YEET code or ideas into the void')
+    .argument('[target]', 'What to yeet')
+    .option('-d, --dramatic', 'Dramatic yeet sequence', false)
+    .option('-w, --wisdom', 'Show yeet wisdom', false)
+    .action(async (target, options) => {
+      try {
+        await yeetCommand.execute(target, {
+          target,
+          dramatic: options.dramatic,
+          wisdom: options.wisdom
+        });
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Tech debt command - Measure technical debt
+  program
+    .command('techdebt')
+    .alias('debt')
+    .description('Measure and lament your technical debt')
+    .option('-e, --excuses', 'Excuses for not fixing debt', false)
+    .option('-s, --strategies', 'Debt payoff strategies', false)
+    .action(async (options) => {
+      try {
+        await techDebtCommand.execute({
+          excuses: options.excuses,
+          strategies: options.strategies
+        });
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Friday command - Friday deploy checker
+  program
+    .command('friday')
+    .description('Friday deployment checker and predictor')
+    .option('-e, --excuse', 'Generate emergency excuse', false)
+    .option('-g, --guide', 'Show survival guide', false)
+    .option('-f, --force', 'Force deploy anyway', false)
+    .action(async (options) => {
+      try {
+        await fridayCommand.execute({
+          excuse: options.excuse,
+          guide: options.guide,
+          force: options.force
+        });
+      } catch (error) {
+        displayError(error as Error);
+        process.exit(1);
+      }
+    });
+
+  // Imposter command - Imposter syndrome therapy
+  program
+    .command('imposter')
+    .description('Imposter syndrome therapy and validation')
+    .option('-t, --truth', 'Show uncomfortable truths', false)
+    .option('-a, --affirm', 'Developer affirmations', false)
+    .option('-s, --stats', 'Industry imposter stats', false)
+    .action(async (options) => {
+      try {
+        await imposterCommand.execute({
+          truth: options.truth,
+          affirm: options.affirm,
+          stats: options.stats
         });
       } catch (error) {
         displayError(error as Error);

@@ -58,3 +58,63 @@ const motivations = {
   chaotic: [
     "Embrace the chaos! Your code already has.",
     "Who needs clean code when you have... this?",
+    "Ship it! What could possibly go wrong?",
+    "Your code is like modern art. Nobody understands it, but it exists.",
+    "YOLO-driven development at its finest.",
+    "Deploy to production! The users are the real QA.",
+    "Comments are for the weak. Real devs read minds.",
+    "Tests are optional. Confidence is mandatory.",
+    "Push to main with your eyes closed. Pure adrenaline.",
+    "Delete that branch. Start fresh. Burn it all down."
+  ]
+};
+
+interface MotivateOptions {
+  level?: string;
+  count?: number;
+}
+
+export async function execute(options: MotivateOptions = {}): Promise<void> {
+  console.log(branding.getLogo('sassy'));
+  console.log(branding.format('\n  💪 BACKHANDED MOTIVATION 💪\n', 'title'));
+  
+  const level = (options.level || 'random') as keyof typeof motivations | 'random';
+  const count = options.count || 3;
+  
+  let selectedMotivations: string[];
+  
+  if (level === 'random') {
+    const allMotivations = Object.values(motivations).flat();
+    selectedMotivations = shuffleArray(allMotivations).slice(0, count);
+  } else if (motivations[level]) {
+    selectedMotivations = shuffleArray(motivations[level]).slice(0, count);
+  } else {
+    selectedMotivations = shuffleArray(motivations.realistic).slice(0, count);
+  }
+  
+  console.log(chalk.hex(branding.colors.mediumPurple)(`  📣 YOUR MOTIVATION (${level.toUpperCase()}):\n`));
+  
+  for (let i = 0; i < selectedMotivations.length; i++) {
+    await delay(500);
+    console.log(chalk.hex(branding.colors.white)(`    ${i + 1}. ${selectedMotivations[i]}`));
+  }
+  
+  console.log('\n' + branding.getDivider());
+  console.log(branding.format(`\n  ${branding.getSass()}\n`, 'sassy'));
+  console.log(branding.status('Now get back to work. These bugs won\'t fix themselves.', 'sassy'));
+}
+
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export const motivateCommand = { execute };

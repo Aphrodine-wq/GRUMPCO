@@ -23,6 +23,11 @@
       .cta:hover { transform: translateY(-1px); }
       section { padding: 3.5rem 0; }
       section h2 { font-size: 1.85rem; margin-bottom: 1.5rem; }
+      .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
+      .mode { border: 1px solid #E9D5FF; border-radius: 1rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.8); }
+      .mode h3 { font-size: 1.1rem; margin-bottom: 0.35rem; }
+      .mode p { color: #5B21B6; font-size: 0.95rem; margin-bottom: 0.75rem; }
+      .mode a { color: #7C3AED; font-weight: 600; text-decoration: none; }
       .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
       .feature { border: 1px solid #E9D5FF; border-radius: 1rem; padding: 1.75rem; background: rgba(255, 255, 255, 0.7); box-shadow: 0 12px 30px rgba(91, 33, 182, 0.08); }
       .feature h3 { font-size: 1.15rem; margin-bottom: 0.5rem; }
@@ -44,8 +49,9 @@
           <span class="logo">G-Rump</span>
           <div class="nav-links">
             <a href="#features">Features</a>
+            <a href="#modes">Ways to use</a>
             <a href="#pricing">Pricing</a>
-            <a href="http://localhost:5178/#/register" target="_blank" rel="noopener">Sign up</a>
+            <a href="https://app.g-rump.com/#/register" target="_blank" rel="noopener">Sign up</a>
           </div>
         </nav>
       </div>
@@ -55,7 +61,29 @@
         <div class="container">
           <h1>AI-Powered Development Assistant</h1>
           <p>Generate architectures, PRDs, and full-stack applications from natural language. Claude Code quality, multi-agent pipeline, and production-ready output.</p>
-          <a href="http://localhost:5178/#/register" class="cta" target="_blank" rel="noopener">Get started</a>
+          <a href="https://app.g-rump.com/#/register" class="cta" target="_blank" rel="noopener">Get started</a>
+        </div>
+      </section>
+      <section id="modes">
+        <div class="container">
+          <h2>Ways to use G‑Rump</h2>
+          <div class="modes">
+            <div class="mode">
+              <h3>Website</h3>
+              <p>Deploy the backend + frontend once, then use the web app from anywhere.</p>
+              <a href="https://app.g-rump.com" target="_blank" rel="noopener">Open web app →</a>
+            </div>
+            <div class="mode">
+              <h3>Windows App</h3>
+              <p>Install the Tauri desktop app for a fast local experience.</p>
+              <a href="https://github.com/Aphrodine-wq/G-rump.com" target="_blank" rel="noopener">Get installer →</a>
+            </div>
+            <div class="mode">
+              <h3>CLI</h3>
+              <p>Automate workflows with `grump ship`, `grump codegen`, and more.</p>
+              <a href="https://github.com/Aphrodine-wq/G-rump.com" target="_blank" rel="noopener">Install CLI →</a>
+            </div>
+          </div>
         </div>
       </section>
       <section id="features">

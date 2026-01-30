@@ -17,7 +17,7 @@ Best for teams or shared use.
 
 1. Deploy backend + frontend (see `backend/DEPLOY_VERCEL.md` or `DEPLOYMENT_SUMMARY.md`).
 2. Set production security flags (see `docs/SECURITY_BASELINE.md`).
-3. Point users to your web URL and have them sign in.
+3. Point users to your web URL and have them sign in (example: `https://app.g-rump.com`).
 
 ### 2) Windows Desktop App (Tauri)
 

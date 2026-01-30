@@ -11,4 +11,6 @@ Static landing and pricing page for G-Rump. Open `index.html` in a browser or se
 
 ## Production
 
-Replace `http://localhost:5178` with your web app URL (e.g. `https://app.grump.example.com`) in links before deploying.
+Update the app links in `index.html` to match your real deployment:
+- Web app: `https://app.g-rump.com`
+- GitHub: `https://github.com/Aphrodine-wq/G-rump.com`

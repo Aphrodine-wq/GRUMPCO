@@ -24,7 +24,7 @@ Pick your path:
 - **CLI**: `npm install -g grump-cli` and run `grump ship "..."`.
 - **macOS App**: in progress (CI build only) — see `docs/MACOS_APP.md`.
 
-See `docs/GETTING_STARTED.md` for the shortest path.
+See `docs/GETTING_STARTED.md` for the shortest path (website, Windows app, or CLI).
 
 ## Quick Start
 

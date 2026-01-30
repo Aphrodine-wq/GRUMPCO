@@ -42,7 +42,7 @@ export default defineConfig({
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/your-org/grump' }
+      { icon: 'github', link: 'https://github.com/Aphrodine-wq/G-rump.com' }
     ]
   },
   // We will map the root docs folder to be available here, 

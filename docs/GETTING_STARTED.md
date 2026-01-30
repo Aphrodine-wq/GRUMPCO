@@ -8,7 +8,7 @@ Best for teams or shared use.
 
 1. Deploy backend + frontend (see `backend/DEPLOY_VERCEL.md` or `DEPLOYMENT_SUMMARY.md`).
 2. Apply production security (`docs/SECURITY_BASELINE.md`).
-3. Open your web URL and sign in.
+3. Open your web URL and sign in (example: `https://app.g-rump.com`).
 
 ## 2) Windows Desktop App
 
@@ -34,5 +34,5 @@ grump ship "Build a todo app with auth"
 ```
 
 Notes:
-- Default API URL is `http://localhost:3000`.
+- Default API URL is `http://localhost:3000` (set to your production URL if hosted).
 - Set `GRUMP_API_URL` / `GRUMP_API_KEY` for CI or scripts.
