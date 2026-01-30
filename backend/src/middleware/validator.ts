@@ -21,15 +21,65 @@ export const MAX_PROJECT_NAME_LENGTH = 2000;
 export const MAX_ARCHITECTURE_DESCRIPTION_LENGTH = 16000;
 
 
-// Basic prompt injection patterns to detect
+// Comprehensive prompt injection patterns to detect
+// These patterns catch common jailbreak and prompt injection attempts
 const SUSPICIOUS_PATTERNS: RegExp[] = [
-  /ignore\s+(all\s+)?(previous|prior|above)/i,
-  /disregard\s+(all\s+)?(previous|prior|above)/i,
-  /forget\s+(all\s+)?(previous|prior|above)/i,
+  // Classic instruction override attempts
+  /ignore\s+(all\s+)?(previous|prior|above|earlier|initial)/i,
+  /disregard\s+(all\s+)?(previous|prior|above|earlier|initial)/i,
+  /forget\s+(all\s+)?(previous|prior|above|earlier|initial)/i,
+  /override\s+(all\s+)?(previous|prior|above|earlier|initial)/i,
+  /bypass\s+(all\s+)?(previous|prior|above|earlier|initial)/i,
+  
+  // New instruction injection
   /new\s+instructions?:/i,
   /system\s*:\s*/i,
   /\[INST\]/i,
   /<<SYS>>/i,
+  /<\|im_start\|>/i,
+  /<\|system\|>/i,
+  /\[system\]/i,
+  
+  // Role manipulation attempts - more specific patterns to avoid false positives
+  /you\s+are\s+now\s+(a\s+)?different/i,
+  /pretend\s+(you('re|\s+are)\s+)?(to\s+be\s+)?a\s+different/i,
+  /pretend\s+(you('re|\s+are)\s+)?(to\s+be\s+)?(an?\s+)?(unrestricted|evil|malicious|hacker)/i,
+  /act\s+as\s+(if\s+you\s+(are|were)\s+)?(a\s+)?different/i,
+  /act\s+as\s+(if\s+you\s+(are|were)\s+)?(an?\s+)?(unrestricted|evil|malicious)/i,
+  /roleplay\s+as\s+(an?\s+)?(unrestricted|evil|malicious|hacker)/i,
+  
+  // Mode switching - specific dangerous modes only
+  /switch\s+to\s+(developer|god|unrestricted|unfiltered|jailbreak)\s*mode/i,
+  /enter\s+(developer|god|unrestricted|unfiltered|jailbreak)\s*mode/i,
+  /enable\s+(developer|god|unrestricted|unfiltered|jailbreak)\s*mode/i,
+  
+  // Jailbreak keywords
+  /dan\s*mode/i,
+  /developer\s*mode\s*(enabled|on|activated)/i,
+  /god\s*mode\s*(enabled|on|activated)/i,
+  /activate\s+god\s*mode/i,
+  /unrestricted\s*mode/i,
+  /unfiltered\s*mode/i,
+  /\bjailbreak\b/i,
+  /do\s+anything\s+now/i,
+  
+  // Prompt leaking attempts
+  /reveal\s+(your|the)\s+(system|initial)\s+(prompt|instructions)/i,
+  /show\s+(me\s+)?(your|the)\s+(system|initial)\s+(prompt|instructions)/i,
+  /what\s+(are|is)\s+your\s+(system|initial)\s+(prompt|instructions)/i,
+  /print\s+(your|the)\s+(system|initial)\s+(prompt|instructions)/i,
+  /output\s+(your|the)\s+(system|initial)\s+(prompt|instructions)/i,
+  /repeat\s+(your|the)\s+(system|initial)\s+(prompt|instructions)/i,
+  
+  // Base64/encoding evasion attempts
+  /base64\s*decode/i,
+  /atob\s*\(/i,
+  /eval\s*\(/i,
+  
+  // Delimiter injection
+  /```system/i,
+  /---\s*system/i,
+  /\*\*\*\s*system/i,
 ];
 
 function sanitizeControlChars(value: string): string {

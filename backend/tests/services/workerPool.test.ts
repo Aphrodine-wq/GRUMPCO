@@ -140,8 +140,8 @@ describe('WorkerPool', () => {
       const stats = pool.getStats();
       
       expect(stats.busyWorkers).toBeGreaterThanOrEqual(0);
-      expect(stats.workerUtilization).toBeGreaterThanOrEqual(0);
-      expect(stats.workerUtilization).toBeLessThanOrEqual(1);
+      expect(stats.metrics.workerUtilization).toBeGreaterThanOrEqual(0);
+      expect(stats.metrics.workerUtilization).toBeLessThanOrEqual(1);
     });
   });
 
