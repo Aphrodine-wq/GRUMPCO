@@ -31,6 +31,7 @@ When the backend is publicly reachable (e.g. web app, public API), you **must**:
 
 - [ ] Set `REDIS_HOST` (and `REDIS_PORT` if not 6379) so rate limiting is shared across restarts and replicas (see [CAPABILITIES.md](CAPABILITIES.md)).
 - [ ] Configure Upstash QStash for asynchronous tasks (see `backend/DEPLOY_VERCEL.md`).
+- **Redis unavailable:** If Redis is down, the app runs with in-memory rate limiting (not shared) and no L2 cache. See [RUNBOOK_REDIS](RUNBOOK_REDIS.md) for behavior and recovery.
 
 ## Abuse Prevention
 
@@ -57,6 +58,11 @@ When the backend is publicly reachable (e.g. web app, public API), you **must**:
 
 - **If the backend is public:** Set `REQUIRE_AUTH_FOR_API=true` to require auth for `/api/chat`, `/api/ship`, and `/api/codegen`. Unauthenticated requests to those paths will receive 401.
 - **If the backend is only used by a desktop app or internal services:** Keep it off the public internet or behind a VPN/private network and document that as the production posture.
+
+## Runbooks
+
+- **Redis unavailable:** [RUNBOOK_REDIS](RUNBOOK_REDIS.md)
+- **NIM down, high error rate, cost spike:** [RUNBOOK](RUNBOOK.md)
 
 ## Quick Reference
 
