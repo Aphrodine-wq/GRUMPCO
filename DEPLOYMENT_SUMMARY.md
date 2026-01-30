@@ -42,7 +42,7 @@ Date: 2026-01-30
 
 ### Prerequisites
 1. Vercel CLI: `npm i -g vercel`
-2. Anthropic API key: https://console.anthropic.com
+2. NVIDIA NIM API key: https://build.nvidia.com (or OpenRouter: https://openrouter.ai)
 3. Supabase account: https://supabase.com
 4. Upstash QStash: https://upstash.com
 
@@ -70,7 +70,8 @@ npm run deploy:setup:win
 
 Or manually set environment variables in Vercel:
 ```bash
-vercel env add ANTHROPIC_API_KEY production
+vercel env add NVIDIA_NIM_API_KEY production
+# OR: vercel env add OPENROUTER_API_KEY production
 vercel env add SUPABASE_URL production
 vercel env add SUPABASE_SERVICE_KEY production
 vercel env add QSTASH_TOKEN production
@@ -121,7 +122,7 @@ curl https://your-frontend.vercel.app
 ### Required
 | Variable | Description |
 |----------|-------------|
-| `ANTHROPIC_API_KEY` | Anthropic API key for AI features |
+| `NVIDIA_NIM_API_KEY` | NVIDIA NIM API key for Kimi K2.5 (or use OPENROUTER_API_KEY) |
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_KEY` | Supabase service_role key |
 | `QSTASH_TOKEN` | QStash token for async jobs |
@@ -141,9 +142,10 @@ curl https://your-frontend.vercel.app
 ### Optional
 | Variable | Description |
 |----------|-------------|
+| `OPENROUTER_API_KEY` | OpenRouter API key (alternative to NVIDIA NIM) |
 | `REDIS_HOST` | Redis for caching/rate limiting |
 | `STRIPE_SECRET_KEY` | For billing features |
-| `NVIDIA_NIM_API_KEY` | For GPU acceleration |
+| `NVIDIA_NIM_URL` | For self-hosted NIM deployment |
 | `METRICS_AUTH` | Basic auth for /metrics endpoint |
 
 ---

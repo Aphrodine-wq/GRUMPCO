@@ -42,7 +42,7 @@ Future enhancements:
 
 ## 4. Intent Optimizer
 
-Today, G-Rump uses the Rust Intent Compiler (`grump-intent`) plus Claude enrichment in
+Today, G-Rump uses the Rust Intent Compiler (`grump-intent`) plus LLM enrichment in
 `backend/src/services/intentCompilerService.ts` to extract actors, features, data flows, and tech stack hints.
 
 Planned “Intent Optimizer” capabilities:
@@ -56,13 +56,13 @@ Planned “Intent Optimizer” capabilities:
 
 Current state:
 
-- Intent parsing is handled by the Rust CLI (`grump-intent`), which the backend calls and then enriches with Claude.
+- Intent parsing is handled by the Rust CLI (`grump-intent`), which the backend calls and then enriches with the LLM.
 
 Directions to explore:
 
-- Hybrid parsing: keep Rust for structural extraction but allow Claude (or another model) to resolve ambiguity,
+- Hybrid parsing: keep Rust for structural extraction but allow the LLM (or another model) to resolve ambiguity,
   infer missing business rules, and propose alternative formulations.
-- Optional “Claude-first” parsing for very unstructured prompts, with Rust validating and normalizing the result.
+- Optional “LLM-first” parsing for very unstructured prompts, with Rust validating and normalizing the result.
 - Long term: a small local model for fast, offline-ish intent compilation, with cloud models used for deeper reasoning.
 
 ## 6. “Wow” factor in the product
@@ -108,7 +108,7 @@ We are adding offline evaluation suites for the main agents so changes can be me
   - Codegen (`/api/codegen/start`)
 - An eval harness in `backend/tests/evals/runEvals.ts` that:
   - Calls the running backend at `EVAL_BASE_URL` (default `http://localhost:3000`).
-  - Uses an LLM-as-judge (`ANTHROPIC_API_KEY`, optional `JUDGE_MODEL`) via `backend/tests/evals/judge.ts`.
+  - Uses an LLM-as-judge (via OpenRouter or configured provider) via `backend/tests/evals/judge.ts`.
   - Writes aggregated results to `frontend/test-results/agent-evals.json`.
 - A new script in `backend/package.json`:
   - `npm run evals` – run all eval suites against a local or remote backend.

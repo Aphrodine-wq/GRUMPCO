@@ -23,7 +23,7 @@ The project is **ready for deployment** to Vercel. All core infrastructure, code
 
 1. **Prerequisites:**
    - Vercel CLI installed: `npm i -g vercel`
-   - Anthropic API key from https://console.anthropic.com
+   - NVIDIA NIM or OpenRouter API key
 
 2. **Run Setup Script:**
    ```bash
@@ -55,7 +55,7 @@ See **[backend/DEPLOY_VERCEL.md](backend/DEPLOY_VERCEL.md)** for step-by-step ma
 
 | Variable | Service | Status |
 |----------|---------|--------|
-| `ANTHROPIC_API_KEY` | Anthropic | Required |
+| `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY` | LLM Provider | Required (at least one) |
 | `SUPABASE_URL` | Supabase | Required |
 | `SUPABASE_SERVICE_KEY` | Supabase | Required |
 | `QSTASH_TOKEN` | Upstash | Required |

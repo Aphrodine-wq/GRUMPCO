@@ -118,6 +118,48 @@ const envSchema = z.object({
 
   // Observability (optional)
   OTLP_ENDPOINT: z.string().url().optional(),
+
+  // Integrations Platform
+  MASTER_KEY: z.string().min(32).optional(), // Required for encryption (32+ chars)
+
+  // Discord Integration
+  DISCORD_CLIENT_ID: z.string().optional(),
+  DISCORD_CLIENT_SECRET: z.string().optional(),
+  DISCORD_BOT_TOKEN: z.string().optional(),
+
+  // Slack Integration
+  SLACK_CLIENT_ID: z.string().optional(),
+  SLACK_CLIENT_SECRET: z.string().optional(),
+  SLACK_BOT_TOKEN: z.string().optional(),
+  SLACK_SIGNING_SECRET: z.string().optional(),
+
+  // Spotify Integration
+  SPOTIFY_CLIENT_ID: z.string().optional(),
+  SPOTIFY_CLIENT_SECRET: z.string().optional(),
+
+  // Obsidian Integration
+  OBSIDIAN_VAULT_PATH: z.string().optional(),
+
+  // ElevenLabs Voice
+  ELEVENLABS_API_KEY: z.string().optional(),
+  ELEVENLABS_VOICE_ID: z.string().optional(),
+
+  // Home Assistant
+  HOME_ASSISTANT_URL: z.string().url().optional(),
+  HOME_ASSISTANT_TOKEN: z.string().optional(),
+
+  // Gmail/Google Integration
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+
+  // Notion Integration
+  NOTION_CLIENT_ID: z.string().optional(),
+  NOTION_CLIENT_SECRET: z.string().optional(),
+  NOTION_REDIRECT_URI: z.string().url().optional(),
+
+  // Twitter/X Integration
+  TWITTER_CLIENT_ID: z.string().optional(),
+  TWITTER_CLIENT_SECRET: z.string().optional(),
 }).refine((data) => {
   // Require at least one AI provider API key (skip in test environment)
   return isTestEnv || data.NVIDIA_NIM_API_KEY || data.OPENROUTER_API_KEY;

@@ -4,7 +4,7 @@ Express API for G-Rump: chat, ship, plan, spec, codegen, intent, architecture, P
 
 ## Environment
 
-Copy `.env.example` to `.env` and set at least `ANTHROPIC_API_KEY`. See [.env.example](.env.example) for all variables. For production, see [docs/PRODUCTION_CHECKLIST.md](../docs/PRODUCTION_CHECKLIST.md).
+Copy `.env.example` to `.env` and set at least `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY`. See [.env.example](.env.example) for all variables. For production, see [docs/PRODUCTION_CHECKLIST.md](../docs/PRODUCTION_CHECKLIST.md).
 
 ## Scripts
 

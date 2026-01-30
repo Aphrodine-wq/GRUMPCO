@@ -124,7 +124,7 @@ graph TB
 - **Backend**: Express, TypeScript (compiled with SWC)
 - **Compiler**: Rust with rayon, LTO, SIMD
 - **Runtime**: Worker threads, multi-tier caching
-- **LLM**: Anthropic Claude, NVIDIA NIM (Kimi K2.5)
+- **LLM**: NVIDIA NIM (Kimi K2.5), OpenRouter (multi-model)
 - **Infrastructure**: Docker, Redis, PostgreSQL/SQLite
 - **Monitoring**: Prometheus, OpenTelemetry
 

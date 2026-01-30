@@ -35,7 +35,7 @@ describe('responseParser', () => {
 
     it('should parse a response with a clarification request', () => {
       const clarification: ClarificationPayload = {
-        questions: [{ id: 'q1', text: 'What is the primary goal?' }],
+        questions: [{ id: 'q1', category: 'custom', question: 'What is the primary goal?', selectionType: 'single', options: [] }],
       };
       const content = `<!--CLARIFICATION_START-->\n${JSON.stringify(
         clarification
@@ -48,8 +48,7 @@ describe('responseParser', () => {
 
     it('should handle malformed clarification JSON gracefully', () => {
       const content =
-        '<!--CLARIFICATION_START-->\n{ "questions": "invalid" 
-<!--CLARIFICATION_END-->';
+        '<!--CLARIFICATION_START-->\n{ "questions": "invalid" \n<!--CLARIFICATION_END-->';
       const result = parseAssistantResponse(content);
       expect(result.type).toBe('text');
     });

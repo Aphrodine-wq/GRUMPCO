@@ -1,10 +1,20 @@
 /**
  * Agent swarm service – decompose user request with Kimi into subtasks,
  * run specialist agents in parallel (capped concurrency), merge results.
+ * 
+ * Also includes persistent swarm tracking via database.
  */
 
 import logger from '../middleware/logger.js';
 import { getNimChatUrl } from '../config/nim.js';
+import { getDatabase } from '../db/database.js';
+import { writeAuditLog } from './auditLogService.js';
+import type {
+  SwarmAgentRecord,
+  SwarmStatus,
+  CreateSwarmAgentInput,
+} from '../types/integrations.js';
+
 const NIM_MODEL = 'moonshotai/kimi-k2.5';
 
 export const SWARM_AGENT_IDS = [
@@ -171,3 +181,195 @@ export async function* runSwarm(
   yield { type: 'summary_done', text: summary };
   return { summary, results };
 }
+
+// ========== Persistent Swarm Management ==========
+
+/**
+ * Create a persistent swarm agent record
+ */
+export async function createPersistentSwarmAgent(input: CreateSwarmAgentInput): Promise<SwarmAgentRecord> {
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  
+  const record: SwarmAgentRecord = {
+    id: `swarm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    user_id: input.userId,
+    parent_id: input.parentId ?? null,
+    name: input.name,
+    status: 'pending',
+    agent_type: input.agentType,
+    task_description: input.taskDescription ?? null,
+    result: null,
+    created_at: now,
+    updated_at: now,
+    completed_at: null,
+  };
+  
+  await db.saveSwarmAgent(record);
+  
+  await writeAuditLog({
+    userId: input.userId,
+    action: 'swarm.agent_created',
+    category: 'agent',
+    target: input.name,
+    metadata: { agentId: record.id, agentType: input.agentType, parentId: input.parentId },
+  });
+  
+  logger.info(
+    { id: record.id, name: input.name, type: input.agentType },
+    'Persistent swarm agent created'
+  );
+  
+  return record;
+}
+
+/**
+ * Get swarm agent by ID
+ */
+export async function getSwarmAgentById(id: string): Promise<SwarmAgentRecord | null> {
+  const db = getDatabase();
+  return db.getSwarmAgent(id);
+}
+
+/**
+ * Get child agents for a parent swarm
+ */
+export async function getSwarmChildren(parentId: string): Promise<SwarmAgentRecord[]> {
+  const db = getDatabase();
+  return db.getSwarmChildren(parentId);
+}
+
+/**
+ * Get all running swarm agents
+ */
+export async function getRunningSwarmAgents(): Promise<SwarmAgentRecord[]> {
+  const db = getDatabase();
+  return db.getRunningSwarmAgents();
+}
+
+/**
+ * Update swarm agent status
+ */
+export async function updateSwarmAgentStatus(
+  id: string,
+  status: SwarmStatus,
+  result?: unknown
+): Promise<void> {
+  const db = getDatabase();
+  const record = await db.getSwarmAgent(id);
+  if (!record) {
+    throw new Error(`Swarm agent not found: ${id}`);
+  }
+  
+  const now = new Date().toISOString();
+  const updated: SwarmAgentRecord = {
+    ...record,
+    status,
+    result: result !== undefined ? JSON.stringify(result) : record.result,
+    updated_at: now,
+    completed_at: ['completed', 'failed', 'cancelled'].includes(status) ? now : null,
+  };
+  
+  await db.saveSwarmAgent(updated);
+  logger.debug({ id, name: record.name, status }, 'Swarm agent status updated');
+}
+
+/**
+ * Complete a swarm agent with result
+ */
+export async function completeSwarmAgent(
+  id: string,
+  result: unknown,
+  userId: string
+): Promise<void> {
+  await updateSwarmAgentStatus(id, 'completed', result);
+  
+  const db = getDatabase();
+  const record = await db.getSwarmAgent(id);
+  
+  await writeAuditLog({
+    userId,
+    action: 'swarm.agent_completed',
+    category: 'agent',
+    target: record?.name ?? id,
+    metadata: { agentId: id },
+  });
+}
+
+/**
+ * Fail a swarm agent with error
+ */
+export async function failSwarmAgent(
+  id: string,
+  error: string,
+  userId: string
+): Promise<void> {
+  await updateSwarmAgentStatus(id, 'failed', { error });
+  
+  const db = getDatabase();
+  const record = await db.getSwarmAgent(id);
+  
+  await writeAuditLog({
+    userId,
+    action: 'swarm.agent_failed',
+    category: 'agent',
+    target: record?.name ?? id,
+    metadata: { agentId: id, error },
+  });
+  
+  logger.error({ id, error }, 'Swarm agent failed');
+}
+
+/**
+ * Cancel a swarm agent
+ */
+export async function cancelSwarmAgent(id: string, userId: string): Promise<void> {
+  await updateSwarmAgentStatus(id, 'cancelled');
+  
+  const db = getDatabase();
+  const record = await db.getSwarmAgent(id);
+  
+  await writeAuditLog({
+    userId,
+    action: 'swarm.agent_cancelled',
+    category: 'agent',
+    target: record?.name ?? id,
+    metadata: { agentId: id },
+  });
+}
+
+/**
+ * Get swarm progress
+ */
+export async function getSwarmProgress(swarmId: string): Promise<{
+  total: number;
+  pending: number;
+  running: number;
+  completed: number;
+  failed: number;
+  cancelled: number;
+}> {
+  const children = await getSwarmChildren(swarmId);
+  
+  return {
+    total: children.length,
+    pending: children.filter(c => c.status === 'pending').length,
+    running: children.filter(c => c.status === 'running').length,
+    completed: children.filter(c => c.status === 'completed').length,
+    failed: children.filter(c => c.status === 'failed').length,
+    cancelled: children.filter(c => c.status === 'cancelled').length,
+  };
+}
+
+/**
+ * Check if all children of a swarm are complete
+ */
+export async function isSwarmComplete(swarmId: string): Promise<boolean> {
+  const children = await getSwarmChildren(swarmId);
+  return children.every(child =>
+    ['completed', 'failed', 'cancelled'].includes(child.status)
+  );
+}
+
+// Re-export types for convenience
+export type { SwarmAgentRecord, SwarmStatus, CreateSwarmAgentInput };

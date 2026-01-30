@@ -77,7 +77,7 @@ function classifyError(error: ErrorWithStatus): ClassifiedError {
       type: 'auth_error',
       message: 'Invalid API key.',
       suggestedAction:
-        'Please check your ANTHROPIC_API_KEY in the backend .env file. See API_SETUP_INSTRUCTIONS.txt for help.',
+        'Please check your NVIDIA_NIM_API_KEY or OPENROUTER_API_KEY in the backend .env file.',
       retryable: false,
     };
   }

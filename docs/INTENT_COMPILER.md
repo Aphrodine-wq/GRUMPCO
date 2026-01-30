@@ -192,7 +192,7 @@ The enriched intent is automatically used by the agent orchestrator to:
 ### Environment Variables
 
 - `GRUMP_INTENT_PATH`: Override path to grump-intent executable
-- `ANTHROPIC_API_KEY`: Required for Claude enrichment
+- `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY`: Required for LLM enrichment
 
 ### Path Resolution
 
@@ -306,7 +306,7 @@ The system automatically finds the grump-intent executable:
 
 ### Enrichment Fails
 
-- Check `ANTHROPIC_API_KEY` is set
+- Check `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY` is set
 - Verify API key is valid
 - Check network connectivity
 - Review error logs for details

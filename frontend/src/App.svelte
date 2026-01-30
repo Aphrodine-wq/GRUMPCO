@@ -12,11 +12,18 @@
   import VoiceCodeScreen from './components/VoiceCodeScreen.svelte';
   import AgentSwarmVisualizer from './components/AgentSwarmVisualizer.svelte';
   import DesignToCodeScreen from './components/DesignToCodeScreen.svelte';
-import LazyCostDashboard from './components/LazyCostDashboard.svelte';
+  import LazyCostDashboard from './components/LazyCostDashboard.svelte';
+  // Integrations platform components
+  import IntegrationsHub from './components/IntegrationsHub.svelte';
+  import ApprovalsCenter from './components/ApprovalsCenter.svelte';
+  import HeartbeatsManager from './components/HeartbeatsManager.svelte';
+  import MemoryManager from './components/MemoryManager.svelte';
+  import AuditLogViewer from './components/AuditLogViewer.svelte';
+  import AdvancedAIDashboard from './components/AdvancedAIDashboard.svelte';
   import { sessionsStore, currentSession } from './stores/sessionsStore';
   import { settingsStore } from './stores/settingsStore';
   import { preferencesStore, setupComplete } from './stores/preferencesStore';
-  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, showCostDashboard, sidebarCollapsed, focusChatTrigger } from './stores/uiStore';
+  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, showCostDashboard, showIntegrations, showApprovals, showHeartbeats, showMemory, showAuditLog, showAdvancedAI, sidebarCollapsed, focusChatTrigger } from './stores/uiStore';
   import { demoStore } from './stores/demoStore';
   import TutorialOverlay from './components/TutorialOverlay.svelte';
   import { isMobileDevice } from './utils/touchGestures';
@@ -109,6 +116,18 @@ import LazyCostDashboard from './components/LazyCostDashboard.svelte';
       <DesignToCodeScreen onBack={() => showDesignToCode.set(false)} />
     {:else if $showCostDashboard}
       <LazyCostDashboard onBack={() => showCostDashboard.set(false)} />
+    {:else if $showIntegrations}
+      <IntegrationsHub onBack={() => showIntegrations.set(false)} />
+    {:else if $showApprovals}
+      <ApprovalsCenter onBack={() => showApprovals.set(false)} />
+    {:else if $showHeartbeats}
+      <HeartbeatsManager onBack={() => showHeartbeats.set(false)} />
+    {:else if $showMemory}
+      <MemoryManager onBack={() => showMemory.set(false)} />
+    {:else if $showAuditLog}
+      <AuditLogViewer onBack={() => showAuditLog.set(false)} />
+    {:else if $showAdvancedAI}
+      <AdvancedAIDashboard onBack={() => showAdvancedAI.set(false)} />
     {:else if !$setupComplete}
       <SetupScreen
         onComplete={() => preferencesStore.completeSetup()}

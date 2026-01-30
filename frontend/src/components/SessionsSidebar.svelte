@@ -1,8 +1,9 @@
 <script lang="ts">
   import { CollapsibleSidebar, Button } from '../lib/design-system';
   import { sessionsStore, sortedSessions, currentSession } from '../stores/sessionsStore';
-  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, sidebarCollapsed } from '../stores/uiStore';
+  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, showIntegrations, showApprovals, showHeartbeats, showMemory, showAuditLog, showAdvancedAI, sidebarCollapsed } from '../stores/uiStore';
   import OpenRepoModal from './OpenRepoModal.svelte';
+  import CostSnippet from './CostSnippet.svelte';
   import type { Session } from '../types';
 
   let hoveredSessionId: string | null = $state(null);
@@ -29,6 +30,11 @@
     showAskDocs.set(false);
     showVoiceCode.set(false);
     showSwarm.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAdvancedAI.set(false);
     if (window.innerWidth < 768) {
       mobileMenuOpen = false;
     }
@@ -41,12 +47,17 @@
     }
   }
 
-  function openSettings() {
+function openSettings() {
     showSettings.set(true);
     showAskDocs.set(false);
     showVoiceCode.set(false);
     showSwarm.set(false);
     showDesignToCode.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAdvancedAI.set(false);
   }
 
   function openAskDocs() {
@@ -55,6 +66,11 @@
     showVoiceCode.set(false);
     showSwarm.set(false);
     showDesignToCode.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAdvancedAI.set(false);
   }
 
   function openVoiceCode() {
@@ -63,6 +79,11 @@
     showAskDocs.set(false);
     showSwarm.set(false);
     showDesignToCode.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAdvancedAI.set(false);
   }
 
   function openDesignToCode() {
@@ -71,6 +92,11 @@
     showAskDocs.set(false);
     showVoiceCode.set(false);
     showSwarm.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAdvancedAI.set(false);
   }
 
   function openSwarm() {
@@ -78,6 +104,92 @@
     showSettings.set(false);
     showAskDocs.set(false);
     showVoiceCode.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAdvancedAI.set(false);
+  }
+
+  function openIntegrations() {
+    showIntegrations.set(true);
+    showSettings.set(false);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
+    showDesignToCode.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAdvancedAI.set(false);
+  }
+
+  function openApprovals() {
+    showApprovals.set(true);
+    showSettings.set(false);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
+    showDesignToCode.set(false);
+    showIntegrations.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAdvancedAI.set(false);
+  }
+
+  function openHeartbeats() {
+    showHeartbeats.set(true);
+    showSettings.set(false);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
+    showDesignToCode.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showMemory.set(false);
+    showAdvancedAI.set(false);
+  }
+
+  function openMemory() {
+    showMemory.set(true);
+    showSettings.set(false);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
+    showDesignToCode.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showAuditLog.set(false);
+    showAdvancedAI.set(false);
+  }
+
+function openAuditLog() {
+    showAuditLog.set(true);
+    showSettings.set(false);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
+    showDesignToCode.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAdvancedAI.set(false);
+  }
+
+  function openAdvancedAI() {
+    showAdvancedAI.set(true);
+    showSettings.set(false);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
+    showDesignToCode.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAuditLog.set(false);
   }
 
   function formatDate(timestamp: number): string {
@@ -329,6 +441,131 @@
           </svg>
           {#if !collapsed}
             <span>Design to code</span>
+          {/if}
+        </button>
+        <button class="settings-btn" title="Integrations" aria-label="Integrations" onclick={openIntegrations}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 2v4" />
+            <path d="M12 18v4" />
+            <path d="m4.93 4.93 2.83 2.83" />
+            <path d="m16.24 16.24 2.83 2.83" />
+            <path d="M2 12h4" />
+            <path d="M18 12h4" />
+            <path d="m4.93 19.07 2.83-2.83" />
+            <path d="m16.24 7.76 2.83-2.83" />
+          </svg>
+          {#if !collapsed}
+            <span>Integrations</span>
+          {/if}
+        </button>
+        <button class="settings-btn" title="Approvals" aria-label="Approvals" onclick={openApprovals}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M9 11l3 3L22 4" />
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          </svg>
+          {#if !collapsed}
+            <span>Approvals</span>
+          {/if}
+        </button>
+        <button class="settings-btn" title="Scheduled tasks" aria-label="Scheduled tasks" onclick={openHeartbeats}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          {#if !collapsed}
+            <span>Scheduled tasks</span>
+          {/if}
+        </button>
+        <button class="settings-btn" title="Memory bank" aria-label="Memory bank" onclick={openMemory}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
+          </svg>
+          {#if !collapsed}
+            <span>Memory bank</span>
+          {/if}
+        </button>
+        <button class="settings-btn" title="Advanced AI" aria-label="Advanced AI" onclick={openAdvancedAI}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </svg>
+          {#if !collapsed}
+            <span>Advanced AI</span>
+          {/if}
+        </button>
+        <button class="settings-btn" title="Audit log" aria-label="Audit log" onclick={openAuditLog}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M16 13H8" />
+            <path d="M16 17H8" />
+            <path d="M10 9H8" />
+          </svg>
+          {#if !collapsed}
+            <span>Audit log</span>
           {/if}
         </button>
         <button class="settings-btn" title="Ask docs" aria-label="Ask docs" onclick={openAskDocs}>

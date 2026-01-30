@@ -49,6 +49,10 @@ import ragRoutes from './routes/rag.js';
 import voiceRoutes from './routes/voice.js';
 import memoryRoutes from './routes/memory.js';
 import visionRoutes from './routes/vision.js';
+import integrationsV2Routes from './routes/integrations-v2.js';
+import approvalsRoutes from './routes/approvals.js';
+import heartbeatsRoutes from './routes/heartbeats.js';
+import advancedAiRoutes from './routes/advanced-ai.js';
 import { findAvailablePort } from './utils/portUtils.js';
 import { skillRegistry } from './skills/index.js';
 import { startJobWorker, stopJobWorker } from './services/jobQueue.js';
@@ -244,6 +248,10 @@ let gpuMetricsInterval: ReturnType<typeof setInterval> | null = null;
     app.use('/api/memory', memoryRoutes);
     app.use('/api/vision', visionRoutes);
     app.use('/api/voice', voiceRoutes);
+    app.use('/api/integrations-v2', integrationsV2Routes);
+    app.use('/api/approvals', approvalsRoutes);
+    app.use('/api/heartbeats', heartbeatsRoutes);
+    app.use('/api/advanced-ai', advancedAiRoutes);
     app.use('/health', healthRoutes);
 
     // Metrics endpoint

@@ -8,6 +8,14 @@ export const showSwarm = writable(false);
 export const showDesignToCode = writable(false);
 export const showCostDashboard = writable(false);
 export const sidebarOpen = writable(true); // Default sidebar state
+
+// Integrations platform screens
+export const showIntegrations = writable(false);
+export const showApprovals = writable(false);
+export const showHeartbeats = writable(false);
+export const showMemory = writable(false);
+export const showAuditLog = writable(false);
+export const showAdvancedAI = writable(false);
 /** Sidebar collapsed state (for keyboard shortcut Ctrl/Cmd+B). */
 export const sidebarCollapsed = writable(false);
 /** When incremented, ChatInterface should focus the chat input (for keyboard shortcut Ctrl/Cmd+Shift+L). */

@@ -89,7 +89,8 @@ For production builds, create a `.env` file in the app data directory:
 
 Example:
 ```
-ANTHROPIC_API_KEY=your-key-here
+NVIDIA_NIM_API_KEY=your-key-here
+# Or use OPENROUTER_API_KEY=your-key-here
 NODE_ENV=production
 PORT=3000
 CORS_ORIGINS=tauri://localhost,http://tauri.localhost,http://127.0.0.1:3000

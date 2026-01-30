@@ -99,11 +99,11 @@ const embeddings = await nim.generateEmbeddings(texts);
 ## Environment Variables
 
 ```bash
-# Required
-ANTHROPIC_API_KEY=sk-...
-
-# Optional (for cost optimization)
+# Required (at least one)
 NVIDIA_NIM_API_KEY=...
+OPENROUTER_API_KEY=...
+
+# Optional (for caching and performance)
 REDIS_HOST=localhost
 REDIS_PORT=6379
 

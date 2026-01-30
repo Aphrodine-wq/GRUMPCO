@@ -12,6 +12,21 @@ import type { Plan } from '../types/plan.js';
 import type { SpecSession } from '../types/spec.js';
 import type { AgentWorkReport } from '../types/agents.js';
 import type { Settings } from '../types/settings.js';
+import type {
+  IntegrationRecord,
+  OAuthTokenRecord,
+  IntegrationSecretRecord,
+  AuditLogRecord,
+  HeartbeatRecord,
+  ApprovalRequestRecord,
+  SwarmAgentRecord,
+  SkillRecord,
+  MemoryRecord,
+  CostBudgetRecord,
+  RateLimitRecord,
+  BrowserAllowlistRecord,
+  IntegrationProviderId,
+} from '../types/integrations.js';
 
 export class SupabaseDatabaseService {
   private client: SupabaseClient;
@@ -383,5 +398,444 @@ export class SupabaseDatabaseService {
       monthlyOutputTokens: data.reduce((acc, r) => acc + (r.output_tokens || 0), 0),
       avgLatencyMs: successful.length > 0 ? Math.round(totalLatency / successful.length) : 0,
     };
+  }
+
+  // ========== Integrations Platform ==========
+
+  /** Save an audit log entry */
+  async saveAuditLog(record: AuditLogRecord): Promise<void> {
+    const { error } = await this.client.from('audit_logs').insert({
+      id: record.id,
+      user_id: record.user_id,
+      actor: record.actor ?? null,
+      action: record.action,
+      category: record.category,
+      target: record.target ?? null,
+      metadata: record.metadata ?? null,
+      created_at: record.created_at,
+    });
+    if (error) throw error;
+  }
+
+  /** Get audit logs with filters */
+  async getAuditLogs(options: {
+    userId?: string;
+    category?: string;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<AuditLogRecord[]> {
+    let query = this.client.from('audit_logs').select('*');
+    if (options.userId) query = query.eq('user_id', options.userId);
+    if (options.category) query = query.eq('category', options.category);
+    query = query.order('created_at', { ascending: false });
+    if (options.limit) query = query.limit(options.limit);
+    if (options.offset) query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []) as AuditLogRecord[];
+  }
+
+  /** Save an integration */
+  async saveIntegration(record: IntegrationRecord): Promise<void> {
+    const { error } = await this.client.from('integrations').upsert({
+      id: record.id,
+      user_id: record.user_id,
+      provider: record.provider,
+      status: record.status,
+      display_name: record.display_name ?? null,
+      metadata: record.metadata ?? null,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+    });
+    if (error) throw error;
+  }
+
+  /** Get integration by ID */
+  async getIntegration(id: string): Promise<IntegrationRecord | null> {
+    const { data, error } = await this.client.from('integrations').select('*').eq('id', id).single();
+    if (error || !data) return null;
+    return data as IntegrationRecord;
+  }
+
+  /** Get integrations for user */
+  async getIntegrationsForUser(userId: string): Promise<IntegrationRecord[]> {
+    const { data, error } = await this.client.from('integrations').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as IntegrationRecord[];
+  }
+
+  /** Get integration by user and provider */
+  async getIntegrationByProvider(userId: string, provider: IntegrationProviderId): Promise<IntegrationRecord | null> {
+    const { data, error } = await this.client.from('integrations').select('*').eq('user_id', userId).eq('provider', provider).single();
+    if (error || !data) return null;
+    return data as IntegrationRecord;
+  }
+
+  /** Delete integration */
+  async deleteIntegration(id: string): Promise<void> {
+    const { error } = await this.client.from('integrations').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  /** Save OAuth token */
+  async saveOAuthToken(record: OAuthTokenRecord): Promise<void> {
+    const { error } = await this.client.from('oauth_tokens').upsert({
+      id: record.id,
+      user_id: record.user_id,
+      provider: record.provider,
+      access_token_enc: record.access_token_enc,
+      refresh_token_enc: record.refresh_token_enc ?? null,
+      token_type: record.token_type ?? null,
+      scope: record.scope ?? null,
+      expires_at: record.expires_at ?? null,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+    });
+    if (error) throw error;
+  }
+
+  /** Get OAuth token by user and provider */
+  async getOAuthToken(userId: string, provider: IntegrationProviderId): Promise<OAuthTokenRecord | null> {
+    const { data, error } = await this.client.from('oauth_tokens').select('*').eq('user_id', userId).eq('provider', provider).single();
+    if (error || !data) return null;
+    return data as OAuthTokenRecord;
+  }
+
+  /** Delete OAuth token */
+  async deleteOAuthToken(userId: string, provider: IntegrationProviderId): Promise<void> {
+    const { error } = await this.client.from('oauth_tokens').delete().eq('user_id', userId).eq('provider', provider);
+    if (error) throw error;
+  }
+
+  /** Save integration secret */
+  async saveIntegrationSecret(record: IntegrationSecretRecord): Promise<void> {
+    const { error } = await this.client.from('integration_secrets').upsert({
+      id: record.id,
+      user_id: record.user_id,
+      provider: record.provider,
+      name: record.name,
+      secret_enc: record.secret_enc,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+    });
+    if (error) throw error;
+  }
+
+  /** Get integration secret */
+  async getIntegrationSecret(userId: string, provider: IntegrationProviderId, name: string): Promise<IntegrationSecretRecord | null> {
+    const { data, error } = await this.client.from('integration_secrets').select('*').eq('user_id', userId).eq('provider', provider).eq('name', name).single();
+    if (error || !data) return null;
+    return data as IntegrationSecretRecord;
+  }
+
+  /** Delete integration secret */
+  async deleteIntegrationSecret(userId: string, provider: IntegrationProviderId, name: string): Promise<void> {
+    const { error } = await this.client.from('integration_secrets').delete().eq('user_id', userId).eq('provider', provider).eq('name', name);
+    if (error) throw error;
+  }
+
+  /** Save heartbeat */
+  async saveHeartbeat(record: HeartbeatRecord): Promise<void> {
+    const { error } = await this.client.from('heartbeats').upsert({
+      id: record.id,
+      user_id: record.user_id,
+      name: record.name,
+      cron_expression: record.cron_expression,
+      enabled: record.enabled,
+      payload: record.payload ?? null,
+      last_run_at: record.last_run_at ?? null,
+      next_run_at: record.next_run_at ?? null,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+    });
+    if (error) throw error;
+  }
+
+  /** Get heartbeat by ID */
+  async getHeartbeat(id: string): Promise<HeartbeatRecord | null> {
+    const { data, error } = await this.client.from('heartbeats').select('*').eq('id', id).single();
+    if (error || !data) return null;
+    return { ...data, enabled: Boolean(data.enabled) } as HeartbeatRecord;
+  }
+
+  /** Get enabled heartbeats */
+  async getEnabledHeartbeats(): Promise<HeartbeatRecord[]> {
+    const { data, error } = await this.client.from('heartbeats').select('*').eq('enabled', true).order('next_run_at', { ascending: true });
+    if (error) throw error;
+    return (data || []).map(r => ({ ...r, enabled: true })) as HeartbeatRecord[];
+  }
+
+  /** Get heartbeats for user */
+  async getHeartbeatsForUser(userId: string): Promise<HeartbeatRecord[]> {
+    const { data, error } = await this.client.from('heartbeats').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(r => ({ ...r, enabled: Boolean(r.enabled) })) as HeartbeatRecord[];
+  }
+
+  /** Delete heartbeat */
+  async deleteHeartbeat(id: string): Promise<void> {
+    const { error } = await this.client.from('heartbeats').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  /** Save approval request */
+  async saveApprovalRequest(record: ApprovalRequestRecord): Promise<void> {
+    const { error } = await this.client.from('approval_requests').upsert({
+      id: record.id,
+      user_id: record.user_id,
+      status: record.status,
+      action: record.action,
+      risk_level: record.risk_level,
+      reason: record.reason ?? null,
+      payload: record.payload ?? null,
+      expires_at: record.expires_at ?? null,
+      created_at: record.created_at,
+      resolved_at: record.resolved_at ?? null,
+      resolved_by: record.resolved_by ?? null,
+    });
+    if (error) throw error;
+  }
+
+  /** Get approval request by ID */
+  async getApprovalRequest(id: string): Promise<ApprovalRequestRecord | null> {
+    const { data, error } = await this.client.from('approval_requests').select('*').eq('id', id).single();
+    if (error || !data) return null;
+    return data as ApprovalRequestRecord;
+  }
+
+  /** Get pending approvals for user */
+  async getPendingApprovals(userId: string): Promise<ApprovalRequestRecord[]> {
+    const { data, error } = await this.client.from('approval_requests').select('*').eq('user_id', userId).eq('status', 'pending').order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as ApprovalRequestRecord[];
+  }
+
+  /** Save swarm agent */
+  async saveSwarmAgent(record: SwarmAgentRecord): Promise<void> {
+    const { error } = await this.client.from('agent_swarm').upsert({
+      id: record.id,
+      user_id: record.user_id,
+      parent_id: record.parent_id ?? null,
+      name: record.name,
+      status: record.status,
+      agent_type: record.agent_type,
+      task_description: record.task_description ?? null,
+      result: record.result ?? null,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+      completed_at: record.completed_at ?? null,
+    });
+    if (error) throw error;
+  }
+
+  /** Get swarm agent by ID */
+  async getSwarmAgent(id: string): Promise<SwarmAgentRecord | null> {
+    const { data, error } = await this.client.from('agent_swarm').select('*').eq('id', id).single();
+    if (error || !data) return null;
+    return data as SwarmAgentRecord;
+  }
+
+  /** Get swarm agents for parent */
+  async getSwarmChildren(parentId: string): Promise<SwarmAgentRecord[]> {
+    const { data, error } = await this.client.from('agent_swarm').select('*').eq('parent_id', parentId).order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data || []) as SwarmAgentRecord[];
+  }
+
+  /** Get running swarm agents */
+  async getRunningSwarmAgents(): Promise<SwarmAgentRecord[]> {
+    const { data, error } = await this.client.from('agent_swarm').select('*').eq('status', 'running').order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data || []) as SwarmAgentRecord[];
+  }
+
+  /** Save skill */
+  async saveSkill(record: SkillRecord): Promise<void> {
+    const { error } = await this.client.from('skills').upsert({
+      id: record.id,
+      user_id: record.user_id,
+      name: record.name,
+      description: record.description ?? null,
+      language: record.language,
+      source_code: record.source_code,
+      compiled_code: record.compiled_code ?? null,
+      status: record.status,
+      version: record.version,
+      approval_request_id: record.approval_request_id ?? null,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+      approved_at: record.approved_at ?? null,
+      approved_by: record.approved_by ?? null,
+    });
+    if (error) throw error;
+  }
+
+  /** Get skill by ID */
+  async getSkill(id: string): Promise<SkillRecord | null> {
+    const { data, error } = await this.client.from('skills').select('*').eq('id', id).single();
+    if (error || !data) return null;
+    return data as SkillRecord;
+  }
+
+  /** Get skill by name */
+  async getSkillByName(name: string): Promise<SkillRecord | null> {
+    const { data, error } = await this.client.from('skills').select('*').eq('name', name).single();
+    if (error || !data) return null;
+    return data as SkillRecord;
+  }
+
+  /** Get active skills */
+  async getActiveSkills(): Promise<SkillRecord[]> {
+    const { data, error } = await this.client.from('skills').select('*').eq('status', 'active').order('name', { ascending: true });
+    if (error) throw error;
+    return (data || []) as SkillRecord[];
+  }
+
+  /** Save memory record */
+  async saveMemoryRecord(record: MemoryRecord): Promise<void> {
+    const { error } = await this.client.from('memory_records').upsert({
+      id: record.id,
+      user_id: record.user_id,
+      type: record.type,
+      content: record.content,
+      embedding: record.embedding ?? null,
+      importance: record.importance,
+      access_count: record.access_count,
+      last_accessed_at: record.last_accessed_at ?? null,
+      expires_at: record.expires_at ?? null,
+      metadata: record.metadata ?? null,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+    });
+    if (error) throw error;
+  }
+
+  /** Get memory record by ID */
+  async getMemoryRecord(id: string): Promise<MemoryRecord | null> {
+    const { data, error } = await this.client.from('memory_records').select('*').eq('id', id).single();
+    if (error || !data) return null;
+    return data as MemoryRecord;
+  }
+
+  /** Search memory records by type */
+  async getMemoryRecordsByType(userId: string, type: string, limit = 50): Promise<MemoryRecord[]> {
+    const { data, error } = await this.client.from('memory_records').select('*').eq('user_id', userId).eq('type', type).order('importance', { ascending: false }).order('last_accessed_at', { ascending: false }).limit(limit);
+    if (error) throw error;
+    return (data || []) as MemoryRecord[];
+  }
+
+  /** Get recent memories */
+  async getRecentMemories(userId: string, limit = 20): Promise<MemoryRecord[]> {
+    const { data, error } = await this.client.from('memory_records').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(limit);
+    if (error) throw error;
+    return (data || []) as MemoryRecord[];
+  }
+
+  /** Delete memory record */
+  async deleteMemoryRecord(id: string): Promise<void> {
+    const { error } = await this.client.from('memory_records').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  /** Save cost budget */
+  async saveCostBudget(record: CostBudgetRecord): Promise<void> {
+    const { error } = await this.client.from('cost_budgets').upsert({
+      id: record.id,
+      user_id: record.user_id,
+      period: record.period,
+      limit_cents: record.limit_cents,
+      spent_cents: record.spent_cents,
+      period_start: record.period_start,
+      period_end: record.period_end,
+      notify_at_percent: record.notify_at_percent,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+    });
+    if (error) throw error;
+  }
+
+  /** Get current budget for user */
+  async getCurrentBudget(userId: string): Promise<CostBudgetRecord | null> {
+    const now = new Date().toISOString();
+    const { data, error } = await this.client.from('cost_budgets').select('*').eq('user_id', userId).lte('period_start', now).gte('period_end', now).single();
+    if (error || !data) return null;
+    return data as CostBudgetRecord;
+  }
+
+  /** Save rate limit */
+  async saveRateLimit(record: RateLimitRecord): Promise<void> {
+    const { error } = await this.client.from('rate_limits').upsert({
+      id: record.id,
+      user_id: record.user_id,
+      resource: record.resource,
+      max_requests: record.max_requests,
+      window_seconds: record.window_seconds,
+      current_count: record.current_count,
+      window_start: record.window_start,
+      created_at: record.created_at,
+    });
+    if (error) throw error;
+  }
+
+  /** Get rate limit */
+  async getRateLimit(userId: string, resource: string): Promise<RateLimitRecord | null> {
+    const { data, error } = await this.client.from('rate_limits').select('*').eq('user_id', userId).eq('resource', resource).single();
+    if (error || !data) return null;
+    return data as RateLimitRecord;
+  }
+
+  /** Increment rate limit counter */
+  async incrementRateLimit(userId: string, resource: string): Promise<{ allowed: boolean; remaining: number }> {
+    const limit = await this.getRateLimit(userId, resource);
+    if (!limit) return { allowed: true, remaining: 999 };
+    
+    const now = new Date();
+    const windowStart = new Date(limit.window_start);
+    const windowEnd = new Date(windowStart.getTime() + limit.window_seconds * 1000);
+    
+    if (now > windowEnd) {
+      // Reset window
+      await this.client.from('rate_limits').update({ current_count: 1, window_start: now.toISOString() }).eq('user_id', userId).eq('resource', resource);
+      return { allowed: true, remaining: limit.max_requests - 1 };
+    }
+    
+    if (limit.current_count >= limit.max_requests) {
+      return { allowed: false, remaining: 0 };
+    }
+    
+    await this.client.from('rate_limits').update({ current_count: limit.current_count + 1 }).eq('user_id', userId).eq('resource', resource);
+    return { allowed: true, remaining: limit.max_requests - limit.current_count - 1 };
+  }
+
+  /** Save browser allowlist entry */
+  async saveBrowserAllowlist(record: BrowserAllowlistRecord): Promise<void> {
+    const { error } = await this.client.from('browser_allowlist').upsert({
+      id: record.id,
+      user_id: record.user_id,
+      domain: record.domain,
+      allowed_actions: record.allowed_actions,
+      created_at: record.created_at,
+    });
+    if (error) throw error;
+  }
+
+  /** Get browser allowlist for user */
+  async getBrowserAllowlist(userId: string): Promise<BrowserAllowlistRecord[]> {
+    const { data, error } = await this.client.from('browser_allowlist').select('*').eq('user_id', userId).order('domain', { ascending: true });
+    if (error) throw error;
+    return (data || []) as BrowserAllowlistRecord[];
+  }
+
+  /** Check if domain is allowed */
+  async isDomainAllowed(userId: string, domain: string): Promise<BrowserAllowlistRecord | null> {
+    const { data, error } = await this.client.from('browser_allowlist').select('*').eq('user_id', userId).eq('domain', domain).single();
+    if (error || !data) return null;
+    return data as BrowserAllowlistRecord;
+  }
+
+  /** Delete browser allowlist entry */
+  async deleteBrowserAllowlist(userId: string, domain: string): Promise<void> {
+    const { error } = await this.client.from('browser_allowlist').delete().eq('user_id', userId).eq('domain', domain);
+    if (error) throw error;
   }
 }

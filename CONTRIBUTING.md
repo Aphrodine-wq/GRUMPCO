@@ -47,7 +47,7 @@ cd backend && npm run dev
 cd frontend && npm run dev
 ```
 
-Backend: `http://localhost:3000`. Frontend: `http://localhost:5173` (or 5178). Copy `backend/.env.example` to `backend/.env` and set `ANTHROPIC_API_KEY` (and other keys as needed).
+Backend: `http://localhost:3000`. Frontend: `http://localhost:5173` (or 5178). Copy `backend/.env.example` to `backend/.env` and set `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY` (and other keys as needed).
 
 ## Code quality
 

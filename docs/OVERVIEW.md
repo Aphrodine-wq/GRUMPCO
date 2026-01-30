@@ -4,11 +4,11 @@
 
 **G-Rump is Architecture-as-Code: Terraform for application architecture.** Your diagram and spec are the source of truth; code generation is optional. Living documentation that can generate code—not an AI code generator. Teams can use the architecture output (Mermaid diagram, intent, tech stack, task breakdown) without ever generating code.
 
-Built as a Tauri desktop app with Svelte frontend and Node.js/Express backend (plus a Rust Intent Compiler), G-Rump uses Claude and optional LLM providers to automate intent understanding, architecture diagrams, spec (PRD) generation, and optional multi-agent code generation. It combines spec-first architecture, full pipeline (SHIP: design → spec → plan → code), and tool-enabled code chat. Use it from Desktop, Web, VS Code, CLI, or chat bots. See [ARCHITECTURE_AS_CODE.md](ARCHITECTURE_AS_CODE.md) for philosophy and use-without-codegen workflows.
+Built as a Tauri desktop app with Svelte frontend and Node.js/Express backend (plus a Rust Intent Compiler), G-Rump uses NVIDIA NIM (Kimi K2.5) and OpenRouter to automate intent understanding, architecture diagrams, spec (PRD) generation, and optional multi-agent code generation. It combines spec-first architecture, full pipeline (SHIP: design → spec → plan → code), and tool-enabled code chat. Use it from Desktop, Web, VS Code, CLI, or chat bots. See [ARCHITECTURE_AS_CODE.md](ARCHITECTURE_AS_CODE.md) for philosophy and use-without-codegen workflows.
 
 **Two modes:**
 - **Architecture**: Describe → Architecture (Mermaid) → Spec (PRD) → (optional) Code. Phased workflow or full SHIP run. Lead with the diagram; code is optional.
-- **Generate code**: Claude-Code-style chat with tools (bash, file read/write/edit, list_dir). Workspace, plan mode, specialist agents, save/load sessions.
+- **Generate code**: AI-powered chat with tools (bash, file read/write/edit, list_dir). Workspace, plan mode, specialist agents, save/load sessions.
 
 ### Why G-Rump
 
@@ -74,7 +74,7 @@ There is no shared project or workspace id linking chat, ship, and codegen today
 │              │                          │                            │
 │              ▼                          ▼                            │
 │  ┌─────────────────────┐    ┌─────────────────────────────────────┐ │
-│  │ Rust Intent Compiler │    │    LLM (Claude / OpenRouter / etc)   │ │
+│  │ Rust Intent Compiler │    │    LLM (Kimi K2.5 / OpenRouter)      │ │
 │  │ grump-intent CLI     │    │  Diagrams, PRDs, agents, tools       │ │
 │  └─────────────────────┘    └─────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────┘
@@ -90,7 +90,7 @@ There is no shared project or workspace id linking chat, ship, and codegen today
 | Frontend | Svelte, TypeScript, Vite |
 | Backend | Node.js 20+, Express, TypeScript |
 | Intent | Rust Intent Compiler (grump-intent) |
-| AI | Claude (Anthropic API); optional OpenRouter, Zhipu, Copilot via LLM gateway |
+| AI | NVIDIA NIM (Kimi K2.5), OpenRouter (multi-model fallback) |
 | Diagrams | Mermaid.js (C4 architecture) |
 
 ---
@@ -124,7 +124,7 @@ milesproject/
 ## How to Run
 
 ```bash
-# 1. Ensure backend/.env has ANTHROPIC_API_KEY (and optional LLM gateway vars)
+# 1. Ensure backend/.env has NVIDIA_NIM_API_KEY or OPENROUTER_API_KEY
 # 2. From project root:
 .\start-app.bat
 ```
@@ -136,17 +136,17 @@ This opens:
 
 ### Ship path (MVP)
 
-The minimal path to validate a release: **Web** — run `.\start-app.bat` (Windows) so backend is on 3000 and frontend on 5173; confirm `http://localhost:3000/health` returns 200 and `http://localhost:5173` loads the UI. Then run one flow: **Architecture mode** (describe → Mermaid → optional PRD) or **SHIP** (design→spec→plan→code). Required: `ANTHROPIC_API_KEY` in `backend/.env`. Redis and grump-intent are optional for this path (rate limiting and intent fall back without them).
+The minimal path to validate a release: **Web** — run `.\start-app.bat` (Windows) so backend is on 3000 and frontend on 5173; confirm `http://localhost:3000/health` returns 200 and `http://localhost:5173` loads the UI. Then run one flow: **Architecture mode** (describe → Mermaid → optional PRD) or **SHIP** (design→spec→plan→code). Required: `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY` in `backend/.env`. Redis and grump-intent are optional for this path (rate limiting and intent fall back without them).
 
 ### Deploy and environment
 
-**Required:** `ANTHROPIC_API_KEY` in `backend/.env`. Copy `backend/.env.example` to `backend/.env` and set the key.
+**Required:** `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY` in `backend/.env`. Copy `backend/.env.example` to `backend/.env` and set at least one key.
 
 **Optional:** `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` for rate limiting, cache, BullMQ, and session storage; omit for in-memory fallback. `CORS_ORIGINS` for production (comma-separated origins; set for web deploy). `GRUMP_INTENT_PATH` for the Rust intent compiler; omit to use Claude-only intent. See `backend/.env.example` for full list (Supabase, Stripe, Twilio, etc.).
 
 **Recommended deploy path (MVP):** Local — run `.\start-app.bat` (backend 3000, frontend 5173). For production: backend on Vercel with `NODE_ENV=production`, `CORS_ORIGINS` set to your frontend URL; frontend as static build (e.g. Vercel or same host). Desktop: `cd frontend && npm run tauri:dev` (dev) or `npm run tauri:build` (installer).
 
-**Tests:** Backend: `cd backend && npm run test` and `npm run type-check`. Frontend: `cd frontend && npm run test:run`. E2E: start backend, then `cd frontend && npm run test:e2e` (or `npm run test:e2e:ci` in CI). In CI, E2E job starts the backend and global-setup waits for backend health. Evals: run `cd backend && npm run evals` with backend up; results in `frontend/test-results/agent-evals.json`. CI (when `ANTHROPIC_API_KEY` is set) runs evals and publishes a score summary to the job summary.
+**Tests:** Backend: `cd backend && npm run test` and `npm run type-check`. Frontend: `cd frontend && npm run test:run`. E2E: start backend, then `cd frontend && npm run test:e2e` (or `npm run test:e2e:ci` in CI). In CI, E2E job starts the backend and global-setup waits for backend health. Evals: run `cd backend && npm run evals` with backend up; results in `frontend/test-results/agent-evals.json`. CI (when API keys are set) runs evals and publishes a score summary to the job summary.
 
 ---
 
@@ -163,14 +163,14 @@ G-Rump includes an experimental **offline eval suite** for the main agents so yo
 - From `backend/` you can run:
 
 ```bash
-export ANTHROPIC_API_KEY=your_key_here
+export NVIDIA_NIM_API_KEY=your_key_here  # or OPENROUTER_API_KEY
 NODE_ENV=production PORT=3000 node dist/index.js  # in one terminal
 
 # In another terminal, from backend/
 npm run evals
 ```
 
-This produces per-task scores and comments for architecture and PRD outputs, plus raw results for SHIP and codegen. In CI (`.github/workflows/ci.yml`), when `ANTHROPIC_API_KEY` is set, the agent-evals job runs evals and writes a score summary to the GitHub Actions job summary via `backend/tests/evals/parseEvalsSummary.mjs`. Use `EVAL_CORRECTNESS_THRESHOLD` (default 3.0) to fail the job if average correctness is below threshold.
+This produces per-task scores and comments for architecture and PRD outputs, plus raw results for SHIP and codegen. In CI (`.github/workflows/ci.yml`), when API keys are set, the agent-evals job runs evals and writes a score summary to the GitHub Actions job summary via `backend/tests/evals/parseEvalsSummary.mjs`. Use `EVAL_CORRECTNESS_THRESHOLD` (default 3.0) to fail the job if average correctness is below threshold.
 
 ---
 

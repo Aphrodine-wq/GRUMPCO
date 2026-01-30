@@ -32,8 +32,9 @@ echo ================================================
 echo.
 echo You'll need the following:
 echo.
-echo 1. ANTHROPIC_API_KEY
-echo    Get from: https://console.anthropic.com
+echo 1. NVIDIA_NIM_API_KEY or OPENROUTER_API_KEY
+echo    NVIDIA NIM: https://build.nvidia.com
+echo    OpenRouter: https://openrouter.ai
 echo.
 echo 2. Supabase Credentials
 echo    - Create project at: https://supabase.com
@@ -60,9 +61,10 @@ echo For each prompt, enter the value and press Enter.
 echo To skip an optional variable, just press Enter.
 echo.
 
-echo --- ANTHROPIC_API_KEY (REQUIRED) ---
-echo Get from: https://console.anthropic.com
-call vercel env add ANTHROPIC_API_KEY production
+echo --- NVIDIA_NIM_API_KEY (REQUIRED) ---
+echo Get from: https://build.nvidia.com
+echo Or use OPENROUTER_API_KEY from https://openrouter.ai
+call vercel env add NVIDIA_NIM_API_KEY production
 
 echo.
 echo --- SUPABASE_URL (REQUIRED) ---

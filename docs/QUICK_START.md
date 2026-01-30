@@ -33,7 +33,7 @@ G-Rump transforms natural language into complete, production-ready applications 
    ```bash
    cd backend
    cp .env.example .env
-   # Add your ANTHROPIC_API_KEY to .env
+   # Add your NVIDIA_NIM_API_KEY or OPENROUTER_API_KEY to .env
    ```
 
 3. **Start development:**

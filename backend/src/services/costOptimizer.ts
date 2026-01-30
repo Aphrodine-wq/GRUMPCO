@@ -173,12 +173,13 @@ export class CostOptimizer {
 
     // Check cost limit
     if (options.maxCostPerRequest) {
+      const maxCost = options.maxCostPerRequest;
       const estimatedCost = this.estimateCost(selectedModel, complexity.factors.messageLength);
-      if (options.maxCostPerRequest && estimatedCost > options.maxCostPerRequest) {
+      if (estimatedCost > maxCost) {
         // Find cheaper alternative
         const cheaperModel = sortedModels.find((m) => {
           const cost = this.estimateCost(m, complexity.factors.messageLength);
-          return cost <= options.maxCostPerRequest;
+          return cost <= maxCost;
         });
 
         if (cheaperModel) {

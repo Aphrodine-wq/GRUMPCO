@@ -23,7 +23,7 @@ This doc lists intentional suppressions and remaining work. Many lint/type items
 - Request timeout middleware ([backend/src/middleware/timeout.ts](backend/src/middleware/timeout.ts)): chat/stream 10 min, codegen 5 min, architecture 3 min (generate-stream 5 min). Streaming responses (Accept: text/event-stream) skip the middleware so long sessions are not cut off.
 
 ## Architecture and Codegen (manual verification)
-- **Architecture mode**: If "describe → Mermaid → PRD" fails, check: (1) `ANTHROPIC_API_KEY` in backend/.env, (2) network/CORS, (3) backend logs for 4xx/5xx or timeout. Endpoints: `POST /api/architecture/generate`, `POST /api/prd/generate`.
+- **Architecture mode**: If "describe → Mermaid → PRD" fails, check: (1) `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY` in backend/.env, (2) network/CORS, (3) backend logs for 4xx/5xx or timeout. Endpoints: `POST /api/architecture/generate`, `POST /api/prd/generate`.
 - **Codegen / tool calls**: If timeouts or silent failures occur, verify: (1) timeout values in timeout middleware and toolExecutionService (bash default 30s), (2) chat stream timeout is skipped for SSE; (3) backend logs for tool execution errors.
 
 ## Redis
@@ -42,7 +42,7 @@ This doc lists intentional suppressions and remaining work. Many lint/type items
 ## Changelog
 - Phase 1.1: Cleared backend lint/type suppressions (any → unknown, non-null fixes, empty object types, validator/logger documented). Backend strict, lint clean.
 - E2E: global-setup waits for backend health in CI; Playwright config and waits hardened.
-- Evals: parseEvalsSummary.mjs path fixed; CI publishes score summary when ANTHROPIC_API_KEY is set.
+- Evals: parseEvalsSummary.mjs path fixed; CI publishes score summary when API keys are set.
 - UI: Keyboard shortcuts (Ctrl+B sidebar, Ctrl+Shift+L or / focus chat); demo note on SetupScreen; Export for plan/architecture/PRD.
 - Deploy: README documents VITE_API_URL for production and Windows installer path.
 - Removed unused `@ts-expect-error` in backend `rateLimiter.ts`. Added root `npm run check-all`. SQLite WAL in .gitignore. Timeouts tuned. CI E2E uses `start:prod`. SetupScreen on first load. Web app Dashboard import fixed.

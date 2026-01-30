@@ -1,5 +1,7 @@
 # Mermaid AI Diagram Generator - System Architecture
 
+> **⚠️ LEGACY DOCUMENT**: This document is outdated and references the old Vue.js frontend and Anthropic Claude as the primary LLM. The current stack uses **Svelte 5** for the frontend and **NVIDIA NIM (Kimi K2.5)** or **OpenRouter** as the LLM provider. For up-to-date architecture documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md) and [OVERVIEW.md](./OVERVIEW.md).
+
 > Comprehensive architectural documentation with visual diagrams covering current state and planned enhancements.
 
 ---

@@ -874,13 +874,14 @@ Complete Project (87+ files)
 
 - **Node.js**: 18+
 - **npm**: 9+
-- **Claude API Key**: Required (set in `.env`)
+- **LLM API Key**: Required (NVIDIA_NIM_API_KEY or OPENROUTER_API_KEY in `.env`)
 - **Port**: 3000 (default)
 
 ### Environment Variables
 ```bash
 # .env
-ANTHROPIC_API_KEY=sk-ant-...
+NVIDIA_NIM_API_KEY=nvapi-...
+# Or use: OPENROUTER_API_KEY=sk-or-...
 NODE_ENV=development
 PORT=3000
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000

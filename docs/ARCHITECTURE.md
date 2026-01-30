@@ -60,9 +60,9 @@ For a file-level map of the codebase, see [CODEBASE.md](./CODEBASE.md).
 
 **Services:**
 - `claudeServiceWithTools` - Tool-enabled chat (bash, file read/write/edit, list_dir); streams via LLM gateway
-- `llmGateway` - Unified streaming for Anthropic, OpenRouter, Zhipu, NIM (model router from `@grump/ai-core`)
+- `llmGateway` - Unified streaming for OpenRouter, NIM, Zhipu (model router from `@grump/ai-core`)
 - `toolExecutionService` - Tool execution (workspace-scoped); path policy via `pathPolicyService`
-- `intentCompilerService` - Intent parsing via Rust CLI or WASM, with Claude enrichment
+- `intentCompilerService` - Intent parsing via Rust CLI or WASM, with LLM enrichment
 - `architectureService`, `prdGeneratorService`, `codeGeneratorService` - Architecture, PRD, codegen
 - `agentOrchestrator`, `wrunnerService` - Multi-agent coordination and quality assurance
 - `tieredCache`, `workerPool`, `batchProcessor`, `nimAccelerator` - Cache, workers, batching, NIM
@@ -117,7 +117,7 @@ App Launch
 ```
 User Input → ChatInterface → /api/generate-diagram-stream
     ├─▶ Intent Compiler (if needed) → grump-intent.exe
-    ├─▶ Claude API → Stream (text + Mermaid)
+    ├─▶ LLM API → Stream (text + Mermaid)
     └─▶ ChatInterface (updates in real-time)
 ```
 
@@ -125,7 +125,7 @@ User Input → ChatInterface → /api/generate-diagram-stream
 ```
 User Input → ChatInterface → POST /api/chat/stream
     Body: { messages, workspaceRoot?, planMode?, agentProfile? }
-    ├─▶ Claude API (tools: bash, file_read, file_write, file_edit, list_directory)
+    ├─▶ LLM API (tools: bash, file_read, file_write, file_edit, list_directory)
     ├─▶ Tool execution (workspace-scoped)
     └─▶ SSE: text, tool_call, tool_result, done → ChatInterface
 ```

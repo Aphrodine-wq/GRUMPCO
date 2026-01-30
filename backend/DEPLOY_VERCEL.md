@@ -31,7 +31,8 @@ Follow the prompts to link your project.
 In the Vercel dashboard or via CLI:
 
 ```bash
-vercel env add ANTHROPIC_API_KEY production
+vercel env add NVIDIA_NIM_API_KEY production
+# Or use OPENROUTER_API_KEY instead
 # Enter your API key when prompted
 
 # Optional

@@ -6,17 +6,24 @@ This guide will help you get G-Rump running in local development or as a bundled
 
 - Node.js 20+ installed
 - npm installed
-- Anthropic API key ([Get one here](https://console.anthropic.com/))
+- NVIDIA NIM API key ([Get one here](https://build.nvidia.com/)) or OpenRouter API key ([Get one here](https://openrouter.ai/))
 - (Optional) Docker and Docker Compose for containerized deployment
 
 ## Quick Start
 
-### 1. Get Your Anthropic API Key
+### 1. Get Your AI Provider API Key
 
-1. Sign up or log in at [Anthropic Console](https://console.anthropic.com/)
+**Option A: NVIDIA NIM (Recommended - for Kimi K2.5)**
+1. Sign up or log in at [NVIDIA Build](https://build.nvidia.com/)
 2. Navigate to API Keys section
 3. Create a new API key
-4. Copy the key (starts with `sk-ant-api03-`)
+4. Copy the key (starts with `nvapi-`)
+
+**Option B: OpenRouter (Multi-model access)**
+1. Sign up or log in at [OpenRouter](https://openrouter.ai/)
+2. Go to Keys section
+3. Create a new API key
+4. Copy the key (starts with `sk-or-v1-`)
 
 ### 2. Configure Environment
 
@@ -24,7 +31,10 @@ This guide will help you get G-Rump running in local development or as a bundled
 
 Create `backend/.env` file:
 ```env
-ANTHROPIC_API_KEY=sk-ant-api03-your-actual-key-here
+# At least one of these is required:
+NVIDIA_NIM_API_KEY=nvapi-your-actual-key-here
+# OPENROUTER_API_KEY=sk-or-v1-your-key-here
+
 PORT=3000
 NODE_ENV=development
 ```
@@ -161,17 +171,17 @@ From the project root, run `scripts\smoke-check.bat` (Windows). It checks backen
 
 ### Backend Won't Start
 
-**Error: "ANTHROPIC_API_KEY is not set"**
+**Error: "At least one AI provider API key is required"**
 - Ensure `backend/.env` exists
+- Set either `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY`
 - Check that the API key is on a single line with no extra spaces
-- Verify the key starts with `sk-ant-api03-`
 
 **Error: "Port 3000 already in use"**
 - The backend automatically finds an available port
 - Check the console output for the actual port
 - Update `frontend/.env` with the correct port if needed
 
-**Error: "Cannot connect to Anthropic API"**
+**Error: "Cannot connect to AI API"**
 - Verify your API key is valid and active
 - Check your internet connection
 - Verify you have API credits/quota
@@ -214,7 +224,8 @@ From the project root, run `scripts\smoke-check.bat` (Windows). It checks backen
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | - | Your Anthropic API key |
+| `NVIDIA_NIM_API_KEY` | One of these | - | NVIDIA NIM API key (for Kimi K2.5) |
+| `OPENROUTER_API_KEY` | One of these | - | OpenRouter API key (multi-model) |
 | `PORT` | No | 3000 | Backend server port |
 | `NODE_ENV` | No | development | Environment mode |
 | `CORS_ORIGINS` | No | localhost:5173 | Comma-separated allowed origins |
@@ -297,7 +308,6 @@ Once G-Rump is running:
 
 ## Getting Help
 
-- Check `API_SETUP_INSTRUCTIONS.txt` for API key setup details
 - Review `docs/OVERVIEW.md` for system architecture
 - Check backend logs for detailed error messages
 - Check browser console for frontend errors
@@ -322,4 +332,4 @@ See `docker-compose.yml` for production-ready Docker configuration.
 - **Binding**: With `NODE_ENV=production`, the backend listens on `127.0.0.1` by default (override with `HOST`). Keeps the API off the network when run as the packaged app.
 - **Metrics**: Set `METRICS_AUTH` in production so `/metrics` requires basic auth.
 - **Tauri**: CSP and capabilities are in `frontend/src-tauri/tauri.conf.json` and `frontend/src-tauri/capabilities/`. Only the `main` and `splashscreen` windows use the default capability set.
-- **Code signing**: For Windows distribution trust, see the “Code Signing (Windows)” section in `BUILD.md`.
+- **Code signing**: For Windows distribution trust, see the "Code Signing (Windows)" section in `BUILD.md`.

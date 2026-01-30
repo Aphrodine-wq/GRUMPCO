@@ -13,7 +13,7 @@ Last updated: 2026-01-30
 **Prerequisites:**
 1. Vercel CLI installed: `npm i -g vercel`
 2. Supabase CLI installed: `npm i -g supabase` (optional)
-3. Anthropic API key from https://console.anthropic.com
+3. NVIDIA NIM or OpenRouter API key
 
 ### Option A: Quick Deploy Script (Recommended)
 Run the automated deployment script:
@@ -36,7 +36,7 @@ See **[backend/DEPLOY_VERCEL.md](../backend/DEPLOY_VERCEL.md)** for detailed ins
     - [ ] Copy QStash token and URL
 
 **Environment Variables to Set:**
-- `ANTHROPIC_API_KEY` - Required
+- `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY` - Required (at least one)
 - `SUPABASE_URL` - Required
 - `SUPABASE_SERVICE_KEY` - Required
 - `QSTASH_TOKEN` - Required

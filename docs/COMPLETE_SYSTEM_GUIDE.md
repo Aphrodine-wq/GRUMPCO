@@ -1,5 +1,7 @@
 # Complete System Guide: How G-Rump Works
 
+> **⚠️ LEGACY DOCUMENT**: This document may contain outdated references to Claude as the primary LLM. The current stack uses **NVIDIA NIM (Kimi K2.5)** or **OpenRouter** as the LLM provider. For up-to-date architecture documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md) and [OVERVIEW.md](./OVERVIEW.md).
+
 ## Table of Contents
 
 1. [System Overview](#system-overview)
