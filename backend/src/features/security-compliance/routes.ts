@@ -5,6 +5,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import logger from '../../middleware/logger.js';
 import {
   performSecurityScan,
   generateSBOM,
@@ -59,7 +60,7 @@ router.post('/scan', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Security scan error:', err);
+    logger.error({ error: err.message }, 'Security scan error');
     res.status(500).json({
       error: err.message,
       type: 'scan_error',
@@ -112,7 +113,7 @@ router.post('/sbom', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('SBOM generation error:', err);
+    logger.error({ error: err.message }, 'SBOM generation error');
     res.status(500).json({
       error: err.message,
       type: 'sbom_error',
@@ -174,7 +175,7 @@ router.post('/compliance', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Compliance report error:', err);
+    logger.error({ error: err.message }, 'Compliance report error');
     res.status(500).json({
       error: err.message,
       type: 'compliance_error',
@@ -219,7 +220,7 @@ router.post('/secrets-audit', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Secrets audit error:', err);
+    logger.error({ error: err.message }, 'Secrets audit error');
     res.status(500).json({
       error: err.message,
       type: 'secrets_audit_error',

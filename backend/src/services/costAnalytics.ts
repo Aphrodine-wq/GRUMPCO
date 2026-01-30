@@ -6,6 +6,8 @@
 import { getDatabase, DatabaseService } from '../db/database.js';
 import logger from '../middleware/logger.js';
 import { MODEL_REGISTRY } from '@grump/ai-core';
+import { getAlertingService } from './alerting.js';
+import { dispatchWebhook } from './webhookService.js';
 
 export interface CostRecord {
   id: string;
@@ -270,6 +272,7 @@ export class CostAnalytics {
    */
   private async checkBudgetAlerts(userId: string): Promise<void> {
     const status = await this.checkBudget(userId);
+    const alertService = getAlertingService();
 
     if (status.alertTriggered) {
       logger.warn(
@@ -283,7 +286,30 @@ export class CostAnalytics {
         'Budget alert triggered'
       );
       
-      // TODO: Send alert notification (email, webhook, etc.)
+      // Send warning alert via alerting service
+      await alertService.sendAlert({
+        severity: 'warning',
+        title: 'Budget threshold exceeded',
+        message: `User ${userId} has exceeded budget alert threshold. Daily: $${status.dailyUsed.toFixed(2)}/${status.dailyLimit?.toFixed(2) ?? 'unlimited'}, Monthly: $${status.monthlyUsed.toFixed(2)}/${status.monthlyLimit?.toFixed(2) ?? 'unlimited'}`,
+        component: 'cost-analytics',
+        metadata: {
+          userId,
+          dailyUsed: status.dailyUsed,
+          dailyLimit: status.dailyLimit,
+          monthlyUsed: status.monthlyUsed,
+          monthlyLimit: status.monthlyLimit,
+        },
+      });
+
+      // Dispatch webhook event for budget warning
+      dispatchWebhook('ship.failed', {
+        type: 'budget_warning',
+        userId,
+        dailyUsed: status.dailyUsed,
+        dailyLimit: status.dailyLimit,
+        monthlyUsed: status.monthlyUsed,
+        monthlyLimit: status.monthlyLimit,
+      });
     }
 
     if (!status.withinBudget) {
@@ -298,7 +324,32 @@ export class CostAnalytics {
         'Budget exceeded'
       );
       
-      // TODO: Send critical alert and potentially block requests
+      // Send critical alert via alerting service
+      await alertService.sendAlert({
+        severity: 'critical',
+        title: 'Budget limit exceeded',
+        message: `User ${userId} has exceeded budget limits. Daily: $${status.dailyUsed.toFixed(2)}/${status.dailyLimit?.toFixed(2) ?? 'unlimited'}, Monthly: $${status.monthlyUsed.toFixed(2)}/${status.monthlyLimit?.toFixed(2) ?? 'unlimited'}. Requests may be blocked.`,
+        component: 'cost-analytics',
+        metadata: {
+          userId,
+          dailyUsed: status.dailyUsed,
+          dailyLimit: status.dailyLimit,
+          monthlyUsed: status.monthlyUsed,
+          monthlyLimit: status.monthlyLimit,
+          blocked: true,
+        },
+      });
+
+      // Dispatch webhook event for budget exceeded
+      dispatchWebhook('ship.failed', {
+        type: 'budget_exceeded',
+        userId,
+        dailyUsed: status.dailyUsed,
+        dailyLimit: status.dailyLimit,
+        monthlyUsed: status.monthlyUsed,
+        monthlyLimit: status.monthlyLimit,
+        blocked: true,
+      });
     }
   }
 

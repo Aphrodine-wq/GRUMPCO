@@ -5,6 +5,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import logger from '../../middleware/logger.js';
 import {
   generateTests,
   generateLoadTestPlan,
@@ -44,7 +45,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Test generation error:', err);
+    logger.error({ error: err.message }, 'Test generation error');
     res.status(500).json({
       error: err.message,
       type: 'generation_error',
@@ -76,7 +77,7 @@ router.post('/load-plan', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Load test plan error:', err);
+    logger.error({ error: err.message }, 'Load test plan error');
     res.status(500).json({
       error: err.message,
       type: 'generation_error',
@@ -108,7 +109,7 @@ router.post('/coverage-analysis', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Coverage analysis error:', err);
+    logger.error({ error: err.message }, 'Coverage analysis error');
     res.status(500).json({
       error: err.message,
       type: 'analysis_error',
@@ -140,7 +141,7 @@ router.post('/mocks', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Mock generation error:', err);
+    logger.error({ error: err.message }, 'Mock generation error');
     res.status(500).json({
       error: err.message,
       type: 'generation_error',

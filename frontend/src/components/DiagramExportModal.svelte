@@ -31,25 +31,25 @@
 
       switch (exportFormat) {
         case 'svg': {
-          const svgData = await exportAsSvg(element);
+          const svgData = await exportAsSvg(diagramId);
           downloadFile(svgData, `${filename}.svg`, 'image/svg+xml');
           showToast('SVG exported successfully', 'success');
           break;
         }
         case 'png': {
-          const pngBlob = await exportAsPng(element);
+          const pngBlob = await exportAsPng(diagramId);
           downloadFile(pngBlob, `${filename}.png`, 'image/png');
           showToast('PNG exported successfully', 'success');
           break;
         }
         case 'pdf': {
-          const pdfBlob = await exportAsPdf(element, includeTitle ? title : undefined);
+          const pdfBlob = await exportAsPdf(diagramId, includeTitle ? title : undefined);
           downloadFile(pdfBlob, `${filename}.pdf`, 'application/pdf');
           showToast('PDF exported successfully', 'success');
           break;
         }
         case 'markdown': {
-          const markdown = await exportAsMarkdown(element, includeTitle ? title : undefined, description);
+          const markdown = await exportAsMarkdown(diagramId, includeTitle ? title : undefined, description);
           downloadFile(markdown, `${filename}.md`, 'text/markdown');
           showToast('Markdown exported successfully', 'success');
           break;
@@ -75,10 +75,28 @@
   async function generateShareableLink() {
     generatingLink = true;
     try {
-      // TODO: Implement backend endpoint to generate shareable links
-      // For now, create a mock link
-      const linkId = Math.random().toString(36).substring(7);
-      shareableLink = `${window.location.origin}/share/${linkId}`;
+      const element = document.getElementById(diagramId);
+      const mermaidCode = element?.querySelector('pre')?.textContent || '';
+      
+      const response = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'diagram',
+          content: element?.innerHTML || '',
+          title,
+          description,
+          mermaidCode,
+          expiresIn: 168, // 7 days
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create shareable link');
+      }
+
+      const data = await response.json();
+      shareableLink = `${window.location.origin}${data.shareUrl}`;
       showToast('Shareable link generated', 'success');
     } catch (error) {
       console.error('Failed to generate link:', error);

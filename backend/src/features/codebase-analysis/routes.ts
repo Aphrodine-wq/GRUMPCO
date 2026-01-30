@@ -5,6 +5,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import logger from '../../middleware/logger.js';
 import {
   analyzeCodebase,
   generateArchitectureDiagram,
@@ -40,7 +41,7 @@ router.post('/project', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Analysis error:', err);
+    logger.error({ error: err.message }, 'Analysis error');
     res.status(500).json({
       error: err.message,
       type: 'analysis_error',
@@ -80,7 +81,7 @@ router.post('/architecture', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Architecture diagram error:', err);
+    logger.error({ error: err.message }, 'Architecture diagram error');
     const hint =
       err.message.includes('ENOENT') || err.message.includes('no such file')
         ? 'Ensure workspacePath exists and is readable.'
@@ -123,7 +124,7 @@ router.post('/dependencies', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Dependency analysis error:', err);
+    logger.error({ error: err.message }, 'Dependency analysis error');
     res.status(500).json({
       error: err.message,
       type: 'dependency_error',
@@ -155,7 +156,7 @@ router.post('/metrics', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Metrics error:', err);
+    logger.error({ error: err.message }, 'Metrics error');
     res.status(500).json({
       error: err.message,
       type: 'metrics_error',
@@ -198,7 +199,7 @@ router.post('/code-smells', async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('Code smells error:', err);
+    logger.error({ error: err.message }, 'Code smells error');
     res.status(500).json({
       error: err.message,
       type: 'code_smells_error',
