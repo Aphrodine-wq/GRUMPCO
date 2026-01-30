@@ -110,4 +110,103 @@ integrations/
 # Build artifacts / installers
 *.exe
 *.zip
+*.msi
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.AppImage
 G-Rump-dist/
+dist-output/
+
+# Archives
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.7z
+*.rar
+*.gz
+*.bz2
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Cache directories
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+.stylelintcache
+
+# Test artifacts
+test-results/
+*.snap
+__snapshots__/
+
+# IDE workspace files
+*.code-workspace
+*.sublime-workspace
+*.sublime-project
+
+# Windows specific
+Desktop.ini
+ehthumbs.db
+
+# macOS specific
+._*
+.Spotlight-V100
+.Trashes
+
+# Large media files (should use Git LFS)
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.mp3
+*.wav
+*.flac
+
+# Compiled binaries (except intentional releases)
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.o
+*.obj
+
+# Installer scripts output
+installer-output/
+*.nsh
+
+# Documentation build output
+docs-site/.vitepress/dist/
+docs-site/.vitepress/cache/
+
+# Python bytecode (additional patterns)
+*.pyc
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments (additional patterns)
+.virtualenv/
+.conda/
+conda-env/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Data files
+*.sqlite
+*.db
+
+# Secrets (additional patterns)
+secrets/
+*.secret
+.secrets
+private/
+credentials/

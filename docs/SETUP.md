@@ -1,5 +1,7 @@
 # Setup Guide - G-Rump
 
+> **Last Updated:** January 2026
+
 This guide will help you get G-Rump running in local development or as a bundled Windows application.
 
 ## Prerequisites
@@ -165,7 +167,7 @@ Make sure `backend/.env` exists with your API key (see above).
 
 From the project root:
 ```bash
-docker-compose up --build
+docker-compose -f deploy/docker-compose.yml up --build
 ```
 
 This will:
@@ -323,13 +325,6 @@ npm run electron:build
 # Output: frontend/electron-dist/G-Rump.exe (portable)
 ```
 
-**Electron App:**
-```bash
-cd frontend
-npm run electron:build
-# Output: frontend/electron-dist/G-Rump.exe (portable)
-```
-
 This creates a Windows executable with:
 - Bundled frontend
 - Splash screen
@@ -362,7 +357,7 @@ For production deployment:
 6. Set up proper logging and monitoring
 7. Configure reverse proxy (nginx) with SSL/TLS
 
-See `docker-compose.yml` for production-ready Docker configuration.
+See `deploy/docker-compose.yml` for production-ready Docker configuration.
 
 ## Security
 

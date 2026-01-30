@@ -1,5 +1,7 @@
 # G-Rump Documentation
 
+> **Last Updated:** January 2026
+
 Welcome to the G-Rump documentation. This index will help you find what you need quickly.
 
 ## 🚀 Getting Started (Pick One)

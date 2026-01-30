@@ -1,6 +1,26 @@
 # G-Rump Roadmap
 
-## 1. More AI models
+> **Last Updated:** January 2026
+
+## Version Milestones
+
+| Version | Target | Focus | Status |
+|---------|--------|-------|--------|
+| **v1.0** | Q1 2026 | Core SHIP workflow, Electron app, basic codegen | Current |
+| **v1.1** | Q2 2026 | More AI models, Intent Optimizer, Agent evals | Planned |
+| **v1.2** | Q3 2026 | IDE integrations, Codebase scanner, Webhooks | Planned |
+| **v2.0** | Q4 2026 | Multi-agent orchestration, "Wow" features | Future |
+
+## Priority Legend
+
+- **P0** - Critical for next release
+- **P1** - High priority, planned for upcoming versions
+- **P2** - Medium priority, on roadmap
+- **P3** - Nice to have, backlog
+
+---
+
+## 1. More AI models (P1 - v1.1)
 
 G-Rump already supports multiple providers via the LLM gateway (`anthropic`, `zhipu`, `copilot`, `openrouter`) in `backend/src/services/llmGateway.ts`. Next steps:
 
@@ -8,7 +28,7 @@ G-Rump already supports multiple providers via the LLM gateway (`anthropic`, `zh
 - Expose a richer model picker in Desktop and Web (per-mode defaults, “fast” vs “quality” presets).
 - Document model-specific limits (context window, tool support, streaming behaviour).
 
-## 2. More IDE integrations
+## 2. More IDE integrations (P1 - v1.2)
 
 Current integrations:
 
@@ -21,7 +41,7 @@ Planned:
 - A generic LSP-style or CLI-based interface so any editor can trigger SHIP, architecture, and codegen.
 - Deeper Cursor integration (beyond REST/MCP) with ready-made rules/skills.
 
-## 3. Scan entire codebase → Mermaid chart
+## 3. Scan entire codebase → Mermaid chart (P1 - v1.2)
 
 Backend support exists today:
 
@@ -40,7 +60,7 @@ Future enhancements:
 - Optional focus filters (per package, feature, or service).
 - Tight integration with the main Architecture mode viewer.
 
-## 4. Intent Optimizer
+## 4. Intent Optimizer (P0 - v1.1)
 
 Today, G-Rump uses the Rust Intent Compiler (`grump-intent`) plus LLM enrichment in
 `backend/src/services/intentCompilerService.ts` to extract actors, features, data flows, and tech stack hints.
@@ -52,7 +72,7 @@ Planned “Intent Optimizer” capabilities:
 - Optional “optimize for codegen” vs “optimize for architecture review” modes.
 - UI hook in Architecture mode to review and tweak the optimized intent before diagram/spec generation.
 
-## 5. AI integrated within the compiler
+## 5. AI integrated within the compiler (P2 - v2.0)
 
 Current state:
 
@@ -75,7 +95,7 @@ Ideas to make the experience feel more impressive, especially for demos and firs
 - One-click deploy for generated apps (e.g. opinionated Vercel presets for common stacks).
 - A short, scripted end-to-end demo (recorded or live) that shows SHIP, agent reports, WRunner, and scheduled agents.
 
-## 7. Webhooks for speed
+## 7. Webhooks for speed (P1 - v1.2)
 
 Current capabilities:
 
@@ -97,7 +117,7 @@ Future enhancements:
 - Optional webhook signing and retry policies for production-grade consumers.
 - Higher-level docs and examples for building webhook-driven flows (e.g. “when SHIP completes, auto-deploy and post to Slack”).
 
-## 8. Agent evals (architecture, PRD, SHIP, codegen)
+## 8. Agent evals (P0 - v1.1)
 
 We are adding offline evaluation suites for the main agents so changes can be measured over time:
 

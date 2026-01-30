@@ -1,5 +1,7 @@
 # Getting Started with G-Rump
 
+> **Last Updated:** January 2026
+
 Welcome! This guide will get you from zero to running G-Rump in under 10 minutes.
 
 ## Prerequisites
@@ -67,8 +69,8 @@ grump ship "Build a todo app with auth"
 Full isolation with all dependencies included.
 
 ```bash
-# Build and run
-docker-compose up --build
+# Build and run (from project root)
+docker-compose -f deploy/docker-compose.yml up --build
 
 # Access the app at http://localhost:8080
 ```

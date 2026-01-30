@@ -1,11 +1,40 @@
 <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- G-Rump FrownY Face Logo -->
   <defs>
     <linearGradient id="grumpGradient" x1="24" y1="24" x2="232" y2="232" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#8B5CF6"/>
       <stop offset="1" stop-color="#5B21B6"/>
     </linearGradient>
+    <linearGradient id="eyeGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E0E7FF"/>
+    </linearGradient>
   </defs>
+  
+  <!-- Background rounded square -->
   <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#grumpGradient)"/>
-  <circle cx="128" cy="128" r="64" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round"/>
-  <path d="M128 128H176" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round"/>
+  
+  <!-- Face circle outline -->
+  <circle cx="128" cy="128" r="80" stroke="#FFFFFF" stroke-width="8" fill="none" opacity="0.2"/>
+  
+  <!-- Left eye (grumpy, slightly angled) -->
+  <ellipse cx="92" cy="108" rx="18" ry="20" fill="url(#eyeGlow)"/>
+  <circle cx="94" cy="112" r="8" fill="#1E1B4B"/>
+  <circle cx="90" cy="108" r="3" fill="#FFFFFF"/>
+  
+  <!-- Right eye (grumpy, slightly angled) -->
+  <ellipse cx="164" cy="108" rx="18" ry="20" fill="url(#eyeGlow)"/>
+  <circle cx="162" cy="112" r="8" fill="#1E1B4B"/>
+  <circle cx="158" cy="108" r="3" fill="#FFFFFF"/>
+  
+  <!-- Grumpy eyebrows -->
+  <path d="M70 88 L114 96" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+  <path d="M186 88 L142 96" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+  
+  <!-- FrownY mouth (curved downward) -->
+  <path d="M88 168 Q128 140 168 168" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" fill="none"/>
+  
+  <!-- Small accent lines for extra grumpiness -->
+  <path d="M76 130 L82 134" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  <path d="M180 130 L174 134" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
 </svg>

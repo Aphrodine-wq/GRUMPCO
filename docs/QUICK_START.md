@@ -1,141 +1,70 @@
 # Quick Start Guide
 
-## Overview
+> **Note:** For the full getting started experience, see [GETTING_STARTED.md](./GETTING_STARTED.md).
+> This page is a quick reference card for experienced users.
 
-G-Rump transforms natural language into complete, production-ready applications using specialized AI agents. This guide will get you up and running quickly.
+## TL;DR
 
-## Pick a Setup
+```bash
+# 1. Install
+cd frontend && npm install
+cd ../backend && npm install && npm run build
 
-- **Website (self-hosted)**: deploy backend + frontend, then use the web app.
-- **Electron Desktop App**: run `npm run electron:dev` or build with `npm run electron:build`.
-- **CLI**: install `grump-cli` and point it at your API URL.
+# 2. Configure (create backend/.env)
+echo "NVIDIA_NIM_API_KEY=nvapi-your-key" > backend/.env
 
-See `docs/SETUP.md` for the shortest path by user type.
-
-## Installation
-
-### Prerequisites
-
-- Node.js 20+
-- Rust (for building intent-compiler)
-- Windows 10/11 (for production builds)
-
-### Setup
-
-1. **Clone and install dependencies:**
-   ```bash
-   # Backend
-   cd backend
-   npm install
-   
-   # Frontend
-   cd ../frontend
-   npm install
-   
-   # Intent Compiler (Rust)
-   cd ../intent-compiler
-   cargo build --release
-   ```
-
-2. **Configure environment:**
-   ```bash
-   cd backend
-   cp .env.example .env
-   # Add your NVIDIA_NIM_API_KEY or OPENROUTER_API_KEY to .env
-   ```
-
-3. **Start development:**
-   ```bash
-   # From project root
-   start-app.bat
-   ```
-
-## Basic Usage
-
-### 1. Describe Your Project
-
-Enter a natural language description:
-```
-Build a todo app with user authentication, real-time sync, and mobile support
+# 3. Run
+cd frontend && npm run electron:dev
 ```
 
-### 2. Generate Architecture
+## Paths
 
-Click "Generate Architecture" to create system architecture diagrams.
+| Use Case | Command |
+|----------|---------|
+| **Desktop App** | `cd frontend && npm run electron:dev` |
+| **Web Dev** | `cd backend && npm run dev` + `cd frontend && npm run dev` |
+| **Docker** | `docker-compose up --build` (from deploy/) |
+| **CLI** | `npm i -g grump-cli && grump ship "your idea"` |
+| **Production Build** | `cd frontend && npm run electron:build` |
 
-### 3. Generate PRD
+## Required Environment
 
-Click "Generate PRD" to create a Product Requirements Document.
-
-### 4. Generate Code
-
-1. Select preferences:
-   - Frontend: Vue or React
-   - Backend: Node.js, Python, or Go
-   - Database: PostgreSQL or MongoDB
-   - Include tests and docs
-
-2. Click "Generate Code"
-
-3. Watch agents work:
-   - Architect: Validates and plans
-   - Frontend: Generates UI
-   - Backend: Generates APIs
-   - DevOps: Generates configs
-   - Test: Generates tests
-   - Docs: Generates documentation
-   - WRunner: Analyzes and fixes
-
-### 5. Download Project
-
-Click "Download Project" to get a ZIP file with:
-- Complete codebase
-- Documentation
-- Configuration files
-- Work reports
-- Quality analysis
-
-## Key Features
-
-### Intent Compiler
-
-Automatically extracts:
-- Code patterns (REST, GraphQL, microservices)
-- Architecture hints
-- Optimization opportunities
-- Code quality requirements
-
-### Design Mode
-
-Each agent generates a work report documenting:
-- What was created
-- Why decisions were made
-- Integration points
-- Known issues
-- Recommendations
-
-### WRunner Quality Assurance
-
-Automatically:
-- Identifies missing components
-- Detects inconsistencies
-- Finds integration gaps
-- Applies auto-fixes
-- Provides recommendations
-
-## Example Workflow
-
-```mermaid
-graph LR
-    A[Describe Project] --> B[Generate Architecture]
-    B --> C[Generate PRD]
-    C --> D[Generate Code]
-    D --> E[Review Reports]
-    E --> F[Download Project]
+Create `backend/.env` with ONE of:
+```env
+NVIDIA_NIM_API_KEY=nvapi-your-key-here
+# OR
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
 ```
 
-## Next Steps
+## First Project
 
-- Read [HOW_IT_WORKS.md](HOW_IT_WORKS.md) for detailed explanation
-- Read [AGENT_SYSTEM.md](AGENT_SYSTEM.md) for agent details
-- Read [INTENT_COMPILER.md](INTENT_COMPILER.md) for intent compiler details
+1. Open G-Rump
+2. Type: *"Build a todo app with user authentication"*
+3. Click **Generate Architecture** → **Generate PRD** → **Generate Code**
+4. Download your project as ZIP
+
+## Workflow
+
+```
+Describe → Architecture → PRD → Code → Download
+```
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `backend/.env` | API keys and config |
+| `frontend/.env` | Optional: custom API URL |
+| `deploy/docker-compose.yml` | Docker deployment |
+| `deploy/vercel.json` | Vercel deployment |
+
+## Help
+
+- [Getting Started](./GETTING_STARTED.md) - Full setup guide
+- [Setup Guide](./SETUP.md) - Detailed configuration & troubleshooting
+- [Architecture](./ARCHITECTURE.md) - How G-Rump works
+- [API Reference](./API.md) - All endpoints
+
+---
+
+*Last updated: January 2026*
