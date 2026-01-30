@@ -342,7 +342,8 @@ async function listVolumes(): Promise<VolumeInfo[]> {
   const client = getDockerClient();
   const { Volumes } = await client.listVolumes();
   
-  return (Volumes || []).map(volume => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (Volumes || []).map((volume: any) => ({
     name: volume.Name,
     driver: volume.Driver,
     mountpoint: volume.Mountpoint,
