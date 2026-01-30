@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Transparent background with purple frowny face - G-Rump brand style -->
+  
+  <!-- Main circle outline -->
+  <circle cx="256" cy="256" r="230" stroke="#7C3AED" stroke-width="28" fill="none" opacity="0.95"/>
+  
+  <!-- Left eye -->
+  <circle cx="175" cy="200" r="32" fill="#7C3AED"/>
+  
+  <!-- Right eye -->
+  <circle cx="337" cy="200" r="32" fill="#7C3AED"/>
+  
+  <!-- Frown (curved line going up = sad face) -->
+  <path d="M 140 340 Q 256 280 372 340" stroke="#7C3AED" stroke-width="28" stroke-linecap="round" fill="none"/>
+</svg>
