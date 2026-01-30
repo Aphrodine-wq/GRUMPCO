@@ -1,12 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "name": "g-rump",
   "public": true,
-  "cleanUrls": true,
-  "trailingSlash": false,
   "installCommand": "npm install",
   "buildCommand": "npm run build:packages && cd backend && npm run build",
+  "regions": ["iad1"],
   "builds": [
     {
       "src": "marketing-site/**",
@@ -16,7 +14,9 @@
       "src": "backend/dist/index.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/dist/**"]
+        "includeFiles": ["backend/dist/**"],
+        "memory": 1024,
+        "maxDuration": 60
       }
     }
   ],
@@ -40,54 +40,19 @@
     {
       "src": "/(.*)",
       "dest": "marketing-site/$1"
+    },
+    {
+      "src": "/(.*)",
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+      },
+      "continue": true
     }
   ],
   "env": {
     "NODE_ENV": "production",
     "DB_TYPE": "supabase"
-  },
-  "regions": ["iad1"],
-  "functions": {
-    "backend/dist/index.js": {
-      "memory": 1024,
-      "maxDuration": 60
-    }
-  },
-"headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        }
-      ]
-    },
-    {
-      "source": "/marketing-site/(.*\\.html)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/(robots\\.txt|sitemap\\.xml)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400"
-        }
-      ]
-    }
-  ]
+  }
 }
