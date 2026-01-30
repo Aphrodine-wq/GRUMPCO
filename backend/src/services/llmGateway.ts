@@ -278,6 +278,7 @@ async function* streamNim(params: StreamParams): AsyncGenerator<StreamEvent> {
 
   const model = params.model || NIM_DEFAULT;
   const url = getNimChatUrl();
+  logger.debug({ model }, '[NIM] Starting stream request');
 
   const body: Record<string, unknown> = {
     model,
@@ -307,6 +308,7 @@ async function* streamNim(params: StreamParams): AsyncGenerator<StreamEvent> {
     }));
   }
 
+  logger.debug({ messageCount: (body.messages as unknown[])?.length, hasTools: !!body.tools }, '[NIM] Sending request');
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -332,10 +334,13 @@ async function* streamNim(params: StreamParams): AsyncGenerator<StreamEvent> {
   const toolCallsAccum: ToolCallAccum[] = [];
   const emittedToolIndices = new Set<number>();
 
+  let chunkCount = 0;
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    buf += dec.decode(value, { stream: true });
+    chunkCount++;
+    const decoded = dec.decode(value, { stream: true });
+    buf += decoded;
     const lines = buf.split('\n');
     buf = lines.pop() ?? '';
     for (const line of lines) {
@@ -348,6 +353,7 @@ async function* streamNim(params: StreamParams): AsyncGenerator<StreamEvent> {
           choices?: Array<{
             delta?: {
               content?: string;
+              reasoning_content?: string;
               tool_calls?: Array<{ index?: number; id?: string; name?: string; arguments?: string }>;
             };
             finish_reason?: string;
@@ -363,9 +369,12 @@ async function* streamNim(params: StreamParams): AsyncGenerator<StreamEvent> {
         const delta = choice?.delta;
         if (!delta) continue;
 
+        // Kimi K2.5 sends content in 'content' field (primary response)
+        // and chain-of-thought reasoning in 'reasoning_content' field
         if (typeof delta.content === 'string' && delta.content.length > 0) {
           yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: delta.content } };
         }
+        // Kimi K2.5 reasoning_content is chain-of-thought, not yielded to user
 
         const toolCalls = delta.tool_calls;
         if (Array.isArray(toolCalls)) {
@@ -402,6 +411,7 @@ async function* streamNim(params: StreamParams): AsyncGenerator<StreamEvent> {
       }
     }
   }
+  logger.debug({ chunkCount }, '[NIM] Stream complete');
   yield { type: 'message_stop' as const };
 }
 
