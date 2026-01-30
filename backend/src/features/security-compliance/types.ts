@@ -154,3 +154,9 @@ export interface SecretsAuditRequest {
   excludePatterns?: string[];
   customPatterns?: string[];
 }
+
+/** Result of workspace path validation */
+export type PathValidationResult = 
+  | { ok: true; resolved: string }
+  | { ok: false; reason: string };
+

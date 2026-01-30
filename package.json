@@ -17,6 +17,8 @@
   "license": "MIT",
   "scripts": {
     "build": "npm run build --prefix frontend",
+    "build:packages": "npm run build --prefix packages/shared-types && npm run build --prefix packages/ai-core",
+    "vercel-build": "npm run build:packages && npm run build --prefix backend",
     "check-all": "npm run type-check --prefix backend && npm run type-check --prefix frontend && npm run lint --prefix backend && npm run lint --prefix frontend",
     "lint": "npm run lint --prefix frontend && npm run lint --prefix backend",
     "lint:fix": "npm run lint:fix --prefix frontend && npm run lint:fix --prefix backend",

@@ -1,9 +1,10 @@
 <script lang="ts">
   import { CollapsibleSidebar, Button } from '../lib/design-system';
   import { sessionsStore, sortedSessions, currentSession } from '../stores/sessionsStore';
-  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, showIntegrations, showApprovals, showHeartbeats, showMemory, showAuditLog, showAdvancedAI, sidebarCollapsed } from '../stores/uiStore';
+  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, showIntegrations, showApprovals, showHeartbeats, showMemory, showAuditLog, showAdvancedAI, showDocker, showCloudDashboard, sidebarCollapsed } from '../stores/uiStore';
   import OpenRepoModal from './OpenRepoModal.svelte';
   import CostSnippet from './CostSnippet.svelte';
+  import ThemeToggle from './ThemeToggle.svelte';
   import type { Session } from '../types';
 
   let hoveredSessionId: string | null = $state(null);
@@ -35,6 +36,8 @@
     showHeartbeats.set(false);
     showMemory.set(false);
     showAdvancedAI.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
     if (window.innerWidth < 768) {
       mobileMenuOpen = false;
     }
@@ -58,6 +61,8 @@ function openSettings() {
     showHeartbeats.set(false);
     showMemory.set(false);
     showAdvancedAI.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
   }
 
   function openAskDocs() {
@@ -71,6 +76,8 @@ function openSettings() {
     showHeartbeats.set(false);
     showMemory.set(false);
     showAdvancedAI.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
   }
 
   function openVoiceCode() {
@@ -84,6 +91,8 @@ function openSettings() {
     showHeartbeats.set(false);
     showMemory.set(false);
     showAdvancedAI.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
   }
 
   function openDesignToCode() {
@@ -97,6 +106,8 @@ function openSettings() {
     showHeartbeats.set(false);
     showMemory.set(false);
     showAdvancedAI.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
   }
 
   function openSwarm() {
@@ -109,6 +120,8 @@ function openSettings() {
     showHeartbeats.set(false);
     showMemory.set(false);
     showAdvancedAI.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
   }
 
   function openIntegrations() {
@@ -122,6 +135,8 @@ function openSettings() {
     showHeartbeats.set(false);
     showMemory.set(false);
     showAdvancedAI.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
   }
 
   function openApprovals() {
@@ -135,6 +150,8 @@ function openSettings() {
     showHeartbeats.set(false);
     showMemory.set(false);
     showAdvancedAI.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
   }
 
   function openHeartbeats() {
@@ -148,6 +165,8 @@ function openSettings() {
     showApprovals.set(false);
     showMemory.set(false);
     showAdvancedAI.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
   }
 
   function openMemory() {
@@ -162,6 +181,8 @@ function openSettings() {
     showHeartbeats.set(false);
     showAuditLog.set(false);
     showAdvancedAI.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
   }
 
 function openAuditLog() {
@@ -176,6 +197,8 @@ function openAuditLog() {
     showHeartbeats.set(false);
     showMemory.set(false);
     showAdvancedAI.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
   }
 
   function openAdvancedAI() {
@@ -190,6 +213,40 @@ function openAuditLog() {
     showHeartbeats.set(false);
     showMemory.set(false);
     showAuditLog.set(false);
+    showDocker.set(false);
+    showCloudDashboard.set(false);
+  }
+
+  function openDocker() {
+    showDocker.set(true);
+    showSettings.set(false);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
+    showDesignToCode.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAuditLog.set(false);
+    showAdvancedAI.set(false);
+    showCloudDashboard.set(false);
+  }
+
+  function openCloudDashboard() {
+    showCloudDashboard.set(true);
+    showSettings.set(false);
+    showAskDocs.set(false);
+    showVoiceCode.set(false);
+    showSwarm.set(false);
+    showDesignToCode.set(false);
+    showIntegrations.set(false);
+    showApprovals.set(false);
+    showHeartbeats.set(false);
+    showMemory.set(false);
+    showAuditLog.set(false);
+    showAdvancedAI.set(false);
+    showDocker.set(false);
   }
 
   function formatDate(timestamp: number): string {
@@ -568,6 +625,46 @@ function openAuditLog() {
             <span>Audit log</span>
           {/if}
         </button>
+        <button class="settings-btn" title="Docker" aria-label="Docker" onclick={openDocker}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M22 12.5c-.5-1-1.5-1.5-3-1.5h-1v-2h-2v2h-2v-2h-2v2h-2v-2H8v2H6c-1.5 0-2.5.5-3 1.5C2.5 13 2 14 2 15.5 2 18 4.5 20 8 20h8c3.5 0 6-2 6-4.5 0-1.5-.5-2.5-1-3z" />
+            <rect x="10" y="6" width="2" height="2" />
+            <rect x="10" y="2" width="2" height="2" />
+            <rect x="14" y="6" width="2" height="2" />
+          </svg>
+          {#if !collapsed}
+            <span>Docker</span>
+          {/if}
+        </button>
+        <button class="settings-btn" title="Cloud Dashboard" aria-label="Cloud Dashboard" onclick={openCloudDashboard}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+            <path d="M22 10a3 3 0 0 0-3-3h-2.207a5.502 5.502 0 0 0-10.702.5" />
+          </svg>
+          {#if !collapsed}
+            <span>Cloud</span>
+          {/if}
+        </button>
         <button class="settings-btn" title="Ask docs" aria-label="Ask docs" onclick={openAskDocs}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -609,6 +706,9 @@ function openAuditLog() {
             <span>Settings</span>
           {/if}
         </button>
+        <div class="theme-toggle-wrapper" class:collapsed>
+          <ThemeToggle size="sm" showLabel={!collapsed} />
+        </div>
       </div>
     {/snippet}
   </CollapsibleSidebar>
@@ -952,5 +1052,18 @@ function openAuditLog() {
         transition: none;
       }
     }
+  }
+
+  .theme-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-top: 1px solid var(--color-border-light);
+    margin-top: 4px;
+  }
+
+  .theme-toggle-wrapper.collapsed {
+    padding: 10px;
+    justify-content: center;
   }
 </style>

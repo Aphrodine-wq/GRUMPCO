@@ -329,6 +329,72 @@ export const OAUTH_PROVIDERS: Record<
   home_assistant: null,
   elevenlabs: null,
   twilio: null,
+  // New OAuth providers (Phase 2.3+)
+  jira: {
+    authUrl: 'https://auth.atlassian.com/authorize',
+    tokenUrl: 'https://auth.atlassian.com/oauth/token',
+    scopes: ['read:jira-work', 'write:jira-work', 'read:jira-user', 'manage:jira-project', 'offline_access'],
+    supportsOAuth: true,
+  },
+  atlassian: {
+    authUrl: 'https://auth.atlassian.com/authorize',
+    tokenUrl: 'https://auth.atlassian.com/oauth/token',
+    scopes: ['read:confluence-space.summary', 'read:confluence-content.all', 'write:confluence-content', 'offline_access'],
+    supportsOAuth: true,
+  },
+  vercel: {
+    authUrl: 'https://vercel.com/oauth/authorize',
+    tokenUrl: 'https://api.vercel.com/v2/oauth/access_token',
+    scopes: [],
+    supportsOAuth: true,
+  },
+  netlify: {
+    authUrl: 'https://app.netlify.com/authorize',
+    tokenUrl: 'https://api.netlify.com/oauth/token',
+    scopes: [],
+    supportsOAuth: true,
+  },
+  github: {
+    authUrl: 'https://github.com/login/oauth/authorize',
+    tokenUrl: 'https://github.com/login/oauth/access_token',
+    scopes: ['repo', 'read:user', 'read:org', 'workflow'],
+    supportsOAuth: true,
+  },
+  gitlab: {
+    authUrl: 'https://gitlab.com/oauth/authorize',
+    tokenUrl: 'https://gitlab.com/oauth/token',
+    scopes: ['api', 'read_user', 'read_repository', 'write_repository'],
+    supportsOAuth: true,
+  },
+  bitbucket: {
+    authUrl: 'https://bitbucket.org/site/oauth2/authorize',
+    tokenUrl: 'https://bitbucket.org/site/oauth2/access_token',
+    scopes: ['repository', 'pullrequest', 'issue', 'account'],
+    supportsOAuth: true,
+  },
+  linear: {
+    authUrl: 'https://linear.app/oauth/authorize',
+    tokenUrl: 'https://api.linear.app/oauth/token',
+    scopes: ['read', 'write', 'issues:create', 'comments:create'],
+    supportsOAuth: true,
+  },
+  // Cloud providers (use API keys typically, but some have OAuth)
+  aws: null, // Uses access keys
+  gcp: {
+    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenUrl: 'https://oauth2.googleapis.com/token',
+    scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    supportsOAuth: true,
+  },
+  azure: {
+    authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+    tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+    scopes: ['https://management.azure.com/.default', 'offline_access'],
+    supportsOAuth: true,
+  },
+  // Backend-as-a-Service (API keys)
+  supabase: null, // Uses project API keys
+  firebase: null, // Uses service account or API keys
 };
 
 /**

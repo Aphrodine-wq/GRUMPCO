@@ -1,0 +1,21 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grump-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#A78BFA"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#grump-gradient)"/>
+  
+  <!-- G letter stylized -->
+  <path d="M64 28C45.2 28 30 43.2 30 62C30 80.8 45.2 96 64 96C75.6 96 85.6 90 91.6 81L76 81C72.4 85.2 68.4 86 64 86C51.2 86 41 76.8 41 62C41 47.2 51.2 38 64 38C71.6 38 78 41.6 82 47L93.6 38.4C86.8 31.6 76 28 64 28Z" fill="white"/>
+  
+  <!-- Inner arc -->
+  <path d="M64 76L98 76L98 62L68 62L68 72L64 72C56 72 50 66 50 62C50 58 56 52 64 52C70 52 74 55 76 58L86 52C81 45 73 42 64 42C50 42 40 51 40 62C40 73 50 82 64 82L64 76Z" fill="white"/>
+  
+  <!-- Sparkle accent -->
+  <circle cx="95" cy="35" r="6" fill="white" opacity="0.8"/>
+  <circle cx="103" cy="43" r="3" fill="white" opacity="0.6"/>
+</svg>

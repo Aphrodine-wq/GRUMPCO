@@ -16,6 +16,11 @@ export const showHeartbeats = writable(false);
 export const showMemory = writable(false);
 export const showAuditLog = writable(false);
 export const showAdvancedAI = writable(false);
+
+// New screens
+export const showDocker = writable(false);
+export const showCloudDashboard = writable(false);
+
 /** Sidebar collapsed state (for keyboard shortcut Ctrl/Cmd+B). */
 export const sidebarCollapsed = writable(false);
 /** When incremented, ChatInterface should focus the chat input (for keyboard shortcut Ctrl/Cmd+Shift+L). */

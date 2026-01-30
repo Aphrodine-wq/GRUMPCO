@@ -22,7 +22,21 @@ export type IntegrationProviderId =
   | 'philips_hue'
   | 'home_assistant'
   | 'elevenlabs'
-  | 'twilio';
+  | 'twilio'
+  // New integrations (Phase 2.3+)
+  | 'jira'
+  | 'atlassian'
+  | 'vercel'
+  | 'netlify'
+  | 'aws'
+  | 'gcp'
+  | 'azure'
+  | 'supabase'
+  | 'firebase'
+  | 'github'
+  | 'gitlab'
+  | 'bitbucket'
+  | 'linear';
 
 export type IntegrationStatus = 'active' | 'disabled' | 'error' | 'pending';
 

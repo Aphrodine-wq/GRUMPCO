@@ -10,7 +10,7 @@ import logger from '../middleware/logger.js';
 import { recordLlmStreamMetrics } from '../middleware/metrics.js';
 import { getNimChatUrl } from '../config/nim.js';
 
-export type LLMProvider = 'nim' | 'zhipu' | 'copilot' | 'openrouter' | 'groq' | 'together' | 'ollama';
+export type LLMProvider = 'nim' | 'zhipu' | 'copilot' | 'openrouter' | 'groq' | 'together' | 'ollama' | 'openai' | 'anthropic' | 'gemini';
 
 export type MultimodalContentPart =
   | { type: 'text'; text: string }
@@ -47,6 +47,9 @@ const NIM_DEFAULT = 'moonshotai/kimi-k2.5';
 const GROQ_DEFAULT = 'llama-3.1-70b-versatile';
 const TOGETHER_DEFAULT = 'togethercomputer/llama-3-70b';
 const OLLAMA_DEFAULT = 'llama3.1';
+const OPENAI_DEFAULT = 'gpt-4o';
+const ANTHROPIC_DEFAULT = 'claude-sonnet-4-20250514';
+const GEMINI_DEFAULT = 'gemini-2.0-flash';
 
 /**
  * Stream from Zhipu (GLM-4) via REST SSE. Tools not mapped in this stub; text only.
@@ -638,6 +641,374 @@ async function* streamOllama(params: StreamParams): AsyncGenerator<StreamEvent> 
 }
 
 /**
+ * Stream from OpenAI (GPT-4o, o1, etc). Uses OPENAI_API_KEY.
+ * Model: gpt-4o (default). Supports tools via function calling.
+ */
+async function* streamOpenAI(params: StreamParams): AsyncGenerator<StreamEvent> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    logger.warn({}, 'OpenAI provider skipped: OPENAI_API_KEY not set');
+    yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: '[OpenAI not configured. Set OPENAI_API_KEY.]' } };
+    yield { type: 'message_stop' as const };
+    return;
+  }
+
+  const model = params.model || OPENAI_DEFAULT;
+  const url = 'https://api.openai.com/v1/chat/completions';
+
+  const body: Record<string, unknown> = {
+    model,
+    max_tokens: params.max_tokens,
+    stream: true,
+    messages: [
+      ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
+      ...params.messages.map((m) => ({ role: m.role, content: m.content })),
+    ],
+  };
+
+  // Add tools if provided (OpenAI function calling format)
+  if (params.tools && params.tools.length > 0) {
+    body.tools = params.tools.map((t) => ({
+      type: 'function' as const,
+      function: {
+        name: t.name,
+        description: t.description ?? '',
+        parameters: t.input_schema ?? { type: 'object', properties: {} },
+      },
+    }));
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(120_000),
+  });
+
+  if (!res.ok) {
+    const t = await res.text();
+    logger.warn({ status: res.status, body: t.slice(0, 500) }, 'OpenAI API error');
+    throw new Error(`OpenAI API error: ${res.status} ${t.slice(0, 200)}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('OpenAI: no response body');
+
+  const dec = new TextDecoder();
+  let buf = '';
+  type ToolCallAccum = { id: string; name: string; args: string };
+  const toolCallsAccum: ToolCallAccum[] = [];
+  const emittedToolIndices = new Set<number>();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (data === '[DONE]') continue;
+      try {
+        const j = JSON.parse(data) as {
+          choices?: Array<{
+            delta?: {
+              content?: string;
+              tool_calls?: Array<{ index?: number; id?: string; function?: { name?: string; arguments?: string } }>;
+            };
+            finish_reason?: string;
+          }>;
+          error?: { message?: string };
+        };
+        if (j.error) {
+          logger.warn({ error: j.error.message }, 'OpenAI stream error');
+          yield { type: 'message_stop' as const };
+          return;
+        }
+        const delta = j.choices?.[0]?.delta;
+        if (!delta) continue;
+
+        // Text content
+        if (typeof delta.content === 'string' && delta.content.length > 0) {
+          yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: delta.content } };
+        }
+
+        // Tool calls (function calling)
+        const toolCalls = delta.tool_calls;
+        if (Array.isArray(toolCalls)) {
+          for (const tc of toolCalls) {
+            const idx = tc.index ?? 0;
+            while (toolCallsAccum.length <= idx) {
+              toolCallsAccum.push({ id: '', name: '', args: '' });
+            }
+            const acc = toolCallsAccum[idx]!;
+            if (tc.id) acc.id = tc.id;
+            if (tc.function?.name) acc.name = tc.function.name;
+            if (tc.function?.arguments) acc.args += tc.function.arguments;
+          }
+          // Emit tool calls when we have id and name
+          for (let i = 0; i < toolCallsAccum.length; i++) {
+            if (emittedToolIndices.has(i)) continue;
+            const acc = toolCallsAccum[i]!;
+            if (acc.id && acc.name) {
+              emittedToolIndices.add(i);
+              let input: Record<string, unknown> = {};
+              try {
+                if (acc.args.trim()) input = JSON.parse(acc.args) as Record<string, unknown>;
+              } catch {
+                input = { raw: acc.args };
+              }
+              yield {
+                type: 'content_block_start' as const,
+                content_block: { type: 'tool_use' as const, id: acc.id, name: acc.name, input },
+              };
+            }
+          }
+        }
+      } catch {
+        // skip malformed chunk
+      }
+    }
+  }
+  yield { type: 'message_stop' as const };
+}
+
+/**
+ * Stream from Anthropic (Claude 3.5 Sonnet, Claude 3 Opus, etc). Uses ANTHROPIC_API_KEY.
+ * Model: claude-sonnet-4-20250514 (default). Native Anthropic streaming format.
+ */
+async function* streamAnthropic(params: StreamParams): AsyncGenerator<StreamEvent> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    logger.warn({}, 'Anthropic provider skipped: ANTHROPIC_API_KEY not set');
+    yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: '[Anthropic not configured. Set ANTHROPIC_API_KEY.]' } };
+    yield { type: 'message_stop' as const };
+    return;
+  }
+
+  const model = params.model || ANTHROPIC_DEFAULT;
+  const url = 'https://api.anthropic.com/v1/messages';
+
+  // Anthropic uses a different format - system is separate, not in messages
+  const body: Record<string, unknown> = {
+    model,
+    max_tokens: params.max_tokens,
+    stream: true,
+    system: params.system || '',
+    messages: params.messages.map((m) => ({ role: m.role, content: m.content })),
+  };
+
+  // Add tools if provided (Anthropic native tool format)
+  if (params.tools && params.tools.length > 0) {
+    body.tools = params.tools.map((t) => ({
+      name: t.name,
+      description: t.description ?? '',
+      input_schema: t.input_schema ?? { type: 'object', properties: {} },
+    }));
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(120_000),
+  });
+
+  if (!res.ok) {
+    const t = await res.text();
+    logger.warn({ status: res.status, body: t.slice(0, 500) }, 'Anthropic API error');
+    throw new Error(`Anthropic API error: ${res.status} ${t.slice(0, 200)}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('Anthropic: no response body');
+
+  const dec = new TextDecoder();
+  let buf = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (!data) continue;
+      try {
+        const event = JSON.parse(data) as {
+          type: string;
+          delta?: { type?: string; text?: string };
+          content_block?: { type?: string; id?: string; name?: string; input?: Record<string, unknown> };
+          error?: { message?: string };
+        };
+
+        // Anthropic events are already in the format we need
+        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+          yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: event.delta.text ?? '' } };
+        } else if (event.type === 'content_block_start' && event.content_block?.type === 'tool_use') {
+          yield {
+            type: 'content_block_start' as const,
+            content_block: {
+              type: 'tool_use' as const,
+              id: event.content_block.id ?? '',
+              name: event.content_block.name ?? '',
+              input: event.content_block.input ?? {},
+            },
+          };
+        } else if (event.type === 'message_stop') {
+          yield { type: 'message_stop' as const };
+          return;
+        } else if (event.type === 'error') {
+          logger.warn({ error: event.error?.message }, 'Anthropic stream error');
+          yield { type: 'error' as const, error: event.error };
+          yield { type: 'message_stop' as const };
+          return;
+        }
+      } catch {
+        // skip malformed chunk
+      }
+    }
+  }
+  yield { type: 'message_stop' as const };
+}
+
+/**
+ * Stream from Google Gemini (Gemini 2.0 Flash, Pro, etc). Uses GOOGLE_API_KEY.
+ * Model: gemini-2.0-flash (default). Uses Gemini's generateContent streaming endpoint.
+ */
+async function* streamGemini(params: StreamParams): AsyncGenerator<StreamEvent> {
+  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    logger.warn({}, 'Gemini provider skipped: GOOGLE_API_KEY or GEMINI_API_KEY not set');
+    yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: '[Gemini not configured. Set GOOGLE_API_KEY or GEMINI_API_KEY.]' } };
+    yield { type: 'message_stop' as const };
+    return;
+  }
+
+  const model = params.model || GEMINI_DEFAULT;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
+
+  // Convert messages to Gemini format
+  // Gemini uses 'user' and 'model' roles, and 'parts' instead of 'content'
+  const contents = params.messages.map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }],
+  }));
+
+  const body: Record<string, unknown> = {
+    contents,
+    generationConfig: {
+      maxOutputTokens: params.max_tokens,
+    },
+  };
+
+  // Add system instruction if provided
+  if (params.system) {
+    body.systemInstruction = { parts: [{ text: params.system }] };
+  }
+
+  // Add tools if provided (Gemini function calling format)
+  if (params.tools && params.tools.length > 0) {
+    body.tools = [{
+      functionDeclarations: params.tools.map((t) => ({
+        name: t.name,
+        description: t.description ?? '',
+        parameters: t.input_schema ?? { type: 'object', properties: {} },
+      })),
+    }];
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(120_000),
+  });
+
+  if (!res.ok) {
+    const t = await res.text();
+    logger.warn({ status: res.status, body: t.slice(0, 500) }, 'Gemini API error');
+    throw new Error(`Gemini API error: ${res.status} ${t.slice(0, 200)}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('Gemini: no response body');
+
+  const dec = new TextDecoder();
+  let buf = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (!data) continue;
+      try {
+        const j = JSON.parse(data) as {
+          candidates?: Array<{
+            content?: {
+              parts?: Array<{
+                text?: string;
+                functionCall?: { name: string; args: Record<string, unknown> };
+              }>;
+            };
+            finishReason?: string;
+          }>;
+          error?: { message?: string };
+        };
+
+        if (j.error) {
+          logger.warn({ error: j.error.message }, 'Gemini stream error');
+          yield { type: 'message_stop' as const };
+          return;
+        }
+
+        const parts = j.candidates?.[0]?.content?.parts;
+        if (Array.isArray(parts)) {
+          for (const part of parts) {
+            // Text content
+            if (typeof part.text === 'string' && part.text.length > 0) {
+              yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: part.text } };
+            }
+            // Function call (tool use)
+            if (part.functionCall) {
+              yield {
+                type: 'content_block_start' as const,
+                content_block: {
+                  type: 'tool_use' as const,
+                  id: `gemini-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                  name: part.functionCall.name,
+                  input: part.functionCall.args ?? {},
+                },
+              };
+            }
+          }
+        }
+      } catch {
+        // skip malformed chunk
+      }
+    }
+  }
+  yield { type: 'message_stop' as const };
+}
+
+/**
  * Wraps an async iterable of StreamEvent to record duration (and optional tokens) on message_stop.
  */
 async function* withStreamMetrics(
@@ -680,7 +1051,13 @@ export function getStream(
               ? TOGETHER_DEFAULT
               : provider === 'ollama'
                 ? OLLAMA_DEFAULT
-                : NIM_DEFAULT);
+                : provider === 'openai'
+                  ? OPENAI_DEFAULT
+                  : provider === 'anthropic'
+                    ? ANTHROPIC_DEFAULT
+                    : provider === 'gemini'
+                      ? GEMINI_DEFAULT
+                      : NIM_DEFAULT);
   const merged = { ...params, model: modelId };
 
   const adapter = getStreamProvider(provider);
@@ -698,7 +1075,13 @@ export function getStream(
               ? streamTogether(merged)
               : provider === 'ollama'
                 ? streamOllama(merged)
-                : streamNim(merged);
+                : provider === 'openai'
+                  ? streamOpenAI(merged)
+                  : provider === 'anthropic'
+                    ? streamAnthropic(merged)
+                    : provider === 'gemini'
+                      ? streamGemini(merged)
+                      : streamNim(merged);
   return withStreamMetrics(source, provider, modelId);
 }
 
@@ -711,6 +1094,9 @@ try {
   registerStreamProvider('groq', { name: 'groq', supportsTools: false, stream: streamGroq });
   registerStreamProvider('together', { name: 'together', supportsTools: false, stream: streamTogether });
   registerStreamProvider('ollama', { name: 'ollama', supportsTools: false, stream: streamOllama });
+  registerStreamProvider('openai', { name: 'openai', supportsTools: true, stream: streamOpenAI });
+  registerStreamProvider('anthropic', { name: 'anthropic', supportsTools: true, stream: streamAnthropic });
+  registerStreamProvider('gemini', { name: 'gemini', supportsTools: true, stream: streamGemini });
 } catch {
   // ai-core may not be available in all environments
 }

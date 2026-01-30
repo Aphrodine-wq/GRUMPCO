@@ -8,6 +8,7 @@
   import PricingModal from './components/PricingModal.svelte';
   import SettingsScreen from './components/SettingsScreen.svelte';
   import SetupScreen from './components/SetupScreen.svelte';
+  import { OnboardingCarousel } from './components/onboarding';
   
   // Lazy load heavy components for better initial load performance
   const AskDocsScreen = () => import('./components/AskDocsScreen.svelte');
@@ -25,10 +26,14 @@
   const AdvancedAIDashboard = () => import('./components/AdvancedAIDashboard.svelte');
   const TutorialOverlay = () => import('./components/TutorialOverlay.svelte');
   
+  // Docker and Cloud components - lazy loaded
+  const DockerPanel = () => import('./components/DockerPanel.svelte');
+  const CloudDashboard = () => import('./components/CloudDashboard.svelte');
+  
   import { sessionsStore, currentSession } from './stores/sessionsStore';
   import { settingsStore } from './stores/settingsStore';
   import { preferencesStore, setupComplete } from './stores/preferencesStore';
-  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, showCostDashboard, showIntegrations, showApprovals, showHeartbeats, showMemory, showAuditLog, showAdvancedAI, sidebarCollapsed, focusChatTrigger } from './stores/uiStore';
+  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, showCostDashboard, showIntegrations, showApprovals, showHeartbeats, showMemory, showAuditLog, showAdvancedAI, showDocker, showCloudDashboard, sidebarCollapsed, focusChatTrigger } from './stores/uiStore';
   import { demoStore } from './stores/demoStore';
   import { isMobileDevice } from './utils/touchGestures';
   import type { Message } from './types';
@@ -142,8 +147,17 @@
       {#await AdvancedAIDashboard() then { default: Component }}
         <Component onBack={() => showAdvancedAI.set(false)} />
       {/await}
+    {:else if $showDocker}
+      {#await DockerPanel() then { default: Component }}
+        <Component onBack={() => showDocker.set(false)} />
+      {/await}
+    {:else if $showCloudDashboard}
+      {#await CloudDashboard() then { default: Component }}
+        <Component onBack={() => showCloudDashboard.set(false)} />
+      {/await}
     {:else if !$setupComplete}
-      <SetupScreen
+      <!-- iOS-style onboarding carousel -->
+      <OnboardingCarousel
         onComplete={() => preferencesStore.completeSetup()}
         onSkip={() => preferencesStore.completeSetup()}
       />

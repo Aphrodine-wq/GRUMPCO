@@ -1,0 +1,28 @@
+# Test files and coverage
+tests
+coverage
+test-results
+*.test.ts
+*.spec.ts
+
+# Source files (only need dist)
+src
+
+# Development files
+*.md
+*.log
+.env*
+!.env.example
+
+# TypeScript source maps
+*.map
+
+# Dev tools
+.eslintrc*
+.prettierrc*
+tsconfig.json
+
+# Large optional dependencies
+node_modules/playwright
+node_modules/playwright-core
+node_modules/better-sqlite3

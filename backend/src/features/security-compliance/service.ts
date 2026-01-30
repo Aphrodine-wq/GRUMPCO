@@ -21,6 +21,7 @@ import {
   SecretsAuditResult,
   SecretsAuditRequest,
   SecretFinding,
+  PathValidationResult,
 } from './types.js';
 import {
   SECURITY_ANALYSIS_SYSTEM_PROMPT,
@@ -55,7 +56,7 @@ function getSecurityScanRoot(): string {
  * Validate workspacePath: must resolve to a path under the allowed scan root.
  * Prevents path traversal (e.g. ../../etc) and absolute paths outside root.
  */
-export function validateWorkspacePath(workspacePath: string): { ok: true; resolved: string } | { ok: false; reason: string } {
+export function validateWorkspacePath(workspacePath: string): PathValidationResult {
   const root = getSecurityScanRoot();
   const resolved = path.resolve(workspacePath);
   const rootSep = root + path.sep;
