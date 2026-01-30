@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Literal, Optional
 import uvicorn
 from fastapi import FastAPI, HTTPException, Path
 
-from .types import (
+from .agtypes import (
     GenericResponse,
     NamedResources,
     ResourcesUpdate,

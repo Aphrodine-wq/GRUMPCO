@@ -11,12 +11,12 @@ from .env_var import *
 from .execution import *
 from .litagent import *
 from .llm_proxy import *
-from .logging import configure_logger  # deprecated  # type: ignore
-from .logging import setup as setup_logging  # type: ignore
-from .logging import setup_module as setup_module_logging  # type: ignore
+from .aglogging import configure_logger  # deprecated  # type: ignore
+from .aglogging import setup as setup_logging  # type: ignore
+from .aglogging import setup_module as setup_module_logging  # type: ignore
 from .runner import *
 from .server import AgentLightningServer  # deprecated  # type: ignore
 from .store import *
 from .tracer import *
 from .trainer import *
-from .types import *
+from .agtypes import *

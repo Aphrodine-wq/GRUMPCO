@@ -41,6 +41,7 @@
       const t = setInterval(fetchSnippet, refreshMs);
       return () => clearInterval(t);
     }
+    return undefined;
   });
 
   function formatUsd(n: number): string {

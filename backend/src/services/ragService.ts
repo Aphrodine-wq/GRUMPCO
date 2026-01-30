@@ -318,37 +318,52 @@ export async function ragQuery(
   }
   const user = `Context:\n\n${context}\n\nQuestion: ${query}`;
 
-  const res = await fetch(getNimChatUrl(), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 1024,
-      messages: [
-        { role: 'system', content: sys },
-        { role: 'user', content: user },
-      ],
-    }),
-    signal: AbortSignal.timeout(90_000),
-  });
+  const canClaudeFallback =
+    process.env.RAG_CLAUDE_FALLBACK === 'true' && Boolean(process.env.ANTHROPIC_API_KEY);
+  let rawAnswer = '';
+  let nimError: string | null = null;
 
-  if (!res.ok) {
-    const t = await res.text();
-    logger.warn({ status: res.status, body: t.slice(0, 500) }, 'NIM chat error in RAG');
-    throw new Error(`RAG LLM: ${res.status} ${t.slice(0, 200)}`);
+  try {
+    const res = await fetch(getNimChatUrl(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1024,
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'user', content: user },
+        ],
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      logger.warn({ status: res.status, body: t.slice(0, 500) }, 'NIM chat error in RAG');
+      nimError = `RAG LLM: ${res.status} ${t.slice(0, 200)}`;
+    } else {
+      const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      rawAnswer = data.choices?.[0]?.message?.content?.trim() ?? 'No response from model.';
+    }
+  } catch (e) {
+    const message = (e as Error).message;
+    logger.warn({ error: message }, 'NIM chat error in RAG');
+    nimError = `RAG LLM: ${message}`;
   }
 
-  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  let rawAnswer = data.choices?.[0]?.message?.content?.trim() ?? 'No response from model.';
+  if (nimError && !canClaudeFallback) {
+    throw new Error(nimError);
+  }
   let fallbackProvider: string | undefined;
 
   const useClaudeFallback =
-    process.env.RAG_CLAUDE_FALLBACK === 'true' &&
-    (confidence < CONFIDENCE_LOW_THRESHOLD || !rawAnswer.trim());
-  if (useClaudeFallback && process.env.ANTHROPIC_API_KEY) {
+    canClaudeFallback &&
+    (Boolean(nimError) || confidence < CONFIDENCE_LOW_THRESHOLD || !rawAnswer.trim());
+  if (useClaudeFallback) {
     try {
       const claudeRes = await fetch(ANTHROPIC_CHAT_URL, {
         method: 'POST',
@@ -378,6 +393,9 @@ export async function ragQuery(
     } catch (e) {
       logger.warn({ error: (e as Error).message }, 'RAG Claude fallback failed');
     }
+  }
+  if (nimError && !fallbackProvider) {
+    throw new Error(nimError);
   }
 
   let structured: Record<string, unknown> | undefined;
