@@ -6,6 +6,7 @@ export const showAskDocs = writable(false);
 export const showVoiceCode = writable(false);
 export const showSwarm = writable(false);
 export const showDesignToCode = writable(false);
+export const showCostDashboard = writable(false);
 export const sidebarOpen = writable(true); // Default sidebar state
 /** Sidebar collapsed state (for keyboard shortcut Ctrl/Cmd+B). */
 export const sidebarCollapsed = writable(false);

@@ -12,10 +12,11 @@
   import VoiceCodeScreen from './components/VoiceCodeScreen.svelte';
   import AgentSwarmVisualizer from './components/AgentSwarmVisualizer.svelte';
   import DesignToCodeScreen from './components/DesignToCodeScreen.svelte';
+import LazyCostDashboard from './components/LazyCostDashboard.svelte';
   import { sessionsStore, currentSession } from './stores/sessionsStore';
   import { settingsStore } from './stores/settingsStore';
   import { preferencesStore, setupComplete } from './stores/preferencesStore';
-  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, sidebarCollapsed, focusChatTrigger } from './stores/uiStore';
+  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, showCostDashboard, sidebarCollapsed, focusChatTrigger } from './stores/uiStore';
   import { demoStore } from './stores/demoStore';
   import TutorialOverlay from './components/TutorialOverlay.svelte';
   import { isMobileDevice } from './utils/touchGestures';
@@ -106,6 +107,8 @@
       <AgentSwarmVisualizer onBack={() => showSwarm.set(false)} />
     {:else if $showDesignToCode}
       <DesignToCodeScreen onBack={() => showDesignToCode.set(false)} />
+    {:else if $showCostDashboard}
+      <LazyCostDashboard onBack={() => showCostDashboard.set(false)} />
     {:else if !$setupComplete}
       <SetupScreen
         onComplete={() => preferencesStore.completeSetup()}

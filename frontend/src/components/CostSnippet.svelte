@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { getApiBase } from '../lib/api.js';
-  import { showSettings } from '../stores/uiStore';
+  import { showCostDashboard } from '../stores/uiStore';
 
   interface Props {
     /** When true, show compact one-line format */
@@ -49,8 +49,7 @@
   }
 
   function openCostDashboard() {
-    showSettings.set(true);
-    // User can navigate to cost dashboard from Settings or we could add a dedicated cost view
+    showCostDashboard.set(true);
   }
 </script>
 
