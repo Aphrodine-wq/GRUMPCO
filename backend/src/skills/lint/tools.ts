@@ -2,10 +2,20 @@
  * Lint Skill - Tool Definitions
  */
 
-import type Anthropic from '@anthropic-ai/sdk';
 import type { SkillContext, ToolExecutionResult } from '../types.js';
 
-export const lintFileTool: Anthropic.Tool = {
+/** Generic tool definition compatible with LLM gateway */
+export interface LintTool {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+}
+
+export const lintFileTool: LintTool = {
   name: 'lint_file',
   description: 'Lint a file to identify and fix issues. Analyzes code and provides actionable feedback.',
   input_schema: {
@@ -25,7 +35,7 @@ export const lintFileTool: Anthropic.Tool = {
   },
 };
 
-export const definitions: Anthropic.Tool[] = [
+export const definitions: LintTool[] = [
   lintFileTool,
 ];
 

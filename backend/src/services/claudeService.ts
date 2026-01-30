@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { withResilience } from './resilience.js';
 import { getRequestLogger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
@@ -7,30 +6,29 @@ import { extractMermaidCode, validateMermaidCode } from './mermaidUtils.js';
 import { getSystemPrompt, type UserPreferences } from '../prompts/index.js';
 import { analyzeIntent, getIntentAugmentation } from './intentParser.js';
 import type { ServiceError, ConversationMessage, RefinementContext } from '../types/index.js';
+import { getStream, type StreamParams, type StreamEvent } from './llmGateway.js';
 
 const isTestEnv = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
-const apiKey = process.env.ANTHROPIC_API_KEY;
 
-// Validate API key on startup
-if (!apiKey) {
-  logger.error('ANTHROPIC_API_KEY is not set. Please copy .env.example to .env and add your API key.');
-  logger.error('Get your key at: https://console.anthropic.com/');
-  if (!isTestEnv) {
-    process.exit(1);
+// Default model for diagram generation
+const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
+
+// Helper to collect stream events into a complete response
+async function collectStreamResponse(stream: AsyncIterable<StreamEvent>): Promise<string> {
+  let fullText = '';
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      fullText += event.delta.text;
+    }
   }
+  return fullText;
 }
 
-const client = new Anthropic({
-  apiKey: apiKey || 'test-key',
-});
-
-// Create resilient wrapper for streaming
-const resilientClaudeStream = withResilience(
-  async (params: Parameters<typeof client.messages.stream>[0]) => {
-    return await client.messages.stream(params);
-  },
-  'claude-diagram-stream'
-);
+// Helper for non-streaming calls
+async function callLLMNonStreaming(params: StreamParams): Promise<string> {
+  const stream = getStream(params, { provider: 'nim', modelId: params.model });
+  return collectStreamResponse(stream);
+}
 
 // Re-export UserPreferences type for external use
 export type { UserPreferences } from '../prompts/index.js';
@@ -120,25 +118,20 @@ async function _generateDiagram(
       refinementContext
     );
 
-    const response = await client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+    const response = await callLLMNonStreaming({
+      model: DEFAULT_MODEL,
       max_tokens: 1024,
       system: getSystemPrompt(enrichedPreferences),
       messages,
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
-    }
-
-    const result = extractMermaidCode(content.text);
+    const result = extractMermaidCode(response);
 
     // If extraction failed but we have text, it might be a clarification question
     // In that case, return the raw text so it can be shown to the user
     if (!result.extracted || !result.code) {
-      // Check if this looks like a clarification question from Claude
-      const lowerText = content.text.toLowerCase();
+      // Check if this looks like a clarification question
+      const lowerText = response.toLowerCase();
       const isClarification = lowerText.includes('would you') ||
         lowerText.includes('could you') ||
         lowerText.includes('which') ||
@@ -147,14 +140,14 @@ async function _generateDiagram(
 
       if (isClarification && intent.requiresClarification) {
         // Return the clarification text as-is (not diagram code)
-        log.info('Claude asked for clarification');
+        log.info('LLM asked for clarification');
         timer.success();
-        return content.text;
+        return response;
       }
 
       const error: ServiceError = new Error('Could not extract diagram code from response');
       error.code = 'EXTRACTION_FAILED';
-      error.rawText = content.text;
+      error.rawText = response;
       timer.failure('extraction_failed');
       throw error;
     }
@@ -227,20 +220,12 @@ export async function* generateDiagramStream(
       refinementContext
     );
 
-    const stream = await resilientClaudeStream({
-      model: 'claude-3-5-sonnet-20241022',
+    const stream = getStream({
+      model: DEFAULT_MODEL,
       max_tokens: 1024,
       system: getSystemPrompt(enrichedPreferences),
       messages,
-    });
-
-    // Handle abort signal
-    if (abortSignal) {
-      abortSignal.addEventListener('abort', () => {
-        log.info('Stream aborted by client');
-        stream.controller?.abort();
-      });
-    }
+    }, { provider: 'nim', modelId: DEFAULT_MODEL });
 
     for await (const event of stream) {
       // Check abort between chunks
@@ -251,8 +236,7 @@ export async function* generateDiagramStream(
       }
 
       if (event.type === 'content_block_delta' &&
-        event.delta &&
-        'text' in event.delta) {
+        event.delta?.type === 'text_delta') {
         yield event.delta.text;
       }
     }

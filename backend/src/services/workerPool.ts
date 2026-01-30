@@ -514,13 +514,13 @@ export class WorkerPool {
       // Add to appropriate priority queue
       switch (priority) {
         case TaskPriority.HIGH:
-          this.highPriorityQueue.push(task);
+          this.highPriorityQueue.push(task as WorkerTask<unknown, unknown>);
           break;
         case TaskPriority.LOW:
-          this.lowPriorityQueue.push(task);
+          this.lowPriorityQueue.push(task as WorkerTask<unknown, unknown>);
           break;
         default:
-          this.normalPriorityQueue.push(task);
+          this.normalPriorityQueue.push(task as WorkerTask<unknown, unknown>);
       }
 
       this.processQueue();

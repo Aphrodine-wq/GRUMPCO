@@ -4,8 +4,7 @@
  */
 
 import logger from '../middleware/logger.js';
-
-const NIM_CHAT_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
+import { getNimChatUrl } from '../config/nim.js';
 const NIM_MODEL = 'moonshotai/kimi-k2.5';
 
 export const SWARM_AGENT_IDS = [
@@ -73,7 +72,7 @@ function getAgentSystemPrompt(agentId: string): string {
 async function nimChat(system: string, user: string): Promise<string> {
   const apiKey = process.env.NVIDIA_NIM_API_KEY;
   if (!apiKey) throw new Error('NVIDIA_NIM_API_KEY is not set');
-  const res = await fetch(NIM_CHAT_URL, {
+  const res = await fetch(getNimChatUrl(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

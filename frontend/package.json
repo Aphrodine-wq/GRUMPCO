@@ -22,7 +22,11 @@
     "test:e2e:debug": "playwright test --debug",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "deploy:prod": "vercel --prod",
+    "deploy:preview": "vercel",
+    "env:add": "vercel env add",
+    "env:add:api": "echo Run: vercel env add VITE_API_URL production"
   },
   "dependencies": {
     "@grump/shared-types": "*",

@@ -59,6 +59,7 @@ import { getTieredCache } from './services/tieredCache.js';
 import { isServerlessRuntime } from './config/runtime.js';
 import { startScheduledAgentsWorker, stopScheduledAgentsWorker, loadRepeatableJobsFromDb } from './services/scheduledAgentsQueue.js';
 import { apiAuthMiddleware } from './middleware/authMiddleware.js';
+import { kimiOptimizationMiddleware, kimiPromptOptimizationMiddleware } from './middleware/kimiMiddleware.js';
 import type { Server } from 'http';
 
 const app: Express = express();
@@ -200,6 +201,14 @@ let gpuMetricsInterval: ReturnType<typeof setInterval> | null = null;
     app.use('/api', rateLimitMw);
     // When REQUIRE_AUTH_FOR_API=true, chat/ship/codegen require auth; else optionalAuth
     app.use('/api', apiAuthMiddleware);
+    
+    // Kimi K2.5 optimization middleware - auto-routes to Kimi for appropriate requests
+    app.use('/api/chat', kimiOptimizationMiddleware({ autoRoute: true, trackSavings: true }));
+    app.use('/api/chat', kimiPromptOptimizationMiddleware());
+    app.use('/api/ship', kimiOptimizationMiddleware({ autoRoute: true, trackSavings: true }));
+    app.use('/api/codegen', kimiOptimizationMiddleware({ autoRoute: true, trackSavings: true }));
+    app.use('/api/plan', kimiOptimizationMiddleware({ autoRoute: true, trackSavings: true }));
+    
     app.use('/api', diagramRoutes);
     app.use('/api/intent', intentRoutes);
     app.use('/api/architecture', architectureRoutes);

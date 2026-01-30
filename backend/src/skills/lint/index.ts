@@ -3,30 +3,32 @@
  */
 
 import { BaseSkill } from '../base/BaseSkill.js';
-import type { SkillContext, ToolExecutionResult } from '../types.js';
+import type { SkillContext, ToolExecutionResult, SkillManifest, SkillTools, SkillPrompts } from '../types.js';
 import { definitions, handlers } from './tools.js';
 import { getLintSystemPrompt } from './prompts.js';
-import manifest from './manifest.json';
+import manifest from './manifest.json' with { type: 'json' };
 import { ESLint } from 'eslint';
 
 class LintSkill extends BaseSkill {
-  manifest = manifest;
-  tools = {
+  manifest: SkillManifest = manifest as SkillManifest;
+  
+  tools: SkillTools = {
     definitions,
     handlers: {
       lint_file: this.handleLintFile.bind(this),
     },
   };
 
-  prompts = {
+  prompts: SkillPrompts = {
     system: getLintSystemPrompt('typescript'), // Default to typescript
   };
 
   private async handleLintFile(
-    input: { filePath: string; fix?: boolean },
+    input: Record<string, unknown>,
     context: SkillContext
   ): Promise<ToolExecutionResult> {
-    const { filePath, fix = false } = input;
+    const filePath = input.filePath as string;
+    const fix = (input.fix as boolean) ?? false;
     const { logger, fileSystem } = context.services;
 
     try {
@@ -52,7 +54,7 @@ class LintSkill extends BaseSkill {
 
       return this.successResult(JSON.stringify(results, null, 2));
     } catch (error) {
-      logger.error({ error, skill: this.manifest.id }, 'Error linting file');
+      logger.error('Error linting file', { error: String(error), skill: this.manifest.id });
       return this.errorResult(error instanceof Error ? error.message : String(error));
     }
   }

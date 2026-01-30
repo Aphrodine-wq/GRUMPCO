@@ -30,7 +30,6 @@
  * @module agentOrchestrator
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { getRequestLogger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
 import logger from '../middleware/logger.js';
@@ -48,6 +47,8 @@ import { dispatchWebhook } from './webhookService.js';
 import { analyzeCode, scanSecurity, optimizePerformance } from './claudeCodeService.js';
 import type { CodeAnalysis, SecurityIssue, PerformanceOptimization } from '../types/claudeCode.js';
 import { generateMasterContext, enrichContextForAgent, generateContextSummary } from './contextService.js';
+import { getCompletion, type CompletionResult } from './llmGatewayHelper.js';
+import type { StreamParams } from './llmGateway.js';
 import type {
   GenerationSession,
   AgentType,
@@ -65,25 +66,18 @@ import type { MasterContext } from '../types/context.js';
 import type { CreativeDesignDoc } from '../types/creativeDesignDoc.js';
 import type { Specification } from '../types/spec.js';
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  logger.error('ANTHROPIC_API_KEY is not set');
-  process.exit(1);
-}
+/** Default model for agent orchestration - Kimi K2.5 via NIM */
+const DEFAULT_AGENT_MODEL = 'moonshotai/kimi-k2.5';
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+/** Kimi K2.5 quality: all agent outputs must satisfy type safety, tests, security, and maintainability. */
+const _AGENT_QUALITY_STANDARD = 'kimi-k2.5' as const;
 
-/** Claude Code quality: all agent outputs must satisfy type safety, tests, security, and maintainability. */
-const _AGENT_QUALITY_STANDARD = 'claude-code' as const;
-
-// Create resilient wrapper for Claude API calls
-// Type assertion: since we never pass stream: true, the response is always a Message
-const resilientClaudeCall = withResilience(
-  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
-    return await client.messages.create(params);
+// Create resilient wrapper for LLM Gateway calls
+const resilientLlmCall = withResilience(
+  async (params: StreamParams): Promise<CompletionResult> => {
+    return await getCompletion(params, 'nim');
   },
-  'claude-agent'
+  'kimi-agent'
 );
 
 /**
@@ -165,8 +159,8 @@ const SUBTASKS_PROMPT = `Break a PRD into ordered implementation sub-tasks. Retu
 async function breakPrdIntoSubTasks(prd: PRD): Promise<SubTask[]> {
   const log = getRequestLogger();
   try {
-    const res = await resilientClaudeCall({
-      model: 'claude-sonnet-4-20250514',
+    const res = await resilientLlmCall({
+      model: DEFAULT_AGENT_MODEL,
       max_tokens: 2048,
       system: SUBTASKS_PROMPT,
       messages: [
@@ -176,9 +170,12 @@ async function breakPrdIntoSubTasks(prd: PRD): Promise<SubTask[]> {
         },
       ],
     });
-    const block = res.content[0];
-    if (block.type !== 'text') return [];
-    let raw = block.text.trim();
+    
+    if (res.error) {
+      throw new Error(res.error);
+    }
+    
+    let raw = res.text.trim();
     const arr = raw.match(/\[[\s\S]*\]/);
     if (arr) raw = arr[0];
     const parsed = JSON.parse(raw) as Array<{ id?: string; title?: string; status?: string }>;
@@ -293,9 +290,9 @@ async function runArchitectAgent(
         const basePrompt = getArchitectAgentPromptWithContext(context, contextSummary, creativeDesignDoc);
         const systemPrompt = systemPromptPrefix ? `${systemPromptPrefix}\n\n${basePrompt}` : basePrompt;
 
-        addSpanEvent('claude.api.call', { operation: 'architect_plan_generation' });
-        const response = await resilientClaudeCall({
-          model: 'claude-opus-4-5-20251101',
+        addSpanEvent('llm.api.call', { operation: 'architect_plan_generation' });
+        const response = await resilientLlmCall({
+          model: DEFAULT_AGENT_MODEL,
           max_tokens: 4096,
           system: systemPrompt,
           messages: [
@@ -306,12 +303,11 @@ async function runArchitectAgent(
           ],
         });
 
-        const content = response.content[0];
-        if (content.type !== 'text') {
-          throw new Error('Unexpected response type');
+        if (response.error) {
+          throw new Error(response.error);
         }
 
-        let jsonText = content.text;
+        let jsonText = response.text;
         if (jsonText.includes('```json')) {
           const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
           if (match) jsonText = match[1];
@@ -439,19 +435,18 @@ async function runFrontendAgent(
       }
     }
 
-    const response = await resilientClaudeCall({
-      model: 'claude-opus-4-5-20251101',
+    const response = await resilientLlmCall({
+      model: DEFAULT_AGENT_MODEL,
       max_tokens: 6000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userContent }],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
+    if (response.error) {
+      throw new Error(response.error);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
@@ -526,19 +521,18 @@ async function runBackendAgent(
       }
     }
 
-    const response = await resilientClaudeCall({
-      model: 'claude-opus-4-5-20251101',
+    const response = await resilientLlmCall({
+      model: DEFAULT_AGENT_MODEL,
       max_tokens: 6000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userContent }],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
+    if (response.error) {
+      throw new Error(response.error);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
@@ -598,8 +592,8 @@ async function runDevOpsAgent(
     const basePrompt = getDevOpsAgentPrompt(contextSummary);
     const systemPrompt = systemPromptPrefix ? `${systemPromptPrefix}\n\n${basePrompt}` : basePrompt;
 
-    const response = await resilientClaudeCall({
-      model: 'claude-opus-4-5-20251101',
+    const response = await resilientLlmCall({
+      model: DEFAULT_AGENT_MODEL,
       max_tokens: 4000,
       system: systemPrompt,
       messages: [
@@ -610,12 +604,11 @@ async function runDevOpsAgent(
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
+    if (response.error) {
+      throw new Error(response.error);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
@@ -685,19 +678,18 @@ async function runTestAgent(
       if (subTasks?.length) userContent += `\n\nSub-tasks to cover:\n${subTasks.map((t) => `- ${t.title}`).join('\n')}`;
     }
 
-    const response = await client.messages.create({
-      model: 'claude-opus-4-5-20251101',
+    const response = await resilientLlmCall({
+      model: DEFAULT_AGENT_MODEL,
       max_tokens: 4000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userContent }],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
+    if (response.error) {
+      throw new Error(response.error);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
@@ -764,19 +756,18 @@ async function runDocsAgent(
       userContent = `Generate docs. Your PRDs only:\n${JSON.stringify(prds.map((p) => p.sections), null, 2)}`;
     }
 
-    const response = await client.messages.create({
-      model: 'claude-opus-4-5-20251101',
+    const response = await resilientLlmCall({
+      model: DEFAULT_AGENT_MODEL,
       max_tokens: 4000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userContent }],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
+    if (response.error) {
+      throw new Error(response.error);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
@@ -927,7 +918,7 @@ Return a JSON object matching the AgentWorkReport structure:
       ? JSON.stringify(prds.map((p) => ({ id: p.id, projectName: p.projectName, sections: p.sections })), null, 2)
       : JSON.stringify(prd.sections, null, 2);
 
-    // Perform Claude Code analysis on generated files
+    // Perform code analysis on generated files
     let codeAnalysisSummary = '';
     let securityIssuesSummary = '';
     let performanceSummary = '';
@@ -982,7 +973,7 @@ Return a JSON object matching the AgentWorkReport structure:
         }
       }
     } catch (error) {
-      log.warn({ agentType, error: (error as Error).message }, 'Claude Code analysis failed, continuing without it');
+      log.warn({ agentType, error: (error as Error).message }, 'Code analysis failed, continuing without it');
     }
 
     const userContent = `Agent Type: ${agentType}
@@ -1004,19 +995,18 @@ ${JSON.stringify(agentTask.output || {}, null, 2)}
 
 Generate a comprehensive work report documenting what this agent accomplished, decisions made, integration points, and any issues or recommendations. Include insights from the code analysis above.`;
 
-    const response = await resilientClaudeCall({
-      model: 'claude-sonnet-4-20250514',
+    const response = await resilientLlmCall({
+      model: DEFAULT_AGENT_MODEL,
       max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: 'user', content: userContent }],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
+    if (response.error) {
+      throw new Error(response.error);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];

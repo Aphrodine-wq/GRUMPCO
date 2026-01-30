@@ -1,10 +1,10 @@
 /**
  * Code Review Skill
  * AI-powered code review with quality analysis, pattern detection, and security scanning
+ * Uses Kimi K2.5 via LLM Gateway
  */
 
 import { Router } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
 import { BaseSkill } from '../base/BaseSkill.js';
 import type {
   SkillManifest,
@@ -24,12 +24,6 @@ import { withResilience } from '../../services/resilience.js';
 
 // Load manifest
 import manifest from './manifest.json' with { type: 'json' };
-
-// Initialize Anthropic client
-const apiKey = process.env.ANTHROPIC_API_KEY;
-const client = new Anthropic({
-  apiKey: apiKey || 'test-key',
-});
 
 class CodeReviewSkill extends BaseSkill {
   manifest: SkillManifest = manifest as SkillManifest;
@@ -229,33 +223,46 @@ class CodeReviewSkill extends BaseSkill {
   }
 
   /**
-   * Review code using Claude
+   * Review code using Kimi K2.5 via LLM Gateway
    */
-  private async reviewCode(request: ReviewRequest): Promise<ReviewResult> {
+  private async reviewCode(request: ReviewRequest, context?: SkillContext): Promise<ReviewResult> {
     const template = templates[request.reviewType || 'deep'];
     const prompt = template
       .replace('{{language}}', request.language || 'code')
       .replace('{{code}}', request.code);
 
     try {
-      // Call Claude API with resilience wrapper
-      const callClaude = withResilience(
-        async () => {
-          return await client.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 2048,
-            system: CODE_REVIEW_SYSTEM_PROMPT,
-            messages: [{ role: 'user', content: prompt }],
-          });
-        },
-        'code-review'
-      );
+      let responseText: string;
 
-      const response = await callClaude();
-
-      // Parse Claude's response
-      const responseText =
-        response.content[0].type === 'text' ? response.content[0].text : '';
+      if (context) {
+        // Use LLM service from context (uses Kimi K2.5 via LLM Gateway)
+        const callLLM = withResilience(
+          async () => {
+            return await context.services.llm.complete({
+              messages: [{ role: 'user', content: prompt }],
+              system: CODE_REVIEW_SYSTEM_PROMPT,
+              maxTokens: 2048,
+            });
+          },
+          'code-review'
+        );
+        responseText = await callLLM();
+      } else {
+        // Fallback: create temporary context and use LLM service
+        const { createSkillContext } = await import('../base/SkillContext.js');
+        const tempContext = createSkillContext({});
+        const callLLM = withResilience(
+          async () => {
+            return await tempContext.services.llm.complete({
+              messages: [{ role: 'user', content: prompt }],
+              system: CODE_REVIEW_SYSTEM_PROMPT,
+              maxTokens: 2048,
+            });
+          },
+          'code-review'
+        );
+        responseText = await callLLM();
+      }
 
       return this.parseReviewResponse(responseText, request.code);
     } catch (error) {
@@ -283,7 +290,7 @@ class CodeReviewSkill extends BaseSkill {
   }
 
   /**
-   * Parse Claude's review response into structured ReviewResult
+   * Parse LLM review response into structured ReviewResult
    */
   private parseReviewResponse(response: string, code: string): ReviewResult {
     const lines = response.split('\n');

@@ -6,18 +6,19 @@
 import path from 'path';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
-import Anthropic from '@anthropic-ai/sdk';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../../middleware/logger.js';
+import { getStream, type StreamEvent, type StreamParams } from '../../services/llmGateway.js';
 import type {
   SkillContext,
   SkillEvent,
-  ClaudeService,
+  LLMService,
   FileSystemService,
   GitService,
   LoggerService,
   GitStatus,
   GitLogEntry,
+  ToolDefinition,
 } from '../types.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -39,7 +40,7 @@ export function createSkillContext(options: {
   let cancelled = false;
 
   // Create services
-  const claudeService = createClaudeService();
+  const llmService = createLLMService();
   const fileSystemService = createFileSystemService(workspacePath);
   const gitService = workspacePath ? createGitService(workspacePath) : undefined;
   const loggerService = createLoggerService(sessionId);
@@ -54,7 +55,7 @@ export function createSkillContext(options: {
       source: options.source || 'api',
     },
     services: {
-      claude: claudeService,
+      llm: llmService,
       fileSystem: fileSystemService,
       git: gitService,
       logger: loggerService,
@@ -69,34 +70,55 @@ export function createSkillContext(options: {
 }
 
 /**
- * Create Claude service wrapper
+ * Create LLM service wrapper using LLM Gateway (Kimi K2.5 via NIM as default)
  */
-function createClaudeService(): ClaudeService {
-  const client = new Anthropic();
-
+function createLLMService(): LLMService {
   return {
-    async createMessage(params) {
-      return client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+    async complete(params) {
+      const streamParams: StreamParams = {
+        model: 'moonshotai/kimi-k2.5',
         max_tokens: params.maxTokens || 4096,
-        system: params.system,
-        messages: params.messages,
-        tools: params.tools,
-      });
-    },
+        system: params.system || '',
+        messages: params.messages.map(m => ({
+          role: m.role,
+          content: m.content,
+        })),
+        tools: params.tools?.map((t: ToolDefinition) => ({
+          name: t.name,
+          description: t.description,
+          input_schema: t.input_schema,
+        })),
+      };
 
-    async *streamMessage(params) {
-      const stream = client.messages.stream({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: params.maxTokens || 4096,
-        system: params.system,
-        messages: params.messages,
-        tools: params.tools,
-      });
+      const stream = getStream(streamParams, { provider: 'nim', modelId: 'moonshotai/kimi-k2.5' });
+      let fullText = '';
 
       for await (const event of stream) {
-        yield event;
+        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          fullText += event.delta.text;
+        }
       }
+
+      return fullText;
+    },
+
+    async *stream(params) {
+      const streamParams: StreamParams = {
+        model: 'moonshotai/kimi-k2.5',
+        max_tokens: params.maxTokens || 4096,
+        system: params.system || '',
+        messages: params.messages.map(m => ({
+          role: m.role,
+          content: m.content,
+        })),
+        tools: params.tools?.map((t: ToolDefinition) => ({
+          name: t.name,
+          description: t.description,
+          input_schema: t.input_schema,
+        })),
+      };
+
+      yield* getStream(streamParams, { provider: 'nim', modelId: 'moonshotai/kimi-k2.5' });
     },
   };
 }

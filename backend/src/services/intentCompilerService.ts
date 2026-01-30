@@ -1,9 +1,8 @@
 /**
  * Intent Compiler Service
- * Spawns Rust grump-intent CLI, parses output, optionally enriches via Claude.
+ * Spawns Rust grump-intent CLI, parses output, optionally enriches via LLM Gateway (Kimi K2.5).
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import logger from '../middleware/logger.js';
 import { getIntentCompilerPrompt, getIntentExtractionFallbackPrompt } from '../prompts/intent-compiler.js';
 import { withResilience } from './resilience.js';
@@ -14,6 +13,7 @@ import { parseIntentWasm } from './intentParserWasm.js';
 import { runIntentCli } from './intentCliRunner.js';
 import { getWorkerPool } from './workerPool.js';
 import { TaskPriority } from './workerPool.js';
+import { getStream, type StreamParams, type StreamEvent } from './llmGateway.js';
 
 export interface StructuredIntent {
   actors: string[];
@@ -76,12 +76,38 @@ export interface EnrichedIntent extends StructuredIntent {
 // Version tag for intent caching/normalization so we can safely evolve the schema
 const INTENT_CACHE_VERSION = 'v1';
 
+// Default model for intent operations via NIM (Kimi K2.5)
+const DEFAULT_INTENT_MODEL = 'moonshotai/kimi-k2.5';
+
 function useWasmIntent(): boolean {
   return process.env.GRUMP_USE_WASM_INTENT === 'true' || process.env.GRUMP_USE_WASM_INTENT === '1';
 }
 
 function useWorkerPoolIntent(): boolean {
   return process.env.GRUMP_USE_WORKER_POOL_INTENT === 'true' || process.env.GRUMP_USE_WORKER_POOL_INTENT === '1';
+}
+
+/**
+ * Collects streaming LLM response into a complete text response.
+ * Uses NIM (Kimi K2.5) as the default provider for non-streaming completions.
+ */
+async function getCompletion(
+  params: StreamParams,
+  options?: { model?: string; timeout?: number }
+): Promise<string> {
+  const modelId = options?.model ?? DEFAULT_INTENT_MODEL;
+  const stream = getStream(params, { provider: 'nim', modelId });
+  
+  let fullText = '';
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      fullText += event.delta.text;
+    } else if (event.type === 'error') {
+      throw new Error(`LLM Gateway error: ${JSON.stringify(event.error)}`);
+    }
+  }
+  
+  return fullText;
 }
 
 /**
@@ -111,23 +137,23 @@ export async function parseIntent(
 }
 
 /**
- * Enrich structured intent via Claude Code-optimized analysis.
+ * Enrich structured intent via LLM Gateway (Kimi K2.5) analysis.
  * Extracts features, users, data flows, tech stack, code patterns, architecture hints,
  * optimization opportunities, and code quality requirements.
  */
-export async function enrichIntentViaClaude(intent: StructuredIntent): Promise<EnrichedIntent> {
-  if (!process.env.ANTHROPIC_API_KEY) {
+export async function enrichIntentViaLLM(intent: StructuredIntent): Promise<EnrichedIntent> {
+  // Check if NIM is available
+  if (!process.env.NVIDIA_NIM_API_KEY) {
+    logger.debug({}, 'NIM not configured, skipping intent enrichment');
     return { ...intent, enriched: {} };
   }
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  // Create resilient wrapper
-  // Type assertion: since we never pass stream: true, the response is always a Message
-  const resilientClaudeCall = withResilience(
-    async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
-      return await client.messages.create(params);
+  // Create resilient wrapper for LLM Gateway calls
+  const resilientLlmCall = withResilience(
+    async (params: StreamParams): Promise<string> => {
+      return await getCompletion(params, { model: DEFAULT_INTENT_MODEL });
     },
-    'claude-intent'
+    'nim-intent-enrichment'
   );
 
   const systemPrompt = getIntentCompilerPrompt();
@@ -139,17 +165,14 @@ export async function enrichIntentViaClaude(intent: StructuredIntent): Promise<E
   const userMsg = `Structured intent from parser:\n${JSON.stringify(intent, null, 2)}\n\nContext Hint: ${contextHint}\n\nAnalyze and enrich this intent with code-specific insights, patterns, architecture hints, optimization opportunities, and quality requirements. FOLLOW THE JSON SCHEMA EXACTLY.`;
 
   try {
-    const res = await resilientClaudeCall({
-      model: 'claude-sonnet-4-20250514',
+    const res = await resilientLlmCall({
+      model: DEFAULT_INTENT_MODEL,
       max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: 'user', content: userMsg }],
     });
-    const block = res.content[0];
-    if (block.type !== 'text') {
-      return { ...intent, enriched: {} };
-    }
-    let raw = block.text.trim();
+    
+    let raw = res.trim();
     // Extract JSON from markdown code blocks if present
     if (raw.includes('```json')) {
       const match = raw.match(/```json\n?([\s\S]*?)\n?```/);
@@ -171,7 +194,7 @@ export async function enrichIntentViaClaude(intent: StructuredIntent): Promise<E
 }
 
 /**
- * When Rust intent compiler fails, extract structured intent via Claude and optionally store for analysis.
+ * When Rust intent compiler fails, extract structured intent via LLM Gateway and optionally store for analysis.
  * When GRUMP_USE_WORKER_POOL_INTENT=true, offloads parsing to worker pool (CLI in worker) first.
  */
 export async function parseIntentWithFallback(
@@ -198,20 +221,20 @@ export async function parseIntentWithFallback(
     return await parseIntent(raw, constraints);
   } catch (rustErr) {
     const err = rustErr as Error;
-    logger.warn({ rustError: err.message, inputLength: raw.length }, 'Intent compiler fallback: Rust failed, using Claude');
-    let claudeIntent: StructuredIntent;
+    logger.warn({ rustError: err.message, inputLength: raw.length }, 'Intent compiler fallback: Rust failed, using LLM Gateway');
+    let llmIntent: StructuredIntent;
     try {
-      claudeIntent = await extractIntentViaClaude(raw, err.message);
-    } catch (claudeErr) {
-      logger.error({ claudeError: (claudeErr as Error).message }, 'Intent compiler fallback: Claude extraction failed');
+      llmIntent = await extractIntentViaLLM(raw, err.message);
+    } catch (llmErr) {
+      logger.error({ llmError: (llmErr as Error).message }, 'Intent compiler fallback: LLM extraction failed');
       throw rustErr;
     }
     try {
-      storeIntentCompilerFailure(raw.trim(), err.message, claudeIntent);
+      storeIntentCompilerFailure(raw.trim(), err.message, llmIntent);
     } catch (storeErr) {
       logger.debug({ storeError: (storeErr as Error).message }, 'Could not store intent compiler failure');
     }
-    return claudeIntent;
+    return llmIntent;
   }
 }
 
@@ -264,10 +287,12 @@ export function optimizeEnrichedIntent(intent: EnrichedIntent): EnrichedIntent {
 }
 
 /**
- * Extract StructuredIntent from raw NL using Claude when Rust compiler is unavailable or failed.
+ * Extract StructuredIntent from raw NL using LLM Gateway (Kimi K2.5) when Rust compiler is unavailable or failed.
  */
-export async function extractIntentViaClaude(raw: string, _rustError?: string): Promise<StructuredIntent> {
-  if (!process.env.ANTHROPIC_API_KEY) {
+export async function extractIntentViaLLM(raw: string, _rustError?: string): Promise<StructuredIntent> {
+  // Check if NIM is available
+  if (!process.env.NVIDIA_NIM_API_KEY) {
+    logger.debug({}, 'NIM not configured, returning default intent structure');
     return {
       actors: ['user'],
       features: [],
@@ -277,63 +302,73 @@ export async function extractIntentViaClaude(raw: string, _rustError?: string): 
       raw: raw.trim(),
     };
   }
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  // Type assertion: since we never pass stream: true, the response is always a Message
+
+  // Create resilient wrapper for LLM Gateway calls
   const resilient = withResilience(
-    async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => client.messages.create(params),
-    'claude-intent-fallback'
+    async (params: StreamParams): Promise<string> => getCompletion(params, { model: DEFAULT_INTENT_MODEL }),
+    'nim-intent-extraction'
   );
+  
   const systemPrompt = getIntentExtractionFallbackPrompt();
   const userMsg = `Raw input:\n${raw.trim()}\n\nExtract structured intent as JSON.`;
 
-  const res = await resilient({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 2048,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: userMsg }],
-  });
-  const block = res.content[0];
-  if (block.type !== 'text') {
-    return { actors: ['user'], features: [], data_flows: [], tech_stack_hints: [], constraints: {}, raw: raw.trim() };
+  try {
+    const res = await resilient({
+      model: DEFAULT_INTENT_MODEL,
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMsg }],
+    });
+    
+    let text = res.trim();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) text = jsonMatch[0];
+    if (text.includes('```json')) {
+      const m = text.match(/```json\n?([\s\S]*?)\n?```/);
+      if (m) text = m[1];
+    } else if (text.includes('```')) {
+      const m = text.match(/```\n?([\s\S]*?)\n?```/);
+      if (m) text = m[1];
+    }
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+    return {
+      actors: Array.isArray(parsed.actors) ? (parsed.actors as string[]) : ['user'],
+      features: Array.isArray(parsed.features) ? (parsed.features as string[]) : [],
+      data_flows: Array.isArray(parsed.data_flows) ? (parsed.data_flows as string[]) : [],
+      tech_stack_hints: Array.isArray(parsed.tech_stack_hints) ? (parsed.tech_stack_hints as string[]) : [],
+      constraints: parsed.constraints && typeof parsed.constraints === 'object' ? (parsed.constraints as Record<string, unknown>) : {},
+      raw: typeof parsed.raw === 'string' ? parsed.raw : raw.trim(),
+    };
+  } catch (e) {
+    logger.warn({ err: (e as Error).message }, 'LLM intent extraction failed, returning default structure');
+    return {
+      actors: ['user'],
+      features: [],
+      data_flows: [],
+      tech_stack_hints: [],
+      constraints: {},
+      raw: raw.trim(),
+    };
   }
-  let text = block.text.trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) text = jsonMatch[0];
-  if (text.includes('```json')) {
-    const m = text.match(/```json\n?([\s\S]*?)\n?```/);
-    if (m) text = m[1];
-  } else if (text.includes('```')) {
-    const m = text.match(/```\n?([\s\S]*?)\n?```/);
-    if (m) text = m[1];
-  }
-  const parsed = JSON.parse(text) as Record<string, unknown>;
-  return {
-    actors: Array.isArray(parsed.actors) ? (parsed.actors as string[]) : ['user'],
-    features: Array.isArray(parsed.features) ? (parsed.features as string[]) : [],
-    data_flows: Array.isArray(parsed.data_flows) ? (parsed.data_flows as string[]) : [],
-    tech_stack_hints: Array.isArray(parsed.tech_stack_hints) ? (parsed.tech_stack_hints as string[]) : [],
-    constraints: parsed.constraints && typeof parsed.constraints === 'object' ? (parsed.constraints as Record<string, unknown>) : {},
-    raw: typeof parsed.raw === 'string' ? parsed.raw : raw.trim(),
-  };
 }
 
 /**
- * Store (input, Rust error, Claude result) for later analysis and rule-update pipeline.
+ * Store (input, Rust error, LLM result) for later analysis and rule-update pipeline.
  */
 export function storeIntentCompilerFailure(
   inputText: string,
   rustError: string,
-  claudeResult: StructuredIntent
+  llmResult: StructuredIntent
 ): void {
   const db = getDatabase().getDb();
   const id = randomUUID();
   db.prepare(
     `INSERT INTO intent_compiler_failures (id, input_text, rust_error, claude_result_json, created_at) VALUES (?, ?, ?, ?, datetime('now'))`
-  ).run(id, inputText, rustError, JSON.stringify(claudeResult));
+  ).run(id, inputText, rustError, JSON.stringify(llmResult));
 }
 
 /**
- * Parse raw NL + constraints via Rust (with Claude fallback on failure), then enrich via Claude.
+ * Parse raw NL + constraints via Rust (with LLM Gateway fallback on failure), then enrich via LLM Gateway.
  */
 export async function parseAndEnrichIntent(
   raw: string,
@@ -347,7 +382,7 @@ export async function parseAndEnrichIntent(
     cacheKey,
     async () => {
       const structured = await parseIntentWithFallback(raw, constraints);
-      const enriched = await enrichIntentViaClaude(structured);
+      const enriched = await enrichIntentViaLLM(structured);
       return optimizeEnrichedIntent(enriched);
     }
   );

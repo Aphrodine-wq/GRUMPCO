@@ -2,10 +2,9 @@
  * Code Review Skill - Tool Definitions
  */
 
-import type Anthropic from '@anthropic-ai/sdk';
-import type { SkillContext, ToolExecutionResult } from '../types.js';
+import type { ToolDefinition } from '../types.js';
 
-export const reviewCodeTool: Anthropic.Tool = {
+export const reviewCodeTool: ToolDefinition = {
   name: 'review_code',
   description: 'Review code for quality, patterns, security, and improvements. Analyzes code and provides actionable feedback.',
   input_schema: {
@@ -34,7 +33,7 @@ export const reviewCodeTool: Anthropic.Tool = {
   },
 };
 
-export const analyzeFileTool: Anthropic.Tool = {
+export const analyzeFileTool: ToolDefinition = {
   name: 'analyze_file',
   description: 'Read and analyze a file from the workspace for code review',
   input_schema: {
@@ -55,7 +54,7 @@ export const analyzeFileTool: Anthropic.Tool = {
   },
 };
 
-export const suggestImprovementsTool: Anthropic.Tool = {
+export const suggestImprovementsTool: ToolDefinition = {
   name: 'suggest_improvements',
   description: 'Generate specific improvement suggestions for code with before/after examples',
   input_schema: {
@@ -80,7 +79,7 @@ export const suggestImprovementsTool: Anthropic.Tool = {
   },
 };
 
-export const definitions: Anthropic.Tool[] = [
+export const definitions: ToolDefinition[] = [
   reviewCodeTool,
   analyzeFileTool,
   suggestImprovementsTool,
@@ -89,5 +88,5 @@ export const definitions: Anthropic.Tool[] = [
 // Tool handlers will be implemented in the skill's index.ts
 export const handlers: Record<
   string,
-  (input: Record<string, unknown>, context: SkillContext) => Promise<ToolExecutionResult>
+  (input: Record<string, unknown>, context: import('../types.js').SkillContext) => Promise<import('../types.js').ToolExecutionResult>
 > = {};

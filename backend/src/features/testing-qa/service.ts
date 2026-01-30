@@ -6,7 +6,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import Anthropic from '@anthropic-ai/sdk';
+import { getStream, type StreamParams } from '../../services/llmGateway.js';
 import {
   TestGenerationRequest,
   TestGenerationResult,
@@ -21,7 +21,21 @@ import {
   MockGenerationResult,
 } from './types.js';
 
-const anthropic = new Anthropic();
+const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
+
+/**
+ * Helper to call LLM via gateway and get complete response text
+ */
+async function callLLM(params: StreamParams): Promise<string> {
+  const stream = getStream(params, { provider: 'nim', modelId: params.model || DEFAULT_MODEL });
+  let responseText = '';
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      responseText += event.delta.text;
+    }
+  }
+  return responseText;
+}
 
 const TESTING_SYSTEM_PROMPT = `You are an expert software testing engineer. You specialize in:
 - Writing comprehensive unit tests
@@ -100,15 +114,12 @@ Also provide a summary:
 }
 \`\`\``;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const responseText = await callLLM({
+    model: DEFAULT_MODEL,
     max_tokens: 8192,
     system: TESTING_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   });
-
-  const textContent = response.content.find((c) => c.type === 'text');
-  const responseText = textContent?.type === 'text' ? textContent.text : '';
 
   // Extract test code
   const codeMatch = responseText.match(/```(?:typescript|javascript|python|go|java)\n?([\s\S]*?)\n?```/);
@@ -209,15 +220,12 @@ Respond with:
 }
 \`\`\``;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const responseText = await callLLM({
+    model: DEFAULT_MODEL,
     max_tokens: 8192,
     system: TESTING_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   });
-
-  const textContent = response.content.find((c) => c.type === 'text');
-  const responseText = textContent?.type === 'text' ? textContent.text : '';
 
   // Extract script
   const scriptMatch = responseText.match(/```(?:javascript|python|yaml)\n?([\s\S]*?)\n?```/);
@@ -382,15 +390,12 @@ Respond with:
 }
 \`\`\``;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const responseText = await callLLM({
+    model: DEFAULT_MODEL,
     max_tokens: 4096,
     system: TESTING_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   });
-
-  const textContent = response.content.find((c) => c.type === 'text');
-  const responseText = textContent?.type === 'text' ? textContent.text : '';
 
   const codeMatch = responseText.match(/```typescript\n?([\s\S]*?)\n?```/);
   const mockCode = codeMatch ? codeMatch[1].trim() : '';

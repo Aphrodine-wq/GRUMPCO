@@ -3,7 +3,6 @@
  * Analyzes agent work reports, identifies issues, and generates fix plans
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { getRequestLogger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
 import logger from '../middleware/logger.js';
@@ -13,23 +12,7 @@ import type { PRD } from '../types/prd.js';
 import { scanSecurity, optimizePerformance, analyzeCode } from './claudeCodeService.js';
 import type { CodeAnalysis, SecurityIssue, PerformanceOptimization } from '../types/claudeCode.js';
 import { withResilience } from './resilience.js';
-
-if (!process.env.ANTHROPIC_API_KEY) {
-  logger.error('ANTHROPIC_API_KEY is not set');
-  process.exit(1);
-}
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-// Create resilient wrapper for Claude API calls
-const _resilientClaudeCall = withResilience(
-  async (params: Parameters<typeof client.messages.create>[0]) => {
-    return await client.messages.create(params);
-  },
-  'claude-wrunner'
-);
+import { getCompletion } from './llmGatewayHelper.js';
 
 /**
  * Analyze all agent work reports and identify issues
@@ -133,19 +116,18 @@ Analyze all agent work reports and identify:
 
 Generate a comprehensive analysis with actionable fixes.`;
 
-    const response = await client.messages.create({
+    const result = await getCompletion({
       model: 'claude-opus-4-5-20251101',
       max_tokens: 8192,
       system: systemPrompt,
       messages: [{ role: 'user', content: userContent }],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
+    if (result.error) {
+      throw new Error(`LLM API error: ${result.error}`);
     }
 
-    let jsonText = content.text;
+    let jsonText = result.text;
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];

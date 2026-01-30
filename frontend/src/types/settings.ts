@@ -11,7 +11,7 @@ export interface UserSettings {
 export type ModelPreset = 'fast' | 'quality' | 'balanced';
 
 export interface ModelsSettings {
-  defaultProvider?: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter' | 'nim';
+  defaultProvider?: 'nim' | 'zhipu' | 'copilot' | 'openrouter';
   defaultModelId?: string;
   /** Quality vs speed: fast = NIM/Kimi, quality = Claude, balanced = router default */
   modelPreset?: ModelPreset;

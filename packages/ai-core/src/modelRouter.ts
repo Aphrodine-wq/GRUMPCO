@@ -29,7 +29,7 @@ export interface RouterResult {
 }
 
 const KIMI_ID = 'moonshotai/kimi-k2.5';
-const CLAUDE_ID = 'claude-sonnet-4-20250514';
+const COMPLEX_TASK_MODEL_ID = 'openrouter/google/gemini-2.5-pro';
 
 function isNimConfigured(): boolean {
   if (typeof process === 'undefined' || !process.env) return false;
@@ -67,7 +67,7 @@ export function route(context: RouterContext): RouterResult {
   const { messageChars = 0, multimodal = false, preferCapability, costOptimization = true, preferNim, maxLatencyMs } = context;
 
   const kimi = getModelById(KIMI_ID);
-  const claude = getModelById(CLAUDE_ID);
+  const complexModel = getModelById(COMPLEX_TASK_MODEL_ID);
   const useKimi = kimi && isNimConfigured();
   const preferNimEffective = preferNim === true || (typeof maxLatencyMs === 'number' && maxLatencyMs > 0);
   const complexityThresholdNim = preferNimEffective ? 70 : 60;
@@ -98,12 +98,12 @@ export function route(context: RouterContext): RouterResult {
       };
     }
     
-    // Complex tasks (> threshold) or tools required: Use Claude for best results
-    if (claude) {
+    // Complex tasks (> threshold) or tools required: Use Gemini via OpenRouter for best results
+    if (complexModel) {
       return {
-        provider: 'anthropic',
-        modelId: CLAUDE_ID,
-        estimatedCost: estimateCost(claude, messageChars),
+        provider: 'openrouter',
+        modelId: COMPLEX_TASK_MODEL_ID,
+        estimatedCost: estimateCost(complexModel, messageChars),
         reasoning: 'Complex task requiring high-capability model',
       };
     }
@@ -124,14 +124,14 @@ export function route(context: RouterContext): RouterResult {
   if (useKimi) {
     return { provider: 'nim', modelId: KIMI_ID };
   }
-  if (claude) {
-    return { provider: 'anthropic', modelId: CLAUDE_ID };
+  if (complexModel) {
+    return { provider: 'openrouter', modelId: COMPLEX_TASK_MODEL_ID };
   }
   const first = MODEL_REGISTRY[0];
   if (first) {
     return { provider: first.provider, modelId: first.id };
   }
-  return { provider: 'anthropic', modelId: CLAUDE_ID };
+  return { provider: 'nim', modelId: KIMI_ID };
 }
 
 /**

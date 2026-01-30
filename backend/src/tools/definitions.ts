@@ -1,10 +1,22 @@
 /**
- * Tool definitions for Claude tool use
+ * Tool definitions for LLM tool use
  * Defines all available tools with Zod schemas
  */
 
 import { z } from 'zod';
-import type Anthropic from '@anthropic-ai/sdk';
+
+/**
+ * Generic tool type definition (replaces Anthropic.Tool)
+ */
+interface Tool {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+}
 
 // ============================================================================
 // BASH EXECUTION TOOL
@@ -27,7 +39,7 @@ export const bashExecuteInputSchema = z.object({
 
 export type BashExecuteInput = z.infer<typeof bashExecuteInputSchema>;
 
-export const bashExecuteTool: Anthropic.Tool = {
+export const bashExecuteTool: Tool = {
   name: 'bash_execute',
   description:
     'Execute bash commands in a sandboxed Docker environment. Useful for running CLI tools, npm commands, git operations, etc.',
@@ -48,7 +60,7 @@ export const bashExecuteTool: Anthropic.Tool = {
       },
     },
     required: ['command'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
@@ -68,7 +80,7 @@ export const fileReadInputSchema = z.object({
 
 export type FileReadInput = z.infer<typeof fileReadInputSchema>;
 
-export const fileReadTool: Anthropic.Tool = {
+export const fileReadTool: Tool = {
   name: 'file_read',
   description:
     'Read the contents of a file. Use this to inspect code, configuration files, or any text content.',
@@ -86,7 +98,7 @@ export const fileReadTool: Anthropic.Tool = {
       },
     },
     required: ['path'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
@@ -109,7 +121,7 @@ export const fileWriteInputSchema = z.object({
 
 export type FileWriteInput = z.infer<typeof fileWriteInputSchema>;
 
-export const fileWriteTool: Anthropic.Tool = {
+export const fileWriteTool: Tool = {
   name: 'file_write',
   description:
     'Write content to a file. If the file does not exist, it will be created. Parent directories are created automatically.',
@@ -130,7 +142,7 @@ export const fileWriteTool: Anthropic.Tool = {
       },
     },
     required: ['path', 'content'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
@@ -165,7 +177,7 @@ export const fileEditInputSchema = z.object({
 
 export type FileEditInput = z.infer<typeof fileEditInputSchema>;
 
-export const fileEditTool: Anthropic.Tool = {
+export const fileEditTool: Tool = {
   name: 'file_edit',
   description:
     'Edit specific lines in an existing file. Supports insert, replace, and delete operations. Line numbers are 1-indexed.',
@@ -205,7 +217,7 @@ export const fileEditTool: Anthropic.Tool = {
       },
     },
     required: ['path', 'operations'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
@@ -225,7 +237,7 @@ export const listDirectoryInputSchema = z.object({
 
 export type ListDirectoryInput = z.infer<typeof listDirectoryInputSchema>;
 
-export const listDirectoryTool: Anthropic.Tool = {
+export const listDirectoryTool: Tool = {
   name: 'list_directory',
   description:
     'List files and directories in a directory. Can be recursive to show the full directory tree.',
@@ -242,7 +254,7 @@ export const listDirectoryTool: Anthropic.Tool = {
       },
     },
     required: ['path'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
@@ -264,7 +276,7 @@ export const codebaseSearchInputSchema = z.object({
 
 export type CodebaseSearchInput = z.infer<typeof codebaseSearchInputSchema>;
 
-export const codebaseSearchTool: Anthropic.Tool = {
+export const codebaseSearchTool: Tool = {
   name: 'codebase_search',
   description:
     'Search the codebase for files or content matching a query. Use for finding relevant files before reading. Prefer list_directory + file_read for targeted exploration.',
@@ -276,7 +288,7 @@ export const codebaseSearchTool: Anthropic.Tool = {
       maxResults: { type: 'number', description: 'Maximum results (default 20)' },
     },
     required: ['query'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
@@ -299,7 +311,7 @@ export const generateDbSchemaInputSchema = z.object({
 
 export type GenerateDbSchemaInput = z.infer<typeof generateDbSchemaInputSchema>;
 
-export const generateDbSchemaTool: Anthropic.Tool = {
+export const generateDbSchemaTool: Tool = {
   name: 'generate_db_schema',
   description:
     'Generate database schema (SQL DDL and optionally Drizzle) from an architecture description, PRD excerpt, or diagram summary. Use for user DB creation, not G-Rump internal DB.',
@@ -311,7 +323,7 @@ export const generateDbSchemaTool: Anthropic.Tool = {
       format: { type: 'string', enum: ['sql', 'drizzle'], description: 'Output format (default sql)' },
     },
     required: ['description'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
@@ -329,7 +341,7 @@ export const generateMigrationsInputSchema = z.object({
 
 export type GenerateMigrationsInput = z.infer<typeof generateMigrationsInputSchema>;
 
-export const generateMigrationsTool: Anthropic.Tool = {
+export const generateMigrationsTool: Tool = {
   name: 'generate_migrations',
   description:
     'Generate migration files (raw SQL) from schema DDL for SQLite or Postgres. Does not apply migrations; output is for user to review and apply with guard rails.',
@@ -340,7 +352,7 @@ export const generateMigrationsTool: Anthropic.Tool = {
       targetDb: { type: 'string', enum: ['sqlite', 'postgres'], description: 'Target DB (default sqlite)' },
     },
     required: ['schemaDdl'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
@@ -353,7 +365,7 @@ export const screenshotUrlInputSchema = z.object({
 
 export type ScreenshotUrlInput = z.infer<typeof screenshotUrlInputSchema>;
 
-export const screenshotUrlTool: Anthropic.Tool = {
+export const screenshotUrlTool: Tool = {
   name: 'screenshot_url',
   description:
     'Capture a screenshot of a URL using headless browser. Requires Playwright. Use for E2E checks or visual verification.',
@@ -361,7 +373,7 @@ export const screenshotUrlTool: Anthropic.Tool = {
     type: 'object',
     properties: { url: { type: 'string', description: 'URL to capture' } },
     required: ['url'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 export const browserRunScriptInputSchema = z.object({
@@ -380,7 +392,7 @@ export const browserRunScriptInputSchema = z.object({
 
 export type BrowserRunScriptInput = z.infer<typeof browserRunScriptInputSchema>;
 
-export const browserRunScriptTool: Anthropic.Tool = {
+export const browserRunScriptTool: Tool = {
   name: 'browser_run_script',
   description:
     'Run a short browser script (navigate, click, type, screenshot, wait). Requires Playwright. Use for E2E-style checks.',
@@ -404,7 +416,7 @@ export const browserRunScriptTool: Anthropic.Tool = {
       },
     },
     required: ['steps'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
@@ -416,7 +428,7 @@ export const browserNavigateInputSchema = z.object({
   timeout: z.number().optional().default(30000).describe('Timeout in ms'),
 });
 
-export const browserNavigateTool: Anthropic.Tool = {
+export const browserNavigateTool: Tool = {
   name: 'browser_navigate',
   description: 'Navigate the browser to a specific URL.',
   input_schema: {
@@ -426,7 +438,7 @@ export const browserNavigateTool: Anthropic.Tool = {
       timeout: { type: 'number', description: 'Timeout in ms (default 30000)' },
     },
     required: ['url'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 export const browserClickInputSchema = z.object({
@@ -435,7 +447,7 @@ export const browserClickInputSchema = z.object({
   timeout: z.number().optional().default(10000).describe('Timeout in ms'),
 });
 
-export const browserClickTool: Anthropic.Tool = {
+export const browserClickTool: Tool = {
   name: 'browser_click',
   description: 'Click an element on the current page.',
   input_schema: {
@@ -445,7 +457,7 @@ export const browserClickTool: Anthropic.Tool = {
       timeout: { type: 'number', description: 'Timeout in ms (default 10000)' },
     },
     required: ['selector'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 export const browserTypeInputSchema = z.object({
@@ -455,7 +467,7 @@ export const browserTypeInputSchema = z.object({
   timeout: z.number().optional().default(10000).describe('Timeout in ms'),
 });
 
-export const browserTypeTool: Anthropic.Tool = {
+export const browserTypeTool: Tool = {
   name: 'browser_type',
   description: 'Type text into an input field.',
   input_schema: {
@@ -466,20 +478,20 @@ export const browserTypeTool: Anthropic.Tool = {
       timeout: { type: 'number', description: 'Timeout in ms' },
     },
     required: ['selector', 'text'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 export const browserGetContentInputSchema = z.object({
   url: z.string().url().optional().describe('Optional navigation URL'),
 });
 
-export const browserGetContentTool: Anthropic.Tool = {
+export const browserGetContentTool: Tool = {
   name: 'browser_get_content',
   description: 'Get the current page HTML and text content.',
   input_schema: {
     type: 'object',
     properties: {},
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 export const browserScreenshotInputSchema = z.object({
@@ -487,7 +499,7 @@ export const browserScreenshotInputSchema = z.object({
   fullPage: z.boolean().optional().default(false).describe('Whether to capture the full scrollable page'),
 });
 
-export const browserScreenshotTool: Anthropic.Tool = {
+export const browserScreenshotTool: Tool = {
   name: 'browser_screenshot',
   description: 'Capture a screenshot of the current page.',
   input_schema: {
@@ -495,7 +507,7 @@ export const browserScreenshotTool: Anthropic.Tool = {
     properties: {
       fullPage: { type: 'boolean', description: 'Capture full scrollable page (default false)' },
     },
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
@@ -511,7 +523,7 @@ export const gitStatusInputSchema = z.object({
 
 export type GitStatusInput = z.infer<typeof gitStatusInputSchema>;
 
-export const gitStatusTool: Anthropic.Tool = {
+export const gitStatusTool: Tool = {
   name: 'git_status',
   description: 'Get git status (branch, staged/unstaged changes, untracked files) for the workspace.',
   input_schema: {
@@ -520,7 +532,7 @@ export const gitStatusTool: Anthropic.Tool = {
       workingDirectory: { type: 'string', description: 'Working directory (default: workspace root)' },
     },
     required: [],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 export const gitDiffInputSchema = z.object({
@@ -531,7 +543,7 @@ export const gitDiffInputSchema = z.object({
 
 export type GitDiffInput = z.infer<typeof gitDiffInputSchema>;
 
-export const gitDiffTool: Anthropic.Tool = {
+export const gitDiffTool: Tool = {
   name: 'git_diff',
   description: 'Show git diff (unstaged by default; use staged: true for staged changes). Optionally limit to one file.',
   input_schema: {
@@ -542,7 +554,7 @@ export const gitDiffTool: Anthropic.Tool = {
       file: { type: 'string', description: 'Limit diff to a single file path' },
     },
     required: [],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 export const gitLogInputSchema = z.object({
@@ -553,7 +565,7 @@ export const gitLogInputSchema = z.object({
 
 export type GitLogInput = z.infer<typeof gitLogInputSchema>;
 
-export const gitLogTool: Anthropic.Tool = {
+export const gitLogTool: Tool = {
   name: 'git_log',
   description: 'Show git log (recent commits). Use for history and context.',
   input_schema: {
@@ -564,7 +576,7 @@ export const gitLogTool: Anthropic.Tool = {
       oneline: { type: 'boolean', description: 'One line per commit (default true)' },
     },
     required: [],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 export const gitCommitInputSchema = z.object({
@@ -575,7 +587,7 @@ export const gitCommitInputSchema = z.object({
 
 export type GitCommitInput = z.infer<typeof gitCommitInputSchema>;
 
-export const gitCommitTool: Anthropic.Tool = {
+export const gitCommitTool: Tool = {
   name: 'git_commit',
   description: 'Create a git commit. Optionally stage all changes first with addAll: true.',
   input_schema: {
@@ -586,7 +598,7 @@ export const gitCommitTool: Anthropic.Tool = {
       addAll: { type: 'boolean', description: 'Stage all changes before commit (default false)' },
     },
     required: ['message'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 export const gitBranchInputSchema = z.object({
@@ -597,7 +609,7 @@ export const gitBranchInputSchema = z.object({
 
 export type GitBranchInput = z.infer<typeof gitBranchInputSchema>;
 
-export const gitBranchTool: Anthropic.Tool = {
+export const gitBranchTool: Tool = {
   name: 'git_branch',
   description: 'List git branches, or create a new branch. Use list: true to see branches, or create: "branch-name" to create one.',
   input_schema: {
@@ -608,7 +620,7 @@ export const gitBranchTool: Anthropic.Tool = {
       create: { type: 'string', description: 'Create a new branch with this name' },
     },
     required: [],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 export const gitPushInputSchema = z.object({
@@ -619,7 +631,7 @@ export const gitPushInputSchema = z.object({
 
 export type GitPushInput = z.infer<typeof gitPushInputSchema>;
 
-export const gitPushTool: Anthropic.Tool = {
+export const gitPushTool: Tool = {
   name: 'git_push',
   description: 'Push commits to remote. Only available when ENABLE_GIT_PUSH=true.',
   input_schema: {
@@ -630,7 +642,7 @@ export const gitPushTool: Anthropic.Tool = {
       branch: { type: 'string', description: 'Branch to push (default current branch)' },
     },
     required: [],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
@@ -652,7 +664,7 @@ export const terminalExecuteInputSchema = z.object({
 
 export type TerminalExecuteInput = z.infer<typeof terminalExecuteInputSchema>;
 
-export const terminalExecuteTool: Anthropic.Tool = {
+export const terminalExecuteTool: Tool = {
   name: 'terminal_execute',
   description:
     'Run a single shell command and get stdout/stderr and exit code. Use for running tests, scripts, or any one-off command. Working directory is workspace root unless specified.',
@@ -664,14 +676,14 @@ export const terminalExecuteTool: Anthropic.Tool = {
       timeout: { type: 'number', description: 'Timeout in milliseconds (max 60000)' },
     },
     required: ['command'],
-  } as unknown as Anthropic.Tool['input_schema'],
+  },
 };
 
 // ============================================================================
 // ALL TOOLS ARRAY (base tools; MCP/dynamic tools can be added via getTools())
 // ============================================================================
 
-const GIT_TOOLS: Anthropic.Tool[] = [
+const GIT_TOOLS: Tool[] = [
   gitStatusTool,
   gitDiffTool,
   gitLogTool,
@@ -680,7 +692,7 @@ const GIT_TOOLS: Anthropic.Tool[] = [
   ...(process.env.ENABLE_GIT_PUSH === 'true' ? [gitPushTool] : []),
 ];
 
-const BASE_TOOLS: Anthropic.Tool[] = [
+const BASE_TOOLS: Tool[] = [
   bashExecuteTool,
   terminalExecuteTool,
   fileReadTool,
@@ -701,7 +713,7 @@ const BASE_TOOLS: Anthropic.Tool[] = [
 ];
 
 /** Tools that can be extended by MCP or dynamic registration. */
-export const AVAILABLE_TOOLS: Anthropic.Tool[] = [...BASE_TOOLS];
+export const AVAILABLE_TOOLS: Tool[] = [...BASE_TOOLS];
 
 // ============================================================================
 // TOOL RESULT TYPE

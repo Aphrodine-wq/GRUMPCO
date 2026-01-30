@@ -389,7 +389,7 @@
   async function runCodeModeStream(signal: AbortSignal) {
     let fromCacheThisStream = false;
     const s = settingsStore.getCurrent();
-    const provider = s?.models?.defaultProvider ?? 'anthropic';
+    const provider = s?.models?.defaultProvider ?? 'nim';
     const apiMessages = flattenMessagesForChatApi(messages, {
       lastUserMessageImage: pendingImageDataUrl,
       provider,

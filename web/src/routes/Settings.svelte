@@ -5,7 +5,7 @@
 
   interface Settings {
     user?: { displayName?: string; email?: string; timezone?: string };
-    models?: { defaultProvider?: 'anthropic' | 'zhipu'; defaultModelId?: string };
+    models?: { defaultProvider?: 'nim' | 'zhipu' | 'copilot' | 'openrouter'; defaultModelId?: string };
     mcp?: { servers?: unknown[] };
     skills?: { enabledIds?: string[] };
     accessibility?: { reducedMotion?: boolean; highContrast?: boolean };
@@ -16,9 +16,10 @@
   let saving = $state(false);
 
   const modelOptions = [
-    { provider: 'anthropic' as const, modelId: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-    { provider: 'anthropic' as const, modelId: 'claude-opus-4-5-20251101', label: 'Claude Opus 4' },
-    { provider: 'zhipu' as const, modelId: 'glm-4', label: 'GLM 4.7' },
+    { provider: 'nim' as const, modelId: 'moonshotai/kimi-k2.5', label: 'Kimi K2.5 (NIM)' },
+    { provider: 'zhipu' as const, modelId: 'glm-4', label: 'GLM 4' },
+    { provider: 'copilot' as const, modelId: 'copilot-codex', label: 'Copilot Codex' },
+    { provider: 'openrouter' as const, modelId: 'openrouter/moonshotai/kimi-k2.5', label: 'Kimi K2.5 (OpenRouter)' },
   ];
 
   onMount(() => {
@@ -73,16 +74,16 @@
 
   function modelValue(): string {
     const m = settings?.models;
-    if (!m?.defaultModelId) return 'anthropic:claude-sonnet-4-20250514';
-    return `${m.defaultProvider ?? 'anthropic'}:${m.defaultModelId}`;
+    if (!m?.defaultModelId) return 'nim:moonshotai/kimi-k2.5';
+    return `${m.defaultProvider ?? 'nim'}:${m.defaultModelId}`;
   }
 
   function handleModelChange(e: Event) {
     const v = (e.target as HTMLSelectElement).value;
-    const [provider, modelId] = v.includes(':') ? v.split(':') : ['anthropic', v];
+    const [provider, modelId] = v.includes(':') ? v.split(':') : ['nim', v];
     saveModels({
       ...settings?.models,
-      defaultProvider: provider as 'anthropic' | 'zhipu',
+      defaultProvider: provider as 'nim' | 'zhipu' | 'copilot' | 'openrouter',
       defaultModelId: modelId,
     });
   }

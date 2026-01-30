@@ -26,8 +26,8 @@ const router = Router();
  *   planId?: string,         // For execute mode: plan ID to execute
  *   specSessionId?: string,  // For spec mode: spec session ID
  *   agentProfile?: string,  // 'general' | 'router' | 'frontend' | 'backend' | 'devops' | 'test'
- *   provider?: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter' | 'nim',  // LLM provider
- *   modelId?: string,       // e.g. 'claude-sonnet-4-20250514', 'glm-4', 'anthropic/claude-3.5-sonnet'
+ *   provider?: 'nim' | 'zhipu' | 'copilot' | 'openrouter',  // LLM provider
+ *   modelId?: string,       // e.g. 'moonshotai/kimi-k2.5', 'glm-4', 'openrouter/google/gemini-2.5-pro'
  *   modelKey?: string,      // Alternative: single key (provider inferred from prefix, e.g. openrouter:...)
  *   guardRailOptions?: { allowedDirs?: string[] }  // Path policy allowlist; confirmEveryWrite is UX-only
  *   tier?: 'free' | 'pro' | 'team' | 'enterprise'  // For capability list and feature flags in prompt
@@ -38,7 +38,7 @@ const router = Router();
  * }
  */
 const PRESET_FAST = { provider: 'nim' as const, modelId: 'moonshotai/kimi-k2.5' };
-const PRESET_QUALITY = { provider: 'anthropic' as const, modelId: 'claude-sonnet-4-20250514' };
+const PRESET_QUALITY = { provider: 'openrouter' as const, modelId: 'openrouter/google/gemini-2.5-pro' };
 
 router.post('/stream', async (req: Request, res: Response) => {
   const { messages, workspaceRoot, mode, planMode, planId, specSessionId, agentProfile, provider, modelId, modelKey, guardRailOptions, tier, autonomous, largeContext, preferNim, maxLatencyMs, modelPreset } = req.body;
@@ -64,12 +64,12 @@ router.post('/stream', async (req: Request, res: Response) => {
   }
 
   // Resolve provider for validation (multimodal allowed only for nim)
-  let providerForValidation: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter' | 'nim' | undefined = provider;
+  let providerForValidation: 'nim' | 'zhipu' | 'copilot' | 'openrouter' | undefined = provider;
   if (modelKey && typeof modelKey === 'string') {
     const [prefix, rest] = modelKey.split(':');
     if (prefix === 'nim' && rest) providerForValidation = 'nim';
     else if (prefix === 'openrouter' && rest) providerForValidation = 'openrouter';
-    else if (!providerForValidation) providerForValidation = /^glm/i.test(modelKey) ? 'zhipu' : /^copilot/i.test(modelKey) ? 'copilot' : 'anthropic';
+    else if (!providerForValidation) providerForValidation = /^glm/i.test(modelKey) ? 'zhipu' : /^copilot/i.test(modelKey) ? 'copilot' : 'nim';
   }
   const allowMultimodal = providerForValidation === 'nim';
 
@@ -144,7 +144,7 @@ router.post('/stream', async (req: Request, res: Response) => {
       ? agentProfile
       : undefined;
     // Model: provider + modelId, or modelKey (e.g. glm-4 → zhipu, copilot-* → copilot, openrouter:* → openrouter, nim:* → nim), or model router when none set
-    let reqProvider: 'anthropic' | 'zhipu' | 'copilot' | 'openrouter' | 'nim' | undefined = provider;
+    let reqProvider: 'nim' | 'zhipu' | 'copilot' | 'openrouter' | undefined = provider;
     let reqModelId: string | undefined = modelId;
     if (modelKey && typeof modelKey === 'string') {
       const [prefix, rest] = modelKey.split(':');
@@ -156,7 +156,7 @@ router.post('/stream', async (req: Request, res: Response) => {
         reqModelId = rest;
       } else {
         reqModelId = modelKey;
-        if (!reqProvider) reqProvider = /^glm/i.test(modelKey) ? 'zhipu' : /^copilot/i.test(modelKey) ? 'copilot' : 'anthropic';
+        if (!reqProvider) reqProvider = /^glm/i.test(modelKey) ? 'zhipu' : /^copilot/i.test(modelKey) ? 'copilot' : 'nim';
       }
     }
     // Quality vs speed preset: override provider/model when set

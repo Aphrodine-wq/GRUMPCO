@@ -3,7 +3,6 @@
  * Generates Product Requirements Documents from system architecture
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { getRequestLogger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
 import logger from '../middleware/logger.js';
@@ -13,30 +12,31 @@ import type { SystemArchitecture } from '../types/architecture.js';
 import type { ConversationMessage } from '../types/index.js';
 import { withResilience } from './resilience.js';
 import { withCache } from './cacheService.js';
+import { getCompletion } from './llmGatewayHelper.js';
+import { getStream, type LLMProvider } from './llmGateway.js';
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  logger.error('ANTHROPIC_API_KEY is not set');
-  process.exit(1);
-}
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-// Create resilient wrapper for Claude API calls
-// Type assertion: since we never pass stream: true, the response is always a Message
-const resilientClaudeCall = withResilience(
-  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
-    return await client.messages.create(params);
+// Create resilient wrapper for LLM gateway non-streaming calls
+const resilientLlmCall = withResilience(
+  async (params: { model: string; max_tokens: number; system: string; messages: Array<{ role: 'user' | 'assistant'; content: string }> }) => {
+    return await getCompletion(params);
   },
-  'claude-prd'
+  'llm-prd'
 );
 
-const resilientClaudeStream = withResilience(
-  async (params: Parameters<typeof client.messages.stream>[0]) => {
-    return await client.messages.stream(params);
+// Create resilient wrapper for LLM gateway streaming calls
+const resilientLlmStream = withResilience(
+  async (params: { model: string; max_tokens: number; system: string; messages: Array<{ role: 'user' | 'assistant'; content: string }>; provider?: LLMProvider }) => {
+    return getStream(
+      {
+        model: params.model,
+        max_tokens: params.max_tokens,
+        system: params.system,
+        messages: params.messages,
+      },
+      { provider: params.provider ?? 'nim' }
+    );
   },
-  'claude-prd-stream'
+  'llm-prd-stream'
 );
 
 /**
@@ -79,23 +79,21 @@ async function _generatePRD(
       content: userMessage,
     });
 
-    log.info({ messageCount: messages.length }, 'Calling Claude API for PRD generation');
+    log.info({ messageCount: messages.length }, 'Calling LLM API for PRD generation');
 
-    // Call Claude API
-    const response = await resilientClaudeCall({
+    // Call LLM API
+    const result = await resilientLlmCall({
       model: 'claude-opus-4-5-20251101',
       max_tokens: 6000,
       system: systemPrompt,
       messages,
     });
 
-    // Extract JSON from response
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (result.error) {
+      throw new Error(`LLM API error: ${result.error}`);
     }
 
-    let jsonText = content.text;
+    let jsonText = result.text;
 
     // Remove markdown code blocks if present
     if (jsonText.includes('```json')) {
@@ -246,7 +244,7 @@ export async function* generatePRDStream(
     log.info({}, 'Starting PRD stream');
 
     // Create streaming response
-    const stream = await resilientClaudeStream({
+    const stream = await resilientLlmStream({
       model: 'claude-opus-4-5-20251101',
       max_tokens: 6000,
       system: systemPrompt,
@@ -326,15 +324,14 @@ export async function suggestComponentsFromArchitecture(
   const timer = createApiTimer('suggest_components');
   try {
     const meta = JSON.stringify(architecture.metadata, null, 2);
-    const res = await resilientClaudeCall({
+    const result = await resilientLlmCall({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
       system: COMPONENTS_PROMPT,
       messages: [{ role: 'user', content: `Architecture metadata:\n${meta}\n\nSuggest major components.` }],
     });
-    const block = res.content[0];
-    if (block.type !== 'text') return [];
-    let raw = block.text.trim();
+    if (result.error) throw new Error(result.error);
+    let raw = result.text.trim();
     const arr = raw.match(/\[[\s\S]*\]/);
     if (arr) raw = arr[0];
     const parsed = JSON.parse(raw) as SuggestedComponent[];
@@ -367,15 +364,14 @@ export async function generatePRDForComponent(
     const meta = JSON.stringify(architecture.metadata, null, 2);
     const label = componentLabel || componentId;
     const userMsg = `Project: ${projectName}\nDescription: ${projectDescription}\n\nComponent: ${label} (id: ${componentId})\n\nArchitecture metadata:\n${meta}\n\nGenerate a PRD for this component only.`;
-    const res = await resilientClaudeCall({
+    const result = await resilientLlmCall({
       model: 'claude-opus-4-5-20251101',
       max_tokens: 6000,
       system: COMPONENT_PRD_PROMPT,
       messages: [{ role: 'user', content: userMsg }],
     });
-    const block = res.content[0];
-    if (block.type !== 'text') throw new Error('Unexpected Claude response');
-    let jsonText = block.text.trim();
+    if (result.error) throw new Error(result.error);
+    let jsonText = result.text.trim();
     if (jsonText.includes('```json')) {
       const m = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (m) jsonText = m[1];

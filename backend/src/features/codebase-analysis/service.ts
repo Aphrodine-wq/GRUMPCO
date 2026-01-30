@@ -7,7 +7,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import Anthropic from '@anthropic-ai/sdk';
+import { getStream, type StreamParams } from '../../services/llmGateway.js';
 import {
   CodebaseAnalysisResult,
   AnalysisRequest,
@@ -30,7 +30,21 @@ import {
   generateCodeSmellsPrompt,
 } from './prompts.js';
 
-const anthropic = new Anthropic();
+const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
+
+/**
+ * Helper to call LLM via gateway and get complete response text
+ */
+async function callLLM(params: StreamParams): Promise<string> {
+  const stream = getStream(params, { provider: 'nim', modelId: params.model || DEFAULT_MODEL });
+  let responseText = '';
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      responseText += event.delta.text;
+    }
+  }
+  return responseText;
+}
 
 // File extensions to language mapping
 const LANGUAGE_MAP: Record<string, string> = {
@@ -294,25 +308,21 @@ export async function analyzeCodebase(request: AnalysisRequest): Promise<Codebas
   // Extract dependencies
   const deps = pkg ? extractDependencies(pkg.parsed) : { production: [], development: [] };
 
-  // Generate file list for Claude
+  // Generate file list for LLM analysis
   const fileList = files
     .map((f) => `${f.path.replace(workspacePath, '')} (${f.language}, ${f.lines} lines)`)
     .slice(0, 200) // Limit for context window
     .join('\n');
 
-  // Call Claude for analysis
+  // Call LLM for analysis
   const analysisPrompt = generateAnalysisPrompt(fileList, pkg?.content || null, configFiles);
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const responseText = await callLLM({
+    model: DEFAULT_MODEL,
     max_tokens: 4096,
     system: CODEBASE_ANALYSIS_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: analysisPrompt }],
   });
-
-  // Parse Claude's response
-  const textContent = response.content.find((c) => c.type === 'text');
-  const responseText = textContent?.type === 'text' ? textContent.text : '';
 
   let analysisData: Record<string, unknown> = {};
   try {
@@ -401,15 +411,12 @@ export async function generateArchitectureDiagram(
     componentsStr
   );
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const responseText = await callLLM({
+    model: DEFAULT_MODEL,
     max_tokens: 2048,
     system: CODEBASE_ANALYSIS_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: diagramPrompt }],
   });
-
-  const textContent = response.content.find((c) => c.type === 'text');
-  const responseText = textContent?.type === 'text' ? textContent.text : '';
 
   // Extract Mermaid diagram (fallback to empty string if not found)
   const mermaidMatch = responseText.match(/```mermaid\n?([\s\S]*?)\n?```/);
@@ -453,15 +460,12 @@ export async function analyzeDependencies(request: DependencyGraphRequest): Prom
 
   const analysisPrompt = generateDependencyAnalysisPrompt(depsStr, lockfile);
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const responseText = await callLLM({
+    model: DEFAULT_MODEL,
     max_tokens: 2048,
     system: CODEBASE_ANALYSIS_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: analysisPrompt }],
   });
-
-  const textContent = response.content.find((c) => c.type === 'text');
-  const responseText = textContent?.type === 'text' ? textContent.text : '';
 
   try {
     const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/);
@@ -507,7 +511,7 @@ export async function detectCodeSmells(workspacePath: string): Promise<CodeSmell
     }
   }
 
-  // Sample some files for deeper analysis with Claude
+  // Sample some files for deeper analysis with LLM
   const sampleFiles = files
     .filter((f) => ['.ts', '.js', '.py', '.go'].includes(f.extension))
     .slice(0, 5);
@@ -528,15 +532,12 @@ export async function detectCodeSmells(workspacePath: string): Promise<CodeSmell
     if (snippets) {
       const prompt = generateCodeSmellsPrompt(snippets);
 
-      const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+      const responseText = await callLLM({
+        model: DEFAULT_MODEL,
         max_tokens: 2048,
         system: CODEBASE_ANALYSIS_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: prompt }],
       });
-
-      const textContent = response.content.find((c) => c.type === 'text');
-      const responseText = textContent?.type === 'text' ? textContent.text : '';
 
       try {
         const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/);

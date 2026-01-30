@@ -4,9 +4,9 @@
  * Used by agent tools for "schema from diagram/PRD" and ORM output.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import logger from '../middleware/logger.js';
 import type { ArchitectureMetadata, DataModel } from '../types/architecture.js';
+import { getCompletion } from './llmGatewayHelper.js';
 
 export type SchemaTargetDb = 'sqlite' | 'postgres' | 'mysql';
 export type SchemaFormat = 'sql' | 'drizzle';
@@ -32,25 +32,27 @@ export async function generateSchemaFromDescription(
 ): Promise<GenerateSchemaResult> {
   const targetDb = options.targetDb ?? 'sqlite';
   const format = options.format ?? 'sql';
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return { ddl: `-- No API key; provide schema for: ${description.slice(0, 200)}`, tables: [] };
-  }
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  
   const userMsg = `Target DB: ${targetDb}. Format: ${format}. Generate schema for:\n\n${description}\n\nRespond with a \`\`\`sql code block for DDL.${format === 'drizzle' ? ' Then a ```ts block for Drizzle schema.' : ''}\`\`\``;
+  
   try {
-    const res = await client.messages.create({
+    const result = await getCompletion({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: SCHEMA_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMsg }],
     });
-    const block = res.content[0];
-    if (block.type !== 'text') return { ddl: '', tables: [] };
+    
+    if (result.error) {
+      logger.warn({ err: result.error }, 'dbSchemaService: generateSchemaFromDescription failed');
+      return { ddl: `-- Error: ${result.error}`, tables: [] };
+    }
+    
     let ddl = '';
     let drizzle: string | undefined;
-    const sqlMatch = block.text.match(/```sql\n?([\s\S]*?)\n?```/);
+    const sqlMatch = result.text.match(/```sql\n?([\s\S]*?)\n?```/);
     if (sqlMatch) ddl = sqlMatch[1].trim();
-    const tsMatch = block.text.match(/```(?:ts|typescript)\n?([\s\S]*?)\n?```/);
+    const tsMatch = result.text.match(/```(?:ts|typescript)\n?([\s\S]*?)\n?```/);
     if (tsMatch) drizzle = tsMatch[1].trim();
     const tables = [...ddl.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?\s*["']?(\w+)["']?/gi)].map((m) => m[1]);
     return { ddl, drizzle, tables };

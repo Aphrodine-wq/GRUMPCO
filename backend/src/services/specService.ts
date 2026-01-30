@@ -3,7 +3,6 @@
  * Interactive Q&A for requirements gathering and specification generation
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import type {
   SpecSession,
   SpecQuestion,
@@ -17,26 +16,7 @@ import type {
 } from '../types/spec.js';
 import logger from '../middleware/logger.js';
 import { getDatabase } from '../db/database.js';
-import { withResilience } from './resilience.js';
-
-if (!process.env.ANTHROPIC_API_KEY) {
-  logger.error('ANTHROPIC_API_KEY is not set');
-  process.exit(1);
-}
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-// Create resilient wrapper for Claude API calls
-// Type assertion: since we never pass stream: true, the response is always a Message
-const resilientClaudeCall = withResilience(
-  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
-    return await client.messages.create(params);
-  },
-  'claude-spec'
-);
-
+import { getCompletion } from './llmGatewayHelper.js';
 
 /**
  * Start a new spec session and generate initial questions
@@ -94,8 +74,8 @@ ${request.workspaceRoot ? `Workspace: ${request.workspaceRoot}` : ''}
 Generate relevant questions to gather all necessary information for creating a comprehensive specification.`;
 
   try {
-    const response = await resilientClaudeCall({
-      model: 'claude-sonnet-4-20250514',
+    const result = await getCompletion({
+      model: 'moonshotai/kimi-k2.5',
       max_tokens: 2048,
       system: systemPrompt,
       messages: [
@@ -106,12 +86,11 @@ Generate relevant questions to gather all necessary information for creating a c
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
+    if (result.error) {
+      throw new Error(`LLM API error: ${result.error}`);
     }
 
-    let jsonText = content.text.trim();
+    let jsonText = result.text.trim();
     
     // Extract JSON from markdown code blocks if present
     if (jsonText.includes('```json')) {
@@ -414,8 +393,8 @@ Generate a comprehensive specification based on these answers.`;
   }
 
   try {
-    const response = await resilientClaudeCall({
-      model: 'claude-sonnet-4-20250514',
+    const result = await getCompletion({
+      model: 'moonshotai/kimi-k2.5',
       max_tokens: 4096,
       system: systemPrompt,
       messages: [
@@ -426,12 +405,11 @@ Generate a comprehensive specification based on these answers.`;
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
+    if (result.error) {
+      throw new Error(`LLM API error: ${result.error}`);
     }
 
-    let jsonText = content.text.trim();
+    let jsonText = result.text.trim();
     
     // Extract JSON from markdown code blocks if present
     if (jsonText.includes('```json')) {

@@ -23,7 +23,7 @@ const result = route({
   multimodal: false,
   costOptimization: true,
 });
-// result.provider === 'nim' | 'anthropic' | ...
+// result.provider === 'nim' | 'zhipu' | 'copilot' | 'openrouter'
 // result.modelId === 'moonshotai/kimi-k2.5' | 'claude-sonnet-4-20250514' | ...
 ```
 

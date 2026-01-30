@@ -3,8 +3,8 @@
  * Modular, discoverable capabilities for the platform
  */
 
-import type Anthropic from '@anthropic-ai/sdk';
 import type { Router } from 'express';
+import type { StreamParams, StreamEvent } from '../services/llmGateway.js';
 
 /**
  * Skill manifest - metadata about a skill
@@ -122,7 +122,7 @@ export interface SkillContext {
 
   /** Available services */
   services: {
-    claude: ClaudeService;
+    llm: LLMService;
     fileSystem: FileSystemService;
     git?: GitService;
     logger: LoggerService;
@@ -136,11 +136,24 @@ export interface SkillContext {
 }
 
 /**
+ * Tool definition for LLM function calling
+ */
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+}
+
+/**
  * Tool definitions for a skill
  */
 export interface SkillTools {
-  /** Anthropic tool definitions */
-  definitions: Anthropic.Tool[];
+  /** Tool definitions for LLM function calling */
+  definitions: ToolDefinition[];
 
   /** Handler functions for each tool */
   handlers: Record<string, SkillToolHandler>;
@@ -279,20 +292,22 @@ export interface SkillRegistration {
 /**
  * Service interfaces for SkillContext
  */
-export interface ClaudeService {
-  createMessage(params: {
+export interface LLMService {
+  /** Complete a message (non-streaming) and return the full response text */
+  complete(params: {
     messages: Array<{ role: 'user' | 'assistant'; content: string }>;
     system?: string;
-    tools?: Anthropic.Tool[];
+    tools?: ToolDefinition[];
     maxTokens?: number;
-  }): Promise<Anthropic.Message>;
+  }): Promise<string>;
 
-  streamMessage(params: {
+  /** Stream message events from the LLM */
+  stream(params: {
     messages: Array<{ role: 'user' | 'assistant'; content: string }>;
     system?: string;
-    tools?: Anthropic.Tool[];
+    tools?: ToolDefinition[];
     maxTokens?: number;
-  }): AsyncGenerator<Anthropic.MessageStreamEvent>;
+  }): AsyncGenerator<StreamEvent>;
 }
 
 export interface FileSystemService {

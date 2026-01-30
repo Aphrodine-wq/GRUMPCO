@@ -3,7 +3,6 @@
  * Abstract base class that skills can extend for common functionality
  */
 
-import type Anthropic from '@anthropic-ai/sdk';
 import type {
   Skill,
   SkillManifest,
@@ -14,6 +13,7 @@ import type {
   SkillExecutionInput,
   SkillExecutionResult,
   ToolExecutionResult,
+  ToolDefinition,
 } from '../types.js';
 import type { Router } from 'express';
 
@@ -183,11 +183,11 @@ export abstract class BaseSkill implements Skill {
     name: string,
     description: string,
     inputSchema: Record<string, unknown>
-  ): Anthropic.Tool {
+  ): ToolDefinition {
     return {
       name,
       description,
-      input_schema: inputSchema as Anthropic.Tool.InputSchema,
+      input_schema: inputSchema as ToolDefinition['input_schema'],
     };
   }
 
@@ -297,9 +297,9 @@ export abstract class BaseSkill implements Skill {
   }
 
   /**
-   * Call Claude with the skill's system prompt
+   * Call LLM with the skill's system prompt (uses Kimi K2.5 via LLM Gateway by default)
    */
-  protected async callClaude(
+  protected async callLLM(
     context: SkillContext,
     userMessage: string,
     options?: {
@@ -311,15 +311,11 @@ export abstract class BaseSkill implements Skill {
       { role: 'user', content: userMessage },
     ];
 
-    const response = await context.services.claude.createMessage({
+    return await context.services.llm.complete({
       messages,
       system: this.prompts?.system,
       tools: options?.includeTools ? this.tools?.definitions : undefined,
       maxTokens: options?.maxTokens || 4096,
     });
-
-    // Extract text from response
-    const textBlock = response.content.find((block) => block.type === 'text');
-    return textBlock?.type === 'text' ? textBlock.text : '';
   }
 }

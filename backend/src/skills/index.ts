@@ -7,7 +7,6 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import type { Express } from 'express';
-import type Anthropic from '@anthropic-ai/sdk';
 import logger from '../middleware/logger.js';
 import type {
   Skill,
@@ -18,6 +17,7 @@ import type {
   SkillExecutionInput,
   SkillExecutionResult,
   ToolExecutionResult,
+  ToolDefinition,
 } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -244,8 +244,8 @@ class SkillRegistry {
   /**
    * Get all tool definitions from all skills
    */
-  getAllTools(): Anthropic.Tool[] {
-    const tools: Anthropic.Tool[] = [];
+  getAllTools(): ToolDefinition[] {
+    const tools: ToolDefinition[] = [];
 
     for (const skill of this.getAllSkills()) {
       if (skill.tools?.definitions) {

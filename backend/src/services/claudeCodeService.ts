@@ -1,13 +1,14 @@
 /**
- * Claude Code Service
+ * LLM Code Service
  * Comprehensive code analysis, refactoring, optimization, security, testing, and documentation
+ * Uses LLM Gateway with Kimi K2.5 for all operations
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { getRequestLogger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
 import logger from '../middleware/logger.js';
 import { withResilience } from './resilience.js';
+import { getCompletion, type CompletionResult } from './llmGatewayHelper.js';
 import type {
   CodeAnalysis,
   RefactoringSuggestion,
@@ -19,21 +20,25 @@ import type {
   PerformanceMetrics,
 } from '../types/claudeCode.js';
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  logger.error('ANTHROPIC_API_KEY is not set');
+if (!process.env.NVIDIA_NIM_API_KEY) {
+  logger.error('NVIDIA_NIM_API_KEY is not set');
   process.exit(1);
 }
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
+const DEFAULT_PROVIDER = 'nim' as const;
 
-// Type assertion: since we never pass stream: true, the response is always a Message
-const resilientClaudeCall = withResilience(
-  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
-    return await client.messages.create(params);
+// Type assertion: since we use getCompletion which returns non-streaming response
+const resilientLlmCall = withResilience(
+  async (params: {
+    model: string;
+    max_tokens: number;
+    system: string;
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  }): Promise<CompletionResult> => {
+    return await getCompletion(params, DEFAULT_PROVIDER);
   },
-  'claude-code'
+  'llm-code'
 );
 
 const CODE_ANALYSIS_PROMPT = `You are an expert code analyst specializing in code quality, patterns, and architecture. Analyze the provided code and return a comprehensive analysis.
@@ -96,15 +101,15 @@ export async function analyzeCode(
   context?: CodeContext
 ): Promise<CodeAnalysis> {
   const log = getRequestLogger();
-  const timer = createApiTimer('claude_code_analyze');
+  const timer = createApiTimer('llm_code_analyze');
 
   try {
     const contextInfo = context
       ? `\n\nContext:\n- Project Type: ${context.projectType || 'N/A'}\n- Framework: ${context.framework || 'N/A'}\n- Language: ${context.language || language}`
       : '';
 
-    const response = await resilientClaudeCall({
-      model: 'claude-opus-4-5-20251101',
+    const response = await resilientLlmCall({
+      model: DEFAULT_MODEL,
       max_tokens: 4096,
       system: CODE_ANALYSIS_PROMPT,
       messages: [
@@ -115,12 +120,11 @@ export async function analyzeCode(
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (response.error) {
+      throw new Error(`LLM error: ${response.error}`);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     jsonText = extractJSON(jsonText);
 
     const analysis = JSON.parse(jsonText) as CodeAnalysis;
@@ -172,11 +176,11 @@ export async function suggestRefactoring(
   language: string
 ): Promise<RefactoringSuggestion[]> {
   const log = getRequestLogger();
-  const timer = createApiTimer('claude_code_refactor');
+  const timer = createApiTimer('llm_code_refactor');
 
   try {
-    const response = await resilientClaudeCall({
-      model: 'claude-opus-4-5-20251101',
+    const response = await resilientLlmCall({
+      model: DEFAULT_MODEL,
       max_tokens: 4096,
       system: REFACTORING_PROMPT,
       messages: [
@@ -187,12 +191,11 @@ export async function suggestRefactoring(
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (response.error) {
+      throw new Error(`LLM error: ${response.error}`);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     jsonText = extractJSON(jsonText);
 
     const suggestions = JSON.parse(jsonText) as RefactoringSuggestion[];
@@ -244,15 +247,15 @@ export async function optimizePerformance(
   metrics?: PerformanceMetrics
 ): Promise<PerformanceOptimization[]> {
   const log = getRequestLogger();
-  const timer = createApiTimer('claude_code_performance');
+  const timer = createApiTimer('llm_code_performance');
 
   try {
     const metricsInfo = metrics
       ? `\n\nCurrent Metrics:\n- Response Time: ${metrics.responseTime}ms\n- Throughput: ${metrics.throughput} req/s\n- Memory: ${metrics.memoryUsage}MB`
       : '';
 
-    const response = await resilientClaudeCall({
-      model: 'claude-opus-4-5-20251101',
+    const response = await resilientLlmCall({
+      model: DEFAULT_MODEL,
       max_tokens: 4096,
       system: PERFORMANCE_PROMPT,
       messages: [
@@ -263,12 +266,11 @@ export async function optimizePerformance(
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (response.error) {
+      throw new Error(`LLM error: ${response.error}`);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     jsonText = extractJSON(jsonText);
 
     const optimizations = JSON.parse(jsonText) as PerformanceOptimization[];
@@ -332,11 +334,11 @@ export async function scanSecurity(
   language: string
 ): Promise<SecurityIssue[]> {
   const log = getRequestLogger();
-  const timer = createApiTimer('claude_code_security');
+  const timer = createApiTimer('llm_code_security');
 
   try {
-    const response = await resilientClaudeCall({
-      model: 'claude-opus-4-5-20251101',
+    const response = await resilientLlmCall({
+      model: DEFAULT_MODEL,
       max_tokens: 4096,
       system: SECURITY_PROMPT,
       messages: [
@@ -347,12 +349,11 @@ export async function scanSecurity(
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (response.error) {
+      throw new Error(`LLM error: ${response.error}`);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     jsonText = extractJSON(jsonText);
 
     const issues = JSON.parse(jsonText) as SecurityIssue[];
@@ -429,13 +430,13 @@ export async function generateTests(
   testFramework?: string
 ): Promise<TestSuite> {
   const log = getRequestLogger();
-  const timer = createApiTimer('claude_code_tests');
+  const timer = createApiTimer('llm_code_tests');
 
   try {
     const frameworkInfo = testFramework ? `\n\nTest Framework: ${testFramework}` : '';
 
-    const response = await resilientClaudeCall({
-      model: 'claude-opus-4-5-20251101',
+    const response = await resilientLlmCall({
+      model: DEFAULT_MODEL,
       max_tokens: 6000,
       system: TEST_GENERATION_PROMPT,
       messages: [
@@ -446,12 +447,11 @@ export async function generateTests(
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (response.error) {
+      throw new Error(`LLM error: ${response.error}`);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     jsonText = extractJSON(jsonText);
 
     const testSuite = JSON.parse(jsonText) as TestSuite;
@@ -529,11 +529,11 @@ export async function generateDocumentation(
   language: string
 ): Promise<Documentation> {
   const log = getRequestLogger();
-  const timer = createApiTimer('claude_code_docs');
+  const timer = createApiTimer('llm_code_docs');
 
   try {
-    const response = await resilientClaudeCall({
-      model: 'claude-opus-4-5-20251101',
+    const response = await resilientLlmCall({
+      model: DEFAULT_MODEL,
       max_tokens: 6000,
       system: DOCUMENTATION_PROMPT,
       messages: [
@@ -544,12 +544,11 @@ export async function generateDocumentation(
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (response.error) {
+      throw new Error(`LLM error: ${response.error}`);
     }
 
-    let jsonText = content.text;
+    let jsonText = response.text;
     jsonText = extractJSON(jsonText);
 
     const documentation = JSON.parse(jsonText) as Documentation;
@@ -590,7 +589,7 @@ Optionally include a "warnings" array of strings for caveats or follow-up items.
 Generate only the JSON. Use the exact tech stack and diagram type. Produce runnable, minimal-but-complete code.`;
 
 /**
- * Generate code files from a Mermaid diagram using Claude
+ * Generate code files from a Mermaid diagram using LLM
  */
 export async function generateCodeFromDiagram(
   diagramType: string,
@@ -598,11 +597,11 @@ export async function generateCodeFromDiagram(
   techStack: string
 ): Promise<GenerateCodeFromDiagramResult> {
   const log = getRequestLogger();
-  const timer = createApiTimer('claude_code_from_diagram');
+  const timer = createApiTimer('llm_code_from_diagram');
 
   try {
-    const response = await resilientClaudeCall({
-      model: 'claude-sonnet-4-20250514',
+    const response = await resilientLlmCall({
+      model: DEFAULT_MODEL,
       max_tokens: 8192,
       system: GENERATE_CODE_FROM_DIAGRAM_PROMPT,
       messages: [
@@ -613,12 +612,11 @@ export async function generateCodeFromDiagram(
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (response.error) {
+      throw new Error(`LLM error: ${response.error}`);
     }
 
-    const jsonText = extractJSON(content.text);
+    const jsonText = extractJSON(response.text);
     const parsed = JSON.parse(jsonText) as { files?: { path: string; content: string }[]; warnings?: string[] };
     const files = Array.isArray(parsed.files) ? parsed.files : [];
     const warnings = Array.isArray(parsed.warnings) ? parsed.warnings : [];
@@ -636,7 +634,7 @@ export async function generateCodeFromDiagram(
 }
 
 /**
- * Helper function to extract JSON from Claude response
+ * Helper function to extract JSON from LLM response
  */
 function extractJSON(text: string): string {
   if (text.includes('```json')) {

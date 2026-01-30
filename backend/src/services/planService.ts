@@ -3,7 +3,7 @@
  * Generates structured plans with multi-phase support and approval workflow
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { getCompletion } from './llmGatewayHelper.js';
 import type {
   Plan,
   PlanStep,
@@ -14,26 +14,6 @@ import type {
 } from '../types/plan.js';
 import logger from '../middleware/logger.js';
 import { getDatabase } from '../db/database.js';
-import { withResilience } from './resilience.js';
-
-if (!process.env.ANTHROPIC_API_KEY) {
-  logger.error({}, 'ANTHROPIC_API_KEY is not set');
-  process.exit(1);
-}
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-// Create resilient wrapper for Claude API calls
-// Type assertion: since we never pass stream: true, the response is always a Message
-const resilientClaudeCall = withResilience(
-  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
-    return await client.messages.create(params);
-  },
-  'claude-plan'
-);
-
 
 /**
  * Generate a structured plan from user request
@@ -106,24 +86,26 @@ ${request.agentProfile ? `Agent profile: ${request.agentProfile}` : ''}
 Generate a comprehensive plan with all necessary steps, file changes, and phases.`;
 
   try {
-    const response = await resilientClaudeCall({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-    });
+    const response = await getCompletion(
+      {
+        model: 'moonshotai/kimi-k2.5',
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+      },
+      'nim'
+    );
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
+    if (response.error) {
+      throw new Error(`LLM completion error: ${response.error}`);
     }
 
-    let jsonText = content.text.trim();
+    let jsonText = response.text.trim();
     
     // Extract JSON from markdown code blocks if present
     if (jsonText.includes('```json')) {

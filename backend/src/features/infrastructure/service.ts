@@ -4,7 +4,7 @@
  * Generates Kubernetes, Terraform, Docker, and CI/CD configurations.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { getStream, type StreamParams } from '../../services/llmGateway.js';
 import {
   K8sGenerationRequest,
   K8sGenerationResult,
@@ -17,7 +17,21 @@ import {
   CICDGenerationResult,
 } from './types.js';
 
-const anthropic = new Anthropic();
+const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
+
+/**
+ * Helper to call LLM via gateway and get complete response text
+ */
+async function callLLM(params: StreamParams): Promise<string> {
+  const stream = getStream(params, { provider: 'nim', modelId: params.model || DEFAULT_MODEL });
+  let responseText = '';
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      responseText += event.delta.text;
+    }
+  }
+  return responseText;
+}
 
 const INFRA_SYSTEM_PROMPT = `You are an expert DevOps engineer and infrastructure architect. You specialize in:
 - Kubernetes manifests and Helm charts
@@ -76,15 +90,12 @@ Respond with each manifest as a separate YAML block:
 ...
 \`\`\``;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const responseText = await callLLM({
+    model: DEFAULT_MODEL,
     max_tokens: 8192,
     system: INFRA_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   });
-
-  const textContent = response.content.find((c) => c.type === 'text');
-  const responseText = textContent?.type === 'text' ? textContent.text : '';
 
   // Parse YAML blocks from response
   const yamlBlocks = responseText.match(/```yaml\n?([\s\S]*?)\n?```/g) || [];
@@ -172,15 +183,12 @@ Respond with each file as a separate code block:
 ...
 \`\`\``;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const responseText = await callLLM({
+    model: DEFAULT_MODEL,
     max_tokens: 8192,
     system: INFRA_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   });
-
-  const textContent = response.content.find((c) => c.type === 'text');
-  const responseText = textContent?.type === 'text' ? textContent.text : '';
 
   // Extract HCL blocks
   const extractFile = (filename: string): string => {
@@ -261,15 +269,12 @@ ${includeCompose ? `\`\`\`yaml
 ...
 \`\`\`` : ''}`;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const responseText = await callLLM({
+    model: DEFAULT_MODEL,
     max_tokens: 4096,
     system: INFRA_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   });
-
-  const textContent = response.content.find((c) => c.type === 'text');
-  const responseText = textContent?.type === 'text' ? textContent.text : '';
 
   // Extract files
   const dockerfileMatch = responseText.match(/```dockerfile\n?([\s\S]*?)\n?```/i);
@@ -327,15 +332,12 @@ Respond with:
 ...
 \`\`\``;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const responseText = await callLLM({
+    model: DEFAULT_MODEL,
     max_tokens: 4096,
     system: INFRA_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   });
-
-  const textContent = response.content.find((c) => c.type === 'text');
-  const responseText = textContent?.type === 'text' ? textContent.text : '';
 
   // Extract pipeline file
   const pattern = new RegExp(`\`\`\`${config.format}\\n?([\\s\\S]*?)\\n?\`\`\``, 'i');

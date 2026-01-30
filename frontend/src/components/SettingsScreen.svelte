@@ -55,23 +55,15 @@
   let architectureDiagram = $state<string | null>(null);
 
   const modelOptions = [
-    {
-      provider: 'anthropic' as const,
-      modelId: 'claude-sonnet-4-20250514',
-      label: 'Claude Sonnet 4',
-    },
-    { provider: 'anthropic' as const, modelId: 'claude-opus-4-5-20251101', label: 'Claude Opus 4' },
+    { provider: 'nim' as const, modelId: 'moonshotai/kimi-k2.5', label: 'Kimi K2.5 (Primary)' },
+    { provider: 'nim' as const, modelId: 'moonshotai/kimi-k2.6', label: 'Kimi K2.6' },
     { provider: 'zhipu' as const, modelId: 'glm-4', label: 'GLM 4.7' },
     { provider: 'copilot' as const, modelId: 'copilot-codex', label: 'Copilot Codex' },
     { provider: 'copilot' as const, modelId: 'copilot-codebase', label: 'Copilot Codebase' },
-    {
-      provider: 'openrouter' as const,
-      modelId: 'anthropic/claude-3.5-sonnet',
-      label: 'OpenRouter Claude 3.5 Sonnet',
-    },
     { provider: 'openrouter' as const, modelId: 'openai/gpt-4o', label: 'OpenRouter GPT-4o' },
-    { provider: 'nim' as const, modelId: 'moonshotai/kimi-k2.5', label: 'Kimi K2.5' },
     { provider: 'nim' as const, modelId: 'nvidia/nemotron-3-nano-30b-a3b', label: 'Nemotron 3 Nano 30B' },
+    { provider: 'nim' as const, modelId: 'nvidia/nemotron-3-giant-150b-a3b', label: 'Nemotron 3 Giant 150B' },
+    { provider: 'nim' as const, modelId: 'nvidia/nemotron-3-super-49b-a3b', label: 'Nemotron 3 Super 49B' },
   ];
 
   onMount(() => {
@@ -143,13 +135,13 @@
 
   function modelValue(): string {
     const m = settings?.models;
-    if (!m?.defaultModelId) return 'anthropic:claude-sonnet-4-20250514';
-    return `${m.defaultProvider ?? 'anthropic'}:${m.defaultModelId}`;
+    if (!m?.defaultModelId) return 'nim:moonshotai/kimi-k2.5';
+    return `${m.defaultProvider ?? 'nim'}:${m.defaultModelId}`;
   }
 
   function handleModelChange(e: Event) {
     const v = (e.target as HTMLSelectElement).value;
-    const [provider, modelId] = v.includes(':') ? v.split(':') : ['anthropic', v];
+    const [provider, modelId] = v.includes(':') ? v.split(':') : ['nim', v];
     saveModels({
       ...settings?.models,
       defaultProvider: provider as any,
@@ -220,7 +212,7 @@
           >
             <option value="balanced">Balanced (router default)</option>
             <option value="fast">Fast (NIM / Kimi)</option>
-            <option value="quality">Quality (Claude)</option>
+            <option value="quality">Quality (Kimi K2.6)</option>
           </select>
           <p class="field-hint">Fast = cheaper and lower latency; Quality = best capability; Balanced = auto by task.</p>
         </div>

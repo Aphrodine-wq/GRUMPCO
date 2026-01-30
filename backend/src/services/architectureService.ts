@@ -1,9 +1,8 @@
 /**
  * Architecture Service
- * Generates system architectures and C4 diagrams using Claude
+ * Generates system architectures and C4 diagrams using LLM Gateway
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { getRequestLogger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
 import logger from '../middleware/logger.js';
@@ -12,33 +11,10 @@ import { analyzeProjectIntent } from './intentParser.js';
 import type { ArchitectureRequest, SystemArchitecture, ArchitectureResponse } from '../types/architecture.js';
 import type { ConversationMessage } from '../types/index.js';
 import type { EnrichedIntent } from './intentCompilerService.js';
-import { withResilience } from './resilience.js';
 import { withCache } from './cacheService.js';
+import { getStream, type StreamEvent, type StreamParams } from './llmGateway.js';
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  logger.error('ANTHROPIC_API_KEY is not set');
-  process.exit(1);
-}
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-// Create resilient wrapper for Claude API calls
-// Type assertion: since we never pass stream: true, the response is always a Message
-const resilientClaudeCall = withResilience(
-  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
-    return await client.messages.create(params);
-  },
-  'claude-architecture'
-);
-
-const resilientClaudeStream = withResilience(
-  async (params: Parameters<typeof client.messages.stream>[0]) => {
-    return await client.messages.stream(params);
-  },
-  'claude-architecture-stream'
-);
+const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
 
 /**
  * Generate system architecture from project description
@@ -111,23 +87,27 @@ async function _generateArchitecture(
       content: userMessage,
     });
 
-    log.info({ messageCount: messages.length }, 'Calling Claude API for architecture generation');
+    log.info({ messageCount: messages.length }, 'Calling LLM Gateway for architecture generation');
 
-    // Call Claude API
-    const response = await resilientClaudeCall({
-      model: 'claude-opus-4-5-20251101',
+    // Call LLM Gateway via streaming and collect full response
+    const params: StreamParams = {
+      model: DEFAULT_MODEL,
       max_tokens: 4096,
       system: systemPrompt,
       messages,
-    });
+    };
 
-    // Extract JSON from response
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    const stream = getStream(params, { provider: 'nim', modelId: DEFAULT_MODEL });
+    let fullText = '';
+
+    for await (const chunk of stream) {
+      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+        fullText += chunk.delta.text;
+      }
     }
 
-    let jsonText = content.text;
+    // Extract JSON from response
+    let jsonText = fullText;
 
     // Remove markdown code blocks if present
     if (jsonText.includes('```json')) {
@@ -148,7 +128,7 @@ async function _generateArchitecture(
       architectureData = JSON.parse(jsonText);
     } catch (e) {
       log.error({ error: String(e), jsonText: jsonText.substring(0, 200) }, 'Failed to parse architecture JSON');
-      throw new Error('Failed to parse architecture from Claude response');
+      throw new Error('Failed to parse architecture from LLM response');
     }
 
     // Validate and construct SystemArchitecture
@@ -300,13 +280,15 @@ export async function* generateArchitectureStream(
 
     log.info({}, 'Starting architecture stream');
 
-    // Create streaming response
-    const stream = await resilientClaudeStream({
-      model: 'claude-opus-4-5-20251101',
+    // Create streaming response via LLM Gateway
+    const params: StreamParams = {
+      model: DEFAULT_MODEL,
       max_tokens: 4096,
       system: systemPrompt,
       messages,
-    });
+    };
+
+    const stream = getStream(params, { provider: 'nim', modelId: DEFAULT_MODEL });
 
     let buffer = '';
     for await (const chunk of stream) {

@@ -1,39 +1,84 @@
 # Things to Do
 
-Actionable checklist for the Vercel Serverless deployment. Tick items as you complete them.
+Actionable checklist for the Vercel Serverless deployment. This document has been updated - most items are now automated or documented. Follow the steps below to deploy.
+
+**Status: Ready for Deployment**
+
+Last updated: 2026-01-30
 
 ---
 
-## 1. Set up Cloud Infrastructure
+## 1. Set up Cloud Infrastructure (Automated Setup Available)
 
-**Operator tasks** (you run these). See **[backend/DEPLOY_VERCEL.md](../backend/DEPLOY_VERCEL.md)** for step-by-step instructions.
+**Prerequisites:**
+1. Vercel CLI installed: `npm i -g vercel`
+2. Supabase CLI installed: `npm i -g supabase` (optional)
+3. Anthropic API key from https://console.anthropic.com
 
-- [ ] **Create Supabase Project**:
-    - [ ] Create a new project on [supabase.com](https://supabase.com).
-    - [ ] Run the schema from `backend/supabase-schema.sql` in the SQL Editor.
-    - [ ] Add `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` as secrets to your Vercel project.
+### Option A: Quick Deploy Script (Recommended)
+Run the automated deployment script:
+```bash
+cd backend
+npm run deploy:setup
+```
 
-- [ ] **Create QStash Service**:
-    - [ ] Create a new QStash database on [upstash.com](https://upstash.com).
-    - [ ] Add `QSTASH_TOKEN`, `QSTASH_URL`, and a new `JOB_WORKER_SECRET` as secrets to your Vercel project.
-    - [ ] Set `PUBLIC_BASE_URL` in Vercel to your production backend URL.
+### Option B: Manual Setup
+See **[backend/DEPLOY_VERCEL.md](../backend/DEPLOY_VERCEL.md)** for detailed instructions.
 
-- [ ] **Set Core Environment Variables**:
-    - [ ] Add `ANTHROPIC_API_KEY` to Vercel secrets.
-    - [ ] Set `NODE_ENV` to `production`.
+**Required Services:**
+- [ ] **Supabase Project** (Database):
+    - [ ] Create at [supabase.com](https://supabase.com)
+    - [ ] Run `backend/supabase-schema.sql` in SQL Editor
+    - [ ] Copy Project URL and Service Role Key
+
+- [ ] **QStash** (Async Jobs):
+    - [ ] Create at [upstash.com](https://upstash.com/qstash)
+    - [ ] Copy QStash token and URL
+
+**Environment Variables to Set:**
+- `ANTHROPIC_API_KEY` - Required
+- `SUPABASE_URL` - Required
+- `SUPABASE_SERVICE_KEY` - Required
+- `QSTASH_TOKEN` - Required
+- `QSTASH_URL` - Required (typically `https://qstash.upstash.io/v2/publish/`)
+- `JOB_WORKER_SECRET` - Required (random secret)
+- `PUBLIC_BASE_URL` - Required (your backend URL)
+- `NODE_ENV` - Set to `production`
 
 ---
 
 ## 2. Deploy to Vercel
 
-- [ ] **Deploy Backend**:
-    - [ ] From the `backend` directory, run `vercel --prod`.
-    - [ ] Verify the deployment is successful and the API is live.
+### Backend Deployment
 
-- [ ] **Deploy Frontend**:
-    - [ ] Set the `VITE_API_URL` environment variable in Vercel to the URL of your deployed backend.
-    - [ ] From the `frontend` directory, run `vercel --prod`.
-    - [ ] Verify the frontend loads and can communicate with the backend.
+```bash
+cd backend
+vercel --prod
+```
+
+**Verify deployment:**
+```bash
+curl https://your-backend.vercel.app/api/health
+```
+
+### Frontend Deployment
+
+1. Set environment variable in Vercel dashboard or CLI:
+```bash
+cd frontend
+vercel env add VITE_API_URL production
+# Enter: https://your-backend.vercel.app/api
+```
+
+2. Deploy:
+```bash
+vercel --prod
+```
+
+**Verify deployment:**
+- Visit your frontend URL
+- Test the API connection
+- Check browser console for errors
 
 ---
 
@@ -47,11 +92,26 @@ Actionable checklist for the Vercel Serverless deployment. Tick items as you com
 
 ---
 
-## 4. Enable Production Safeguards
+## 4. Production Safeguards (Security)
 
-- [ ] Set `BLOCK_SUSPICIOUS_PROMPTS=true` in production environment variables.
-- [ ] Set `REQUIRE_AUTH_FOR_API=true` if the backend is publicly accessible.
-- [ ] Note: `REDIS_HOST` is listed for rate-limiting, but serverless environments may require a different approach or rely on Vercel's built-in protection. Confirm if Upstash Redis is used for more than just QStash.
+**CRITICAL:** Enable these for any production deployment accessible by untrusted users:
+
+### Environment Variables
+```bash
+vercel env add BLOCK_SUSPICIOUS_PROMPTS production  # true
+vercel env add REQUIRE_AUTH_FOR_API production      # true
+```
+
+### Additional Security Measures
+- Set `GRUMP_WEBHOOK_SECRET` for webhook verification
+- Configure `METRICS_AUTH` to protect `/metrics` endpoint
+- Enable Vercel's built-in rate limiting (see PRODUCTION_CHECKLIST.md)
+- Set up monitoring and alerting (see docs/monitoring.md)
+
+### Rate Limiting Options
+- **Option 1:** Use Upstash Redis + rate-limit-redis middleware
+- **Option 2:** Rely on Vercel's built-in rate limiting
+- **Option 3:** Use Vercel Pro for advanced rate limiting features
 
 ---
 

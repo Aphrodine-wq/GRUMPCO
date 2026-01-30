@@ -3,7 +3,6 @@
  * Generates master context and enriches it for specific agents
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { getRequestLogger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
 import logger from '../middleware/logger.js';
@@ -18,23 +17,14 @@ import { optimizeEnrichedIntent, parseAndEnrichIntent } from './intentCompilerSe
 import { getCachedContext, cacheContext } from './contextCache.js';
 import { withResilience } from './resilience.js';
 import { recordContextGeneration, recordContextCacheHit } from '../middleware/metrics.js';
+import { getCompletion } from './llmGatewayHelper.js';
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  logger.error('ANTHROPIC_API_KEY is not set');
-  process.exit(1);
-}
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-// Create resilient wrapper for Claude API calls
-// Type assertion: since we never pass stream: true, the response is always a Message
-const resilientClaudeCall = withResilience(
-  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
-    return await client.messages.create(params);
+// Create resilient wrapper for LLM gateway calls
+const resilientLlmCall = withResilience(
+  async (params: { model: string; max_tokens: number; system: string; messages: Array<{ role: 'user' | 'assistant'; content: string }> }) => {
+    return await getCompletion(params);
   },
-  'claude-context'
+  'llm-context'
 );
 
 const UNIFIED_CONTEXT_PROMPT = `You are a comprehensive project context generator. Your role is to generate ALL project artifacts (enriched intent, architecture, PRD, and master context) in a single unified response.
@@ -234,7 +224,7 @@ export async function generateMasterContext(
       // OPTIMIZED: Single comprehensive API call for all components
       log.info({}, 'Generating all components in single unified call');
       
-      const response = await resilientClaudeCall({
+      const result = await resilientLlmCall({
         model: 'claude-opus-4-5-20251101',
         max_tokens: 8192, // Increased for comprehensive output
         system: UNIFIED_CONTEXT_PROMPT,
@@ -246,12 +236,11 @@ export async function generateMasterContext(
         ],
       });
 
-      const content = response.content[0];
-      if (content.type !== 'text') {
-        throw new Error('Unexpected response type from Claude');
+      if (result.error) {
+        throw new Error(`LLM API error: ${result.error}`);
       }
 
-      let jsonText = content.text;
+      let jsonText = result.text;
       if (jsonText.includes('```json')) {
         const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
         if (match) jsonText = match[1];
@@ -351,7 +340,7 @@ export async function generateMasterContext(
       prd = prdResponse.prd;
     }
 
-    // Step 4: Generate unified context via Claude
+    // Step 4: Generate unified context via LLM
     log.info({}, 'Generating unified master context');
     const contextJson = JSON.stringify({
       enrichedIntent: {
@@ -374,7 +363,7 @@ export async function generateMasterContext(
       },
     }, null, 2);
 
-    const response = await resilientClaudeCall({
+    const result = await resilientLlmCall({
       model: 'claude-opus-4-5-20251101',
       max_tokens: 4096,
       system: MASTER_CONTEXT_PROMPT,
@@ -386,12 +375,11 @@ export async function generateMasterContext(
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (result.error) {
+      throw new Error(`LLM API error: ${result.error}`);
     }
 
-    let jsonText = content.text;
+    let jsonText = result.text;
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
@@ -523,7 +511,7 @@ export async function enrichContextForAgent(
       },
     }, null, 2);
 
-    const response = await resilientClaudeCall({
+    const result = await resilientLlmCall({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
       system: AGENT_CONTEXT_PROMPT,
@@ -535,12 +523,11 @@ export async function enrichContextForAgent(
       ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (result.error) {
+      throw new Error(`LLM API error: ${result.error}`);
     }
 
-    let jsonText = content.text;
+    let jsonText = result.text;
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];

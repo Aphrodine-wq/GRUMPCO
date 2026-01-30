@@ -1,5 +1,4 @@
 import express, { Request, Response, Router } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
 import { getRequestLogger } from '../middleware/logger.js';
 import { getDatabase } from '../db/database.js';
 import { getAllServiceStates } from '../services/bulkheads.js';
@@ -16,9 +15,8 @@ router.get('/', (_req: Request, res: Response) => {
 // Quick health check for frontend status badge - no API calls, token-free
 router.get('/quick', (_req: Request, res: Response) => {
   const apiKeyConfigured = !!(
-    process.env.ANTHROPIC_API_KEY &&
-    process.env.ANTHROPIC_API_KEY !== 'your_api_key_here' &&
-    process.env.ANTHROPIC_API_KEY.startsWith('sk-')
+    process.env.NVIDIA_NIM_API_KEY ||
+    process.env.OPENROUTER_API_KEY
   );
 
   const authEnabled =
@@ -84,7 +82,7 @@ router.get('/ready', async (_req: Request, res: Response) => {
 
   const checks: Record<string, boolean> = {
     api_key: false,
-    anthropic_api: false,
+    nim_api: false,
     database: false,
   };
 
@@ -95,8 +93,8 @@ router.get('/ready', async (_req: Request, res: Response) => {
     checks.redis = false;
   }
 
-  // Check API key is configured
-  if (process.env.ANTHROPIC_API_KEY) {
+  // Check API key is configured (NVIDIA NIM or OpenRouter)
+  if (process.env.NVIDIA_NIM_API_KEY || process.env.OPENROUTER_API_KEY) {
     checks.api_key = true;
   }
 
@@ -123,24 +121,50 @@ router.get('/ready', async (_req: Request, res: Response) => {
     }
   }
 
-  // Check Anthropic API connectivity (lightweight check)
-  try {
-    const client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-
-    // Use a minimal request to verify connectivity
-    // Note: This costs tokens, so we only do it on /ready, not /health
-    await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1,
-      messages: [{ role: 'user', content: 'ping' }],
-    });
-    checks.anthropic_api = true;
-  } catch (error) {
-    const err = error as Error;
-    log.warn({ error: err.message }, 'Anthropic API health check failed');
-    checks.anthropic_api = false;
+  // Check NVIDIA NIM API connectivity using OpenAI-compatible endpoint
+  if (process.env.NVIDIA_NIM_API_KEY) {
+    try {
+      const response = await fetch(`${process.env.NVIDIA_NIM_URL || 'https://integrate.api.nvidia.com/v1'}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NVIDIA_NIM_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'moonshotai/kimi-k2.5',
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'ping' }],
+        }),
+      });
+      checks.nim_api = response.ok;
+    } catch (error) {
+      const err = error as Error;
+      log.warn({ error: err.message }, 'NVIDIA NIM API health check failed');
+      checks.nim_api = false;
+    }
+  } else if (process.env.OPENROUTER_API_KEY) {
+    // Check OpenRouter as fallback
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
+          'X-Title': 'Opencode Health Check',
+        },
+        body: JSON.stringify({
+          model: 'moonshotai/kimi-k2.5',
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'ping' }],
+        }),
+      });
+      checks.nim_api = response.ok;
+    } catch (error) {
+      const err = error as Error;
+      log.warn({ error: err.message }, 'OpenRouter API health check failed');
+      checks.nim_api = false;
+    }
   }
 
   const allHealthy = Object.values(checks).every(v => v);
@@ -211,22 +235,52 @@ router.get('/detailed', async (_req: Request, res: Response) => {
     };
   }
 
-  // API endpoint check
+  // API endpoint check (NVIDIA NIM with Kimi K2.5)
   try {
-    const client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
     const start = Date.now();
-    await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1,
-      messages: [{ role: 'user', content: 'ping' }],
-    });
+    let response;
+    
+    if (process.env.NVIDIA_NIM_API_KEY) {
+      response = await fetch(`${process.env.NVIDIA_NIM_URL || 'https://integrate.api.nvidia.com/v1'}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NVIDIA_NIM_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'moonshotai/kimi-k2.5',
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'ping' }],
+        }),
+      });
+    } else if (process.env.OPENROUTER_API_KEY) {
+      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
+          'X-Title': 'Opencode Health Check',
+        },
+        body: JSON.stringify({
+          model: 'moonshotai/kimi-k2.5',
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'ping' }],
+        }),
+      });
+    } else {
+      throw new Error('No AI provider API key configured');
+    }
+    
     const latency = Date.now() - start;
-    checks.api_endpoint = {
-      status: 'healthy',
-      details: { latencyMs: latency },
-    };
+    if (response.ok) {
+      checks.api_endpoint = {
+        status: 'healthy',
+        details: { latencyMs: latency },
+      };
+    } else {
+      throw new Error(`API returned status ${response.status}`);
+    }
   } catch (error) {
     checks.api_endpoint = {
       status: 'unhealthy',

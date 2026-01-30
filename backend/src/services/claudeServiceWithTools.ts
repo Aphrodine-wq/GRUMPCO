@@ -43,7 +43,6 @@ const _DEFAULT_TOOL_INPUT_SCHEMA = { type: 'object' as const, properties: undefi
  * @module claudeServiceWithTools
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import {
   AVAILABLE_TOOLS,
   ToolExecutionResult,
@@ -95,7 +94,7 @@ import { createSkillContext } from '../skills/base/SkillContext.js';
 import { getHeadSystemPrompt } from '../prompts/head.js';
 import { wrapModeContext } from '../prompts/compose.js';
 import { getChatModePrompt, type ChatModeName, type CodeSpecialist } from '../prompts/chat/index.js';
-import { getStream, type LLMProvider } from './llmGateway.js';
+import { getStream, type LLMProvider, type MultimodalContentPart } from './llmGateway.js';
 import { filterOutput } from '../utils/outputFilters.js';
 
 // ============================================================================
@@ -171,10 +170,8 @@ export type ChatStreamEvent =
  * ```
  */
 export class ClaudeServiceWithTools {
-  /** Anthropic SDK client instance */
-  private client: Anthropic;
   /** Default model for API calls */
-  private model: string = 'claude-sonnet-4-20250514';
+  private model: string = 'moonshotai/kimi-k2.5';
   /** Shared tool execution service */
   private toolExecutionService: ToolExecutionService;
   /** Request-scoped tool execution service (for isolation) */
@@ -182,12 +179,8 @@ export class ClaudeServiceWithTools {
 
   /**
    * Create a new ClaudeServiceWithTools instance.
-   * Initializes the Anthropic client with API key from environment.
    */
   constructor() {
-    this.client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
     this.toolExecutionService = toolExecutionService;
   }
 
@@ -196,61 +189,17 @@ export class ClaudeServiceWithTools {
   }
 
   /**
-   * Resilient stream wrapper with circuit breakers and rate limiting
-   * Handles streaming API calls with bulkhead pattern isolation
+   * Helper to collect stream events into a complete response
    */
-  private async resilientStream(
-    params: Parameters<typeof this.client.messages.stream>[0]
-  ): Promise<AsyncIterable<unknown>> {
-    const serviceType = 'claude-chat' as const;
-
-    // Check rate limit
-    const rateLimitCheck = checkRateLimit(serviceType);
-    if (!rateLimitCheck.allowed) {
-      const error: ErrorWithStatus = new Error('Rate limit exceeded') as ErrorWithStatus;
-      error.status = 429;
-      error.retryAfter = rateLimitCheck.retryAfter;
-      throw error;
+  private async collectStreamResponse(stream: AsyncIterable<unknown>): Promise<string> {
+    let fullText = '';
+    for await (const event of stream) {
+      const ev = event as { type?: string; delta?: { type?: string; text?: string } };
+      if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+        fullText += ev.delta.text ?? '';
+      }
     }
-
-    // Create streaming function with retry
-    const streamFn = withRetry(
-      async (streamParams: Parameters<typeof this.client.messages.stream>[0]) => {
-        return await this.client.messages.stream(streamParams);
-      },
-      {
-        retries: 2, // Fewer retries for streams
-        minTimeout: 500,
-        maxTimeout: 2000,
-      }
-    );
-
-    // Wrap with circuit breaker
-    const breaker = getCircuitBreaker(serviceType, streamFn);
-
-    try {
-      const stream = await breaker.fire(params);
-      return stream as unknown as AsyncIterable<unknown>;
-    } catch (error) {
-      const err = error as ErrorWithStatus;
-
-      // Check if circuit is open
-      if (breaker.opened) {
-        const circuitError: ErrorWithStatus = new Error('Service temporarily unavailable') as ErrorWithStatus;
-        circuitError.code = 'CIRCUIT_OPEN';
-        circuitError.status = 503;
-        circuitError.retryAfter = 30;
-        throw circuitError;
-      }
-
-      // Check if it's a retryable error
-      if (!isRetryableError(err)) {
-        throw error;
-      }
-
-      // For retryable errors, throw to let caller handle
-      throw error;
-    }
+    return fullText;
   }
 
   /**
@@ -346,45 +295,58 @@ export class ClaudeServiceWithTools {
         ? [...AVAILABLE_TOOLS, ...getUserToolDefinitions(), ...getMcpTools(), ...skillRegistry.getAllTools()]
         : [];
 
-      const requestParams: Parameters<typeof this.client.messages.stream>[0] = {
-        model: modelId ?? this.model,
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages: messages.map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-        })),
-      };
-      if (allTools.length > 0) {
-        requestParams.tools = allTools;
-      }
-
-      const useGateway = provider != null || modelId != null;
-      const gwProvider = provider ?? 'anthropic';
-      const isNim = gwProvider === 'nim';
-      const gwMessages = requestParams.messages.map((m) => {
-        const role = m.role as 'user' | 'assistant';
-        const c = m.content;
-        if (typeof c === 'string') return { role, content: c };
-        if (isNim && Array.isArray(c)) return { role, content: c };
-        return { role, content: JSON.stringify(c) };
+      const gwMessages = messages.map((msg) => {
+        const role = msg.role as 'user' | 'assistant';
+        const content: string | unknown = msg.content as string | unknown;
+        // Handle string content
+        if (typeof content === 'string') {
+          return { role, content };
+        }
+        // Handle array content (multimodal)
+        if (Array.isArray(content)) {
+          const transformedContent: MultimodalContentPart[] = content
+            .map((block: unknown) => {
+              const b = block as { type: string; text?: string; source?: { type: string; url?: string } };
+              if (b.type === 'text') {
+                return { type: 'text' as const, text: b.text ?? '' };
+              } else if (b.type === 'image' && b.source?.type === 'url' && b.source?.url) {
+                return { type: 'image_url' as const, image_url: { url: b.source.url } };
+              }
+              logger.warn({ block }, 'Unsupported content block type for LLM Gateway, skipping.');
+              return null;
+            })
+            .filter((p: MultimodalContentPart | null): p is MultimodalContentPart => p !== null);
+          return { role, content: transformedContent };
+        }
+        // Fallback for other types
+        return { role, content: JSON.stringify(content) };
       });
-      const response = useGateway
-        ? getStream(
-          {
-            model: requestParams.model,
-            max_tokens: requestParams.max_tokens,
-            system: typeof requestParams.system === 'string' ? requestParams.system : JSON.stringify(requestParams.system),
-            messages: gwMessages,
-            tools: requestParams.tools?.map((t) => ({
-              name: t.name,
-              description: 'description' in t ? (t.description ?? '') : '',
-              input_schema: ('input_schema' in t ? t.input_schema : _DEFAULT_TOOL_INPUT_SCHEMA) as { type: 'object'; properties?: Record<string, unknown>; required?: string[] },
-            })),
-          },
-          { provider: gwProvider, modelId: modelId ?? this.model }
-        )
-        : await this.resilientStream(requestParams);
+
+      const finalProvider = (provider ?? 'nim') as LLMProvider;
+      const finalModelId = modelId ?? this.model;
+      
+      // Map tools to gateway format
+      const mappedTools = allTools.length > 0 
+        ? allTools.map((t: unknown) => {
+            const tool = t as { name: string; description?: string; input_schema?: { type: 'object'; properties?: Record<string, unknown>; required?: string[] } };
+            return {
+              name: tool.name,
+              description: tool.description ?? '',
+              input_schema: tool.input_schema ?? _DEFAULT_TOOL_INPUT_SCHEMA,
+            };
+          })
+        : undefined;
+      
+      const response = getStream(
+        {
+          model: finalModelId,
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: gwMessages,
+          tools: mappedTools,
+        },
+        { provider: finalProvider, modelId: finalModelId }
+      );
 
       let currentTextBlock = '';
 

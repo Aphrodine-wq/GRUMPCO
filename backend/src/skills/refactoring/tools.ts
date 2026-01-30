@@ -2,9 +2,9 @@
  * Refactoring Skill - Tool Definitions
  */
 
-import type Anthropic from '@anthropic-ai/sdk';
+import type { ToolDefinition } from '../types.js';
 
-export const extractFunctionTool: Anthropic.Tool = {
+export const extractFunctionTool: ToolDefinition = {
   name: 'extract_function',
   description: 'Extract a portion of code into a new function',
   input_schema: {
@@ -35,7 +35,7 @@ export const extractFunctionTool: Anthropic.Tool = {
   },
 };
 
-export const extractVariableTool: Anthropic.Tool = {
+export const extractVariableTool: ToolDefinition = {
   name: 'extract_variable',
   description: 'Extract an expression into a named variable',
   input_schema: {
@@ -62,7 +62,7 @@ export const extractVariableTool: Anthropic.Tool = {
   },
 };
 
-export const renameSymbolTool: Anthropic.Tool = {
+export const renameSymbolTool: ToolDefinition = {
   name: 'rename_symbol',
   description: 'Rename a variable, function, or class throughout the code',
   input_schema: {
@@ -90,7 +90,7 @@ export const renameSymbolTool: Anthropic.Tool = {
   },
 };
 
-export const simplifyCodeTool: Anthropic.Tool = {
+export const simplifyCodeTool: ToolDefinition = {
   name: 'simplify_code',
   description: 'Simplify code by reducing complexity and improving readability',
   input_schema: {
@@ -115,7 +115,7 @@ export const simplifyCodeTool: Anthropic.Tool = {
   },
 };
 
-export const inlineFunctionTool: Anthropic.Tool = {
+export const inlineFunctionTool: ToolDefinition = {
   name: 'inline_function',
   description: 'Inline a function call by replacing it with the function body',
   input_schema: {
@@ -134,7 +134,7 @@ export const inlineFunctionTool: Anthropic.Tool = {
   },
 };
 
-export const applyPatternTool: Anthropic.Tool = {
+export const applyPatternTool: ToolDefinition = {
   name: 'apply_pattern',
   description: 'Apply a design pattern to restructure code',
   input_schema: {
@@ -158,7 +158,7 @@ export const applyPatternTool: Anthropic.Tool = {
   },
 };
 
-export const suggestRefactoringsTool: Anthropic.Tool = {
+export const suggestRefactoringsTool: ToolDefinition = {
   name: 'suggest_refactorings',
   description: 'Analyze code and suggest potential refactorings',
   input_schema: {
@@ -177,7 +177,7 @@ export const suggestRefactoringsTool: Anthropic.Tool = {
   },
 };
 
-export const definitions: Anthropic.Tool[] = [
+export const definitions: ToolDefinition[] = [
   extractFunctionTool,
   extractVariableTool,
   renameSymbolTool,

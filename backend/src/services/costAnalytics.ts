@@ -3,7 +3,7 @@
  * Comprehensive cost tracking and analytics for LLM API usage
  */
 
-import { getDatabase } from '../db/database.js';
+import { getDatabase, DatabaseService } from '../db/database.js';
 import logger from '../middleware/logger.js';
 import { MODEL_REGISTRY } from '@grump/ai-core';
 
@@ -66,27 +66,29 @@ export class CostAnalytics {
     // Persist to database
     try {
       const db = getDatabase();
-      await db.run(
+      const dbService = db as DatabaseService;
+      const rawDb = dbService.getDb();
+      const stmt = rawDb.prepare(
         `INSERT INTO cost_records (
           id, user_id, session_id, model, provider, operation,
           input_tokens, output_tokens, cost_usd, cache_hit,
           cache_savings_usd, model_routing_savings_usd, timestamp
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          fullRecord.id,
-          fullRecord.userId,
-          fullRecord.sessionId || null,
-          fullRecord.model,
-          fullRecord.provider,
-          fullRecord.operation,
-          fullRecord.inputTokens,
-          fullRecord.outputTokens,
-          fullRecord.costUsd,
-          fullRecord.cacheHit ? 1 : 0,
-          fullRecord.cacheSavingsUsd,
-          fullRecord.modelRoutingSavingsUsd,
-          fullRecord.timestamp.toISOString(),
-        ]
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      );
+      stmt.run(
+        fullRecord.id,
+        fullRecord.userId,
+        fullRecord.sessionId || null,
+        fullRecord.model,
+        fullRecord.provider,
+        fullRecord.operation,
+        fullRecord.inputTokens,
+        fullRecord.outputTokens,
+        fullRecord.costUsd,
+        fullRecord.cacheHit ? 1 : 0,
+        fullRecord.cacheSavingsUsd,
+        fullRecord.modelRoutingSavingsUsd,
+        fullRecord.timestamp.toISOString()
       );
     } catch (error) {
       logger.error(
@@ -134,36 +136,38 @@ export class CostAnalytics {
 
     try {
       // Get all cost records for user in date range
-      const records = await db.all<CostRecord[]>(
+      const dbService = db as DatabaseService;
+      const rawDb = dbService.getDb();
+      const stmt = rawDb.prepare(
         `SELECT * FROM cost_records
          WHERE user_id = ? AND timestamp >= ? AND timestamp <= ?
-         ORDER BY timestamp DESC`,
-        [userId, start.toISOString(), end.toISOString()]
+         ORDER BY timestamp DESC`
       );
+      const records = stmt.all(userId, start.toISOString(), end.toISOString()) as CostRecord[];
 
       // Calculate summary
-      const totalCost = records.reduce((sum, r) => sum + r.costUsd, 0);
+      const totalCost = records.reduce((sum: number, r: CostRecord) => sum + r.costUsd, 0);
       const totalRequests = records.length;
-      const cacheHits = records.filter((r) => r.cacheHit).length;
+      const cacheHits = records.filter((r: CostRecord) => r.cacheHit).length;
       const cacheHitRate = totalRequests > 0 ? cacheHits / totalRequests : 0;
-      const cacheSavings = records.reduce((sum, r) => sum + r.cacheSavingsUsd, 0);
-      const modelRoutingSavings = records.reduce((sum, r) => sum + r.modelRoutingSavingsUsd, 0);
+      const cacheSavings = records.reduce((sum: number, r: CostRecord) => sum + r.cacheSavingsUsd, 0);
+      const modelRoutingSavings = records.reduce((sum: number, r: CostRecord) => sum + r.modelRoutingSavingsUsd, 0);
 
       // Cost by model
       const costByModel: Record<string, number> = {};
-      records.forEach((r) => {
+      records.forEach((r: CostRecord) => {
         costByModel[r.model] = (costByModel[r.model] || 0) + r.costUsd;
       });
 
       // Cost by operation
       const costByOperation: Record<string, number> = {};
-      records.forEach((r) => {
+      records.forEach((r: CostRecord) => {
         costByOperation[r.operation] = (costByOperation[r.operation] || 0) + r.costUsd;
       });
 
       // Cost by day
       const costByDayMap = new Map<string, number>();
-      records.forEach((r) => {
+      records.forEach((r: CostRecord) => {
         const date = new Date(r.timestamp).toISOString().split('T')[0];
         costByDayMap.set(date, (costByDayMap.get(date) || 0) + r.costUsd);
       });
@@ -397,8 +401,10 @@ export function getCostAnalytics(): CostAnalytics {
  */
 export async function initializeCostTracking(): Promise<void> {
   const db = getDatabase();
+  const dbService = db as DatabaseService;
+  const rawDb = dbService.getDb();
   
-  await db.run(`
+  rawDb.exec(`
     CREATE TABLE IF NOT EXISTS cost_records (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -416,12 +422,12 @@ export async function initializeCostTracking(): Promise<void> {
     )
   `);
 
-  await db.run(`
+  rawDb.exec(`
     CREATE INDEX IF NOT EXISTS idx_cost_records_user_timestamp 
     ON cost_records(user_id, timestamp)
   `);
 
-  await db.run(`
+  rawDb.exec(`
     CREATE INDEX IF NOT EXISTS idx_cost_records_operation 
     ON cost_records(operation, timestamp)
   `);

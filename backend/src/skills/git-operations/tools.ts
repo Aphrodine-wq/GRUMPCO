@@ -2,9 +2,18 @@
  * Git Operations Skill - Tool Definitions
  */
 
-import type Anthropic from '@anthropic-ai/sdk';
+/** Generic tool definition compatible with LLM gateway */
+export interface GitTool {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+}
 
-export const generateCommitMessageTool: Anthropic.Tool = {
+export const generateCommitMessageTool: GitTool = {
   name: 'generate_commit_message',
   description: 'Generate a conventional commit message based on staged changes',
   input_schema: {
@@ -28,7 +37,7 @@ export const generateCommitMessageTool: Anthropic.Tool = {
   },
 };
 
-export const gitStatusTool: Anthropic.Tool = {
+export const gitStatusTool: GitTool = {
   name: 'git_status',
   description: 'Get the current git status including staged, unstaged, and untracked files',
   input_schema: {
@@ -37,7 +46,7 @@ export const gitStatusTool: Anthropic.Tool = {
   },
 };
 
-export const gitDiffTool: Anthropic.Tool = {
+export const gitDiffTool: GitTool = {
   name: 'git_diff',
   description: 'Get the diff of changes (staged or unstaged)',
   input_schema: {
@@ -56,7 +65,7 @@ export const gitDiffTool: Anthropic.Tool = {
   },
 };
 
-export const gitLogTool: Anthropic.Tool = {
+export const gitLogTool: GitTool = {
   name: 'git_log',
   description: 'Get recent commit history',
   input_schema: {
@@ -76,7 +85,7 @@ export const gitLogTool: Anthropic.Tool = {
   },
 };
 
-export const suggestBranchNameTool: Anthropic.Tool = {
+export const suggestBranchNameTool: GitTool = {
   name: 'suggest_branch_name',
   description: 'Suggest a branch name based on a task description',
   input_schema: {
@@ -97,7 +106,7 @@ export const suggestBranchNameTool: Anthropic.Tool = {
   },
 };
 
-export const generatePRDescriptionTool: Anthropic.Tool = {
+export const generatePRDescriptionTool: GitTool = {
   name: 'generate_pr_description',
   description: 'Generate a pull request description based on branch changes',
   input_schema: {
@@ -118,7 +127,7 @@ export const generatePRDescriptionTool: Anthropic.Tool = {
   },
 };
 
-export const createCommitTool: Anthropic.Tool = {
+export const createCommitTool: GitTool = {
   name: 'create_commit',
   description: 'Create a git commit with the specified message',
   input_schema: {
@@ -138,7 +147,7 @@ export const createCommitTool: Anthropic.Tool = {
   },
 };
 
-export const definitions: Anthropic.Tool[] = [
+export const definitions: GitTool[] = [
   generateCommitMessageTool,
   gitStatusTool,
   gitDiffTool,

@@ -41,11 +41,9 @@ if (envPath) {
 
 // Define environment schema with Zod
 const envSchema = z.object({
-  // Required
-  ANTHROPIC_API_KEY: z.string().min(1, 'ANTHROPIC_API_KEY is required').refine(
-    (key) => isTestEnv || key.startsWith('sk-') || key === 'test-key',
-    'ANTHROPIC_API_KEY must start with "sk-"'
-  ),
+  // AI Providers - at least one required
+  NVIDIA_NIM_API_KEY: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().optional(),
 
   // Server
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -110,11 +108,7 @@ const envSchema = z.object({
   // Metrics (optional)
   METRICS_AUTH: z.string().optional(),
 
-  // OpenRouter (optional)
-  OPENROUTER_API_KEY: z.string().optional(),
-
   // NVIDIA NIM / GPU (optional)
-  NVIDIA_NIM_API_KEY: z.string().optional(),
   NVIDIA_NIM_URL: z
     .string()
     .optional()
@@ -124,6 +118,11 @@ const envSchema = z.object({
 
   // Observability (optional)
   OTLP_ENDPOINT: z.string().url().optional(),
+}).refine((data) => {
+  // Require at least one AI provider API key (skip in test environment)
+  return isTestEnv || data.NVIDIA_NIM_API_KEY || data.OPENROUTER_API_KEY;
+}, {
+  message: 'At least one AI provider API key is required (NVIDIA_NIM_API_KEY or OPENROUTER_API_KEY)',
 });
 
 // Type for validated environment
@@ -145,7 +144,7 @@ if (!parseResult.success) {
 
   console.error('\nTo fix this:');
   console.error('  1. Copy backend/.env.example to backend/.env');
-  console.error('  2. Add your Anthropic API key from https://console.anthropic.com');
+  console.error('  2. Add your NVIDIA NIM API key or OpenRouter API key');
   console.error('  3. Restart the server');
   console.error(`\nCurrent directory: ${process.cwd()}`);
   console.error(`Searched in: ${envPath || 'default location'}`);
@@ -160,21 +159,20 @@ if (!parseResult.success) {
 // Export validated env (with defaults applied)
 export const env: Env = parseResult.success
   ? parseResult.data
-  : envSchema.parse({ ...process.env, ANTHROPIC_API_KEY: 'invalid-key-see-errors-above' });
+  : envSchema.parse({ ...process.env, NVIDIA_NIM_API_KEY: 'invalid-key-see-errors-above', OPENROUTER_API_KEY: 'invalid-key-see-errors-above' });
 
 // Log successful validation (never log raw secrets or key material in production)
 if (parseResult.success) {
   if (process.env.NODE_ENV !== 'production') {
-    const keyPreview = env.ANTHROPIC_API_KEY.substring(0, 12) + '...' + env.ANTHROPIC_API_KEY.slice(-4);
-    console.log(`[env] ANTHROPIC_API_KEY loaded: ${keyPreview}`);
+    if (env.NVIDIA_NIM_API_KEY) {
+      const keyPreview = env.NVIDIA_NIM_API_KEY.substring(0, 12) + '...' + env.NVIDIA_NIM_API_KEY.slice(-4);
+      console.log(`[env] NVIDIA_NIM_API_KEY loaded: ${keyPreview}`);
+    }
     if (env.OPENROUTER_API_KEY) {
       console.log('[env] OPENROUTER_API_KEY set (OpenRouter provider available)');
     }
     if (env.REDIS_HOST) {
       console.log(`[env] Redis configured at ${env.REDIS_HOST}:${env.REDIS_PORT}`);
-    }
-    if (env.NVIDIA_NIM_API_KEY) {
-      console.log('[env] NVIDIA NIM configured');
     }
     if (env.NVIDIA_NIM_URL) {
       console.log(`[env] NVIDIA_NIM_URL set (local/self-hosted NIM)`);

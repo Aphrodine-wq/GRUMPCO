@@ -1,17 +1,16 @@
 /**
- * LLM Gateway – unified streaming client for Anthropic and Zhipu (GLM).
+ * LLM Gateway – unified streaming client for multiple LLM providers (NIM, Zhipu, Copilot, OpenRouter).
  * Returns an async iterable of events compatible with Anthropic stream shape
- * so existing chat loop can consume either provider.
+ * so existing chat loop can consume any provider.
  * Uses @grump/ai-core provider registry when an adapter is registered.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { getStreamProvider, registerStreamProvider } from '@grump/ai-core';
 import logger from '../middleware/logger.js';
 import { recordLlmStreamMetrics } from '../middleware/metrics.js';
 import { getNimChatUrl } from '../config/nim.js';
 
-export type LLMProvider = 'anthropic' | 'zhipu' | 'copilot' | 'openrouter' | 'nim';
+export type LLMProvider = 'nim' | 'zhipu' | 'copilot' | 'openrouter';
 
 export type MultimodalContentPart =
   | { type: 'text'; text: string }
@@ -39,42 +38,12 @@ export type StreamEvent =
   | { type: 'message_stop' }
   | { type: 'error'; error?: unknown };
 
-const ANTHROPIC_DEFAULT = 'claude-sonnet-4-20250514';
 const ZHIPU_DEFAULT = 'glm-4';
 /** Sub-models from Copilot (Codex-style); used when provider is copilot. */
 export const COPILOT_SUB_MODELS = ['copilot-codex', 'copilot-codebase'] as const;
 const COPILOT_DEFAULT = 'copilot-codex';
-const OPENROUTER_DEFAULT = 'anthropic/claude-3.5-sonnet';
+const OPENROUTER_DEFAULT = 'openrouter/moonshotai/kimi-k2.5';
 const NIM_DEFAULT = 'moonshotai/kimi-k2.5';
-
-const anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-/**
- * Stream from Anthropic – pass-through, same event shape.
- */
-async function* streamAnthropic(params: StreamParams): AsyncGenerator<StreamEvent> {
-  const stream = await anthropicClient.messages.stream({
-    model: params.model || ANTHROPIC_DEFAULT,
-    max_tokens: params.max_tokens,
-    system: params.system ?? '',
-    messages: params.messages ?? [],
-    tools: params.tools,
-  } as Parameters<typeof anthropicClient.messages.stream>[0]);
-
-  for await (const event of stream) {
-    const ev = event as { type: string; delta?: { type?: string; text?: string }; content_block?: { type?: string; id?: string; name?: string; input?: Record<string, unknown> } };
-    if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
-      yield { type: 'content_block_delta' as const, delta: { type: 'text_delta' as const, text: (ev.delta as { text?: string }).text ?? '' } };
-    } else if (ev.type === 'content_block_start') {
-      const blk = ev.content_block;
-      if (blk?.type === 'tool_use') {
-        yield { type: 'content_block_start' as const, content_block: { type: 'tool_use' as const, id: blk.id ?? '', name: blk.name ?? '', input: blk.input ?? {} } };
-      }
-    } else if (ev.type === 'message_stop') {
-      yield { type: 'message_stop' as const };
-    }
-  }
-}
 
 /**
  * Stream from Zhipu (GLM-4) via REST SSE. Tools not mapped in this stub; text only.
@@ -216,7 +185,7 @@ async function* streamCopilot(params: StreamParams): AsyncGenerator<StreamEvent>
 
 /**
  * Stream from OpenRouter (OpenAI-compatible). Uses OPENROUTER_API_KEY.
- * Model pass-through (e.g. anthropic/claude-3.5-sonnet, openai/gpt-4o). Text-only; tools not mapped.
+ * Model pass-through (e.g. moonshotai/kimi-k2.5, openai/gpt-4o). Text-only; tools not mapped.
  */
 async function* streamOpenRouter(params: StreamParams): AsyncGenerator<StreamEvent> {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -464,7 +433,7 @@ export function getStream(
   params: StreamParams,
   options: { provider?: LLMProvider; modelId?: string } = {}
 ): AsyncIterable<StreamEvent> {
-  const provider = options.provider ?? 'anthropic';
+  const provider = options.provider ?? 'nim';
   const modelId =
     options.modelId ??
     (provider === 'zhipu'
@@ -473,9 +442,7 @@ export function getStream(
         ? COPILOT_DEFAULT
         : provider === 'openrouter'
           ? OPENROUTER_DEFAULT
-          : provider === 'nim'
-            ? NIM_DEFAULT
-            : ANTHROPIC_DEFAULT);
+          : NIM_DEFAULT);
   const merged = { ...params, model: modelId };
 
   const adapter = getStreamProvider(provider);
@@ -487,15 +454,12 @@ export function getStream(
         ? streamCopilot(merged)
         : provider === 'openrouter'
           ? streamOpenRouter(merged)
-          : provider === 'nim'
-            ? streamNim(merged)
-            : streamAnthropic(merged);
+          : streamNim(merged);
   return withStreamMetrics(source, provider, modelId);
 }
 
 // Register built-in providers so getStreamProvider() can resolve them (optional; getStream falls back to built-in if not registered)
 try {
-  registerStreamProvider('anthropic', { name: 'anthropic', supportsTools: true, stream: streamAnthropic });
   registerStreamProvider('nim', { name: 'nim', supportsTools: true, stream: streamNim });
   registerStreamProvider('zhipu', { name: 'zhipu', supportsTools: false, stream: streamZhipu });
   registerStreamProvider('copilot', { name: 'copilot', supportsTools: false, stream: streamCopilot });

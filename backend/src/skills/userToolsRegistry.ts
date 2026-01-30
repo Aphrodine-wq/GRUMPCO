@@ -3,13 +3,26 @@
  * Tools registered here are included in the agent tool list and executed via stub or custom handler.
  */
 
-import type Anthropic from '@anthropic-ai/sdk';
 import type { SkillContext } from './types.js';
+
+/** Generic tool input schema compatible with LLM gateway */
+export interface ToolInputSchema {
+  type: 'object';
+  properties?: Record<string, unknown>;
+  required?: string[];
+}
+
+/** Generic tool definition compatible with LLM gateway */
+export interface UserTool {
+  name: string;
+  description: string;
+  input_schema: ToolInputSchema;
+}
 
 export interface UserToolDef {
   name: string;
   description: string;
-  input_schema: Anthropic.Tool['input_schema'];
+  input_schema: ToolInputSchema;
   /** Optional; if absent, executor returns a placeholder message. */
   handler?: (input: Record<string, unknown>, context: SkillContext) => Promise<{ output: string }>;
 }
@@ -32,9 +45,9 @@ export function unregisterUserTool(name: string): void {
 }
 
 /**
- * Return tool definitions for the agent (Anthropic.Tool shape).
+ * Return tool definitions for the agent (generic Tool shape).
  */
-export function getUserToolDefinitions(): Anthropic.Tool[] {
+export function getUserToolDefinitions(): UserTool[] {
   return Array.from(userTools.values()).map((d) => ({
     name: d.name,
     description: d.description,

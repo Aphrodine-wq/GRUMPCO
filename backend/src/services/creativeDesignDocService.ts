@@ -3,7 +3,6 @@
  * Generates layout, UI/UX, key screens, and UX flows from project description and architecture
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { getRequestLogger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
 import logger from '../middleware/logger.js';
@@ -14,22 +13,14 @@ import {
 import type { CreativeDesignDoc, PRDOverviewForCDD } from '../types/creativeDesignDoc.js';
 import type { SystemArchitecture } from '../types/architecture.js';
 import { withResilience } from './resilience.js';
+import { getCompletion } from './llmGatewayHelper.js';
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  logger.error({}, 'ANTHROPIC_API_KEY is not set');
-  process.exit(1);
-}
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-// Type assertion: since we never pass stream: true, the response is always a Message
-const resilientClaudeCall = withResilience(
-  async (params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> => {
-    return await client.messages.create(params);
+// Create resilient wrapper for LLM gateway calls
+const resilientLlmCall = withResilience(
+  async (params: { model: string; max_tokens: number; system: string; messages: Array<{ role: 'user' | 'assistant'; content: string }> }) => {
+    return await getCompletion(params);
   },
-  'claude-cdd'
+  'llm-cdd'
 );
 
 /**
@@ -52,21 +43,20 @@ export async function generateCreativeDesignDoc(
       prdOverview
     );
 
-    log.info({}, 'Calling Claude API for Creative Design Document');
+    log.info({}, 'Calling LLM API for Creative Design Document');
 
-    const response = await resilientClaudeCall({
+    const result = await resilientLlmCall({
       model: 'claude-opus-4-5-20251101',
       max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (result.error) {
+      throw new Error(`LLM API error: ${result.error}`);
     }
 
-    let jsonText = content.text.trim();
+    let jsonText = result.text.trim();
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];

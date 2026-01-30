@@ -1,10 +1,10 @@
 /**
  * Refactoring Skill
  * Intelligent code refactoring with extract, rename, and pattern application
+ * Uses Kimi K2.5 via LLM Gateway
  */
 
 import { Router } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
 import { BaseSkill } from '../base/BaseSkill.js';
 import type {
   SkillManifest,
@@ -30,12 +30,6 @@ import { withResilience } from '../../services/resilience.js';
 
 // Load manifest
 import manifest from './manifest.json' with { type: 'json' };
-
-// Initialize Anthropic client
-const apiKey = process.env.ANTHROPIC_API_KEY;
-const client = new Anthropic({
-  apiKey: apiKey || 'test-key',
-});
 
 class RefactoringSkill extends BaseSkill {
   manifest: SkillManifest = manifest as SkillManifest;
@@ -182,7 +176,8 @@ class RefactoringSkill extends BaseSkill {
         codeToRefactor,
         refactoringType,
         input.params || {},
-        language
+        language,
+        context
       );
 
       yield {
@@ -261,13 +256,14 @@ class RefactoringSkill extends BaseSkill {
   }
 
   /**
-   * Perform the refactoring
+   * Perform the refactoring using Kimi K2.5 via LLM Gateway
    */
   private async performRefactoring(
     code: string,
     type: RefactoringType,
     options: Record<string, unknown>,
-    language: string
+    language: string,
+    context?: SkillContext
   ): Promise<RefactoringResult> {
     try {
       const templateKey = (type === 'extract-function' ? 'extractFunction' : type === 'rename' ? 'renameSymbol' : type === 'apply-pattern' ? 'applyPattern' : 'simplifyCode') as keyof typeof templates;
@@ -276,25 +272,37 @@ class RefactoringSkill extends BaseSkill {
         .replace('{{language}}', language || 'code')
         .replace('{{code}}', code);
 
-      // Call Claude API with resilience wrapper
-      const callClaude = withResilience(
-        async () => {
-          return await client.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 4096,
-            system: REFACTORING_SYSTEM_PROMPT,
-            messages: [{ role: 'user', content: prompt }],
-          });
-        },
-        'refactoring'
-      );
+      let responseText: string;
 
-      const response = await callClaude();
-
-      // Parse Claude's response
-      const firstBlock = response.content[0];
-      const responseText =
-        firstBlock?.type === 'text' ? firstBlock.text : '';
+      if (context) {
+        // Use LLM service from context (uses Kimi K2.5 via LLM Gateway)
+        const callLLM = withResilience(
+          async () => {
+            return await context.services.llm.complete({
+              messages: [{ role: 'user', content: prompt }],
+              system: REFACTORING_SYSTEM_PROMPT,
+              maxTokens: 4096,
+            });
+          },
+          'refactoring'
+        );
+        responseText = await callLLM();
+      } else {
+        // Fallback: create temporary context and use LLM service
+        const { createSkillContext } = await import('../base/SkillContext.js');
+        const tempContext = createSkillContext({});
+        const callLLM = withResilience(
+          async () => {
+            return await tempContext.services.llm.complete({
+              messages: [{ role: 'user', content: prompt }],
+              system: REFACTORING_SYSTEM_PROMPT,
+              maxTokens: 4096,
+            });
+          },
+          'refactoring'
+        );
+        responseText = await callLLM();
+      }
 
       return this.parseRefactoringResponse(responseText, code);
     } catch (error) {
@@ -322,7 +330,7 @@ class RefactoringSkill extends BaseSkill {
   }
 
   /**
-   * Parse Claude's refactoring response into structured RefactoringResult
+   * Parse LLM refactoring response into structured RefactoringResult
    */
   private parseRefactoringResponse(
     response: string,

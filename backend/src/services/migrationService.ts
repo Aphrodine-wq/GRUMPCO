@@ -4,8 +4,8 @@
  * Used by agent tools for "generate migrations" and optionally "apply" (with guard rails).
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import logger from '../middleware/logger.js';
+import { getCompletion } from './llmGatewayHelper.js';
 
 export type MigrationTargetDb = 'sqlite' | 'postgres';
 
@@ -25,28 +25,26 @@ export async function generateMigrations(
   schemaDdl: string,
   targetDb: MigrationTargetDb = 'sqlite'
 ): Promise<GenerateMigrationsResult> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return {
-      migrations: [`-- No API key; migrations for ${targetDb}\n${schemaDdl.slice(0, 500)}`],
-      summary: 'Placeholder',
-    };
-  }
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const userMsg = `Target DB: ${targetDb}\n\nSchema DDL:\n${schemaDdl}\n\nProduce ordered migration SQL blocks.`;
+  
   try {
-    const res = await client.messages.create({
+    const result = await getCompletion({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: MIGRATION_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMsg }],
     });
-    const block = res.content[0];
-    if (block.type !== 'text') return { migrations: [] };
+    
+    if (result.error) {
+      logger.warn({ err: result.error }, 'migrationService: generateMigrations failed');
+      return { migrations: [`-- Error: ${result.error}`], summary: 'Error' };
+    }
+    
     const migrations: string[] = [];
-    const sqlBlocks = block.text.matchAll(/```sql\n?([\s\S]*?)\n?```/g);
+    const sqlBlocks = result.text.matchAll(/```sql\n?([\s\S]*?)\n?```/g);
     for (const m of sqlBlocks) migrations.push(m[1].trim());
-    if (migrations.length === 0 && block.text.includes('CREATE')) {
-      migrations.push(block.text.replace(/```\w*\n?/g, '').trim());
+    if (migrations.length === 0 && result.text.includes('CREATE')) {
+      migrations.push(result.text.replace(/```\w*\n?/g, '').trim());
     }
     return { migrations, summary: `${migrations.length} migration(s) for ${targetDb}` };
   } catch (e) {

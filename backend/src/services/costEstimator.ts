@@ -171,7 +171,7 @@ export class CostEstimator {
       
       return {
         ...estimate,
-        modelName: modelConfig?.name || modelId,
+        modelName: modelConfig?.id || modelId,
       };
     }).sort((a, b) => a.estimatedCost - b.estimatedCost);
   }

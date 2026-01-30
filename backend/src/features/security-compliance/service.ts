@@ -7,7 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import Anthropic from '@anthropic-ai/sdk';
+import { getStream, type StreamParams } from '../../services/llmGateway.js';
 import {
   SecurityScanResult,
   SecurityVulnerability,
@@ -29,7 +29,21 @@ import {
   generateSBOMPrompt,
 } from './prompts.js';
 
-const anthropic = new Anthropic();
+const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
+
+/**
+ * Helper to call LLM via gateway and get complete response text
+ */
+async function callLLM(params: StreamParams): Promise<string> {
+  const stream = getStream(params, { provider: 'nim', modelId: params.model || DEFAULT_MODEL });
+  let responseText = '';
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      responseText += event.delta.text;
+    }
+  }
+  return responseText;
+}
 
 /** Allowed root for security scans. Resolved path must be under this root to prevent path traversal. */
 function getSecurityScanRoot(): string {
@@ -269,7 +283,7 @@ export async function performSecurityScan(request: SecurityScanRequest): Promise
     }
   }
 
-  // 2. SAST scan (using Claude)
+  // 2. SAST scan (using LLM)
   if (scanTypes.includes('sast') || scanTypes.includes('config')) {
     const codeSnippets = readCodeFiles(workspacePath);
     const packageJson = readPackageJson(workspacePath);
@@ -277,15 +291,12 @@ export async function performSecurityScan(request: SecurityScanRequest): Promise
     if (codeSnippets) {
       const prompt = generateSecurityScanPrompt(codeSnippets, packageJson);
 
-      const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+      const responseText = await callLLM({
+        model: DEFAULT_MODEL,
         max_tokens: 4096,
         system: SECURITY_ANALYSIS_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: prompt }],
       });
-
-      const textContent = response.content.find((c) => c.type === 'text');
-      const responseText = textContent?.type === 'text' ? textContent.text : '';
 
       try {
         const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/);
@@ -369,7 +380,7 @@ export async function generateSBOM(request: SBOMRequest): Promise<SBOMResult> {
     });
   }
 
-  // Use Claude to enrich with license info
+  // Use LLM to enrich with license info
   const depsStr = Object.entries(allDeps)
     .map(([name, version]) => `${name}@${version}`)
     .join('\n');
@@ -378,20 +389,17 @@ export async function generateSBOM(request: SBOMRequest): Promise<SBOMResult> {
   const prompt = generateSBOMPrompt(depsStr, projectInfo);
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const responseText = await callLLM({
+      model: DEFAULT_MODEL,
       max_tokens: 4096,
       system: SECURITY_ANALYSIS_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const textContent = response.content.find((c) => c.type === 'text');
-    const responseText = textContent?.type === 'text' ? textContent.text : '';
-
     const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/);
     if (jsonMatch) {
       const data = JSON.parse(jsonMatch[1]);
-      // Merge license info from Claude
+      // Merge license info from LLM
       for (const comp of data.components || []) {
         const existing = components.find((c) => c.name === comp.name);
         if (existing && comp.licenses) {
@@ -438,15 +446,12 @@ Dev Dependencies: ${Object.keys(pkg.devDependencies || {}).length}
 
   const prompt = generateCompliancePrompt(standard, projectInfo, codeSnippets);
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const responseText = await callLLM({
+    model: DEFAULT_MODEL,
     max_tokens: 4096,
     system: SECURITY_ANALYSIS_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   });
-
-  const textContent = response.content.find((c) => c.type === 'text');
-  const responseText = textContent?.type === 'text' ? textContent.text : '';
 
   let requirements: ComplianceRequirement[] = [];
   let recommendations: string[] = [];
