@@ -5,6 +5,7 @@
  */
 
 import { parentPort, workerData } from 'worker_threads';
+import { runIntentCli } from '../services/intentCliRunner.js';
 
 const workerIndex = (workerData as { workerIndex?: number; cpuCount?: number } | undefined)?.workerIndex ?? -1;
 
@@ -22,19 +23,10 @@ interface WorkerResponse {
 }
 
 /**
- * Parse intent (CPU-intensive regex operations)
+ * Parse intent via grump-intent CLI (CPU-bound spawn + parse).
  */
 async function parseIntent(data: { text: string; constraints?: Record<string, unknown> }): Promise<unknown> {
-  // This would use the WASM module or native parsing
-  // For now, return a placeholder
-  return {
-    actors: ['user'],
-    features: [],
-    data_flows: [],
-    tech_stack_hints: [],
-    constraints: data.constraints || {},
-    raw: data.text,
-  };
+  return runIntentCli(data.text, data.constraints);
 }
 
 /**

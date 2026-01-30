@@ -19,6 +19,7 @@
   import { colors } from '../lib/design-system/tokens/colors';
   import { workspaceStore } from '../stores/workspaceStore';
   import { analyzeArchitecture } from '../stores/featuresStore';
+  import { showSettings, showCostDashboard } from '../stores/uiStore';
 
   interface Tier {
     id: string;
@@ -331,6 +332,12 @@
               <Button
                 variant="secondary"
                 size="sm"
+                onclick={() => { showSettings.set(false); showCostDashboard.set(true); }}
+                >Cost dashboard</Button
+              >
+              <Button
+                variant="secondary"
+                size="sm"
                 onclick={() => window.open(billingUrl, '_blank')}>Manage Billing</Button
               >
             </div>
@@ -342,9 +349,14 @@
             {/if}
           {:else}
             <p class="billing-empty">Sign in to view your subscription details.</p>
-            <Button variant="primary" size="sm" onclick={() => window.open(billingUrl, '_blank')}
-              >View Pricing</Button
-            >
+            <div class="billing-actions">
+              <Button variant="secondary" size="sm" onclick={() => { showSettings.set(false); showCostDashboard.set(true); }}
+                >Cost dashboard</Button
+              >
+              <Button variant="primary" size="sm" onclick={() => window.open(billingUrl, '_blank')}
+                >View Pricing</Button
+              >
+            </div>
           {/if}
         </div>
       </Card>

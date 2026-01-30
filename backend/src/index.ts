@@ -28,6 +28,7 @@ import githubRoutes from './routes/github.js';
 import analyzeRoutes from './features/codebase-analysis/routes.js';
 import settingsRoutes from './routes/settings.js';
 import billingRoutes from './routes/billing.js';
+import costDashboardRoutes from './routes/costDashboard.js';
 import skillsApiRoutes from './routes/skillsApi.js';
 import securityRoutes from './features/security-compliance/routes.js';
 import infraRoutes from './features/infrastructure/routes.js';
@@ -53,6 +54,8 @@ import { skillRegistry } from './skills/index.js';
 import { startJobWorker, stopJobWorker } from './services/jobQueue.js';
 import { getNIMAccelerator } from './services/nimAccelerator.js';
 import { updateGpuMetrics } from './middleware/metrics.js';
+import { shutdownWorkerPool } from './services/workerPool.js';
+import { getTieredCache } from './services/tieredCache.js';
 import { isServerlessRuntime } from './config/runtime.js';
 import { startScheduledAgentsWorker, stopScheduledAgentsWorker, loadRepeatableJobsFromDb } from './services/scheduledAgentsQueue.js';
 import { apiAuthMiddleware } from './middleware/authMiddleware.js';
@@ -211,6 +214,7 @@ let gpuMetricsInterval: ReturnType<typeof setInterval> | null = null;
     app.use('/api/analyze', analyzeRoutes);
     app.use('/api/settings', settingsRoutes);
     app.use('/api/billing', billingRoutes);
+    app.use('/api/cost', costDashboardRoutes);
     app.use('/api/skills-api', skillsApiRoutes);
     app.use('/api/messaging', messagingRoutes);
     app.use('/api/security', securityRoutes);
@@ -304,32 +308,42 @@ let gpuMetricsInterval: ReturnType<typeof setInterval> | null = null;
       });
     }
 
-    process.on('SIGTERM', async () => {
-      logger.info('SIGTERM received, shutting down gracefully');
+    const gracefulShutdown = async () => {
       if (gpuMetricsInterval) clearInterval(gpuMetricsInterval);
       await stopJobWorker();
       await stopScheduledAgentsWorker();
-      server?.close(async () => {
+      await shutdownWorkerPool();
+      const nim = getNIMAccelerator();
+      if (nim) await nim.flush();
+      try {
+        await getTieredCache().shutdown();
+      } catch (e) {
+        logger.warn({ err: (e as Error).message }, 'Tiered cache shutdown warning');
+      }
+      const finish = async () => {
         await skillRegistry.cleanup();
         await closeDatabase();
         await shutdownTracing();
         logger.info('Server closed');
         process.exit(0);
-      });
+      };
+      if (server) {
+        server.close(() => {
+          finish();
+        });
+      } else {
+        await finish();
+      }
+    };
+
+    process.on('SIGTERM', async () => {
+      logger.info('SIGTERM received, shutting down gracefully');
+      await gracefulShutdown();
     });
 
     process.on('SIGINT', async () => {
       logger.info('SIGINT received, shutting down gracefully');
-      if (gpuMetricsInterval) clearInterval(gpuMetricsInterval);
-      await stopJobWorker();
-      await stopScheduledAgentsWorker();
-      server?.close(async () => {
-        await skillRegistry.cleanup();
-        await closeDatabase();
-        await shutdownTracing();
-        logger.info('Server closed');
-        process.exit(0);
-      });
+      await gracefulShutdown();
     });
   } catch (err) {
     const error = err as Error;

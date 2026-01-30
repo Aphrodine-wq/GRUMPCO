@@ -247,6 +247,28 @@ router.get('/detailed', async (_req: Request, res: Response) => {
     };
   }
 
+  // Redis (optional): report degraded when configured but disconnected
+  const redisConfigured = !!(process.env.REDIS_HOST && process.env.REDIS_HOST.trim() !== '');
+  if (redisConfigured) {
+    try {
+      const connected = await isRedisConnected();
+      checks.redis = {
+        status: connected ? 'healthy' : 'degraded',
+        details: connected
+          ? { message: 'connected' }
+          : {
+              message: 'Redis configured but disconnected',
+              impact: 'Rate limiting not shared; L2 cache disabled. See docs/RUNBOOK_REDIS.md.',
+            },
+      };
+    } catch (error) {
+      checks.redis = {
+        status: 'degraded',
+        details: { error: (error as Error).message, impact: 'L2 cache disabled; rate limits in-memory only.' },
+      };
+    }
+  }
+
   // Memory usage
   const memUsage = process.memoryUsage();
   const heapUsedMB = memUsage.heapUsed / 1024 / 1024;

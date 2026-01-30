@@ -35,6 +35,7 @@ export const options = {
     http_req_failed: ['rate<0.05'],     // Error rate should be less than 5%
     errors: ['rate<0.05'],               // Custom error rate
   },
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)'],
 };
 
 const BASE_URL = __ENV.K6_BASE_URL || 'http://localhost:3000';
@@ -285,4 +286,14 @@ export function setup() {
  */
 export function teardown(data) {
   console.log(`Test completed. Base URL: ${data.baseUrl}`);
+}
+
+/**
+ * Export summary to k6-summary.json for CI regression checks.
+ * Run with --out json=k6-results.json to also emit raw JSON.
+ */
+export function handleSummary(data) {
+  return {
+    'k6-summary.json': JSON.stringify(data, null, 2),
+  };
 }

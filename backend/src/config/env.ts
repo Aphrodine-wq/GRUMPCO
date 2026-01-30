@@ -72,6 +72,14 @@ const envSchema = z.object({
 
   // Intent compiler
   GRUMP_INTENT_PATH: z.string().optional(),
+  GRUMP_USE_WASM_INTENT: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
+  GRUMP_USE_WORKER_POOL_INTENT: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
 
   // Supabase
   SUPABASE_URL: z.string().url().optional(),
@@ -104,6 +112,15 @@ const envSchema = z.object({
 
   // OpenRouter (optional)
   OPENROUTER_API_KEY: z.string().optional(),
+
+  // NVIDIA NIM / GPU (optional)
+  NVIDIA_NIM_API_KEY: z.string().optional(),
+  NVIDIA_NIM_URL: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^https?:\/\/[^\s]+$/.test(String(v).trim()), 'NVIDIA_NIM_URL must be http(s) URL'),
+  NIM_EMBED_BATCH_SIZE: z.coerce.number().int().positive().optional(),
+  NIM_EMBED_MAX_WAIT_MS: z.coerce.number().int().nonnegative().optional(),
 
   // Observability (optional)
   OTLP_ENDPOINT: z.string().url().optional(),
@@ -155,6 +172,12 @@ if (parseResult.success) {
     }
     if (env.REDIS_HOST) {
       console.log(`[env] Redis configured at ${env.REDIS_HOST}:${env.REDIS_PORT}`);
+    }
+    if (env.NVIDIA_NIM_API_KEY) {
+      console.log('[env] NVIDIA NIM configured');
+    }
+    if (env.NVIDIA_NIM_URL) {
+      console.log(`[env] NVIDIA_NIM_URL set (local/self-hosted NIM)`);
     }
   }
   console.log(`[env] Environment validated successfully (${env.NODE_ENV} mode)`);

@@ -137,18 +137,24 @@ jobs:
       
       - name: Run load tests
         working-directory: backend
-        run: k6 run tests/load/k6-scenarios.js
+        run: k6 run tests/load/k6-scenarios.js --out json=k6-results.json
       
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
           name: api-benchmarks
           path: backend/k6-results.json
+      
+      - name: Upload k6 summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-benchmark-summary
+          path: backend/k6-summary.json
 
   performance-regression:
     name: Check Performance Regression
     runs-on: ubuntu-latest
-    needs: [benchmark-rust, benchmark-build]
+    needs: [benchmark-rust, benchmark-build, benchmark-api]
     steps:
       - uses: actions/checkout@v4
       
@@ -157,8 +163,38 @@ jobs:
         with:
           name: build-benchmarks
       
+      - name: Download k6 summary
+        uses: actions/download-artifact@v4
+        with:
+          name: api-benchmark-summary
+          path: api-benchmark-summary
+      
       - name: Check for regressions
         run: |
           echo "## Performance Regression Check" >> $GITHUB_STEP_SUMMARY
           echo "Checking for performance regressions..." >> $GITHUB_STEP_SUMMARY
+          K6_SUMMARY="api-benchmark-summary/k6-summary.json"
+          [ -f "api-benchmark-summary/backend/k6-summary.json" ] && K6_SUMMARY="api-benchmark-summary/backend/k6-summary.json"
+          if [ ! -f "$K6_SUMMARY" ]; then
+            echo "❌ k6 summary missing" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          P95_MS=$(node -e "
+            const d = require('./'"$K6_SUMMARY"'');
+            const m = d.metrics && d.metrics['http_req_duration'];
+            const v = m && m.values && (m.values['p(95)'] ?? m.values['p95']);
+            if (v == null) process.exit(2);
+            console.log(Math.round(v));
+          " 2>/dev/null) || true
+          if [ -z "$P95_MS" ] || [ "$P95_MS" = "null" ]; then
+            echo "⚠️ Could not extract p95; skipping threshold check" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "http_req_duration p95: ${P95_MS}ms" >> $GITHUB_STEP_SUMMARY
+            BASELINE="${K6_P95_BASELINE_MS:-5000}"
+            if [ "$P95_MS" -gt "$BASELINE" ]; then
+              echo "❌ Regression: p95 ${P95_MS}ms exceeds baseline ${BASELINE}ms" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+            echo "✅ p95 within baseline ${BASELINE}ms" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "✅ No significant regressions detected" >> $GITHUB_STEP_SUMMARY

@@ -3,6 +3,7 @@
  * Endpoints for PRD generation
  */
 
+import { createHash } from 'crypto';
 import express, { Request, Response, Router } from 'express';
 import {
   generatePRD,
@@ -14,9 +15,25 @@ import { getRequestLogger } from '../middleware/logger.js';
 import { sendServerError, writeSSEError } from '../utils/errorResponse.js';
 import { validatePrdGenerateRequest, handlePrdValidationErrors } from '../middleware/validator.js';
 import { dispatchWebhook } from '../services/webhookService.js';
+import { getTieredCache } from '../services/tieredCache.js';
 import { DEMO_PRD } from '../demo/sampleData.js';
 import type { PRDRequest, ConversationMessage } from '../types/index.js';
 import type { SystemArchitecture } from '../types/architecture.js';
+
+const PRD_CACHE_TTL_SEC = 60 * 60; // 1 hour (seconds for tiered cache)
+
+function prdCacheKey(
+  req: { architectureId?: string; projectName?: string; projectDescription?: string; refinements?: unknown[] },
+  arch: SystemArchitecture
+): string {
+  const payload = JSON.stringify({
+    architectureId: req.architectureId ?? arch.id,
+    projectName: (req.projectName ?? '').trim(),
+    projectDescription: (req.projectDescription ?? '').trim().slice(0, 500),
+    refinements: (req.refinements ?? []),
+  });
+  return createHash('sha256').update(payload).digest('hex').substring(0, 32);
+}
 
 const router: Router = express.Router();
 
@@ -71,21 +88,27 @@ router.post(
       'PRD generation requested'
     );
 
-    const response = await generatePRD(
-      {
-        architectureId: arch.id,
-        projectName,
-        projectDescription,
-        refinements,
-      },
-      arch,
-      conversationHistory
-    );
+    const prdRequest = {
+      architectureId: arch.id,
+      projectName,
+      projectDescription,
+      refinements,
+    };
+    const key = prdCacheKey(prdRequest, arch);
+    const cache = getTieredCache();
+    const cached = await cache.get<Awaited<ReturnType<typeof generatePRD>>>('prd:generate', key);
+    if (cached && cached.status !== 'error') {
+      return res.json(cached);
+    }
+
+    const response = await generatePRD(prdRequest, arch, conversationHistory);
 
     if (response.status === 'error') {
       res.status(400).json(response);
       return;
     }
+
+    cache.set('prd:generate', key, response, PRD_CACHE_TTL_SEC).catch(() => {});
 
     dispatchWebhook('prd.generated', {
       architectureId: arch.id,

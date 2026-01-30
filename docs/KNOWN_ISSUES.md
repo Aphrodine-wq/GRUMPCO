@@ -26,6 +26,9 @@ This doc lists intentional suppressions and remaining work. Many lint/type items
 - **Architecture mode**: If "describe → Mermaid → PRD" fails, check: (1) `ANTHROPIC_API_KEY` in backend/.env, (2) network/CORS, (3) backend logs for 4xx/5xx or timeout. Endpoints: `POST /api/architecture/generate`, `POST /api/prd/generate`.
 - **Codegen / tool calls**: If timeouts or silent failures occur, verify: (1) timeout values in timeout middleware and toolExecutionService (bash default 30s), (2) chat stream timeout is skipped for SSE; (3) backend logs for tool execution errors.
 
+## Redis
+- When `REDIS_HOST` is set but Redis is unreachable, the app runs with in-memory rate limiting (not shared) and no L2 cache. `/health/detailed` reports `redis: degraded`. See [RUNBOOK_REDIS](RUNBOOK_REDIS.md).
+
 ## Verification (automated)
 - **Backend unit tests**: `cd backend && npm test` — all pass.
 - **Frontend unit tests**: `cd frontend && npm run test:run` — all pass.
