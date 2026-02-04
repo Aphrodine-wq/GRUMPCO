@@ -9,6 +9,7 @@
    * - User profile section
    * - Agent/model picker
    */
+  import { onMount } from 'svelte';
   import {
     Plus,
     MessageSquare,
@@ -19,27 +20,38 @@
     Search,
     Layout,
     Plug,
+    Server,
+    LogOut,
+    CheckSquare,
+    BookOpen,
+    Brain,
   } from 'lucide-svelte';
   import { sessionsStore, sortedSessions, currentSession } from '../../stores/sessionsStore';
   import { setCurrentView, sidebarCollapsed, currentView } from '../../stores/uiStore';
   import type { ViewType } from '../../stores/uiStore';
-  import { isAuthenticated, user as currentUser } from '../../stores/authStore';
+  import { isAuthenticated, user as currentUser, logout } from '../../stores/authStore';
+  import { authGateStore } from '../../stores/authGateStore';
   import type { Session } from '../../types';
+  import Modal from '../../lib/design-system/components/Modal/Modal.svelte';
+  import GoogleAuthGate from '../GoogleAuthGate.svelte';
 
   // Sidebar state
   let collapsed = $derived($sidebarCollapsed);
   let hoverExpanded = $state(false);
   let searchQuery = $state('');
   let hoveredSessionId: string | null = $state(null);
+  let accountMenuOpen = $state(false);
+  let showAuthModal = $state(false);
+  let accountMenuRef: HTMLDivElement | null = $state(null);
 
   // Effective collapsed state (collapsed but can expand on hover)
   const effectiveCollapsed = $derived(collapsed && !hoverExpanded);
 
-  // Nav first: Chat, Architecture, Integrations, Settings (G-Agent moved into chat)
+  // Nav: Chat, Architecture, Integrations, Approvals, Skills, Memory, MCP (Settings in account menu)
   interface NavItem {
     id: ViewType;
     label: string;
-    icon: 'chat' | 'architecture' | 'integrations' | 'settings';
+    icon: 'chat' | 'architecture' | 'integrations' | 'approvals' | 'skills' | 'memory' | 'mcp' | 'settings';
     badge?: string;
   }
 
@@ -47,9 +59,13 @@
     { id: 'chat', label: 'Chat', icon: 'chat' },
     { id: 'designToCode', label: 'Architecture', icon: 'architecture' },
     { id: 'integrations', label: 'Integrations', icon: 'integrations' },
+    { id: 'approvals', label: 'Approvals', icon: 'approvals' },
+    { id: 'skills', label: 'Skills', icon: 'skills' },
+    { id: 'memory', label: 'Memory', icon: 'memory' },
+    { id: 'mcp', label: 'MCP', icon: 'mcp' },
   ];
 
-  const secondaryNav: NavItem[] = [{ id: 'settings', label: 'Settings', icon: 'settings' }];
+  const secondaryNav: NavItem[] = [];
 
   // Filter sessions based on search
   const filteredSessions = $derived(
@@ -117,6 +133,43 @@
     }
     return name.length > 28 ? name.slice(0, 28) + '...' : name;
   }
+
+  function toggleAccountMenu() {
+    accountMenuOpen = !accountMenuOpen;
+  }
+
+  function closeAccountMenu() {
+    accountMenuOpen = false;
+  }
+
+  function handleSignIn() {
+    closeAccountMenu();
+    showAuthModal = true;
+  }
+
+  function handleSignOut() {
+    closeAccountMenu();
+    logout();
+  }
+
+  function handleAuthComplete() {
+    showAuthModal = false;
+  }
+
+  function handleAuthSkip() {
+    authGateStore.markAuthSkipped();
+    showAuthModal = false;
+  }
+
+  onMount(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (accountMenuOpen && accountMenuRef && !accountMenuRef.contains(e.target as Node)) {
+        closeAccountMenu();
+      }
+    }
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  });
 
   function getInitials(name?: string, email?: string): string {
     if (name) {
@@ -191,13 +244,21 @@
         title={item.label}
       >
         {#if item.icon === 'chat'}
-          <MessageSquare size={20} />
+          <MessageSquare size={18} />
         {:else if item.icon === 'architecture'}
-          <Layout size={20} />
+          <Layout size={18} />
         {:else if item.icon === 'integrations'}
-          <Plug size={20} />
+          <Plug size={18} />
+        {:else if item.icon === 'approvals'}
+          <CheckSquare size={18} />
+        {:else if item.icon === 'skills'}
+          <BookOpen size={18} />
+        {:else if item.icon === 'memory'}
+          <Brain size={18} />
+        {:else if item.icon === 'mcp'}
+          <Server size={18} />
         {:else}
-          <Settings size={20} />
+          <Settings size={18} />
         {/if}
         {#if !effectiveCollapsed}
           <span class="nav-label">{item.label}</span>
@@ -421,7 +482,7 @@
   <!-- Spacer -->
   <div class="sidebar-spacer"></div>
 
-  <!-- Footer: Secondary Nav + User -->
+  <!-- Footer: User (Settings moved to Account menu) -->
   <div class="sidebar-footer">
     {#each secondaryNav as item}
       <button
@@ -438,8 +499,15 @@
     {/each}
 
     <!-- User Profile -->
-    <div class="user-section">
-      <button class="user-btn" title={$currentUser?.email || 'Account'}>
+    <div class="user-section" bind:this={accountMenuRef}>
+      <button
+        type="button"
+        class="user-btn"
+        title={$currentUser?.email || 'Account'}
+        onclick={toggleAccountMenu}
+        aria-expanded={accountMenuOpen}
+        aria-haspopup="menu"
+      >
         <div class="user-avatar">
           {#if $isAuthenticated && $currentUser}
             <span>{getInitials($currentUser.name, $currentUser.email)}</span>
@@ -460,9 +528,74 @@
           </div>
         {/if}
       </button>
+
+      <!-- Account menu popover -->
+      {#if accountMenuOpen}
+        <div
+          class="account-menu"
+          role="menu"
+          aria-label="Account menu"
+          tabindex="-1"
+          onkeydown={(e) => {
+            if (e.key === 'Escape') closeAccountMenu();
+          }}
+        >
+          {#if $isAuthenticated && $currentUser}
+            <div class="account-menu-header">
+              <span class="account-menu-name">{$currentUser.name || $currentUser.email?.split('@')[0]}</span>
+              <span class="account-menu-email">{$currentUser.email}</span>
+            </div>
+            <div class="account-menu-divider"></div>
+          {/if}
+          {#if !$isAuthenticated}
+            <button
+              type="button"
+              class="account-menu-item primary"
+              role="menuitem"
+              onclick={handleSignIn}
+            >
+              <User size={16} />
+              <span>Sign in</span>
+            </button>
+          {/if}
+          <button
+            type="button"
+            class="account-menu-item"
+            role="menuitem"
+            onclick={() => {
+              closeAccountMenu();
+              goTo('settings');
+            }}
+          >
+            <Settings size={16} />
+            <span>Settings</span>
+          </button>
+          {#if $isAuthenticated}
+            <div class="account-menu-divider"></div>
+            <button
+              type="button"
+              class="account-menu-item danger"
+              role="menuitem"
+              onclick={handleSignOut}
+            >
+              <LogOut size={16} />
+              <span>Sign out</span>
+            </button>
+          {/if}
+        </div>
+      {/if}
     </div>
   </div>
 </aside>
+
+<!-- Auth modal -->
+<Modal
+  bind:open={showAuthModal}
+  title="Sign in"
+  size="sm"
+>
+  <GoogleAuthGate onComplete={handleAuthComplete} onSkip={handleAuthSkip} />
+</Modal>
 
 <style>
   .unified-sidebar {
@@ -489,7 +622,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px;
+    padding: 10px;
     border-bottom: 1px solid var(--color-border-light, #f3e8ff);
   }
 
@@ -499,8 +632,8 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    height: 40px;
-    padding: 0 12px;
+    height: 38px;
+    padding: 0 10px;
     background: var(--color-primary, #7c3aed);
     color: white;
     border: none;
@@ -557,8 +690,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 8px 12px;
-    padding: 8px 12px;
+    margin: 6px 10px;
+    padding: 6px 10px;
     background: var(--color-bg-input, #f3e8ff);
     border-radius: 10px;
     border: 1px solid transparent;
@@ -593,16 +726,16 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 8px;
+    padding: 6px;
   }
 
   .nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
-    height: 44px;
-    padding: 0 12px;
+    height: 40px;
+    padding: 0 10px;
     background: transparent;
     border: none;
     border-radius: 10px;
@@ -662,7 +795,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 16px 4px;
+    padding: 6px 12px 4px;
   }
 
   .section-title {
@@ -677,7 +810,7 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 0 8px 8px;
+    padding: 0 6px 6px;
   }
 
   .sessions-list::-webkit-scrollbar {
@@ -694,7 +827,7 @@
   }
 
   .session-group-label {
-    padding: 12px 8px 4px;
+    padding: 10px 6px 4px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -708,12 +841,12 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    min-height: 40px;
-    padding: 8px 12px;
+    min-height: 34px;
+    padding: 4px 8px;
     background: transparent;
     border: none;
     border-radius: 10px;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--color-text, #1f1147);
     cursor: pointer;
     transition: all 150ms ease;
@@ -732,9 +865,10 @@
 
   .session-item.collapsed {
     justify-content: center;
-    padding: 8px;
-    width: 40px;
-    height: 40px;
+    padding: 6px;
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
     margin: 0 auto 4px;
     border-radius: 10px;
     font-weight: 600;
@@ -766,8 +900,18 @@
     padding: 0;
   }
 
+  .session-item.collapsed .session-name {
+    flex: none;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    overflow: visible;
+    text-overflow: unset;
+  }
+
   .session-name {
     flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -798,7 +942,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: 20px;
     color: var(--color-text-muted, #6d28d9);
     font-size: 14px;
     opacity: 0.6;
@@ -821,21 +965,91 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 12px 8px;
+    padding: 10px 6px;
     border-top: 1px solid var(--color-border-light, #f3e8ff);
     background: rgba(255, 255, 255, 0.5);
   }
 
   .user-section {
+    position: relative;
     margin-top: 4px;
+  }
+
+  .account-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    margin-bottom: 4px;
+    background: white;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    padding: 6px 0;
+    z-index: 1000;
+    min-width: 200px;
+  }
+
+  .account-menu-header {
+    padding: 10px 14px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .account-menu-name {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-text, #111827);
+  }
+
+  .account-menu-email {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #6b7280);
+  }
+
+  .account-menu-divider {
+    height: 1px;
+    background: var(--color-border, #e5e7eb);
+    margin: 6px 0;
+  }
+
+  .account-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: var(--color-text, #374151);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+  }
+
+  .account-menu-item:hover {
+    background: var(--color-bg-subtle, #f5f5f5);
+  }
+
+  .account-menu-item.primary {
+    color: var(--color-primary, #7c3aed);
+    font-weight: 500;
+  }
+
+  .account-menu-item.danger:hover {
+    background: rgba(239, 68, 68, 0.08);
+    color: #dc2626;
   }
 
   .user-btn {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
-    padding: 8px 12px;
+    padding: 6px 10px;
     background: transparent;
     border: none;
     border-radius: 10px;
@@ -850,7 +1064,7 @@
 
   .collapsed .user-btn {
     justify-content: center;
-    padding: 8px;
+    padding: 6px;
   }
 
   .user-avatar {

@@ -52,7 +52,9 @@
   import { chatModeStore } from '../stores/chatModeStore';
   import { settingsStore } from '../stores/settingsStore';
   import { workspaceStore } from '../stores/workspaceStore';
-  import { showSettings, focusChatTrigger, setCurrentView } from '../stores/uiStore';
+  import { showSettings, focusChatTrigger, setCurrentView, currentView } from '../stores/uiStore';
+  import type { ViewType } from '../stores/uiStore';
+  import { addSavedPrompt } from '../stores/savedPromptsStore';
   import {
     gAgentPlanStore,
     currentPlan as gAgentCurrentPlan,
@@ -64,8 +66,18 @@
   // Utilities
   import { processError, logError } from '../utils/errorHandler';
   import { trackMessageSent, trackError } from '../lib/analytics';
+  import { Mic, BookOpen, LayoutGrid, MessageCircle, Sparkles } from 'lucide-svelte';
 
   import type { Message, ContentBlock } from '../types';
+
+  /** Views that can be opened from the chat mode bar (secondary row). G-Agent is accessed from sidebar/session, not this strip. */
+  const CHAT_VIEW_MODES: { id: ViewType; label: string; icon: typeof Mic }[] = [
+    { id: 'voiceCode', label: 'Voice', icon: Mic },
+    { id: 'askDocs', label: 'Ask Docs', icon: BookOpen },
+    { id: 'canvas', label: 'Canvas', icon: LayoutGrid },
+    { id: 'talkMode', label: 'Talk', icon: MessageCircle },
+    { id: 'skills', label: 'Skills', icon: Sparkles },
+  ];
 
   // Props
   interface Props {
@@ -107,9 +119,24 @@
   // @ts-ignore
   let memoryPanelRef: GAgentMemoryPanel | null = $state(null);
 
-  // Chat mode
-  let chatMode: 'normal' | 'plan' | 'spec' | 'ship' | 'execute' | 'design' | 'argument' | 'code' =
-    $state('normal');
+  // Chat mode (includes 'ship' for local Ship view; store has design | code | argument)
+  let chatMode = $state<'normal' | 'plan' | 'spec' | 'ship' | 'execute' | 'design' | 'argument' | 'code'>('normal');
+  const shipModeActive = $derived(chatMode === 'ship');
+
+  /** Label for top-right mode indicator (Chat view only) */
+  const modeIndicatorLabel = $derived(
+    shipModeActive
+      ? 'Ship'
+      : chatMode === 'plan'
+        ? 'Plan'
+        : chatMode === 'spec'
+          ? 'Spec'
+          : $chatModeStore === 'design'
+            ? 'Architecture'
+            : $chatModeStore === 'code'
+              ? 'Code'
+              : 'Chat'
+  );
 
   // Confirmed Free Agent sessions
   const freeAgentLocalConfirmedSessionIds = new Set<string>();
@@ -152,11 +179,14 @@
     onmessagesUpdated(messages);
   });
 
-  // Subscribe to chat mode store
+  // Subscribe to chat mode store (when store is 'code', preserve plan/spec so they don't flip to Code)
   $effect(() => {
-    if (chatModeStore) {
-      chatMode = $chatModeStore as typeof chatMode;
+    if (!chatModeStore) return;
+    const storeVal = $chatModeStore;
+    if (storeVal === 'design' || storeVal === 'argument' || storeVal === 'none') {
+      chatMode = storeVal as typeof chatMode;
     }
+    // When store is 'code', leave chatMode unchanged so Plan/Spec stay selected
   });
 
   // Focus input when triggered
@@ -206,6 +236,66 @@
     };
   });
 
+  // Mode button handlers (Architecture, Code, Ship) – toggle off when clicking active mode
+  function setModeArchitecture() {
+    if ($chatModeStore === 'design') {
+      chatModeStore.clearMode();
+      chatMode = 'normal';
+    } else {
+      chatModeStore.setMode('design');
+      chatMode = 'design';
+    }
+  }
+  function setModeCode() {
+    if ($chatModeStore === 'code') {
+      chatModeStore.clearMode();
+      chatMode = 'normal';
+    } else {
+      chatModeStore.setMode('code');
+      chatMode = 'code';
+    }
+  }
+  function setModeShip() {
+    if (chatMode === 'ship') {
+      const storeMode = get(chatModeStore);
+      chatMode = storeMode === 'design' ? 'design' : storeMode === 'code' ? 'code' : 'normal';
+    } else {
+      chatMode = 'ship';
+    }
+  }
+
+  function setModeArgument() {
+    if ($chatModeStore === 'argument') {
+      chatModeStore.clearMode();
+      chatMode = 'normal';
+    } else {
+      chatModeStore.setMode('argument');
+      chatMode = 'argument';
+    }
+  }
+
+  function setModePlan() {
+    if (chatMode === 'plan') {
+      chatModeStore.clearMode();
+      chatMode = 'normal';
+    } else {
+      chatModeStore.setMode('code');
+      chatMode = 'plan';
+      window.dispatchEvent(new CustomEvent('switch-plan-mode'));
+    }
+  }
+
+  function setModeSpec() {
+    if (chatMode === 'spec') {
+      chatModeStore.clearMode();
+      chatMode = 'normal';
+    } else {
+      chatModeStore.setMode('code');
+      chatMode = 'spec';
+      window.dispatchEvent(new CustomEvent('switch-spec-mode'));
+    }
+  }
+
   // Initialize settings
   onMount(() => {
     const s = settingsStore.getCurrent();
@@ -220,11 +310,58 @@
       isNimProvider = (settings?.models?.defaultProvider ?? '') === 'nim';
     });
 
+    const onOpenShipMode = () => {
+      chatMode = 'ship';
+    };
+    const onCloseShipMode = () => {
+      const storeMode = get(chatModeStore);
+      chatMode = storeMode === 'design' ? 'design' : storeMode === 'code' ? 'code' : 'normal';
+    };
+    const onSwitchPlanMode = () => {
+      chatModeStore.setMode('code');
+      chatMode = 'plan';
+    };
+    const onSwitchSpecMode = () => {
+      chatModeStore.setMode('code');
+      chatMode = 'spec';
+    };
+    const onInsertSavedPrompt = (e: CustomEvent<{ text: string }>) => {
+      if (e.detail?.text != null) {
+        inputText = e.detail.text;
+        tick().then(() => inputRef?.focus());
+      }
+    };
+    const onSaveCurrentPrompt = () => {
+      const text = inputText?.trim();
+      if (!text) {
+        showToast('Nothing to save – type a prompt first', 'info');
+        return;
+      }
+      try {
+        addSavedPrompt(text);
+        showToast('Prompt saved. Use Ctrl+K and search "Insert" to use it.', 'success');
+      } catch (err) {
+        showToast('Failed to save prompt', 'error');
+      }
+    };
+    window.addEventListener('open-ship-mode', onOpenShipMode);
+    window.addEventListener('close-ship-mode', onCloseShipMode);
+    window.addEventListener('switch-plan-mode', onSwitchPlanMode);
+    window.addEventListener('switch-spec-mode', onSwitchSpecMode);
+    window.addEventListener('insert-saved-prompt', onInsertSavedPrompt as EventListener);
+    window.addEventListener('save-current-prompt', onSaveCurrentPrompt);
+
     document.addEventListener('keydown', handleGlobalKeydown);
     inputRef?.focus();
 
     return () => {
       unsub();
+      window.removeEventListener('open-ship-mode', onOpenShipMode);
+      window.removeEventListener('close-ship-mode', onCloseShipMode);
+      window.removeEventListener('switch-plan-mode', onSwitchPlanMode);
+      window.removeEventListener('switch-spec-mode', onSwitchSpecMode);
+      window.removeEventListener('insert-saved-prompt', onInsertSavedPrompt as EventListener);
+      window.removeEventListener('save-current-prompt', onSaveCurrentPrompt);
       document.removeEventListener('keydown', handleGlobalKeydown);
     };
   });
@@ -435,18 +572,32 @@
     <SettingsScreen onBack={() => showSettings.set(false)} />
   {:else}
     <div class="chat-container">
-      <!-- Header -->
-      <ChatHeader
-        {isGAgentSession}
-        isConnected={$gAgentConnected}
-        showStatusPanel={showGAgentStatusPanel}
-        showMemoryPanel={showGAgentMemoryPanel}
-        modelName={modelDisplayName()}
-        onGAgentClick={() => setCurrentView('freeAgent')}
-        onStatusToggle={() => (showGAgentStatusPanel = !showGAgentStatusPanel)}
-        onMemoryToggle={() => (showGAgentMemoryPanel = !showGAgentMemoryPanel)}
-        onModelClick={() => (showModelPicker = !showModelPicker)}
-      />
+      <!-- Header + model picker dropdown -->
+      <div class="header-wrapper">
+        <div class="mode-indicator" aria-label="Current mode">{modeIndicatorLabel}</div>
+        <ChatHeader
+          {isGAgentSession}
+          isConnected={$gAgentConnected}
+          showStatusPanel={showGAgentStatusPanel}
+          showMemoryPanel={showGAgentMemoryPanel}
+          modelName={modelDisplayName()}
+          modelPickerOpen={showModelPicker}
+          onGAgentClick={() => setCurrentView('freeAgent')}
+          onStatusToggle={() => (showGAgentStatusPanel = !showGAgentStatusPanel)}
+          onMemoryToggle={() => (showGAgentMemoryPanel = !showGAgentMemoryPanel)}
+          onModelClick={() => (showModelPicker = !showModelPicker)}
+        />
+        {#if showModelPicker}
+          <div class="model-picker-dropdown">
+            <ModelPicker
+              value={currentModelKey}
+              compact={false}
+              showAuto={true}
+              onSelect={handleModelSelect}
+            />
+          </div>
+        {/if}
+      </div>
 
       <!-- Main content area -->
       {#if chatMode === 'ship'}
@@ -502,7 +653,7 @@
 
             <!-- Messages -->
             <div class="messages-container" bind:this={messagesRef}>
-              <div class="messages-inner">
+              <div class="messages-inner" class:is-empty={messages.length <= 1 && !streaming}>
                 {#if messages.length <= 1 && !streaming}
                   <div class="empty-state">
                     <FrownyFace size="lg" state="idle" animated={true} />
@@ -621,16 +772,85 @@
           />
         {/if}
 
-        {#if showModelPicker}
-          <div class="model-picker-dropdown">
-            <ModelPicker
-              value={currentModelKey}
-              compact={false}
-              showAuto={true}
-              onSelect={handleModelSelect}
-            />
-          </div>
-        {/if}
+        <!-- Mode strip below chat input (Argument, Plan, Spec, Architecture, Code, Ship) -->
+        <div class="mode-strip-bottom">
+          <button
+            type="button"
+            class="mode-btn"
+            class:active={$chatModeStore === 'argument'}
+            onclick={setModeArgument}
+            aria-pressed={$chatModeStore === 'argument'}
+            title="Argument – refine ideas and constraints"
+          >
+            Argument
+          </button>
+          <button
+            type="button"
+            class="mode-btn"
+            class:active={chatMode === 'plan'}
+            onclick={setModePlan}
+            aria-pressed={chatMode === 'plan'}
+            title="Plan – break down into tasks"
+          >
+            Plan
+          </button>
+          <button
+            type="button"
+            class="mode-btn"
+            class:active={chatMode === 'spec'}
+            onclick={setModeSpec}
+            aria-pressed={chatMode === 'spec'}
+            title="Spec – write requirements"
+          >
+            Spec
+          </button>
+          <button
+            type="button"
+            class="mode-btn"
+            class:active={$chatModeStore === 'design'}
+            onclick={setModeArchitecture}
+            aria-pressed={$chatModeStore === 'design'}
+            title="Architecture – design system and structure"
+          >
+            Architecture
+          </button>
+          <button
+            type="button"
+            class="mode-btn"
+            class:active={$chatModeStore === 'code' && chatMode !== 'plan' && chatMode !== 'spec'}
+            onclick={setModeCode}
+            aria-pressed={$chatModeStore === 'code' && chatMode !== 'plan' && chatMode !== 'spec'}
+            title="Code – implement"
+          >
+            Code
+          </button>
+          <button
+            type="button"
+            class="mode-btn"
+            class:active={shipModeActive}
+            onclick={setModeShip}
+            aria-pressed={shipModeActive}
+            title="Ship – run full pipeline"
+          >
+            Ship
+          </button>
+        </div>
+        <div class="mode-flowchart" aria-hidden="true">
+          <span class="flow-label">Describe</span>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-label">Design</span>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-label">Spec</span>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-label">Plan</span>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-label">Code</span>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-label">Ship</span>
+        </div>
+        <div class="shortcut-hint-bottom">
+          <span class="shortcut-hint-label"><kbd>Ctrl</kbd>+<kbd>K</kbd> search</span>
+        </div>
       </div>
     </div>
   {/if}
@@ -674,6 +894,26 @@
     overflow: hidden;
   }
 
+  .header-wrapper {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .mode-indicator {
+    position: absolute;
+    top: 0.5rem;
+    right: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    z-index: 1;
+    pointer-events: none;
+  }
+
   /* Main area */
   .chat-main {
     flex: 1;
@@ -700,8 +940,8 @@
   /* Sidebars */
   .status-sidebar {
     width: 320px;
-    border-right: 1px solid var(--color-border, #e5e7eb);
-    background: linear-gradient(180deg, #111827 0%, #1f2937 100%);
+    border-right: 1px solid #e5e7eb;
+    background: #f9fafb;
     overflow-y: auto;
     animation: slideInLeft 0.3s ease;
   }
@@ -757,6 +997,8 @@
     overflow-y: auto;
     padding: 2rem 1rem;
     scroll-behavior: smooth;
+    display: flex;
+    flex-direction: column;
   }
 
   .messages-inner {
@@ -765,28 +1007,113 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    width: 100%;
   }
 
-  /* Empty state */
+  .messages-inner.is-empty {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Empty state – pushed up, slightly smaller */
   .empty-state {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    padding: 4rem 2rem;
-    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    gap: 0.5rem;
+    text-align: center;
+    width: 100%;
+    min-height: 120px;
   }
 
   .empty-title {
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #111827;
     margin: 0;
   }
 
   .empty-subtitle {
-    font-size: 1rem;
+    font-size: 0.875rem;
     color: #6b7280;
     margin: 0;
+  }
+
+  .mode-btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #6b7280;
+    background: transparent;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+
+  .mode-btn:hover {
+    color: #374151;
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
+
+  .mode-btn.active {
+    color: #7c3aed;
+    background: rgba(124, 58, 237, 0.08);
+    border-color: rgba(124, 58, 237, 0.35);
+  }
+
+  /* Mode strip below chat input (Architecture, Code, Ship only) */
+  .mode-strip-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    flex-shrink: 0;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  .mode-flowchart {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.35rem 1rem;
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    color: var(--color-text-muted, #9ca3af);
+  }
+
+  .mode-flowchart .flow-label {
+    font-weight: 500;
+  }
+
+  .mode-flowchart .flow-arrow {
+    opacity: 0.7;
+  }
+
+  .shortcut-hint-bottom {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.25rem 1rem 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .shortcut-hint-label {
+    font-size: 0.6875rem;
+    color: var(--color-text-muted, #9ca3af);
+  }
+
+  .shortcut-hint-label kbd {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.625rem;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.25rem;
   }
 
   /* Streaming message */
@@ -861,16 +1188,26 @@
 
   .model-picker-dropdown {
     position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-bottom: 0.5rem;
+    top: 100%;
+    right: 0;
+    margin-top: 0.25rem;
+    min-width: 360px;
+    max-width: 420px;
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 0.75rem;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     z-index: 100;
     padding: 0.5rem;
+  }
+
+  .model-picker-dropdown :global(.model-picker-trigger) {
+    min-width: 100%;
+  }
+
+  .model-picker-dropdown :global(.model-picker-dropdown) {
+    min-width: 100%;
+    max-height: 420px;
   }
 
   @media (prefers-reduced-motion: reduce) {

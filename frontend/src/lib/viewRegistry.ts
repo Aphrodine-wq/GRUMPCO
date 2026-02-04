@@ -103,7 +103,12 @@ export const VIEW_REGISTRY = {
   },
   memory: {
     loader: () => import('../components/MemoryManager.svelte'),
-    loadingLabel: 'Loading Memory bank…',
+    loadingLabel: 'Loading Memory…',
+    backTo: 'chat',
+  },
+  mcp: {
+    loader: () => import('../components/McpScreen.svelte'),
+    loadingLabel: 'Loading MCP…',
     backTo: 'chat',
   },
   auditLog: {

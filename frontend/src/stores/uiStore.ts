@@ -16,6 +16,7 @@ export type ViewType =
   | 'approvals'
   | 'heartbeats'
   | 'memory'
+  | 'mcp'
   | 'auditLog'
   | 'advancedAI'
   | 'docker'
@@ -56,6 +57,7 @@ export const showIntegrations = createViewStore(currentView, 'integrations');
 export const showApprovals = createViewStore(currentView, 'approvals');
 export const showHeartbeats = createViewStore(currentView, 'heartbeats');
 export const showMemory = createViewStore(currentView, 'memory');
+export const showMcp = createViewStore(currentView, 'mcp');
 export const showAuditLog = createViewStore(currentView, 'auditLog');
 export const showAdvancedAI = createViewStore(currentView, 'advancedAI');
 export const showDocker = createViewStore(currentView, 'docker');

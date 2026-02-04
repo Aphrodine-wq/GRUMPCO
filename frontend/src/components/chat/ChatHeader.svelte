@@ -18,6 +18,8 @@
     showMemoryPanel?: boolean;
     /** Current model display name (shown in header when provided) */
     modelName?: string;
+    /** Whether the model picker dropdown is open (shows active state on model button) */
+    modelPickerOpen?: boolean;
     /** Called when G-Agent button clicked */
     onGAgentClick?: () => void;
     /** Called when status toggle clicked */
@@ -34,6 +36,7 @@
     showStatusPanel = false,
     showMemoryPanel = false,
     modelName,
+    modelPickerOpen = false,
     onGAgentClick,
     onStatusToggle,
     onMemoryToggle,
@@ -76,19 +79,19 @@
   <span class="header-spacer"></span>
 
   {#if modelName !== undefined && onModelClick}
-    <button
-      type="button"
-      class="header-btn model-btn"
-      onclick={() => onModelClick()}
-      title="Change model"
-    >
-      <span>{modelName}</span>
-    </button>
+    <div class="model-block">
+      <span class="model-label">{modelName}</span>
+      <button
+        type="button"
+        class="header-btn model-btn"
+        class:active={modelPickerOpen}
+        onclick={() => onModelClick()}
+        title="Change model"
+      >
+        Change
+      </button>
+    </div>
   {/if}
-
-  <span class="header-hint">
-    <kbd>Ctrl</kbd>+<kbd>K</kbd> search
-  </span>
 </header>
 
 <style>
@@ -134,8 +137,23 @@
     font-weight: 600;
   }
 
+  .model-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+  }
+
+  .model-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-text-secondary, #4a4a5a);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
   .header-btn.model-btn {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     color: var(--color-text-secondary, #4a4a5a);
   }
 
@@ -157,19 +175,6 @@
 
   .header-spacer {
     flex: 1;
-  }
-
-  .header-hint {
-    font-size: 0.6875rem;
-    color: var(--color-text-muted, #9ca3af);
-  }
-
-  .header-hint kbd {
-    padding: 0.125rem 0.25rem;
-    font-size: 0.625rem;
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 0.25rem;
   }
 
   @media (prefers-reduced-motion: reduce) {
