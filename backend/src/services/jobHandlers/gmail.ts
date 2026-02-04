@@ -13,12 +13,12 @@ export async function handleProcessGmailWebhook(job: {
   const { emailAddress, historyId } = job.data;
   logger.info({ emailAddress, historyId }, "Processing Gmail webhook job");
 
-  const { data: user, error } = await from("users")
+  const { data: userRow, error } = await from("users")
     .select("id")
     .eq("email", emailAddress)
     .single();
 
-  if (error || !user) {
+  if (error || !userRow) {
     logger.error(
       { emailAddress, error: error?.message },
       "Could not find user for Gmail webhook",
@@ -26,6 +26,7 @@ export async function handleProcessGmailWebhook(job: {
     return;
   }
 
+  const user = userRow as { id: string };
   const userId = user.id;
 
   const gmailService = new GmailService(userId);

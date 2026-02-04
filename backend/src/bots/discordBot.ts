@@ -4,7 +4,7 @@
  * Requires DISCORD_BOT_TOKEN. Does not run in serverless (needs persistent WebSocket).
  */
 
-// @ts-expect-error discord.js types have known issues with GatewayIntentBits export
+// discord.js types have known issues with GatewayIntentBits export
 import { Client, GatewayIntentBits, type TextChannel } from "discord.js";
 import { processMessage } from "../services/messagingService.js";
 import { setDiscordSendFn } from "../services/messagingShipNotifier.js";

@@ -46,13 +46,14 @@ function getFigmaConfig(): { clientId: string; clientSecret: string; redirectUri
  * GET /api/figma/auth-url
  * Returns the Figma OAuth authorization URL.
  */
-router.get('/auth-url', (_req: Request, res: Response) => {
+router.get('/auth-url', (_req: Request, res: Response): void => {
   const config = getFigmaConfig();
   if (!config) {
-    return res.status(503).json({
+    res.status(503).json({
       error: 'Figma OAuth not configured',
       hint: 'Set FIGMA_CLIENT_ID and FIGMA_CLIENT_SECRET in environment',
     });
+    return;
   }
   const state = `grump_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const params = new URLSearchParams({
@@ -70,14 +71,16 @@ router.get('/auth-url', (_req: Request, res: Response) => {
  * GET /api/figma/callback?code=...&state=...
  * Exchanges authorization code for tokens and stores them.
  */
-router.get('/callback', async (req: Request, res: Response) => {
+router.get('/callback', async (req: Request, res: Response): Promise<void> => {
   const { code, state } = req.query as { code?: string; state?: string };
   if (!code) {
-    return res.status(400).send('<html><body><p>Missing code</p><script>window.close()</script></body></html>');
+    res.status(400).send('<html><body><p>Missing code</p><script>window.close()</script></body></html>');
+    return;
   }
   const config = getFigmaConfig();
   if (!config) {
-    return res.status(503).send('<html><body><p>Figma not configured</p><script>window.close()</script></body></html>');
+    res.status(503).send('<html><body><p>Figma not configured</p><script>window.close()</script></body></html>');
+    return;
   }
   try {
     const tokenRes = await fetch(FIGMA_OAUTH_TOKEN, {
@@ -94,7 +97,8 @@ router.get('/callback', async (req: Request, res: Response) => {
     if (!tokenRes.ok) {
       const errText = await tokenRes.text();
       logger.warn({ status: tokenRes.status, body: errText }, 'Figma token exchange failed');
-      return res.status(400).send(`<html><body><p>Token exchange failed</p><script>window.close()</script></body></html>`);
+      res.status(400).send(`<html><body><p>Token exchange failed</p><script>window.close()</script></body></html>`);
+      return;
     }
     const data = (await tokenRes.json()) as {
       access_token: string;
@@ -110,9 +114,11 @@ router.get('/callback', async (req: Request, res: Response) => {
     res.send(
       `<html><body><p>Figma connected. You can close this window.</p><script>window.close(); setTimeout(function(){ window.close(); }, 500);</script></body></html>`
     );
+    return;
   } catch (err) {
     logger.error({ err }, 'Figma callback error');
     res.status(500).send('<html><body><p>Error connecting Figma</p><script>window.close()</script></body></html>');
+    return;
   }
 });
 
@@ -120,7 +126,7 @@ router.get('/callback', async (req: Request, res: Response) => {
  * GET /api/figma/me
  * Returns whether Figma is connected (has stored token).
  */
-router.get('/me', (_req: Request, res: Response) => {
+router.get('/me', (_req: Request, res: Response): void => {
   const token = getStoredToken();
   res.json({ connected: !!token?.accessToken });
 });
@@ -129,10 +135,11 @@ router.get('/me', (_req: Request, res: Response) => {
  * GET /api/figma/files
  * Proxies to Figma REST API: list files the user can access.
  */
-router.get('/files', async (_req: Request, res: Response) => {
+router.get('/files', async (_req: Request, res: Response): Promise<void> => {
   const token = getStoredToken();
   if (!token?.accessToken) {
-    return res.status(401).json({ error: 'Figma not connected', connected: false });
+    res.status(401).json({ error: 'Figma not connected', connected: false });
+    return;
   }
   try {
     const apiRes = await fetch(`${FIGMA_API_BASE}/me/files`, {
@@ -141,13 +148,16 @@ router.get('/files', async (_req: Request, res: Response) => {
     if (!apiRes.ok) {
       const errText = await apiRes.text();
       logger.warn({ status: apiRes.status }, 'Figma files list failed');
-      return res.status(apiRes.status).json({ error: 'Figma API error', details: errText });
+      res.status(apiRes.status).json({ error: 'Figma API error', details: errText });
+      return;
     }
     const data = await apiRes.json();
     res.json(data);
+    return;
   } catch (err) {
     logger.error({ err }, 'Figma files proxy error');
     res.status(502).json({ error: 'Failed to fetch Figma files' });
+    return;
   }
 });
 
@@ -155,26 +165,33 @@ router.get('/files', async (_req: Request, res: Response) => {
  * GET /api/figma/files/:fileKey
  * Proxies to Figma REST API: get file document (includes nodes for frame picker).
  */
-router.get('/files/:fileKey', async (req: Request, res: Response) => {
+router.get('/files/:fileKey', async (req: Request, res: Response): Promise<void> => {
   const token = getStoredToken();
   if (!token?.accessToken) {
-    return res.status(401).json({ error: 'Figma not connected', connected: false });
+    res.status(401).json({ error: 'Figma not connected', connected: false });
+    return;
   }
   const { fileKey } = req.params;
-  if (!fileKey) return res.status(400).json({ error: 'Missing fileKey' });
+  if (!fileKey) {
+    res.status(400).json({ error: 'Missing fileKey' });
+    return;
+  }
   try {
     const apiRes = await fetch(`${FIGMA_API_BASE}/files/${fileKey}`, {
       headers: { Authorization: `Bearer ${token.accessToken}` },
     });
     if (!apiRes.ok) {
       const errText = await apiRes.text();
-      return res.status(apiRes.status).json({ error: 'Figma API error', details: errText });
+      res.status(apiRes.status).json({ error: 'Figma API error', details: errText });
+      return;
     }
     const data = await apiRes.json();
     res.json(data);
+    return;
   } catch (err) {
     logger.error({ err }, 'Figma file proxy error');
     res.status(502).json({ error: 'Failed to fetch Figma file' });
+    return;
   }
 });
 

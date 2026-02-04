@@ -300,7 +300,8 @@ async function handleReminderIntent(
   platformUserId: string,
   content: string,
 ): Promise<string> {
-  const { createReminder } = await import("./reminderService.js");
+  const reminderModule = await import("./reminderService.js");
+  const createReminder = reminderModule.createReminder;
 
   // Parse "at 3pm" / "in 2 hours" / "tomorrow 9am" or plain text
   let dueAt = new Date(Date.now() + 60 * 60 * 1000); // Default: 1 hour
