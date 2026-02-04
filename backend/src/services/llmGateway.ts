@@ -2,15 +2,19 @@
  * @fileoverview Unified LLM Gateway - Multi-Provider AI Router
  *
  * Enterprise-grade AI inference with intelligent provider routing.
- * Supports: NVIDIA NIM, GitHub Copilot, and local development (mock).
+ * Supports: NVIDIA NIM, OpenRouter, Ollama, GitHub Copilot, Kimi K2.5, Anthropic, and Mistral AI.
  *
  * ## Supported Providers
  *
  * | Provider | Best For | Models |
  * |----------|----------|--------|
  * | NVIDIA NIM | Primary, reliable | Llama 3.1 70B/405B, Nemotron |
- * | GitHub Copilot | Code generation, completions | GPT-4, GPT-3.5 |
- * | Mock | Demo/exploration | Zero-config testing |
+ * | OpenRouter | Best model selection | Claude, GPT-4, Llama, etc. |
+ * | Ollama | Local/self-hosted | Various local models |
+ * | GitHub Copilot | Code generation | GPT-4, Claude 3.5 |
+ * | Kimi K2.5 | Long context, multilingual | Kimi K2.5 |
+ * | Anthropic | Claude models | Claude 3.5 Sonnet, Opus |
+ * | Mistral AI | Mistral models | Mistral Large, Codestral |
  *
  * ## Event Stream Format
  *
@@ -31,7 +35,7 @@ import { getNimChatUrl } from '../config/nim.js';
 import { env, getApiKey, type ApiProvider } from '../config/env.js';
 
 /** Supported LLM provider identifiers */
-export type LLMProvider = 'nim' | 'github-copilot' | 'mock';
+export type LLMProvider = 'nim' | 'openrouter' | 'ollama' | 'github-copilot' | 'kimi' | 'anthropic' | 'mistral' | 'mock';
 
 /**
  * Multimodal content part for vision-capable models.
@@ -121,10 +125,46 @@ export const PROVIDER_CONFIGS: Record<Exclude<LLMProvider, 'mock'>, ProviderConf
     ],
     capabilities: ['streaming', 'vision', 'json_mode', 'function_calling'],
     costPer1kTokens: 0.0002,
-    speedRank: 1,
-    qualityRank: 1,
+    speedRank: 2,
+    qualityRank: 2,
     defaultModel: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
     supportsTools: true,
+  },
+  openrouter: {
+    name: 'openrouter',
+    baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+    apiKeyEnvVar: 'OPENROUTER_API_KEY',
+    models: [
+      'anthropic/claude-3.5-sonnet',
+      'anthropic/claude-3-opus',
+      'openai/gpt-4o',
+      'openai/gpt-4o-mini',
+      'meta-llama/llama-3.1-405b-instruct',
+      'meta-llama/llama-3.1-70b-instruct',
+      'google/gemini-pro-1.5',
+    ],
+    capabilities: ['streaming', 'vision', 'json_mode', 'function_calling'],
+    costPer1kTokens: 0.003, // Variable, using Claude as reference
+    speedRank: 3,
+    qualityRank: 1, // Best quality
+    defaultModel: 'anthropic/claude-3.5-sonnet',
+    supportsTools: true,
+    headers: {
+      'HTTP-Referer': env.PUBLIC_BASE_URL || 'https://g-rump.com',
+      'X-Title': 'G-Rump AI',
+    },
+  },
+  ollama: {
+    name: 'ollama',
+    baseUrl: `${env.OLLAMA_BASE_URL}/api/chat`,
+    apiKeyEnvVar: '',
+    models: ['llama3.1', 'llama3.2', 'mistral', 'codellama', 'qwen2.5-coder', 'deepseek-coder'],
+    capabilities: ['streaming'],
+    costPer1kTokens: 0, // Local = free
+    speedRank: 5,
+    qualityRank: 4,
+    defaultModel: 'llama3.1',
+    supportsTools: false,
   },
   'github-copilot': {
     name: 'github-copilot',
@@ -147,6 +187,59 @@ export const PROVIDER_CONFIGS: Record<Exclude<LLMProvider, 'mock'>, ProviderConf
       'Editor-Plugin-Version': 'copilot/1.150.0',
     },
   },
+  kimi: {
+    name: 'kimi',
+    baseUrl: 'https://api.moonshot.cn/v1/chat/completions',
+    apiKeyEnvVar: 'KIMI_API_KEY',
+    models: [
+      'moonshot-v1-8k',
+      'moonshot-v1-32k',
+      'moonshot-v1-128k',
+    ],
+    capabilities: ['streaming', 'json_mode', 'function_calling'],
+    costPer1kTokens: 0.0002,
+    speedRank: 3,
+    qualityRank: 2,
+    defaultModel: 'moonshot-v1-32k',
+    supportsTools: true,
+  },
+  anthropic: {
+    name: 'anthropic',
+    baseUrl: 'https://api.anthropic.com/v1/messages',
+    apiKeyEnvVar: 'ANTHROPIC_API_KEY',
+    models: [
+      'claude-3-5-sonnet-20241022',
+      'claude-3-opus-20240229',
+      'claude-3-sonnet-20240229',
+      'claude-3-haiku-20240307',
+    ],
+    capabilities: ['streaming', 'vision', 'json_mode', 'function_calling'],
+    costPer1kTokens: 0.003,
+    speedRank: 3,
+    qualityRank: 1,
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    supportsTools: true,
+    headers: {
+      'anthropic-version': '2023-06-01',
+    },
+  },
+  mistral: {
+    name: 'mistral',
+    baseUrl: 'https://api.mistral.ai/v1/chat/completions',
+    apiKeyEnvVar: 'MISTRAL_API_KEY',
+    models: [
+      'mistral-large-latest',
+      'mistral-medium-latest',
+      'mistral-small-latest',
+      'codestral-latest',
+    ],
+    capabilities: ['streaming', 'json_mode', 'function_calling'],
+    costPer1kTokens: 0.002,
+    speedRank: 2,
+    qualityRank: 2,
+    defaultModel: 'mistral-large-latest',
+    supportsTools: true,
+  },
 };
 
 // =============================================================================
@@ -158,8 +251,11 @@ const TIMEOUT_FAST_MS = Number(process.env.LLM_TIMEOUT_FAST_MS ?? 30_000);
 const TIMEOUT_SLOW_MS = Number(process.env.LLM_TIMEOUT_SLOW_MS ?? 180_000);
 
 function getTimeoutMs(provider: LLMProvider, maxTokens?: number): number {
-  // GitHub Copilot is consistently fast
-  if (provider === 'github-copilot') return TIMEOUT_FAST_MS;
+  // GitHub Copilot and Kimi are consistently fast
+  if (provider === 'github-copilot' || provider === 'kimi') return TIMEOUT_FAST_MS;
+
+  // Ollama depends on local hardware
+  if (provider === 'ollama') return TIMEOUT_SLOW_MS;
 
   // Large token requests need more time
   if (typeof maxTokens === 'number' && maxTokens > 4096) {
@@ -175,11 +271,11 @@ function getTimeoutMs(provider: LLMProvider, maxTokens?: number): number {
 
 /**
  * Generic OpenAI-compatible stream generator.
- * Works for NIM and GitHub Copilot.
+ * Works for NIM, OpenRouter, GitHub Copilot, Kimi, and Mistral.
  */
 async function* streamOpenAICompatible(
   params: StreamParams,
-  provider: Exclude<LLMProvider, 'mock'>
+  provider: Exclude<LLMProvider, 'mock' | 'ollama' | 'anthropic'>
 ): AsyncGenerator<StreamEvent> {
   const config = PROVIDER_CONFIGS[provider];
   const apiKey = getApiKeyForProvider(provider);
@@ -272,10 +368,7 @@ async function* streamOpenAICompatible(
     let chunkCount = 0;
 
     // Track tool calls
-    const toolCalls: Map<
-      number,
-      { id: string; name: string; args: string }
-    > = new Map();
+    const toolCalls: Map<number, { id: string; name: string; args: string }> = new Map();
     const emittedToolIndices = new Set<number>();
 
     while (true) {
@@ -377,10 +470,275 @@ async function* streamNim(params: StreamParams): AsyncGenerator<StreamEvent> {
 }
 
 /**
+ * Stream from OpenRouter (OpenAI-compatible API).
+ */
+async function* streamOpenRouter(params: StreamParams): AsyncGenerator<StreamEvent> {
+  yield* streamOpenAICompatible(params, 'openrouter');
+}
+
+/**
  * Stream from GitHub Copilot (OpenAI-compatible API).
  */
 async function* streamGitHubCopilot(params: StreamParams): AsyncGenerator<StreamEvent> {
   yield* streamOpenAICompatible(params, 'github-copilot');
+}
+
+/**
+ * Stream from Kimi (OpenAI-compatible API).
+ */
+async function* streamKimi(params: StreamParams): AsyncGenerator<StreamEvent> {
+  yield* streamOpenAICompatible(params, 'kimi');
+}
+
+/**
+ * Stream from Mistral AI (OpenAI-compatible API).
+ */
+async function* streamMistral(params: StreamParams): AsyncGenerator<StreamEvent> {
+  yield* streamOpenAICompatible(params, 'mistral');
+}
+
+/**
+ * Stream from Anthropic (native API).
+ */
+async function* streamAnthropic(params: StreamParams): AsyncGenerator<StreamEvent> {
+  const config = PROVIDER_CONFIGS.anthropic;
+  const apiKey = getApiKeyForProvider('anthropic');
+
+  if (!apiKey) {
+    logger.warn({ provider: 'anthropic' }, 'Anthropic not configured - API key missing');
+    yield {
+      type: 'content_block_delta' as const,
+      delta: {
+        type: 'text_delta' as const,
+        text: `[Anthropic not configured - set ${config.apiKeyEnvVar} environment variable]`,
+      },
+    };
+    yield { type: 'message_stop' as const };
+    return;
+  }
+
+  const model = params.model || config.defaultModel;
+  logger.debug({ model, provider: 'anthropic' }, '[Anthropic] Starting stream request');
+
+  const body: Record<string, unknown> = {
+    model,
+    max_tokens: params.max_tokens,
+    stream: true,
+    messages: params.messages.map((m) => ({
+      role: m.role,
+      content: typeof m.content === 'string' ? m.content : m.content,
+    })),
+  };
+
+  if (params.system) body.system = params.system;
+  if (params.temperature !== undefined) body.temperature = params.temperature;
+  if (params.top_p !== undefined) body.top_p = params.top_p;
+
+  // Add tools if provided
+  if (params.tools && params.tools.length > 0) {
+    body.tools = params.tools.map((t) => ({
+      name: t.name,
+      description: t.description ?? '',
+      input_schema: t.input_schema ?? { type: 'object', properties: {} },
+    }));
+  }
+
+  const timeoutMs = getTimeoutMs('anthropic', params.max_tokens);
+
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      ...config.headers,
+    };
+
+    const res = await fetch(config.baseUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      logger.warn({ status: res.status, body: t.slice(0, 500), model }, 'Anthropic API error');
+      throw new Error(`Anthropic API error: ${res.status} ${t.slice(0, 200)}`);
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error('Anthropic: no response body');
+
+    const dec = new TextDecoder();
+    let buf = '';
+    let chunkCount = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunkCount++;
+      const decoded = dec.decode(value, { stream: true });
+      buf += decoded;
+      const lines = buf.split('\n');
+      buf = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (!line.trim() || !line.startsWith('data: ')) continue;
+        const dataStr = line.slice(6);
+
+        try {
+          const j = JSON.parse(dataStr) as {
+            type?: string;
+            delta?: { type?: string; text?: string };
+            content_block?: { type?: string; id?: string; name?: string; input?: Record<string, unknown> };
+          };
+
+          if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta' && j.delta.text) {
+            yield {
+              type: 'content_block_delta' as const,
+              delta: { type: 'text_delta' as const, text: j.delta.text },
+            };
+          }
+
+          if (j.type === 'content_block_start' && j.content_block?.type === 'tool_use') {
+            yield {
+              type: 'content_block_start' as const,
+              content_block: {
+                type: 'tool_use' as const,
+                id: j.content_block.id ?? '',
+                name: j.content_block.name ?? '',
+                input: j.content_block.input ?? {},
+              },
+            };
+          }
+
+          if (j.type === 'message_stop') {
+            yield { type: 'message_stop' as const };
+            return;
+          }
+        } catch {
+          // skip malformed chunk
+        }
+      }
+    }
+
+    logger.debug({ chunkCount, model }, '[Anthropic] Stream complete');
+    yield { type: 'message_stop' as const };
+  } catch (error) {
+    logger.warn({ error, model }, 'Anthropic request failed');
+    yield {
+      type: 'content_block_delta' as const,
+      delta: {
+        type: 'text_delta' as const,
+        text: `[Anthropic connection failed - ${error instanceof Error ? error.message : 'Unknown error'}]`,
+      },
+    };
+    yield { type: 'message_stop' as const };
+  }
+}
+
+/**
+ * Stream from Ollama (native API).
+ */
+async function* streamOllama(params: StreamParams): AsyncGenerator<StreamEvent> {
+  const config = PROVIDER_CONFIGS.ollama;
+  const model = params.model || config.defaultModel;
+
+  logger.debug({ model, provider: 'ollama' }, '[Ollama] Starting stream request');
+
+  const body: Record<string, unknown> = {
+    model,
+    messages: [
+      ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
+      ...params.messages.map((m) => ({
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content : 'Image content not supported',
+      })),
+    ],
+    stream: true,
+    options: {
+      num_predict: params.max_tokens,
+      temperature: params.temperature ?? 0.7,
+      top_p: params.top_p ?? 0.9,
+    },
+  };
+
+  const timeoutMs = getTimeoutMs('ollama', params.max_tokens);
+
+  try {
+    const res = await fetch(config.baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      logger.warn({ status: res.status, body: t.slice(0, 500), model }, 'Ollama API error');
+      throw new Error(`Ollama API error: ${res.status} ${t.slice(0, 200)}`);
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error('Ollama: no response body');
+
+    const dec = new TextDecoder();
+    let buf = '';
+    let chunkCount = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunkCount++;
+      const decoded = dec.decode(value, { stream: true });
+      buf += decoded;
+      const lines = buf.split('\n');
+      buf = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const j = JSON.parse(line) as {
+            message?: { content?: string };
+            done?: boolean;
+            error?: string;
+          };
+
+          if (j.error) {
+            logger.warn({ error: j.error }, 'Ollama stream error');
+            yield { type: 'message_stop' as const };
+            return;
+          }
+
+          if (j.message?.content) {
+            yield {
+              type: 'content_block_delta' as const,
+              delta: { type: 'text_delta' as const, text: j.message.content },
+            };
+          }
+
+          if (j.done) {
+            yield { type: 'message_stop' as const };
+            return;
+          }
+        } catch {
+          // skip malformed chunk
+        }
+      }
+    }
+
+    logger.debug({ chunkCount, model }, '[Ollama] Stream complete');
+    yield { type: 'message_stop' as const };
+  } catch (error) {
+    logger.warn({ error, model }, 'Ollama request failed');
+    yield {
+      type: 'content_block_delta' as const,
+      delta: {
+        type: 'text_delta' as const,
+        text: `[Ollama connection failed - ensure Ollama is running at ${env.OLLAMA_BASE_URL}]`,
+      },
+    };
+    yield { type: 'message_stop' as const };
+  }
 }
 
 // =============================================================================
@@ -482,8 +840,23 @@ export async function* getStream(
   // Select the appropriate stream function
   let streamFn: (params: StreamParams) => AsyncGenerator<StreamEvent>;
   switch (provider) {
+    case 'openrouter':
+      streamFn = streamOpenRouter;
+      break;
+    case 'ollama':
+      streamFn = streamOllama;
+      break;
     case 'github-copilot':
       streamFn = streamGitHubCopilot;
+      break;
+    case 'kimi':
+      streamFn = streamKimi;
+      break;
+    case 'anthropic':
+      streamFn = streamAnthropic;
+      break;
+    case 'mistral':
+      streamFn = streamMistral;
       break;
     case 'nim':
     default:
@@ -516,11 +889,24 @@ export async function* getStream(
 // Register all providers with ai-core if available
 try {
   registerStreamProvider('nim', { name: 'nvidia-nim', supportsTools: true, stream: streamNim });
+  registerStreamProvider('openrouter', {
+    name: 'openrouter',
+    supportsTools: true,
+    stream: streamOpenRouter,
+  });
+  registerStreamProvider('ollama', { name: 'ollama', supportsTools: false, stream: streamOllama });
   registerStreamProvider('github-copilot', {
     name: 'github-copilot',
     supportsTools: true,
     stream: streamGitHubCopilot,
   });
+  registerStreamProvider('kimi', { name: 'kimi', supportsTools: true, stream: streamKimi });
+  registerStreamProvider('anthropic', {
+    name: 'anthropic',
+    supportsTools: true,
+    stream: streamAnthropic,
+  });
+  registerStreamProvider('mistral', { name: 'mistral', supportsTools: true, stream: streamMistral });
 } catch {
   // ai-core may not be available in all environments
 }
@@ -536,8 +922,18 @@ export function toApiProvider(provider: LLMProvider): ApiProvider | null {
   switch (provider) {
     case 'nim':
       return 'nvidia_nim';
+    case 'openrouter':
+      return 'openrouter';
+    case 'ollama':
+      return 'ollama';
     case 'github-copilot':
       return 'github_copilot';
+    case 'kimi':
+      return 'kimi';
+    case 'anthropic':
+      return 'anthropic';
+    case 'mistral':
+      return 'mistral';
     default:
       return null;
   }
@@ -556,6 +952,7 @@ export function getApiKeyForProvider(provider: LLMProvider): string | undefined 
  */
 export function isProviderConfigured(provider: LLMProvider): boolean {
   if (provider === 'mock') return true;
+  if (provider === 'ollama') return Boolean(env.OLLAMA_BASE_URL);
   return Boolean(getApiKeyForProvider(provider));
 }
 
@@ -576,7 +973,12 @@ export function getDefaultModelId(provider: LLMProvider = 'nim'): string {
 export function getConfiguredProviders(): LLMProvider[] {
   const providers: LLMProvider[] = [];
   if (isProviderConfigured('nim')) providers.push('nim');
+  if (isProviderConfigured('openrouter')) providers.push('openrouter');
+  if (isProviderConfigured('ollama')) providers.push('ollama');
   if (isProviderConfigured('github-copilot')) providers.push('github-copilot');
+  if (isProviderConfigured('kimi')) providers.push('kimi');
+  if (isProviderConfigured('anthropic')) providers.push('anthropic');
+  if (isProviderConfigured('mistral')) providers.push('mistral');
   return providers;
 }
 

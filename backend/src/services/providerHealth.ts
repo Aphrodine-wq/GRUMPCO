@@ -76,7 +76,12 @@ const HEALTH_CHECK_ENDPOINTS: Record<Exclude<LLMProvider, 'mock'>, string> = {
   nim:
     env.NVIDIA_NIM_URL?.replace('/chat/completions', '/models') ??
     'https://integrate.api.nvidia.com/v1/models',
+  openrouter: 'https://openrouter.ai/api/v1/models',
+  ollama: `${env.OLLAMA_BASE_URL}/api/tags`,
   'github-copilot': 'https://api.githubcopilot.com/models',
+  kimi: 'https://api.moonshot.cn/v1/models',
+  anthropic: 'https://api.anthropic.com/v1/models',
+  mistral: 'https://api.mistral.ai/v1/models',
 };
 
 // =============================================================================
