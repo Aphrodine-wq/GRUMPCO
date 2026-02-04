@@ -42,6 +42,21 @@ pub mod parallel_engine;
 // Hyper-optimized parse function
 pub mod hyper_parse;
 
+// GPU acceleration
+pub mod gpu_accelerator;
+
+// JIT compilation engine
+pub mod jit_engine;
+
+// Zero-copy memory architecture
+pub mod zero_copy;
+
+// AI model compression
+pub mod model_compression;
+
+// ULTIMATE parse engine - integrates EVERYTHING
+pub mod ultimate_parse;
+
 // Core NLP modules
 pub mod classifier;
 pub mod dependencies;
