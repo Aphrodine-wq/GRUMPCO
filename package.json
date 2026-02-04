@@ -41,7 +41,7 @@
     "data:synth": "cd services/nemo-curator && python generate_synthetic.py",
     "prepare": "husky || true",
     "installer:stage": "node scripts/build-installer-stage.js",
-    "installer:build": "node scripts/build-installer-stage.js && iscc installer/Setup.iss"
+    "installer:exe": "node scripts/build-installer-stage.js && makensis installer/Setup.nsi"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.0.0",

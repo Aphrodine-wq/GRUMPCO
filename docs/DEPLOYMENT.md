@@ -16,7 +16,7 @@ Complete step-by-step guide for deploying G-Rump to production.
 6. [SSL/HTTPS Setup](#sslhttps-setup)
 7. [Monitoring](#monitoring)
 8. [Troubleshooting](#troubleshooting)
-9. [Building the Windows installer (Setup.exe)](./INSTALLER.md)
+9. [Building the Windows installer (Setup.exe) with NSIS](./INSTALLER.md)
 
 ---
 
