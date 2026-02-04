@@ -50,10 +50,8 @@ RUN mkdir -p node_modules/@grump/ai-core && \
     cp -r packages/ai-core/dist node_modules/@grump/ai-core/ && \
     cp packages/ai-core/package.json node_modules/@grump/ai-core/
 
-# Build backend with SWC (using compatible options)
-RUN --mount=type=cache,target=/app/.swc \
-    npx swc src -d dist --copy-files --config-file .swcrc && \
-    node scripts/copy-migrations.mjs
+# Build backend with TypeScript (more reliable than SWC in Docker)
+RUN npx tsc && node scripts/copy-migrations.mjs
 
 # =============================================================================
 # Production stage
