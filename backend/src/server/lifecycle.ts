@@ -122,8 +122,11 @@ export async function initializeCore(): Promise<void> {
     logger.info("G-Agent goal repository initialized");
   }
 
-  await initializeCostTracking();
-  logger.info("Cost tracking initialized");
+  // Cost tracking uses raw DB (SQLite DDL); skip when using Supabase
+  if (databaseSupportsRawDb()) {
+    await initializeCostTracking();
+    logger.info("Cost tracking initialized");
+  }
 
   // Prewarm hot routes in serverless mode
   if (isServerlessRuntime) {
