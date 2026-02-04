@@ -2,8 +2,9 @@ services:
   - type: web
     name: grump-backend
     runtime: docker
-    dockerfilePath: backend/Dockerfile
-    dockerContext: .
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    dockerContext: ..
     healthCheckPath: /health/quick
     plan: starter
     autoDeploy: true
