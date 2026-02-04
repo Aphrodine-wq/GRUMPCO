@@ -23,6 +23,25 @@ use wasm_bindgen::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod simd_parser;
 
+// Hyper-optimized SIMD with AVX-512
+#[cfg(not(target_arch = "wasm32"))]
+pub mod hyper_simd;
+
+// Quantum-inspired optimization
+pub mod quantum_optimizer;
+
+// Neural pattern matching
+pub mod neural_pattern_engine;
+
+// Hyper-advanced caching
+pub mod hyper_cache;
+
+// Ultra-parallel processing
+pub mod parallel_engine;
+
+// Hyper-optimized parse function
+pub mod hyper_parse;
+
 // Core NLP modules
 pub mod classifier;
 pub mod dependencies;

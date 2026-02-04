@@ -22,6 +22,7 @@ rayon = "1.8"
 once_cell = "1.19"
 rustc-hash = "1.1"
 phf = { version = "0.11", features = ["macros"] }
+fastrand = "2.0"
 # Memory optimization crates
 bumpalo = { version = "3.14", features = ["collections"] }
 smallvec = { version = "1.11", features = ["union", "const_generics"] }
