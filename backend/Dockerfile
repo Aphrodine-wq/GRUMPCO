@@ -18,7 +18,7 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 # Copy package files - we'll patch workspace deps during build
-COPY package*.json ./
+COPY backend/package*.json ./
 
 # Create a patched package.json that removes workspace deps
 # The ai-core package will be bundled inline
@@ -36,9 +36,9 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY packages/ai-core ./packages/ai-core
 
 # Copy source code and build configuration
-COPY tsconfig.json .swcrc ./
-COPY src ./src
-COPY scripts ./scripts
+COPY backend/tsconfig.json backend/.swcrc ./
+COPY backend/src ./src
+COPY backend/scripts ./scripts
 
 # Build ai-core first
 WORKDIR /app/packages/ai-core
@@ -77,7 +77,7 @@ RUN addgroup -g 1001 -S grump && \
 WORKDIR /app
 
 # Copy package files and patch for production
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN node -e " \
     const pkg = require('./package.json'); \
     delete pkg.dependencies['@grump/ai-core']; \
