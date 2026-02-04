@@ -7,7 +7,17 @@
  * and that the requested model ID exists in the NIM catalog.
  */
 
-const CLOUD_NIM_BASE = "https://integrate.api.nvidia.com/v1";
+export const CLOUD_NIM_BASE = "https://integrate.api.nvidia.com/v1";
+
+/** True when baseUrl is the cloud Integrate API (no /v1/metrics endpoint). */
+export function isCloudNim(baseUrl: string): boolean {
+  try {
+    const u = new URL(baseUrl.replace(/\/$/, ""));
+    return u.hostname === "integrate.api.nvidia.com";
+  } catch {
+    return false;
+  }
+}
 
 export function getNimApiBase(): string {
   const raw = process.env.NVIDIA_NIM_URL?.trim();

@@ -6,7 +6,7 @@
 import logger from "../middleware/logger.js";
 import { createEmbeddingBatchProcessor } from "./batchProcessor.js";
 import { updateGpuMetrics } from "../middleware/metrics.js";
-import { getNimApiBase } from "../config/nim.js";
+import { getNimApiBase, isCloudNim } from "../config/nim.js";
 
 export interface NIMConfig {
   apiKey: string;
@@ -93,8 +93,8 @@ export class NIMAccelerator {
       },
     );
 
-    // Start GPU metrics monitoring if multi-GPU is enabled
-    if (this.config.enableMultiGPU) {
+    // Start GPU metrics monitoring only for self-hosted NIM (cloud Integrate API has no /v1/metrics)
+    if (this.config.enableMultiGPU && !isCloudNim(this.config.baseUrl ?? "")) {
       this.startGPUMonitoring();
     }
 
