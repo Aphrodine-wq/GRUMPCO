@@ -85,13 +85,35 @@ const envSchema = z
       .default('false')
       .transform((v) => v === 'true'),
 
+    // OpenRouter - https://openrouter.ai
+    OPENROUTER_API_KEY: z.string().optional(),
+
+    // Ollama - Local/self-hosted (Enterprise)
+    OLLAMA_BASE_URL: z
+      .string()
+      .optional()
+      .default('http://localhost:11434')
+      .refine(
+        (v) => !v || /^https?:\/\/[^\s]+$/.test(String(v).trim()),
+        'OLLAMA_BASE_URL must be a valid http(s) URL'
+      ),
+
     // GitHub Copilot - https://github.com/features/copilot
     GITHUB_COPILOT_TOKEN: z.string().optional(),
 
+    // Kimi K2.5 - https://platform.moonshot.cn
+    KIMI_API_KEY: z.string().optional(),
+
+    // Anthropic - https://anthropic.com
+    ANTHROPIC_API_KEY: z.string().optional(),
+
+    // Mistral AI - https://mistral.ai
+    MISTRAL_API_KEY: z.string().optional(),
+
     // Provider routing preferences
-    ROUTER_FAST_PROVIDER: z.enum(['nim', 'github-copilot']).default('nim'),
-    ROUTER_QUALITY_PROVIDER: z.enum(['nim', 'github-copilot']).default('nim'),
-    ROUTER_CODING_PROVIDER: z.enum(['github-copilot', 'nim']).default('github-copilot'),
+    ROUTER_FAST_PROVIDER: z.enum(['nim', 'kimi', 'github-copilot', 'mistral', 'openrouter', 'anthropic', 'ollama']).default('nim'),
+    ROUTER_QUALITY_PROVIDER: z.enum(['anthropic', 'openrouter', 'nim', 'mistral', 'github-copilot', 'kimi', 'ollama']).default('anthropic'),
+    ROUTER_CODING_PROVIDER: z.enum(['github-copilot', 'mistral', 'nim', 'anthropic', 'openrouter', 'kimi', 'ollama']).default('github-copilot'),
 
     // Server
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -547,14 +569,25 @@ export default process.env;
  * Get API key for a provider. Abstraction for future secret manager integration.
  * When SECRET_MANAGER_URL is set, this could fetch from Vault/AWS/GCP; for now uses env.
  */
-export type ApiProvider = 'nvidia_nim' | 'github_copilot';
+export type ApiProvider = 'nvidia_nim' | 'openrouter' | 'ollama' | 'github_copilot' | 'kimi' | 'anthropic' | 'mistral';
 
 export function getApiKey(provider: ApiProvider): string | undefined {
   switch (provider) {
     case 'nvidia_nim':
       return env.NVIDIA_NIM_API_KEY;
+    case 'openrouter':
+      return env.OPENROUTER_API_KEY;
+    case 'ollama':
+      // Ollama typically doesn't require an API key for local instances
+      return undefined;
     case 'github_copilot':
       return env.GITHUB_COPILOT_TOKEN;
+    case 'kimi':
+      return env.KIMI_API_KEY;
+    case 'anthropic':
+      return env.ANTHROPIC_API_KEY;
+    case 'mistral':
+      return env.MISTRAL_API_KEY;
     default:
       return undefined;
   }
@@ -567,8 +600,18 @@ export function isProviderConfigured(provider: ApiProvider): boolean {
   switch (provider) {
     case 'nvidia_nim':
       return Boolean(env.NVIDIA_NIM_API_KEY);
+    case 'openrouter':
+      return Boolean(env.OPENROUTER_API_KEY);
+    case 'ollama':
+      return Boolean(env.OLLAMA_BASE_URL);
     case 'github_copilot':
       return Boolean(env.GITHUB_COPILOT_TOKEN);
+    case 'kimi':
+      return Boolean(env.KIMI_API_KEY);
+    case 'anthropic':
+      return Boolean(env.ANTHROPIC_API_KEY);
+    case 'mistral':
+      return Boolean(env.MISTRAL_API_KEY);
     default:
       return false;
   }
@@ -580,6 +623,11 @@ export function isProviderConfigured(provider: ApiProvider): boolean {
 export function getConfiguredProviders(): ApiProvider[] {
   const providers: ApiProvider[] = [];
   if (env.NVIDIA_NIM_API_KEY) providers.push('nvidia_nim');
+  if (env.OPENROUTER_API_KEY) providers.push('openrouter');
+  if (env.OLLAMA_BASE_URL) providers.push('ollama');
   if (env.GITHUB_COPILOT_TOKEN) providers.push('github_copilot');
+  if (env.KIMI_API_KEY) providers.push('kimi');
+  if (env.ANTHROPIC_API_KEY) providers.push('anthropic');
+  if (env.MISTRAL_API_KEY) providers.push('mistral');
   return providers;
 }

@@ -70,7 +70,12 @@ const CIRCUIT_BREAKER_RESET_MS = 60000; // 1 minute
 // Provider performance characteristics
 const PROVIDER_SPEED_RANKING: LLMProvider[] = [
   'nim', // Fastest and most reliable
+  'kimi', // Fast long-context
   'github-copilot', // Fast for code generation
+  'mistral', // Fast European provider
+  'anthropic', // Good balance
+  'openrouter', // Variable by model
+  'ollama', // Depends on hardware
 ];
 
 class SmartRetryService {

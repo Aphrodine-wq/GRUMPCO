@@ -9,7 +9,12 @@
  *
  * Provider Priority:
  * 1. NIM - Primary, reliable, high performance
- * 2. GitHub Copilot - Code generation specialist
+ * 2. Anthropic - Best quality (Claude)
+ * 3. OpenRouter - Best model selection
+ * 4. GitHub Copilot - Code generation specialist
+ * 5. Mistral AI - European, multilingual
+ * 6. Kimi K2.5 - Long context specialist
+ * 7. Ollama - Local/self-hosted (enterprise)
  *
  * @module services/modelRouter
  */
@@ -31,7 +36,7 @@ import {
 // =============================================================================
 
 /** Request type classification */
-export type RequestType = 'simple' | 'complex' | 'coding' | 'vision' | 'creative' | 'default';
+export type RequestType = 'simple' | 'complex' | 'coding' | 'vision' | 'creative' | 'long-context' | 'default';
 
 /** Routing decision result */
 export interface RoutingDecision {
@@ -71,6 +76,7 @@ interface ProviderRanking {
   quality: LLMProvider[];
   cost: LLMProvider[];
   coding: LLMProvider[];
+  longContext: LLMProvider[];
 }
 
 // =============================================================================
@@ -79,42 +85,83 @@ interface ProviderRanking {
 
 /** Provider rankings by different criteria (only configured providers) */
 const PROVIDER_RANKINGS: ProviderRanking = {
-  speed: ['nim', 'github-copilot'],
-  quality: ['nim', 'github-copilot'],
-  cost: ['nim', 'github-copilot'],
-  coding: ['github-copilot', 'nim'],
+  speed: ['nim', 'kimi', 'github-copilot', 'mistral', 'anthropic', 'openrouter', 'ollama'],
+  quality: ['anthropic', 'openrouter', 'nim', 'mistral', 'github-copilot', 'kimi', 'ollama'],
+  cost: ['ollama', 'nim', 'kimi', 'mistral', 'github-copilot', 'openrouter', 'anthropic'],
+  coding: ['github-copilot', 'mistral', 'anthropic', 'nim', 'openrouter', 'kimi', 'ollama'],
+  longContext: ['kimi', 'anthropic', 'nim', 'openrouter', 'mistral', 'github-copilot', 'ollama'],
 };
 
 /** Default model mappings by request type */
 const DEFAULT_MODELS: Record<RequestType, Record<LLMProvider, string>> = {
   simple: {
     nim: 'meta/llama-3.1-70b-instruct',
+    openrouter: 'meta-llama/llama-3.1-70b-instruct',
+    ollama: 'llama3.1',
     'github-copilot': 'gpt-3.5-turbo',
+    kimi: 'moonshot-v1-8k',
+    anthropic: 'claude-3-haiku-20240307',
+    mistral: 'mistral-small-latest',
     mock: 'mock-model',
   },
   complex: {
     nim: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+    openrouter: 'anthropic/claude-3.5-sonnet',
+    ollama: 'llama3.1',
     'github-copilot': 'gpt-4',
+    kimi: 'moonshot-v1-32k',
+    anthropic: 'claude-3-5-sonnet-20241022',
+    mistral: 'mistral-large-latest',
     mock: 'mock-model',
   },
   coding: {
     nim: 'mistralai/codestral-22b-instruct-v0.1',
+    openrouter: 'anthropic/claude-3.5-sonnet',
+    ollama: 'codellama',
     'github-copilot': 'gpt-4',
+    kimi: 'moonshot-v1-32k',
+    anthropic: 'claude-3-5-sonnet-20241022',
+    mistral: 'codestral-latest',
     mock: 'mock-model',
   },
   vision: {
     nim: 'meta/llama-3.1-70b-instruct',
+    openrouter: 'openai/gpt-4o',
+    ollama: 'llava',
     'github-copilot': 'gpt-4',
+    kimi: 'moonshot-v1-32k',
+    anthropic: 'claude-3-5-sonnet-20241022',
+    mistral: 'mistral-large-latest',
     mock: 'mock-model',
   },
   creative: {
     nim: 'meta/llama-3.1-405b-instruct',
+    openrouter: 'anthropic/claude-3-opus',
+    ollama: 'llama3.1',
     'github-copilot': 'gpt-4',
+    kimi: 'moonshot-v1-128k',
+    anthropic: 'claude-3-opus-20240229',
+    mistral: 'mistral-large-latest',
+    mock: 'mock-model',
+  },
+  'long-context': {
+    nim: 'meta/llama-3.1-405b-instruct',
+    openrouter: 'anthropic/claude-3.5-sonnet',
+    ollama: 'llama3.1',
+    'github-copilot': 'gpt-4',
+    kimi: 'moonshot-v1-128k',
+    anthropic: 'claude-3-5-sonnet-20241022',
+    mistral: 'mistral-large-latest',
     mock: 'mock-model',
   },
   default: {
     nim: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+    openrouter: 'anthropic/claude-3.5-sonnet',
+    ollama: 'llama3.1',
     'github-copilot': 'gpt-4',
+    kimi: 'moonshot-v1-32k',
+    anthropic: 'claude-3-5-sonnet-20241022',
+    mistral: 'mistral-large-latest',
     mock: 'mock-model',
   },
 };
@@ -134,6 +181,11 @@ export function classifyRequest(params: StreamParams): RequestType {
     return 'vision';
   }
 
+  // Long context requests (very long prompts)
+  if (content.length > 10000) {
+    return 'long-context';
+  }
+
   // Coding requests
   if (
     content.includes('code') ||
@@ -143,7 +195,9 @@ export function classifyRequest(params: StreamParams): RequestType {
     content.includes('refactor') ||
     content.includes('typescript') ||
     content.includes('javascript') ||
-    content.includes('python')
+    content.includes('python') ||
+    content.includes('api') ||
+    content.includes('class')
   ) {
     return 'coding';
   }
@@ -153,7 +207,8 @@ export function classifyRequest(params: StreamParams): RequestType {
     content.includes('creative') ||
     content.includes('story') ||
     content.includes('poem') ||
-    content.includes('imagine')
+    content.includes('imagine') ||
+    content.includes('write')
   ) {
     return 'creative';
   }
@@ -191,7 +246,7 @@ export function selectProvider(
       model,
       reason: 'User-specified provider',
       estimatedCost: config?.costPer1kTokens ?? 0,
-      estimatedLatency: options.provider === 'nim' ? 'fast' : 'medium',
+      estimatedLatency: getLatencyEstimate(options.provider),
       fallbackChain: [options.provider],
     };
   }
@@ -205,13 +260,13 @@ export function selectProvider(
       model,
       reason: 'User preference from settings',
       estimatedCost: config?.costPer1kTokens ?? 0,
-      estimatedLatency: options.userPreference === 'nim' ? 'fast' : 'medium',
-      fallbackChain: [options.userPreference, 'nim'],
+      estimatedLatency: getLatencyEstimate(options.userPreference),
+      fallbackChain: [options.userPreference, 'nim', 'openrouter'],
     };
   }
 
-  // Coding requests prefer GitHub Copilot
-  if (requestType === 'coding' && !options.preferSpeed) {
+  // Coding requests prefer GitHub Copilot or Mistral
+  if (requestType === 'coding') {
     const provider: LLMProvider = 'github-copilot';
     const model = options.model || DEFAULT_MODELS.coding[provider];
     return {
@@ -219,12 +274,54 @@ export function selectProvider(
       model,
       reason: 'GitHub Copilot optimized for code generation',
       estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
-      estimatedLatency: 'medium',
-      fallbackChain: ['github-copilot', 'nim'],
+      estimatedLatency: 'fast',
+      fallbackChain: ['github-copilot', 'mistral', 'anthropic', 'nim'],
     };
   }
 
-  // Default to NIM for all other cases
+  // Long context requests prefer Kimi
+  if (requestType === 'long-context') {
+    const provider: LLMProvider = 'kimi';
+    const model = options.model || DEFAULT_MODELS['long-context'][provider];
+    return {
+      provider,
+      model,
+      reason: 'Kimi K2.5 optimized for long context (128k tokens)',
+      estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
+      estimatedLatency: 'medium',
+      fallbackChain: ['kimi', 'anthropic', 'nim', 'openrouter'],
+    };
+  }
+
+  // Quality-focused requests prefer Anthropic
+  if (options.preferQuality || requestType === 'creative') {
+    const provider: LLMProvider = 'anthropic';
+    const model = options.model || DEFAULT_MODELS[requestType][provider];
+    return {
+      provider,
+      model,
+      reason: 'Anthropic Claude - Best quality and reasoning',
+      estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
+      estimatedLatency: 'medium',
+      fallbackChain: ['anthropic', 'openrouter', 'nim', 'mistral'],
+    };
+  }
+
+  // Speed-focused requests prefer NIM
+  if (options.preferSpeed) {
+    const provider: LLMProvider = 'nim';
+    const model = options.model || DEFAULT_MODELS[requestType][provider];
+    return {
+      provider,
+      model,
+      reason: 'NVIDIA NIM - Fastest inference',
+      estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
+      estimatedLatency: 'fast',
+      fallbackChain: ['nim', 'kimi', 'mistral', 'openrouter'],
+    };
+  }
+
+  // Default to NIM for balanced performance
   const provider: LLMProvider = 'nim';
   const model = options.model || DEFAULT_MODELS[requestType][provider];
   return {
@@ -233,8 +330,20 @@ export function selectProvider(
     reason: 'NVIDIA NIM - Primary provider for balanced performance',
     estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
     estimatedLatency: 'fast',
-    fallbackChain: ['nim', 'github-copilot'],
+    fallbackChain: ['nim', 'anthropic', 'openrouter', 'mistral'],
   };
+}
+
+/**
+ * Get estimated latency for a provider.
+ */
+function getLatencyEstimate(provider: LLMProvider): 'fast' | 'medium' | 'slow' {
+  const config = getProviderConfig(provider);
+  if (!config) return 'medium';
+  
+  if (config.speedRank <= 2) return 'fast';
+  if (config.speedRank <= 4) return 'medium';
+  return 'slow';
 }
 
 // =============================================================================
@@ -265,6 +374,14 @@ export function selectProvider(
  *   system: 'You are a coding assistant',
  *   messages: [{ role: 'user', content: 'Write a TypeScript function' }]
  * }, { requestType: 'coding' });
+ *
+ * // Long document -> routed to Kimi
+ * const stream = routeStream({
+ *   model: '',
+ *   max_tokens: 4096,
+ *   system: 'Analyze this document',
+ *   messages: [{ role: 'user', content: veryLongDocument }]
+ * }, { requestType: 'long-context' });
  * ```
  */
 export async function* routeStream(
@@ -320,4 +437,26 @@ export function estimateCost(
   const config = getProviderConfig(provider);
   if (!config) return 0;
   return ((inputTokens + outputTokens) / 1000) * config.costPer1kTokens;
+}
+
+/**
+ * Get recommended provider for a specific use case.
+ */
+export function getRecommendedProvider(useCase: 'speed' | 'quality' | 'cost' | 'coding' | 'long-context'): LLMProvider {
+  const configured = getConfiguredProviders();
+  
+  switch (useCase) {
+    case 'speed':
+      return configured.find(p => PROVIDER_RANKINGS.speed.includes(p)) ?? 'nim';
+    case 'quality':
+      return configured.find(p => PROVIDER_RANKINGS.quality.includes(p)) ?? 'anthropic';
+    case 'cost':
+      return configured.find(p => PROVIDER_RANKINGS.cost.includes(p)) ?? 'ollama';
+    case 'coding':
+      return configured.find(p => PROVIDER_RANKINGS.coding.includes(p)) ?? 'github-copilot';
+    case 'long-context':
+      return configured.find(p => PROVIDER_RANKINGS.longContext.includes(p)) ?? 'kimi';
+    default:
+      return 'nim';
+  }
 }
