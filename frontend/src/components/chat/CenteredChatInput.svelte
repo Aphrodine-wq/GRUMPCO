@@ -243,17 +243,12 @@
       </Tooltip>
     </div>
   </form>
-
-  <!-- Hint text -->
-  <p class="input-hint">
-    <kbd>Enter</kbd> to send, <kbd>Shift+Enter</kbd> for new line
-  </p>
 </div>
 
 <style>
   .centered-input-wrapper {
     width: 100%;
-    max-width: 1000px;
+    max-width: 880px;
     margin: 0 auto;
     padding: 0 1rem;
   }
@@ -453,25 +448,6 @@
 
   .send-button.streaming:hover {
     background: #dc2626;
-  }
-
-  /* Hint text */
-  .input-hint {
-    margin: 0.5rem 0 0;
-    font-size: 0.6875rem;
-    color: #9ca3af;
-    text-align: center;
-  }
-
-  .input-hint kbd {
-    display: inline-block;
-    padding: 0.125rem 0.375rem;
-    font-family: ui-monospace, monospace;
-    font-size: 0.625rem;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.25rem;
-    box-shadow: 0 1px 0 #d1d5db;
   }
 
   /* Reduced motion */

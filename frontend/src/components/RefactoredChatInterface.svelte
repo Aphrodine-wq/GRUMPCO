@@ -138,6 +138,17 @@
               : 'Chat'
   );
 
+  /** Flowchart labels under the input – change when mode changes */
+  const modeFlowchartLabels = $derived.by(() => {
+    if (shipModeActive) return ['Code', 'Ship', 'Deploy'];
+    if (chatMode === 'plan') return ['Plan', 'Tasks', 'Code', 'Ship'];
+    if (chatMode === 'spec') return ['Requirements', 'Spec', 'Plan', 'Code', 'Ship'];
+    if ($chatModeStore === 'argument') return ['Idea', 'Argument', 'Constraints'];
+    if ($chatModeStore === 'code') return ['Implement', 'Review', 'Ship'];
+    if ($chatModeStore === 'design') return ['Describe', 'Design', 'Spec', 'Plan', 'Code', 'Ship'];
+    return ['Describe', 'Design', 'Spec', 'Plan', 'Code', 'Ship'];
+  });
+
   // Confirmed Free Agent sessions
   const freeAgentLocalConfirmedSessionIds = new Set<string>();
 
@@ -836,17 +847,10 @@
           </button>
         </div>
         <div class="mode-flowchart" aria-hidden="true">
-          <span class="flow-label">Describe</span>
-          <span class="flow-arrow" aria-hidden="true">→</span>
-          <span class="flow-label">Design</span>
-          <span class="flow-arrow" aria-hidden="true">→</span>
-          <span class="flow-label">Spec</span>
-          <span class="flow-arrow" aria-hidden="true">→</span>
-          <span class="flow-label">Plan</span>
-          <span class="flow-arrow" aria-hidden="true">→</span>
-          <span class="flow-label">Code</span>
-          <span class="flow-arrow" aria-hidden="true">→</span>
-          <span class="flow-label">Ship</span>
+          {#each modeFlowchartLabels as label, i}
+            {#if i > 0}<span class="flow-arrow" aria-hidden="true">→</span>{/if}
+            <span class="flow-label">{label}</span>
+          {/each}
         </div>
         <div class="shortcut-hint-bottom">
           <span class="shortcut-hint-label"><kbd>Ctrl</kbd>+<kbd>K</kbd> search</span>
@@ -1015,7 +1019,7 @@
     justify-content: center;
   }
 
-  /* Empty state – pushed up, slightly smaller */
+  /* Empty state – pushed up a little */
   .empty-state {
     display: flex;
     flex-direction: column;
@@ -1026,6 +1030,7 @@
     text-align: center;
     width: 100%;
     min-height: 120px;
+    margin-top: -1rem;
   }
 
   .empty-title {

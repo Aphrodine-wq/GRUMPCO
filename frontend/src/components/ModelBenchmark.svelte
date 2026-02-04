@@ -151,12 +151,9 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: var(--bg-primary, #1a1a2e);
-    color: var(--text-primary, #e8e8e8);
-    font-family:
-      system-ui,
-      -apple-system,
-      sans-serif;
+    background: #f9fafb;
+    color: #111827;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
   .benchmark-header {
@@ -164,12 +161,15 @@
     align-items: center;
     gap: 1rem;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border, #333);
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
   }
 
   .benchmark-header h2 {
     margin: 0;
     font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
   }
 
   .benchmark-body {
@@ -184,12 +184,16 @@
   .benchmark-prompt {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid var(--border, #333);
+    border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
     font-size: 0.875rem;
     resize: vertical;
-    background: var(--bg-secondary, #16213e);
-    color: var(--text-primary, #e8e8e8);
+    background: #ffffff;
+    color: #111827;
+  }
+
+  .benchmark-prompt::placeholder {
+    color: #9ca3af;
   }
 
   .model-checkboxes {
@@ -203,6 +207,7 @@
     align-items: center;
     gap: 0.5rem;
     cursor: pointer;
+    color: #374151;
   }
 
   .benchmark-actions {
@@ -214,22 +219,28 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 0.875rem;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
   }
 
   .results-table th,
   .results-table td {
     padding: 0.5rem 0.75rem;
     text-align: left;
-    border-bottom: 1px solid var(--border, #333);
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
   }
 
   .results-table th {
-    color: var(--text-secondary, #888);
+    color: #6b7280;
     font-weight: 600;
+    background: #f9fafb;
   }
 
   .model-id {
     font-family: monospace;
     font-size: 0.8rem;
+    color: #111827;
   }
 </style>

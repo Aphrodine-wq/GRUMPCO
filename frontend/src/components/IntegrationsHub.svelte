@@ -12,19 +12,26 @@
     getOAuthUrl,
     setApiKey,
     setBotToken,
+    getFigmaAuthUrl,
+    getFigmaMe,
     PROVIDER_METADATA,
     type Integration,
     type IntegrationProvider,
     type IntegrationStatus,
   } from '../lib/integrationsApi';
   import { showToast } from '../stores/toastStore';
+  import { settingsStore } from '../stores/settingsStore';
+  import { get } from 'svelte/store';
   import { Button, Card, Badge, Modal, Spinner } from '../lib/design-system';
   import { ArrowLeft, ExternalLink, Settings, Trash2, Power, AlertCircle } from 'lucide-svelte';
+  import type { McpServerConfig } from '../types/settings';
 
   interface Props {
     onBack: () => void;
+    /** When true, hide header (for embedding in Settings Integrations tab) */
+    embedInTab?: boolean;
   }
-  let { onBack }: Props = $props();
+  let { onBack, embedInTab = false }: Props = $props();
 
   let integrations = $state<Integration[]>([]);
   let loading = $state(true);
@@ -33,21 +40,33 @@
   let apiKeyInput = $state('');
   let botTokenInput = $state('');
   let displayNameInput = $state('');
+  let enableMcpForGAgent = $state(false);
   let configuring = $state(false);
+  let figmaConnected = $state(false);
+  /** Set while redirecting to OAuth so we don't double-submit */
+  let oauthRedirecting = $state<IntegrationProvider | null>(null);
 
   const providers = Object.keys(PROVIDER_METADATA) as IntegrationProvider[];
 
-  // Group providers by category
+  // Group providers by category (matches backend IntegrationProviderId where applicable)
   const providerCategories = {
-    'Development Tools': ['github', 'gitlab', 'bitbucket', 'jira', 'linear'],
+    'Development Tools': ['github', 'gitlab', 'bitbucket', 'jira', 'linear', 'atlassian'],
     Communication: ['slack', 'discord', 'telegram'],
-    'AI & Models': ['openai', 'anthropic', 'huggingface'],
-    'Local Services': ['ollama', 'docker'],
-    Other: ['custom'],
+    'Deploy & Cloud': ['vercel', 'netlify', 'aws', 'gcp', 'azure'],
+    'Backend as a Service': ['supabase', 'firebase'],
+    'Productivity & Design': ['notion', 'figma', 'gmail', 'google_calendar', 'twitter', 'obsidian'],
+    'Voice & Messaging': ['elevenlabs', 'twilio', 'sendgrid'],
+    'Other': ['home_assistant', 'stripe', 'custom'],
   };
 
   onMount(async () => {
     await loadIntegrations();
+    try {
+      const me = await getFigmaMe();
+      figmaConnected = me.connected;
+    } catch {
+      figmaConnected = false;
+    }
   });
 
   async function loadIntegrations() {
@@ -88,6 +107,7 @@
     apiKeyInput = '';
     botTokenInput = '';
     displayNameInput = getProviderMeta(provider).name;
+    enableMcpForGAgent = false;
     showAddModal = true;
   }
 
@@ -96,15 +116,42 @@
     selectedProvider = null;
     apiKeyInput = '';
     botTokenInput = '';
+    enableMcpForGAgent = false;
     configuring = false;
+  }
+
+  async function addMcpForIntegration(provider: IntegrationProvider, integrationId: string) {
+    const meta = getProviderMeta(provider);
+    const current = get(settingsStore);
+    const existing = current?.mcp?.servers ?? [];
+    const entry: McpServerConfig = {
+      id: `integration_${provider}_${integrationId}`,
+      name: `${meta.name} (G-Agent)`,
+      enabled: true,
+    };
+    const next = [...existing.filter((s) => s.id !== entry.id), entry];
+    await settingsStore.save({ mcp: { servers: next } });
   }
 
   async function handleOAuth() {
     if (!selectedProvider) return;
+    await runOAuthFlow(selectedProvider);
+  }
+
+  /** Start OAuth from modal or from card; redirects (or opens window for Figma). */
+  async function runOAuthFlow(provider: IntegrationProvider) {
     try {
-      const { url } = await getOAuthUrl(selectedProvider);
-      window.location.href = url;
+      if (provider === 'figma') {
+        const { url } = await getFigmaAuthUrl();
+        window.open(url, '_blank', 'noopener,noreferrer');
+        showToast('Complete connection in the new window, then refresh', 'info');
+        return;
+      }
+      oauthRedirecting = provider;
+      const { authUrl } = await getOAuthUrl(provider);
+      window.location.href = authUrl;
     } catch (e) {
+      oauthRedirecting = null;
       showToast('Failed to start OAuth flow', 'error');
       console.error(e);
     }
@@ -115,6 +162,11 @@
     configuring = true;
     try {
       await setApiKey(selectedProvider, apiKeyInput.trim());
+      const list = await listIntegrations();
+      const added = list.find((i) => i.provider === selectedProvider);
+      if (enableMcpForGAgent && added) {
+        await addMcpForIntegration(selectedProvider, added.id);
+      }
       showToast(`${getProviderMeta(selectedProvider).name} connected!`, 'success');
       closeModal();
       await loadIntegrations();
@@ -131,6 +183,11 @@
     configuring = true;
     try {
       await setBotToken(selectedProvider, botTokenInput.trim());
+      const list = await listIntegrations();
+      const added = list.find((i) => i.provider === selectedProvider);
+      if (enableMcpForGAgent && added) {
+        await addMcpForIntegration(selectedProvider, added.id);
+      }
       showToast(`${getProviderMeta(selectedProvider).name} connected!`, 'success');
       closeModal();
       await loadIntegrations();
@@ -172,6 +229,7 @@
   }
 
   function isConnected(provider: IntegrationProvider): boolean {
+    if (provider === 'figma') return figmaConnected;
     return integrations.some((i) => i.provider === provider);
   }
 
@@ -183,17 +241,19 @@
   }
 </script>
 
-<div class="integrations-hub">
-  <header class="hub-header">
-    <Button variant="ghost" size="sm" onclick={onBack}>
-      <ArrowLeft size={16} />
-      Back
-    </Button>
-    <div class="header-text">
-      <h1>Integrations Hub</h1>
-      <p class="subtitle">Connect your favorite tools and services to supercharge your workflow</p>
-    </div>
-  </header>
+<div class="integrations-hub" class:embed={embedInTab}>
+  {#if !embedInTab}
+    <header class="hub-header">
+      <Button variant="ghost" size="sm" onclick={onBack}>
+        <ArrowLeft size={16} />
+        Back
+      </Button>
+      <div class="header-text">
+        <h1>Integrations Hub</h1>
+        <p class="subtitle">Connect your favorite tools and services to supercharge your workflow</p>
+      </div>
+    </header>
+  {/if}
 
   {#if loading}
     <div class="loading-state">
@@ -201,7 +261,9 @@
       <p>Loading integrations...</p>
     </div>
   {:else}
-    <!-- Connected Integrations -->
+    <div class="two-column-layout">
+      <!-- Left: Connected Integrations -->
+      <aside class="column-left">
     {#if integrations.length > 0}
       <section class="section">
         <div class="section-header">
@@ -213,7 +275,7 @@
         <div class="integrations-grid">
           {#each integrations as integration}
             {@const meta = getProviderMeta(integration.provider as IntegrationProvider)}
-            <Card padding="md">
+            <Card padding="sm">
               <div class="card-content connected">
                 <div class="card-top">
                   <div
@@ -248,9 +310,16 @@
           {/each}
         </div>
       </section>
+    {:else}
+      <section class="section">
+        <h2>Connected</h2>
+        <p class="empty-column-text">No integrations connected yet.</p>
+      </section>
     {/if}
+      </aside>
 
-    <!-- Available Integrations by Category -->
+      <!-- Right: Available Integrations by Category -->
+      <main class="column-right">
     {#each Object.keys(providerCategories) as category}
       {@const availableInCategory = getAvailableProvidersByCategory(category)}
       {#if availableInCategory.length > 0}
@@ -259,9 +328,9 @@
           <div class="integrations-grid">
             {#each availableInCategory as provider}
               {@const meta = getProviderMeta(provider)}
-              <Card padding="md">
+              <Card padding="sm">
                 <div class="card-content available">
-                  <div class="card-top">
+                  <div class="card-top card-top-centered">
                     <div
                       class="provider-icon"
                       style="background: {meta.color}15; color: {meta.color}"
@@ -274,14 +343,27 @@
                   </div>
                   <h3>{meta.name}</h3>
                   <p class="description">{meta.description}</p>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onclick={() => openAddModal(provider)}
-                    fullWidth
-                  >
-                    Connect
-                  </Button>
+                  {#if meta.authType === 'oauth'}
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onclick={() => runOAuthFlow(provider)}
+                      disabled={oauthRedirecting === provider}
+                      fullWidth
+                    >
+                      <ExternalLink size={14} />
+                      {oauthRedirecting === provider ? 'Redirecting…' : 'Sign in'}
+                    </Button>
+                  {:else}
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onclick={() => openAddModal(provider)}
+                      fullWidth
+                    >
+                      Connect
+                    </Button>
+                  {/if}
                 </div>
               </Card>
             {/each}
@@ -289,17 +371,8 @@
         </section>
       {/if}
     {/each}
-
-    <!-- Empty State -->
-    {#if integrations.length === 0}
-      <div class="empty-state">
-        <div class="empty-icon">
-          <Settings size={48} />
-        </div>
-        <h3>No integrations yet</h3>
-        <p>Connect your first integration to get started</p>
-      </div>
-    {/if}
+      </main>
+    </div>
   {/if}
 </div>
 
@@ -333,6 +406,13 @@
           placeholder="My {meta.name}"
           class="text-input"
         />
+      </div>
+
+      <div class="mcp-option">
+        <label class="checkbox-label">
+          <input type="checkbox" bind:checked={enableMcpForGAgent} />
+          <span>Also add this integration's MCP for G-Agent to automatically control</span>
+        </label>
       </div>
 
       {#if meta.authType === 'oauth'}
@@ -389,10 +469,20 @@
         </div>
         <Button
           variant="primary"
-          onclick={() => {
-            createIntegration(selectedProvider!);
+          onclick={async () => {
+            try {
+              const created = await createIntegration(selectedProvider!);
+              if (enableMcpForGAgent && created?.id) {
+                await addMcpForIntegration(selectedProvider!, created.id);
+              }
+              showToast(`${getProviderMeta(selectedProvider!).name} connected!`, 'success');
+            } catch (e) {
+              showToast('Failed to enable integration', 'error');
+              console.error(e);
+              return;
+            }
             closeModal();
-            loadIntegrations();
+            await loadIntegrations();
           }}
           fullWidth
         >
@@ -406,10 +496,45 @@
 <style>
   .integrations-hub {
     padding: 32px;
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: none;
+    width: 100%;
     height: 100%;
     overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  .integrations-hub.embed {
+    padding: 0;
+    max-width: none;
+    margin: 0;
+  }
+
+  .two-column-layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .two-column-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .column-left {
+    position: sticky;
+    top: 0;
+  }
+
+  .column-right {
+    min-width: 0;
+  }
+
+  .empty-column-text {
+    color: #a1a1aa;
+    font-size: 14px;
+    margin: 0;
   }
 
   .hub-header {
@@ -444,7 +569,7 @@
   }
 
   .section {
-    margin-bottom: 32px;
+    margin-bottom: 24px;
   }
 
   .section-header {
@@ -458,19 +583,33 @@
     font-size: 16px;
     font-weight: 600;
     color: #3f3f46;
+    text-align: center;
+    width: 100%;
     margin: 0;
+  }
+
+  .column-left .integrations-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .column-right .integrations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
   }
 
   .integrations-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
   }
 
   .card-content {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
   }
 
   .card-top {
@@ -479,18 +618,38 @@
     justify-content: space-between;
   }
 
+  .card-content.available {
+    align-items: center;
+    text-align: center;
+  }
+
+  .card-content.available .card-top.card-top-centered {
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .card-content.available h3 {
+    text-align: center;
+    width: 100%;
+  }
+
+  .card-content.available .description {
+    text-align: center;
+  }
+
   .provider-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
   .provider-icon.large {
-    width: 64px;
-    height: 64px;
+    width: 52px;
+    height: 52px;
   }
 
   .auth-type {
@@ -505,17 +664,17 @@
   }
 
   .card-content h3 {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     color: #18181b;
     margin: 0;
   }
 
   .description {
-    font-size: 13px;
+    font-size: 12px;
     color: #71717a;
     margin: 0;
-    line-height: 1.5;
+    line-height: 1.45;
     flex: 1;
   }
 
@@ -523,40 +682,6 @@
     display: flex;
     gap: 8px;
     margin-top: 4px;
-  }
-
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 80px 40px;
-    text-align: center;
-  }
-
-  .empty-icon {
-    width: 80px;
-    height: 80px;
-    border-radius: 20px;
-    background: #f4f4f5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #a1a1aa;
-    margin-bottom: 24px;
-  }
-
-  .empty-state h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #18181b;
-    margin: 0 0 8px;
-  }
-
-  .empty-state p {
-    font-size: 14px;
-    color: #71717a;
-    margin: 0;
   }
 
   /* Modal Content */
@@ -582,6 +707,23 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+
+  .mcp-option {
+    margin: 0.75rem 0;
+  }
+
+  .mcp-option .checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: normal;
+    cursor: pointer;
+  }
+
+  .mcp-option .checkbox-label input {
+    margin-top: 0.2rem;
   }
 
   .form-group label {

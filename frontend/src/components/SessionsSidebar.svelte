@@ -83,7 +83,7 @@
       group: 'ai',
       icon: 'swarm',
     },
-    { view: 'memory', label: 'Memory bank', keywords: ['memory'], group: 'ai', icon: 'memory' },
+    { view: 'memory', label: 'Memory', keywords: ['memory'], group: 'ai', icon: 'memory' },
     {
       view: 'approvals',
       label: 'Approvals',

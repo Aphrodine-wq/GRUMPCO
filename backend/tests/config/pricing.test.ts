@@ -63,9 +63,9 @@ describe('Pricing Configuration', () => {
         expect(TIERS.free.priceMonthlyCents).toBe(0);
       });
 
-      it('should have 100 credits per month', () => {
-        expect(TIERS.free.creditsPerMonth).toBe(100);
-        expect(TIERS.free.apiCallsPerMonth).toBe(100);
+      it('should have 10 credits per month', () => {
+        expect(TIERS.free.creditsPerMonth).toBe(10);
+        expect(TIERS.free.apiCallsPerMonth).toBe(10);
       });
 
       it('should have 1 seat and 1 GB storage', () => {

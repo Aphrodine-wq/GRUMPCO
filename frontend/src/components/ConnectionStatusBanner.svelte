@@ -26,7 +26,7 @@
 </script>
 
 {#if $connectionStatus === 'disconnected'}
-  <div class="connection-banner" role="alert" aria-live="polite">
+  <div class="connection-banner disconnected" role="alert" aria-live="polite">
     <WifiOff class="banner-icon" size={18} />
     <span>Backend disconnected. Retrying…</span>
     <button
@@ -42,6 +42,11 @@
       {retrying ? 'Retrying…' : 'Retry'}
     </button>
   </div>
+{:else if $connectionStatus === 'connected'}
+  <div class="connection-banner connected" role="status" aria-live="polite">
+    <span class="status-dot"></span>
+    <span>Connected</span>
+  </div>
 {/if}
 
 <style>
@@ -50,10 +55,27 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
-    color: #92400e;
     font-size: 0.875rem;
     font-weight: 500;
+  }
+
+  .connection-banner.connected {
+    background: #ffffff;
+    color: #059669;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .connection-banner.connected .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    flex-shrink: 0;
+  }
+
+  .connection-banner.disconnected {
+    background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
   }
 
   .connection-banner :global(.banner-icon) {

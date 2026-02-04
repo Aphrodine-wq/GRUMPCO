@@ -151,6 +151,11 @@
 
   <!-- Main content area -->
   <div class="slide-wrapper">
+    <!-- Full-bleed background for all slides -->
+    <div class="onboarding-bg" aria-hidden="true">
+      <div class="onboarding-bg-gradient"></div>
+      <div class="onboarding-bg-dots"></div>
+    </div>
     <div
       class="slide-content"
       class:transitioning={isTransitioning}
@@ -320,8 +325,40 @@
     z-index: 100;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(180deg, #fafafa 0%, #f5f3ff 100%);
     overflow: hidden;
+  }
+
+  .onboarding-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .onboarding-bg-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      165deg,
+      #fafafa 0%,
+      #f5f3ff 25%,
+      #ede9fe 50%,
+      #e9e5ff 75%,
+      #ddd6fe 100%
+    );
+  }
+
+  .onboarding-bg-dots {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgba(124, 58, 237, 0.12) 1px,
+      transparent 0
+    );
+    background-size: 22px 22px;
+    opacity: 0.9;
   }
 
   /* Skip button */
@@ -351,24 +388,29 @@
     outline-offset: 2px;
   }
 
-  /* Slide wrapper */
+  /* Slide wrapper – scrollable so tall slides are not cut off */
   .slide-wrapper {
+    position: relative;
     flex: 1;
+    min-height: 0;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 2rem;
     padding-bottom: 4rem;
   }
 
   .slide-content {
+    position: relative;
+    z-index: 1;
     width: 100%;
-    height: 100%;
+    min-height: min-content;
     max-width: 900px;
     transition:
-      opacity 0.2s ease-out,
-      transform 0.3s ease-out;
+      opacity 0.4s ease-out,
+      transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .slide-content.transitioning {
@@ -389,6 +431,7 @@
     flex-direction: column;
     align-items: center;
     width: 100%;
+    min-height: 0;
     max-height: 100%;
     overflow-y: auto;
     padding-bottom: 2rem;

@@ -497,9 +497,10 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: linear-gradient(180deg, #0c1222 0%, #0f1729 100%);
+    background: #ffffff;
     border-radius: 12px;
     overflow: hidden;
+    border: 1px solid #e5e7eb;
   }
 
   .panel-header {
@@ -507,8 +508,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    background: rgba(0, 0, 0, 0.3);
-    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
   }
 
   .header-left {
@@ -519,19 +520,20 @@
 
   .panel-icon {
     font-size: 24px;
+    color: #374151;
   }
 
   .panel-header h3 {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
-    color: #e0e0ff;
+    color: #111827;
   }
 
   .queue-toggle {
     width: 28px;
     height: 28px;
-    background: rgba(59, 130, 246, 0.2);
+    background: rgba(59, 130, 246, 0.12);
     border: 1px solid rgba(59, 130, 246, 0.3);
     border-radius: 50%;
     cursor: pointer;
@@ -539,16 +541,18 @@
     align-items: center;
     justify-content: center;
     font-size: 12px;
+    color: #374151;
     transition: all 0.2s;
   }
 
   .queue-toggle:hover {
-    background: rgba(59, 130, 246, 0.3);
+    background: rgba(59, 130, 246, 0.2);
   }
 
   .queue-toggle.running {
-    background: rgba(16, 185, 129, 0.2);
-    border-color: rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: #059669;
     animation: pulse-running 2s ease-in-out infinite;
   }
 
@@ -599,13 +603,14 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
   }
 
   .filter-tabs {
     display: flex;
     gap: 4px;
-    background: rgba(0, 0, 0, 0.3);
+    background: #f3f4f6;
     padding: 3px;
     border-radius: 8px;
   }
@@ -614,7 +619,7 @@
     padding: 6px 14px;
     background: transparent;
     border: none;
-    color: #888;
+    color: #6b7280;
     font-size: 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -622,13 +627,14 @@
   }
 
   .filter-tabs button.active {
-    background: #3b82f6;
-    color: white;
+    background: #ffffff;
+    color: #111827;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 
   .add-btn {
     padding: 8px 16px;
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    background: #374151;
     border: none;
     color: white;
     font-size: 12px;
@@ -639,14 +645,15 @@
   }
 
   .add-btn:hover {
+    background: #4b5563;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .new-goal-form {
     padding: 16px;
-    background: rgba(0, 0, 0, 0.4);
-    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
   }
 
   .form-header {
@@ -658,14 +665,14 @@
 
   .form-header h4 {
     margin: 0;
-    color: #e0e0ff;
+    color: #111827;
     font-size: 14px;
   }
 
   .close-btn {
     background: transparent;
     border: none;
-    color: #888;
+    color: #6b7280;
     font-size: 18px;
     cursor: pointer;
   }
@@ -673,10 +680,10 @@
   .new-goal-form textarea {
     width: 100%;
     padding: 12px;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
-    color: #e0e0ff;
+    color: #111827;
     font-size: 13px;
     resize: none;
     margin-bottom: 12px;
@@ -698,17 +705,17 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #a0a0c0;
+    color: #374151;
     font-size: 13px;
   }
 
   .form-row select,
   .form-row input[type='datetime-local'] {
     padding: 6px 12px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
     border-radius: 6px;
-    color: #e0e0ff;
+    color: #111827;
     font-size: 12px;
   }
 
@@ -730,9 +737,9 @@
 
   .cancel-btn {
     padding: 8px 16px;
-    background: rgba(100, 100, 100, 0.2);
-    border: none;
-    color: #888;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    color: #6b7280;
     font-size: 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -765,7 +772,7 @@
     align-items: center;
     justify-content: center;
     height: 200px;
-    color: #666;
+    color: #6b7280;
     gap: 12px;
   }
 
@@ -791,21 +798,21 @@
 
   .hint {
     font-size: 12px;
-    color: #555;
+    color: #6b7280;
   }
 
   .goal-card {
     padding: 14px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(59, 130, 246, 0.15);
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .goal-card:hover {
-    background: rgba(59, 130, 246, 0.1);
-    border-color: rgba(59, 130, 246, 0.3);
+    background: #f3f4f6;
+    border-color: #d1d5db;
   }
 
   .goal-card.executing {
@@ -862,13 +869,13 @@
 
   .timestamp {
     margin-left: auto;
-    color: #555;
+    color: #6b7280;
     font-size: 11px;
   }
 
   .goal-description {
     margin: 0 0 10px;
-    color: #c0c0e0;
+    color: #374151;
     font-size: 13px;
     line-height: 1.4;
   }
@@ -893,9 +900,10 @@
   }
 
   .cron-info code {
-    background: rgba(0, 0, 0, 0.3);
+    background: #e5e7eb;
     padding: 2px 6px;
     border-radius: 4px;
+    color: #111827;
   }
 
   .error-info {
@@ -925,9 +933,9 @@
 
   .action-btn {
     padding: 4px 12px;
-    background: rgba(100, 100, 100, 0.2);
-    border: none;
-    color: #888;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    color: #6b7280;
     font-size: 11px;
     border-radius: 4px;
     cursor: pointer;
@@ -935,8 +943,8 @@
   }
 
   .action-btn:hover {
-    background: rgba(100, 100, 100, 0.3);
-    color: #c0c0c0;
+    background: #e5e7eb;
+    color: #374151;
   }
 
   .action-btn.retry {

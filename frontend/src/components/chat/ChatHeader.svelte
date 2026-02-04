@@ -80,16 +80,19 @@
 
   {#if modelName !== undefined && onModelClick}
     <div class="model-block">
-      <span class="model-label">{modelName}</span>
-      <button
-        type="button"
-        class="header-btn model-btn"
-        class:active={modelPickerOpen}
-        onclick={() => onModelClick()}
-        title="Change model"
-      >
-        Change
-      </button>
+      <span class="model-label-heading">Model</span>
+      <div class="model-row">
+        <span class="model-value">{modelName}</span>
+        <button
+          type="button"
+          class="header-btn model-btn"
+          class:active={modelPickerOpen}
+          onclick={() => onModelClick()}
+          title="Change model"
+        >
+          Change
+        </button>
+      </div>
     </div>
   {/if}
 </header>
@@ -141,15 +144,28 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.25rem;
+    gap: 0.125rem;
+    margin-top: -0.2rem;
   }
 
-  .model-label {
-    font-size: 0.6875rem;
+  .model-label-heading {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .model-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .model-value {
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--color-text-secondary, #4a4a5a);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
   }
 
   .header-btn.model-btn {

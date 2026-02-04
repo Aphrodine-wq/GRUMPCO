@@ -28,14 +28,15 @@
   import { onboardingStore } from '../stores/onboardingStore';
   import { newOnboardingStore } from '../stores/newOnboardingStore';
   import { authGateStore } from '../stores/authGateStore';
-  import { preferencesStore, density, includeRagContext } from '../stores/preferencesStore';
+  import { preferencesStore, density, includeRagContext, gAgentCapabilities, type GAgentCapabilityKey } from '../stores/preferencesStore';
   import {
     wakeWordEnabled,
     setWakeWordEnabled,
     loadWakeWordEnabled,
   } from '../stores/wakeWordStore';
   import { getDockerInfo, isDockerSetupAvailable } from '../lib/dockerSetup';
-  import { Settings2, Cpu, Shield, Puzzle, CreditCard, Info } from 'lucide-svelte';
+  import { Settings2, Cpu, Shield, Puzzle, CreditCard, Info, GitBranch, Sun, Moon, Monitor } from 'lucide-svelte';
+  import type { AppTheme } from '../stores/newOnboardingStore';
 
   interface Tier {
     id: string;
@@ -68,21 +69,27 @@
   interface Props {
     onBack?: () => void;
     billingUrl?: string;
+    /** When set, open this tab on first render (e.g. 'integrations' when navigating from sidebar). */
+    initialTab?: string;
   }
 
-  let { onBack, billingUrl = '#' }: Props = $props();
+  let { onBack, billingUrl = '#', initialTab }: Props = $props();
 
   // Tab definitions
   const settingsTabs = [
     { id: 'general', label: 'General', icon: Settings2 },
     { id: 'models', label: 'Models', icon: Cpu },
+    { id: 'git', label: 'Git', icon: GitBranch },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'integrations', label: 'Integrations', icon: Puzzle },
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'about', label: 'About', icon: Info },
   ];
 
-  let activeTab = $state('general');
+  // svelte-ignore state_referenced_locally - initialTab is intentionally used only for initial tab
+  let activeTab = $state(
+    initialTab && settingsTabs.some((t) => t.id === initialTab) ? initialTab : 'general'
+  );
 
   // State
   let settings = $state<Settings | null>(null);
@@ -367,6 +374,30 @@
       <!-- ═══════════════════════════════════════════════════════════════════ -->
       {#if activeTab === 'general'}
         <div class="tab-section">
+          <Card title="Theme" padding="md">
+            <p class="section-desc">
+              Choose light, dark, or follow your system preference. Dark mode applies across the app.
+            </p>
+            <div class="theme-options-row">
+              {#each [
+                { id: 'light' as AppTheme, label: 'Light', icon: Sun },
+                { id: 'dark' as AppTheme, label: 'Dark', icon: Moon },
+                { id: 'system' as AppTheme, label: 'System', icon: Monitor },
+              ] as option}
+                <button
+                  type="button"
+                  class="theme-option-btn"
+                  class:selected={$newOnboardingStore?.theme === option.id}
+                  onclick={() => newOnboardingStore.setTheme(option.id)}
+                  aria-pressed={$newOnboardingStore?.theme === option.id}
+                >
+                  <option.icon size={20} />
+                  <span>{option.label}</span>
+                </button>
+              {/each}
+            </div>
+          </Card>
+
           <Card title="Appearance" padding="md">
             <p class="section-desc">
               Layout density for lists and padding. Compact uses about 20% less space.
@@ -395,6 +426,22 @@
                   <span>Compact</span>
                 </label>
               </div>
+            </div>
+          </Card>
+
+          <Card title="Privacy & Telemetry" padding="md">
+            <p class="section-desc">
+              Help improve G-Rump by sharing anonymous usage data. No code or prompts are sent.
+            </p>
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={$newOnboardingStore?.telemetryOptIn ?? true}
+                  onchange={(e) => newOnboardingStore.setTelemetry((e.target as HTMLInputElement).checked)}
+                />
+                <span class="checkbox-label-text">Send anonymous usage analytics</span>
+              </label>
             </div>
           </Card>
 
@@ -665,6 +712,57 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- GIT TAB -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+      {:else if activeTab === 'git'}
+        <div class="tab-section git-tab">
+          <Card title="Workspace & Repository" padding="md">
+            <p class="section-desc">
+              Current workspace and Git repository. Connect a GitHub repo in Integrations or open a folder in the app.
+            </p>
+            <div class="field-group">
+              <span class="field-label">Workspace root</span>
+              <p class="field-value monospace">{workspaceRoot ?? 'Not set'}</p>
+            </div>
+            <div class="field-group">
+              <span class="field-label">Repository URL</span>
+              <p class="field-value monospace">{$workspaceStore?.repoUrl ?? 'None (local only)'}</p>
+            </div>
+            <Button variant="ghost" size="sm" onclick={() => setCurrentView('integrations')}>
+              Open Integrations to connect GitHub
+            </Button>
+          </Card>
+          <Card title="G-Agent Git Capability" padding="md">
+            <p class="section-desc">
+              Allow G-Agent to run Git commands (status, diff, commit, branch, push) in your workspace.
+            </p>
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={$gAgentCapabilities?.includes('git') ?? false}
+                  onchange={(e) => {
+                    const enabled = (e.target as HTMLInputElement).checked;
+                    const current: GAgentCapabilityKey[] = $gAgentCapabilities ?? [];
+                    const next: GAgentCapabilityKey[] = enabled
+                      ? (current.includes('git') ? current : [...current, 'git'])
+                      : current.filter((c) => c !== 'git');
+                    preferencesStore.setGAgentCapabilities(next);
+                  }}
+                />
+                <span class="checkbox-label-text">Enable Git for G-Agent</span>
+              </label>
+            </div>
+          </Card>
+          <Card title="Git Tips" padding="md">
+            <ul class="tips-list">
+              <li>Use Ship mode to push generated code to a new GitHub repo.</li>
+              <li>Connect GitHub in Integrations for OAuth and repo access.</li>
+              <li>G-Agent can run git status, diff, commit, and push when the capability is enabled.</li>
+            </ul>
+          </Card>
+        </div>
+
         <!-- SECURITY TAB -->
         <!-- ═══════════════════════════════════════════════════════════════════ -->
       {:else if activeTab === 'security'}
@@ -1508,6 +1606,62 @@
     font-weight: 600;
     color: #3f3f46;
     margin-bottom: 8px;
+  }
+
+  .theme-options-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .theme-option-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-secondary, #4a4a5a);
+    background: var(--color-bg-input, #f3f4f6);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .theme-option-btn:hover {
+    background: var(--color-bg-card-hover, #f9fafb);
+    border-color: var(--color-border-highlight, #d1d5db);
+  }
+
+  .theme-option-btn.selected {
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
+    border-color: var(--color-primary, #7c3aed);
+    color: var(--color-primary, #7c3aed);
+  }
+
+  .field-value {
+    margin: 0.25rem 0 0;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary, #4a4a5a);
+  }
+
+  .field-value.monospace {
+    font-family: ui-monospace, monospace;
+    font-size: 0.8125rem;
+    word-break: break-all;
+  }
+
+  .tips-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary, #4a4a5a);
+    line-height: 1.6;
+  }
+
+  .tips-list li {
+    margin-bottom: 0.5rem;
   }
 
   .radio-row {

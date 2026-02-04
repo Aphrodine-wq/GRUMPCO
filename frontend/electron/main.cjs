@@ -10,7 +10,7 @@
  * 6. Memory-optimized window creation
  */
 
-const { app, BrowserWindow, shell, ipcMain, nativeImage, nativeTheme, Tray, Menu, Notification, globalShortcut } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, nativeImage, nativeTheme, Tray, Menu, Notification, globalShortcut, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn, exec } = require('child_process');
@@ -183,6 +183,7 @@ function createSplashWindow() {
     center: true,
     backgroundColor: '#1a1a1a',
     skipTaskbar: true,
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -192,9 +193,10 @@ function createSplashWindow() {
   });
 
   const splashHTML = `<!DOCTYPE html>
-<html><head><style>
+<html><head><meta charset="utf-8"><style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#A855F7;font-size:14px;overflow:hidden}
+html,body{background:#1a1a1a !important;min-height:100vh}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#A855F7;font-size:14px;overflow:hidden}
 .logo{width:48px;height:48px;margin-bottom:12px}
 </style></head><body>
 <svg class="logo" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#7C3AED" stroke-width="5" opacity="0.9"/><circle cx="35" cy="40" r="6" fill="#7C3AED"/><circle cx="65" cy="40" r="6" fill="#7C3AED"/><path d="M 28 68 Q 50 55 72 68" stroke="#7C3AED" stroke-width="5" stroke-linecap="round" fill="none"/></svg>
@@ -202,6 +204,11 @@ body{background:#1a1a1a;display:flex;flex-direction:column;align-items:center;ju
 </body></html>`;
 
   splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHTML)}`);
+  splashWindow.once('ready-to-show', () => {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.show();
+    }
+  });
 }
 
 // Optimized main window creation
@@ -444,6 +451,19 @@ ipcMain.handle('shell:show-item-in-folder', (_event, pathToOpen) => {
   } catch (e) {
     console.warn('[G-Rump] showItemInFolder failed:', e?.message);
   }
+});
+
+// Folder picker for Settings > Security > Allowed directories
+ipcMain.handle('dialog:select-directory', async () => {
+  const win = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+  const result = await dialog.showOpenDialog(win, {
+    properties: ['openDirectory'],
+    title: 'Select allowed directory',
+  });
+  if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+    return { canceled: true };
+  }
+  return { canceled: false, path: result.filePaths[0] };
 });
 
 // OS notification (ship/codegen complete, errors)

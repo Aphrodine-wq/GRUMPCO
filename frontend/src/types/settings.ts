@@ -19,7 +19,7 @@ export interface CustomModelConfig {
 }
 
 export interface ModelsSettings {
-  defaultProvider?: 'nim' | 'zhipu' | 'copilot' | 'openrouter';
+  defaultProvider?: 'nim' | 'zhipu' | 'copilot' | 'openrouter' | 'groq' | 'together' | 'ollama' | 'mock';
   defaultModelId?: string;
   /** Embedding model ID (e.g. BAAI/bge-small-en-v1.5, nvidia/nv-embed-v2) */
   embeddingModelId?: string;
@@ -33,7 +33,9 @@ export interface McpServerConfig {
   id: string;
   name: string;
   command?: string;
+  args?: string[];
   url?: string;
+  env?: Record<string, string>;
   enabled?: boolean;
 }
 

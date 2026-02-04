@@ -13,9 +13,9 @@ import type { CreativeDesignDoc } from './creativeDesignDoc.js';
 export type ShipPhase = 'design' | 'spec' | 'plan' | 'code' | 'completed' | 'failed';
 
 export interface ShipPreferences {
-  frontendFramework?: 'vue' | 'react';
-  backendRuntime?: 'node' | 'python' | 'go';
-  database?: 'postgres' | 'mongodb';
+  frontendFramework?: 'svelte' | 'next' | 'angular' | 'vue' | 'react';
+  backendRuntime?: 'node' | 'bun' | 'deno' | 'python' | 'go';
+  database?: 'postgres' | 'mongodb' | 'sqlite';
   includeTests?: boolean;
   includeDocs?: boolean;
   workspaceRoot?: string;
@@ -63,6 +63,10 @@ export interface ShipSession {
   createdAt: string;
   updatedAt: string;
   projectId?: string;
+  projectName?: string;
+  repoOrg?: string;
+  deploymentTarget?: string;
+  phases?: ShipRunnablePhase[];
   designResult?: DesignPhaseResult;
   specResult?: SpecPhaseResult;
   planResult?: PlanPhaseResult;
@@ -71,10 +75,20 @@ export interface ShipSession {
   error?: string;
 }
 
+export type ShipRunnablePhase = 'design' | 'spec' | 'plan' | 'code';
+
 export interface ShipStartRequest {
   projectDescription: string;
   preferences?: ShipPreferences;
   projectId?: string;
+  /** Optional project display name */
+  projectName?: string;
+  /** Optional repo or org (e.g. for GitHub) */
+  repoOrg?: string;
+  /** Optional deployment target: none, vercel, aws, gcp, etc. */
+  deploymentTarget?: string;
+  /** Phases to run; default all. If set, only these phases execute. */
+  phases?: ShipRunnablePhase[];
 }
 
 export interface ShipPhaseResponse {

@@ -65,7 +65,22 @@ vi.mock('mermaid', () => ({
   },
 }));
 
-// Helper to reset all mocks between tests
+/**
+ * Reset all test mocks between tests.
+ *
+ * Clears localStorage data, resets all vi mocks, and restores
+ * mock implementations to their original behavior. Call this
+ * in afterEach() to ensure test isolation.
+ *
+ * @example
+ * ```ts
+ * import { resetMocks } from './setup';
+ *
+ * afterEach(() => {
+ *   resetMocks();
+ * });
+ * ```
+ */
 export function resetMocks(): void {
   Object.keys(localStorageStore).forEach((key) => delete localStorageStore[key]);
   vi.clearAllMocks();

@@ -6,6 +6,7 @@
 // Re-export all SHIP types from shared package
 export type {
   ShipPhase,
+  ShipRunnablePhase,
   ShipSession,
   ShipPreferences,
   DesignPhaseResult,

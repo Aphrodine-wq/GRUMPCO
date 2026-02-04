@@ -235,16 +235,6 @@
         },
       },
       {
-        id: 'view-approvals',
-        label: 'Approvals',
-        category: 'ai',
-        icon: Check,
-        action: () => {
-          setCurrentView('approvals');
-          close();
-        },
-      },
-      {
         id: 'view-heartbeats',
         label: 'Scheduled tasks',
         category: 'ai',

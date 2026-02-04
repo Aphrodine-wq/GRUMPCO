@@ -370,14 +370,15 @@
 <style>
   .approvals-center {
     padding: 2rem;
-    max-width: 900px;
-    margin: 0 auto;
+    max-width: none;
+    width: 100%;
+    box-sizing: border-box;
     height: 100%;
     overflow-y: auto;
   }
 
   .header {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
 
   .back-btn {
@@ -399,39 +400,41 @@
   }
 
   h1 {
-    font-size: 1.75rem;
+    font-size: 1.375rem;
     font-weight: 700;
     color: #111827;
     margin: 0 0 0.25rem;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   .pending-badge {
     background: #ef4444;
     color: white;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    padding: 0.25rem 0.75rem;
+    padding: 0.2rem 0.5rem;
     border-radius: 9999px;
   }
 
   .subtitle {
+    font-size: 0.8125rem;
     color: #6b7280;
     margin: 0;
   }
 
   .filter-tabs {
     display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
+    gap: 0.375rem;
+    margin-bottom: 1rem;
     border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 0.5rem;
+    padding-bottom: 0.375rem;
   }
 
   .tab {
-    padding: 0.5rem 1rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
     background: transparent;
     border: none;
     border-radius: 6px;
@@ -441,7 +444,7 @@
     transition: all 0.2s;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.375rem;
   }
 
   .tab:hover {
@@ -489,14 +492,14 @@
   .approvals-list {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
   .approval-card {
     background: white;
     border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 1.25rem;
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
     transition: all 0.2s;
   }
 
@@ -509,8 +512,8 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
   }
 
   .action-info {
@@ -519,17 +522,17 @@
 
   .risk-badge {
     display: inline-block;
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     font-weight: 600;
-    padding: 0.25rem 0.5rem;
+    padding: 0.2rem 0.4rem;
     border-radius: 4px;
     text-transform: uppercase;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.375rem;
   }
 
   .action-info h3 {
     margin: 0;
-    font-size: 1rem;
+    font-size: 0.875rem;
     font-weight: 600;
     color: #111827;
   }
@@ -540,40 +543,40 @@
 
   .status {
     display: block;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     text-transform: capitalize;
   }
 
   .time {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     color: #9ca3af;
   }
 
   .reason {
     color: #4b5563;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    margin: 0 0 1rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    margin: 0 0 0.75rem;
   }
 
   .payload-details {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
   .payload-details summary {
     cursor: pointer;
     color: #6366f1;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 500;
   }
 
   .payload-details pre {
-    margin: 0.5rem 0 0;
-    padding: 1rem;
+    margin: 0.375rem 0 0;
+    padding: 0.75rem;
     background: #f9fafb;
-    border-radius: 8px;
-    font-size: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.6875rem;
     overflow-x: auto;
     color: #374151;
   }
@@ -582,12 +585,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 1rem;
+    padding-top: 0.75rem;
     border-top: 1px solid #f3f4f6;
   }
 
   .expiry {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     color: #9ca3af;
   }
 
@@ -602,8 +605,8 @@
 
   .approve-btn,
   .reject-btn {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     border: none;
     border-radius: 6px;

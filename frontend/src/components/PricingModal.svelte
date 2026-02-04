@@ -16,7 +16,7 @@
       price: '$0',
       period: 'forever',
       features: [
-        '50 API calls/month',
+        '10 API calls/month',
         'Basic architecture diagrams',
         'Community support',
         'Single project',
@@ -26,7 +26,7 @@
     {
       id: 'pro',
       name: 'Pro',
-      price: '$29',
+      price: '$49',
       period: 'per month',
       features: [
         '1,000 API calls/month',

@@ -54,7 +54,7 @@
   aria-label={ariaLabel}
 >
   <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="frowny-svg">
-    <circle cx="50" cy="50" r="45" stroke="var(--face-color)" stroke-width="5" opacity="0.85" />
+    <!-- No outer circle – logo is transparent; only eyes and mouth for clear read on any background -->
     <circle cx="35" cy="40" r="6" fill="var(--face-color)" />
     <circle cx="65" cy="40" r="6" fill="var(--face-color)" />
     <path

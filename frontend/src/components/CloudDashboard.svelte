@@ -1,4 +1,8 @@
 <script lang="ts">
+  /**
+   * Cloud Dashboard – unified view of infrastructure.
+   * Data from API only; no client-side mock.
+   */
   import { onMount } from 'svelte';
   import { fade, fly, slide } from 'svelte/transition';
   import { writable, derived } from 'svelte/store';
@@ -63,234 +67,23 @@
   const recentDeployments = derived(deployments, ($d) => $d.slice(0, 5));
   const totalMonthlyCost = derived(costs, ($c) => $c.reduce((sum, c) => sum + c.current, 0));
 
-  // Fallback mock data when API is unavailable
-  function getMockData() {
-    return {
-      integrations: [
-        {
-          id: 'vercel',
-          name: 'Vercel',
-          icon: 'vercel',
-          category: 'deploy' as const,
-          connected: true,
-          lastSync: new Date().toISOString(),
-          status: 'healthy' as const,
-        },
-        {
-          id: 'netlify',
-          name: 'Netlify',
-          icon: 'netlify',
-          category: 'deploy' as const,
-          connected: true,
-          lastSync: new Date().toISOString(),
-          status: 'healthy' as const,
-        },
-        {
-          id: 'aws',
-          name: 'AWS',
-          icon: 'aws',
-          category: 'cloud' as const,
-          connected: true,
-          lastSync: new Date().toISOString(),
-          status: 'healthy' as const,
-        },
-        {
-          id: 'gcp',
-          name: 'Google Cloud',
-          icon: 'gcp',
-          category: 'cloud' as const,
-          connected: false,
-        },
-        { id: 'azure', name: 'Azure', icon: 'azure', category: 'cloud' as const, connected: false },
-        {
-          id: 'supabase',
-          name: 'Supabase',
-          icon: 'supabase',
-          category: 'baas' as const,
-          connected: true,
-          lastSync: new Date().toISOString(),
-          status: 'healthy' as const,
-        },
-        {
-          id: 'firebase',
-          name: 'Firebase',
-          icon: 'firebase',
-          category: 'baas' as const,
-          connected: false,
-        },
-        {
-          id: 'github',
-          name: 'GitHub',
-          icon: 'github',
-          category: 'vcs' as const,
-          connected: true,
-          lastSync: new Date().toISOString(),
-          status: 'healthy' as const,
-        },
-        {
-          id: 'jira',
-          name: 'Jira',
-          icon: 'jira',
-          category: 'pm' as const,
-          connected: true,
-          lastSync: new Date().toISOString(),
-          status: 'warning' as const,
-        },
-        { id: 'linear', name: 'Linear', icon: 'linear', category: 'pm' as const, connected: false },
-      ],
-      deployments: [
-        {
-          id: 'd1',
-          project: 'g-rump-app',
-          provider: 'vercel' as const,
-          status: 'ready' as const,
-          url: 'https://g-rump.vercel.app',
-          branch: 'main',
-          commit: 'abc123',
-          createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-          duration: 45,
-        },
-        {
-          id: 'd2',
-          project: 'g-rump-docs',
-          provider: 'netlify' as const,
-          status: 'building' as const,
-          branch: 'main',
-          commit: 'def456',
-          createdAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
-        },
-        {
-          id: 'd3',
-          project: 'g-rump-api',
-          provider: 'vercel' as const,
-          status: 'ready' as const,
-          url: 'https://api.g-rump.dev',
-          branch: 'main',
-          commit: 'ghi789',
-          createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-          duration: 62,
-        },
-        {
-          id: 'd4',
-          project: 'g-rump-app',
-          provider: 'vercel' as const,
-          status: 'error' as const,
-          branch: 'feature/new-ui',
-          commit: 'jkl012',
-          createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-        },
-        {
-          id: 'd5',
-          project: 'landing-page',
-          provider: 'netlify' as const,
-          status: 'ready' as const,
-          url: 'https://grump.io',
-          branch: 'main',
-          commit: 'mno345',
-          createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-          duration: 28,
-        },
-      ],
-      resources: [
-        {
-          id: 'r1',
-          name: 'prod-api-cluster',
-          provider: 'aws' as const,
-          type: 'container' as const,
-          status: 'running' as const,
-          region: 'us-east-1',
-          cost: 145.5,
-        },
-        {
-          id: 'r2',
-          name: 'main-db',
-          provider: 'aws' as const,
-          type: 'database' as const,
-          status: 'running' as const,
-          region: 'us-east-1',
-          cost: 89.99,
-        },
-        {
-          id: 'r3',
-          name: 'static-assets',
-          provider: 'aws' as const,
-          type: 'storage' as const,
-          status: 'running' as const,
-          region: 'us-east-1',
-          cost: 12.3,
-        },
-        {
-          id: 'r4',
-          name: 'ai-inference',
-          provider: 'gcp' as const,
-          type: 'compute' as const,
-          status: 'running' as const,
-          region: 'us-central1',
-          cost: 234.0,
-        },
-        {
-          id: 'r5',
-          name: 'edge-functions',
-          provider: 'aws' as const,
-          type: 'serverless' as const,
-          status: 'running' as const,
-          region: 'global',
-          cost: 45.67,
-        },
-      ],
-      costs: [
-        {
-          provider: 'AWS',
-          current: 293.46,
-          forecast: 320.0,
-          trend: 'up' as const,
-          trendPercent: 8,
-        },
-        { provider: 'GCP', current: 234.0, forecast: 250.0, trend: 'up' as const, trendPercent: 5 },
-        {
-          provider: 'Vercel',
-          current: 20.0,
-          forecast: 20.0,
-          trend: 'stable' as const,
-          trendPercent: 0,
-        },
-        {
-          provider: 'Supabase',
-          current: 25.0,
-          forecast: 25.0,
-          trend: 'stable' as const,
-          trendPercent: 0,
-        },
-      ],
-    };
-  }
-
-  // Load data from API with fallback to mock data
   async function loadDashboardData() {
     isLoading.set(true);
-
     try {
       const response = await fetch('/api/cloud/dashboard');
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Use API data if available
-      integrations.set(data.integrations || getMockData().integrations);
-      deployments.set(data.deployments || getMockData().deployments);
-      resources.set(data.resources || getMockData().resources);
-      costs.set(data.costs || getMockData().costs);
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const json = await response.json();
+      const payload = json.data ?? {};
+      integrations.set(Array.isArray(payload.integrations) ? payload.integrations : []);
+      deployments.set(Array.isArray(payload.deployments) ? payload.deployments : []);
+      resources.set(Array.isArray(payload.resources) ? payload.resources : []);
+      costs.set(Array.isArray(payload.costs) ? payload.costs : []);
     } catch (error) {
-      console.warn('Failed to fetch cloud dashboard data, using mock data:', error);
-      // Fallback to mock data
-      const mock = getMockData();
-      integrations.set(mock.integrations);
-      deployments.set(mock.deployments);
-      resources.set(mock.resources);
-      costs.set(mock.costs);
+      console.warn('Failed to fetch cloud dashboard data:', error);
+      integrations.set([]);
+      deployments.set([]);
+      resources.set([]);
+      costs.set([]);
     } finally {
       isLoading.set(false);
     }

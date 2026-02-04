@@ -87,14 +87,10 @@ export const VIEW_REGISTRY = {
 
   // ── Integrations & Platform ────────────────────────────────────────────
   integrations: {
-    loader: () => import('../components/IntegrationsHub.svelte'),
+    loader: () => import('../components/TabbedSettingsScreen.svelte'),
     loadingLabel: 'Loading Integrations…',
     backTo: 'chat',
-  },
-  approvals: {
-    loader: () => import('../components/ApprovalsCenter.svelte'),
-    loadingLabel: 'Loading Approvals…',
-    backTo: 'chat',
+    extraProps: { initialTab: 'integrations' },
   },
   heartbeats: {
     loader: () => import('../components/HeartbeatsManager.svelte'),

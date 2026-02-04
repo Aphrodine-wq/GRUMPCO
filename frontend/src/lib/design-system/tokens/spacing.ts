@@ -78,7 +78,7 @@ export const semanticSpacing = {
 
   // Sidebar and panels
   layout: {
-    sidebarWidth: '280px',
+    sidebarWidth: '230px',
     sidebarCollapsed: '64px', // Increased from 48px (was too small)
     headerHeight: '48px',
     maxContentWidth: '896px', // Same as before

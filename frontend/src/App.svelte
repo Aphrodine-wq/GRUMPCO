@@ -30,6 +30,7 @@
   } from './stores/uiStore';
   import { workspaceStore } from './stores/workspaceStore';
   import { demoStore } from './stores/demoStore';
+  import { newOnboardingStore } from './stores/newOnboardingStore';
   import { isMobileDevice } from './utils/touchGestures';
   import { showToast } from './stores/toastStore';
   import type { Message } from './types';
@@ -37,6 +38,10 @@
   import CommandPalette from './components/CommandPalette.svelte';
 
   const SHORTCUTS_TIP_SHOWN_KEY = 'g-rump-shortcuts-tip-shown';
+
+  /** Views that use full width of main content (no outer padding; view controls its own padding). */
+  const FULL_WIDTH_VIEWS = ['designToCode', 'integrations'] as const;
+  const isFullWidthView = $derived(FULL_WIDTH_VIEWS.includes($currentView as (typeof FULL_WIDTH_VIEWS)[number]));
 
   let isMobile = $state(false);
   let densityValue = $state<'comfortable' | 'compact'>('comfortable');
@@ -62,6 +67,30 @@
   onMount(() => {
     localStorage.removeItem('mermaid-app-state');
     settingsStore.load().catch(() => {});
+
+    // Apply theme (light / dark / system) to document so dark mode works
+    function applyTheme() {
+      const data = get(newOnboardingStore);
+      const theme = data?.theme ?? 'system';
+      const resolved =
+        theme === 'system'
+          ? (typeof window !== 'undefined' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light')
+          : theme;
+      if (typeof document !== 'undefined' && document.documentElement) {
+        document.documentElement.setAttribute('data-theme', resolved);
+      }
+    }
+    applyTheme();
+    const unsubTheme = newOnboardingStore.subscribe(() => applyTheme());
+    let mediaQuery: MediaQueryList | null = null;
+    if (typeof window !== 'undefined') {
+      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      mediaQuery.addEventListener('change', applyTheme);
+    }
+
     checkAuth().catch(() => {});
 
     if (!$currentSession) {
@@ -168,6 +197,8 @@
 
     return () => {
       window.removeEventListener('keydown', onKeydown);
+      unsubTheme();
+      if (mediaQuery) mediaQuery.removeEventListener('change', applyTheme);
       unsubs.forEach((u) => u());
     };
   });
@@ -193,7 +224,7 @@
       <UnifiedSidebar />
     {/if}
 
-    <div class="main-content">
+    <div class="main-content" class:full-width={isFullWidthView}>
       {#key $currentView}
         <div class="main-content-view" transition:fade={{ duration: 200 }}>
           {#if $currentView === 'settings'}
@@ -253,7 +284,7 @@
     width: 100%;
     /* Removed max-width constraint - now full width on maximize */
     margin: 0 auto;
-    background: #fafafa;
+    background: var(--color-bg-app, #fafafa);
     overflow: hidden;
     position: relative;
   }
@@ -285,7 +316,7 @@
 
   /* Ensure background fills the "void" outside the app on large screens */
   :global(body) {
-    background-color: #f0f2f5;
+    background-color: var(--color-bg-subtle, #f0f2f5);
   }
 
   /* Respect user preference for reduced motion */
@@ -305,6 +336,10 @@
     flex-direction: column;
     overflow: hidden;
     padding: var(--space-content, 20px);
+  }
+
+  .main-content.full-width {
+    padding: 0;
   }
 
   .main-content-view {

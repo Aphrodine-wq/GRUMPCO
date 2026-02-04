@@ -52,9 +52,10 @@
   }
   .ext-item {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 0.75rem;
     padding: 0.75rem 1rem;
     background: #fff;
     border-radius: 6px;
@@ -64,6 +65,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
+    min-width: 0;
+    flex: 1;
   }
   .ext-name {
     font-size: 0.9375rem;
@@ -73,13 +76,15 @@
   .ext-desc {
     font-size: 0.8125rem;
     color: #6b7280;
+    line-height: 1.4;
+    word-break: break-word;
   }
   .ext-link {
     font-size: 0.8125rem;
     font-weight: 600;
     color: var(--color-primary);
     text-decoration: none;
-    white-space: nowrap;
+    flex-shrink: 0;
   }
   .ext-link:hover {
     text-decoration: underline;

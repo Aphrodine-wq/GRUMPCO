@@ -22,7 +22,7 @@
     <h2>Troubleshooting</h2>
   </header>
   <div class="troubleshooting-body">
-    <Card title={steps[step]} padding="md">
+    <Card title={steps[step]} padding="md" class="troubleshooting-card">
       {#if step === 0}
         <p>Select the issue you’re seeing:</p>
         <ul class="issue-list">
@@ -58,26 +58,41 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    font-family:
-      system-ui,
-      -apple-system,
-      sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #ffffff;
   }
   .troubleshooting-header {
     display: flex;
     align-items: center;
     gap: 1rem;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border, #333);
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
   }
   .troubleshooting-header h2 {
     margin: 0;
     font-size: 1.25rem;
+    font-weight: 600;
+    color: #7c3aed;
   }
   .troubleshooting-body {
     flex: 1;
     overflow: auto;
     padding: 1.5rem;
+    background: #ffffff;
+  }
+  .troubleshooting-body :global(.troubleshooting-card) {
+    background: #ffffff !important;
+    border: 1px solid #e9d5ff !important;
+    box-shadow: 0 1px 3px rgba(124, 58, 237, 0.08) !important;
+  }
+  .troubleshooting-body :global(.troubleshooting-card .card-content),
+  .troubleshooting-body :global(.troubleshooting-card .card-header),
+  .troubleshooting-body :global(.troubleshooting-card .header-title) {
+    color: #6d28d9 !important;
+  }
+  .troubleshooting-body :global(.troubleshooting-card p) {
+    color: #6d28d9 !important;
   }
   .issue-list {
     list-style: none;
@@ -87,23 +102,27 @@
   .issue-btn {
     display: block;
     width: 100%;
-    padding: 0.5rem 1rem;
-    margin-bottom: 0.25rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
     text-align: left;
-    background: var(--bg-secondary, #222);
-    border: 1px solid var(--border, #333);
+    background: #ffffff;
+    border: 1px solid #e9d5ff;
     border-radius: 0.5rem;
-    color: var(--text-primary, #e8e8e8);
+    color: #6d28d9;
+    font-weight: 500;
     cursor: pointer;
   }
   .issue-btn:hover {
-    background: var(--bg-hover, #333);
+    background: #f5f3ff;
+    border-color: #7c3aed;
   }
-  code {
+  .troubleshooting-body code {
     font-size: 0.875rem;
-    padding: 0.125rem 0.25rem;
-    background: var(--bg-secondary, #222);
+    padding: 0.2rem 0.4rem;
+    background: #f5f3ff;
     border-radius: 0.25rem;
+    color: #6d28d9;
+    border: 1px solid #e9d5ff;
   }
   .troubleshooting-actions {
     display: flex;

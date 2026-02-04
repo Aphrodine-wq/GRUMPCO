@@ -96,6 +96,94 @@
 }
 
 /* ============================================
+   Dark Theme
+   ============================================ */
+[data-theme='dark'] {
+  /* Backgrounds */
+  --color-bg-app: #0f0f14;
+  --color-bg-subtle: #18181f;
+  --color-bg-card: #1a1a24;
+  --color-bg-card-hover: #22222e;
+  --color-bg-input: #252532;
+  --color-bg-overlay: rgba(0, 0, 0, 0.7);
+  --color-bg-elevated: #1e1e2a;
+  --color-bg-inset: #252532;
+
+  /* Text */
+  --color-text: #e4e4f0;
+  --color-text-secondary: #a1a1b5;
+  --color-text-muted: #71717a;
+  --color-text-inverse: #0f0f14;
+  --color-text-disabled: #6b6b7b;
+
+  /* Brand / Accents */
+  --color-primary: #a78bfa;
+  --color-primary-hover: #c4b5fd;
+  --color-primary-active: #ddd6fe;
+  --color-primary-subtle: rgba(167, 139, 250, 0.15);
+  --color-primary-glow: rgba(167, 139, 250, 0.25);
+
+  /* Secondary */
+  --color-secondary: #c4b5fd;
+  --color-secondary-hover: #a78bfa;
+  --color-secondary-subtle: rgba(167, 139, 250, 0.12);
+
+  /* Status Colors */
+  --color-success: #34d399;
+  --color-success-subtle: rgba(52, 211, 153, 0.15);
+  --color-success-border: rgba(52, 211, 153, 0.35);
+  --color-warning: #fbbf24;
+  --color-warning-subtle: rgba(251, 191, 36, 0.15);
+  --color-warning-border: rgba(251, 191, 36, 0.35);
+  --color-error: #f87171;
+  --color-error-subtle: rgba(248, 113, 113, 0.15);
+  --color-error-border: rgba(248, 113, 113, 0.35);
+  --color-info: #60a5fa;
+  --color-info-subtle: rgba(96, 165, 250, 0.15);
+  --color-info-border: rgba(96, 165, 250, 0.35);
+
+  /* Borders */
+  --color-border: #2d2d3a;
+  --color-border-light: #252532;
+  --color-border-highlight: #3d3d4d;
+  --color-border-focus: #a78bfa;
+
+  /* Glassmorphism */
+  --glass-bg: rgba(26, 26, 36, 0.95);
+  --glass-bg-hover: rgba(30, 30, 42, 0.98);
+  --glass-border: rgba(167, 139, 250, 0.12);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --glass-backdrop: blur(16px);
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 6px 26px rgba(167, 139, 250, 0.3);
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+
+  /* Focus Ring */
+  --focus-ring: 0 0 0 3px rgba(167, 139, 250, 0.4);
+
+  /* Scrollbar */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #3d3d4d;
+  --scrollbar-thumb-hover: #4d4d5d;
+
+  /* Syntax Highlighting */
+  --code-bg: #1e1e3f;
+  --code-text: #e4e4f7;
+  --code-keyword: #ff7eb6;
+  --code-string: #78dce8;
+  --code-number: #ab9df2;
+  --code-comment: #727297;
+  --code-function: #a9dc76;
+  --code-variable: #ffd866;
+}
+
+/* ============================================
    Utility Classes
    ============================================ */
 

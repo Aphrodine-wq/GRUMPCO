@@ -256,7 +256,7 @@ router.get(
         });
       }
 
-      res.redirect(`${frontendUrl}/dashboard`);
+      res.redirect(`${frontendUrl}/auth/done`);
     } catch (err) {
       const error = err as Error;
       log.error({ error: error.message }, "GitHub OAuth callback error");

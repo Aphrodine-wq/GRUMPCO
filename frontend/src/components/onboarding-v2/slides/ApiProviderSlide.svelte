@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { Key, Check, AlertCircle, ExternalLink } from 'lucide-svelte';
   import { newOnboardingStore, AI_PROVIDER_OPTIONS } from '../../../stores/newOnboardingStore';
+  import { getProviderIconPath, getProviderFallbackLetter } from '../../../lib/aiProviderIcons.js';
 
   interface Props {
     onNext: () => void;
@@ -19,9 +20,9 @@
   onMount(() => {
     setTimeout(() => (mounted = true), 100);
 
-    // Pre-select Kimi as recommended
+    // Pre-select Kimi as recommended; do not show nvidia-nim (platform default)
     const current = newOnboardingStore.get();
-    if (current.aiProvider) {
+    if (current.aiProvider && current.aiProvider !== 'nvidia-nim') {
       selectedProvider = current.aiProvider;
     }
   });
@@ -68,6 +69,9 @@
   }
 
   const selectedProviderInfo = $derived(AI_PROVIDER_OPTIONS.find((p) => p.id === selectedProvider));
+
+  // NVIDIA NIM is platform default (not user-selectable). Only show other providers.
+  const displayProviders = $derived(AI_PROVIDER_OPTIONS.filter((p) => p.id !== 'nvidia-nim'));
 </script>
 
 <div class="slide-container">
@@ -78,12 +82,14 @@
         <Key size={28} />
       </div>
       <h2 class="title">Connect AI Provider</h2>
-      <p class="subtitle">Choose your preferred AI model provider</p>
+      <p class="subtitle">G-Rump uses NVIDIA NIM by default. Add a second provider for more models or skip to use NIM only.</p>
     </div>
 
     <!-- Provider selection -->
     <div class="providers-grid">
-      {#each AI_PROVIDER_OPTIONS as provider}
+      {#each displayProviders as provider}
+        {@const iconPath = getProviderIconPath(provider.id)}
+        {@const fallbackLetter = getProviderFallbackLetter(provider.id)}
         <button
           class="provider-card"
           class:selected={selectedProvider === provider.id}
@@ -93,7 +99,15 @@
           {#if provider.popular && provider.id === 'kimi'}
             <span class="recommended-badge">Recommended</span>
           {/if}
-          <span class="provider-icon">{provider.icon}</span>
+          <span class="provider-icon" aria-hidden="true">
+            {#if iconPath}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" role="img">
+                <path d={iconPath} />
+              </svg>
+            {:else}
+              <span class="provider-icon-fallback">{fallbackLetter}</span>
+            {/if}
+          </span>
           <span class="provider-name">{provider.name}</span>
           {#if provider.description}
             <span class="provider-desc">{provider.description}</span>
@@ -215,7 +229,7 @@
     width: 100%;
     opacity: 0;
     transform: translateY(20px);
-    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .content.mounted {
@@ -242,15 +256,18 @@
   }
 
   .title {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: #1f2937;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #111827;
     margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
   }
 
   .subtitle {
-    font-size: 1rem;
-    color: #6b7280;
+    font-size: 1.0625rem;
+    color: #374151;
+    line-height: 1.4;
   }
 
   /* Providers grid */
@@ -315,7 +332,31 @@
   }
 
   .provider-icon {
-    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    color: #374151;
+  }
+
+  .provider-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .provider-icon-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #f3f4f6;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #374151;
   }
 
   .provider-name {
