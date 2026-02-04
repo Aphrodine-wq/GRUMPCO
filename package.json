@@ -80,5 +80,6 @@
       "ssh2",
       "xxhash-addon"
     ]
-  }
+  },
+  "packageManager": "pnpm@9.15.0"
 }
