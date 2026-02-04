@@ -3,6 +3,7 @@
 # =============================================================================
 # G-Rump Backend Dockerfile
 # Multi-stage build for security and minimal image size
+# Designed to work within the backend directory context
 # =============================================================================
 
 # Build stage
@@ -13,31 +14,40 @@ LABEL stage="builder"
 
 WORKDIR /app
 
-# Install build dependencies and enable pnpm via corepack
-RUN apk add --no-cache python3 make g++ && \
-    corepack enable && \
-    corepack prepare pnpm@8.15.4 --activate
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
 
-# Copy package files and lockfile for dependency installation
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* .npmrc* ./
+# Copy package files - we'll patch workspace deps during build
+COPY package*.json ./
 
-# Copy workspace packages that are dependencies
-COPY packages/ai-core/package.json ./packages/ai-core/
-COPY backend/package.json ./backend/
+# Create a patched package.json that removes workspace deps
+# The ai-core package will be bundled inline
+RUN node -e " \
+    const pkg = require('./package.json'); \
+    delete pkg.dependencies['@grump/ai-core']; \
+    require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2)); \
+    "
 
-# Install dependencies with cache mount for faster rebuilds
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --prefer-offline
+# Install dependencies
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --prefer-offline --no-audit
+
+# Copy ai-core package source (will be bundled with esbuild)
+COPY packages/ai-core ./packages/ai-core
 
 # Copy source code and build configuration
-COPY backend/tsconfig.json backend/.swcrc ./backend/
-COPY backend/src ./backend/src
-COPY backend/scripts ./backend/scripts
+COPY tsconfig.json .swcrc ./
+COPY src ./src
+COPY scripts ./scripts
 
-# Build with SWC (much faster than tsc)
-WORKDIR /app/backend
+# Build ai-core first
+WORKDIR /app/packages/ai-core
+RUN npm install && npm run build
+
+# Build backend with SWC
+WORKDIR /app
 RUN --mount=type=cache,target=/app/.swc \
-    pnpm run build
+    npm run build
 
 # =============================================================================
 # Production stage
@@ -53,13 +63,11 @@ LABEL org.opencontainers.image.title="G-Rump Backend" \
     org.opencontainers.image.source="https://github.com/Aphrodine-wq/G-rump.com" \
     org.opencontainers.image.documentation="https://docs.g-rump.com"
 
-# Install runtime dependencies and enable pnpm
+# Install runtime dependencies
 RUN apk add --no-cache \
     tini \
     curl \
     dumb-init \
-    && corepack enable \
-    && corepack prepare pnpm@8.15.4 --activate \
     && rm -rf /var/cache/apk/*
 
 # Security: Create non-root user
@@ -68,20 +76,25 @@ RUN addgroup -g 1001 -S grump && \
 
 WORKDIR /app
 
-# Copy package files and lockfile
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* .npmrc* ./
+# Copy package files and patch for production
+COPY package*.json ./
+RUN node -e " \
+    const pkg = require('./package.json'); \
+    delete pkg.dependencies['@grump/ai-core']; \
+    require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2)); \
+    "
 
-# Copy workspace packages that are dependencies
-COPY packages/ai-core/package.json ./packages/ai-core/
-COPY backend/package.json ./backend/
-
-# Install production dependencies only with cache mount
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --prefer-offline --prod && \
-    pnpm store prune
+# Install production dependencies only
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --omit=dev --prefer-offline --no-audit && \
+    npm cache clean --force
 
 # Copy built application from builder
-COPY --from=builder --chown=grump:grump /app/backend/dist ./dist
+COPY --from=builder --chown=grump:grump /app/dist ./dist
+
+# Copy built ai-core from builder
+COPY --from=builder --chown=grump:grump /app/packages/ai-core/dist ./node_modules/@grump/ai-core/dist
+COPY --from=builder --chown=grump:grump /app/packages/ai-core/package.json ./node_modules/@grump/ai-core/
 
 # Create data directory for SQLite with correct permissions
 RUN mkdir -p /app/data /app/logs && \
