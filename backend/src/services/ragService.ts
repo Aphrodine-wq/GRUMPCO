@@ -718,16 +718,16 @@ export async function ragQuery(
         sys = `You are a helpful assistant. Answer the user's question using only the provided context. When you use information from a source, cite it with [1], [2], etc. corresponding to the numbered context. If the context does not contain relevant information, say so. Do not make up facts.`;
       }
       const user = `Context:\n\n${irfResult.context}\n\nQuestion: ${query}`;
-      const modelId = getRAGModel();
+      const ragModel = getRAGModel();
       const completionParams = {
-        model: modelId,
+        model: ragModel.modelId,
         max_tokens: 1024,
         system: sys,
         messages: [{ role: "user" as const, content: user }],
       };
       const completionResult = await getCompletion(completionParams, {
-        provider: "nim" as LLMProvider,
-        modelId: modelId,
+        provider: ragModel.provider,
+        modelId: ragModel.modelId,
       });
       if (completionResult.error) {
         logger.warn(
@@ -893,21 +893,21 @@ export async function ragQuery(
   }
   const user = `Context:\n\n${context}\n\nQuestion: ${query}`;
 
-  const modelId = getRAGModel();
+  const ragModel = getRAGModel();
   // Enable fallback to Llama 405B for low confidence responses
   const canFallback = process.env.RAG_LLM_FALLBACK === "true";
   let rawAnswer = "";
   let primaryError: string | null = null;
 
   const completionParams = {
-    model: modelId,
+    model: ragModel.modelId,
     max_tokens: 1024,
     system: sys,
     messages: [{ role: "user" as const, content: user }],
   };
   const completionResult = await getCompletion(completionParams, {
-    provider: "nim" as LLMProvider,
-    modelId: modelId,
+    provider: ragModel.provider,
+    modelId: ragModel.modelId,
   });
   if (completionResult.error) {
     primaryError = completionResult.error;
@@ -928,10 +928,10 @@ export async function ragQuery(
       !rawAnswer.trim());
   if (useFallback) {
     try {
-      const fallbackResult = await getCompletion(completionParams, {
-        provider: "nim",
-        modelId: RAG_FALLBACK_MODEL,
-      });
+      const fallbackResult = await getCompletion(
+        { ...completionParams, model: RAG_FALLBACK_MODEL },
+        { provider: "nim" as LLMProvider, modelId: RAG_FALLBACK_MODEL },
+      );
       if (fallbackResult.text?.trim()) {
         rawAnswer = fallbackResult.text.trim();
         fallbackProvider = "llama-405b";

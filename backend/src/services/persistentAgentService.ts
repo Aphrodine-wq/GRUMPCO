@@ -512,12 +512,12 @@ async function runMemoryCleanup(_userId: string): Promise<unknown> {
 
 async function runReminderCheck(): Promise<unknown> {
   const { processDueReminders } = await import("./reminderService.js");
-  const { processed, notified } = await processDueReminders();
+  const reminders = await processDueReminders();
   return {
     type: "reminder_check",
     processedAt: new Date().toISOString(),
-    processed,
-    notified,
+    processed: reminders.length,
+    notified: reminders.length,
   };
 }
 

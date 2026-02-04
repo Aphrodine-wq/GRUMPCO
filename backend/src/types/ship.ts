@@ -93,6 +93,10 @@ export interface ShipStartRequest {
   userId?: string;
   /** Optional project/workspace id to associate with this session */
   projectId?: string;
+  projectName?: string;
+  repoOrg?: string;
+  deploymentTarget?: string;
+  phases?: ShipPhase[];
 }
 
 export interface ShipPhaseResponse {
@@ -100,10 +104,10 @@ export interface ShipPhaseResponse {
   phase: ShipPhase;
   status: "running" | "completed" | "failed";
   result?:
-    | DesignPhaseResult
-    | SpecPhaseResult
-    | PlanPhaseResult
-    | CodePhaseResult;
+  | DesignPhaseResult
+  | SpecPhaseResult
+  | PlanPhaseResult
+  | CodePhaseResult;
   error?: string;
   nextPhase?: ShipPhase;
 }

@@ -6,6 +6,7 @@
 
 import { getDatabase } from "../db/database.js";
 import logger from "../middleware/logger.js";
+import type { LLMProvider } from "./llmGateway.js";
 
 export interface AgentSessionMeta {
   id: string;
@@ -221,7 +222,7 @@ export async function sessionsSend(
         undefined,
         undefined,
         undefined,
-        routed.provider,
+        routed.provider as LLMProvider,
         routed.modelId,
       );
 
