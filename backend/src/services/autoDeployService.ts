@@ -46,7 +46,7 @@ export class AutoDeployService {
       await execAsync("docker info");
       return true;
     } catch (error) {
-      logger.error("Docker is not available", { error });
+      logger.error({ error }, "Docker is not available");
       return false;
     }
   }
@@ -85,7 +85,7 @@ export class AutoDeployService {
       const appName = config.appName || `user-app-${Date.now()}`;
       const port = config.port || 8080;
 
-      logger.info("Starting auto-deployment", { appName, appDir, port });
+      logger.info({ appName, appDir, port }, "Starting auto-deployment");
 
       // Run the auto-deploy script
       const scriptPath = path.join(this.scriptsDir, "auto-deploy-user-app.sh");
@@ -96,7 +96,7 @@ export class AutoDeployService {
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       });
 
-      logger.info("Deployment completed", { appName, stdout, stderr });
+      logger.info({ appName, stdout, stderr }, "Deployment completed");
 
       // Get container ID
       const { stdout: containerId } = await execAsync(
@@ -112,7 +112,7 @@ export class AutoDeployService {
         logs: stdout,
       };
     } catch (error: any) {
-      logger.error("Deployment failed", { error, config });
+      logger.error({ error, config }, "Deployment failed");
 
       return {
         success: false,
@@ -133,10 +133,10 @@ export class AutoDeployService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       await execAsync(`docker stop ${appName}`);
-      logger.info("App stopped", { appName });
+      logger.info({ appName }, "App stopped");
       return { success: true };
     } catch (error: any) {
-      logger.error("Failed to stop app", { appName, error });
+      logger.error({ appName, error }, "Failed to stop app");
       return { success: false, error: error.message };
     }
   }
@@ -150,10 +150,10 @@ export class AutoDeployService {
     try {
       await execAsync(`docker stop ${appName}`);
       await execAsync(`docker rm ${appName}`);
-      logger.info("App removed", { appName });
+      logger.info({ appName }, "App removed");
       return { success: true };
     } catch (error: any) {
-      logger.error("Failed to remove app", { appName, error });
+      logger.error({ appName, error }, "Failed to remove app");
       return { success: false, error: error.message };
     }
   }
@@ -168,7 +168,7 @@ export class AutoDeployService {
       );
       return stdout;
     } catch (error: any) {
-      logger.error("Failed to get app logs", { appName, error });
+      logger.error({ appName, error }, "Failed to get app logs");
       return `Error getting logs: ${error.message}`;
     }
   }
@@ -198,7 +198,7 @@ export class AutoDeployService {
           return { name, status, port: ports, image };
         });
     } catch (error: any) {
-      logger.error("Failed to list deployed apps", { error });
+      logger.error({ error }, "Failed to list deployed apps");
       return [];
     }
   }
@@ -225,7 +225,7 @@ export class AutoDeployService {
 
       return { running, status, containerId };
     } catch (error: any) {
-      logger.error("Failed to get app status", { appName, error });
+      logger.error({ appName, error }, "Failed to get app status");
       return { running: false };
     }
   }

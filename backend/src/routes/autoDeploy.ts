@@ -5,6 +5,7 @@
 
 import {
   Router,
+  // discord.js types have known issues with GatewayIntentBits exportFunction,
   type Request,
   type Response,
   type NextFunction,
@@ -27,7 +28,7 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
       return;
     }
 
-    logger.info("Received deployment request", { appDirectory, appName, port });
+    logger.info({ appDirectory, appName, port }, "Received deployment request");
 
     const result = await autoDeployService.deployApp({
       appDirectory,

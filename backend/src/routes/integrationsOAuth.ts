@@ -13,10 +13,10 @@ import {
 import { getRequestLogger } from "../middleware/logger.js";
 import { getOAuthCookieOptions } from "../middleware/cookieSecurity.js";
 import crypto from "crypto";
-import { getDb } from "../db/database.js";
+import { getDatabase } from "../db/database.js";
 import { encrypt } from "../utils/encryption.js";
 import type { IntegrationProviderId } from "../types/integrations.js";
-import type { OAuthTokenRecord } from "../types/integrations.js";
+import type { OAuthTokenRecord, IntegrationRecord } from "../types/integrations.js";
 
 const router: Router = express.Router();
 
@@ -346,7 +346,7 @@ router.get("/:provider/callback", async (req: Request, res: Response) => {
     const tokenData = await tokenResponse.json();
 
     // Store tokens in database
-    const db = getDb();
+    const db = getDatabase();
     const tokenRecord: OAuthTokenRecord = {
       id: crypto.randomUUID(),
       user_id: stateData.userId,
@@ -367,21 +367,29 @@ router.get("/:provider/callback", async (req: Request, res: Response) => {
     await db.saveOAuthToken(tokenRecord);
 
     // Also create/update integration record
-    const existingIntegrations = await db.listIntegrations(stateData.userId);
+    const existingIntegrations = await db.getIntegrationsForUser(stateData.userId);
     const existingIntegration = existingIntegrations.find(
-      (i) => i.provider === provider,
+      (i: IntegrationRecord) => i.provider === provider,
     );
 
     if (!existingIntegration) {
-      await db.createIntegration({
-        userId: stateData.userId,
+      await db.saveIntegration({
+        id: crypto.randomUUID(),
+        user_id: stateData.userId,
         provider: provider as any,
-        displayName: config.authUrl.includes("google")
+        status: "active",
+        display_name: config.authUrl.includes("google")
           ? `Google ${provider}`
           : provider.charAt(0).toUpperCase() + provider.slice(1),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       });
     } else {
-      await db.updateIntegration(existingIntegration.id, { status: "active" });
+      await db.saveIntegration({
+        ...existingIntegration,
+        status: "active",
+        updated_at: new Date().toISOString(),
+      });
     }
 
     log.info(
@@ -423,8 +431,8 @@ router.post(
 
     try {
       // Retrieve refresh token from database
-      const db = getDb();
-      const tokenRecord = await db.getOAuthToken(
+      const db = getDatabase();
+      const tokenRecord: OAuthTokenRecord | null = await db.getOAuthToken(
         req.user?.id || "",
         provider as any,
       );

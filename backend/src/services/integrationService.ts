@@ -434,6 +434,18 @@ export const OAUTH_PROVIDERS: Record<
   // Backend-as-a-Service (API keys)
   supabase: null, // Uses project API keys
   firebase: null, // Uses service account or API keys
+  stripe: {
+    authUrl: "https://connect.stripe.com/oauth/authorize",
+    tokenUrl: "https://connect.stripe.com/oauth/token",
+    scopes: ["read_write"],
+    supportsOAuth: true,
+  },
+  figma: {
+    authUrl: "https://www.figma.com/oauth",
+    tokenUrl: "https://www.figma.com/api/oauth/token",
+    scopes: ["file_read"],
+    supportsOAuth: true,
+  },
 };
 
 /**

@@ -82,6 +82,7 @@ const HEALTH_CHECK_ENDPOINTS: Record<Exclude<LLMProvider, "mock">, string> = {
   kimi: "https://api.moonshot.cn/v1/models",
   anthropic: "https://api.anthropic.com/v1/models",
   mistral: "https://api.mistral.ai/v1/models",
+  groq: "https://api.groq.com/openai/v1/models",
 };
 
 // =============================================================================
