@@ -3,8 +3,8 @@
  * Pre-flight cost estimation for LLM requests
  */
 
-import { MODEL_REGISTRY } from '@grump/ai-core';
-import logger from '../middleware/logger.js';
+import { MODEL_REGISTRY } from "@grump/ai-core";
+import logger from "../middleware/logger.js";
 
 export interface CostEstimate {
   estimatedCost: number;
@@ -15,7 +15,7 @@ export interface CostEstimate {
     outputTokens: number;
   };
   model: string;
-  confidence: 'high' | 'medium' | 'low';
+  confidence: "high" | "medium" | "low";
 }
 
 export interface EstimationOptions {
@@ -39,10 +39,10 @@ export class CostEstimator {
    */
   public estimateChatCost(
     messages: Array<{ role: string; content: string }>,
-    options: EstimationOptions = {}
+    options: EstimationOptions = {},
   ): CostEstimate {
     // Calculate input tokens
-    const inputText = messages.map((m) => m.content).join(' ');
+    const inputText = messages.map((m) => m.content).join(" ");
     const inputTokens = this.estimateTokens(inputText);
 
     // Estimate output tokens (default: 50% of input)
@@ -50,11 +50,11 @@ export class CostEstimator {
     const outputTokens = Math.ceil(inputTokens * outputRatio);
 
     // Find model config
-    const modelId = options.model || 'claude-3-5-sonnet-20241022';
+    const modelId = options.model || "claude-3-5-sonnet-20241022";
     const modelConfig = MODEL_REGISTRY.find((m) => m.id === modelId);
 
     if (!modelConfig) {
-      logger.warn({ model: modelId }, 'Model not found in registry');
+      logger.warn({ model: modelId }, "Model not found in registry");
       return {
         estimatedCost: 0,
         breakdown: {
@@ -64,21 +64,23 @@ export class CostEstimator {
           outputTokens,
         },
         model: modelId,
-        confidence: 'low',
+        confidence: "low",
       };
     }
 
     // Calculate costs
-    const inputCost = (inputTokens / 1_000_000) * (modelConfig.costPerMillionInput || 0);
-    const outputCost = (outputTokens / 1_000_000) * (modelConfig.costPerMillionOutput || 0);
+    const inputCost =
+      (inputTokens / 1_000_000) * (modelConfig.costPerMillionInput || 0);
+    const outputCost =
+      (outputTokens / 1_000_000) * (modelConfig.costPerMillionOutput || 0);
     const estimatedCost = inputCost + outputCost;
 
     // Determine confidence based on message complexity
-    let confidence: 'high' | 'medium' | 'low' = 'medium';
+    let confidence: "high" | "medium" | "low" = "medium";
     if (messages.length === 1 && inputTokens < 1000) {
-      confidence = 'high'; // Simple, single message
+      confidence = "high"; // Simple, single message
     } else if (messages.length > 10 || inputTokens > 10000) {
-      confidence = 'low'; // Complex conversation
+      confidence = "low"; // Complex conversation
     }
 
     logger.debug(
@@ -89,7 +91,7 @@ export class CostEstimator {
         estimatedCost,
         confidence,
       },
-      'Cost estimated'
+      "Cost estimated",
     );
 
     return {
@@ -110,7 +112,7 @@ export class CostEstimator {
    */
   public estimateCodeGenCost(
     description: string,
-    complexity: 'simple' | 'medium' | 'complex' = 'medium'
+    complexity: "simple" | "medium" | "complex" = "medium",
   ): CostEstimate {
     const baseTokens = this.estimateTokens(description);
 
@@ -125,7 +127,7 @@ export class CostEstimator {
     const outputTokens = baseTokens * outputRatio;
 
     // Use a code-optimized model
-    const model = 'claude-3-5-sonnet-20241022';
+    const model = "claude-3-5-sonnet-20241022";
     const modelConfig = MODEL_REGISTRY.find((m) => m.id === model);
 
     if (!modelConfig) {
@@ -138,12 +140,14 @@ export class CostEstimator {
           outputTokens,
         },
         model,
-        confidence: 'low',
+        confidence: "low",
       };
     }
 
-    const inputCost = (baseTokens / 1_000_000) * (modelConfig.costPerMillionInput || 0);
-    const outputCost = (outputTokens / 1_000_000) * (modelConfig.costPerMillionOutput || 0);
+    const inputCost =
+      (baseTokens / 1_000_000) * (modelConfig.costPerMillionInput || 0);
+    const outputCost =
+      (outputTokens / 1_000_000) * (modelConfig.costPerMillionOutput || 0);
 
     return {
       estimatedCost: inputCost + outputCost,
@@ -154,7 +158,7 @@ export class CostEstimator {
         outputTokens,
       },
       model,
-      confidence: 'medium',
+      confidence: "medium",
     };
   }
 
@@ -163,7 +167,7 @@ export class CostEstimator {
    */
   public compareModels(
     messages: Array<{ role: string; content: string }>,
-    models: string[]
+    models: string[],
   ): Array<CostEstimate & { modelName: string }> {
     return models
       .map((modelId) => {
@@ -183,15 +187,19 @@ export class CostEstimator {
    */
   public getRecommendations(
     currentCost: number,
-    monthlyBudget: number
+    monthlyBudget: number,
   ): Array<{ type: string; message: string; potentialSavings: number }> {
-    const recommendations: Array<{ type: string; message: string; potentialSavings: number }> = [];
+    const recommendations: Array<{
+      type: string;
+      message: string;
+      potentialSavings: number;
+    }> = [];
     const projectedMonthlyCost = currentCost * 30; // Rough projection
 
     if (projectedMonthlyCost > monthlyBudget) {
       const overage = projectedMonthlyCost - monthlyBudget;
       recommendations.push({
-        type: 'budget',
+        type: "budget",
         message: `Projected monthly cost ($${projectedMonthlyCost.toFixed(2)}) exceeds budget ($${monthlyBudget.toFixed(2)})`,
         potentialSavings: overage,
       });
@@ -199,26 +207,28 @@ export class CostEstimator {
 
     // Recommend cheaper models
     recommendations.push({
-      type: 'model',
-      message: 'Switch to Claude Haiku for simple tasks to save 40-60%',
+      type: "model",
+      message: "Switch to Claude Haiku for simple tasks to save 40-60%",
       potentialSavings: currentCost * 0.5,
     });
 
     // Recommend caching
     recommendations.push({
-      type: 'caching',
-      message: 'Enable prompt caching to reduce costs by 30-40%',
+      type: "caching",
+      message: "Enable prompt caching to reduce costs by 30-40%",
       potentialSavings: currentCost * 0.35,
     });
 
     // Recommend batching
     recommendations.push({
-      type: 'batching',
-      message: 'Batch similar requests together to reduce overhead',
+      type: "batching",
+      message: "Batch similar requests together to reduce overhead",
       potentialSavings: currentCost * 0.15,
     });
 
-    return recommendations.sort((a, b) => b.potentialSavings - a.potentialSavings);
+    return recommendations.sort(
+      (a, b) => b.potentialSavings - a.potentialSavings,
+    );
   }
 }
 

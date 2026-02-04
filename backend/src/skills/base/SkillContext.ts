@@ -3,12 +3,12 @@
  * Creates execution contexts for skills
  */
 
-import path from 'path';
-import fs from 'fs/promises';
-import { existsSync } from 'fs';
-import { v4 as uuidv4 } from 'uuid';
-import logger from '../../middleware/logger.js';
-import { getStream, type StreamParams } from '../../services/llmGateway.js';
+import path from "path";
+import fs from "fs/promises";
+import { existsSync } from "fs";
+import { v4 as uuidv4 } from "uuid";
+import logger from "../../middleware/logger.js";
+import { getStream, type StreamParams } from "../../services/llmGateway.js";
 import type {
   SkillContext,
   SkillEvent,
@@ -19,9 +19,9 @@ import type {
   GitStatus,
   GitLogEntry,
   ToolDefinition,
-} from '../types.js';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+} from "../types.js";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
@@ -32,7 +32,7 @@ export function createSkillContext(options: {
   sessionId?: string;
   workspacePath?: string;
   config?: Record<string, unknown>;
-  source?: 'chat' | 'api' | 'command' | 'skill_test';
+  source?: "chat" | "api" | "command" | "skill_test";
   onEvent?: (event: SkillEvent) => void;
 }): SkillContext {
   const sessionId = options.sessionId || uuidv4();
@@ -42,7 +42,9 @@ export function createSkillContext(options: {
   // Create services
   const llmService = createLLMService();
   const fileSystemService = createFileSystemService(workspacePath);
-  const gitService = workspacePath ? createGitService(workspacePath) : undefined;
+  const gitService = workspacePath
+    ? createGitService(workspacePath)
+    : undefined;
   const loggerService = createLoggerService(sessionId);
 
   return {
@@ -52,7 +54,7 @@ export function createSkillContext(options: {
     request: {
       id: uuidv4(),
       timestamp: new Date(),
-      source: options.source || 'api',
+      source: options.source || "api",
     },
     services: {
       llm: llmService,
@@ -76,9 +78,9 @@ function createLLMService(): LLMService {
   return {
     async complete(params) {
       const streamParams: StreamParams = {
-        model: 'moonshotai/kimi-k2.5',
+        model: "moonshotai/kimi-k2.5",
         max_tokens: params.maxTokens || 4096,
-        system: params.system || '',
+        system: params.system || "",
         messages: params.messages.map((m) => ({
           role: m.role,
           content: m.content,
@@ -90,11 +92,17 @@ function createLLMService(): LLMService {
         })),
       };
 
-      const stream = getStream(streamParams, { provider: 'nim', modelId: 'moonshotai/kimi-k2.5' });
-      let fullText = '';
+      const stream = getStream(streamParams, {
+        provider: "nim",
+        modelId: "moonshotai/kimi-k2.5",
+      });
+      let fullText = "";
 
       for await (const event of stream) {
-        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        if (
+          event.type === "content_block_delta" &&
+          event.delta.type === "text_delta"
+        ) {
           fullText += event.delta.text;
         }
       }
@@ -104,9 +112,9 @@ function createLLMService(): LLMService {
 
     async *stream(params) {
       const streamParams: StreamParams = {
-        model: 'moonshotai/kimi-k2.5',
+        model: "moonshotai/kimi-k2.5",
         max_tokens: params.maxTokens || 4096,
-        system: params.system || '',
+        system: params.system || "",
         messages: params.messages.map((m) => ({
           role: m.role,
           content: m.content,
@@ -118,7 +126,10 @@ function createLLMService(): LLMService {
         })),
       };
 
-      yield* getStream(streamParams, { provider: 'nim', modelId: 'moonshotai/kimi-k2.5' });
+      yield* getStream(streamParams, {
+        provider: "nim",
+        modelId: "moonshotai/kimi-k2.5",
+      });
     },
   };
 }
@@ -150,7 +161,7 @@ function createFileSystemService(workspacePath?: string): FileSystemService {
   return {
     async readFile(filePath: string): Promise<string> {
       const resolved = resolvePath(filePath);
-      return fs.readFile(resolved, 'utf-8');
+      return fs.readFile(resolved, "utf-8");
     },
 
     async writeFile(filePath: string, content: string): Promise<void> {
@@ -162,7 +173,7 @@ function createFileSystemService(workspacePath?: string): FileSystemService {
         await fs.mkdir(dir, { recursive: true });
       }
 
-      await fs.writeFile(resolved, content, 'utf-8');
+      await fs.writeFile(resolved, content, "utf-8");
     },
 
     async exists(filePath: string): Promise<boolean> {
@@ -174,7 +185,9 @@ function createFileSystemService(workspacePath?: string): FileSystemService {
       const resolved = resolvePath(dirPath);
       const entries = await fs.readdir(resolved, { withFileTypes: true });
 
-      return entries.map((entry) => (entry.isDirectory() ? `${entry.name}/` : entry.name));
+      return entries.map((entry) =>
+        entry.isDirectory() ? `${entry.name}/` : entry.name,
+      );
     },
 
     async deleteFile(filePath: string): Promise<void> {
@@ -200,25 +213,25 @@ function createGitService(workspacePath: string): GitService {
 
   return {
     async status(): Promise<GitStatus> {
-      const branch = await runGit('branch --show-current');
-      const statusOutput = await runGit('status --porcelain');
+      const branch = await runGit("branch --show-current");
+      const statusOutput = await runGit("status --porcelain");
 
       const staged: string[] = [];
       const unstaged: string[] = [];
       const untracked: string[] = [];
 
-      for (const line of statusOutput.split('\n').filter(Boolean)) {
+      for (const line of statusOutput.split("\n").filter(Boolean)) {
         const indexStatus = line[0];
         const workTreeStatus = line[1];
         const fileName = line.slice(3);
 
-        if (indexStatus === '?') {
+        if (indexStatus === "?") {
           untracked.push(fileName);
         } else {
-          if (indexStatus !== ' ') {
+          if (indexStatus !== " ") {
             staged.push(fileName);
           }
-          if (workTreeStatus !== ' ') {
+          if (workTreeStatus !== " ") {
             unstaged.push(fileName);
           }
         }
@@ -228,13 +241,13 @@ function createGitService(workspacePath: string): GitService {
     },
 
     async diff(options?: { staged?: boolean }): Promise<string> {
-      const args = options?.staged ? 'diff --cached' : 'diff';
+      const args = options?.staged ? "diff --cached" : "diff";
       return runGit(args);
     },
 
     async commit(message: string, files?: string[]): Promise<string> {
       if (files && files.length > 0) {
-        await runGit(`add ${files.map((f) => `"${f}"`).join(' ')}`);
+        await runGit(`add ${files.map((f) => `"${f}"`).join(" ")}`);
       }
 
       // Use heredoc-style commit message
@@ -243,14 +256,14 @@ function createGitService(workspacePath: string): GitService {
     },
 
     async log(count: number = 10): Promise<GitLogEntry[]> {
-      const format = '%H|%s|%an|%aI';
+      const format = "%H|%s|%an|%aI";
       const output = await runGit(`log -${count} --format="${format}"`);
 
       return output
-        .split('\n')
+        .split("\n")
         .filter(Boolean)
         .map((line) => {
-          const [hash, message, author, date] = line.split('|');
+          const [hash, message, author, date] = line.split("|");
           return {
             hash,
             message,
@@ -261,14 +274,14 @@ function createGitService(workspacePath: string): GitService {
     },
 
     async branch(): Promise<string> {
-      return runGit('branch --show-current');
+      return runGit("branch --show-current");
     },
 
     async branches(): Promise<string[]> {
-      const output = await runGit('branch -a');
+      const output = await runGit("branch -a");
       return output
-        .split('\n')
-        .map((line) => line.trim().replace(/^\* /, ''))
+        .split("\n")
+        .map((line) => line.trim().replace(/^\* /, ""))
         .filter(Boolean);
     },
   };
@@ -281,7 +294,7 @@ function createLoggerService(sessionId: string): LoggerService {
   const addContext = (meta?: Record<string, unknown>) => ({
     ...meta,
     sessionId,
-    component: 'skill',
+    component: "skill",
   });
 
   return {

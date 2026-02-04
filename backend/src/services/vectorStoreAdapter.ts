@@ -3,11 +3,11 @@
  * Implementations: file (default), Pinecone when RAG_VECTOR_STORE=pinecone and PINECONE_* set.
  */
 
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { dirname } from 'path';
-import { existsSync } from 'fs';
-import type { DocType } from './ragService.js';
-import { PineconeVectorStore } from './pineconeVectorStore.js';
+import { readFile, writeFile, mkdir } from "fs/promises";
+import { dirname } from "path";
+import { existsSync } from "fs";
+import type { DocType } from "./ragService.js";
+import { PineconeVectorStore } from "./pineconeVectorStore.js";
 
 export interface VectorChunk {
   id: string;
@@ -34,7 +34,10 @@ export interface VectorUpsertOptions {
 }
 
 export interface IVectorStore {
-  query(embedding: number[], options?: VectorQueryOptions): Promise<ChunkWithScore[]>;
+  query(
+    embedding: number[],
+    options?: VectorQueryOptions,
+  ): Promise<ChunkWithScore[]>;
   upsert(chunks: VectorChunk[], options?: VectorUpsertOptions): Promise<void>;
   clear?(options?: { namespace?: string }): Promise<void>;
 }
@@ -77,7 +80,7 @@ export class FileVectorStore implements IVectorStore {
       this.chunks = [];
       return;
     }
-    const raw = await readFile(this.path, 'utf8');
+    const raw = await readFile(this.path, "utf8");
     const data = JSON.parse(raw) as { chunks?: VectorChunk[] };
     this.chunks = data.chunks ?? [];
   }
@@ -87,12 +90,18 @@ export class FileVectorStore implements IVectorStore {
     if (!existsSync(dir)) await mkdir(dir, { recursive: true });
     await writeFile(
       this.path,
-      JSON.stringify({ chunks: this.chunks, savedAt: new Date().toISOString() }),
-      'utf8'
+      JSON.stringify({
+        chunks: this.chunks,
+        savedAt: new Date().toISOString(),
+      }),
+      "utf8",
     );
   }
 
-  async query(embedding: number[], options?: VectorQueryOptions): Promise<ChunkWithScore[]> {
+  async query(
+    embedding: number[],
+    options?: VectorQueryOptions,
+  ): Promise<ChunkWithScore[]> {
     await this.load();
     const topK = options?.topK ?? 10;
     const filtered = this.chunks.filter((c) => matchesType(c, options?.types));
@@ -104,7 +113,10 @@ export class FileVectorStore implements IVectorStore {
     return withScores.slice(0, topK);
   }
 
-  async upsert(chunks: VectorChunk[], _options?: { namespace?: string }): Promise<void> {
+  async upsert(
+    chunks: VectorChunk[],
+    _options?: { namespace?: string },
+  ): Promise<void> {
     await this.load();
     const ids = new Set(chunks.map((c) => c.id));
     this.chunks = this.chunks.filter((c) => !ids.has(c.id));
@@ -118,8 +130,10 @@ export class FileVectorStore implements IVectorStore {
   }
 }
 
-const DEFAULT_INDEX_PATH = process.env.RAG_INDEX_PATH ?? './data/rag-index.json';
-const MEMORY_INDEX_PATH = process.env.RAG_MEMORY_INDEX_PATH ?? './data/rag-memory.json';
+const DEFAULT_INDEX_PATH =
+  process.env.RAG_INDEX_PATH ?? "./data/rag-index.json";
+const MEMORY_INDEX_PATH =
+  process.env.RAG_MEMORY_INDEX_PATH ?? "./data/rag-memory.json";
 
 let defaultStore: IVectorStore | null = null;
 let memoryStore: IVectorStore | null = null;
@@ -134,11 +148,11 @@ export function getVectorStore(): IVectorStore {
   const kind = process.env.RAG_VECTOR_STORE;
   const apiKey = process.env.PINECONE_API_KEY;
   const indexName = process.env.PINECONE_INDEX;
-  if (kind === 'pinecone' && apiKey && indexName) {
+  if (kind === "pinecone" && apiKey && indexName) {
     defaultStore = new PineconeVectorStore({
       apiKey,
       indexName,
-      defaultNamespace: process.env.PINECONE_NAMESPACE ?? 'default',
+      defaultNamespace: process.env.PINECONE_NAMESPACE ?? "default",
       host: process.env.PINECONE_HOST,
     });
   } else {

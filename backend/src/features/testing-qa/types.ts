@@ -5,8 +5,8 @@
 export interface TestGenerationRequest {
   filePath: string;
   fileContent: string;
-  testFramework?: 'vitest' | 'jest' | 'pytest' | 'go-test' | 'junit';
-  testTypes?: ('unit' | 'integration' | 'e2e')[];
+  testFramework?: "vitest" | "jest" | "pytest" | "go-test" | "junit";
+  testTypes?: ("unit" | "integration" | "e2e")[];
   coverageGoal?: number;
 }
 
@@ -42,12 +42,12 @@ export interface LoadTestScenario {
 export interface LoadTestPlanRequest {
   projectName: string;
   endpoints: Array<{
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+    method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
     path: string;
     expectedRps?: number;
     payload?: unknown;
   }>;
-  tool?: 'k6' | 'locust' | 'artillery';
+  tool?: "k6" | "locust" | "artillery";
   baseUrl?: string;
 }
 
@@ -70,7 +70,7 @@ export interface CoverageGap {
   uncoveredLines: number[];
   uncoveredFunctions: string[];
   currentCoverage: number;
-  priority: 'high' | 'medium' | 'low';
+  priority: "high" | "medium" | "low";
 }
 
 export interface CoverageAnalysisResult {
@@ -81,7 +81,7 @@ export interface CoverageAnalysisResult {
   suggestedTests: Array<{
     file: string;
     testDescription: string;
-    priority: 'high' | 'medium' | 'low';
+    priority: "high" | "medium" | "low";
   }>;
 }
 
@@ -89,7 +89,7 @@ export interface MockGenerationRequest {
   filePath: string;
   fileContent: string;
   dependencies: string[];
-  framework?: 'vitest' | 'jest' | 'unittest' | 'mockito';
+  framework?: "vitest" | "jest" | "unittest" | "mockito";
 }
 
 export interface MockGenerationResult {

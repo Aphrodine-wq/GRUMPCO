@@ -12,19 +12,27 @@
  * @module services/claudeService
  */
 
-import { withResilience } from './resilience.js';
-import { getRequestLogger } from '../middleware/logger.js';
-import { createApiTimer } from '../middleware/metrics.js';
-import { extractMermaidCode, validateMermaidCode } from './mermaidUtils.js';
-import { getSystemPrompt, type UserPreferences } from '../prompts/index.js';
-import { analyzeIntent, getIntentAugmentation } from './intentParser.js';
-import type { ServiceError, ConversationMessage, RefinementContext } from '../types/index.js';
-import { getStream, type StreamParams, type StreamEvent } from './llmGateway.js';
-import { createHash } from 'crypto';
-import { requestDeduper } from './requestDeduper.js';
+import { withResilience } from "./resilience.js";
+import { getRequestLogger } from "../middleware/logger.js";
+import { createApiTimer } from "../middleware/metrics.js";
+import { extractMermaidCode, validateMermaidCode } from "./mermaidUtils.js";
+import { getSystemPrompt, type UserPreferences } from "../prompts/index.js";
+import { analyzeIntent, getIntentAugmentation } from "./intentParser.js";
+import type {
+  ServiceError,
+  ConversationMessage,
+  RefinementContext,
+} from "../types/index.js";
+import {
+  getStream,
+  type StreamParams,
+  type StreamEvent,
+} from "./llmGateway.js";
+import { createHash } from "crypto";
+import { requestDeduper } from "./requestDeduper.js";
 
 /** Default LLM model for diagram generation (Kimi K2.5 via NVIDIA NIM) */
-const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
+const DEFAULT_MODEL = "moonshotai/kimi-k2.5";
 
 /**
  * Collects all text chunks from a streaming LLM response into a single string.
@@ -38,10 +46,15 @@ const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
  * const fullResponse = await collectStreamResponse(stream);
  * ```
  */
-async function collectStreamResponse(stream: AsyncIterable<StreamEvent>): Promise<string> {
-  let fullText = '';
+async function collectStreamResponse(
+  stream: AsyncIterable<StreamEvent>,
+): Promise<string> {
+  let fullText = "";
   for await (const event of stream) {
-    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
       fullText += event.delta.text;
     }
   }
@@ -60,7 +73,7 @@ function hashStreamParams(params: StreamParams): string {
       input_schema: t.input_schema,
     })),
   });
-  return createHash('sha256').update(payload).digest('hex');
+  return createHash("sha256").update(payload).digest("hex");
 }
 
 /**
@@ -73,14 +86,17 @@ function hashStreamParams(params: StreamParams): string {
 async function callLLMNonStreaming(params: StreamParams): Promise<string> {
   const dedupeKey = `diagram:${hashStreamParams(params)}`;
   return requestDeduper.dedupe(dedupeKey, async () => {
-    const stream = getStream(params, { provider: 'nim', modelId: params.model });
+    const stream = getStream(params, {
+      provider: "nim",
+      modelId: params.model,
+    });
     return collectStreamResponse(stream);
   });
 }
 
 // Re-export UserPreferences type for external use
-export type { UserPreferences } from '../prompts/index.js';
-export type { ConversationMessage, RefinementContext } from '../types/index.js';
+export type { UserPreferences } from "../prompts/index.js";
+export type { ConversationMessage, RefinementContext } from "../types/index.js";
 
 /** Maximum number of message pairs to include from conversation history */
 const CONTEXT_WINDOW_SIZE = 5;
@@ -114,9 +130,9 @@ const CONTEXT_WINDOW_SIZE = 5;
 function buildConversationMessages(
   userMessage: string,
   conversationHistory?: ConversationMessage[],
-  refinementContext?: RefinementContext
-): Array<{ role: 'user' | 'assistant'; content: string }> {
-  const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+  refinementContext?: RefinementContext,
+): Array<{ role: "user" | "assistant"; content: string }> {
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
 
   // Add recent conversation history (limited to context window)
   if (conversationHistory && conversationHistory.length > 0) {
@@ -132,11 +148,11 @@ function buildConversationMessages(
   // Build current message with refinement context if present
   let currentMessage = userMessage;
   if (refinementContext?.baseDiagram) {
-    currentMessage = `Based on this existing diagram:\n\`\`\`mermaid\n${refinementContext.baseDiagram}\n\`\`\`\n\n${refinementContext.instruction || 'Please modify this diagram according to my request:'}\n\n${userMessage}`;
+    currentMessage = `Based on this existing diagram:\n\`\`\`mermaid\n${refinementContext.baseDiagram}\n\`\`\`\n\n${refinementContext.instruction || "Please modify this diagram according to my request:"}\n\n${userMessage}`;
   }
 
   messages.push({
-    role: 'user',
+    role: "user",
     content: currentMessage,
   });
 
@@ -165,10 +181,10 @@ async function _generateDiagram(
   userMessage: string,
   preferences?: UserPreferences,
   conversationHistory?: ConversationMessage[],
-  refinementContext?: RefinementContext
+  refinementContext?: RefinementContext,
 ): Promise<string> {
   const log = getRequestLogger();
-  const timer = createApiTimer('generate_diagram');
+  const timer = createApiTimer("generate_diagram");
 
   try {
     // Analyze user intent
@@ -183,7 +199,7 @@ async function _generateDiagram(
         hasConversationHistory: !!conversationHistory?.length,
         hasRefinementContext: !!refinementContext?.baseDiagram,
       },
-      'Generating diagram with intent analysis'
+      "Generating diagram with intent analysis",
     );
 
     // Enrich preferences with intent analysis
@@ -201,14 +217,14 @@ async function _generateDiagram(
     const intentAugmentation = getIntentAugmentation(intent);
     if (intentAugmentation && !refinementContext?.baseDiagram) {
       messageContent = `${userMessage}\n\n${intentAugmentation}`;
-      log.info('Added intent augmentation for clarification guidance');
+      log.info("Added intent augmentation for clarification guidance");
     }
 
     // Build conversation messages with history
     const messages = buildConversationMessages(
       messageContent,
       conversationHistory,
-      refinementContext
+      refinementContext,
     );
 
     const response = await callLLMNonStreaming({
@@ -226,32 +242,34 @@ async function _generateDiagram(
       // Check if this looks like a clarification question
       const lowerText = response.toLowerCase();
       const isClarification =
-        lowerText.includes('would you') ||
-        lowerText.includes('could you') ||
-        lowerText.includes('which') ||
-        lowerText.includes('prefer') ||
-        lowerText.includes('clarify');
+        lowerText.includes("would you") ||
+        lowerText.includes("could you") ||
+        lowerText.includes("which") ||
+        lowerText.includes("prefer") ||
+        lowerText.includes("clarify");
 
       if (isClarification && intent.requiresClarification) {
         // Return the clarification text as-is (not diagram code)
-        log.info('LLM asked for clarification');
+        log.info("LLM asked for clarification");
         timer.success();
         return response;
       }
 
-      const error: ServiceError = new Error('Could not extract diagram code from response');
-      error.code = 'EXTRACTION_FAILED';
+      const error: ServiceError = new Error(
+        "Could not extract diagram code from response",
+      );
+      error.code = "EXTRACTION_FAILED";
       error.rawText = response;
-      timer.failure('extraction_failed');
+      timer.failure("extraction_failed");
       throw error;
     }
 
     timer.success();
-    log.info({ method: result.method }, 'Diagram generated successfully');
+    log.info({ method: result.method }, "Diagram generated successfully");
     return result.code;
   } catch (error) {
     const err = error as ServiceError;
-    timer.failure(err.status?.toString() || 'error');
+    timer.failure(err.status?.toString() || "error");
     throw error;
   }
 }
@@ -260,7 +278,10 @@ async function _generateDiagram(
  * Resilient version of _generateDiagram with circuit breaker and retry logic.
  * Uses exponential backoff for transient failures and circuit breaker for persistent failures.
  */
-const resilientGenerateDiagram = withResilience(_generateDiagram, 'claude-diagram');
+const resilientGenerateDiagram = withResilience(
+  _generateDiagram,
+  "claude-diagram",
+);
 
 /**
  * Generates a Mermaid diagram from a natural language description.
@@ -299,9 +320,14 @@ export async function generateDiagram(
   userMessage: string,
   preferences?: UserPreferences,
   conversationHistory?: ConversationMessage[],
-  refinementContext?: RefinementContext
+  refinementContext?: RefinementContext,
 ): Promise<string> {
-  return resilientGenerateDiagram(userMessage, preferences, conversationHistory, refinementContext);
+  return resilientGenerateDiagram(
+    userMessage,
+    preferences,
+    conversationHistory,
+    refinementContext,
+  );
 }
 
 /**
@@ -342,10 +368,10 @@ export async function* generateDiagramStream(
   preferences?: UserPreferences,
   abortSignal?: AbortSignal,
   conversationHistory?: ConversationMessage[],
-  refinementContext?: RefinementContext
+  refinementContext?: RefinementContext,
 ): AsyncGenerator<string, void, unknown> {
   const log = getRequestLogger();
-  const timer = createApiTimer('generate_diagram_stream');
+  const timer = createApiTimer("generate_diagram_stream");
 
   try {
     // Analyze user intent
@@ -359,7 +385,7 @@ export async function* generateDiagramStream(
         hasConversationHistory: !!conversationHistory?.length,
         hasRefinementContext: !!refinementContext?.baseDiagram,
       },
-      'Starting diagram stream with intent analysis'
+      "Starting diagram stream with intent analysis",
     );
 
     // Enrich preferences with intent analysis
@@ -381,7 +407,7 @@ export async function* generateDiagramStream(
     const messages = buildConversationMessages(
       messageContent,
       conversationHistory,
-      refinementContext
+      refinementContext,
     );
 
     const stream = getStream(
@@ -391,32 +417,35 @@ export async function* generateDiagramStream(
         system: getSystemPrompt(enrichedPreferences),
         messages,
       },
-      { provider: 'nim', modelId: DEFAULT_MODEL }
+      { provider: "nim", modelId: DEFAULT_MODEL },
     );
 
     for await (const event of stream) {
       // Check abort between chunks
       if (abortSignal?.aborted) {
-        log.info('Stream cancelled');
-        timer.failure('aborted');
+        log.info("Stream cancelled");
+        timer.failure("aborted");
         return;
       }
 
-      if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+      if (
+        event.type === "content_block_delta" &&
+        event.delta?.type === "text_delta"
+      ) {
         yield event.delta.text;
       }
     }
 
     timer.success();
-    log.info('Stream completed successfully');
+    log.info("Stream completed successfully");
   } catch (error) {
     const err = error as Error & { status?: number };
-    if (err.name === 'AbortError' || abortSignal?.aborted) {
-      timer.failure('aborted');
-      log.info('Stream aborted');
+    if (err.name === "AbortError" || abortSignal?.aborted) {
+      timer.failure("aborted");
+      log.info("Stream aborted");
       return;
     }
-    timer.failure(err.status?.toString() || 'error');
+    timer.failure(err.status?.toString() || "error");
     throw error;
   }
 }
@@ -425,5 +454,5 @@ export async function* generateDiagramStream(
 export { extractMermaidCode, validateMermaidCode };
 
 // Export intent analysis for external use
-export { analyzeIntent } from './intentParser.js';
-export type { IntentAnalysis } from './intentParser.js';
+export { analyzeIntent } from "./intentParser.js";
+export type { IntentAnalysis } from "./intentParser.js";

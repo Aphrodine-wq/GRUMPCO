@@ -14,9 +14,9 @@
  * @module gAgent/security
  */
 
-import { z } from 'zod';
-import type { Request, Response, NextFunction } from 'express';
-import logger from '../middleware/logger.js';
+import { z } from "zod";
+import type { Request, Response, NextFunction } from "express";
+import logger from "../middleware/logger.js";
 import {
   getGuardrailsConfig,
   isExtensionBlocked,
@@ -24,7 +24,7 @@ import {
   isDirectoryDepthAllowed,
   isFileSizeAllowed,
   isHighRiskCommand,
-} from '../config/guardrailsConfig.js';
+} from "../config/guardrailsConfig.js";
 
 // ============================================================================
 // CONSTANTS
@@ -200,11 +200,11 @@ export interface SecurityCheckResult {
  */
 export function checkSuspiciousInGAgentBody(
   body: Record<string, unknown>,
-  keys: string[]
+  keys: string[],
 ): SecurityCheckResult | null {
   for (const key of keys) {
     const val = body[key];
-    const text = typeof val === 'string' ? val : '';
+    const text = typeof val === "string" ? val : "";
     const matches = checkGAgentSuspiciousPatterns(text);
 
     if (matches.length > 0) {
@@ -212,12 +212,12 @@ export function checkSuspiciousInGAgentBody(
 
       // Always log (warning level)
       logger.warn(
-        { patterns: matches, field: key, preview, source: 'g-agent-security' },
-        'G-Agent suspicious patterns detected'
+        { patterns: matches, field: key, preview, source: "g-agent-security" },
+        "G-Agent suspicious patterns detected",
       );
 
       // Block if env var is set
-      if (process.env.BLOCK_SUSPICIOUS_PROMPTS === 'true') {
+      if (process.env.BLOCK_SUSPICIOUS_PROMPTS === "true") {
         return { blocked: true, patterns: matches, field: key, preview };
       }
     }
@@ -235,7 +235,7 @@ export function checkSuspiciousInGAgentBody(
  */
 export function sanitizeControlChars(value: string): string {
   // eslint-disable-next-line no-control-regex -- intentional: strip control chars for security
-  return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 }
 
 /**
@@ -246,7 +246,7 @@ export function sanitizeControlChars(value: string): string {
  */
 export function sanitizeGAgentMessage(
   input: string,
-  maxLength = GAGENT_MAX_MESSAGE_LENGTH
+  maxLength = GAGENT_MAX_MESSAGE_LENGTH,
 ): string {
   let sanitized = sanitizeControlChars(input);
   sanitized = sanitized.trim();
@@ -267,7 +267,7 @@ export function sanitizeGoalDescription(input: string): string {
   let sanitized = sanitizeControlChars(input);
   sanitized = sanitized.trim();
   // Normalize multiple newlines to max 2
-  sanitized = sanitized.replace(/\n{3,}/g, '\n\n');
+  sanitized = sanitized.replace(/\n{3,}/g, "\n\n");
   if (sanitized.length > GAGENT_MAX_DESCRIPTION_LENGTH) {
     sanitized = sanitized.substring(0, GAGENT_MAX_DESCRIPTION_LENGTH);
   }
@@ -282,7 +282,7 @@ export function sanitizeGoalDescription(input: string): string {
 export function sanitizePath(input: string): string {
   let sanitized = input.trim();
   // Remove null bytes (path traversal attack)
-  sanitized = sanitized.replace(/\0/g, '');
+  sanitized = sanitized.replace(/\0/g, "");
   // Don't allow explicit path traversal sequences
   // (Note: more comprehensive path validation should happen at file system level)
   if (sanitized.length > GAGENT_MAX_PATH_LENGTH) {
@@ -301,7 +301,9 @@ export function sanitizeTags(tags: unknown): string[] {
   if (!Array.isArray(tags)) return [];
 
   return tags
-    .filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0)
+    .filter(
+      (tag): tag is string => typeof tag === "string" && tag.trim().length > 0,
+    )
     .slice(0, GAGENT_MAX_TAGS)
     .map((tag) => tag.trim().substring(0, GAGENT_MAX_TAG_LENGTH));
 }
@@ -312,15 +314,18 @@ export function sanitizeTags(tags: unknown): string[] {
  * - Sanitizes string values
  * - Removes functions and symbols
  */
-export function sanitizeContext(obj: unknown, depth = 0): Record<string, unknown> | undefined {
+export function sanitizeContext(
+  obj: unknown,
+  depth = 0,
+): Record<string, unknown> | undefined {
   if (depth > GAGENT_MAX_CONTEXT_DEPTH) return undefined;
   if (obj === null || obj === undefined) return undefined;
-  if (typeof obj !== 'object') return undefined;
+  if (typeof obj !== "object") return undefined;
   if (Array.isArray(obj)) {
     // For arrays in context, sanitize each element
     return obj.map((item) => {
-      if (typeof item === 'string') return sanitizeControlChars(item);
-      if (typeof item === 'object' && item !== null) {
+      if (typeof item === "string") return sanitizeControlChars(item);
+      if (typeof item === "object" && item !== null) {
         return sanitizeContext(item, depth + 1);
       }
       return item;
@@ -330,11 +335,11 @@ export function sanitizeContext(obj: unknown, depth = 0): Record<string, unknown
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     // Skip dangerous types
-    if (typeof value === 'function' || typeof value === 'symbol') continue;
+    if (typeof value === "function" || typeof value === "symbol") continue;
 
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       result[key] = sanitizeControlChars(value);
-    } else if (typeof value === 'object' && value !== null) {
+    } else if (typeof value === "object" && value !== null) {
       const sanitized = sanitizeContext(value, depth + 1);
       if (sanitized !== undefined) {
         result[key] = sanitized;
@@ -352,32 +357,32 @@ export function sanitizeContext(obj: unknown, depth = 0): Record<string, unknown
 
 // --- Common Enums ---
 const agentModeSchema = z.enum([
-  'chat',
-  'goal',
-  'plan',
-  'execute',
-  'swarm',
-  'codegen',
-  'autonomous',
+  "chat",
+  "goal",
+  "plan",
+  "execute",
+  "swarm",
+  "codegen",
+  "autonomous",
 ]);
-const prioritySchema = z.enum(['low', 'normal', 'high', 'urgent']);
+const prioritySchema = z.enum(["low", "normal", "high", "urgent"]);
 const triggerTypeSchema = z.enum([
-  'immediate',
-  'scheduled',
-  'cron',
-  'webhook',
-  'file_change',
-  'self_scheduled',
+  "immediate",
+  "scheduled",
+  "cron",
+  "webhook",
+  "file_change",
+  "self_scheduled",
 ]);
 
 // --- Agent Process Request Schema ---
 export const agentProcessRequestSchema = z.object({
   message: z
     .string()
-    .min(1, 'Message is required')
+    .min(1, "Message is required")
     .max(
       GAGENT_MAX_MESSAGE_LENGTH,
-      `Message must be at most ${GAGENT_MAX_MESSAGE_LENGTH} characters`
+      `Message must be at most ${GAGENT_MAX_MESSAGE_LENGTH} characters`,
     )
     .transform((val) => sanitizeGAgentMessage(val)),
 
@@ -389,7 +394,11 @@ export const agentProcessRequestSchema = z.object({
 
   planId: z.string().max(GAGENT_MAX_ID_LENGTH).optional(),
 
-  workspaceRoot: z.string().max(GAGENT_MAX_PATH_LENGTH).transform(sanitizePath).optional(),
+  workspaceRoot: z
+    .string()
+    .max(GAGENT_MAX_PATH_LENGTH)
+    .transform(sanitizePath)
+    .optional(),
 
   capabilities: z.array(z.string().max(100)).max(50).optional(),
 
@@ -409,22 +418,26 @@ export type AgentProcessRequest = z.infer<typeof agentProcessRequestSchema>;
 export const goalCreateRequestSchema = z.object({
   description: z
     .string()
-    .min(1, 'Description is required')
+    .min(1, "Description is required")
     .max(
       GAGENT_MAX_DESCRIPTION_LENGTH,
-      `Description must be at most ${GAGENT_MAX_DESCRIPTION_LENGTH} characters`
+      `Description must be at most ${GAGENT_MAX_DESCRIPTION_LENGTH} characters`,
     )
     .transform(sanitizeGoalDescription),
 
-  priority: prioritySchema.optional().default('normal'),
+  priority: prioritySchema.optional().default("normal"),
 
-  triggerType: triggerTypeSchema.optional().default('immediate'),
+  triggerType: triggerTypeSchema.optional().default("immediate"),
 
   scheduledAt: z.string().datetime().optional(),
 
   cronExpression: z.string().max(GAGENT_MAX_CRON_LENGTH).optional(),
 
-  workspaceRoot: z.string().max(GAGENT_MAX_PATH_LENGTH).transform(sanitizePath).optional(),
+  workspaceRoot: z
+    .string()
+    .max(GAGENT_MAX_PATH_LENGTH)
+    .transform(sanitizePath)
+    .optional(),
 
   tags: z
     .array(z.string())
@@ -440,13 +453,20 @@ export type GoalCreateRequest = z.infer<typeof goalCreateRequestSchema>;
 export const recurringGoalRequestSchema = z.object({
   description: z
     .string()
-    .min(1, 'Description is required')
+    .min(1, "Description is required")
     .max(GAGENT_MAX_DESCRIPTION_LENGTH)
     .transform(sanitizeGoalDescription),
 
-  cronExpression: z.string().min(1, 'Cron expression is required').max(GAGENT_MAX_CRON_LENGTH),
+  cronExpression: z
+    .string()
+    .min(1, "Cron expression is required")
+    .max(GAGENT_MAX_CRON_LENGTH),
 
-  workspaceRoot: z.string().max(GAGENT_MAX_PATH_LENGTH).transform(sanitizePath).optional(),
+  workspaceRoot: z
+    .string()
+    .max(GAGENT_MAX_PATH_LENGTH)
+    .transform(sanitizePath)
+    .optional(),
 
   priority: prioritySchema.optional(),
 
@@ -460,11 +480,14 @@ export type RecurringGoalRequest = z.infer<typeof recurringGoalRequestSchema>;
 
 // --- Follow-up Goal Request Schema ---
 export const followUpGoalRequestSchema = z.object({
-  parentGoalId: z.string().min(1, 'Parent goal ID is required').max(GAGENT_MAX_ID_LENGTH),
+  parentGoalId: z
+    .string()
+    .min(1, "Parent goal ID is required")
+    .max(GAGENT_MAX_ID_LENGTH),
 
   description: z
     .string()
-    .min(1, 'Description is required')
+    .min(1, "Description is required")
     .max(GAGENT_MAX_DESCRIPTION_LENGTH)
     .transform(sanitizeGoalDescription),
 
@@ -500,7 +523,7 @@ export interface ValidatedRequest<T> extends Request {
  */
 export function validateGAgentRequest<T extends z.ZodSchema>(
   schema: T,
-  suspiciousKeys: string[] = ['message', 'description']
+  suspiciousKeys: string[] = ["message", "description"],
 ) {
   return (req: Request, res: Response, next: NextFunction): void => {
     // 1. Zod validation (includes sanitization via transforms)
@@ -508,20 +531,20 @@ export function validateGAgentRequest<T extends z.ZodSchema>(
 
     if (!result.success) {
       const errors = result.error.errors.map((e) => ({
-        field: e.path.join('.'),
+        field: e.path.join("."),
         message: e.message,
       }));
 
       logger.warn(
-        { errors, path: req.path, source: 'g-agent-security' },
-        'G-Agent validation failed'
+        { errors, path: req.path, source: "g-agent-security" },
+        "G-Agent validation failed",
       );
 
       res.status(400).json({
         success: false,
         error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Validation failed',
+          code: "VALIDATION_ERROR",
+          message: "Validation failed",
           details: errors,
         },
       });
@@ -529,14 +552,22 @@ export function validateGAgentRequest<T extends z.ZodSchema>(
     }
 
     // 2. Suspicious pattern check (on ORIGINAL input, before sanitization)
-    const suspiciousResult = checkSuspiciousInGAgentBody(req.body, suspiciousKeys);
+    const suspiciousResult = checkSuspiciousInGAgentBody(
+      req.body,
+      suspiciousKeys,
+    );
     if (suspiciousResult?.blocked) {
       res.status(400).json({
         success: false,
         error: {
-          code: 'SUSPICIOUS_CONTENT',
-          message: 'Request blocked: suspicious content detected',
-          details: [{ field: suspiciousResult.field, message: 'Content matches blocked patterns' }],
+          code: "SUSPICIOUS_CONTENT",
+          message: "Request blocked: suspicious content detected",
+          details: [
+            {
+              field: suspiciousResult.field,
+              message: "Content matches blocked patterns",
+            },
+          ],
         },
       });
       return;
@@ -556,30 +587,34 @@ export function validateGAgentRequest<T extends z.ZodSchema>(
 /**
  * Middleware for POST /api/agent/process and /api/agent/stream
  */
-export const validateAgentProcessRequest = validateGAgentRequest(agentProcessRequestSchema, [
-  'message',
-]);
+export const validateAgentProcessRequest = validateGAgentRequest(
+  agentProcessRequestSchema,
+  ["message"],
+);
 
 /**
  * Middleware for POST /api/gagent/goals
  */
-export const validateGoalCreateRequest = validateGAgentRequest(goalCreateRequestSchema, [
-  'description',
-]);
+export const validateGoalCreateRequest = validateGAgentRequest(
+  goalCreateRequestSchema,
+  ["description"],
+);
 
 /**
  * Middleware for POST /api/gagent/recurring
  */
-export const validateRecurringGoalRequest = validateGAgentRequest(recurringGoalRequestSchema, [
-  'description',
-]);
+export const validateRecurringGoalRequest = validateGAgentRequest(
+  recurringGoalRequestSchema,
+  ["description"],
+);
 
 /**
  * Middleware for POST /api/gagent/follow-up
  */
-export const validateFollowUpGoalRequest = validateGAgentRequest(followUpGoalRequestSchema, [
-  'description',
-]);
+export const validateFollowUpGoalRequest = validateGAgentRequest(
+  followUpGoalRequestSchema,
+  ["description"],
+);
 
 // ============================================================================
 // FILE SYSTEM RESTRICTIONS
@@ -591,7 +626,7 @@ export const validateFollowUpGoalRequest = validateGAgentRequest(followUpGoalReq
 export interface FileSystemCheckResult {
   allowed: boolean;
   reason?: string;
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  riskLevel: "low" | "medium" | "high" | "critical";
 }
 
 /**
@@ -601,15 +636,15 @@ export function checkFileReadAllowed(filePath: string): FileSystemCheckResult {
   const config = getGuardrailsConfig();
 
   if (!config.enabled) {
-    return { allowed: true, riskLevel: 'low' };
+    return { allowed: true, riskLevel: "low" };
   }
 
   // Check path traversal
   if (containsPathTraversal(filePath)) {
     return {
       allowed: false,
-      reason: 'Path traversal detected',
-      riskLevel: 'critical',
+      reason: "Path traversal detected",
+      riskLevel: "critical",
     };
   }
 
@@ -617,8 +652,8 @@ export function checkFileReadAllowed(filePath: string): FileSystemCheckResult {
   if (isDirectoryBlocked(filePath)) {
     return {
       allowed: false,
-      reason: 'Access to blocked directory',
-      riskLevel: 'high',
+      reason: "Access to blocked directory",
+      riskLevel: "high",
     };
   }
 
@@ -627,21 +662,24 @@ export function checkFileReadAllowed(filePath: string): FileSystemCheckResult {
     return {
       allowed: false,
       reason: `Path exceeds maximum directory depth of ${config.fileSystem.maxDirectoryDepth}`,
-      riskLevel: 'medium',
+      riskLevel: "medium",
     };
   }
 
-  return { allowed: true, riskLevel: 'low' };
+  return { allowed: true, riskLevel: "low" };
 }
 
 /**
  * Check if a file path is allowed for write operations
  */
-export function checkFileWriteAllowed(filePath: string, fileSize?: number): FileSystemCheckResult {
+export function checkFileWriteAllowed(
+  filePath: string,
+  fileSize?: number,
+): FileSystemCheckResult {
   const config = getGuardrailsConfig();
 
   if (!config.enabled) {
-    return { allowed: true, riskLevel: 'low' };
+    return { allowed: true, riskLevel: "low" };
   }
 
   // First check read restrictions
@@ -654,8 +692,8 @@ export function checkFileWriteAllowed(filePath: string, fileSize?: number): File
   if (isExtensionBlocked(filePath)) {
     return {
       allowed: false,
-      reason: 'File extension is blocked for writing',
-      riskLevel: 'high',
+      reason: "File extension is blocked for writing",
+      riskLevel: "high",
     };
   }
 
@@ -664,7 +702,7 @@ export function checkFileWriteAllowed(filePath: string, fileSize?: number): File
     return {
       allowed: false,
       reason: `File size exceeds limit of ${config.fileSystem.maxFileSizeBytes} bytes`,
-      riskLevel: 'medium',
+      riskLevel: "medium",
     };
   }
 
@@ -672,30 +710,32 @@ export function checkFileWriteAllowed(filePath: string, fileSize?: number): File
   if (isSensitiveFile(filePath)) {
     return {
       allowed: false,
-      reason: 'Writing to sensitive files is not allowed',
-      riskLevel: 'critical',
+      reason: "Writing to sensitive files is not allowed",
+      riskLevel: "critical",
     };
   }
 
-  return { allowed: true, riskLevel: 'low' };
+  return { allowed: true, riskLevel: "low" };
 }
 
 /**
  * Check if a file deletion is allowed
  */
-export function checkFileDeleteAllowed(filePath: string): FileSystemCheckResult {
+export function checkFileDeleteAllowed(
+  filePath: string,
+): FileSystemCheckResult {
   const config = getGuardrailsConfig();
 
   if (!config.enabled) {
-    return { allowed: true, riskLevel: 'low' };
+    return { allowed: true, riskLevel: "low" };
   }
 
   // Check path traversal
   if (containsPathTraversal(filePath)) {
     return {
       allowed: false,
-      reason: 'Path traversal detected',
-      riskLevel: 'critical',
+      reason: "Path traversal detected",
+      riskLevel: "critical",
     };
   }
 
@@ -703,8 +743,8 @@ export function checkFileDeleteAllowed(filePath: string): FileSystemCheckResult 
   if (isDirectoryBlocked(filePath)) {
     return {
       allowed: false,
-      reason: 'Cannot delete files in blocked directories',
-      riskLevel: 'critical',
+      reason: "Cannot delete files in blocked directories",
+      riskLevel: "critical",
     };
   }
 
@@ -712,12 +752,12 @@ export function checkFileDeleteAllowed(filePath: string): FileSystemCheckResult 
   if (isSensitiveFile(filePath)) {
     return {
       allowed: false,
-      reason: 'Cannot delete sensitive files',
-      riskLevel: 'critical',
+      reason: "Cannot delete sensitive files",
+      riskLevel: "critical",
     };
   }
 
-  return { allowed: true, riskLevel: 'medium' };
+  return { allowed: true, riskLevel: "medium" };
 }
 
 /**
@@ -727,15 +767,15 @@ export function checkCommandAllowed(command: string): FileSystemCheckResult {
   const config = getGuardrailsConfig();
 
   if (!config.enabled) {
-    return { allowed: true, riskLevel: 'low' };
+    return { allowed: true, riskLevel: "low" };
   }
 
   // Check for high-risk commands
   if (isHighRiskCommand(command)) {
     return {
       allowed: false,
-      reason: 'High-risk command detected',
-      riskLevel: 'critical',
+      reason: "High-risk command detected",
+      riskLevel: "critical",
     };
   }
 
@@ -744,8 +784,8 @@ export function checkCommandAllowed(command: string): FileSystemCheckResult {
     if (pattern.test(command)) {
       return {
         allowed: false,
-        reason: 'Dangerous command pattern detected',
-        riskLevel: 'critical',
+        reason: "Dangerous command pattern detected",
+        riskLevel: "critical",
       };
     }
   }
@@ -754,8 +794,8 @@ export function checkCommandAllowed(command: string): FileSystemCheckResult {
   if (containsPathTraversal(command)) {
     return {
       allowed: false,
-      reason: 'Path traversal in command arguments',
-      riskLevel: 'high',
+      reason: "Path traversal in command arguments",
+      riskLevel: "high",
     };
   }
 
@@ -833,7 +873,7 @@ function containsPathTraversal(pathOrCommand: string): boolean {
  * Check if file is sensitive
  */
 function isSensitiveFile(filePath: string): boolean {
-  const normalizedPath = filePath.toLowerCase().replace(/\\/g, '/');
+  const normalizedPath = filePath.toLowerCase().replace(/\\/g, "/");
 
   const sensitivePatterns = [
     // Environment and config files
@@ -874,7 +914,7 @@ function isSensitiveFile(filePath: string): boolean {
 /**
  * Determine risk level of a command
  */
-function determineCommandRiskLevel(command: string): 'low' | 'medium' | 'high' {
+function determineCommandRiskLevel(command: string): "low" | "medium" | "high" {
   const lowerCommand = command.toLowerCase();
 
   // High risk commands
@@ -892,7 +932,7 @@ function determineCommandRiskLevel(command: string): 'low' | 'medium' | 'high' {
   ];
 
   if (highRiskPatterns.some((pattern) => pattern.test(lowerCommand))) {
-    return 'high';
+    return "high";
   }
 
   // Medium risk commands
@@ -908,10 +948,10 @@ function determineCommandRiskLevel(command: string): 'low' | 'medium' | 'high' {
   ];
 
   if (mediumRiskPatterns.some((pattern) => pattern.test(lowerCommand))) {
-    return 'medium';
+    return "medium";
   }
 
-  return 'low';
+  return "low";
 }
 
 /**
@@ -919,7 +959,7 @@ function determineCommandRiskLevel(command: string): 'low' | 'medium' | 'high' {
  */
 export function validateBatchOperation(
   files: Array<{ path: string; size?: number }>,
-  operation: 'read' | 'write' | 'delete'
+  operation: "read" | "write" | "delete",
 ): { allowed: boolean; blockedFiles: string[]; reason?: string } {
   const config = getGuardrailsConfig();
   const blockedFiles: string[] = [];
@@ -934,7 +974,7 @@ export function validateBatchOperation(
   }
 
   // Check total size for write operations
-  if (operation === 'write') {
+  if (operation === "write") {
     const totalSize = files.reduce((sum, f) => sum + (f.size ?? 0), 0);
     if (totalSize > config.fileSystem.maxBytesPerOperation) {
       return {
@@ -950,13 +990,13 @@ export function validateBatchOperation(
     let check: FileSystemCheckResult;
 
     switch (operation) {
-      case 'read':
+      case "read":
         check = checkFileReadAllowed(file.path);
         break;
-      case 'write':
+      case "write":
         check = checkFileWriteAllowed(file.path, file.size);
         break;
-      case 'delete':
+      case "delete":
         check = checkFileDeleteAllowed(file.path);
         break;
     }

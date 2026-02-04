@@ -4,10 +4,10 @@
  * Provides security scanning, SBOM generation, and compliance assessment.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import * as crypto from 'crypto';
-import { getStream, type StreamParams } from '../../services/llmGateway.js';
+import * as fs from "fs";
+import * as path from "path";
+import * as crypto from "crypto";
+import { getStream, type StreamParams } from "../../services/llmGateway.js";
 import {
   type SecurityScanResult,
   type SecurityVulnerability,
@@ -22,24 +22,30 @@ import {
   type SecretsAuditRequest,
   type SecretFinding,
   type PathValidationResult,
-} from './types.js';
+} from "./types.js";
 import {
   SECURITY_ANALYSIS_SYSTEM_PROMPT,
   generateSecurityScanPrompt,
   generateCompliancePrompt,
   generateSBOMPrompt,
-} from './prompts.js';
+} from "./prompts.js";
 
-const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
+const DEFAULT_MODEL = "moonshotai/kimi-k2.5";
 
 /**
  * Helper to call LLM via gateway and get complete response text
  */
 async function callLLM(params: StreamParams): Promise<string> {
-  const stream = getStream(params, { provider: 'nim', modelId: params.model || DEFAULT_MODEL });
-  let responseText = '';
+  const stream = getStream(params, {
+    provider: "nim",
+    modelId: params.model || DEFAULT_MODEL,
+  });
+  let responseText = "";
   for await (const event of stream) {
-    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
       responseText += event.delta.text;
     }
   }
@@ -56,7 +62,9 @@ function getSecurityScanRoot(): string {
  * Validate workspacePath: must resolve to a path under the allowed scan root.
  * Prevents path traversal (e.g. ../../etc) and absolute paths outside root.
  */
-export function validateWorkspacePath(workspacePath: string): PathValidationResult {
+export function validateWorkspacePath(
+  workspacePath: string,
+): PathValidationResult {
   const root = getSecurityScanRoot();
   const resolved = path.resolve(workspacePath);
   const rootSep = root + path.sep;
@@ -64,7 +72,7 @@ export function validateWorkspacePath(workspacePath: string): PathValidationResu
     return {
       ok: false,
       reason:
-        'workspacePath must be under the allowed scan root (set SECURITY_SCAN_ROOT or use a path under the current working directory)',
+        "workspacePath must be under the allowed scan root (set SECURITY_SCAN_ROOT or use a path under the current working directory)",
     };
   }
   return { ok: true, resolved };
@@ -74,128 +82,156 @@ export function validateWorkspacePath(workspacePath: string): PathValidationResu
 const SECRET_PATTERNS: Array<{
   name: string;
   pattern: RegExp;
-  type: SecretFinding['type'];
-  severity: SecretFinding['severity'];
+  type: SecretFinding["type"];
+  severity: SecretFinding["severity"];
 }> = [
-  { name: 'AWS Access Key', pattern: /AKIA[0-9A-Z]{16}/g, type: 'api-key', severity: 'critical' },
-  { name: 'AWS Secret Key', pattern: /[0-9a-zA-Z/+]{40}/g, type: 'api-key', severity: 'critical' },
-  { name: 'GitHub Token', pattern: /ghp_[0-9a-zA-Z]{36}/g, type: 'token', severity: 'critical' },
-  { name: 'GitHub OAuth', pattern: /gho_[0-9a-zA-Z]{36}/g, type: 'token', severity: 'critical' },
   {
-    name: 'Slack Token',
+    name: "AWS Access Key",
+    pattern: /AKIA[0-9A-Z]{16}/g,
+    type: "api-key",
+    severity: "critical",
+  },
+  {
+    name: "AWS Secret Key",
+    pattern: /[0-9a-zA-Z/+]{40}/g,
+    type: "api-key",
+    severity: "critical",
+  },
+  {
+    name: "GitHub Token",
+    pattern: /ghp_[0-9a-zA-Z]{36}/g,
+    type: "token",
+    severity: "critical",
+  },
+  {
+    name: "GitHub OAuth",
+    pattern: /gho_[0-9a-zA-Z]{36}/g,
+    type: "token",
+    severity: "critical",
+  },
+  {
+    name: "Slack Token",
     pattern: /xox[baprs]-[0-9a-zA-Z-]{10,}/g,
-    type: 'token',
-    severity: 'high',
+    type: "token",
+    severity: "high",
   },
   {
-    name: 'Stripe API Key',
+    name: "Stripe API Key",
     pattern: /sk_live_[0-9a-zA-Z]{24}/g,
-    type: 'api-key',
-    severity: 'critical',
+    type: "api-key",
+    severity: "critical",
   },
   {
-    name: 'Stripe Test Key',
+    name: "Stripe Test Key",
     pattern: /sk_test_[0-9a-zA-Z]{24}/g,
-    type: 'api-key',
-    severity: 'medium',
+    type: "api-key",
+    severity: "medium",
   },
   {
-    name: 'Private Key',
+    name: "Private Key",
     pattern: /-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----/g,
-    type: 'private-key',
-    severity: 'critical',
+    type: "private-key",
+    severity: "critical",
   },
   {
-    name: 'Generic API Key',
+    name: "Generic API Key",
     pattern: /api[_-]?key[_-]?[=:]["']?[0-9a-zA-Z]{20,}/gi,
-    type: 'api-key',
-    severity: 'high',
+    type: "api-key",
+    severity: "high",
   },
   {
-    name: 'Generic Secret',
+    name: "Generic Secret",
     pattern: /secret[_-]?key[_-]?[=:]["']?[0-9a-zA-Z]{20,}/gi,
-    type: 'credential',
-    severity: 'high',
+    type: "credential",
+    severity: "high",
   },
   {
-    name: 'Password in Code',
+    name: "Password in Code",
     pattern: /password[_-]?[=:]["'][^"']{8,}/gi,
-    type: 'password',
-    severity: 'high',
+    type: "password",
+    severity: "high",
   },
   {
-    name: 'Connection String',
+    name: "Connection String",
     pattern: /(?:mongodb|postgres|mysql|redis):\/\/[^\s"']+/gi,
-    type: 'connection-string',
-    severity: 'high',
+    type: "connection-string",
+    severity: "high",
   },
   {
-    name: 'JWT Secret',
+    name: "JWT Secret",
     pattern: /jwt[_-]?secret[_-]?[=:]["']?[0-9a-zA-Z]{16,}/gi,
-    type: 'credential',
-    severity: 'critical',
+    type: "credential",
+    severity: "critical",
   },
   {
-    name: 'Anthropic API Key',
+    name: "Anthropic API Key",
     pattern: /sk-ant-[a-zA-Z0-9-_]{20,}/g,
-    type: 'api-key',
-    severity: 'critical',
+    type: "api-key",
+    severity: "critical",
   },
-  { name: 'OpenAI API Key', pattern: /sk-[a-zA-Z0-9]{48}/g, type: 'api-key', severity: 'critical' },
+  {
+    name: "OpenAI API Key",
+    pattern: /sk-[a-zA-Z0-9]{48}/g,
+    type: "api-key",
+    severity: "critical",
+  },
 ];
 
 // Files to scan for secrets
 const SECRET_SCAN_EXTENSIONS = new Set([
-  '.js',
-  '.ts',
-  '.jsx',
-  '.tsx',
-  '.py',
-  '.go',
-  '.rb',
-  '.php',
-  '.java',
-  '.kt',
-  '.swift',
-  '.cs',
-  '.env',
-  '.yaml',
-  '.yml',
-  '.json',
-  '.xml',
-  '.conf',
-  '.config',
-  '.ini',
-  '.properties',
+  ".js",
+  ".ts",
+  ".jsx",
+  ".tsx",
+  ".py",
+  ".go",
+  ".rb",
+  ".php",
+  ".java",
+  ".kt",
+  ".swift",
+  ".cs",
+  ".env",
+  ".yaml",
+  ".yml",
+  ".json",
+  ".xml",
+  ".conf",
+  ".config",
+  ".ini",
+  ".properties",
 ]);
 
 // Directories to ignore
 const IGNORE_DIRS = new Set([
-  'node_modules',
-  '.git',
-  'dist',
-  'build',
-  'coverage',
-  '__pycache__',
-  'venv',
-  '.venv',
-  'vendor',
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  "coverage",
+  "__pycache__",
+  "venv",
+  ".venv",
+  "vendor",
 ]);
 
 /**
  * Redact a secret for safe display
  */
 function redactSecret(secret: string): string {
-  if (secret.length <= 8) return '***';
-  return secret.substring(0, 4) + '***' + secret.substring(secret.length - 4);
+  if (secret.length <= 8) return "***";
+  return secret.substring(0, 4) + "***" + secret.substring(secret.length - 4);
 }
 
 /**
  * Scan a single file for secrets
  */
-function scanFileForSecrets(filePath: string, content: string): SecretFinding[] {
+function scanFileForSecrets(
+  filePath: string,
+  content: string,
+): SecretFinding[] {
   const findings: SecretFinding[] = [];
-  const lines = content.split('\n');
+  const lines = content.split("\n");
 
   for (const { name, pattern, type, severity } of SECRET_PATTERNS) {
     // Reset regex
@@ -235,7 +271,7 @@ function scanFileForSecrets(filePath: string, content: string): SecretFinding[] 
 function scanDirectory(
   dirPath: string,
   extensions: Set<string>,
-  excludePatterns: string[] = []
+  excludePatterns: string[] = [],
 ): string[] {
   const files: string[] = [];
 
@@ -252,7 +288,11 @@ function scanDirectory(
         files.push(...scanDirectory(fullPath, extensions, excludePatterns));
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase();
-        if (extensions.has(ext) || entry.name === '.env' || entry.name.includes('.env.')) {
+        if (
+          extensions.has(ext) ||
+          entry.name === ".env" ||
+          entry.name.includes(".env.")
+        ) {
           files.push(fullPath);
         }
       }
@@ -269,15 +309,15 @@ function scanDirectory(
  */
 function readCodeFiles(workspacePath: string, maxFiles: number = 20): string {
   const codeExtensions = new Set([
-    '.js',
-    '.ts',
-    '.jsx',
-    '.tsx',
-    '.py',
-    '.go',
-    '.java',
-    '.php',
-    '.rb',
+    ".js",
+    ".ts",
+    ".jsx",
+    ".tsx",
+    ".py",
+    ".go",
+    ".java",
+    ".php",
+    ".rb",
   ]);
   const files = scanDirectory(workspacePath, codeExtensions);
 
@@ -287,28 +327,30 @@ function readCodeFiles(workspacePath: string, maxFiles: number = 20): string {
 
   for (const file of files.slice(0, maxFiles)) {
     try {
-      const content = fs.readFileSync(file, 'utf-8');
+      const content = fs.readFileSync(file, "utf-8");
       if (totalSize + content.length > maxSize) break;
 
-      const relativePath = file.replace(workspacePath, '');
-      snippets.push(`## ${relativePath}\n\`\`\`\n${content.substring(0, 5000)}\n\`\`\``);
+      const relativePath = file.replace(workspacePath, "");
+      snippets.push(
+        `## ${relativePath}\n\`\`\`\n${content.substring(0, 5000)}\n\`\`\``,
+      );
       totalSize += content.length;
     } catch (_err) {
       // Skip unreadable files
     }
   }
 
-  return snippets.join('\n\n');
+  return snippets.join("\n\n");
 }
 
 /**
  * Read package.json
  */
 function readPackageJson(workspacePath: string): string | null {
-  const pkgPath = path.join(workspacePath, 'package.json');
+  const pkgPath = path.join(workspacePath, "package.json");
   if (fs.existsSync(pkgPath)) {
     try {
-      return fs.readFileSync(pkgPath, 'utf-8');
+      return fs.readFileSync(pkgPath, "utf-8");
     } catch (_err) {
       return null;
     }
@@ -321,25 +363,25 @@ function readPackageJson(workspacePath: string): string | null {
  */
 function calculateSecurityScore(vulnerabilities: SecurityVulnerability[]): {
   score: number;
-  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  grade: "A" | "B" | "C" | "D" | "F";
 } {
   let score = 100;
 
   for (const vuln of vulnerabilities) {
     switch (vuln.severity) {
-      case 'critical':
+      case "critical":
         score -= 25;
         break;
-      case 'high':
+      case "high":
         score -= 15;
         break;
-      case 'medium':
+      case "medium":
         score -= 10;
         break;
-      case 'low':
+      case "low":
         score -= 5;
         break;
-      case 'info':
+      case "info":
         score -= 1;
         break;
     }
@@ -347,12 +389,12 @@ function calculateSecurityScore(vulnerabilities: SecurityVulnerability[]): {
 
   score = Math.max(0, Math.min(100, score));
 
-  let grade: 'A' | 'B' | 'C' | 'D' | 'F';
-  if (score >= 90) grade = 'A';
-  else if (score >= 80) grade = 'B';
-  else if (score >= 70) grade = 'C';
-  else if (score >= 60) grade = 'D';
-  else grade = 'F';
+  let grade: "A" | "B" | "C" | "D" | "F";
+  if (score >= 90) grade = "A";
+  else if (score >= 80) grade = "B";
+  else if (score >= 70) grade = "C";
+  else if (score >= 60) grade = "D";
+  else grade = "F";
 
   return { score, grade };
 }
@@ -361,11 +403,11 @@ function calculateSecurityScore(vulnerabilities: SecurityVulnerability[]): {
  * Perform security scan
  */
 export async function performSecurityScan(
-  request: SecurityScanRequest
+  request: SecurityScanRequest,
 ): Promise<SecurityScanResult> {
   const {
     workspacePath,
-    scanTypes = ['sast', 'deps', 'secrets', 'config'],
+    scanTypes = ["sast", "deps", "secrets", "config"],
     excludePatterns = [],
   } = request;
   const startTime = Date.now();
@@ -374,20 +416,24 @@ export async function performSecurityScan(
   const vulnerabilities: SecurityVulnerability[] = [];
 
   // 1. Secrets scan (local, fast)
-  if (scanTypes.includes('secrets')) {
-    const files = scanDirectory(workspacePath, SECRET_SCAN_EXTENSIONS, excludePatterns);
+  if (scanTypes.includes("secrets")) {
+    const files = scanDirectory(
+      workspacePath,
+      SECRET_SCAN_EXTENSIONS,
+      excludePatterns,
+    );
     for (const file of files) {
       try {
-        const content = fs.readFileSync(file, 'utf-8');
+        const content = fs.readFileSync(file, "utf-8");
         const findings = scanFileForSecrets(file, content);
         for (const finding of findings) {
           vulnerabilities.push({
             id: `SEC-${crypto.randomUUID().substring(0, 8)}`,
-            type: 'secret-exposure',
+            type: "secret-exposure",
             severity: finding.severity,
             title: `Exposed ${finding.type}`,
             description: finding.description,
-            file: finding.file.replace(workspacePath, ''),
+            file: finding.file.replace(workspacePath, ""),
             line: finding.line,
             recommendation: finding.recommendation,
           });
@@ -399,7 +445,7 @@ export async function performSecurityScan(
   }
 
   // 2. SAST scan (using LLM)
-  if (scanTypes.includes('sast') || scanTypes.includes('config')) {
+  if (scanTypes.includes("sast") || scanTypes.includes("config")) {
     const codeSnippets = readCodeFiles(workspacePath);
     const packageJson = readPackageJson(workspacePath);
 
@@ -410,7 +456,7 @@ export async function performSecurityScan(
         model: DEFAULT_MODEL,
         max_tokens: 4096,
         system: SECURITY_ANALYSIS_SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [{ role: "user", content: prompt }],
       });
 
       try {
@@ -437,33 +483,37 @@ export async function performSecurityScan(
     duration: Date.now() - startTime,
     summary: {
       totalVulnerabilities: vulnerabilities.length,
-      critical: vulnerabilities.filter((v) => v.severity === 'critical').length,
-      high: vulnerabilities.filter((v) => v.severity === 'high').length,
-      medium: vulnerabilities.filter((v) => v.severity === 'medium').length,
-      low: vulnerabilities.filter((v) => v.severity === 'low').length,
-      info: vulnerabilities.filter((v) => v.severity === 'info').length,
+      critical: vulnerabilities.filter((v) => v.severity === "critical").length,
+      high: vulnerabilities.filter((v) => v.severity === "high").length,
+      medium: vulnerabilities.filter((v) => v.severity === "medium").length,
+      low: vulnerabilities.filter((v) => v.severity === "low").length,
+      info: vulnerabilities.filter((v) => v.severity === "info").length,
       score,
       grade,
     },
     vulnerabilities,
     categories: {
       injection: vulnerabilities.filter((v) =>
-        ['sql-injection', 'xss', 'command-injection'].includes(v.type)
+        ["sql-injection", "xss", "command-injection"].includes(v.type),
       ).length,
       authentication: vulnerabilities.filter((v) =>
-        ['auth-bypass', 'broken-access-control'].includes(v.type)
+        ["auth-bypass", "broken-access-control"].includes(v.type),
       ).length,
       dataExposure: vulnerabilities.filter((v) =>
-        ['sensitive-data-exposure', 'secret-exposure'].includes(v.type)
+        ["sensitive-data-exposure", "secret-exposure"].includes(v.type),
       ).length,
-      configuration: vulnerabilities.filter((v) => v.type === 'security-misconfiguration').length,
-      dependencies: vulnerabilities.filter((v) => v.type === 'dependency-vulnerability').length,
+      configuration: vulnerabilities.filter(
+        (v) => v.type === "security-misconfiguration",
+      ).length,
+      dependencies: vulnerabilities.filter(
+        (v) => v.type === "dependency-vulnerability",
+      ).length,
     },
     recommendations: [
-      'Review and fix all critical and high severity vulnerabilities',
-      'Move all secrets to environment variables or a secrets manager',
-      'Implement input validation for all user inputs',
-      'Keep dependencies up to date and monitor for vulnerabilities',
+      "Review and fix all critical and high severity vulnerabilities",
+      "Move all secrets to environment variables or a secrets manager",
+      "Implement input validation for all user inputs",
+      "Keep dependencies up to date and monitor for vulnerabilities",
     ],
   };
 
@@ -474,11 +524,15 @@ export async function performSecurityScan(
  * Generate SBOM
  */
 export async function generateSBOM(request: SBOMRequest): Promise<SBOMResult> {
-  const { workspacePath, format = 'cyclonedx', includeDevDeps = true } = request;
+  const {
+    workspacePath,
+    format = "cyclonedx",
+    includeDevDeps = true,
+  } = request;
 
   const packageJson = readPackageJson(workspacePath);
   if (!packageJson) {
-    throw new Error('No package.json found');
+    throw new Error("No package.json found");
   }
 
   const pkg = JSON.parse(packageJson);
@@ -491,11 +545,11 @@ export async function generateSBOM(request: SBOMRequest): Promise<SBOMResult> {
   };
 
   for (const [name, version] of Object.entries(allDeps)) {
-    const versionStr = String(version).replace(/^[\^~]/, '');
+    const versionStr = String(version).replace(/^[\^~]/, "");
     components.push({
       name,
       version: versionStr,
-      type: 'library',
+      type: "library",
       purl: `pkg:npm/${name}@${versionStr}`,
       licenses: [], // Would need to look up from npm registry
     });
@@ -504,9 +558,9 @@ export async function generateSBOM(request: SBOMRequest): Promise<SBOMResult> {
   // Use LLM to enrich with license info
   const depsStr = Object.entries(allDeps)
     .map(([name, version]) => `${name}@${version}`)
-    .join('\n');
+    .join("\n");
 
-  const projectInfo = `Name: ${pkg.name || 'unknown'}\nVersion: ${pkg.version || '0.0.0'}`;
+  const projectInfo = `Name: ${pkg.name || "unknown"}\nVersion: ${pkg.version || "0.0.0"}`;
   const prompt = generateSBOMPrompt(depsStr, projectInfo);
 
   try {
@@ -514,7 +568,7 @@ export async function generateSBOM(request: SBOMRequest): Promise<SBOMResult> {
       model: DEFAULT_MODEL,
       max_tokens: 4096,
       system: SECURITY_ANALYSIS_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: "user", content: prompt }],
     });
 
     const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/);
@@ -534,14 +588,14 @@ export async function generateSBOM(request: SBOMRequest): Promise<SBOMResult> {
 
   return {
     format,
-    version: format === 'cyclonedx' ? '1.4' : '2.3',
+    version: format === "cyclonedx" ? "1.4" : "2.3",
     metadata: {
       timestamp: new Date().toISOString(),
-      tool: 'G-Rump Security Scanner',
+      tool: "G-Rump Security Scanner",
       component: {
-        name: pkg.name || 'unknown',
-        version: pkg.version || '0.0.0',
-        type: 'application',
+        name: pkg.name || "unknown",
+        version: pkg.version || "0.0.0",
+        type: "application",
       },
     },
     components,
@@ -552,7 +606,7 @@ export async function generateSBOM(request: SBOMRequest): Promise<SBOMResult> {
  * Generate compliance report
  */
 export async function generateComplianceReport(
-  request: ComplianceRequest
+  request: ComplianceRequest,
 ): Promise<ComplianceReport> {
   const { workspacePath, standard, projectType } = request;
 
@@ -562,7 +616,7 @@ export async function generateComplianceReport(
 
   const projectInfo = `
 Project: ${pkg.name || path.basename(workspacePath)}
-Type: ${projectType || 'Unknown'}
+Type: ${projectType || "Unknown"}
 Dependencies: ${Object.keys(pkg.dependencies || {}).length}
 Dev Dependencies: ${Object.keys(pkg.devDependencies || {}).length}
 `;
@@ -573,7 +627,7 @@ Dev Dependencies: ${Object.keys(pkg.devDependencies || {}).length}
     model: DEFAULT_MODEL,
     max_tokens: 4096,
     system: SECURITY_ANALYSIS_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [{ role: "user", content: prompt }],
   });
 
   let requirements: ComplianceRequirement[] = [];
@@ -602,7 +656,9 @@ Dev Dependencies: ${Object.keys(pkg.devDependencies || {}).length}
       totalRequirements: requirements.length,
       ...summary,
       compliancePercentage:
-        requirements.length > 0 ? Math.round((summary.compliant / requirements.length) * 100) : 0,
+        requirements.length > 0
+          ? Math.round((summary.compliant / requirements.length) * 100)
+          : 0,
     },
     requirements,
     recommendations,
@@ -613,16 +669,25 @@ Dev Dependencies: ${Object.keys(pkg.devDependencies || {}).length}
 /**
  * Audit for secrets
  */
-export async function auditSecrets(request: SecretsAuditRequest): Promise<SecretsAuditResult> {
+export async function auditSecrets(
+  request: SecretsAuditRequest,
+): Promise<SecretsAuditResult> {
   const { workspacePath, excludePatterns = [] } = request;
 
-  const files = scanDirectory(workspacePath, SECRET_SCAN_EXTENSIONS, excludePatterns);
+  const files = scanDirectory(
+    workspacePath,
+    SECRET_SCAN_EXTENSIONS,
+    excludePatterns,
+  );
   const findings: SecretFinding[] = [];
 
   for (const file of files) {
     try {
-      const content = fs.readFileSync(file, 'utf-8');
-      const fileFindings = scanFileForSecrets(file.replace(workspacePath, ''), content);
+      const content = fs.readFileSync(file, "utf-8");
+      const fileFindings = scanFileForSecrets(
+        file.replace(workspacePath, ""),
+        content,
+      );
       findings.push(...fileFindings);
     } catch (_err) {
       // Skip unreadable files
@@ -637,12 +702,12 @@ export async function auditSecrets(request: SecretsAuditRequest): Promise<Secret
     recommendations:
       findings.length > 0
         ? [
-            'Move all secrets to environment variables',
-            'Use a secrets manager like HashiCorp Vault or AWS Secrets Manager',
-            'Add secret patterns to .gitignore',
-            'Rotate any exposed credentials immediately',
-            'Implement pre-commit hooks to prevent secret commits',
+            "Move all secrets to environment variables",
+            "Use a secrets manager like HashiCorp Vault or AWS Secrets Manager",
+            "Add secret patterns to .gitignore",
+            "Rotate any exposed credentials immediately",
+            "Implement pre-commit hooks to prevent secret commits",
           ]
-        : ['No secrets detected. Continue following security best practices.'],
+        : ["No secrets detected. Continue following security best practices."],
   };
 }

@@ -15,23 +15,24 @@ export interface Template {
 
 const BUILTIN_TEMPLATES: Template[] = [
   {
-    id: 'rest-api-node',
-    name: 'REST API (Node + Express)',
-    description: 'Starter for a Node.js REST API with TypeScript and health check.',
-    version: '1.0.0',
-    author: 'G-Rump',
-    tags: ['node', 'express', 'rest', 'typescript'],
-    prdSnippet: 'REST API with health, CRUD, and OpenAPI',
+    id: "rest-api-node",
+    name: "REST API (Node + Express)",
+    description:
+      "Starter for a Node.js REST API with TypeScript and health check.",
+    version: "1.0.0",
+    author: "G-Rump",
+    tags: ["node", "express", "rest", "typescript"],
+    prdSnippet: "REST API with health, CRUD, and OpenAPI",
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'vue-dashboard',
-    name: 'Vue 3 Dashboard',
-    description: 'Vue 3 + TypeScript dashboard with layout and routing.',
-    version: '1.0.0',
-    author: 'G-Rump',
-    tags: ['vue', 'dashboard', 'typescript'],
-    prdSnippet: 'Dashboard with sidebar, charts, and tables',
+    id: "vue-dashboard",
+    name: "Vue 3 Dashboard",
+    description: "Vue 3 + TypeScript dashboard with layout and routing.",
+    version: "1.0.0",
+    author: "G-Rump",
+    tags: ["vue", "dashboard", "typescript"],
+    prdSnippet: "Dashboard with sidebar, charts, and tables",
     createdAt: new Date().toISOString(),
   },
 ];
@@ -44,7 +45,7 @@ export function listTemplates(query?: string, tags?: string[]): Template[] {
       (t) =>
         t.name.toLowerCase().includes(q) ||
         t.description.toLowerCase().includes(q) ||
-        t.tags.some((tag) => tag.toLowerCase().includes(q))
+        t.tags.some((tag) => tag.toLowerCase().includes(q)),
     );
   }
   if (tags?.length) {

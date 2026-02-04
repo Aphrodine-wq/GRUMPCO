@@ -32,7 +32,7 @@ export interface K8sGenerationRequest {
     tls?: boolean;
   };
   namespace?: string;
-  environment?: 'development' | 'staging' | 'production';
+  environment?: "development" | "staging" | "production";
 }
 
 export interface K8sGenerationResult {
@@ -53,29 +53,29 @@ export interface TerraformResource {
 }
 
 export interface TerraformGenerationRequest {
-  provider: 'aws' | 'gcp' | 'azure';
+  provider: "aws" | "gcp" | "azure";
   projectName: string;
   resources: Array<{
     type:
-      | 'vpc'
-      | 'subnet'
-      | 'ec2'
-      | 'rds'
-      | 's3'
-      | 'eks'
-      | 'ecs'
-      | 'lambda'
-      | 'api-gateway'
-      | 'cloudfront'
-      | 'elb'
-      | 'security-group'
-      | 'iam'
-      | 'custom';
+      | "vpc"
+      | "subnet"
+      | "ec2"
+      | "rds"
+      | "s3"
+      | "eks"
+      | "ecs"
+      | "lambda"
+      | "api-gateway"
+      | "cloudfront"
+      | "elb"
+      | "security-group"
+      | "iam"
+      | "custom";
     name: string;
     config?: Record<string, unknown>;
   }>;
   region?: string;
-  environment?: 'development' | 'staging' | 'production';
+  environment?: "development" | "staging" | "production";
   tags?: Record<string, string>;
 }
 
@@ -89,7 +89,7 @@ export interface TerraformGenerationResult {
 }
 
 export interface DockerGenerationRequest {
-  projectType: 'node' | 'python' | 'go' | 'java' | 'rust' | 'custom';
+  projectType: "node" | "python" | "go" | "java" | "rust" | "custom";
   projectName: string;
   baseImage?: string;
   port?: number;
@@ -115,10 +115,10 @@ export interface DockerGenerationResult {
 }
 
 export interface CICDGenerationRequest {
-  platform: 'github-actions' | 'gitlab-ci' | 'jenkins' | 'circleci';
-  projectType: 'node' | 'python' | 'go' | 'java' | 'rust';
-  stages: Array<'lint' | 'test' | 'build' | 'deploy' | 'security-scan'>;
-  deployTarget?: 'kubernetes' | 'ecs' | 'ec2' | 'lambda' | 'vercel' | 'netlify';
+  platform: "github-actions" | "gitlab-ci" | "jenkins" | "circleci";
+  projectType: "node" | "python" | "go" | "java" | "rust";
+  stages: Array<"lint" | "test" | "build" | "deploy" | "security-scan">;
+  deployTarget?: "kubernetes" | "ecs" | "ec2" | "lambda" | "vercel" | "netlify";
   branches?: {
     main?: string;
     develop?: string;

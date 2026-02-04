@@ -3,16 +3,16 @@
  * With Redis: BullMQ repeatable jobs. Without Redis: node-cron in-process.
  */
 
-import { getDatabase } from '../db/database.js';
-import { startShipMode } from './shipModeService.js';
-import { enqueueShipJob } from './jobQueue.js';
-import logger from '../middleware/logger.js';
-import { db as supabaseDb, isMockMode } from './supabaseClient.js';
-import { isServerlessRuntime } from '../config/runtime.js';
+import { getDatabase } from "../db/database.js";
+import { startShipMode } from "./shipModeService.js";
+import { enqueueShipJob } from "./jobQueue.js";
+import logger from "../middleware/logger.js";
+import { db as supabaseDb, isMockMode } from "./supabaseClient.js";
+import { isServerlessRuntime } from "../config/runtime.js";
 
-const _SCHEDULED_QUEUE_NAME = 'grump:scheduled';
+const _SCHEDULED_QUEUE_NAME = "grump:scheduled";
 
-export type ScheduledAction = 'ship' | 'codegen' | 'chat';
+export type ScheduledAction = "ship" | "codegen" | "chat";
 
 export interface ScheduledAgentParams {
   projectDescription?: string;
@@ -32,16 +32,18 @@ export interface ScheduledAgent {
 }
 
 function useRedis(): boolean {
-  return !!(process.env.REDIS_HOST && process.env.REDIS_HOST.trim() !== '');
+  return !!(process.env.REDIS_HOST && process.env.REDIS_HOST.trim() !== "");
 }
 
 function useSupabase(): boolean {
-  return isServerlessRuntime || process.env.DB_TYPE === 'supabase';
+  return isServerlessRuntime || process.env.DB_TYPE === "supabase";
 }
 
 function supabaseTable(table: string) {
   if (isMockMode) {
-    throw new Error('Supabase is required for scheduled agents in serverless mode');
+    throw new Error(
+      "Supabase is required for scheduled agents in serverless mode",
+    );
   }
   return supabaseDb.from(table);
 }
@@ -53,14 +55,14 @@ function getDb() {
 export function listScheduledAgents(): ScheduledAgent[] {
   if (useSupabase()) {
     throw new Error(
-      'Scheduled agents listing is async in Supabase mode. Use listAllScheduledAgents with await.'
+      "Scheduled agents listing is async in Supabase mode. Use listAllScheduledAgents with await.",
     );
   }
   const db = getDb();
   const rows = db
     .prepare(
       `SELECT id, name, cron_expression AS cronExpression, action, params_json AS paramsJson, enabled, created_at AS createdAt, updated_at AS updatedAt
-     FROM scheduled_agents WHERE enabled = 1 ORDER BY created_at ASC`
+     FROM scheduled_agents WHERE enabled = 1 ORDER BY created_at ASC`,
     )
     .all() as {
     id: string;
@@ -77,7 +79,9 @@ export function listScheduledAgents(): ScheduledAgent[] {
     name: r.name,
     cronExpression: r.cronExpression,
     action: r.action as ScheduledAction,
-    params: (r.paramsJson ? JSON.parse(r.paramsJson) : {}) as ScheduledAgentParams,
+    params: (r.paramsJson
+      ? JSON.parse(r.paramsJson)
+      : {}) as ScheduledAgentParams,
     enabled: r.enabled === 1,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
@@ -86,9 +90,9 @@ export function listScheduledAgents(): ScheduledAgent[] {
 
 export async function listAllScheduledAgents(): Promise<ScheduledAgent[]> {
   if (useSupabase()) {
-    const { data, error } = await supabaseTable('scheduled_agents')
-      .select('*')
-      .order('created_at', { ascending: true });
+    const { data, error } = await supabaseTable("scheduled_agents")
+      .select("*")
+      .order("created_at", { ascending: true });
     if (error) throw error;
     return (data || []).map((r: Record<string, unknown>) => ({
       id: r.id as string,
@@ -105,7 +109,7 @@ export async function listAllScheduledAgents(): Promise<ScheduledAgent[]> {
   const rows = db
     .prepare(
       `SELECT id, name, cron_expression AS cronExpression, action, params_json AS paramsJson, enabled, created_at AS createdAt, updated_at AS updatedAt
-     FROM scheduled_agents ORDER BY created_at ASC`
+     FROM scheduled_agents ORDER BY created_at ASC`,
     )
     .all() as {
     id: string;
@@ -122,7 +126,9 @@ export async function listAllScheduledAgents(): Promise<ScheduledAgent[]> {
     name: r.name,
     cronExpression: r.cronExpression,
     action: r.action as ScheduledAction,
-    params: (r.paramsJson ? JSON.parse(r.paramsJson) : {}) as ScheduledAgentParams,
+    params: (r.paramsJson
+      ? JSON.parse(r.paramsJson)
+      : {}) as ScheduledAgentParams,
     enabled: r.enabled === 1,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
@@ -132,10 +138,10 @@ export async function listAllScheduledAgents(): Promise<ScheduledAgent[]> {
 export async function runScheduledAgent(
   scheduleId: string,
   action: ScheduledAction,
-  params: ScheduledAgentParams
+  params: ScheduledAgentParams,
 ): Promise<void> {
-  if (action === 'ship') {
-    const projectDescription = params.projectDescription ?? '';
+  if (action === "ship") {
+    const projectDescription = params.projectDescription ?? "";
     const session = await startShipMode({
       projectDescription,
       preferences: params.preferences as Record<string, unknown> | undefined,
@@ -143,10 +149,13 @@ export async function runScheduledAgent(
     await enqueueShipJob(session.id);
     logger.info(
       { scheduleId, sessionId: session.id },
-      'Scheduled agent: SHIP session created and enqueued'
+      "Scheduled agent: SHIP session created and enqueued",
     );
   } else {
-    logger.warn({ scheduleId, action }, 'Scheduled agent: only ship action is implemented');
+    logger.warn(
+      { scheduleId, action },
+      "Scheduled agent: only ship action is implemented",
+    );
   }
 }
 
@@ -154,12 +163,12 @@ export async function createScheduledAgent(
   name: string,
   cronExpression: string,
   action: ScheduledAction,
-  params: ScheduledAgentParams
+  params: ScheduledAgentParams,
 ): Promise<ScheduledAgent> {
   const id = `sched_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const now = new Date().toISOString();
   if (useSupabase()) {
-    const { error } = await supabaseTable('scheduled_agents').insert({
+    const { error } = await supabaseTable("scheduled_agents").insert({
       id,
       name,
       cron_expression: cronExpression,
@@ -172,17 +181,26 @@ export async function createScheduledAgent(
     if (error) throw error;
   } else {
     const db = getDb();
-    const sqliteNow = now.replace('T', ' ').slice(0, 19);
+    const sqliteNow = now.replace("T", " ").slice(0, 19);
     db.prepare(
       `INSERT INTO scheduled_agents (id, name, cron_expression, action, params_json, enabled, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 1, ?, ?)`
-    ).run(id, name, cronExpression, action, JSON.stringify(params ?? {}), sqliteNow, sqliteNow);
+       VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+    ).run(
+      id,
+      name,
+      cronExpression,
+      action,
+      JSON.stringify(params ?? {}),
+      sqliteNow,
+      sqliteNow,
+    );
 
     if (useRedis()) {
-      const { addScheduledRepeatableJob } = await import('./scheduledAgentsQueue.js');
+      const { addScheduledRepeatableJob } =
+        await import("./scheduledAgentsQueue.js");
       await addScheduledRepeatableJob(id, cronExpression, action, params);
     } else {
-      const { scheduleWithNodeCron } = await import('./scheduledAgentsCron.js');
+      const { scheduleWithNodeCron } = await import("./scheduledAgentsCron.js");
       scheduleWithNodeCron(id, cronExpression, action, params);
     }
   }
@@ -197,43 +215,48 @@ export async function createScheduledAgent(
     createdAt: now,
     updatedAt: now,
   };
-  logger.info({ id, name, cronExpression, action }, 'Scheduled agent created');
+  logger.info({ id, name, cronExpression, action }, "Scheduled agent created");
   return agent;
 }
 
 export async function cancelScheduledAgent(id: string): Promise<boolean> {
   if (useSupabase()) {
-    const { data, error } = await supabaseTable('scheduled_agents')
+    const { data, error } = await supabaseTable("scheduled_agents")
       .update({ enabled: false, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select('id')
+      .eq("id", id)
+      .select("id")
       .single();
     if (error || !data) return false;
-    logger.info({ id }, 'Scheduled agent cancelled');
+    logger.info({ id }, "Scheduled agent cancelled");
     return true;
   }
   const db = getDb();
   const result = db
-    .prepare(`UPDATE scheduled_agents SET enabled = 0, updated_at = datetime('now') WHERE id = ?`)
+    .prepare(
+      `UPDATE scheduled_agents SET enabled = 0, updated_at = datetime('now') WHERE id = ?`,
+    )
     .run(id);
   if (result.changes === 0) return false;
 
   if (useRedis()) {
-    const { removeScheduledRepeatableJob } = await import('./scheduledAgentsQueue.js');
+    const { removeScheduledRepeatableJob } =
+      await import("./scheduledAgentsQueue.js");
     await removeScheduledRepeatableJob(id);
   } else {
-    const { unscheduleNodeCron } = await import('./scheduledAgentsCron.js');
+    const { unscheduleNodeCron } = await import("./scheduledAgentsCron.js");
     unscheduleNodeCron(id);
   }
-  logger.info({ id }, 'Scheduled agent cancelled');
+  logger.info({ id }, "Scheduled agent cancelled");
   return true;
 }
 
-export async function getScheduledAgent(id: string): Promise<ScheduledAgent | null> {
+export async function getScheduledAgent(
+  id: string,
+): Promise<ScheduledAgent | null> {
   if (useSupabase()) {
-    const { data, error } = await supabaseTable('scheduled_agents')
-      .select('*')
-      .eq('id', id)
+    const { data, error } = await supabaseTable("scheduled_agents")
+      .select("*")
+      .eq("id", id)
       .single();
     if (error || !data) return null;
     return {
@@ -251,7 +274,7 @@ export async function getScheduledAgent(id: string): Promise<ScheduledAgent | nu
   const row = db
     .prepare(
       `SELECT id, name, cron_expression AS cronExpression, action, params_json AS paramsJson, enabled, created_at AS createdAt, updated_at AS updatedAt
-     FROM scheduled_agents WHERE id = ?`
+     FROM scheduled_agents WHERE id = ?`,
     )
     .get(id) as
     | {
@@ -271,7 +294,9 @@ export async function getScheduledAgent(id: string): Promise<ScheduledAgent | nu
     name: row.name,
     cronExpression: row.cronExpression,
     action: row.action as ScheduledAction,
-    params: (row.paramsJson ? JSON.parse(row.paramsJson) : {}) as ScheduledAgentParams,
+    params: (row.paramsJson
+      ? JSON.parse(row.paramsJson)
+      : {}) as ScheduledAgentParams,
     enabled: row.enabled === 1,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

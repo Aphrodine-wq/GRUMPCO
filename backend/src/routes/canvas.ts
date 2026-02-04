@@ -7,11 +7,18 @@
  * @module routes/canvas
  */
 
-import { Router, type Request, type Response } from 'express';
-import { z } from 'zod';
-import { applyCanvasAction, getCanvasState } from '../services/canvasService.js';
-import { sendErrorResponse, sendServerError, ErrorCode } from '../utils/errorResponse.js';
-import logger from '../middleware/logger.js';
+import { Router, type Request, type Response } from "express";
+import { z } from "zod";
+import {
+  applyCanvasAction,
+  getCanvasState,
+} from "../services/canvasService.js";
+import {
+  sendErrorResponse,
+  sendServerError,
+  ErrorCode,
+} from "../utils/errorResponse.js";
+import logger from "../middleware/logger.js";
 
 const router = Router();
 
@@ -37,13 +44,13 @@ const canvasElementSchema = z
 const canvasActionSchema = z.object({
   sessionId: z
     .string({
-      required_error: 'sessionId is required',
-      invalid_type_error: 'sessionId must be a string',
+      required_error: "sessionId is required",
+      invalid_type_error: "sessionId must be a string",
     })
-    .min(1, 'sessionId cannot be empty'),
-  action: z.enum(['create', 'update', 'delete'], {
-    required_error: 'action is required',
-    invalid_type_error: 'action must be create, update, or delete',
+    .min(1, "sessionId cannot be empty"),
+  action: z.enum(["create", "update", "delete"], {
+    required_error: "action is required",
+    invalid_type_error: "action must be create, update, or delete",
   }),
   elementId: z.string().optional(),
   element: canvasElementSchema.optional(),
@@ -61,15 +68,18 @@ const canvasActionSchema = z.object({
  * @param {Object} [req.body.element] - Element data (for create/update)
  * @returns {Object} Updated canvas elements
  */
-router.post('/action', (req: Request, res: Response) => {
+router.post("/action", (req: Request, res: Response) => {
   // Validate request body
   const validation = canvasActionSchema.safeParse(req.body);
 
   if (!validation.success) {
     const firstError = validation.error.errors[0];
-    logger.warn({ errors: validation.error.errors }, 'Invalid canvas action request');
+    logger.warn(
+      { errors: validation.error.errors },
+      "Invalid canvas action request",
+    );
     sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError.message, {
-      field: firstError.path.join('.'),
+      field: firstError.path.join("."),
     });
     return;
   }
@@ -85,8 +95,8 @@ router.post('/action', (req: Request, res: Response) => {
     });
     res.json({ ok: true, elements: result.elements });
   } catch (error: unknown) {
-    logger.error({ err: error, sessionId, action }, 'Canvas action failed');
-    sendServerError(res, error, { type: 'canvas_error' });
+    logger.error({ err: error, sessionId, action }, "Canvas action failed");
+    sendServerError(res, error, { type: "canvas_error" });
   }
 });
 
@@ -99,14 +109,14 @@ router.post('/action', (req: Request, res: Response) => {
  * @param {string} req.params.sessionId - Session identifier
  * @returns {Object} Canvas elements array
  */
-router.get('/:sessionId', (req: Request, res: Response) => {
+router.get("/:sessionId", (req: Request, res: Response) => {
   const sessionId =
-    typeof req.params.sessionId === 'string'
+    typeof req.params.sessionId === "string"
       ? req.params.sessionId
-      : (req.params.sessionId?.[0] ?? '');
+      : (req.params.sessionId?.[0] ?? "");
 
   if (!sessionId) {
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, 'sessionId is required');
+    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, "sessionId is required");
     return;
   }
 

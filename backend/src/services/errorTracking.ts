@@ -7,8 +7,8 @@
  * @module services/errorTracking
  */
 
-import type { Request } from 'express';
-import logger from '../middleware/logger.js';
+import type { Request } from "express";
+import logger from "../middleware/logger.js";
 
 // =============================================================================
 // TYPES
@@ -28,12 +28,12 @@ export interface ErrorContext {
   /** Extra context data */
   extra?: Record<string, unknown>;
   /** Error severity level */
-  level?: 'fatal' | 'error' | 'warning' | 'info';
+  level?: "fatal" | "error" | "warning" | "info";
 }
 
 export interface PerformanceSpan {
   finish: () => void;
-  setStatus: (status: 'ok' | 'error' | 'cancelled') => void;
+  setStatus: (status: "ok" | "error" | "cancelled") => void;
   setData: (key: string, value: unknown) => void;
 }
 
@@ -42,9 +42,10 @@ export interface PerformanceSpan {
 // =============================================================================
 
 const SENTRY_DSN = process.env.SENTRY_DSN;
-const SENTRY_ENVIRONMENT = process.env.NODE_ENV || 'development';
-const SENTRY_RELEASE = process.env.npm_package_version || 'unknown';
-const SENTRY_ENABLED = Boolean(SENTRY_DSN) && process.env.NODE_ENV === 'production';
+const SENTRY_ENVIRONMENT = process.env.NODE_ENV || "development";
+const SENTRY_RELEASE = process.env.npm_package_version || "unknown";
+const SENTRY_ENABLED =
+  Boolean(SENTRY_DSN) && process.env.NODE_ENV === "production";
 
 // Lazy-load Sentry to avoid import issues if not installed
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,16 +57,16 @@ let Sentry: any = null;
  */
 export async function initErrorTracking(): Promise<void> {
   if (!SENTRY_DSN) {
-    logger.info('Error tracking disabled (SENTRY_DSN not configured)');
+    logger.info("Error tracking disabled (SENTRY_DSN not configured)");
     return;
   }
 
   try {
     // Dynamic import - Sentry is an optional dependency
-    Sentry = await import('@sentry/node').catch(() => null);
+    Sentry = await import("@sentry/node").catch(() => null);
 
     if (!Sentry) {
-      logger.info('Sentry package not installed, error tracking disabled');
+      logger.info("Sentry package not installed, error tracking disabled");
       return;
     }
 
@@ -75,7 +76,7 @@ export async function initErrorTracking(): Promise<void> {
       release: SENTRY_RELEASE,
 
       // Performance monitoring
-      tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+      tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
 
       // Session tracking
       autoSessionTracking: true,
@@ -84,7 +85,10 @@ export async function initErrorTracking(): Promise<void> {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       beforeSend(event: any, hint: any) {
         // Don't send events in development unless explicitly enabled
-        if (process.env.NODE_ENV !== 'production' && !process.env.SENTRY_DEBUG) {
+        if (
+          process.env.NODE_ENV !== "production" &&
+          !process.env.SENTRY_DEBUG
+        ) {
           return null;
         }
 
@@ -93,9 +97,9 @@ export async function initErrorTracking(): Promise<void> {
         if (error instanceof Error) {
           // Don't report client errors (4xx)
           if (
-            error.message.includes('rate_limit') ||
-            error.message.includes('unauthorized') ||
-            error.message.includes('not_found')
+            error.message.includes("rate_limit") ||
+            error.message.includes("unauthorized") ||
+            error.message.includes("not_found")
           ) {
             return null;
           }
@@ -103,24 +107,27 @@ export async function initErrorTracking(): Promise<void> {
 
         // Scrub sensitive data
         if (event.request?.headers) {
-          delete event.request.headers['authorization'];
-          delete event.request.headers['cookie'];
-          delete event.request.headers['x-api-key'];
+          delete event.request.headers["authorization"];
+          delete event.request.headers["cookie"];
+          delete event.request.headers["x-api-key"];
         }
 
         return event;
       },
 
       // Integrations
-      integrations: [Sentry.httpIntegration({ tracing: true }), Sentry.expressIntegration()],
+      integrations: [
+        Sentry.httpIntegration({ tracing: true }),
+        Sentry.expressIntegration(),
+      ],
 
       // Ignore common non-errors
       ignoreErrors: [
-        'ECONNRESET',
-        'ECONNREFUSED',
-        'ETIMEDOUT',
-        'socket hang up',
-        'Request aborted',
+        "ECONNRESET",
+        "ECONNREFUSED",
+        "ETIMEDOUT",
+        "socket hang up",
+        "Request aborted",
       ],
     });
 
@@ -129,10 +136,13 @@ export async function initErrorTracking(): Promise<void> {
         environment: SENTRY_ENVIRONMENT,
         release: SENTRY_RELEASE,
       },
-      'Error tracking initialized (Sentry)'
+      "Error tracking initialized (Sentry)",
     );
   } catch (err) {
-    logger.warn({ err }, 'Failed to initialize Sentry, error tracking disabled');
+    logger.warn(
+      { err },
+      "Failed to initialize Sentry, error tracking disabled",
+    );
   }
 }
 
@@ -143,7 +153,10 @@ export async function initErrorTracking(): Promise<void> {
 /**
  * Capture an exception with context.
  */
-export function captureException(error: Error, context?: ErrorContext): string | undefined {
+export function captureException(
+  error: Error,
+  context?: ErrorContext,
+): string | undefined {
   // Always log locally
   logger.error(
     {
@@ -151,7 +164,7 @@ export function captureException(error: Error, context?: ErrorContext): string |
       stack: error.stack,
       ...context,
     },
-    'Exception captured'
+    "Exception captured",
   );
 
   if (!Sentry || !SENTRY_ENABLED) {
@@ -181,13 +194,13 @@ export function captureException(error: Error, context?: ErrorContext): string |
 
     // Set request context
     if (context?.requestId) {
-      scope.setTag('request_id', context.requestId);
+      scope.setTag("request_id", context.requestId);
     }
     if (context?.endpoint) {
-      scope.setTag('endpoint', context.endpoint);
+      scope.setTag("endpoint", context.endpoint);
     }
     if (context?.method) {
-      scope.setTag('method', context.method);
+      scope.setTag("method", context.method);
     }
 
     // Set level
@@ -205,7 +218,7 @@ export function captureException(error: Error, context?: ErrorContext): string |
 export function captureRequestException(
   error: Error,
   req: Request,
-  extra?: Record<string, unknown>
+  extra?: Record<string, unknown>,
 ): string | undefined {
   const requestWithContext = req as Request & {
     correlationId?: string;
@@ -233,11 +246,12 @@ export function captureRequestException(
  */
 export function captureMessage(
   message: string,
-  level: ErrorContext['level'] = 'info',
-  context?: Omit<ErrorContext, 'level'>
+  level: ErrorContext["level"] = "info",
+  context?: Omit<ErrorContext, "level">,
 ): string | undefined {
   // Map level to logger method (logger uses 'warn' not 'warning', 'fatal' maps to 'error')
-  const logLevel = level === 'fatal' ? 'error' : level === 'warning' ? 'warn' : level;
+  const logLevel =
+    level === "fatal" ? "error" : level === "warning" ? "warn" : level;
   logger[logLevel]({ ...context }, message);
 
   if (!Sentry || !SENTRY_ENABLED) {
@@ -259,7 +273,7 @@ export function captureMessage(
         scope.setExtra(key, value);
       });
     }
-    scope.setLevel(level || 'info');
+    scope.setLevel(level || "info");
 
     return Sentry.captureMessage(message);
   });
@@ -274,7 +288,7 @@ export function captureMessage(
  */
 export function startTransaction(
   name: string,
-  op: string
+  op: string,
 ): {
   finish: () => void;
   startSpan: (name: string, op: string) => PerformanceSpan;
@@ -302,8 +316,11 @@ export function startTransaction(
         });
         return {
           finish: () => childSpan?.end(),
-          setStatus: (status: 'ok' | 'error' | 'cancelled') => {
-            childSpan?.setStatus({ code: status === 'ok' ? 1 : 2, message: status });
+          setStatus: (status: "ok" | "error" | "cancelled") => {
+            childSpan?.setStatus({
+              code: status === "ok" ? 1 : 2,
+              message: status,
+            });
           },
           setData: (key: string, value: unknown) => {
             childSpan?.setAttribute(key, value as string);
@@ -321,7 +338,11 @@ export function startTransaction(
 /**
  * Set user context for all subsequent error reports.
  */
-export function setUser(user: { id: string; email?: string; username?: string }): void {
+export function setUser(user: {
+  id: string;
+  email?: string;
+  username?: string;
+}): void {
   if (!Sentry || !SENTRY_ENABLED) return;
   Sentry.setUser(user);
 }
@@ -345,7 +366,7 @@ export function addBreadcrumb(
   message: string,
   category: string,
   data?: Record<string, unknown>,
-  level: 'debug' | 'info' | 'warning' | 'error' = 'info'
+  level: "debug" | "info" | "warning" | "error" = "info",
 ): void {
   if (!Sentry || !SENTRY_ENABLED) return;
 
@@ -367,7 +388,12 @@ export function addBreadcrumb(
  * Use this as the last error handler.
  */
 export function errorTrackingMiddleware() {
-  return (err: Error, req: Request, res: unknown, next: (err?: Error) => void): void => {
+  return (
+    err: Error,
+    req: Request,
+    res: unknown,
+    next: (err?: Error) => void,
+  ): void => {
     captureRequestException(err, req);
     next(err);
   };
@@ -387,12 +413,12 @@ export function requestContextMiddleware() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       Sentry.withScope((scope: any) => {
         if (requestWithContext.correlationId) {
-          scope.setTag('request_id', requestWithContext.correlationId);
+          scope.setTag("request_id", requestWithContext.correlationId);
         }
         if (requestWithContext.user?.id) {
           scope.setUser({ id: requestWithContext.user.id });
         }
-        scope.setTag('route', `${req.method} ${req.path}`);
+        scope.setTag("route", `${req.method} ${req.path}`);
       });
     }
 
@@ -412,9 +438,9 @@ export async function flushErrorTracking(timeout = 2000): Promise<void> {
 
   try {
     await Sentry.close(timeout);
-    logger.info('Error tracking flushed');
+    logger.info("Error tracking flushed");
   } catch (err) {
-    logger.warn({ err }, 'Error flushing error tracking');
+    logger.warn({ err }, "Error flushing error tracking");
   }
 }
 

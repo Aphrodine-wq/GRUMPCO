@@ -3,13 +3,16 @@
  * Manages proactive scheduled tasks (hourly, daily, etc.)
  */
 
-import { getDatabase } from '../db/database.js';
-import { writeAuditLog } from './auditLogService.js';
-import logger from '../middleware/logger.js';
-import type { HeartbeatRecord, CreateHeartbeatInput } from '../types/integrations.js';
+import { getDatabase } from "../db/database.js";
+import { writeAuditLog } from "./auditLogService.js";
+import logger from "../middleware/logger.js";
+import type {
+  HeartbeatRecord,
+  CreateHeartbeatInput,
+} from "../types/integrations.js";
 
 // We'll use node-cron compatible expressions
-import cronParser from 'cron-parser';
+import cronParser from "cron-parser";
 
 /**
  * Generate next run time from cron expression
@@ -27,7 +30,9 @@ function getNextRunTime(cronExpression: string): string {
 /**
  * Create a new heartbeat
  */
-export async function createHeartbeat(input: CreateHeartbeatInput): Promise<HeartbeatRecord> {
+export async function createHeartbeat(
+  input: CreateHeartbeatInput,
+): Promise<HeartbeatRecord> {
   const db = getDatabase();
   const now = new Date().toISOString();
 
@@ -48,20 +53,25 @@ export async function createHeartbeat(input: CreateHeartbeatInput): Promise<Hear
 
   await writeAuditLog({
     userId: input.userId,
-    action: 'heartbeat.created',
-    category: 'automation',
+    action: "heartbeat.created",
+    category: "automation",
     target: input.name,
     metadata: { cronExpression: input.cronExpression },
   });
 
-  logger.info({ name: input.name, cron: input.cronExpression }, 'Heartbeat created');
+  logger.info(
+    { name: input.name, cron: input.cronExpression },
+    "Heartbeat created",
+  );
   return record;
 }
 
 /**
  * Get heartbeat by ID
  */
-export async function getHeartbeat(id: string): Promise<HeartbeatRecord | null> {
+export async function getHeartbeat(
+  id: string,
+): Promise<HeartbeatRecord | null> {
   const db = getDatabase();
   return db.getHeartbeat(id);
 }
@@ -69,7 +79,9 @@ export async function getHeartbeat(id: string): Promise<HeartbeatRecord | null> 
 /**
  * Get all heartbeats for a user
  */
-export async function getHeartbeatsForUser(userId: string): Promise<HeartbeatRecord[]> {
+export async function getHeartbeatsForUser(
+  userId: string,
+): Promise<HeartbeatRecord[]> {
   const db = getDatabase();
   return db.getHeartbeatsForUser(userId);
 }
@@ -115,7 +127,7 @@ export async function markHeartbeatExecuted(id: string): Promise<void> {
   };
 
   await db.saveHeartbeat(updated);
-  logger.debug({ id, name: record.name, nextRun }, 'Heartbeat executed');
+  logger.debug({ id, name: record.name, nextRun }, "Heartbeat executed");
 }
 
 /**
@@ -124,7 +136,7 @@ export async function markHeartbeatExecuted(id: string): Promise<void> {
 export async function setHeartbeatEnabled(
   id: string,
   enabled: boolean,
-  userId: string
+  userId: string,
 ): Promise<void> {
   const db = getDatabase();
   const record = await db.getHeartbeat(id);
@@ -143,12 +155,12 @@ export async function setHeartbeatEnabled(
 
   await writeAuditLog({
     userId,
-    action: enabled ? 'heartbeat.enabled' : 'heartbeat.disabled',
-    category: 'automation',
+    action: enabled ? "heartbeat.enabled" : "heartbeat.disabled",
+    category: "automation",
     target: record.name,
   });
 
-  logger.info({ id, name: record.name, enabled }, 'Heartbeat status changed');
+  logger.info({ id, name: record.name, enabled }, "Heartbeat status changed");
 }
 
 /**
@@ -157,7 +169,7 @@ export async function setHeartbeatEnabled(
 export async function updateHeartbeatSchedule(
   id: string,
   cronExpression: string,
-  userId: string
+  userId: string,
 ): Promise<void> {
   const db = getDatabase();
   const record = await db.getHeartbeat(id);
@@ -183,19 +195,25 @@ export async function updateHeartbeatSchedule(
 
   await writeAuditLog({
     userId,
-    action: 'heartbeat.schedule_updated',
-    category: 'automation',
+    action: "heartbeat.schedule_updated",
+    category: "automation",
     target: record.name,
     metadata: { cronExpression },
   });
 
-  logger.info({ id, name: record.name, cron: cronExpression }, 'Heartbeat schedule updated');
+  logger.info(
+    { id, name: record.name, cron: cronExpression },
+    "Heartbeat schedule updated",
+  );
 }
 
 /**
  * Delete a heartbeat
  */
-export async function deleteHeartbeat(id: string, userId: string): Promise<void> {
+export async function deleteHeartbeat(
+  id: string,
+  userId: string,
+): Promise<void> {
   const db = getDatabase();
   const record = await db.getHeartbeat(id);
   if (!record) return;
@@ -204,61 +222,61 @@ export async function deleteHeartbeat(id: string, userId: string): Promise<void>
 
   await writeAuditLog({
     userId,
-    action: 'heartbeat.deleted',
-    category: 'automation',
+    action: "heartbeat.deleted",
+    category: "automation",
     target: record.name,
   });
 
-  logger.info({ id, name: record.name }, 'Heartbeat deleted');
+  logger.info({ id, name: record.name }, "Heartbeat deleted");
 }
 
 // ========== Predefined Heartbeat Templates ==========
 
 export const HEARTBEAT_TEMPLATES = {
   HOURLY_SUMMARY: {
-    name: 'Hourly Summary',
-    cronExpression: '0 * * * *', // Every hour
-    description: 'Generate a summary of recent activity',
+    name: "Hourly Summary",
+    cronExpression: "0 * * * *", // Every hour
+    description: "Generate a summary of recent activity",
   },
   DAILY_DIGEST: {
-    name: 'Daily Digest',
-    cronExpression: '0 9 * * *', // 9 AM daily
-    description: 'Send daily digest of tasks and updates',
+    name: "Daily Digest",
+    cronExpression: "0 9 * * *", // 9 AM daily
+    description: "Send daily digest of tasks and updates",
   },
   WEEKLY_REVIEW: {
-    name: 'Weekly Review',
-    cronExpression: '0 10 * * 1', // 10 AM Monday
-    description: 'Weekly progress review and planning',
+    name: "Weekly Review",
+    cronExpression: "0 10 * * 1", // 10 AM Monday
+    description: "Weekly progress review and planning",
   },
   HEALTH_CHECK: {
-    name: 'System Health Check',
-    cronExpression: '*/15 * * * *', // Every 15 minutes
-    description: 'Check system health and integrations',
+    name: "System Health Check",
+    cronExpression: "*/15 * * * *", // Every 15 minutes
+    description: "Check system health and integrations",
   },
   MEMORY_CLEANUP: {
-    name: 'Memory Cleanup',
-    cronExpression: '0 3 * * *', // 3 AM daily
-    description: 'Clean up expired memories and optimize storage',
+    name: "Memory Cleanup",
+    cronExpression: "0 3 * * *", // 3 AM daily
+    description: "Clean up expired memories and optimize storage",
   },
   REMINDER_CHECK: {
-    name: 'Reminder Check',
-    cronExpression: '*/5 * * * *', // Every 5 minutes
-    description: 'Process due reminders and notify via messaging',
+    name: "Reminder Check",
+    cronExpression: "*/5 * * * *", // Every 5 minutes
+    description: "Process due reminders and notify via messaging",
   },
   INBOX_SUMMARY: {
-    name: 'Inbox Summary',
-    cronExpression: '0 9 * * *', // 9 AM daily
-    description: 'Daily email digest (requires Gmail OAuth)',
+    name: "Inbox Summary",
+    cronExpression: "0 9 * * *", // 9 AM daily
+    description: "Daily email digest (requires Gmail OAuth)",
   },
   CALENDAR_REMINDER: {
-    name: 'Calendar Reminder',
-    cronExpression: '0 8 * * *', // 8 AM daily
-    description: 'Upcoming events reminder (requires Google Calendar OAuth)',
+    name: "Calendar Reminder",
+    cronExpression: "0 8 * * *", // 8 AM daily
+    description: "Upcoming events reminder (requires Google Calendar OAuth)",
   },
   CUSTOM_REMINDER: {
-    name: 'Custom Reminder',
-    cronExpression: '0 9 * * *', // 9 AM daily
-    description: 'User-defined reminder text',
+    name: "Custom Reminder",
+    cronExpression: "0 9 * * *", // 9 AM daily
+    description: "User-defined reminder text",
   },
 } as const;
 
@@ -268,7 +286,7 @@ export const HEARTBEAT_TEMPLATES = {
 export async function createHeartbeatFromTemplate(
   userId: string,
   templateKey: keyof typeof HEARTBEAT_TEMPLATES,
-  payload?: Record<string, unknown>
+  payload?: Record<string, unknown>,
 ): Promise<HeartbeatRecord> {
   const template = HEARTBEAT_TEMPLATES[templateKey];
   return createHeartbeat({

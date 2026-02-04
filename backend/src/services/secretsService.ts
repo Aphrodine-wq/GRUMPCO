@@ -3,15 +3,19 @@
  * Manages encrypted storage of API keys and other secrets
  */
 
-import { getDatabase } from '../db/database.js';
-import { encryptValue, decryptValue, type EncryptedPayload } from './cryptoService.js';
-import { writeAuditLog } from './auditLogService.js';
-import logger from '../middleware/logger.js';
+import { getDatabase } from "../db/database.js";
+import {
+  encryptValue,
+  decryptValue,
+  type EncryptedPayload,
+} from "./cryptoService.js";
+import { writeAuditLog } from "./auditLogService.js";
+import logger from "../middleware/logger.js";
 import type {
   IntegrationProviderId,
   IntegrationSecretRecord,
   CreateSecretInput,
-} from '../types/integrations.js';
+} from "../types/integrations.js";
 
 /**
  * Store an encrypted secret
@@ -37,12 +41,12 @@ export async function storeSecret(input: CreateSecretInput): Promise<void> {
 
   await writeAuditLog({
     userId: input.userId,
-    action: 'secret.stored',
-    category: 'security',
+    action: "secret.stored",
+    category: "security",
     target: `${input.provider}:${input.name}`,
   });
 
-  logger.info({ provider: input.provider, name: input.name }, 'Secret stored');
+  logger.info({ provider: input.provider, name: input.name }, "Secret stored");
 }
 
 /**
@@ -51,7 +55,7 @@ export async function storeSecret(input: CreateSecretInput): Promise<void> {
 export async function getSecret(
   userId: string,
   provider: IntegrationProviderId,
-  name: string
+  name: string,
 ): Promise<string | null> {
   const db = getDatabase();
   const record = await db.getIntegrationSecret(userId, provider, name);
@@ -61,7 +65,10 @@ export async function getSecret(
     const payload = JSON.parse(record.secret_enc) as EncryptedPayload;
     return decryptValue(payload);
   } catch (err) {
-    logger.error({ provider, name, error: (err as Error).message }, 'Failed to decrypt secret');
+    logger.error(
+      { provider, name, error: (err as Error).message },
+      "Failed to decrypt secret",
+    );
     return null;
   }
 }
@@ -72,19 +79,19 @@ export async function getSecret(
 export async function deleteSecret(
   userId: string,
   provider: IntegrationProviderId,
-  name: string
+  name: string,
 ): Promise<void> {
   const db = getDatabase();
   await db.deleteIntegrationSecret(userId, provider, name);
 
   await writeAuditLog({
     userId,
-    action: 'secret.deleted',
-    category: 'security',
+    action: "secret.deleted",
+    category: "security",
     target: `${provider}:${name}`,
   });
 
-  logger.info({ provider, name }, 'Secret deleted');
+  logger.info({ provider, name }, "Secret deleted");
 }
 
 /**
@@ -93,7 +100,7 @@ export async function deleteSecret(
 export async function hasSecret(
   userId: string,
   provider: IntegrationProviderId,
-  name: string
+  name: string,
 ): Promise<boolean> {
   const db = getDatabase();
   const record = await db.getIntegrationSecret(userId, provider, name);
@@ -107,7 +114,7 @@ export async function getOrCreateSecret(
   userId: string,
   provider: IntegrationProviderId,
   name: string,
-  defaultValue?: string
+  defaultValue?: string,
 ): Promise<string | null> {
   const existing = await getSecret(userId, provider, name);
   if (existing) return existing;
@@ -128,14 +135,14 @@ export async function getOrCreateSecret(
 // ========== Common Secret Names ==========
 
 export const SECRET_NAMES = {
-  API_KEY: 'api_key',
-  API_SECRET: 'api_secret',
-  BOT_TOKEN: 'bot_token',
-  WEBHOOK_SECRET: 'webhook_secret',
-  ACCESS_TOKEN: 'access_token',
-  REFRESH_TOKEN: 'refresh_token',
-  VAULT_PATH: 'vault_path',
-  HOME_URL: 'home_url',
+  API_KEY: "api_key",
+  API_SECRET: "api_secret",
+  BOT_TOKEN: "bot_token",
+  WEBHOOK_SECRET: "webhook_secret",
+  ACCESS_TOKEN: "access_token",
+  REFRESH_TOKEN: "refresh_token",
+  VAULT_PATH: "vault_path",
+  HOME_URL: "home_url",
 } as const;
 
 /**
@@ -144,7 +151,7 @@ export const SECRET_NAMES = {
 export async function storeApiKey(
   userId: string,
   provider: IntegrationProviderId,
-  apiKey: string
+  apiKey: string,
 ): Promise<void> {
   await storeSecret({
     userId,
@@ -159,7 +166,7 @@ export async function storeApiKey(
  */
 export async function getApiKey(
   userId: string,
-  provider: IntegrationProviderId
+  provider: IntegrationProviderId,
 ): Promise<string | null> {
   return getSecret(userId, provider, SECRET_NAMES.API_KEY);
 }
@@ -170,7 +177,7 @@ export async function getApiKey(
 export async function storeBotToken(
   userId: string,
   provider: IntegrationProviderId,
-  token: string
+  token: string,
 ): Promise<void> {
   await storeSecret({
     userId,
@@ -185,7 +192,7 @@ export async function storeBotToken(
  */
 export async function getBotToken(
   userId: string,
-  provider: IntegrationProviderId
+  provider: IntegrationProviderId,
 ): Promise<string | null> {
   return getSecret(userId, provider, SECRET_NAMES.BOT_TOKEN);
 }

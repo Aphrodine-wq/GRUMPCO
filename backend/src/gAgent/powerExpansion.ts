@@ -12,16 +12,16 @@
  * @module gAgent/powerExpansion
  */
 
-import { EventEmitter } from 'events';
-import { messageBus } from './messageBus.js';
+import { EventEmitter } from "events";
+import { messageBus } from "./messageBus.js";
 import {
   DEFAULT_CONFIDENCE_THRESHOLDS,
   calculateRiskLevel,
   RISK_FACTORS,
   type ConfidenceThresholds,
   type RiskLevel,
-} from './systemPrompt.js';
-import type { AgentType, Task, Plan, Pattern, PatternTask } from './types.js';
+} from "./systemPrompt.js";
+import type { AgentType, Task, Plan, Pattern, PatternTask } from "./types.js";
 
 // ============================================================================
 // CONSTANTS
@@ -36,12 +36,12 @@ export const MAX_HEALING_RETRIES = 3;
  * Strategy types for different approaches
  */
 export const STRATEGIES = {
-  DIRECT: 'direct', // Direct approach
-  DECOMPOSE: 'decompose', // Break into smaller tasks
-  ITERATIVE: 'iterative', // Step-by-step with feedback
-  PARALLEL: 'parallel', // Multi-agent parallel execution
-  CONSERVATIVE: 'conservative', // Safe, slower approach
-  AGGRESSIVE: 'aggressive', // Fast, higher risk approach
+  DIRECT: "direct", // Direct approach
+  DECOMPOSE: "decompose", // Break into smaller tasks
+  ITERATIVE: "iterative", // Step-by-step with feedback
+  PARALLEL: "parallel", // Multi-agent parallel execution
+  CONSERVATIVE: "conservative", // Safe, slower approach
+  AGGRESSIVE: "aggressive", // Fast, higher risk approach
 } as const;
 
 export type Strategy = (typeof STRATEGIES)[keyof typeof STRATEGIES];
@@ -65,11 +65,11 @@ export interface ConfidenceFactor {
 }
 
 export type ConfidenceAction =
-  | 'auto_execute' // High confidence, just do it
-  | 'suggest_and_wait' // Suggest plan, wait for brief period
-  | 'ask_explicitly' // Ask for explicit confirmation
-  | 'decline' // Too risky/uncertain, decline
-  | 'decompose'; // Too complex, break down first
+  | "auto_execute" // High confidence, just do it
+  | "suggest_and_wait" // Suggest plan, wait for brief period
+  | "ask_explicitly" // Ask for explicit confirmation
+  | "decline" // Too risky/uncertain, decline
+  | "decompose"; // Too complex, break down first
 
 export interface HealingAttempt {
   id: string;
@@ -83,13 +83,13 @@ export interface HealingAttempt {
 }
 
 export type ErrorType =
-  | 'parsing_error'
-  | 'timeout_error'
-  | 'resource_error'
-  | 'validation_error'
-  | 'api_error'
-  | 'permission_error'
-  | 'unknown_error';
+  | "parsing_error"
+  | "timeout_error"
+  | "resource_error"
+  | "validation_error"
+  | "api_error"
+  | "permission_error"
+  | "unknown_error";
 
 export interface SelfHealingContext {
   taskId: string;
@@ -137,14 +137,14 @@ export interface LearningRecord {
 }
 
 export type PowerEvent =
-  | { type: 'confidence_analyzed'; analysis: ConfidenceAnalysis }
-  | { type: 'healing_attempted'; attempt: HealingAttempt }
-  | { type: 'healing_succeeded'; context: SelfHealingContext }
-  | { type: 'healing_exhausted'; context: SelfHealingContext }
-  | { type: 'task_decomposed'; decomposition: TaskDecomposition }
-  | { type: 'strategy_selected'; selection: StrategySelection }
-  | { type: 'pattern_matched'; pattern: Pattern; confidence: number }
-  | { type: 'pattern_learned'; patternId: string };
+  | { type: "confidence_analyzed"; analysis: ConfidenceAnalysis }
+  | { type: "healing_attempted"; attempt: HealingAttempt }
+  | { type: "healing_succeeded"; context: SelfHealingContext }
+  | { type: "healing_exhausted"; context: SelfHealingContext }
+  | { type: "task_decomposed"; decomposition: TaskDecomposition }
+  | { type: "strategy_selected"; selection: StrategySelection }
+  | { type: "pattern_matched"; pattern: Pattern; confidence: number }
+  | { type: "pattern_learned"; patternId: string };
 
 // ============================================================================
 // CONFIDENCE ROUTER
@@ -156,7 +156,9 @@ export type PowerEvent =
 export class ConfidenceRouter {
   private thresholds: ConfidenceThresholds;
 
-  constructor(thresholds: ConfidenceThresholds = DEFAULT_CONFIDENCE_THRESHOLDS) {
+  constructor(
+    thresholds: ConfidenceThresholds = DEFAULT_CONFIDENCE_THRESHOLDS,
+  ) {
     this.thresholds = thresholds;
   }
 
@@ -176,7 +178,7 @@ export class ConfidenceRouter {
 
     // Factor 1: Context clarity
     const contextFactor: ConfidenceFactor = {
-      name: 'context_clarity',
+      name: "context_clarity",
       weight: 0.25,
       score: params.contextQuality,
       contribution: 0.25 * params.contextQuality,
@@ -184,9 +186,13 @@ export class ConfidenceRouter {
     factors.push(contextFactor);
 
     // Factor 2: Previous success with similar tasks
-    const historyScore = params.previousSuccess ? 0.9 : params.historyAvailable ? 0.5 : 0.4;
+    const historyScore = params.previousSuccess
+      ? 0.9
+      : params.historyAvailable
+        ? 0.5
+        : 0.4;
     const historyFactor: ConfidenceFactor = {
-      name: 'history',
+      name: "history",
       weight: 0.2,
       score: historyScore,
       contribution: 0.2 * historyScore,
@@ -196,7 +202,7 @@ export class ConfidenceRouter {
     // Factor 3: Pattern match
     const patternScore = params.similarPatternFound ? 0.95 : 0.3;
     const patternFactor: ConfidenceFactor = {
-      name: 'pattern_match',
+      name: "pattern_match",
       weight: 0.2,
       score: patternScore,
       contribution: 0.2 * patternScore,
@@ -210,7 +216,7 @@ export class ConfidenceRouter {
     const normalizedRisk = Math.min(totalRisk / 100, 1);
     const riskScore = 1 - normalizedRisk;
     const riskFactor: ConfidenceFactor = {
-      name: 'risk_level',
+      name: "risk_level",
       weight: 0.2,
       score: riskScore,
       contribution: 0.2 * riskScore,
@@ -229,7 +235,7 @@ export class ConfidenceRouter {
               ? 0.4
               : 0.2;
     const costFactor: ConfidenceFactor = {
-      name: 'cost',
+      name: "cost",
       weight: 0.15,
       score: costScore,
       contribution: 0.15 * costScore,
@@ -244,27 +250,27 @@ export class ConfidenceRouter {
     let reason: string;
 
     if (totalScore >= this.thresholds.autoExecute) {
-      action = 'auto_execute';
-      reason = 'High confidence - proceeding automatically';
+      action = "auto_execute";
+      reason = "High confidence - proceeding automatically";
     } else if (totalScore >= this.thresholds.suggestAndWait) {
-      action = 'suggest_and_wait';
-      reason = 'Good confidence - suggesting plan, awaiting brief confirmation';
+      action = "suggest_and_wait";
+      reason = "Good confidence - suggesting plan, awaiting brief confirmation";
     } else if (totalScore >= this.thresholds.askExplicitly) {
       // Check if complexity is the main issue
       if (params.contextQuality < 0.5) {
-        action = 'decompose';
-        reason = 'Request is complex or unclear - breaking down for clarity';
+        action = "decompose";
+        reason = "Request is complex or unclear - breaking down for clarity";
       } else {
-        action = 'ask_explicitly';
-        reason = 'Moderate confidence - requesting explicit confirmation';
+        action = "ask_explicitly";
+        reason = "Moderate confidence - requesting explicit confirmation";
       }
     } else if (totalScore >= this.thresholds.decline) {
-      action = 'ask_explicitly';
-      reason = 'Low confidence - cannot proceed without explicit confirmation';
+      action = "ask_explicitly";
+      reason = "Low confidence - cannot proceed without explicit confirmation";
     } else {
-      action = 'decline';
+      action = "decline";
       reason =
-        'Very low confidence - declining to proceed. Please clarify or simplify the request.';
+        "Very low confidence - declining to proceed. Please clarify or simplify the request.";
     }
 
     return {
@@ -297,49 +303,49 @@ export class SelfHealingEngine extends EventEmitter {
    * Classify an error type
    */
   classifyError(error: Error | string): ErrorType {
-    const errorStr = typeof error === 'string' ? error : error.message;
+    const errorStr = typeof error === "string" ? error : error.message;
     const lowerError = errorStr.toLowerCase();
 
     if (
-      lowerError.includes('parse') ||
-      lowerError.includes('json') ||
-      lowerError.includes('syntax')
+      lowerError.includes("parse") ||
+      lowerError.includes("json") ||
+      lowerError.includes("syntax")
     ) {
-      return 'parsing_error';
+      return "parsing_error";
     }
-    if (lowerError.includes('timeout') || lowerError.includes('timed out')) {
-      return 'timeout_error';
-    }
-    if (
-      lowerError.includes('memory') ||
-      lowerError.includes('resource') ||
-      lowerError.includes('quota')
-    ) {
-      return 'resource_error';
+    if (lowerError.includes("timeout") || lowerError.includes("timed out")) {
+      return "timeout_error";
     }
     if (
-      lowerError.includes('valid') ||
-      lowerError.includes('schema') ||
-      lowerError.includes('required')
+      lowerError.includes("memory") ||
+      lowerError.includes("resource") ||
+      lowerError.includes("quota")
     ) {
-      return 'validation_error';
+      return "resource_error";
     }
     if (
-      lowerError.includes('api') ||
-      lowerError.includes('rate limit') ||
-      lowerError.includes('429')
+      lowerError.includes("valid") ||
+      lowerError.includes("schema") ||
+      lowerError.includes("required")
     ) {
-      return 'api_error';
+      return "validation_error";
     }
     if (
-      lowerError.includes('permission') ||
-      lowerError.includes('denied') ||
-      lowerError.includes('403')
+      lowerError.includes("api") ||
+      lowerError.includes("rate limit") ||
+      lowerError.includes("429")
     ) {
-      return 'permission_error';
+      return "api_error";
+    }
+    if (
+      lowerError.includes("permission") ||
+      lowerError.includes("denied") ||
+      lowerError.includes("403")
+    ) {
+      return "permission_error";
     }
 
-    return 'unknown_error';
+    return "unknown_error";
   }
 
   /**
@@ -347,90 +353,117 @@ export class SelfHealingEngine extends EventEmitter {
    */
   generateHealingStrategy(
     errorType: ErrorType,
-    attemptNumber: number
+    attemptNumber: number,
   ): { strategy: string; adjustments: string[] } {
-    const strategies: Record<ErrorType, Array<{ strategy: string; adjustments: string[] }>> = {
+    const strategies: Record<
+      ErrorType,
+      Array<{ strategy: string; adjustments: string[] }>
+    > = {
       parsing_error: [
         {
-          strategy: 'simplify_output',
-          adjustments: ['Request simpler output format', 'Add explicit formatting instructions'],
+          strategy: "simplify_output",
+          adjustments: [
+            "Request simpler output format",
+            "Add explicit formatting instructions",
+          ],
         },
         {
-          strategy: 'step_by_step',
-          adjustments: ['Break into smaller steps', 'Validate each step output'],
+          strategy: "step_by_step",
+          adjustments: [
+            "Break into smaller steps",
+            "Validate each step output",
+          ],
         },
         {
-          strategy: 'fallback_parser',
-          adjustments: ['Use lenient parsing', 'Extract partial results'],
+          strategy: "fallback_parser",
+          adjustments: ["Use lenient parsing", "Extract partial results"],
         },
       ],
       timeout_error: [
         {
-          strategy: 'reduce_scope',
-          adjustments: ['Process fewer items', 'Use smaller context window'],
+          strategy: "reduce_scope",
+          adjustments: ["Process fewer items", "Use smaller context window"],
         },
         {
-          strategy: 'batch_processing',
-          adjustments: ['Split into batches', 'Process incrementally'],
+          strategy: "batch_processing",
+          adjustments: ["Split into batches", "Process incrementally"],
         },
         {
-          strategy: 'increase_timeout',
-          adjustments: ['Extend timeout', 'Add progress checkpoints'],
+          strategy: "increase_timeout",
+          adjustments: ["Extend timeout", "Add progress checkpoints"],
         },
       ],
       resource_error: [
         {
-          strategy: 'reduce_complexity',
-          adjustments: ['Use smaller model', 'Reduce context size'],
+          strategy: "reduce_complexity",
+          adjustments: ["Use smaller model", "Reduce context size"],
         },
         {
-          strategy: 'cleanup_resources',
-          adjustments: ['Release unused resources', 'Wait for resources'],
+          strategy: "cleanup_resources",
+          adjustments: ["Release unused resources", "Wait for resources"],
         },
         {
-          strategy: 'prioritize',
-          adjustments: ['Focus on essential parts', 'Skip non-critical tasks'],
+          strategy: "prioritize",
+          adjustments: ["Focus on essential parts", "Skip non-critical tasks"],
         },
       ],
       validation_error: [
-        { strategy: 'fix_input', adjustments: ['Sanitize input', 'Add missing fields'] },
-        { strategy: 'use_defaults', adjustments: ['Apply default values', 'Relax constraints'] },
         {
-          strategy: 'request_correction',
-          adjustments: ['Ask user for corrections', 'Provide examples'],
+          strategy: "fix_input",
+          adjustments: ["Sanitize input", "Add missing fields"],
+        },
+        {
+          strategy: "use_defaults",
+          adjustments: ["Apply default values", "Relax constraints"],
+        },
+        {
+          strategy: "request_correction",
+          adjustments: ["Ask user for corrections", "Provide examples"],
         },
       ],
       api_error: [
         {
-          strategy: 'retry_with_backoff',
-          adjustments: ['Wait before retry', 'Exponential backoff'],
+          strategy: "retry_with_backoff",
+          adjustments: ["Wait before retry", "Exponential backoff"],
         },
         {
-          strategy: 'fallback_provider',
-          adjustments: ['Try alternative model', 'Use cached results'],
+          strategy: "fallback_provider",
+          adjustments: ["Try alternative model", "Use cached results"],
         },
-        { strategy: 'queue_for_later', adjustments: ['Schedule retry', 'Notify when available'] },
+        {
+          strategy: "queue_for_later",
+          adjustments: ["Schedule retry", "Notify when available"],
+        },
       ],
       permission_error: [
         {
-          strategy: 'request_access',
-          adjustments: ['Ask for permissions', 'Explain requirements'],
+          strategy: "request_access",
+          adjustments: ["Ask for permissions", "Explain requirements"],
         },
         {
-          strategy: 'workaround',
-          adjustments: ['Use alternative approach', 'Skip restricted operations'],
+          strategy: "workaround",
+          adjustments: [
+            "Use alternative approach",
+            "Skip restricted operations",
+          ],
         },
-        { strategy: 'escalate', adjustments: ['Escalate to admin', 'Request manual intervention'] },
+        {
+          strategy: "escalate",
+          adjustments: ["Escalate to admin", "Request manual intervention"],
+        },
       ],
       unknown_error: [
-        { strategy: 'simplify', adjustments: ['Simplify request', 'Remove complex parts'] },
         {
-          strategy: 'isolate',
-          adjustments: ['Test individual components', 'Identify failure point'],
+          strategy: "simplify",
+          adjustments: ["Simplify request", "Remove complex parts"],
         },
         {
-          strategy: 'human_assistance',
-          adjustments: ['Request human review', 'Provide error details'],
+          strategy: "isolate",
+          adjustments: ["Test individual components", "Identify failure point"],
+        },
+        {
+          strategy: "human_assistance",
+          adjustments: ["Request human review", "Provide error details"],
         },
       ],
     };
@@ -447,7 +480,7 @@ export class SelfHealingEngine extends EventEmitter {
     taskId: string,
     originalRequest: string,
     originalError: string,
-    goalId?: string
+    goalId?: string,
   ): SelfHealingContext {
     const context: SelfHealingContext = {
       taskId,
@@ -467,7 +500,10 @@ export class SelfHealingEngine extends EventEmitter {
   async attemptHealing(
     taskId: string,
     currentError: string,
-    executeAdjusted: (adjustedRequest: string, adjustments: string[]) => Promise<boolean>
+    executeAdjusted: (
+      adjustedRequest: string,
+      adjustments: string[],
+    ) => Promise<boolean>,
   ): Promise<boolean> {
     const context = this.contexts.get(taskId);
     if (!context) {
@@ -477,16 +513,23 @@ export class SelfHealingEngine extends EventEmitter {
 
     if (context.attempts.length >= MAX_HEALING_RETRIES) {
       console.log(`[SelfHealing] Max retries exhausted for task: ${taskId}`);
-      this.emit('power', { type: 'healing_exhausted', context });
+      this.emit("power", { type: "healing_exhausted", context });
       return false;
     }
 
     const errorType = this.classifyError(currentError);
     const attemptNumber = context.attempts.length;
-    const { strategy, adjustments } = this.generateHealingStrategy(errorType, attemptNumber);
+    const { strategy, adjustments } = this.generateHealingStrategy(
+      errorType,
+      attemptNumber,
+    );
 
-    console.log(`[SelfHealing] Attempt ${attemptNumber + 1}/${MAX_HEALING_RETRIES} for ${taskId}`);
-    console.log(`[SelfHealing] Strategy: ${strategy}, Adjustments: ${adjustments.join(', ')}`);
+    console.log(
+      `[SelfHealing] Attempt ${attemptNumber + 1}/${MAX_HEALING_RETRIES} for ${taskId}`,
+    );
+    console.log(
+      `[SelfHealing] Strategy: ${strategy}, Adjustments: ${adjustments.join(", ")}`,
+    );
 
     // Create attempt record
     const attempt: HealingAttempt = {
@@ -502,10 +545,14 @@ export class SelfHealingEngine extends EventEmitter {
     context.attempts.push(attempt);
 
     // Adjust the request based on strategy
-    const adjustedRequest = this.adjustRequest(context.originalRequest, strategy, adjustments);
+    const adjustedRequest = this.adjustRequest(
+      context.originalRequest,
+      strategy,
+      adjustments,
+    );
     context.adjustedRequest = adjustedRequest;
 
-    this.emit('power', { type: 'healing_attempted', attempt });
+    this.emit("power", { type: "healing_attempted", attempt });
 
     try {
       const success = await executeAdjusted(adjustedRequest, adjustments);
@@ -513,13 +560,15 @@ export class SelfHealingEngine extends EventEmitter {
 
       if (success) {
         console.log(`[SelfHealing] Healing succeeded for task: ${taskId}`);
-        this.emit('power', { type: 'healing_succeeded', context });
+        this.emit("power", { type: "healing_succeeded", context });
       }
 
       return success;
     } catch (err) {
       attempt.resultError = (err as Error).message;
-      console.log(`[SelfHealing] Healing attempt failed: ${attempt.resultError}`);
+      console.log(
+        `[SelfHealing] Healing attempt failed: ${attempt.resultError}`,
+      );
       return false;
     }
   }
@@ -527,23 +576,31 @@ export class SelfHealingEngine extends EventEmitter {
   /**
    * Adjust request based on strategy
    */
-  private adjustRequest(originalRequest: string, strategy: string, _adjustments: string[]): string {
+  private adjustRequest(
+    originalRequest: string,
+    strategy: string,
+    _adjustments: string[],
+  ): string {
     // In production, this would use more sophisticated request modification
     // For now, we add hints to the request
     let adjusted = originalRequest;
 
     switch (strategy) {
-      case 'simplify_output':
-        adjusted += '\n\nNote: Please provide a simple, well-formatted response.';
+      case "simplify_output":
+        adjusted +=
+          "\n\nNote: Please provide a simple, well-formatted response.";
         break;
-      case 'step_by_step':
-        adjusted += '\n\nNote: Please break this down into clear, numbered steps.';
+      case "step_by_step":
+        adjusted +=
+          "\n\nNote: Please break this down into clear, numbered steps.";
         break;
-      case 'reduce_scope':
-        adjusted += '\n\nNote: Please focus on the most essential aspects only.';
+      case "reduce_scope":
+        adjusted +=
+          "\n\nNote: Please focus on the most essential aspects only.";
         break;
-      case 'simplify':
-        adjusted += '\n\nNote: Please provide a simplified approach to this task.';
+      case "simplify":
+        adjusted +=
+          "\n\nNote: Please provide a simplified approach to this task.";
         break;
       default:
         adjusted += `\n\nNote: Adjusted approach using ${strategy} strategy.`;
@@ -583,7 +640,9 @@ export class TaskDecomposer {
       length: taskDescription.length / 500, // Longer = more complex
       andCount: (taskDescription.match(/\band\b/gi) || []).length * 0.1,
       orCount: (taskDescription.match(/\bor\b/gi) || []).length * 0.1,
-      conditionals: (taskDescription.match(/\bif\b|\bwhen\b|\bunless\b/gi) || []).length * 0.15,
+      conditionals:
+        (taskDescription.match(/\bif\b|\bwhen\b|\bunless\b/gi) || []).length *
+        0.15,
       lists: (taskDescription.match(/\d+\.\s|\*\s|-\s/g) || []).length * 0.05,
       techTerms: this.countTechTerms(taskDescription) * 0.1,
     };
@@ -594,26 +653,26 @@ export class TaskDecomposer {
 
   private countTechTerms(text: string): number {
     const techTerms = [
-      'api',
-      'database',
-      'authentication',
-      'authorization',
-      'deployment',
-      'microservice',
-      'container',
-      'kubernetes',
-      'docker',
-      'ci/cd',
-      'webhook',
-      'websocket',
-      'graphql',
-      'rest',
-      'grpc',
-      'component',
-      'module',
-      'service',
-      'controller',
-      'middleware',
+      "api",
+      "database",
+      "authentication",
+      "authorization",
+      "deployment",
+      "microservice",
+      "container",
+      "kubernetes",
+      "docker",
+      "ci/cd",
+      "webhook",
+      "websocket",
+      "graphql",
+      "rest",
+      "grpc",
+      "component",
+      "module",
+      "service",
+      "controller",
+      "middleware",
     ];
     const lowerText = text.toLowerCase();
     return techTerms.filter((term) => lowerText.includes(term)).length;
@@ -624,7 +683,7 @@ export class TaskDecomposer {
    */
   decompose(
     taskDescription: string,
-    context?: { projectType?: string; techStack?: string[] }
+    context?: { projectType?: string; techStack?: string[] },
   ): TaskDecomposition {
     const complexity = this.analyzeComplexity(taskDescription);
     const subtasks: DecomposedTask[] = [];
@@ -677,10 +736,13 @@ export class TaskDecomposer {
     // First, try numbered or bulleted lists
     const listMatch = description.match(/(?:\d+\.\s|\*\s|-\s)([^\n]+)/g);
     if (listMatch && listMatch.length > 1) {
-      segments = listMatch.map((s) => s.replace(/^\d+\.\s|\*\s|-\s/, '').trim());
+      segments = listMatch.map((s) =>
+        s.replace(/^\d+\.\s|\*\s|-\s/, "").trim(),
+      );
     } else {
       // Try splitting by sentence with "then" or sequential markers
-      const sequenceMarkers = /[.;]\s*(?:then|next|after that|finally|first|second|third|lastly)/gi;
+      const sequenceMarkers =
+        /[.;]\s*(?:then|next|after that|finally|first|second|third|lastly)/gi;
       if (sequenceMarkers.test(description)) {
         segments = description
           .split(sequenceMarkers)
@@ -704,73 +766,91 @@ export class TaskDecomposer {
 
   private suggestAgent(
     segment: string,
-    context?: { projectType?: string; techStack?: string[] }
+    context?: { projectType?: string; techStack?: string[] },
   ): AgentType {
     const lower = segment.toLowerCase();
 
     // Architecture/design related
-    if (lower.includes('architect') || lower.includes('design') || lower.includes('structure')) {
-      return 'architect';
+    if (
+      lower.includes("architect") ||
+      lower.includes("design") ||
+      lower.includes("structure")
+    ) {
+      return "architect";
     }
     // Frontend related
     if (
-      lower.includes('ui') ||
-      lower.includes('frontend') ||
-      lower.includes('component') ||
-      lower.includes('react') ||
-      lower.includes('svelte') ||
-      lower.includes('vue')
+      lower.includes("ui") ||
+      lower.includes("frontend") ||
+      lower.includes("component") ||
+      lower.includes("react") ||
+      lower.includes("svelte") ||
+      lower.includes("vue")
     ) {
-      return 'frontend';
+      return "frontend";
     }
     // Backend related
     if (
-      lower.includes('api') ||
-      lower.includes('backend') ||
-      lower.includes('server') ||
-      lower.includes('database') ||
-      lower.includes('endpoint')
+      lower.includes("api") ||
+      lower.includes("backend") ||
+      lower.includes("server") ||
+      lower.includes("database") ||
+      lower.includes("endpoint")
     ) {
-      return 'backend';
+      return "backend";
     }
     // DevOps related
     if (
-      lower.includes('deploy') ||
-      lower.includes('docker') ||
-      lower.includes('ci') ||
-      lower.includes('kubernetes') ||
-      lower.includes('infrastructure')
+      lower.includes("deploy") ||
+      lower.includes("docker") ||
+      lower.includes("ci") ||
+      lower.includes("kubernetes") ||
+      lower.includes("infrastructure")
     ) {
-      return 'devops';
+      return "devops";
     }
     // Testing related
-    if (lower.includes('test') || lower.includes('spec') || lower.includes('coverage')) {
-      return 'test';
+    if (
+      lower.includes("test") ||
+      lower.includes("spec") ||
+      lower.includes("coverage")
+    ) {
+      return "test";
     }
     // Security related
-    if (lower.includes('security') || lower.includes('auth') || lower.includes('permission')) {
-      return 'security';
+    if (
+      lower.includes("security") ||
+      lower.includes("auth") ||
+      lower.includes("permission")
+    ) {
+      return "security";
     }
     // Documentation related
-    if (lower.includes('document') || lower.includes('readme') || lower.includes('guide')) {
-      return 'docs';
+    if (
+      lower.includes("document") ||
+      lower.includes("readme") ||
+      lower.includes("guide")
+    ) {
+      return "docs";
     }
 
     // Default based on project context
-    if (context?.projectType?.includes('frontend')) return 'frontend';
-    if (context?.projectType?.includes('backend')) return 'backend';
+    if (context?.projectType?.includes("frontend")) return "frontend";
+    if (context?.projectType?.includes("backend")) return "backend";
 
-    return 'executor';
+    return "executor";
   }
 
   private calculateSegmentRisk(segment: string): number {
     const lower = segment.toLowerCase();
     let risk = 0;
 
-    if (lower.includes('delete') || lower.includes('remove')) risk += RISK_FACTORS.file_delete;
-    if (lower.includes('execute') || lower.includes('run')) risk += RISK_FACTORS.code_execute;
-    if (lower.includes('database')) risk += RISK_FACTORS.database_write;
-    if (lower.includes('deploy') || lower.includes('production'))
+    if (lower.includes("delete") || lower.includes("remove"))
+      risk += RISK_FACTORS.file_delete;
+    if (lower.includes("execute") || lower.includes("run"))
+      risk += RISK_FACTORS.code_execute;
+    if (lower.includes("database")) risk += RISK_FACTORS.database_write;
+    if (lower.includes("deploy") || lower.includes("production"))
       risk += RISK_FACTORS.shell_command;
 
     return risk;
@@ -801,7 +881,7 @@ export class StrategySelector {
     estimatedCost: number;
     riskLevel: RiskLevel;
     hasPattern: boolean;
-    timeConstraint?: 'relaxed' | 'normal' | 'urgent';
+    timeConstraint?: "relaxed" | "normal" | "urgent";
     userPreference?: Strategy;
   }): StrategySelection {
     const alternatives: Array<{ strategy: Strategy; confidence: number }> = [];
@@ -830,10 +910,13 @@ export class StrategySelector {
       }
 
       // Adjust based on risk
-      if (strategy === STRATEGIES.AGGRESSIVE && params.riskLevel !== 'minimal') {
+      if (
+        strategy === STRATEGIES.AGGRESSIVE &&
+        params.riskLevel !== "minimal"
+      ) {
         confidence -= 0.2;
       }
-      if (strategy === STRATEGIES.CONSERVATIVE && params.riskLevel === 'high') {
+      if (strategy === STRATEGIES.CONSERVATIVE && params.riskLevel === "high") {
         confidence += 0.2;
       }
 
@@ -843,11 +926,17 @@ export class StrategySelector {
       }
 
       // Adjust based on time constraint
-      if (params.timeConstraint === 'urgent') {
-        if (strategy === STRATEGIES.DIRECT || strategy === STRATEGIES.AGGRESSIVE) {
+      if (params.timeConstraint === "urgent") {
+        if (
+          strategy === STRATEGIES.DIRECT ||
+          strategy === STRATEGIES.AGGRESSIVE
+        ) {
           confidence += 0.1;
         }
-        if (strategy === STRATEGIES.ITERATIVE || strategy === STRATEGIES.CONSERVATIVE) {
+        if (
+          strategy === STRATEGIES.ITERATIVE ||
+          strategy === STRATEGIES.CONSERVATIVE
+        ) {
           confidence -= 0.1;
         }
       }
@@ -872,13 +961,13 @@ export class StrategySelector {
     // Generate reasoning
     let reasoning = `Selected ${bestStrategy} strategy with ${Math.round(bestConfidence * 100)}% confidence. `;
     if (params.complexity > 0.7) {
-      reasoning += 'Task complexity is high. ';
+      reasoning += "Task complexity is high. ";
     }
-    if (params.riskLevel !== 'minimal' && params.riskLevel !== 'low') {
+    if (params.riskLevel !== "minimal" && params.riskLevel !== "low") {
       reasoning += `Risk level is ${params.riskLevel}. `;
     }
     if (params.hasPattern) {
-      reasoning += 'Matching pattern found. ';
+      reasoning += "Matching pattern found. ";
     }
 
     return {
@@ -910,20 +999,28 @@ export class PatternMatcher extends EventEmitter {
   /**
    * Find matching pattern for a task
    */
-  findMatch(taskDescription: string): { pattern: Pattern; confidence: number } | null {
+  findMatch(
+    taskDescription: string,
+  ): { pattern: Pattern; confidence: number } | null {
     let bestMatch: { pattern: Pattern; confidence: number } | null = null;
 
     for (const pattern of this.patterns.values()) {
-      const confidence = this.calculateMatchConfidence(taskDescription, pattern);
+      const confidence = this.calculateMatchConfidence(
+        taskDescription,
+        pattern,
+      );
 
-      if (confidence > 0.6 && (!bestMatch || confidence > bestMatch.confidence)) {
+      if (
+        confidence > 0.6 &&
+        (!bestMatch || confidence > bestMatch.confidence)
+      ) {
         bestMatch = { pattern, confidence };
       }
     }
 
     if (bestMatch) {
-      this.emit('power', {
-        type: 'pattern_matched',
+      this.emit("power", {
+        type: "pattern_matched",
         pattern: bestMatch.pattern,
         confidence: bestMatch.confidence,
       });
@@ -932,13 +1029,20 @@ export class PatternMatcher extends EventEmitter {
     return bestMatch;
   }
 
-  private calculateMatchConfidence(taskDescription: string, pattern: Pattern): number {
+  private calculateMatchConfidence(
+    taskDescription: string,
+    pattern: Pattern,
+  ): number {
     const taskLower = taskDescription.toLowerCase();
     const patternLower = pattern.goal.toLowerCase();
 
     // Word overlap
-    const taskWords = new Set(taskLower.split(/\W+/).filter((w) => w.length > 3));
-    const patternWords = new Set(patternLower.split(/\W+/).filter((w) => w.length > 3));
+    const taskWords = new Set(
+      taskLower.split(/\W+/).filter((w) => w.length > 3),
+    );
+    const patternWords = new Set(
+      patternLower.split(/\W+/).filter((w) => w.length > 3),
+    );
 
     let overlap = 0;
     for (const word of taskWords) {
@@ -948,7 +1052,8 @@ export class PatternMatcher extends EventEmitter {
     const overlapScore = overlap / Math.max(taskWords.size, patternWords.size);
 
     // Boost for high success rate patterns
-    const successRate = pattern.successCount / (pattern.successCount + pattern.failureCount);
+    const successRate =
+      pattern.successCount / (pattern.successCount + pattern.failureCount);
     const successBoost = successRate * 0.2;
 
     // Confidence boost
@@ -973,7 +1078,7 @@ export class PatternMatcher extends EventEmitter {
     // Update average duration
     const totalRuns = pattern.successCount + pattern.failureCount;
     pattern.avgDurationMs = Math.round(
-      (pattern.avgDurationMs * (totalRuns - 1) + durationMs) / totalRuns
+      (pattern.avgDurationMs * (totalRuns - 1) + durationMs) / totalRuns,
     );
 
     // Update confidence based on success rate
@@ -1009,7 +1114,7 @@ export class PatternMatcher extends EventEmitter {
     };
 
     this.patterns.set(pattern.id, pattern);
-    this.emit('power', { type: 'pattern_learned', patternId: pattern.id });
+    this.emit("power", { type: "pattern_learned", patternId: pattern.id });
 
     return pattern;
   }
@@ -1058,8 +1163,8 @@ export class PowerExpansion extends EventEmitter {
     this.patternMatcher = new PatternMatcher();
 
     // Forward events from sub-engines
-    this.selfHealing.on('power', (event) => this.emit('power', event));
-    this.patternMatcher.on('power', (event) => this.emit('power', event));
+    this.selfHealing.on("power", (event) => this.emit("power", event));
+    this.patternMatcher.on("power", (event) => this.emit("power", event));
   }
 
   /**
@@ -1077,10 +1182,14 @@ export class PowerExpansion extends EventEmitter {
     matchedPattern?: { pattern: Pattern; confidence: number };
   } {
     // Check for matching pattern
-    const matchedPattern = this.patternMatcher.findMatch(params.taskDescription);
+    const matchedPattern = this.patternMatcher.findMatch(
+      params.taskDescription,
+    );
 
     // Analyze task complexity
-    const complexity = this.taskDecomposer.analyzeComplexity(params.taskDescription);
+    const complexity = this.taskDecomposer.analyzeComplexity(
+      params.taskDescription,
+    );
 
     // Calculate context quality from message history
     const contextQuality = params.previousMessages
@@ -1098,13 +1207,16 @@ export class PowerExpansion extends EventEmitter {
       historyAvailable: (params.previousMessages?.length ?? 0) > 0,
     });
 
-    this.emit('power', { type: 'confidence_analyzed', analysis: confidence });
+    this.emit("power", { type: "confidence_analyzed", analysis: confidence });
 
     // Decompose if needed
     let decomposition: TaskDecomposition | undefined;
-    if (complexity > 0.6 || confidence.action === 'decompose') {
-      decomposition = this.taskDecomposer.decompose(params.taskDescription, params.context);
-      this.emit('power', { type: 'task_decomposed', decomposition });
+    if (complexity > 0.6 || confidence.action === "decompose") {
+      decomposition = this.taskDecomposer.decompose(
+        params.taskDescription,
+        params.context,
+      );
+      this.emit("power", { type: "task_decomposed", decomposition });
     }
 
     // Select strategy
@@ -1116,7 +1228,7 @@ export class PowerExpansion extends EventEmitter {
       hasPattern: !!matchedPattern,
     });
 
-    this.emit('power', { type: 'strategy_selected', selection: strategy });
+    this.emit("power", { type: "strategy_selected", selection: strategy });
 
     return {
       confidence,

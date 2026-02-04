@@ -10,15 +10,15 @@ export interface UserSettings {
 }
 
 export interface ModelOption {
-  provider: 'nim' | 'mock';
+  provider: "nim" | "mock";
   modelId: string;
   label?: string;
 }
 
-export type ModelPreset = 'fast' | 'quality' | 'balanced';
+export type ModelPreset = "fast" | "quality" | "balanced";
 
 export interface ModelsSettings {
-  defaultProvider?: 'nim' | 'mock';
+  defaultProvider?: "nim" | "mock";
   defaultModelId?: string;
   /** Quality vs speed: fast = Llama/Mistral, quality = Llama 405B, balanced = router default. Powered by NVIDIA NIM. */
   modelPreset?: ModelPreset;
@@ -46,7 +46,7 @@ export interface SkillsSettings {
 export interface AccessibilitySettings {
   reducedMotion?: boolean;
   highContrast?: boolean;
-  fontSize?: 'normal' | 'large' | 'xlarge';
+  fontSize?: "normal" | "large" | "xlarge";
   keyboardShortcuts?: boolean;
 }
 
@@ -56,7 +56,7 @@ export interface IntegrationsSettings {
 }
 
 /** Tier override (e.g. from billing); used by feature-flags resolution when set. */
-export type TierId = 'free' | 'pro' | 'team' | 'enterprise';
+export type TierId = "free" | "pro" | "team" | "enterprise";
 
 /** Guard rails for local file read/write: workspace, allowlist, confirm writes, autonomous. */
 export interface GuardRailsSettings {
@@ -92,32 +92,39 @@ export interface Settings {
  * G-Agent is the flagship autonomous AI agent - the "brain" of G-Rump
  */
 export type GAgentCapabilityKey =
-  | 'file'
-  | 'git'
-  | 'bash'
-  | 'npm'
-  | 'docker'
-  | 'cloud'
-  | 'webhooks'
-  | 'heartbeats'
-  | 'internet_search'
-  | 'database'
-  | 'api_call'
-  | 'monitoring'
-  | 'cicd'
-  | 'skills_self_edit'
-  | 'task_planning' // NEW: Rust-powered task decomposition
-  | 'memory' // NEW: Unified memory system
-  | 'self_improve'; // NEW: Self-improvement loop
+  | "file"
+  | "git"
+  | "bash"
+  | "npm"
+  | "docker"
+  | "cloud"
+  | "webhooks"
+  | "heartbeats"
+  | "internet_search"
+  | "database"
+  | "api_call"
+  | "monitoring"
+  | "cicd"
+  | "skills_self_edit"
+  | "task_planning" // NEW: Rust-powered task decomposition
+  | "memory" // NEW: Unified memory system
+  | "self_improve"; // NEW: Self-improvement loop
 
 /** @deprecated Use GAgentCapabilityKey instead */
 export type FreeAgentCapabilityKey = GAgentCapabilityKey;
 
 /** Capabilities that require a PRO+ tier license */
-export const PREMIUM_CAPABILITIES: GAgentCapabilityKey[] = ['cloud', 'cicd', 'task_planning'];
+export const PREMIUM_CAPABILITIES: GAgentCapabilityKey[] = [
+  "cloud",
+  "cicd",
+  "task_planning",
+];
 
 /** Capabilities that require a TEAM+ tier license */
-export const TEAM_CAPABILITIES: GAgentCapabilityKey[] = ['memory', 'self_improve'];
+export const TEAM_CAPABILITIES: GAgentCapabilityKey[] = [
+  "memory",
+  "self_improve",
+];
 
 /** Maximum agents in swarm by tier (free=3, pro=5, team=10, enterprise=unlimited) */
 export const SWARM_LIMITS: Record<string, number> = {
@@ -131,7 +138,7 @@ export const SWARM_LIMITS: Record<string, number> = {
  * G-Agent Model Preference
  */
 export interface GAgentModelPreference {
-  source?: 'cloud' | 'ollama' | 'auto';
+  source?: "cloud" | "ollama" | "auto";
   provider?: string;
   modelId?: string;
 }
@@ -157,12 +164,18 @@ export type FreeAgentPersona = GAgentPersona;
 export interface GAgentTask {
   id: string;
   description: string;
-  status: 'pending' | 'approved' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
+  status:
+    | "pending"
+    | "approved"
+    | "in_progress"
+    | "completed"
+    | "failed"
+    | "cancelled";
   priority: number;
   dependencies: string[];
   estimatedDuration?: number;
   tools: string[];
-  riskLevel: 'safe' | 'moderate' | 'risky';
+  riskLevel: "safe" | "moderate" | "risky";
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
@@ -177,7 +190,12 @@ export interface GAgentPlan {
   id: string;
   goal: string;
   tasks: GAgentTask[];
-  status: 'planning' | 'awaiting_approval' | 'executing' | 'completed' | 'failed';
+  status:
+    | "planning"
+    | "awaiting_approval"
+    | "executing"
+    | "completed"
+    | "failed";
   confidence: number;
   estimatedTotalDuration?: number;
   createdAt: string;
@@ -188,18 +206,18 @@ export interface GAgentPlan {
 }
 
 export interface UserPreferences {
-  diagramStyle: 'minimal' | 'detailed' | 'comprehensive';
+  diagramStyle: "minimal" | "detailed" | "comprehensive";
   primaryTechStack: string[];
-  theme: 'light' | 'dark' | 'auto';
+  theme: "light" | "dark" | "auto";
   analyticsOptIn: boolean;
   apiKey?: string;
   setupComplete: boolean;
-  density?: 'comfortable' | 'compact';
+  density?: "comfortable" | "compact";
 
   // G-Agent Configuration
   gAgentCapabilities?: GAgentCapabilityKey[];
   gAgentExternalAllowlist?: string[];
-  gAgentPreferredModelSource?: 'cloud' | 'ollama' | 'auto';
+  gAgentPreferredModelSource?: "cloud" | "ollama" | "auto";
   gAgentOllamaModel?: string;
   gAgentModelPreference?: GAgentModelPreference;
   gAgentPersona?: GAgentPersona;
@@ -212,7 +230,7 @@ export interface UserPreferences {
   /** @deprecated Use gAgentExternalAllowlist instead */
   freeAgentExternalAllowlist?: string[];
   /** @deprecated Use gAgentPreferredModelSource instead */
-  freeAgentPreferredModelSource?: 'cloud' | 'ollama' | 'auto';
+  freeAgentPreferredModelSource?: "cloud" | "ollama" | "auto";
   /** @deprecated Use gAgentOllamaModel instead */
   freeAgentOllamaModel?: string;
   /** @deprecated Use gAgentModelPreference instead */

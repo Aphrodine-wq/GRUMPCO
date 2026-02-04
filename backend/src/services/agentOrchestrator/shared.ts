@@ -9,10 +9,10 @@
  * @module agentOrchestrator/shared
  */
 
-import { withResilience } from '../resilience.js';
-import { getCompletion, type CompletionResult } from '../llmGatewayHelper.js';
-import type { StreamParams } from '../llmGateway.js';
-import type { GeneratedFile } from '../../types/agents.js';
+import { withResilience } from "../resilience.js";
+import { getCompletion, type CompletionResult } from "../llmGatewayHelper.js";
+import type { StreamParams } from "../llmGateway.js";
+import type { GeneratedFile } from "../../types/agents.js";
 
 /**
  * Default model for codegen agent orchestration.
@@ -20,9 +20,9 @@ import type { GeneratedFile } from '../../types/agents.js';
  *
  * Powered by NVIDIA NIM - https://build.nvidia.com/
  */
-function getCodegenDefault(): { provider: 'nim'; modelId: string } {
+function getCodegenDefault(): { provider: "nim"; modelId: string } {
   // Use Llama 3.1 405B for complex code generation tasks
-  return { provider: 'nim', modelId: 'meta/llama-3.1-405b-instruct' };
+  return { provider: "nim", modelId: "meta/llama-3.1-405b-instruct" };
 }
 
 export const DEFAULT_AGENT_MODEL = getCodegenDefault().modelId;
@@ -31,7 +31,7 @@ export const DEFAULT_AGENT_MODEL = getCodegenDefault().modelId;
  * Quality standard identifier for agent outputs.
  * All agent outputs must satisfy type safety, tests, security, and maintainability.
  */
-export const AGENT_QUALITY_STANDARD = 'kimi-k2.5' as const;
+export const AGENT_QUALITY_STANDARD = "kimi-k2.5" as const;
 
 /**
  * Resilient wrapper for LLM Gateway calls.
@@ -62,10 +62,10 @@ export const resilientLlmCall = withResilience(
     const { provider, modelId } = getCodegenDefault();
     return await getCompletion(
       { ...params, model: params.model || modelId },
-      { provider, modelId: params.model || modelId }
+      { provider, modelId: params.model || modelId },
     );
   },
-  'kimi-agent'
+  "kimi-agent",
 );
 
 /**
@@ -87,10 +87,10 @@ export const resilientLlmCall = withResilience(
  * ```
  */
 export function extractJsonFromResponse(text: string): string {
-  if (text.includes('```json')) {
+  if (text.includes("```json")) {
     const match = text.match(/```json\n?([\s\S]*?)\n?```/);
     if (match) return match[1];
-  } else if (text.includes('```')) {
+  } else if (text.includes("```")) {
     const match = text.match(/```\n?([\s\S]*?)\n?```/);
     if (match) return match[1];
   }
@@ -113,19 +113,27 @@ export function extractJsonFromResponse(text: string): string {
  * session.generatedFiles.push(...files);
  * ```
  */
-export function convertAgentOutputToFiles(agentOutput: Record<string, unknown>): GeneratedFile[] {
+export function convertAgentOutputToFiles(
+  agentOutput: Record<string, unknown>,
+): GeneratedFile[] {
   const files: GeneratedFile[] = [];
 
   for (const key of Object.keys(agentOutput)) {
     const items = agentOutput[key];
     if (Array.isArray(items)) {
-      for (const item of items as Array<{ path?: string; content?: string; type?: string }>) {
+      for (const item of items as Array<{
+        path?: string;
+        content?: string;
+        type?: string;
+      }>) {
         if (item.path && item.content) {
           files.push({
             path: item.path,
-            type: (item.type === 'test' || item.type === 'config' || item.type === 'doc'
+            type: (item.type === "test" ||
+            item.type === "config" ||
+            item.type === "doc"
               ? item.type
-              : 'source') as GeneratedFile['type'],
+              : "source") as GeneratedFile["type"],
             language: getLanguageFromPath(item.path),
             size: item.content.length,
             content: item.content,
@@ -152,15 +160,15 @@ export function convertAgentOutputToFiles(agentOutput: Record<string, unknown>):
  * ```
  */
 export function getLanguageFromPath(path: string): string {
-  if (path.endsWith('.ts') || path.endsWith('.tsx')) return 'typescript';
-  if (path.endsWith('.js') || path.endsWith('.jsx')) return 'javascript';
-  if (path.endsWith('.py')) return 'python';
-  if (path.endsWith('.vue')) return 'vue';
-  if (path.endsWith('.go')) return 'go';
-  if (path.endsWith('.sql')) return 'sql';
-  if (path.endsWith('.json')) return 'json';
-  if (path.endsWith('.yaml') || path.endsWith('.yml')) return 'yaml';
-  if (path.endsWith('.md')) return 'markdown';
-  if (path.endsWith('.sh')) return 'shell';
-  return 'text';
+  if (path.endsWith(".ts") || path.endsWith(".tsx")) return "typescript";
+  if (path.endsWith(".js") || path.endsWith(".jsx")) return "javascript";
+  if (path.endsWith(".py")) return "python";
+  if (path.endsWith(".vue")) return "vue";
+  if (path.endsWith(".go")) return "go";
+  if (path.endsWith(".sql")) return "sql";
+  if (path.endsWith(".json")) return "json";
+  if (path.endsWith(".yaml") || path.endsWith(".yml")) return "yaml";
+  if (path.endsWith(".md")) return "markdown";
+  if (path.endsWith(".sh")) return "shell";
+  return "text";
 }

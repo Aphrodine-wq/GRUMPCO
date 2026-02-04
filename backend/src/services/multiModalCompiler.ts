@@ -14,7 +14,7 @@
  * @module services/multiModalCompiler
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -24,15 +24,15 @@ import { EventEmitter } from 'events';
  * Content modality types
  */
 export type ContentModality =
-  | 'code' // Source code files
-  | 'test' // Test files
-  | 'docs' // Documentation (README, docs/, etc.)
-  | 'config' // Configuration files
-  | 'types' // Type definitions
-  | 'api' // API definitions (OpenAPI, GraphQL, etc.)
-  | 'data' // Data files (JSON, YAML, etc.)
-  | 'style' // Style files (CSS, SCSS, etc.)
-  | 'unknown'; // Unclassified
+  | "code" // Source code files
+  | "test" // Test files
+  | "docs" // Documentation (README, docs/, etc.)
+  | "config" // Configuration files
+  | "types" // Type definitions
+  | "api" // API definitions (OpenAPI, GraphQL, etc.)
+  | "data" // Data files (JSON, YAML, etc.)
+  | "style" // Style files (CSS, SCSS, etc.)
+  | "unknown"; // Unclassified
 
 /**
  * A multi-modal unit representing content with its modality
@@ -79,30 +79,30 @@ export interface CrossReference {
 }
 
 export type CrossRefType =
-  | 'tests' // This code is tested by target
-  | 'tested_by' // This test tests target
-  | 'documents' // This doc documents target
-  | 'documented_by' // This code is documented by target
-  | 'imports' // This file imports target
-  | 'imported_by' // This file is imported by target
-  | 'implements' // This implements interface in target
-  | 'extends' // This extends class in target
-  | 'configures' // This config configures target
-  | 'types_for' // This type file provides types for target
-  | 'styles'; // This style file styles target
+  | "tests" // This code is tested by target
+  | "tested_by" // This test tests target
+  | "documents" // This doc documents target
+  | "documented_by" // This code is documented by target
+  | "imports" // This file imports target
+  | "imported_by" // This file is imported by target
+  | "implements" // This implements interface in target
+  | "extends" // This extends class in target
+  | "configures" // This config configures target
+  | "types_for" // This type file provides types for target
+  | "styles"; // This style file styles target
 
 /**
  * User intent for weight adjustment
  */
 export type UserIntent =
-  | 'understand' // User wants to understand code
-  | 'implement' // User wants to implement something
-  | 'debug' // User is debugging
-  | 'test' // User is writing tests
-  | 'document' // User is writing docs
-  | 'refactor' // User is refactoring
-  | 'review' // User is reviewing code
-  | 'configure'; // User is configuring
+  | "understand" // User wants to understand code
+  | "implement" // User wants to implement something
+  | "debug" // User is debugging
+  | "test" // User is writing tests
+  | "document" // User is writing docs
+  | "refactor" // User is refactoring
+  | "review" // User is reviewing code
+  | "configure"; // User is configuring
 
 /**
  * Modality weights configuration
@@ -273,7 +273,13 @@ export const MODALITY_PATTERNS: Record<ContentModality, RegExp[]> = {
     /vite\.config/i,
     /webpack\.config/i,
   ],
-  types: [/\.d\.ts$/i, /types\.(ts|js)$/i, /\/types\//i, /interfaces\.(ts|js)$/i, /\.pyi$/i],
+  types: [
+    /\.d\.ts$/i,
+    /types\.(ts|js)$/i,
+    /\/types\//i,
+    /interfaces\.(ts|js)$/i,
+    /\.pyi$/i,
+  ],
   api: [
     /openapi\.(json|yaml|yml)$/i,
     /swagger\.(json|yaml|yml)$/i,
@@ -283,7 +289,14 @@ export const MODALITY_PATTERNS: Record<ContentModality, RegExp[]> = {
     /routes\.(ts|js)$/i,
   ],
   data: [/\.json$/i, /\.csv$/i, /\.xml$/i, /fixtures\//i, /seeds?\//i, /mock/i],
-  style: [/\.css$/i, /\.scss$/i, /\.sass$/i, /\.less$/i, /\.styl$/i, /tailwind/i],
+  style: [
+    /\.css$/i,
+    /\.scss$/i,
+    /\.sass$/i,
+    /\.less$/i,
+    /\.styl$/i,
+    /tailwind/i,
+  ],
   unknown: [],
 };
 
@@ -330,14 +343,14 @@ export class MultiModalCompilerService extends EventEmitter {
   detectModality(filePath: string, content?: string): ContentModality {
     // Check patterns in order of specificity
     const checkOrder: ContentModality[] = [
-      'test', // Check test first (often matches code patterns too)
-      'types', // Type files before general code
-      'api', // API definitions
-      'config', // Config files
-      'docs', // Documentation
-      'style', // Style files
-      'data', // Data files
-      'code', // General code last
+      "test", // Check test first (often matches code patterns too)
+      "types", // Type files before general code
+      "api", // API definitions
+      "config", // Config files
+      "docs", // Documentation
+      "style", // Style files
+      "data", // Data files
+      "code", // General code last
     ];
 
     for (const modality of checkOrder) {
@@ -354,63 +367,73 @@ export class MultiModalCompilerService extends EventEmitter {
       return this.detectModalityFromContent(content, filePath);
     }
 
-    return 'unknown';
+    return "unknown";
   }
 
   /**
    * Detect modality from content analysis
    */
-  private detectModalityFromContent(content: string, filePath: string): ContentModality {
+  private detectModalityFromContent(
+    content: string,
+    filePath: string,
+  ): ContentModality {
     const lower = content.toLowerCase();
 
     // Test indicators
     if (
-      lower.includes('describe(') ||
-      lower.includes('it(') ||
-      lower.includes('test(') ||
-      lower.includes('@test') ||
-      lower.includes('assert') ||
-      lower.includes('expect(')
+      lower.includes("describe(") ||
+      lower.includes("it(") ||
+      lower.includes("test(") ||
+      lower.includes("@test") ||
+      lower.includes("assert") ||
+      lower.includes("expect(")
     ) {
-      return 'test';
+      return "test";
     }
 
     // Documentation indicators
-    if (filePath.endsWith('.md') || (lower.includes('## ') && lower.includes('# '))) {
-      return 'docs';
+    if (
+      filePath.endsWith(".md") ||
+      (lower.includes("## ") && lower.includes("# "))
+    ) {
+      return "docs";
     }
 
     // Type definition indicators
-    if (lower.includes('interface ') || lower.includes('type ') || lower.includes('declare ')) {
-      return 'types';
+    if (
+      lower.includes("interface ") ||
+      lower.includes("type ") ||
+      lower.includes("declare ")
+    ) {
+      return "types";
     }
 
     // API indicators
     if (
-      lower.includes('router.') ||
-      lower.includes('@route') ||
-      lower.includes('endpoint') ||
-      lower.includes('openapi')
+      lower.includes("router.") ||
+      lower.includes("@route") ||
+      lower.includes("endpoint") ||
+      lower.includes("openapi")
     ) {
-      return 'api';
+      return "api";
     }
 
     // Config indicators
     if (lower.includes('"name":') && lower.includes('"version":')) {
-      return 'config';
+      return "config";
     }
 
     // Default to code if it looks like code
     if (
-      lower.includes('function ') ||
-      lower.includes('class ') ||
-      lower.includes('import ') ||
-      lower.includes('export ')
+      lower.includes("function ") ||
+      lower.includes("class ") ||
+      lower.includes("import ") ||
+      lower.includes("export ")
     ) {
-      return 'code';
+      return "code";
     }
 
-    return 'unknown';
+    return "unknown";
   }
 
   // --------------------------------------------------------------------------
@@ -420,7 +443,10 @@ export class MultiModalCompilerService extends EventEmitter {
   /**
    * Detect cross-references between units
    */
-  detectCrossReferences(unit: MultiModalUnit, allUnits: MultiModalUnit[]): CrossReference[] {
+  detectCrossReferences(
+    unit: MultiModalUnit,
+    allUnits: MultiModalUnit[],
+  ): CrossReference[] {
     const refs: CrossReference[] = [];
     const content = unit.content.source || unit.content.detailed;
 
@@ -441,31 +467,39 @@ export class MultiModalCompilerService extends EventEmitter {
   private findRelationships(
     source: MultiModalUnit,
     target: MultiModalUnit,
-    sourceContent: string
+    sourceContent: string,
   ): CrossReference[] {
     const refs: CrossReference[] = [];
 
     // Test ↔ Code relationship
-    if (source.modality === 'test' && target.modality === 'code') {
-      const strength = this.calculateTestCodeStrength(source, target, sourceContent);
+    if (source.modality === "test" && target.modality === "code") {
+      const strength = this.calculateTestCodeStrength(
+        source,
+        target,
+        sourceContent,
+      );
       if (strength >= this.config.minCrossRefStrength) {
         refs.push({
           targetId: target.id,
           targetPath: target.filePath,
-          type: 'tested_by',
+          type: "tested_by",
           strength,
           bidirectional: true,
         });
       }
     }
 
-    if (source.modality === 'code' && target.modality === 'test') {
-      const strength = this.calculateTestCodeStrength(target, source, target.content.source || '');
+    if (source.modality === "code" && target.modality === "test") {
+      const strength = this.calculateTestCodeStrength(
+        target,
+        source,
+        target.content.source || "",
+      );
       if (strength >= this.config.minCrossRefStrength) {
         refs.push({
           targetId: target.id,
           targetPath: target.filePath,
-          type: 'tests',
+          type: "tests",
           strength,
           bidirectional: true,
         });
@@ -473,13 +507,13 @@ export class MultiModalCompilerService extends EventEmitter {
     }
 
     // Docs ↔ Code relationship
-    if (source.modality === 'docs' && target.modality === 'code') {
+    if (source.modality === "docs" && target.modality === "code") {
       const strength = this.calculateDocsCodeStrength(source, target);
       if (strength >= this.config.minCrossRefStrength) {
         refs.push({
           targetId: target.id,
           targetPath: target.filePath,
-          type: 'documents',
+          type: "documents",
           strength,
           bidirectional: true,
         });
@@ -491,19 +525,19 @@ export class MultiModalCompilerService extends EventEmitter {
       refs.push({
         targetId: target.id,
         targetPath: target.filePath,
-        type: 'imports',
+        type: "imports",
         strength: 0.8,
         bidirectional: true,
       });
     }
 
     // Types ↔ Code relationship
-    if (source.modality === 'types' && target.modality === 'code') {
+    if (source.modality === "types" && target.modality === "code") {
       if (this.isTypesFor(source, target)) {
         refs.push({
           targetId: target.id,
           targetPath: target.filePath,
-          type: 'types_for',
+          type: "types_for",
           strength: 0.9,
           bidirectional: true,
         });
@@ -511,7 +545,7 @@ export class MultiModalCompilerService extends EventEmitter {
     }
 
     // Config ↔ Code relationship
-    if (source.modality === 'config') {
+    if (source.modality === "config") {
       const configRefs = this.findConfigRelationships(source, target);
       refs.push(...configRefs);
     }
@@ -525,15 +559,18 @@ export class MultiModalCompilerService extends EventEmitter {
   private calculateTestCodeStrength(
     test: MultiModalUnit,
     code: MultiModalUnit,
-    testContent: string
+    testContent: string,
   ): number {
     let strength = 0;
 
     // Same directory structure (e.g., src/foo.ts and tests/foo.test.ts)
-    const testBase = test.filePath.replace(/\.(test|spec)\.(ts|js|tsx|jsx)$/i, '');
-    const codeBase = code.filePath.replace(/\.(ts|js|tsx|jsx)$/i, '');
+    const testBase = test.filePath.replace(
+      /\.(test|spec)\.(ts|js|tsx|jsx)$/i,
+      "",
+    );
+    const codeBase = code.filePath.replace(/\.(ts|js|tsx|jsx)$/i, "");
 
-    if (testBase.includes(codeBase.split('/').pop() || '')) {
+    if (testBase.includes(codeBase.split("/").pop() || "")) {
       strength += 0.5;
     }
 
@@ -545,9 +582,9 @@ export class MultiModalCompilerService extends EventEmitter {
     // Test mentions code file name or exports
     const codeFileName =
       code.filePath
-        .split('/')
+        .split("/")
         .pop()
-        ?.replace(/\.\w+$/, '') || '';
+        ?.replace(/\.\w+$/, "") || "";
     if (testContent.toLowerCase().includes(codeFileName.toLowerCase())) {
       strength += 0.2;
     }
@@ -558,25 +595,33 @@ export class MultiModalCompilerService extends EventEmitter {
   /**
    * Calculate relationship strength between docs and code
    */
-  private calculateDocsCodeStrength(docs: MultiModalUnit, code: MultiModalUnit): number {
+  private calculateDocsCodeStrength(
+    docs: MultiModalUnit,
+    code: MultiModalUnit,
+  ): number {
     let strength = 0;
-    const docsContent = (docs.content.source || docs.content.detailed).toLowerCase();
+    const docsContent = (
+      docs.content.source || docs.content.detailed
+    ).toLowerCase();
 
     // Docs in same directory
-    const docsDir = docs.filePath.split('/').slice(0, -1).join('/');
-    const codeDir = code.filePath.split('/').slice(0, -1).join('/');
+    const docsDir = docs.filePath.split("/").slice(0, -1).join("/");
+    const codeDir = code.filePath.split("/").slice(0, -1).join("/");
     if (docsDir === codeDir) {
       strength += 0.3;
     }
 
     // Docs mentions code file
-    const codeFileName = code.filePath.split('/').pop() || '';
+    const codeFileName = code.filePath.split("/").pop() || "";
     if (docsContent.includes(codeFileName.toLowerCase())) {
       strength += 0.4;
     }
 
     // Docs has code blocks with similar patterns
-    if (docsContent.includes('```') && docsContent.includes(code.meta.language || 'unknown')) {
+    if (
+      docsContent.includes("```") &&
+      docsContent.includes(code.meta.language || "unknown")
+    ) {
       strength += 0.2;
     }
 
@@ -590,15 +635,15 @@ export class MultiModalCompilerService extends EventEmitter {
     // Extract filename without extension
     const fileName =
       targetPath
-        .split('/')
+        .split("/")
         .pop()
-        ?.replace(/\.\w+$/, '') || '';
+        ?.replace(/\.\w+$/, "") || "";
 
     // Various import patterns
     const patterns = [
-      new RegExp(`from\\s+['"](.*${fileName})['"']`, 'i'),
-      new RegExp(`import\\s+['"](.*${fileName})['"']`, 'i'),
-      new RegExp(`require\\(['"](.*${fileName})['"]\\)`, 'i'),
+      new RegExp(`from\\s+['"](.*${fileName})['"']`, "i"),
+      new RegExp(`import\\s+['"](.*${fileName})['"']`, "i"),
+      new RegExp(`require\\(['"](.*${fileName})['"]\\)`, "i"),
     ];
 
     return patterns.some((p) => p.test(content));
@@ -609,10 +654,12 @@ export class MultiModalCompilerService extends EventEmitter {
    */
   private isTypesFor(types: MultiModalUnit, code: MultiModalUnit): boolean {
     // Same base name (e.g., foo.d.ts for foo.ts)
-    const typesBase = types.filePath.replace(/\.d\.ts$/i, '').replace(/\/types\//i, '/');
-    const codeBase = code.filePath.replace(/\.(ts|js)$/i, '');
+    const typesBase = types.filePath
+      .replace(/\.d\.ts$/i, "")
+      .replace(/\/types\//i, "/");
+    const codeBase = code.filePath.replace(/\.(ts|js)$/i, "");
 
-    return typesBase.includes(codeBase.split('/').pop() || '___');
+    return typesBase.includes(codeBase.split("/").pop() || "___");
   }
 
   /**
@@ -620,18 +667,18 @@ export class MultiModalCompilerService extends EventEmitter {
    */
   private findConfigRelationships(
     config: MultiModalUnit,
-    target: MultiModalUnit
+    target: MultiModalUnit,
   ): CrossReference[] {
     const refs: CrossReference[] = [];
     const configContent = config.content.source || config.content.detailed;
 
     // Config mentions target file
-    const targetName = target.filePath.split('/').pop() || '';
+    const targetName = target.filePath.split("/").pop() || "";
     if (configContent.includes(targetName)) {
       refs.push({
         targetId: target.id,
         targetPath: target.filePath,
-        type: 'configures',
+        type: "configures",
         strength: 0.6,
         bidirectional: true,
       });
@@ -654,7 +701,7 @@ export class MultiModalCompilerService extends EventEmitter {
       modality?: ContentModality;
       embedding?: number[];
       importance?: number;
-    } = {}
+    } = {},
   ): MultiModalUnit {
     const modality = options.modality || this.detectModality(filePath, content);
 
@@ -673,7 +720,9 @@ export class MultiModalCompilerService extends EventEmitter {
         language: this.detectLanguage(filePath),
         size: content.length,
         tokenCount: this.estimateTokens(content),
-        importance: options.importance ?? this.calculateImportance(filePath, content, modality),
+        importance:
+          options.importance ??
+          this.calculateImportance(filePath, content, modality),
         lastModified: new Date().toISOString(),
       },
       embedding: options.embedding,
@@ -690,7 +739,11 @@ export class MultiModalCompilerService extends EventEmitter {
       this.metrics.crossRefsDetected += unit.crossRefs.length;
     }
 
-    this.emit('unit_indexed', { id: unit.id, modality, crossRefs: unit.crossRefs.length });
+    this.emit("unit_indexed", {
+      id: unit.id,
+      modality,
+      crossRefs: unit.crossRefs.length,
+    });
 
     return unit;
   }
@@ -699,13 +752,13 @@ export class MultiModalCompilerService extends EventEmitter {
    * Generate abstract (1-2 sentences) from content
    */
   private generateAbstract(content: string, modality: ContentModality): string {
-    const firstLines = content.split('\n').slice(0, 5).join(' ').trim();
+    const firstLines = content.split("\n").slice(0, 5).join(" ").trim();
 
     switch (modality) {
-      case 'code': {
+      case "code": {
         // Extract first function/class name
         const match = content.match(
-          /(?:export\s+)?(?:async\s+)?(?:function|class|const|interface|type)\s+(\w+)/
+          /(?:export\s+)?(?:async\s+)?(?:function|class|const|interface|type)\s+(\w+)/,
         );
         if (match) {
           return `Defines ${match[1]} - ${firstLines.slice(0, 100)}`;
@@ -713,7 +766,7 @@ export class MultiModalCompilerService extends EventEmitter {
         return firstLines.slice(0, 150);
       }
 
-      case 'test': {
+      case "test": {
         const describeMatch = content.match(/describe\s*\(\s*['"](.+?)['"]/);
         if (describeMatch) {
           return `Tests for ${describeMatch[1]}`;
@@ -721,7 +774,7 @@ export class MultiModalCompilerService extends EventEmitter {
         return `Test file - ${firstLines.slice(0, 100)}`;
       }
 
-      case 'docs': {
+      case "docs": {
         // Get first heading or paragraph
         const headingMatch = content.match(/^#\s+(.+)/m);
         if (headingMatch) {
@@ -740,40 +793,42 @@ export class MultiModalCompilerService extends EventEmitter {
    */
   private generateSummary(content: string, modality: ContentModality): string {
     switch (modality) {
-      case 'code': {
+      case "code": {
         // Extract exports and main structures
         const exports =
-          content.match(/export\s+(?:async\s+)?(?:function|class|const|interface|type)\s+(\w+)/g) ||
-          [];
+          content.match(
+            /export\s+(?:async\s+)?(?:function|class|const|interface|type)\s+(\w+)/g,
+          ) || [];
         const structures = exports
           .slice(0, 5)
-          .join(', ')
-          .replace(/export\s+(async\s+)?/g, '');
+          .join(", ")
+          .replace(/export\s+(async\s+)?/g, "");
 
         if (structures) {
-          return `Exports: ${structures}. ${content.slice(0, 300).replace(/\s+/g, ' ')}`;
+          return `Exports: ${structures}. ${content.slice(0, 300).replace(/\s+/g, " ")}`;
         }
-        return content.slice(0, 500).replace(/\s+/g, ' ');
+        return content.slice(0, 500).replace(/\s+/g, " ");
       }
 
-      case 'test': {
+      case "test": {
         // Extract test descriptions
-        const describes = content.match(/(?:describe|it|test)\s*\(\s*['"](.+?)['"]/g) || [];
+        const describes =
+          content.match(/(?:describe|it|test)\s*\(\s*['"](.+?)['"]/g) || [];
         const testNames = describes
           .slice(0, 5)
-          .map((d) => d.match(/['"](.+?)['"]/)?.[1] || '')
+          .map((d) => d.match(/['"](.+?)['"]/)?.[1] || "")
           .filter(Boolean);
-        return `Tests: ${testNames.join(', ') || 'various tests'}`;
+        return `Tests: ${testNames.join(", ") || "various tests"}`;
       }
 
-      case 'docs': {
+      case "docs": {
         // Get first few paragraphs
-        const paragraphs = content.split(/\n\n+/).slice(0, 3).join(' ');
-        return paragraphs.slice(0, 500).replace(/\s+/g, ' ');
+        const paragraphs = content.split(/\n\n+/).slice(0, 3).join(" ");
+        return paragraphs.slice(0, 500).replace(/\s+/g, " ");
       }
 
       default:
-        return content.slice(0, 500).replace(/\s+/g, ' ');
+        return content.slice(0, 500).replace(/\s+/g, " ");
     }
   }
 
@@ -781,29 +836,29 @@ export class MultiModalCompilerService extends EventEmitter {
    * Detect programming language from file path
    */
   private detectLanguage(filePath: string): string {
-    const ext = filePath.split('.').pop()?.toLowerCase() || '';
+    const ext = filePath.split(".").pop()?.toLowerCase() || "";
     const langMap: Record<string, string> = {
-      ts: 'typescript',
-      tsx: 'typescript',
-      js: 'javascript',
-      jsx: 'javascript',
-      py: 'python',
-      go: 'go',
-      rs: 'rust',
-      java: 'java',
-      cpp: 'cpp',
-      c: 'c',
-      cs: 'csharp',
-      rb: 'ruby',
-      php: 'php',
-      swift: 'swift',
-      kt: 'kotlin',
-      md: 'markdown',
-      json: 'json',
-      yaml: 'yaml',
-      yml: 'yaml',
-      css: 'css',
-      scss: 'scss',
+      ts: "typescript",
+      tsx: "typescript",
+      js: "javascript",
+      jsx: "javascript",
+      py: "python",
+      go: "go",
+      rs: "rust",
+      java: "java",
+      cpp: "cpp",
+      c: "c",
+      cs: "csharp",
+      rb: "ruby",
+      php: "php",
+      swift: "swift",
+      kt: "kotlin",
+      md: "markdown",
+      json: "json",
+      yaml: "yaml",
+      yml: "yaml",
+      css: "css",
+      scss: "scss",
     };
     return langMap[ext] || ext;
   }
@@ -814,12 +869,16 @@ export class MultiModalCompilerService extends EventEmitter {
   private calculateImportance(
     filePath: string,
     content: string,
-    modality: ContentModality
+    modality: ContentModality,
   ): number {
     let importance = 0.5;
 
     // Entry points are important
-    if (filePath.includes('index.') || filePath.includes('main.') || filePath.includes('app.')) {
+    if (
+      filePath.includes("index.") ||
+      filePath.includes("main.") ||
+      filePath.includes("app.")
+    ) {
       importance += 0.2;
     }
 
@@ -828,7 +887,7 @@ export class MultiModalCompilerService extends EventEmitter {
     importance += Math.min(0.2, exportCount * 0.02);
 
     // READMEs are important
-    if (filePath.toLowerCase().includes('readme')) {
+    if (filePath.toLowerCase().includes("readme")) {
       importance += 0.3;
     }
 
@@ -866,9 +925,10 @@ export class MultiModalCompilerService extends EventEmitter {
 
     // 2. Filter units by requested modalities
     const modalityFilter =
-      request.modalities || (Object.keys(DEFAULT_MODALITY_WEIGHTS) as ContentModality[]);
+      request.modalities ||
+      (Object.keys(DEFAULT_MODALITY_WEIGHTS) as ContentModality[]);
     const candidateUnits = Array.from(this.units.values()).filter((u) =>
-      modalityFilter.includes(u.modality)
+      modalityFilter.includes(u.modality),
     );
 
     // 3. Calculate effective weight for each unit
@@ -879,7 +939,9 @@ export class MultiModalCompilerService extends EventEmitter {
       const relevanceScore = this.calculateRelevance(unit, request.query);
 
       const finalWeight =
-        (baseWeight + intentBoost + crossRefBoost) * relevanceScore * unit.meta.importance;
+        (baseWeight + intentBoost + crossRefBoost) *
+        relevanceScore *
+        unit.meta.importance;
 
       return {
         unit,
@@ -899,11 +961,11 @@ export class MultiModalCompilerService extends EventEmitter {
       scoredUnits,
       request.constraints.maxTokens,
       request.constraints.maxUnitsPerModality,
-      request.options?.balanceModalities !== false
+      request.options?.balanceModalities !== false,
     );
 
     // 6. Gather cross-references
-    const crossRefs: MultiModalResult['crossReferences'] = [];
+    const crossRefs: MultiModalResult["crossReferences"] = [];
     if (request.options?.includeCrossRefs !== false) {
       for (const selected of selectedUnits) {
         for (const ref of selected.unit.crossRefs) {
@@ -920,7 +982,10 @@ export class MultiModalCompilerService extends EventEmitter {
     }
 
     // 7. Compile context with modality organization
-    const compiledContext = this.formatCompiledContext(selectedUnits, crossRefs);
+    const compiledContext = this.formatCompiledContext(
+      selectedUnits,
+      crossRefs,
+    );
 
     // 8. Calculate modality breakdown
     const modalityBreakdown = this.calculateModalityBreakdown(selectedUnits);
@@ -943,14 +1008,18 @@ export class MultiModalCompilerService extends EventEmitter {
       crossReferences: crossRefs,
       stats: {
         totalUnits: selectedUnits.length,
-        totalTokens: selectedUnits.reduce((sum, s) => sum + s.unit.meta.tokenCount, 0),
-        modalitiesIncluded: new Set(selectedUnits.map((s) => s.unit.modality)).size,
+        totalTokens: selectedUnits.reduce(
+          (sum, s) => sum + s.unit.meta.tokenCount,
+          0,
+        ),
+        modalitiesIncluded: new Set(selectedUnits.map((s) => s.unit.modality))
+          .size,
         crossRefsFound: crossRefs.length,
         compilationTimeMs: performance.now() - startTime,
       },
     };
 
-    this.emit('compilation_complete', { id: result.id, stats: result.stats });
+    this.emit("compilation_complete", { id: result.id, stats: result.stats });
 
     return result;
   }
@@ -962,28 +1031,28 @@ export class MultiModalCompilerService extends EventEmitter {
     const lower = query.toLowerCase();
 
     if (lower.match(/\b(debug|error|bug|fix|issue|problem|broken)\b/)) {
-      return 'debug';
+      return "debug";
     }
     if (lower.match(/\b(test|spec|coverage|assert|expect)\b/)) {
-      return 'test';
+      return "test";
     }
     if (lower.match(/\b(document|docs|readme|explain|describe)\b/)) {
-      return 'document';
+      return "document";
     }
     if (lower.match(/\b(implement|create|add|build|make|write)\b/)) {
-      return 'implement';
+      return "implement";
     }
     if (lower.match(/\b(refactor|clean|improve|optimize|simplify)\b/)) {
-      return 'refactor';
+      return "refactor";
     }
     if (lower.match(/\b(review|check|audit|analyze)\b/)) {
-      return 'review';
+      return "review";
     }
     if (lower.match(/\b(config|configure|setup|environment|settings)\b/)) {
-      return 'configure';
+      return "configure";
     }
 
-    return 'understand';
+    return "understand";
   }
 
   /**
@@ -991,7 +1060,7 @@ export class MultiModalCompilerService extends EventEmitter {
    */
   private calculateWeights(
     intent: UserIntent,
-    customWeights?: Partial<ModalityWeights>
+    customWeights?: Partial<ModalityWeights>,
   ): ModalityWeights {
     const base = { ...this.config.defaultWeights };
     const modifiers = this.config.intentModifiers[intent] || {};
@@ -1013,7 +1082,10 @@ export class MultiModalCompilerService extends EventEmitter {
   /**
    * Calculate intent-based boost for a unit
    */
-  private calculateIntentBoost(unit: MultiModalUnit, intent: UserIntent): number {
+  private calculateIntentBoost(
+    unit: MultiModalUnit,
+    intent: UserIntent,
+  ): number {
     const modifiers = this.config.intentModifiers[intent] || {};
     const modifier = modifiers[unit.modality] || 1;
     return (modifier - 1) * 0.2; // Convert modifier to boost value
@@ -1022,11 +1094,16 @@ export class MultiModalCompilerService extends EventEmitter {
   /**
    * Calculate cross-reference boost for a unit
    */
-  private calculateCrossRefBoost(unit: MultiModalUnit, allUnits: MultiModalUnit[]): number {
+  private calculateCrossRefBoost(
+    unit: MultiModalUnit,
+    allUnits: MultiModalUnit[],
+  ): number {
     if (unit.crossRefs.length === 0) return 0;
 
     // More cross-refs = more central/important
-    const refCount = unit.crossRefs.filter((r) => allUnits.some((u) => u.id === r.targetId)).length;
+    const refCount = unit.crossRefs.filter((r) =>
+      allUnits.some((u) => u.id === r.targetId),
+    ).length;
 
     return Math.min(0.3, refCount * this.config.crossRefBoostFactor * 0.1);
   }
@@ -1036,7 +1113,8 @@ export class MultiModalCompilerService extends EventEmitter {
    */
   private calculateRelevance(unit: MultiModalUnit, query: string): number {
     const queryWords = new Set(query.toLowerCase().split(/\s+/));
-    const unitText = `${unit.content.abstract} ${unit.content.summary}`.toLowerCase();
+    const unitText =
+      `${unit.content.abstract} ${unit.content.summary}`.toLowerCase();
     const unitWords = new Set(unitText.split(/\s+/));
 
     let overlap = 0;
@@ -1049,10 +1127,10 @@ export class MultiModalCompilerService extends EventEmitter {
     // File path relevance
     const pathRelevance = queryWords.has(
       unit.filePath
-        .split('/')
+        .split("/")
         .pop()
-        ?.replace(/\.\w+$/, '')
-        .toLowerCase() || ''
+        ?.replace(/\.\w+$/, "")
+        .toLowerCase() || "",
     )
       ? 0.2
       : 0;
@@ -1073,7 +1151,7 @@ export class MultiModalCompilerService extends EventEmitter {
     }>,
     maxTokens: number,
     maxPerModality?: number,
-    enableBalancing = true
+    enableBalancing = true,
   ): typeof scoredUnits {
     const selected: typeof scoredUnits = [];
     const modalityCounts = new Map<ContentModality, number>();
@@ -1095,8 +1173,12 @@ export class MultiModalCompilerService extends EventEmitter {
 
       // Check modality balance
       if (enableBalancing) {
-        const modalityPct = (modalityTokens.get(modality) || 0) / Math.max(1, totalTokens);
-        if (modalityPct > this.config.maxModalityPercentage && selected.length > 3) {
+        const modalityPct =
+          (modalityTokens.get(modality) || 0) / Math.max(1, totalTokens);
+        if (
+          modalityPct > this.config.maxModalityPercentage &&
+          selected.length > 3
+        ) {
           continue;
         }
       }
@@ -1105,7 +1187,10 @@ export class MultiModalCompilerService extends EventEmitter {
       selected.push(scored);
       totalTokens += tokenCost;
       modalityCounts.set(modality, (modalityCounts.get(modality) || 0) + 1);
-      modalityTokens.set(modality, (modalityTokens.get(modality) || 0) + tokenCost);
+      modalityTokens.set(
+        modality,
+        (modalityTokens.get(modality) || 0) + tokenCost,
+      );
     }
 
     return selected;
@@ -1116,7 +1201,7 @@ export class MultiModalCompilerService extends EventEmitter {
    */
   private formatCompiledContext(
     units: Array<{ unit: MultiModalUnit; finalWeight: number }>,
-    crossRefs: MultiModalResult['crossReferences']
+    crossRefs: MultiModalResult["crossReferences"],
   ): string {
     const sections: string[] = [];
 
@@ -1130,15 +1215,15 @@ export class MultiModalCompilerService extends EventEmitter {
 
     // Format each modality section
     const modalityOrder: ContentModality[] = [
-      'code',
-      'types',
-      'api',
-      'test',
-      'docs',
-      'config',
-      'data',
-      'style',
-      'unknown',
+      "code",
+      "types",
+      "api",
+      "test",
+      "docs",
+      "config",
+      "data",
+      "style",
+      "unknown",
     ];
 
     for (const modality of modalityOrder) {
@@ -1146,7 +1231,9 @@ export class MultiModalCompilerService extends EventEmitter {
       if (!modalityUnits || modalityUnits.length === 0) continue;
 
       const header = this.getModalityHeader(modality);
-      const content = modalityUnits.map((u) => this.formatUnit(u.unit)).join('\n\n');
+      const content = modalityUnits
+        .map((u) => this.formatUnit(u.unit))
+        .join("\n\n");
 
       sections.push(`## ${header}\n\n${content}`);
     }
@@ -1157,7 +1244,7 @@ export class MultiModalCompilerService extends EventEmitter {
       sections.push(`## Relationships\n\n${refSummary}`);
     }
 
-    return sections.join('\n\n---\n\n');
+    return sections.join("\n\n---\n\n");
   }
 
   /**
@@ -1165,15 +1252,15 @@ export class MultiModalCompilerService extends EventEmitter {
    */
   private getModalityHeader(modality: ContentModality): string {
     const headers: Record<ContentModality, string> = {
-      code: '📝 Source Code',
-      test: '🧪 Tests',
-      docs: '📚 Documentation',
-      config: '⚙️ Configuration',
-      types: '🔷 Type Definitions',
-      api: '🔌 API Definitions',
-      data: '📊 Data',
-      style: '🎨 Styles',
-      unknown: '📄 Other',
+      code: "📝 Source Code",
+      test: "🧪 Tests",
+      docs: "📚 Documentation",
+      config: "⚙️ Configuration",
+      types: "🔷 Type Definitions",
+      api: "🔌 API Definitions",
+      data: "📊 Data",
+      style: "🎨 Styles",
+      unknown: "📄 Other",
     };
     return headers[modality];
   }
@@ -1183,7 +1270,7 @@ export class MultiModalCompilerService extends EventEmitter {
    */
   private formatUnit(unit: MultiModalUnit): string {
     const header = `### ${unit.filePath}`;
-    const meta = unit.meta.language ? `\`${unit.meta.language}\`` : '';
+    const meta = unit.meta.language ? `\`${unit.meta.language}\`` : "";
 
     // Use summary for context efficiency
     const content = unit.content.summary || unit.content.abstract;
@@ -1194,7 +1281,9 @@ export class MultiModalCompilerService extends EventEmitter {
   /**
    * Format cross-reference summary
    */
-  private formatCrossRefSummary(crossRefs: MultiModalResult['crossReferences']): string {
+  private formatCrossRefSummary(
+    crossRefs: MultiModalResult["crossReferences"],
+  ): string {
     const grouped = new Map<CrossRefType, string[]>();
 
     for (const ref of crossRefs) {
@@ -1208,16 +1297,19 @@ export class MultiModalCompilerService extends EventEmitter {
       lines.push(`- **${type}**: ${refs.length} connections`);
     }
 
-    return lines.join('\n');
+    return lines.join("\n");
   }
 
   /**
    * Calculate modality breakdown
    */
   private calculateModalityBreakdown(
-    units: Array<{ unit: MultiModalUnit }>
-  ): MultiModalResult['modalityBreakdown'] {
-    const counts = new Map<ContentModality, { count: number; tokens: number }>();
+    units: Array<{ unit: MultiModalUnit }>,
+  ): MultiModalResult["modalityBreakdown"] {
+    const counts = new Map<
+      ContentModality,
+      { count: number; tokens: number }
+    >();
     let totalTokens = 0;
 
     for (const { unit } of units) {
@@ -1281,7 +1373,9 @@ export class MultiModalCompilerService extends EventEmitter {
    * Get units by modality
    */
   getUnitsByModality(modality: ContentModality): MultiModalUnit[] {
-    return Array.from(this.units.values()).filter((u) => u.modality === modality);
+    return Array.from(this.units.values()).filter(
+      (u) => u.modality === modality,
+    );
   }
 
   /**
@@ -1318,7 +1412,7 @@ const multiModalInstances = new Map<string, MultiModalCompilerService>();
  */
 export function getMultiModalCompiler(
   sessionId: string,
-  config?: Partial<MultiModalConfig>
+  config?: Partial<MultiModalConfig>,
 ): MultiModalCompilerService {
   let instance = multiModalInstances.get(sessionId);
   if (!instance) {

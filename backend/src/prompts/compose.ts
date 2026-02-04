@@ -3,12 +3,12 @@
  * Tags: <identity>, <rules>, <capabilities>, <context>, <task>, <tools>.
  */
 
-import { CLAUDE_CODE_QUALITY_BLOCK } from './shared/claude-code-quality.js';
+import { CLAUDE_CODE_QUALITY_BLOCK } from "./shared/claude-code-quality.js";
 import {
   getFeatureFlags,
   formatCapabilityListForPrompt,
   type TierId,
-} from '../services/featureFlagsService.js';
+} from "../services/featureFlagsService.js";
 
 export interface ComposeHeadOptions {
   tier?: TierId;
@@ -51,14 +51,14 @@ ${list}
 export function composeHead(opts?: ComposeHeadOptions): string {
   const includeCapabilities = opts?.includeCapabilities !== false;
   const parts: string[] = [
-    'You are G-Rump, an AI coding assistant that helps users go from idea to code. You follow Claude Code quality standards and work in structured modes.',
+    "You are G-Rump, an AI coding assistant that helps users go from idea to code. You follow Claude Code quality standards and work in structured modes.",
     identityBlock(),
     rulesBlock(),
   ];
   if (includeCapabilities) {
     parts.push(capabilitiesBlock(opts?.tier, opts?.userKey));
   }
-  return parts.join('\n\n');
+  return parts.join("\n\n");
 }
 
 /**

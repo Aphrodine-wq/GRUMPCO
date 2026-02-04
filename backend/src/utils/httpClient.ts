@@ -3,9 +3,9 @@
  * Optimized for making external API calls with connection reuse
  */
 
-import https from 'https';
-import http from 'http';
-import logger from '../middleware/logger.js';
+import https from "https";
+import http from "http";
+import logger from "../middleware/logger.js";
 
 export interface HttpClientOptions {
   maxSockets?: number;
@@ -31,15 +31,21 @@ export class HttpClient {
     this.httpsAgent = new https.Agent(agentOptions);
     this.httpAgent = new http.Agent(agentOptions);
 
-    logger.info({ options: agentOptions }, 'HTTP client initialized with connection pooling');
+    logger.info(
+      { options: agentOptions },
+      "HTTP client initialized with connection pooling",
+    );
   }
 
   /**
    * Make a fetch request with connection pooling
    */
-  public async fetch(url: string | URL, options: RequestInit = {}): Promise<Response> {
-    const urlObj = typeof url === 'string' ? new URL(url) : url;
-    const isHttps = urlObj.protocol === 'https:';
+  public async fetch(
+    url: string | URL,
+    options: RequestInit = {},
+  ): Promise<Response> {
+    const urlObj = typeof url === "string" ? new URL(url) : url;
+    const isHttps = urlObj.protocol === "https:";
 
     // Add agent for connection pooling
     const fetchOptions: RequestInit = {
@@ -57,7 +63,7 @@ export class HttpClient {
           error: error instanceof Error ? error.message : String(error),
           url: urlObj.toString(),
         },
-        'HTTP request failed'
+        "HTTP request failed",
       );
       throw error;
     }
@@ -90,7 +96,7 @@ export class HttpClient {
   public destroy(): void {
     this.httpsAgent.destroy();
     this.httpAgent.destroy();
-    logger.info('HTTP client destroyed');
+    logger.info("HTTP client destroyed");
   }
 }
 
@@ -120,7 +126,10 @@ export function destroyHttpClient(): void {
 /**
  * Helper function for making pooled HTTP requests
  */
-export async function pooledFetch(url: string | URL, options: RequestInit = {}): Promise<Response> {
+export async function pooledFetch(
+  url: string | URL,
+  options: RequestInit = {},
+): Promise<Response> {
   const client = getHttpClient();
   return client.fetch(url, options);
 }

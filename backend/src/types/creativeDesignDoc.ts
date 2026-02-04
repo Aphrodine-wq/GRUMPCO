@@ -7,7 +7,14 @@ export interface LayoutRegion {
   id: string;
   name: string;
   description: string;
-  placement: 'header' | 'sidebar' | 'main' | 'footer' | 'modal' | 'drawer' | 'floating';
+  placement:
+    | "header"
+    | "sidebar"
+    | "main"
+    | "footer"
+    | "modal"
+    | "drawer"
+    | "floating";
   breakpoints?: { minWidth?: number; maxWidth?: number; label: string }[];
 }
 

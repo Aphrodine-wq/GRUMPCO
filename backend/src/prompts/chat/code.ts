@@ -2,7 +2,12 @@
  * Code mode prompt – tools, small edits, specialist routing.
  */
 
-export type CodeSpecialist = 'router' | 'frontend' | 'backend' | 'devops' | 'test';
+export type CodeSpecialist =
+  | "router"
+  | "frontend"
+  | "backend"
+  | "devops"
+  | "test";
 
 export interface CodePromptOptions {
   workspaceRoot?: string;

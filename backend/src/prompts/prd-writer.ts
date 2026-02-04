@@ -197,7 +197,10 @@ You MUST respond with a VALID JSON object (no markdown, no code blocks) containi
 - Link related items (features → stories → metrics)`;
 }
 
-export function getPRDStructurePrompt(projectName: string, architectureJson: string): string {
+export function getPRDStructurePrompt(
+  projectName: string,
+  architectureJson: string,
+): string {
   return `${getPRDWriterPrompt()}
 
 ## Project Context:

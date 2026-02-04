@@ -4,13 +4,13 @@
  * When set, /v1 is appended if missing. When unset, cloud default is used.
  */
 
-const CLOUD_NIM_BASE = 'https://integrate.api.nvidia.com/v1';
+const CLOUD_NIM_BASE = "https://integrate.api.nvidia.com/v1";
 
 export function getNimApiBase(): string {
   const raw = process.env.NVIDIA_NIM_URL?.trim();
   if (!raw) return CLOUD_NIM_BASE;
-  const base = raw.replace(/\/$/, '');
-  return base.endsWith('/v1') ? base : `${base}/v1`;
+  const base = raw.replace(/\/$/, "");
+  return base.endsWith("/v1") ? base : `${base}/v1`;
 }
 
 export function getNimEmbedUrl(): string {

@@ -6,7 +6,7 @@
 // Fast JSON stringify with circular reference handling
 export function fastStringify(obj: unknown, space?: string | number): string {
   if (obj === null || obj === undefined) {
-    return 'null';
+    return "null";
   }
 
   // For simple objects, use native JSON.stringify
@@ -23,15 +23,15 @@ export function fastStringify(obj: unknown, space?: string | number): string {
   return JSON.stringify(
     obj,
     (key, value) => {
-      if (typeof value === 'object' && value !== null) {
+      if (typeof value === "object" && value !== null) {
         if (seen.has(value)) {
-          return '[Circular]';
+          return "[Circular]";
         }
         seen.add(value);
       }
       return value;
     },
-    space
+    space,
   );
 }
 
@@ -49,7 +49,7 @@ export function fastParse<T>(json: string, defaultValue?: T): T | undefined {
 
 // Check if object has circular references
 function hasCircularRefs(obj: unknown): boolean {
-  if (typeof obj !== 'object' || obj === null) {
+  if (typeof obj !== "object" || obj === null) {
     return false;
   }
 
@@ -58,7 +58,7 @@ function hasCircularRefs(obj: unknown): boolean {
 
   while (stack.length > 0) {
     const current = stack.pop();
-    if (typeof current !== 'object' || current === null) {
+    if (typeof current !== "object" || current === null) {
       continue;
     }
 
@@ -69,7 +69,7 @@ function hasCircularRefs(obj: unknown): boolean {
 
     if (Array.isArray(current)) {
       for (const item of current) {
-        if (typeof item === 'object' && item !== null) {
+        if (typeof item === "object" && item !== null) {
           stack.push(item);
         }
       }
@@ -77,7 +77,7 @@ function hasCircularRefs(obj: unknown): boolean {
       for (const key in current) {
         if (Object.prototype.hasOwnProperty.call(current, key)) {
           const value = (current as Record<string, unknown>)[key];
-          if (typeof value === 'object' && value !== null) {
+          if (typeof value === "object" && value !== null) {
             stack.push(value);
           }
         }
@@ -90,7 +90,7 @@ function hasCircularRefs(obj: unknown): boolean {
 
 // Stream JSON parser for large payloads
 export class StreamingJSONParser {
-  private buffer = '';
+  private buffer = "";
   private depth = 0;
   private inString = false;
   private escapeNext = false;
@@ -106,7 +106,7 @@ export class StreamingJSONParser {
       if (this.inString) {
         if (this.escapeNext) {
           this.escapeNext = false;
-        } else if (char === '\\') {
+        } else if (char === "\\") {
           this.escapeNext = true;
         } else if (char === '"') {
           this.inString = false;
@@ -116,15 +116,15 @@ export class StreamingJSONParser {
           case '"':
             this.inString = true;
             break;
-          case '{':
-          case '[':
+          case "{":
+          case "[":
             if (this.depth === 0) {
               // Start of new object/array
             }
             this.depth++;
             break;
-          case '}':
-          case ']':
+          case "}":
+          case "]":
             this.depth--;
             if (this.depth === 0) {
               // Complete object/array found
@@ -148,7 +148,7 @@ export class StreamingJSONParser {
   }
 
   reset(): void {
-    this.buffer = '';
+    this.buffer = "";
     this.depth = 0;
     this.inString = false;
     this.escapeNext = false;
@@ -162,18 +162,18 @@ export class StreamingJSONParser {
 // Optimized JSON stringify for common patterns
 export function optimizedStringify(obj: unknown): string {
   // Fast path for common types
-  if (obj === null) return 'null';
-  if (obj === undefined) return 'null';
-  if (typeof obj === 'boolean') return obj ? 'true' : 'false';
-  if (typeof obj === 'number') return String(obj);
-  if (typeof obj === 'string') return JSON.stringify(obj);
-  if (typeof obj !== 'object') return 'null';
+  if (obj === null) return "null";
+  if (obj === undefined) return "null";
+  if (typeof obj === "boolean") return obj ? "true" : "false";
+  if (typeof obj === "number") return String(obj);
+  if (typeof obj === "string") return JSON.stringify(obj);
+  if (typeof obj !== "object") return "null";
 
   // Fast path for arrays
   if (Array.isArray(obj)) {
-    if (obj.length === 0) return '[]';
+    if (obj.length === 0) return "[]";
     const items = obj.map(optimizedStringify);
-    return '[' + items.join(',') + ']';
+    return "[" + items.join(",") + "]";
   }
 
   // Fast path for plain objects
@@ -182,9 +182,9 @@ export function optimizedStringify(obj: unknown): string {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const value = (obj as Record<string, unknown>)[key];
       if (value !== undefined) {
-        pairs.push(JSON.stringify(key) + ':' + optimizedStringify(value));
+        pairs.push(JSON.stringify(key) + ":" + optimizedStringify(value));
       }
     }
   }
-  return '{' + pairs.join(',') + '}';
+  return "{" + pairs.join(",") + "}";
 }

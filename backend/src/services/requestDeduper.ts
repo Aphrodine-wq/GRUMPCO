@@ -81,8 +81,12 @@ export class RequestDeduper {
 /**
  * Create a deduplication key from multiple parts
  */
-export function createDedupeKey(...parts: (string | number | boolean | undefined)[]): string {
-  return parts.map((part) => (part === undefined ? '_' : String(part))).join(':');
+export function createDedupeKey(
+  ...parts: (string | number | boolean | undefined)[]
+): string {
+  return parts
+    .map((part) => (part === undefined ? "_" : String(part)))
+    .join(":");
 }
 
 export const requestDeduper = new RequestDeduper();

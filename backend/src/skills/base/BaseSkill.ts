@@ -14,8 +14,8 @@ import type {
   SkillExecutionResult,
   ToolExecutionResult,
   ToolDefinition,
-} from '../types.js';
-import type { Router } from 'express';
+} from "../types.js";
+import type { Router } from "express";
 
 /**
  * Abstract base class for skills
@@ -71,12 +71,14 @@ export abstract class BaseSkill implements Skill {
     }
 
     // Check patterns
-    if (triggers.patterns?.some((p) => new RegExp(p, 'i').test(input))) {
+    if (triggers.patterns?.some((p) => new RegExp(p, "i").test(input))) {
       return true;
     }
 
     // Check commands
-    if (triggers.commands?.some((c) => inputLower.startsWith(c.toLowerCase()))) {
+    if (
+      triggers.commands?.some((c) => inputLower.startsWith(c.toLowerCase()))
+    ) {
       return true;
     }
 
@@ -87,7 +89,10 @@ export abstract class BaseSkill implements Skill {
    * Quick execution (non-streaming)
    * Override this for simple skills
    */
-  async run(input: SkillExecutionInput, context: SkillContext): Promise<SkillExecutionResult> {
+  async run(
+    input: SkillExecutionInput,
+    context: SkillContext,
+  ): Promise<SkillExecutionResult> {
     const startTime = Date.now();
 
     try {
@@ -102,7 +107,7 @@ export abstract class BaseSkill implements Skill {
     } catch (error) {
       return {
         success: false,
-        output: '',
+        output: "",
         events: [],
         duration: Date.now() - startTime,
         error: error instanceof Error ? error : new Error(String(error)),
@@ -113,8 +118,11 @@ export abstract class BaseSkill implements Skill {
   /**
    * Override this method for simple processing
    */
-  protected async process(_input: SkillExecutionInput, _context: SkillContext): Promise<string> {
-    throw new Error('Skill must implement process() or execute()');
+  protected async process(
+    _input: SkillExecutionInput,
+    _context: SkillContext,
+  ): Promise<string> {
+    throw new Error("Skill must implement process() or execute()");
   }
 
   /**
@@ -123,12 +131,12 @@ export abstract class BaseSkill implements Skill {
    */
   async *execute(
     input: SkillExecutionInput,
-    context: SkillContext
+    context: SkillContext,
   ): AsyncGenerator<SkillEvent, SkillExecutionResult, undefined> {
     const startTime = Date.now();
 
     yield {
-      type: 'started',
+      type: "started",
       skillId: this.manifest.id,
       timestamp: new Date(),
     };
@@ -138,12 +146,12 @@ export abstract class BaseSkill implements Skill {
       const result = await this.run(input, context);
 
       yield {
-        type: 'output',
+        type: "output",
         content: result.output,
       };
 
       yield {
-        type: 'completed',
+        type: "completed",
         summary: result.output.slice(0, 100),
         duration: Date.now() - startTime,
       };
@@ -153,14 +161,14 @@ export abstract class BaseSkill implements Skill {
       const err = error instanceof Error ? error : new Error(String(error));
 
       yield {
-        type: 'error',
+        type: "error",
         error: err,
         recoverable: false,
       };
 
       return {
         success: false,
-        output: '',
+        output: "",
         events: [],
         duration: Date.now() - startTime,
         error: err,
@@ -176,19 +184,22 @@ export abstract class BaseSkill implements Skill {
   protected createTool(
     name: string,
     description: string,
-    inputSchema: Record<string, unknown>
+    inputSchema: Record<string, unknown>,
   ): ToolDefinition {
     return {
       name,
       description,
-      input_schema: inputSchema as ToolDefinition['input_schema'],
+      input_schema: inputSchema as ToolDefinition["input_schema"],
     };
   }
 
   /**
    * Create a successful tool result
    */
-  protected successResult(output: string, metadata?: Record<string, unknown>): ToolExecutionResult {
+  protected successResult(
+    output: string,
+    metadata?: Record<string, unknown>,
+  ): ToolExecutionResult {
     return {
       success: true,
       output,
@@ -199,10 +210,13 @@ export abstract class BaseSkill implements Skill {
   /**
    * Create an error tool result
    */
-  protected errorResult(error: string, metadata?: Record<string, unknown>): ToolExecutionResult {
+  protected errorResult(
+    error: string,
+    metadata?: Record<string, unknown>,
+  ): ToolExecutionResult {
     return {
       success: false,
-      output: '',
+      output: "",
       error,
       metadata,
     };
@@ -211,9 +225,13 @@ export abstract class BaseSkill implements Skill {
   /**
    * Emit a progress event
    */
-  protected emitProgress(context: SkillContext, percent: number, message?: string): void {
+  protected emitProgress(
+    context: SkillContext,
+    percent: number,
+    message?: string,
+  ): void {
     context.emit({
-      type: 'progress',
+      type: "progress",
       percent,
       message,
     });
@@ -224,7 +242,7 @@ export abstract class BaseSkill implements Skill {
    */
   protected emitThinking(context: SkillContext, content: string): void {
     context.emit({
-      type: 'thinking',
+      type: "thinking",
       content,
     });
   }
@@ -234,7 +252,7 @@ export abstract class BaseSkill implements Skill {
    */
   protected emitOutput(context: SkillContext, content: string): void {
     context.emit({
-      type: 'output',
+      type: "output",
       content,
     });
   }
@@ -242,15 +260,21 @@ export abstract class BaseSkill implements Skill {
   /**
    * Read a file safely within workspace
    */
-  protected async readFile(context: SkillContext, filePath: string): Promise<string | null> {
+  protected async readFile(
+    context: SkillContext,
+    filePath: string,
+  ): Promise<string | null> {
     try {
       if (!context.services.fileSystem.isWithinWorkspace(filePath)) {
-        context.services.logger.warn('Path outside workspace', { filePath });
+        context.services.logger.warn("Path outside workspace", { filePath });
         return null;
       }
       return await context.services.fileSystem.readFile(filePath);
     } catch (error) {
-      context.services.logger.error('Failed to read file', { filePath, error: String(error) });
+      context.services.logger.error("Failed to read file", {
+        filePath,
+        error: String(error),
+      });
       return null;
     }
   }
@@ -261,24 +285,27 @@ export abstract class BaseSkill implements Skill {
   protected async writeFile(
     context: SkillContext,
     filePath: string,
-    content: string
+    content: string,
   ): Promise<boolean> {
     try {
       if (!context.services.fileSystem.isWithinWorkspace(filePath)) {
-        context.services.logger.warn('Path outside workspace', { filePath });
+        context.services.logger.warn("Path outside workspace", { filePath });
         return false;
       }
       await context.services.fileSystem.writeFile(filePath, content);
 
       context.emit({
-        type: 'file_change',
+        type: "file_change",
         path: filePath,
-        action: 'modified',
+        action: "modified",
       });
 
       return true;
     } catch (error) {
-      context.services.logger.error('Failed to write file', { filePath, error: String(error) });
+      context.services.logger.error("Failed to write file", {
+        filePath,
+        error: String(error),
+      });
       return false;
     }
   }
@@ -292,10 +319,10 @@ export abstract class BaseSkill implements Skill {
     options?: {
       includeTools?: boolean;
       maxTokens?: number;
-    }
+    },
   ): Promise<string> {
-    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
-      { role: 'user', content: userMessage },
+    const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+      { role: "user", content: userMessage },
     ];
 
     return await context.services.llm.complete({

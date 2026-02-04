@@ -10,13 +10,13 @@
  * @module services/codeValidationService
  */
 
-import { spawn } from 'child_process';
-import { promises as fs } from 'fs';
-import path from 'path';
-import os from 'os';
-import logger from '../middleware/logger.js';
-import { getGuardrailsConfig } from '../config/guardrailsConfig.js';
-import { writeAuditLog } from './auditLogService.js';
+import { spawn } from "child_process";
+import { promises as fs } from "fs";
+import path from "path";
+import os from "os";
+import logger from "../middleware/logger.js";
+import { getGuardrailsConfig } from "../config/guardrailsConfig.js";
+import { writeAuditLog } from "./auditLogService.js";
 
 // ============================================================================
 // TYPES
@@ -34,9 +34,9 @@ export interface ValidationError {
   /** Error code (e.g., TS2304, no-unused-vars) */
   code: string;
   /** Severity: error, warning, info */
-  severity: 'error' | 'warning' | 'info';
+  severity: "error" | "warning" | "info";
   /** Source: typescript, eslint, syntax */
-  source: 'typescript' | 'eslint' | 'syntax';
+  source: "typescript" | "eslint" | "syntax";
 }
 
 export interface ValidationResult {
@@ -105,7 +105,7 @@ export interface CodeValidationOptions {
  * Run TypeScript compilation check
  */
 export async function validateTypeScript(
-  options: TypeScriptValidationOptions
+  options: TypeScriptValidationOptions,
 ): Promise<ValidationResult> {
   const config = getGuardrailsConfig();
   const startTime = Date.now();
@@ -117,10 +117,10 @@ export async function validateTypeScript(
       errorCount: 0,
       warningCount: 0,
       errors: [],
-      summary: 'TypeScript validation skipped (disabled in config)',
+      summary: "TypeScript validation skipped (disabled in config)",
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: 'Disabled in guardrails config',
+      skipReason: "Disabled in guardrails config",
     };
   }
 
@@ -132,7 +132,8 @@ export async function validateTypeScript(
   } = options;
 
   // Check if tsconfig exists
-  const tsconfigFile = tsconfigPath ?? path.join(workspaceRoot, 'tsconfig.json');
+  const tsconfigFile =
+    tsconfigPath ?? path.join(workspaceRoot, "tsconfig.json");
   let hasTsConfig = false;
   try {
     await fs.access(tsconfigFile);
@@ -147,31 +148,31 @@ export async function validateTypeScript(
       errorCount: 0,
       warningCount: 0,
       errors: [],
-      summary: 'TypeScript validation skipped (no tsconfig.json found)',
+      summary: "TypeScript validation skipped (no tsconfig.json found)",
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: 'No tsconfig.json found',
+      skipReason: "No tsconfig.json found",
     };
   }
 
   return new Promise((resolve) => {
-    const args = ['--noEmit', '--pretty', 'false'];
+    const args = ["--noEmit", "--pretty", "false"];
 
     if (tsconfigPath) {
-      args.push('--project', tsconfigPath);
+      args.push("--project", tsconfigPath);
     } else if (hasTsConfig) {
-      args.push('--project', tsconfigFile);
+      args.push("--project", tsconfigFile);
     }
 
     if (files.length > 0) {
       args.push(...files);
     }
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
     let timedOut = false;
 
-    const proc = spawn('npx', ['tsc', ...args], {
+    const proc = spawn("npx", ["tsc", ...args], {
       cwd: workspaceRoot,
       shell: true,
       timeout: timeoutMs,
@@ -179,18 +180,18 @@ export async function validateTypeScript(
 
     const timer = setTimeout(() => {
       timedOut = true;
-      proc.kill('SIGTERM');
+      proc.kill("SIGTERM");
     }, timeoutMs);
 
-    proc.stdout.on('data', (data) => {
+    proc.stdout.on("data", (data) => {
       stdout += data.toString();
     });
 
-    proc.stderr.on('data', (data) => {
+    proc.stderr.on("data", (data) => {
       stderr += data.toString();
     });
 
-    proc.on('close', (_code) => {
+    proc.on("close", (_code) => {
       clearTimeout(timer);
       const durationMs = Date.now() - startTime;
 
@@ -201,13 +202,13 @@ export async function validateTypeScript(
           warningCount: 0,
           errors: [
             {
-              file: 'tsc',
+              file: "tsc",
               line: 0,
               column: 0,
               message: `TypeScript compilation timed out after ${timeoutMs}ms`,
-              code: 'TIMEOUT',
-              severity: 'error',
-              source: 'typescript',
+              code: "TIMEOUT",
+              severity: "error",
+              source: "typescript",
             },
           ],
           summary: `TypeScript compilation timed out after ${timeoutMs}ms`,
@@ -218,8 +219,10 @@ export async function validateTypeScript(
       }
 
       const errors = parseTypeScriptOutput(stdout + stderr, workspaceRoot);
-      const errorCount = errors.filter((e) => e.severity === 'error').length;
-      const warningCount = errors.filter((e) => e.severity === 'warning').length;
+      const errorCount = errors.filter((e) => e.severity === "error").length;
+      const warningCount = errors.filter(
+        (e) => e.severity === "warning",
+      ).length;
 
       const passed = config.codeValidation.failOnTsErrors
         ? errorCount <= config.codeValidation.maxTsErrors
@@ -238,7 +241,7 @@ export async function validateTypeScript(
       });
     });
 
-    proc.on('error', (err) => {
+    proc.on("error", (err) => {
       clearTimeout(timer);
       resolve({
         passed: true, // Don't block if tsc not available
@@ -246,16 +249,16 @@ export async function validateTypeScript(
         warningCount: 1,
         errors: [
           {
-            file: 'tsc',
+            file: "tsc",
             line: 0,
             column: 0,
             message: `TypeScript not available: ${err.message}`,
-            code: 'NOT_AVAILABLE',
-            severity: 'warning',
-            source: 'typescript',
+            code: "NOT_AVAILABLE",
+            severity: "warning",
+            source: "typescript",
           },
         ],
-        summary: 'TypeScript not available - skipped',
+        summary: "TypeScript not available - skipped",
         durationMs: Date.now() - startTime,
         skipped: true,
         skipReason: `TypeScript not available: ${err.message}`,
@@ -267,12 +270,16 @@ export async function validateTypeScript(
 /**
  * Parse TypeScript compiler output
  */
-function parseTypeScriptOutput(output: string, workspaceRoot: string): ValidationError[] {
+function parseTypeScriptOutput(
+  output: string,
+  workspaceRoot: string,
+): ValidationError[] {
   const errors: ValidationError[] = [];
-  const lines = output.split('\n');
+  const lines = output.split("\n");
 
   // TypeScript output format: path(line,col): severity TSXXXX: message
-  const errorRegex = /^(.+?)\((\d+),(\d+)\):\s+(error|warning)\s+(TS\d+):\s+(.+)$/;
+  const errorRegex =
+    /^(.+?)\((\d+),(\d+)\):\s+(error|warning)\s+(TS\d+):\s+(.+)$/;
 
   for (const line of lines) {
     const match = line.match(errorRegex);
@@ -284,8 +291,8 @@ function parseTypeScriptOutput(output: string, workspaceRoot: string): Validatio
         column: parseInt(colNum, 10),
         message: message.trim(),
         code,
-        severity: severity === 'error' ? 'error' : 'warning',
-        source: 'typescript',
+        severity: severity === "error" ? "error" : "warning",
+        source: "typescript",
       });
     }
   }
@@ -300,7 +307,9 @@ function parseTypeScriptOutput(output: string, workspaceRoot: string): Validatio
 /**
  * Run ESLint validation
  */
-export async function validateESLint(options: ESLintValidationOptions): Promise<ValidationResult> {
+export async function validateESLint(
+  options: ESLintValidationOptions,
+): Promise<ValidationResult> {
   const config = getGuardrailsConfig();
   const startTime = Date.now();
 
@@ -311,16 +320,16 @@ export async function validateESLint(options: ESLintValidationOptions): Promise<
       errorCount: 0,
       warningCount: 0,
       errors: [],
-      summary: 'ESLint validation skipped (disabled in config)',
+      summary: "ESLint validation skipped (disabled in config)",
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: 'Disabled in guardrails config',
+      skipReason: "Disabled in guardrails config",
     };
   }
 
   const {
     workspaceRoot,
-    files = ['.'],
+    files = ["."],
     fix = false,
     configPath,
     timeoutMs = config.codeValidation.compilationTimeoutMs,
@@ -328,14 +337,14 @@ export async function validateESLint(options: ESLintValidationOptions): Promise<
 
   // Check if ESLint config exists
   const eslintConfigs = [
-    '.eslintrc.js',
-    '.eslintrc.cjs',
-    '.eslintrc.json',
-    '.eslintrc.yml',
-    '.eslintrc.yaml',
-    'eslint.config.js',
-    'eslint.config.mjs',
-    'eslint.config.cjs',
+    ".eslintrc.js",
+    ".eslintrc.cjs",
+    ".eslintrc.json",
+    ".eslintrc.yml",
+    ".eslintrc.yaml",
+    "eslint.config.js",
+    "eslint.config.mjs",
+    "eslint.config.cjs",
   ];
 
   let hasEslintConfig = false;
@@ -355,31 +364,31 @@ export async function validateESLint(options: ESLintValidationOptions): Promise<
       errorCount: 0,
       warningCount: 0,
       errors: [],
-      summary: 'ESLint validation skipped (no config found)',
+      summary: "ESLint validation skipped (no config found)",
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: 'No ESLint config found',
+      skipReason: "No ESLint config found",
     };
   }
 
   return new Promise((resolve) => {
-    const args = ['eslint', '--format', 'json'];
+    const args = ["eslint", "--format", "json"];
 
     if (fix) {
-      args.push('--fix');
+      args.push("--fix");
     }
 
     if (configPath) {
-      args.push('--config', configPath);
+      args.push("--config", configPath);
     }
 
     args.push(...files);
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
     let timedOut = false;
 
-    const proc = spawn('npx', args, {
+    const proc = spawn("npx", args, {
       cwd: workspaceRoot,
       shell: true,
       timeout: timeoutMs,
@@ -387,18 +396,18 @@ export async function validateESLint(options: ESLintValidationOptions): Promise<
 
     const timer = setTimeout(() => {
       timedOut = true;
-      proc.kill('SIGTERM');
+      proc.kill("SIGTERM");
     }, timeoutMs);
 
-    proc.stdout.on('data', (data) => {
+    proc.stdout.on("data", (data) => {
       stdout += data.toString();
     });
 
-    proc.stderr.on('data', (data) => {
+    proc.stderr.on("data", (data) => {
       stderr += data.toString();
     });
 
-    proc.on('close', (_code) => {
+    proc.on("close", (_code) => {
       clearTimeout(timer);
       const durationMs = Date.now() - startTime;
 
@@ -409,13 +418,13 @@ export async function validateESLint(options: ESLintValidationOptions): Promise<
           warningCount: 0,
           errors: [
             {
-              file: 'eslint',
+              file: "eslint",
               line: 0,
               column: 0,
               message: `ESLint timed out after ${timeoutMs}ms`,
-              code: 'TIMEOUT',
-              severity: 'error',
-              source: 'eslint',
+              code: "TIMEOUT",
+              severity: "error",
+              source: "eslint",
             },
           ],
           summary: `ESLint timed out after ${timeoutMs}ms`,
@@ -426,8 +435,10 @@ export async function validateESLint(options: ESLintValidationOptions): Promise<
       }
 
       const errors = parseESLintOutput(stdout, workspaceRoot);
-      const errorCount = errors.filter((e) => e.severity === 'error').length;
-      const warningCount = errors.filter((e) => e.severity === 'warning').length;
+      const errorCount = errors.filter((e) => e.severity === "error").length;
+      const warningCount = errors.filter(
+        (e) => e.severity === "warning",
+      ).length;
 
       const passed = config.codeValidation.failOnLintErrors
         ? errorCount <= config.codeValidation.maxLintErrors
@@ -446,7 +457,7 @@ export async function validateESLint(options: ESLintValidationOptions): Promise<
       });
     });
 
-    proc.on('error', (err) => {
+    proc.on("error", (err) => {
       clearTimeout(timer);
       resolve({
         passed: true, // Don't block if ESLint not available
@@ -454,16 +465,16 @@ export async function validateESLint(options: ESLintValidationOptions): Promise<
         warningCount: 1,
         errors: [
           {
-            file: 'eslint',
+            file: "eslint",
             line: 0,
             column: 0,
             message: `ESLint not available: ${err.message}`,
-            code: 'NOT_AVAILABLE',
-            severity: 'warning',
-            source: 'eslint',
+            code: "NOT_AVAILABLE",
+            severity: "warning",
+            source: "eslint",
           },
         ],
-        summary: 'ESLint not available - skipped',
+        summary: "ESLint not available - skipped",
         durationMs: Date.now() - startTime,
         skipped: true,
         skipReason: `ESLint not available: ${err.message}`,
@@ -475,7 +486,10 @@ export async function validateESLint(options: ESLintValidationOptions): Promise<
 /**
  * Parse ESLint JSON output
  */
-function parseESLintOutput(output: string, workspaceRoot: string): ValidationError[] {
+function parseESLintOutput(
+  output: string,
+  workspaceRoot: string,
+): ValidationError[] {
   const errors: ValidationError[] = [];
 
   try {
@@ -488,9 +502,9 @@ function parseESLintOutput(output: string, workspaceRoot: string): ValidationErr
           line: message.line || 0,
           column: message.column || 0,
           message: message.message,
-          code: message.ruleId || 'unknown',
-          severity: message.severity === 2 ? 'error' : 'warning',
-          source: 'eslint',
+          code: message.ruleId || "unknown",
+          severity: message.severity === 2 ? "error" : "warning",
+          source: "eslint",
         });
       }
     }
@@ -498,13 +512,13 @@ function parseESLintOutput(output: string, workspaceRoot: string): ValidationErr
     // Could not parse JSON, might be an error message
     if (output.trim()) {
       errors.push({
-        file: 'eslint',
+        file: "eslint",
         line: 0,
         column: 0,
         message: `ESLint output: ${output.substring(0, 500)}`,
-        code: 'PARSE_ERROR',
-        severity: 'warning',
-        source: 'eslint',
+        code: "PARSE_ERROR",
+        severity: "warning",
+        source: "eslint",
       });
     }
   }
@@ -520,14 +534,17 @@ function parseESLintOutput(output: string, workspaceRoot: string): ValidationErr
  * Quick syntax validation for a single file
  * Uses Node.js built-in parser for JS/TS
  */
-export async function validateSyntax(filePath: string, content: string): Promise<ValidationResult> {
+export async function validateSyntax(
+  filePath: string,
+  content: string,
+): Promise<ValidationResult> {
   const startTime = Date.now();
   const errors: ValidationError[] = [];
 
   const ext = path.extname(filePath).toLowerCase();
 
   // For JavaScript/TypeScript, try to parse
-  if (['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'].includes(ext)) {
+  if ([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"].includes(ext)) {
     try {
       // Use dynamic import to attempt parsing
       // This is a basic syntax check
@@ -538,17 +555,17 @@ export async function validateSyntax(filePath: string, content: string): Promise
 
       try {
         // Try to load as a module to check syntax
-        const { spawn } = await import('child_process');
+        const { spawn } = await import("child_process");
 
         await new Promise<void>((resolve) => {
-          const proc = spawn('node', ['--check', tempFile], { timeout: 5000 });
-          let stderr = '';
+          const proc = spawn("node", ["--check", tempFile], { timeout: 5000 });
+          let stderr = "";
 
-          proc.stderr.on('data', (data) => {
+          proc.stderr.on("data", (data) => {
             stderr += data.toString();
           });
 
-          proc.on('close', (exitCode) => {
+          proc.on("close", (exitCode) => {
             if (exitCode !== 0 && stderr) {
               // Parse the error
               const match = stderr.match(/:(\d+)\n(.+)/);
@@ -558,9 +575,9 @@ export async function validateSyntax(filePath: string, content: string): Promise
                   line: parseInt(match[1], 10),
                   column: 0,
                   message: match[2].trim(),
-                  code: 'SYNTAX_ERROR',
-                  severity: 'error',
-                  source: 'syntax',
+                  code: "SYNTAX_ERROR",
+                  severity: "error",
+                  source: "syntax",
                 });
               } else {
                 errors.push({
@@ -568,16 +585,16 @@ export async function validateSyntax(filePath: string, content: string): Promise
                   line: 0,
                   column: 0,
                   message: stderr.substring(0, 500),
-                  code: 'SYNTAX_ERROR',
-                  severity: 'error',
-                  source: 'syntax',
+                  code: "SYNTAX_ERROR",
+                  severity: "error",
+                  source: "syntax",
                 });
               }
             }
             resolve();
           });
 
-          proc.on('error', () => resolve()); // Ignore process errors
+          proc.on("error", () => resolve()); // Ignore process errors
         });
       } finally {
         // Clean up temp file
@@ -592,27 +609,27 @@ export async function validateSyntax(filePath: string, content: string): Promise
         file: filePath,
         line: 0,
         column: 0,
-        message: err instanceof Error ? err.message : 'Unknown syntax error',
-        code: 'SYNTAX_ERROR',
-        severity: 'error',
-        source: 'syntax',
+        message: err instanceof Error ? err.message : "Unknown syntax error",
+        code: "SYNTAX_ERROR",
+        severity: "error",
+        source: "syntax",
       });
     }
   }
 
   // For JSON files
-  if (ext === '.json') {
+  if (ext === ".json") {
     try {
       JSON.parse(content);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Invalid JSON';
+      const message = err instanceof Error ? err.message : "Invalid JSON";
       // Try to extract line number from error message
       const match = message.match(/position (\d+)/);
       let line = 0;
       if (match) {
         // Approximate line number from position
         const position = parseInt(match[1], 10);
-        line = content.substring(0, position).split('\n').length;
+        line = content.substring(0, position).split("\n").length;
       }
 
       errors.push({
@@ -620,9 +637,9 @@ export async function validateSyntax(filePath: string, content: string): Promise
         line,
         column: 0,
         message,
-        code: 'JSON_SYNTAX_ERROR',
-        severity: 'error',
-        source: 'syntax',
+        code: "JSON_SYNTAX_ERROR",
+        severity: "error",
+        source: "syntax",
       });
     }
   }
@@ -631,11 +648,11 @@ export async function validateSyntax(filePath: string, content: string): Promise
 
   return {
     passed,
-    errorCount: errors.filter((e) => e.severity === 'error').length,
-    warningCount: errors.filter((e) => e.severity === 'warning').length,
+    errorCount: errors.filter((e) => e.severity === "error").length,
+    warningCount: errors.filter((e) => e.severity === "warning").length,
     errors,
     summary: passed
-      ? 'Syntax validation passed'
+      ? "Syntax validation passed"
       : `Syntax validation failed: ${errors.length} errors`,
     durationMs: Date.now() - startTime,
     skipped: false,
@@ -658,7 +675,8 @@ export async function validateCode(options: CodeValidationOptions): Promise<{
   const config = getGuardrailsConfig();
   const startTime = Date.now();
 
-  const runTypeScript = options.typescript ?? config.codeValidation.requireCompilation;
+  const runTypeScript =
+    options.typescript ?? config.codeValidation.requireCompilation;
   const runESLint = options.eslint ?? config.codeValidation.requireLinting;
 
   // Run validations in parallel
@@ -673,10 +691,10 @@ export async function validateCode(options: CodeValidationOptions): Promise<{
           errorCount: 0,
           warningCount: 0,
           errors: [],
-          summary: 'TypeScript validation not requested',
+          summary: "TypeScript validation not requested",
           durationMs: 0,
           skipped: true,
-          skipReason: 'Not requested',
+          skipReason: "Not requested",
         } as ValidationResult),
     runESLint
       ? validateESLint({
@@ -688,10 +706,10 @@ export async function validateCode(options: CodeValidationOptions): Promise<{
           errorCount: 0,
           warningCount: 0,
           errors: [],
-          summary: 'ESLint validation not requested',
+          summary: "ESLint validation not requested",
           durationMs: 0,
           skipped: true,
-          skipReason: 'Not requested',
+          skipReason: "Not requested",
         } as ValidationResult),
   ]);
 
@@ -705,8 +723,8 @@ export async function validateCode(options: CodeValidationOptions): Promise<{
   if (!passed && options.userId) {
     await writeAuditLog({
       userId: options.userId,
-      action: 'guardrails.code_validation_failed',
-      category: 'security',
+      action: "guardrails.code_validation_failed",
+      category: "security",
       target: options.workspaceRoot,
       metadata: {
         errorCount: totalErrors,
@@ -726,7 +744,7 @@ export async function validateCode(options: CodeValidationOptions): Promise<{
       typescript: { passed: tsResult.passed, errors: tsResult.errorCount },
       eslint: { passed: lintResult.passed, errors: lintResult.errorCount },
     },
-    'Code validation complete'
+    "Code validation complete",
   );
 
   return {
@@ -743,7 +761,10 @@ export async function validateCode(options: CodeValidationOptions): Promise<{
         : `Code validation failed (${totalErrors} errors, ${totalWarnings} warnings)`,
       durationMs,
       skipped: tsResult.skipped && lintResult.skipped,
-      skipReason: tsResult.skipped && lintResult.skipped ? 'All validations skipped' : undefined,
+      skipReason:
+        tsResult.skipped && lintResult.skipped
+          ? "All validations skipped"
+          : undefined,
     },
   };
 }

@@ -3,15 +3,15 @@
  * Generates frontend code (Vue/React) from PRD. When hasCreativeDesignDoc is true, instructs implementing layout/UX from CDD.
  */
 
-import { CLAUDE_CODE_QUALITY_BLOCK } from '../shared/claude-code-quality.js';
+import { CLAUDE_CODE_QUALITY_BLOCK } from "../shared/claude-code-quality.js";
 
 export function getFrontendAgentPrompt(
-  framework: 'vue' | 'react' = 'vue',
+  framework: "vue" | "react" = "vue",
   contextSummary?: string,
-  hasCreativeDesignDoc?: boolean
+  hasCreativeDesignDoc?: boolean,
 ): string {
   const frameworkGuide =
-    framework === 'vue'
+    framework === "vue"
       ? `- Vue 3 with Composition API
      - TypeScript for type safety
      - TailwindCSS for styling
@@ -161,7 +161,7 @@ ${
 - **Accessibility**: Apply all accessibility notes from the CDD (focus order, contrast, labels).
 - **Responsiveness**: Apply responsiveness notes and ensure layout adapts per breakpoint as specified.
 `
-    : ''
+    : ""
 }
 ${CLAUDE_CODE_QUALITY_BLOCK}
 

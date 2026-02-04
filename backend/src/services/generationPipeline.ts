@@ -6,30 +6,33 @@
  * Supports retry with degradation
  */
 
-import logger from '../middleware/logger.js';
-import { getRequestLogger } from '../middleware/logger.js';
-import type { StructuredIntent } from './intentCliRunner.js';
+import logger from "../middleware/logger.js";
+import { getRequestLogger } from "../middleware/logger.js";
+import type { StructuredIntent } from "./intentCliRunner.js";
 import {
   AstGeneratorService,
   type GeneratedFile,
   CodeGenerationError,
-} from './astGeneratorService.js';
-import { validateTypeScript, type ValidationResult } from './codeValidationService.js';
-import { generateCodeFromDiagram } from './claudeCodeService.js';
-import type { FileDefinition } from '../types/index.js';
+} from "./astGeneratorService.js";
+import {
+  validateTypeScript,
+  type ValidationResult,
+} from "./codeValidationService.js";
+import { generateCodeFromDiagram } from "./claudeCodeService.js";
+import type { FileDefinition } from "../types/index.js";
 
 // ============================================================================
 // Pipeline Types
 // ============================================================================
 
 export type PipelineStage =
-  | 'intent'
-  | 'architecture'
-  | 'prd'
-  | 'skeleton'
-  | 'implementation'
-  | 'validation'
-  | 'final';
+  | "intent"
+  | "architecture"
+  | "prd"
+  | "skeleton"
+  | "implementation"
+  | "validation"
+  | "final";
 
 export interface PipelineContext {
   /** Original user request */
@@ -60,7 +63,7 @@ export interface PipelineContext {
 
 export interface StageExecution {
   stage: PipelineStage;
-  status: 'success' | 'failure' | 'skipped';
+  status: "success" | "failure" | "skipped";
   durationMs: number;
   error?: string;
   retryCount: number;
@@ -105,7 +108,7 @@ export interface PipelineResult {
 }
 
 export interface StageSummary {
-  status: 'success' | 'failure' | 'skipped';
+  status: "success" | "failure" | "skipped";
   durationMs: number;
   retryCount: number;
 }
@@ -115,10 +118,10 @@ export class PipelineError extends Error {
     message: string,
     public readonly stage: PipelineStage,
     public readonly cause?: Error,
-    public readonly recoverable: boolean = false
+    public readonly recoverable: boolean = false,
   ) {
     super(message);
-    this.name = 'PipelineError';
+    this.name = "PipelineError";
   }
 }
 
@@ -128,37 +131,55 @@ export class PipelineError extends Error {
 
 export const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   stages: {
-    intent: { name: 'intent', enabled: true, maxRetries: 2, degradation: true, timeoutMs: 10000 },
+    intent: {
+      name: "intent",
+      enabled: true,
+      maxRetries: 2,
+      degradation: true,
+      timeoutMs: 10000,
+    },
     architecture: {
-      name: 'architecture',
+      name: "architecture",
       enabled: true,
       maxRetries: 2,
       degradation: true,
       timeoutMs: 15000,
     },
-    prd: { name: 'prd', enabled: true, maxRetries: 1, degradation: true, timeoutMs: 20000 },
+    prd: {
+      name: "prd",
+      enabled: true,
+      maxRetries: 1,
+      degradation: true,
+      timeoutMs: 20000,
+    },
     skeleton: {
-      name: 'skeleton',
+      name: "skeleton",
       enabled: true,
       maxRetries: 1,
       degradation: false,
       timeoutMs: 15000,
     },
     implementation: {
-      name: 'implementation',
+      name: "implementation",
       enabled: true,
       maxRetries: 2,
       degradation: true,
       timeoutMs: 60000,
     },
     validation: {
-      name: 'validation',
+      name: "validation",
       enabled: true,
       maxRetries: 0,
       degradation: false,
       timeoutMs: 30000,
     },
-    final: { name: 'final', enabled: true, maxRetries: 0, degradation: false, timeoutMs: 5000 },
+    final: {
+      name: "final",
+      enabled: true,
+      maxRetries: 0,
+      degradation: false,
+      timeoutMs: 5000,
+    },
   },
   globalTimeoutMs: 120000,
   validateBetweenStages: false,
@@ -187,7 +208,7 @@ export class GenerationPipeline {
       techStack?: string;
       projectName?: string;
       skipStages?: PipelineStage[];
-    }
+    },
   ): Promise<PipelineResult> {
     const log = getRequestLogger();
     const startTime = Date.now();
@@ -207,56 +228,64 @@ export class GenerationPipeline {
 
     try {
       // Stage 1: Intent Extraction
-      if (this.shouldRunStage('intent', context, options?.skipStages)) {
-        const result = await this.runStage('intent', context, () => this.extractIntent(context));
+      if (this.shouldRunStage("intent", context, options?.skipStages)) {
+        const result = await this.runStage("intent", context, () =>
+          this.extractIntent(context),
+        );
         stageSummary.intent = result.summary;
         if (result.error) errors.push(result.error);
       }
 
       // Stage 2: Architecture Generation
-      if (this.shouldRunStage('architecture', context, options?.skipStages)) {
-        const result = await this.runStage('architecture', context, () =>
-          this.generateArchitecture(context)
+      if (this.shouldRunStage("architecture", context, options?.skipStages)) {
+        const result = await this.runStage("architecture", context, () =>
+          this.generateArchitecture(context),
         );
         stageSummary.architecture = result.summary;
         if (result.error) errors.push(result.error);
       }
 
       // Stage 3: PRD Generation
-      if (this.shouldRunStage('prd', context, options?.skipStages)) {
-        const result = await this.runStage('prd', context, () => this.generatePRD(context));
+      if (this.shouldRunStage("prd", context, options?.skipStages)) {
+        const result = await this.runStage("prd", context, () =>
+          this.generatePRD(context),
+        );
         stageSummary.prd = result.summary;
         if (result.error) errors.push(result.error);
       }
 
       // Stage 4: Skeleton Generation
-      if (this.shouldRunStage('skeleton', context, options?.skipStages)) {
-        const result = await this.runStage('skeleton', context, () =>
-          this.generateSkeleton(context)
+      if (this.shouldRunStage("skeleton", context, options?.skipStages)) {
+        const result = await this.runStage("skeleton", context, () =>
+          this.generateSkeleton(context),
         );
         stageSummary.skeleton = result.summary;
         if (result.error) errors.push(result.error);
       }
 
       // Stage 5: Implementation
-      if (this.shouldRunStage('implementation', context, options?.skipStages)) {
-        const result = await this.runStage('implementation', context, () =>
-          this.generateImplementation(context)
+      if (this.shouldRunStage("implementation", context, options?.skipStages)) {
+        const result = await this.runStage("implementation", context, () =>
+          this.generateImplementation(context),
         );
         stageSummary.implementation = result.summary;
         if (result.error) errors.push(result.error);
       }
 
       // Stage 6: Validation
-      if (this.shouldRunStage('validation', context, options?.skipStages)) {
-        const result = await this.runStage('validation', context, () => this.validate(context));
+      if (this.shouldRunStage("validation", context, options?.skipStages)) {
+        const result = await this.runStage("validation", context, () =>
+          this.validate(context),
+        );
         stageSummary.validation = result.summary;
         if (result.error) errors.push(result.error);
       }
 
       // Stage 7: Finalization
-      if (this.shouldRunStage('final', context, options?.skipStages)) {
-        const result = await this.runStage('final', context, () => this.finalize(context));
+      if (this.shouldRunStage("final", context, options?.skipStages)) {
+        const result = await this.runStage("final", context, () =>
+          this.finalize(context),
+        );
         stageSummary.final = result.summary;
         if (result.error) errors.push(result.error);
       }
@@ -269,7 +298,7 @@ export class GenerationPipeline {
           stages: Object.keys(stageSummary),
           errors: errors.length,
         },
-        'Pipeline completed'
+        "Pipeline completed",
       );
 
       return {
@@ -282,7 +311,7 @@ export class GenerationPipeline {
       };
     } catch (error) {
       const durationMs = Date.now() - startTime;
-      log.error({ error }, 'Pipeline failed');
+      log.error({ error }, "Pipeline failed");
 
       return {
         success: false,
@@ -291,7 +320,11 @@ export class GenerationPipeline {
         durationMs,
         errors: [
           ...errors,
-          new PipelineError('Pipeline execution failed', 'final', error as Error),
+          new PipelineError(
+            "Pipeline execution failed",
+            "final",
+            error as Error,
+          ),
         ],
         stageSummary,
       };
@@ -304,7 +337,7 @@ export class GenerationPipeline {
   private shouldRunStage(
     stage: PipelineStage,
     context: PipelineContext,
-    skipStages?: PipelineStage[]
+    skipStages?: PipelineStage[],
   ): boolean {
     if (skipStages?.includes(stage)) return false;
 
@@ -322,7 +355,7 @@ export class GenerationPipeline {
   private async runStage<T>(
     stageName: PipelineStage,
     context: PipelineContext,
-    executor: () => Promise<T>
+    executor: () => Promise<T>,
   ): Promise<{ summary: StageSummary; error?: PipelineError }> {
     const config = this.config.stages[stageName];
     const startTime = Date.now();
@@ -333,14 +366,14 @@ export class GenerationPipeline {
         await executor();
 
         const summary: StageSummary = {
-          status: 'success',
+          status: "success",
           durationMs: Date.now() - startTime,
           retryCount,
         };
 
         context.history.push({
           stage: stageName,
-          status: 'success',
+          status: "success",
           durationMs: summary.durationMs,
           retryCount,
         });
@@ -355,19 +388,19 @@ export class GenerationPipeline {
             retry: retryCount,
             error: (error as Error).message,
           },
-          'Stage failed, retrying'
+          "Stage failed, retrying",
         );
 
         if (retryCount > config.maxRetries) {
           const summary: StageSummary = {
-            status: 'failure',
+            status: "failure",
             durationMs: Date.now() - startTime,
             retryCount: retryCount - 1,
           };
 
           context.history.push({
             stage: stageName,
-            status: 'failure',
+            status: "failure",
             durationMs: summary.durationMs,
             error: (error as Error).message,
             retryCount: retryCount - 1,
@@ -377,7 +410,7 @@ export class GenerationPipeline {
             `Stage ${stageName} failed after ${retryCount} attempts`,
             stageName,
             error as Error,
-            false
+            false,
           );
 
           if (this.config.failFast) {
@@ -394,7 +427,11 @@ export class GenerationPipeline {
 
     // Should not reach here
     return {
-      summary: { status: 'failure', durationMs: Date.now() - startTime, retryCount },
+      summary: {
+        status: "failure",
+        durationMs: Date.now() - startTime,
+        retryCount,
+      },
       error: new PipelineError(`Stage ${stageName} failed`, stageName),
     };
   }
@@ -407,7 +444,7 @@ export class GenerationPipeline {
    * Stage 1: Extract intent from user request
    */
   private async extractIntent(context: PipelineContext): Promise<void> {
-    const { HybridIntentParser } = await import('./unifiedIntentParser.js');
+    const { HybridIntentParser } = await import("./unifiedIntentParser.js");
     const parser = new HybridIntentParser();
 
     const result = await parser.parse(
@@ -416,7 +453,7 @@ export class GenerationPipeline {
       {
         useCache: true,
         fallbackToLlm: true,
-      }
+      },
     );
 
     context.intent = result.intent;
@@ -427,11 +464,13 @@ export class GenerationPipeline {
    */
   private async generateArchitecture(context: PipelineContext): Promise<void> {
     // Use existing architecture service
-    const { generateArchitecture } = await import('./architectureService.js');
+    const { generateArchitecture } = await import("./architectureService.js");
 
     const result = await generateArchitecture({
       projectDescription: context.request,
-      techStack: context.metadata.techStack ? [context.metadata.techStack] : undefined,
+      techStack: context.metadata.techStack
+        ? [context.metadata.techStack]
+        : undefined,
     });
 
     const architecture = result.architecture;
@@ -439,7 +478,7 @@ export class GenerationPipeline {
       architecture?.c4Diagrams?.container ??
       architecture?.c4Diagrams?.context ??
       architecture?.c4Diagrams?.component ??
-      '';
+      "";
 
     // Persist full architecture JSON for downstream stages
     if (architecture) {
@@ -452,35 +491,39 @@ export class GenerationPipeline {
    */
   private async generatePRD(context: PipelineContext): Promise<void> {
     // Use PRD generator service
-    const { generatePRD } = await import('./prdGeneratorService.js');
-    const { parseIntentUnified } = await import('./intentCompilerService.js');
+    const { generatePRD } = await import("./prdGeneratorService.js");
+    const { parseIntentUnified } = await import("./intentCompilerService.js");
 
     if (!context.intent) {
       context.intent = await parseIntentUnified(context.request, {});
     }
 
     // Rebuild architecture object if needed
-    const { generateArchitecture } = await import('./architectureService.js');
+    const { generateArchitecture } = await import("./architectureService.js");
     const archResponse = await generateArchitecture({
       projectDescription: context.request,
-      techStack: context.metadata.techStack ? [context.metadata.techStack] : undefined,
+      techStack: context.metadata.techStack
+        ? [context.metadata.techStack]
+        : undefined,
     });
 
     const architecture = archResponse.architecture;
     if (!architecture) {
-      throw new PipelineError('Architecture missing for PRD generation', 'prd');
+      throw new PipelineError("Architecture missing for PRD generation", "prd");
     }
 
     const prdResponse = await generatePRD(
       {
         architectureId: architecture.id,
-        projectName: context.metadata.projectName ?? 'Generated Project',
+        projectName: context.metadata.projectName ?? "Generated Project",
         projectDescription: context.request,
       },
-      architecture
+      architecture,
     );
 
-    context.prd = prdResponse.prd ? JSON.stringify(prdResponse.prd, null, 2) : '';
+    context.prd = prdResponse.prd
+      ? JSON.stringify(prdResponse.prd, null, 2)
+      : "";
     context.architecture =
       architecture.c4Diagrams?.container ??
       architecture.c4Diagrams?.context ??
@@ -496,19 +539,19 @@ export class GenerationPipeline {
     const files: FileDefinition[] = [];
 
     // Generate basic structure based on tech stack
-    const techStack = context.metadata.techStack || 'typescript';
+    const techStack = context.metadata.techStack || "typescript";
 
-    if (techStack.includes('react') || techStack.includes('next')) {
+    if (techStack.includes("react") || techStack.includes("next")) {
       files.push({
-        path: 'src/App.tsx',
-        content: '// TODO: Implement main app component\n',
+        path: "src/App.tsx",
+        content: "// TODO: Implement main app component\n",
       });
     }
 
-    if (techStack.includes('express') || techStack.includes('node')) {
+    if (techStack.includes("express") || techStack.includes("node")) {
       files.push({
-        path: 'src/index.ts',
-        content: '// TODO: Implement server entry point\n',
+        path: "src/index.ts",
+        content: "// TODO: Implement server entry point\n",
       });
     }
 
@@ -518,14 +561,16 @@ export class GenerationPipeline {
   /**
    * Stage 5: Generate full implementation
    */
-  private async generateImplementation(context: PipelineContext): Promise<void> {
+  private async generateImplementation(
+    context: PipelineContext,
+  ): Promise<void> {
     // Use existing code generation with architecture
-    const diagramType = this.detectDiagramType(context.architecture || '');
+    const diagramType = this.detectDiagramType(context.architecture || "");
 
     const result = await generateCodeFromDiagram(
       diagramType,
-      context.architecture || '',
-      context.metadata.techStack || 'typescript'
+      context.architecture || "",
+      context.metadata.techStack || "typescript",
     );
 
     context.implementation = result.files;
@@ -539,10 +584,10 @@ export class GenerationPipeline {
     const validations: ValidationResult[] = [];
 
     for (const file of files) {
-      if (file.path.endsWith('.ts') || file.path.endsWith('.tsx')) {
+      if (file.path.endsWith(".ts") || file.path.endsWith(".tsx")) {
         // Basic syntax validation
         const result = await validateTypeScript({
-          workspaceRoot: '/tmp/validation',
+          workspaceRoot: "/tmp/validation",
           files: [file.path],
         });
         validations.push(result);
@@ -574,12 +619,13 @@ export class GenerationPipeline {
    */
   private detectDiagramType(mermaidCode: string): string {
     const code = mermaidCode.toLowerCase().trim();
-    if (code.startsWith('erdiagram')) return 'er';
-    if (code.startsWith('sequencediagram')) return 'sequence';
-    if (code.startsWith('classdiagram')) return 'class';
-    if (code.startsWith('flowchart') || code.startsWith('graph')) return 'flowchart';
-    if (code.startsWith('statediagram')) return 'flowchart';
-    return 'flowchart';
+    if (code.startsWith("erdiagram")) return "er";
+    if (code.startsWith("sequencediagram")) return "sequence";
+    if (code.startsWith("classdiagram")) return "class";
+    if (code.startsWith("flowchart") || code.startsWith("graph"))
+      return "flowchart";
+    if (code.startsWith("statediagram")) return "flowchart";
+    return "flowchart";
   }
 }
 
@@ -597,7 +643,7 @@ export async function runPipeline(
     projectName?: string;
     skipStages?: PipelineStage[];
     config?: Partial<PipelineConfig>;
-  }
+  },
 ): Promise<PipelineResult> {
   const pipeline = new GenerationPipeline(options?.config);
   return pipeline.execute(request, options);
@@ -609,18 +655,18 @@ export async function runPipeline(
 export async function runSingleStage(
   stage: PipelineStage,
   context: Partial<PipelineContext>,
-  config?: Partial<PipelineConfig>
+  config?: Partial<PipelineConfig>,
 ): Promise<PipelineResult> {
   const pipeline = new GenerationPipeline(config);
   const fullContext: PipelineContext = {
-    request: context.request || '',
+    request: context.request || "",
     history: [],
     metadata: { startTime: Date.now() },
     ...context,
   };
 
   const stagesToSkip = Object.keys(DEFAULT_PIPELINE_CONFIG.stages).filter(
-    (s) => s !== stage
+    (s) => s !== stage,
   ) as PipelineStage[];
 
   return pipeline.execute(fullContext.request, { skipStages: stagesToSkip });

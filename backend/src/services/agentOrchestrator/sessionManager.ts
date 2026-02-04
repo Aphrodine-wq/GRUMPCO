@@ -30,8 +30,8 @@
  * @module agentOrchestrator/sessionManager
  */
 
-import logger from '../../middleware/logger.js';
-import { getDatabase } from '../../db/database.js';
+import logger from "../../middleware/logger.js";
+import { getDatabase } from "../../db/database.js";
 import type {
   GenerationSession,
   AgentType,
@@ -39,9 +39,9 @@ import type {
   CodeGenRequestMulti,
   AgentTask,
   SubTask,
-} from '../../types/agents.js';
-import type { PRD } from '../../types/prd.js';
-import { resilientLlmCall, DEFAULT_AGENT_MODEL } from './shared.js';
+} from "../../types/agents.js";
+import type { PRD } from "../../types/prd.js";
+import { resilientLlmCall, DEFAULT_AGENT_MODEL } from "./shared.js";
 
 /**
  * Initialize an agent task with default pending status.
@@ -56,13 +56,16 @@ import { resilientLlmCall, DEFAULT_AGENT_MODEL } from './shared.js';
  * // { taskId: 'task_frontend_1234567890', agentType: 'frontend', status: 'pending', ... }
  * ```
  */
-export function initializeAgentTask(agentType: AgentType, description: string): AgentTask {
+export function initializeAgentTask(
+  agentType: AgentType,
+  description: string,
+): AgentTask {
   return {
     taskId: `task_${agentType}_${Date.now()}`,
     agentType,
     description,
     input: {},
-    status: 'pending',
+    status: "pending",
   };
 }
 
@@ -91,13 +94,15 @@ export function initializeAgentTask(agentType: AgentType, description: string): 
  * });
  * ```
  */
-export async function initializeSession(request: CodeGenRequest): Promise<GenerationSession> {
+export async function initializeSession(
+  request: CodeGenRequest,
+): Promise<GenerationSession> {
   const db = getDatabase();
   const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   const session: GenerationSession = {
     sessionId,
-    status: 'initializing',
+    status: "initializing",
     prdId: request.prdId,
     architectureId: request.architectureId,
     createdAt: new Date().toISOString(),
@@ -105,21 +110,36 @@ export async function initializeSession(request: CodeGenRequest): Promise<Genera
     preferences: request.preferences,
     projectId: request.projectId,
     agents: {
-      architect: initializeAgentTask('architect', 'Validate PRD and create generation plan'),
-      frontend: initializeAgentTask('frontend', 'Generate frontend components and pages'),
-      backend: initializeAgentTask('backend', 'Generate backend APIs and services'),
-      devops: initializeAgentTask('devops', 'Generate Docker and CI/CD configs'),
-      test: initializeAgentTask('test', 'Generate test suites'),
-      docs: initializeAgentTask('docs', 'Generate documentation'),
-      security: initializeAgentTask('security', 'Review generated code for security issues'),
-      i18n: initializeAgentTask('i18n', 'Suggest or add i18n structure'),
-      wrunner: initializeAgentTask('wrunner', 'WRunner analysis and auto-fix'),
+      architect: initializeAgentTask(
+        "architect",
+        "Validate PRD and create generation plan",
+      ),
+      frontend: initializeAgentTask(
+        "frontend",
+        "Generate frontend components and pages",
+      ),
+      backend: initializeAgentTask(
+        "backend",
+        "Generate backend APIs and services",
+      ),
+      devops: initializeAgentTask(
+        "devops",
+        "Generate Docker and CI/CD configs",
+      ),
+      test: initializeAgentTask("test", "Generate test suites"),
+      docs: initializeAgentTask("docs", "Generate documentation"),
+      security: initializeAgentTask(
+        "security",
+        "Review generated code for security issues",
+      ),
+      i18n: initializeAgentTask("i18n", "Suggest or add i18n structure"),
+      wrunner: initializeAgentTask("wrunner", "WRunner analysis and auto-fix"),
     },
     generatedFiles: [],
   };
 
   await db.saveSession(session);
-  logger.info({ sessionId }, 'Code generation session initialized');
+  logger.info({ sessionId }, "Code generation session initialized");
 
   return session;
 }
@@ -138,7 +158,9 @@ export async function initializeSession(request: CodeGenRequest): Promise<Genera
  * }
  * ```
  */
-export async function getSession(sessionId: string): Promise<GenerationSession | null> {
+export async function getSession(
+  sessionId: string,
+): Promise<GenerationSession | null> {
   const db = getDatabase();
   return await db.getSession(sessionId);
 }
@@ -172,7 +194,7 @@ export async function breakPrdIntoSubTasks(prd: PRD): Promise<SubTask[]> {
       system: SUBTASKS_PROMPT,
       messages: [
         {
-          role: 'user',
+          role: "user",
           content: `PRD:\n${JSON.stringify(prd.sections, null, 2)}\n\nBreak into sub-tasks.`,
         },
       ],
@@ -185,14 +207,21 @@ export async function breakPrdIntoSubTasks(prd: PRD): Promise<SubTask[]> {
     let raw = res.text.trim();
     const arr = raw.match(/\[[\s\S]*\]/);
     if (arr) raw = arr[0];
-    const parsed = JSON.parse(raw) as Array<{ id?: string; title?: string; status?: string }>;
+    const parsed = JSON.parse(raw) as Array<{
+      id?: string;
+      title?: string;
+      status?: string;
+    }>;
     return (Array.isArray(parsed) ? parsed : []).map((t, i) => ({
       id: t.id || `task_${i}`,
       title: t.title || `Task ${i + 1}`,
-      status: 'pending' as const,
+      status: "pending" as const,
     }));
   } catch (e) {
-    logger.warn({ err: (e as Error).message }, 'Sub-task breakdown failed, using empty');
+    logger.warn(
+      { err: (e as Error).message },
+      "Sub-task breakdown failed, using empty",
+    );
     return [];
   }
 }
@@ -221,7 +250,7 @@ export async function breakPrdIntoSubTasks(prd: PRD): Promise<SubTask[]> {
  * ```
  */
 export async function initializeSessionMulti(
-  request: CodeGenRequestMulti
+  request: CodeGenRequestMulti,
 ): Promise<GenerationSession> {
   const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const prds = request.prds.map((x) => x.prd);
@@ -229,11 +258,12 @@ export async function initializeSessionMulti(
   for (const { prd } of request.prds) {
     subTasksByPrdId[prd.id] = await breakPrdIntoSubTasks(prd);
   }
-  const mapping = request.componentMapping ?? defaultComponentMapping(request.prds);
+  const mapping =
+    request.componentMapping ?? defaultComponentMapping(request.prds);
   const session: GenerationSession = {
     sessionId,
-    status: 'initializing',
-    prdId: prds[0]?.id ?? 'multi',
+    status: "initializing",
+    prdId: prds[0]?.id ?? "multi",
     architectureId: request.architecture.id,
     createdAt: new Date().toISOString(),
     userId: request.userId,
@@ -244,21 +274,30 @@ export async function initializeSessionMulti(
     subTasksByPrdId,
     componentMapping: mapping,
     agents: {
-      architect: initializeAgentTask('architect', 'Validate PRDs and create plan'),
-      frontend: initializeAgentTask('frontend', 'Generate frontend'),
-      backend: initializeAgentTask('backend', 'Generate backend'),
-      devops: initializeAgentTask('devops', 'Generate DevOps configs'),
-      test: initializeAgentTask('test', 'Generate tests'),
-      docs: initializeAgentTask('docs', 'Generate docs'),
-      security: initializeAgentTask('security', 'Review generated code for security issues'),
-      i18n: initializeAgentTask('i18n', 'Suggest or add i18n structure'),
-      wrunner: initializeAgentTask('wrunner', 'WRunner analysis and auto-fix'),
+      architect: initializeAgentTask(
+        "architect",
+        "Validate PRDs and create plan",
+      ),
+      frontend: initializeAgentTask("frontend", "Generate frontend"),
+      backend: initializeAgentTask("backend", "Generate backend"),
+      devops: initializeAgentTask("devops", "Generate DevOps configs"),
+      test: initializeAgentTask("test", "Generate tests"),
+      docs: initializeAgentTask("docs", "Generate docs"),
+      security: initializeAgentTask(
+        "security",
+        "Review generated code for security issues",
+      ),
+      i18n: initializeAgentTask("i18n", "Suggest or add i18n structure"),
+      wrunner: initializeAgentTask("wrunner", "WRunner analysis and auto-fix"),
     },
     generatedFiles: [],
   };
   const db = getDatabase();
   await db.saveSession(session);
-  logger.info({ sessionId, prdCount: prds.length }, 'Multi-PRD codegen session initialized');
+  logger.info(
+    { sessionId, prdCount: prds.length },
+    "Multi-PRD codegen session initialized",
+  );
   return session;
 }
 
@@ -283,15 +322,19 @@ export async function initializeSessionMulti(
  * ```
  */
 export function defaultComponentMapping(
-  prds: CodeGenRequestMulti['prds']
+  prds: CodeGenRequestMulti["prds"],
 ): Partial<Record<AgentType, string[]>> {
   const map: Partial<Record<AgentType, string[]>> = {};
   for (const { prd, componentLabel } of prds) {
     const id = prd.id;
-    const label = (componentLabel ?? '').toLowerCase();
-    if (label.includes('frontend') || label.includes('ui')) {
+    const label = (componentLabel ?? "").toLowerCase();
+    if (label.includes("frontend") || label.includes("ui")) {
       (map.frontend ??= []).push(id);
-    } else if (label.includes('api') || label.includes('backend') || label.includes('auth')) {
+    } else if (
+      label.includes("api") ||
+      label.includes("backend") ||
+      label.includes("auth")
+    ) {
       (map.backend ??= []).push(id);
     } else {
       (map.backend ??= []).push(id);
@@ -318,13 +361,15 @@ export function defaultComponentMapping(
  */
 export function getPrdsAndSubTasksForAgent(
   session: GenerationSession,
-  agentType: 'frontend' | 'backend' | 'test' | 'docs'
+  agentType: "frontend" | "backend" | "test" | "docs",
 ): { prds: PRD[]; subTasks: SubTask[] } {
   const prds = session.prds ?? [];
   const mapping = session.componentMapping ?? {};
   const prdIds = mapping[agentType] ?? [];
   const subTasksByPrdId = session.subTasksByPrdId ?? {};
-  const agentPrds = prdIds.length ? prds.filter((p) => prdIds.includes(p.id)) : prds;
+  const agentPrds = prdIds.length
+    ? prds.filter((p) => prdIds.includes(p.id))
+    : prds;
   const subTasks = agentPrds.flatMap((p) => subTasksByPrdId[p.id] ?? []);
   return { prds: agentPrds, subTasks };
 }

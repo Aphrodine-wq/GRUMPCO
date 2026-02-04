@@ -15,7 +15,7 @@ export interface CodePattern {
   pattern: string;
   description: string;
   location: string;
-  confidence: 'high' | 'medium' | 'low';
+  confidence: "high" | "medium" | "low";
 }
 
 export interface ComplexityMetrics {
@@ -29,29 +29,36 @@ export interface ComplexityMetrics {
 
 export interface Dependency {
   name: string;
-  type: 'import' | 'require' | 'dependency';
+  type: "import" | "require" | "dependency";
   version?: string;
   location: string;
 }
 
 export interface CodeSmell {
   type:
-    | 'long_method'
-    | 'large_class'
-    | 'duplicate_code'
-    | 'dead_code'
-    | 'magic_number'
-    | 'god_object'
-    | 'feature_envy';
-  severity: 'critical' | 'high' | 'medium' | 'low';
+    | "long_method"
+    | "large_class"
+    | "duplicate_code"
+    | "dead_code"
+    | "magic_number"
+    | "god_object"
+    | "feature_envy";
+  severity: "critical" | "high" | "medium" | "low";
   location: string;
   description: string;
   suggestion: string;
 }
 
 export interface RefactoringSuggestion {
-  type: 'extract_method' | 'extract_class' | 'rename' | 'simplify' | 'move' | 'inline' | 'split';
-  priority: 'high' | 'medium' | 'low';
+  type:
+    | "extract_method"
+    | "extract_class"
+    | "rename"
+    | "simplify"
+    | "move"
+    | "inline"
+    | "split";
+  priority: "high" | "medium" | "low";
   location: string;
   description: string;
   before: string;
@@ -60,8 +67,14 @@ export interface RefactoringSuggestion {
 }
 
 export interface PerformanceOptimization {
-  type: 'caching' | 'algorithm' | 'database' | 'network' | 'memory' | 'rendering';
-  priority: 'high' | 'medium' | 'low';
+  type:
+    | "caching"
+    | "algorithm"
+    | "database"
+    | "network"
+    | "memory"
+    | "rendering";
+  priority: "high" | "medium" | "low";
   location: string;
   issue: string;
   suggestion: string;
@@ -71,14 +84,14 @@ export interface PerformanceOptimization {
 
 export interface SecurityIssue {
   type:
-    | 'sql_injection'
-    | 'xss'
-    | 'csrf'
-    | 'auth_bypass'
-    | 'sensitive_data'
-    | 'insecure_dependency'
-    | 'weak_crypto';
-  severity: 'critical' | 'high' | 'medium' | 'low';
+    | "sql_injection"
+    | "xss"
+    | "csrf"
+    | "auth_bypass"
+    | "sensitive_data"
+    | "insecure_dependency"
+    | "weak_crypto";
+  severity: "critical" | "high" | "medium" | "low";
   location: string;
   description: string;
   vulnerability: string;
@@ -96,7 +109,7 @@ export interface TestSuite {
 
 export interface TestCase {
   name: string;
-  type: 'unit' | 'integration' | 'e2e';
+  type: "unit" | "integration" | "e2e";
   description: string;
   code: string;
   expectedBehavior: string;
@@ -113,7 +126,7 @@ export interface CoverageMetrics {
 
 export interface MockDefinition {
   name: string;
-  type: 'function' | 'class' | 'module' | 'api';
+  type: "function" | "class" | "module" | "api";
   implementation: string;
   usage: string;
 }
@@ -161,7 +174,7 @@ export interface PropertyDoc {
   name: string;
   type: string;
   description: string;
-  access: 'public' | 'private' | 'protected';
+  access: "public" | "private" | "protected";
 }
 
 export interface ModuleDoc {

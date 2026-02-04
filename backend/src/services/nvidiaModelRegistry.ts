@@ -9,5 +9,5 @@
  */
 
 // Re-export everything from the modular registry for backward compatibility
-export * from './nvidia-registry/index.js';
-export { default } from './nvidia-registry/index.js';
+export * from "./nvidia-registry/index.js";
+export { default } from "./nvidia-registry/index.js";

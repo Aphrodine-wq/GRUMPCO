@@ -9,7 +9,7 @@
  * - Coordinate multi-agent workflows
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 import type {
   AgentType,
   AgentStatus,
@@ -17,7 +17,7 @@ import type {
   Goal,
   MessageBusEvent,
   MessageBusSubscription,
-} from './types.js';
+} from "./types.js";
 
 // ============================================================================
 // CHANNEL CONSTANTS
@@ -25,28 +25,28 @@ import type {
 
 export const CHANNELS = {
   // Agent lifecycle
-  AGENT_SPAWN: 'agent:spawn',
-  AGENT_STATUS: 'agent:status',
-  AGENT_MESSAGE: 'agent:message',
-  AGENT_RESULT: 'agent:result',
+  AGENT_SPAWN: "agent:spawn",
+  AGENT_STATUS: "agent:status",
+  AGENT_MESSAGE: "agent:message",
+  AGENT_RESULT: "agent:result",
 
   // Task coordination
-  TASK_ASSIGN: 'task:assign',
-  TASK_PROGRESS: 'task:progress',
-  TASK_COMPLETE: 'task:complete',
-  TASK_FAILED: 'task:failed',
+  TASK_ASSIGN: "task:assign",
+  TASK_PROGRESS: "task:progress",
+  TASK_COMPLETE: "task:complete",
+  TASK_FAILED: "task:failed",
 
   // Goal updates
-  GOAL_CREATED: 'goal:created',
-  GOAL_UPDATED: 'goal:updated',
-  GOAL_COMPLETED: 'goal:completed',
+  GOAL_CREATED: "goal:created",
+  GOAL_UPDATED: "goal:updated",
+  GOAL_COMPLETED: "goal:completed",
 
   // System events
-  SYSTEM_ERROR: 'system:error',
-  SYSTEM_SHUTDOWN: 'system:shutdown',
+  SYSTEM_ERROR: "system:error",
+  SYSTEM_SHUTDOWN: "system:shutdown",
 
   // Broadcast
-  BROADCAST: 'broadcast',
+  BROADCAST: "broadcast",
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
@@ -56,16 +56,16 @@ export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
 // ============================================================================
 
 export interface AgentSpawnMessage {
-  type: 'agent_spawn_request';
+  type: "agent_spawn_request";
   agentType: AgentType;
   taskId: string;
   goalId?: string;
-  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  priority?: "low" | "normal" | "high" | "urgent";
   context?: Record<string, unknown>;
 }
 
 export interface AgentStatusMessage {
-  type: 'agent_status_update';
+  type: "agent_status_update";
   agentId: string;
   agentType: AgentType;
   status: AgentStatus;
@@ -75,7 +75,7 @@ export interface AgentStatusMessage {
 }
 
 export interface AgentResultMessage {
-  type: 'agent_result';
+  type: "agent_result";
   agentId: string;
   agentType: AgentType;
   taskId: string;
@@ -83,7 +83,7 @@ export interface AgentResultMessage {
 }
 
 export interface TaskAssignMessage {
-  type: 'task_assign';
+  type: "task_assign";
   taskId: string;
   agentType: AgentType;
   description: string;
@@ -93,7 +93,7 @@ export interface TaskAssignMessage {
 }
 
 export interface TaskProgressMessage {
-  type: 'task_progress';
+  type: "task_progress";
   taskId: string;
   agentId: string;
   progress: number;
@@ -101,7 +101,7 @@ export interface TaskProgressMessage {
 }
 
 export interface TaskCompleteMessage {
-  type: 'task_complete';
+  type: "task_complete";
   taskId: string;
   agentId: string;
   output: string;
@@ -110,7 +110,7 @@ export interface TaskCompleteMessage {
 }
 
 export interface TaskFailedMessage {
-  type: 'task_failed';
+  type: "task_failed";
   taskId: string;
   agentId: string;
   error: string;
@@ -118,32 +118,32 @@ export interface TaskFailedMessage {
 }
 
 export interface GoalCreatedMessage {
-  type: 'goal_created';
+  type: "goal_created";
   goal: Goal;
 }
 
 export interface GoalUpdatedMessage {
-  type: 'goal_updated';
+  type: "goal_updated";
   goalId: string;
   update: Partial<Goal>;
 }
 
 export interface GoalCompletedMessage {
-  type: 'goal_completed';
+  type: "goal_completed";
   goalId: string;
   result: string;
   artifacts?: Array<{ type: string; path?: string; content: string }>;
 }
 
 export interface BroadcastMessage {
-  type: 'broadcast';
+  type: "broadcast";
   channel: string;
   data: unknown;
   source?: string;
 }
 
 export interface SystemErrorMessage {
-  type: 'system_error';
+  type: "system_error";
   error: string;
   code?: string;
   source?: string;
@@ -179,7 +179,11 @@ interface Subscription {
 export class MessageBus {
   private emitter: EventEmitter;
   private subscriptions: Map<string, Subscription>;
-  private messageHistory: Array<{ channel: string; message: BusMessage; timestamp: string }>;
+  private messageHistory: Array<{
+    channel: string;
+    message: BusMessage;
+    timestamp: string;
+  }>;
   private maxHistory: number;
   private static instance: MessageBus;
 
@@ -222,7 +226,7 @@ export class MessageBus {
     this.emitter.emit(channel, message);
 
     // Also emit to wildcard subscribers
-    this.emitter.emit('*', { channel, message });
+    this.emitter.emit("*", { channel, message });
   }
 
   /**
@@ -233,12 +237,12 @@ export class MessageBus {
     taskId: string,
     options?: {
       goalId?: string;
-      priority?: 'low' | 'normal' | 'high' | 'urgent';
+      priority?: "low" | "normal" | "high" | "urgent";
       context?: Record<string, unknown>;
-    }
+    },
   ): void {
     this.publish(CHANNELS.AGENT_SPAWN, {
-      type: 'agent_spawn_request',
+      type: "agent_spawn_request",
       agentType,
       taskId,
       ...options,
@@ -256,10 +260,10 @@ export class MessageBus {
       taskId?: string;
       progress?: number;
       message?: string;
-    }
+    },
   ): void {
     this.publish(CHANNELS.AGENT_STATUS, {
-      type: 'agent_status_update',
+      type: "agent_status_update",
       agentId,
       agentType,
       status,
@@ -274,10 +278,10 @@ export class MessageBus {
     agentId: string,
     agentType: AgentType,
     taskId: string,
-    result: AgentResult
+    result: AgentResult,
   ): void {
     this.publish(CHANNELS.AGENT_RESULT, {
-      type: 'agent_result',
+      type: "agent_result",
       agentId,
       agentType,
       taskId,
@@ -294,10 +298,10 @@ export class MessageBus {
     description: string,
     tools: string[],
     dependsOn: string[],
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): void {
     this.publish(CHANNELS.TASK_ASSIGN, {
-      type: 'task_assign',
+      type: "task_assign",
       taskId,
       agentType,
       description,
@@ -310,9 +314,14 @@ export class MessageBus {
   /**
    * Publish task progress
    */
-  updateTaskProgress(taskId: string, agentId: string, progress: number, message?: string): void {
+  updateTaskProgress(
+    taskId: string,
+    agentId: string,
+    progress: number,
+    message?: string,
+  ): void {
     this.publish(CHANNELS.TASK_PROGRESS, {
-      type: 'task_progress',
+      type: "task_progress",
       taskId,
       agentId,
       progress,
@@ -328,10 +337,10 @@ export class MessageBus {
     agentId: string,
     output: string,
     durationMs: number,
-    artifacts?: Array<{ type: string; path?: string; content: string }>
+    artifacts?: Array<{ type: string; path?: string; content: string }>,
   ): void {
     this.publish(CHANNELS.TASK_COMPLETE, {
-      type: 'task_complete',
+      type: "task_complete",
       taskId,
       agentId,
       output,
@@ -343,9 +352,14 @@ export class MessageBus {
   /**
    * Publish task failure
    */
-  failTask(taskId: string, agentId: string, error: string, retryable: boolean): void {
+  failTask(
+    taskId: string,
+    agentId: string,
+    error: string,
+    retryable: boolean,
+  ): void {
     this.publish(CHANNELS.TASK_FAILED, {
-      type: 'task_failed',
+      type: "task_failed",
       taskId,
       agentId,
       error,
@@ -358,7 +372,7 @@ export class MessageBus {
    */
   goalCreated(goal: Goal): void {
     this.publish(CHANNELS.GOAL_CREATED, {
-      type: 'goal_created',
+      type: "goal_created",
       goal,
     });
   }
@@ -368,7 +382,7 @@ export class MessageBus {
    */
   goalUpdated(goalId: string, update: Partial<Goal>): void {
     this.publish(CHANNELS.GOAL_UPDATED, {
-      type: 'goal_updated',
+      type: "goal_updated",
       goalId,
       update,
     });
@@ -380,10 +394,10 @@ export class MessageBus {
   goalCompleted(
     goalId: string,
     result: string,
-    artifacts?: Array<{ type: string; path?: string; content: string }>
+    artifacts?: Array<{ type: string; path?: string; content: string }>,
   ): void {
     this.publish(CHANNELS.GOAL_COMPLETED, {
-      type: 'goal_completed',
+      type: "goal_completed",
       goalId,
       result,
       artifacts,
@@ -395,7 +409,7 @@ export class MessageBus {
    */
   broadcast(channel: string, data: unknown, source?: string): void {
     this.publish(CHANNELS.BROADCAST, {
-      type: 'broadcast',
+      type: "broadcast",
       channel,
       data,
       source,
@@ -407,7 +421,7 @@ export class MessageBus {
    */
   systemError(error: string, code?: string, source?: string): void {
     this.publish(CHANNELS.SYSTEM_ERROR, {
-      type: 'system_error',
+      type: "system_error",
       error,
       code,
       source,
@@ -422,9 +436,9 @@ export class MessageBus {
    * Subscribe to a channel
    */
   subscribe<T extends BusMessage = BusMessage>(
-    channel: Channel | '*',
+    channel: Channel | "*",
     handler: MessageHandler<T>,
-    filter?: (message: BusMessage) => boolean
+    filter?: (message: BusMessage) => boolean,
   ): string {
     const subscriptionId = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -456,62 +470,83 @@ export class MessageBus {
   /**
    * Subscribe to agent status updates
    */
-  onAgentStatusUpdate(handler: MessageHandler<AgentStatusMessage>, agentId?: string): string {
+  onAgentStatusUpdate(
+    handler: MessageHandler<AgentStatusMessage>,
+    agentId?: string,
+  ): string {
     return this.subscribe(
       CHANNELS.AGENT_STATUS,
       handler,
-      agentId ? (m) => (m as AgentStatusMessage).agentId === agentId : undefined
+      agentId
+        ? (m) => (m as AgentStatusMessage).agentId === agentId
+        : undefined,
     );
   }
 
   /**
    * Subscribe to agent results
    */
-  onAgentResult(handler: MessageHandler<AgentResultMessage>, agentId?: string): string {
+  onAgentResult(
+    handler: MessageHandler<AgentResultMessage>,
+    agentId?: string,
+  ): string {
     return this.subscribe(
       CHANNELS.AGENT_RESULT,
       handler,
-      agentId ? (m) => (m as AgentResultMessage).agentId === agentId : undefined
+      agentId
+        ? (m) => (m as AgentResultMessage).agentId === agentId
+        : undefined,
     );
   }
 
   /**
    * Subscribe to task completions
    */
-  onTaskComplete(handler: MessageHandler<TaskCompleteMessage>, taskId?: string): string {
+  onTaskComplete(
+    handler: MessageHandler<TaskCompleteMessage>,
+    taskId?: string,
+  ): string {
     return this.subscribe(
       CHANNELS.TASK_COMPLETE,
       handler,
-      taskId ? (m) => (m as TaskCompleteMessage).taskId === taskId : undefined
+      taskId ? (m) => (m as TaskCompleteMessage).taskId === taskId : undefined,
     );
   }
 
   /**
    * Subscribe to task failures
    */
-  onTaskFailed(handler: MessageHandler<TaskFailedMessage>, taskId?: string): string {
+  onTaskFailed(
+    handler: MessageHandler<TaskFailedMessage>,
+    taskId?: string,
+  ): string {
     return this.subscribe(
       CHANNELS.TASK_FAILED,
       handler,
-      taskId ? (m) => (m as TaskFailedMessage).taskId === taskId : undefined
+      taskId ? (m) => (m as TaskFailedMessage).taskId === taskId : undefined,
     );
   }
 
   /**
    * Subscribe to goal updates
    */
-  onGoalUpdated(handler: MessageHandler<GoalUpdatedMessage>, goalId?: string): string {
+  onGoalUpdated(
+    handler: MessageHandler<GoalUpdatedMessage>,
+    goalId?: string,
+  ): string {
     return this.subscribe(
       CHANNELS.GOAL_UPDATED,
       handler,
-      goalId ? (m) => (m as GoalUpdatedMessage).goalId === goalId : undefined
+      goalId ? (m) => (m as GoalUpdatedMessage).goalId === goalId : undefined,
     );
   }
 
   /**
    * Subscribe to all events (wildcard)
    */
-  onAny(handler: (event: { channel: string; message: BusMessage }) => void): string {
+  onAny(
+    handler: (event: { channel: string; message: BusMessage }) => void,
+  ): string {
     const subscriptionId = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     // Wrapper to match MessageHandler signature for internal tracking
@@ -521,12 +556,12 @@ export class MessageBus {
 
     const subscription: Subscription = {
       id: subscriptionId,
-      channel: '*',
+      channel: "*",
       handler: wrappedHandler,
     };
 
     this.subscriptions.set(subscriptionId, subscription);
-    this.emitter.on('*', handler);
+    this.emitter.on("*", handler);
 
     return subscriptionId;
   }
@@ -570,7 +605,7 @@ export class MessageBus {
   once<T extends BusMessage = BusMessage>(
     channel: Channel,
     filter?: (message: BusMessage) => boolean,
-    timeoutMs?: number
+    timeoutMs?: number,
   ): Promise<T> {
     return new Promise((resolve, reject) => {
       let timeoutId: NodeJS.Timeout | undefined;
@@ -599,7 +634,7 @@ export class MessageBus {
    */
   async waitForTask(
     taskId: string,
-    timeoutMs: number = 300_000
+    timeoutMs: number = 300_000,
   ): Promise<TaskCompleteMessage | TaskFailedMessage> {
     return new Promise((resolve, reject) => {
       let timeoutId: NodeJS.Timeout | undefined;
@@ -664,7 +699,9 @@ export class MessageBus {
    */
   getSubscriptionCount(channel?: Channel): number {
     if (channel) {
-      return Array.from(this.subscriptions.values()).filter((s) => s.channel === channel).length;
+      return Array.from(this.subscriptions.values()).filter(
+        (s) => s.channel === channel,
+      ).length;
     }
     return this.subscriptions.size;
   }
@@ -681,9 +718,9 @@ export class MessageBus {
    */
   shutdown(): void {
     this.publish(CHANNELS.SYSTEM_SHUTDOWN, {
-      type: 'broadcast',
-      channel: 'shutdown',
-      data: { reason: 'Message bus shutting down' },
+      type: "broadcast",
+      channel: "shutdown",
+      data: { reason: "Message bus shutting down" },
     });
 
     this.unsubscribeAll();

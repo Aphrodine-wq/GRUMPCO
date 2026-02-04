@@ -10,25 +10,29 @@
  * Optional: PHONE_TO_USER_ID as JSON map for Twilio routing.
  */
 
-import { Router, type Request, type Response } from 'express';
-import { processMessage } from '../services/messagingService.js';
-import { sendTelegram, sendTwilio } from '../services/messagingShipNotifier.js';
-import { getDatabase } from '../db/database.js';
-import logger from '../middleware/logger.js';
-import { timingSafeEqualString } from '../utils/security.js';
+import { Router, type Request, type Response } from "express";
+import { processMessage } from "../services/messagingService.js";
+import { sendTelegram, sendTwilio } from "../services/messagingShipNotifier.js";
+import { getDatabase } from "../db/database.js";
+import logger from "../middleware/logger.js";
+import { timingSafeEqualString } from "../utils/security.js";
 
 const router = Router();
-const PLATFORMS = ['telegram', 'discord', 'twilio', 'slack'] as const;
-const isProduction = process.env.NODE_ENV === 'production';
+const PLATFORMS = ["telegram", "discord", "twilio", "slack"] as const;
+const isProduction = process.env.NODE_ENV === "production";
 
-function verifyTwilioWebhook(req: Request): { ok: boolean; missingInProd?: boolean } {
+function verifyTwilioWebhook(req: Request): {
+  ok: boolean;
+  missingInProd?: boolean;
+} {
   const secret = process.env.TWILIO_WEBHOOK_SECRET;
-  if (isProduction && process.env.MESSAGING_PROVIDER === 'twilio' && !secret) {
+  if (isProduction && process.env.MESSAGING_PROVIDER === "twilio" && !secret) {
     return { ok: false, missingInProd: true };
   }
   if (!secret) return { ok: true };
-  const header = req.headers['x-webhook-secret'] ?? req.headers['x-twilio-secret'];
-  const provided = typeof header === 'string' ? header : '';
+  const header =
+    req.headers["x-webhook-secret"] ?? req.headers["x-twilio-secret"];
+  const provided = typeof header === "string" ? header : "";
   return { ok: timingSafeEqualString(provided, secret) };
 }
 
@@ -37,7 +41,9 @@ function verifyTelegramWebhook(req: Request): boolean {
   if (!secret) return true;
   const q = (req.query?.secret ?? req.query?.token) as string | undefined;
   if (q) return timingSafeEqualString(q, secret);
-  const header = req.headers['x-telegram-bot-api-secret-token'] as string | undefined;
+  const header = req.headers["x-telegram-bot-api-secret-token"] as
+    | string
+    | undefined;
   if (header) return timingSafeEqualString(header, secret);
   return false;
 }
@@ -48,13 +54,13 @@ function resolveUserKey(_from: string): string {
   if (mapping) {
     try {
       const entries = JSON.parse(mapping) as Record<string, string>;
-      const key = entries[_from] ?? entries[_from.replace(/\D/g, '')];
+      const key = entries[_from] ?? entries[_from.replace(/\D/g, "")];
       if (key) return key;
     } catch {
       // ignore
     }
   }
-  return 'default';
+  return "default";
 }
 
 /**
@@ -62,91 +68,111 @@ function resolveUserKey(_from: string): string {
  * Body (Twilio form): From, To, Body (SMS) or SpeechResult (voice), MessageSid.
  * For WhatsApp: From is whatsapp:+1234567890.
  */
-router.post('/inbound', async (req: Request, res: Response) => {
+router.post("/inbound", async (req: Request, res: Response) => {
   const verification = verifyTwilioWebhook(req);
   if (verification.missingInProd) {
-    logger.warn('Twilio webhook secret not configured in production');
+    logger.warn("Twilio webhook secret not configured in production");
     res
       .status(503)
-      .json({ error: 'Messaging webhook secret not configured', type: 'config_error' });
+      .json({
+        error: "Messaging webhook secret not configured",
+        type: "config_error",
+      });
     return;
   }
   if (!verification.ok) {
-    res.status(403).json({ error: 'Invalid webhook secret' });
+    res.status(403).json({ error: "Invalid webhook secret" });
     return;
   }
 
-  const provider = process.env.MESSAGING_PROVIDER ?? 'twilio';
-  if (provider !== 'twilio') {
-    res.status(200).send('');
+  const provider = process.env.MESSAGING_PROVIDER ?? "twilio";
+  if (provider !== "twilio") {
+    res.status(200).send("");
     return;
   }
 
   const body = req.body ?? {};
-  const from = (body.From ?? body.from ?? '').toString();
-  const text = (body.Body ?? body.body ?? body.SpeechResult ?? body.TranscriptionText ?? '')
+  const from = (body.From ?? body.from ?? "").toString();
+  const text = (
+    body.Body ??
+    body.body ??
+    body.SpeechResult ??
+    body.TranscriptionText ??
+    ""
+  )
     .toString()
     .trim();
 
   if (!from) {
-    logger.warn({ body: JSON.stringify(body).slice(0, 200) }, 'Messaging inbound: missing From');
-    res.status(200).send('');
+    logger.warn(
+      { body: JSON.stringify(body).slice(0, 200) },
+      "Messaging inbound: missing From",
+    );
+    res.status(200).send("");
     return;
   }
 
   const userKey = resolveUserKey(from);
-  if (userKey === 'default' && process.env.PHONE_TO_USER_ID) {
-    logger.debug({ from }, 'Messaging: phone not mapped, ignoring');
-    res.status(200).send('');
+  if (userKey === "default" && process.env.PHONE_TO_USER_ID) {
+    logger.debug({ from }, "Messaging: phone not mapped, ignoring");
+    res.status(200).send("");
     return;
   }
 
-  const reply = await processMessage('twilio', from, text || '(empty)');
+  const reply = await processMessage("twilio", from, text || "(empty)");
 
   if (reply) {
     try {
       await sendTwilio(from, reply);
     } catch (err) {
-      logger.warn({ err }, 'Twilio send error');
+      logger.warn({ err }, "Twilio send error");
     }
   }
 
-  res.status(200).send('');
+  res.status(200).send("");
 });
 
 /**
  * POST /api/messaging/telegram
  * Body (Telegram JSON): { message: { chat: { id }, text } }
  */
-router.post('/telegram', async (req: Request, res: Response) => {
+router.post("/telegram", async (req: Request, res: Response) => {
   if (!verifyTelegramWebhook(req)) {
-    res.status(403).json({ error: 'Invalid webhook secret' });
+    res.status(403).json({ error: "Invalid webhook secret" });
     return;
   }
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {
-    logger.warn('TELEGRAM_BOT_TOKEN not set');
-    res.status(503).json({ error: 'Telegram not configured', type: 'config_error' });
+    logger.warn("TELEGRAM_BOT_TOKEN not set");
+    res
+      .status(503)
+      .json({ error: "Telegram not configured", type: "config_error" });
     return;
   }
 
-  const body = req.body as { message?: { chat?: { id?: number }; text?: string } };
+  const body = req.body as {
+    message?: { chat?: { id?: number }; text?: string };
+  };
   const message = body?.message;
   const chatId = message?.chat?.id;
-  const text = (message?.text ?? '').toString().trim();
+  const text = (message?.text ?? "").toString().trim();
 
   if (chatId == null) {
     res.status(200).json({ ok: true });
     return;
   }
 
-  const reply = await processMessage('telegram', String(chatId), text || '(empty)');
+  const reply = await processMessage(
+    "telegram",
+    String(chatId),
+    text || "(empty)",
+  );
 
   try {
     await sendTelegram(String(chatId), reply);
   } catch (err) {
-    logger.warn({ err }, 'Telegram send error');
+    logger.warn({ err }, "Telegram send error");
   }
 
   res.status(200).json({ ok: true });
@@ -157,26 +183,30 @@ router.post('/telegram', async (req: Request, res: Response) => {
  * Pair chat app identity with G-Rump user for proactive push (heartbeats, task completion).
  * Body: { platform, platformUserId }
  */
-router.post('/subscribe', async (req: Request, res: Response) => {
+router.post("/subscribe", async (req: Request, res: Response) => {
   try {
-    const userId = (req as Request & { userId?: string }).userId ?? 'default';
+    const userId = (req as Request & { userId?: string }).userId ?? "default";
     const body = req.body ?? {};
-    const platform = String(body.platform ?? '').toLowerCase();
-    const platformUserId = String(body.platformUserId ?? body.platform_user_id ?? '').trim();
+    const platform = String(body.platform ?? "").toLowerCase();
+    const platformUserId = String(
+      body.platformUserId ?? body.platform_user_id ?? "",
+    ).trim();
 
     if (!platform || !platformUserId) {
-      res.status(400).json({ error: 'platform and platformUserId are required' });
+      res
+        .status(400)
+        .json({ error: "platform and platformUserId are required" });
       return;
     }
     if (!PLATFORMS.includes(platform as (typeof PLATFORMS)[number])) {
       res.status(400).json({
-        error: `platform must be one of: ${PLATFORMS.join(', ')}`,
+        error: `platform must be one of: ${PLATFORMS.join(", ")}`,
       });
       return;
     }
 
     const db = getDatabase();
-    const id = `sub_${userId}_${platform}_${platformUserId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const id = `sub_${userId}_${platform}_${platformUserId.replace(/[^a-zA-Z0-9]/g, "_")}`;
     const now = new Date().toISOString();
     await db.saveMessagingSubscription({
       id,
@@ -191,8 +221,11 @@ router.post('/subscribe', async (req: Request, res: Response) => {
       subscription: { id, userId, platform, platformUserId, createdAt: now },
     });
   } catch (err) {
-    logger.error({ err: (err as Error).message }, 'Failed to create messaging subscription');
-    res.status(500).json({ error: 'Failed to create subscription' });
+    logger.error(
+      { err: (err as Error).message },
+      "Failed to create messaging subscription",
+    );
+    res.status(500).json({ error: "Failed to create subscription" });
   }
 });
 
@@ -201,15 +234,19 @@ router.post('/subscribe', async (req: Request, res: Response) => {
  * Remove a messaging subscription.
  * Body: { platform, platformUserId }
  */
-router.delete('/subscribe', async (req: Request, res: Response) => {
+router.delete("/subscribe", async (req: Request, res: Response) => {
   try {
-    const userId = (req as Request & { userId?: string }).userId ?? 'default';
+    const userId = (req as Request & { userId?: string }).userId ?? "default";
     const body = req.body ?? {};
-    const platform = String(body.platform ?? '').toLowerCase();
-    const platformUserId = String(body.platformUserId ?? body.platform_user_id ?? '').trim();
+    const platform = String(body.platform ?? "").toLowerCase();
+    const platformUserId = String(
+      body.platformUserId ?? body.platform_user_id ?? "",
+    ).trim();
 
     if (!platform || !platformUserId) {
-      res.status(400).json({ error: 'platform and platformUserId are required' });
+      res
+        .status(400)
+        .json({ error: "platform and platformUserId are required" });
       return;
     }
 
@@ -217,8 +254,11 @@ router.delete('/subscribe', async (req: Request, res: Response) => {
     await db.deleteMessagingSubscription(userId, platform, platformUserId);
     res.status(200).json({ ok: true });
   } catch (err) {
-    logger.error({ err: (err as Error).message }, 'Failed to delete messaging subscription');
-    res.status(500).json({ error: 'Failed to delete subscription' });
+    logger.error(
+      { err: (err as Error).message },
+      "Failed to delete messaging subscription",
+    );
+    res.status(500).json({ error: "Failed to delete subscription" });
   }
 });
 
@@ -226,15 +266,18 @@ router.delete('/subscribe', async (req: Request, res: Response) => {
  * GET /api/messaging/subscriptions
  * List current user's messaging subscriptions.
  */
-router.get('/subscriptions', async (req: Request, res: Response) => {
+router.get("/subscriptions", async (req: Request, res: Response) => {
   try {
-    const userId = (req as Request & { userId?: string }).userId ?? 'default';
+    const userId = (req as Request & { userId?: string }).userId ?? "default";
     const db = getDatabase();
     const subs = await db.getMessagingSubscriptions(userId);
     res.json({ subscriptions: subs });
   } catch (err) {
-    logger.error({ err: (err as Error).message }, 'Failed to list messaging subscriptions');
-    res.status(500).json({ error: 'Failed to list subscriptions' });
+    logger.error(
+      { err: (err as Error).message },
+      "Failed to list messaging subscriptions",
+    );
+    res.status(500).json({ error: "Failed to list subscriptions" });
   }
 });
 

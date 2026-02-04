@@ -17,12 +17,23 @@
  * @module routes/memory
  */
 
-import { Router, type Request, type Response } from 'express';
-import { z } from 'zod';
-import { recall, remember, learnFromFeedback } from '../services/memoryService.js';
-import { gAgentMemoryService, type MemoryCategory } from '../services/gAgentMemoryService.js';
-import logger from '../middleware/logger.js';
-import { sendErrorResponse, sendServerError, ErrorCode } from '../utils/errorResponse.js';
+import { Router, type Request, type Response } from "express";
+import { z } from "zod";
+import {
+  recall,
+  remember,
+  learnFromFeedback,
+} from "../services/memoryService.js";
+import {
+  gAgentMemoryService,
+  type MemoryCategory,
+} from "../services/gAgentMemoryService.js";
+import logger from "../middleware/logger.js";
+import {
+  sendErrorResponse,
+  sendServerError,
+  ErrorCode,
+} from "../utils/errorResponse.js";
 
 const router = Router();
 
@@ -34,17 +45,25 @@ const router = Router();
  * Schema for recall request.
  */
 const recallSchema = z.object({
-  userId: z.string({ required_error: 'userId is required' }).min(1, 'userId is required'),
-  query: z.string({ required_error: 'query is required' }).min(1, 'query is required'),
+  userId: z
+    .string({ required_error: "userId is required" })
+    .min(1, "userId is required"),
+  query: z
+    .string({ required_error: "query is required" })
+    .min(1, "query is required"),
 });
 
 /**
  * Schema for remember request.
  */
 const rememberSchema = z.object({
-  userId: z.string({ required_error: 'userId is required' }).min(1, 'userId is required'),
-  type: z.enum(['interaction', 'correction', 'preference']).optional(),
-  content: z.string({ required_error: 'content is required' }).min(1, 'content is required'),
+  userId: z
+    .string({ required_error: "userId is required" })
+    .min(1, "userId is required"),
+  type: z.enum(["interaction", "correction", "preference"]).optional(),
+  content: z
+    .string({ required_error: "content is required" })
+    .min(1, "content is required"),
   summary: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
 });
@@ -53,9 +72,15 @@ const rememberSchema = z.object({
  * Schema for feedback request.
  */
 const feedbackSchema = z.object({
-  userId: z.string({ required_error: 'userId is required' }).min(1, 'userId is required'),
-  originalResponse: z.string({ required_error: 'originalResponse is required' }),
-  correctedResponse: z.string({ required_error: 'correctedResponse is required' }),
+  userId: z
+    .string({ required_error: "userId is required" })
+    .min(1, "userId is required"),
+  originalResponse: z.string({
+    required_error: "originalResponse is required",
+  }),
+  correctedResponse: z.string({
+    required_error: "correctedResponse is required",
+  }),
   context: z.string().optional(),
 });
 
@@ -71,9 +96,9 @@ const searchQuerySchema = z.object({
  * Schema for lexicon entry creation.
  */
 const lexiconEntrySchema = z.object({
-  term: z.string().min(1, 'term is required'),
-  definition: z.string().min(1, 'definition is required'),
-  category: z.string().min(1, 'category is required'),
+  term: z.string().min(1, "term is required"),
+  definition: z.string().min(1, "definition is required"),
+  category: z.string().min(1, "category is required"),
   aliases: z.array(z.string()).optional(),
   relatedTerms: z.array(z.string()).optional(),
   examples: z.array(z.string()).optional(),
@@ -84,11 +109,11 @@ const lexiconEntrySchema = z.object({
  * Schema for project context creation.
  */
 const projectContextSchema = z.object({
-  workspaceRoot: z.string().min(1, 'workspaceRoot is required'),
-  name: z.string().min(1, 'name is required'),
-  type: z.string().min(1, 'type is required'),
-  techStack: z.array(z.string()).min(1, 'techStack is required'),
-  architecture: z.string().min(1, 'architecture is required'),
+  workspaceRoot: z.string().min(1, "workspaceRoot is required"),
+  name: z.string().min(1, "name is required"),
+  type: z.string().min(1, "type is required"),
+  techStack: z.array(z.string()).min(1, "techStack is required"),
+  architecture: z.string().min(1, "architecture is required"),
   conventions: z
     .array(
       z.object({
@@ -96,7 +121,7 @@ const projectContextSchema = z.object({
         pattern: z.string(),
         description: z.string(),
         examples: z.array(z.string()),
-      })
+      }),
     )
     .optional(),
   files: z
@@ -106,7 +131,7 @@ const projectContextSchema = z.object({
         type: z.string(),
         description: z.string(),
         exports: z.array(z.string()).optional(),
-      })
+      }),
     )
     .optional(),
   dependencies: z.array(z.string()).optional(),
@@ -116,8 +141,10 @@ const projectContextSchema = z.object({
  * Schema for unified G-Agent search.
  */
 const gAgentSearchSchema = z.object({
-  query: z.string().min(1, 'query is required'),
-  categories: z.array(z.enum(['patterns', 'skills', 'lexicon', 'projectContext'])).optional(),
+  query: z.string().min(1, "query is required"),
+  categories: z
+    .array(z.enum(["patterns", "skills", "lexicon", "projectContext"]))
+    .optional(),
   limit: z.number().int().positive().optional(),
 });
 
@@ -135,11 +162,11 @@ const gAgentSearchSchema = z.object({
  * @returns {object} 200 - Empty memories list
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.get('/', async (_req: Request, res: Response): Promise<void> => {
+router.get("/", async (_req: Request, res: Response): Promise<void> => {
   try {
     res.json({ memories: [] });
   } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'Memory list error');
+    logger.warn({ error: (e as Error).message }, "Memory list error");
     sendServerError(res, e);
   }
 });
@@ -158,13 +185,18 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
  * @returns {ApiErrorResponse} 400 - Validation error
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.post('/recall', async (req: Request, res: Response): Promise<void> => {
+router.post("/recall", async (req: Request, res: Response): Promise<void> => {
   const parseResult = recallSchema.safeParse(req.body);
   if (!parseResult.success) {
     const firstError = parseResult.error.errors[0];
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError?.message ?? 'Invalid request', {
-      field: firstError?.path?.join('.'),
-    });
+    sendErrorResponse(
+      res,
+      ErrorCode.VALIDATION_ERROR,
+      firstError?.message ?? "Invalid request",
+      {
+        field: firstError?.path?.join("."),
+      },
+    );
     return;
   }
 
@@ -173,7 +205,7 @@ router.post('/recall', async (req: Request, res: Response): Promise<void> => {
     const memories = await recall(userId.trim(), query.trim());
     res.json({ memories });
   } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'Memory recall error');
+    logger.warn({ error: (e as Error).message }, "Memory recall error");
     sendServerError(res, e);
   }
 });
@@ -195,19 +227,25 @@ router.post('/recall', async (req: Request, res: Response): Promise<void> => {
  * @returns {ApiErrorResponse} 400 - Validation error
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.post('/remember', async (req: Request, res: Response): Promise<void> => {
+router.post("/remember", async (req: Request, res: Response): Promise<void> => {
   const parseResult = rememberSchema.safeParse(req.body);
   if (!parseResult.success) {
     const firstError = parseResult.error.errors[0];
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError?.message ?? 'Invalid request', {
-      field: firstError?.path?.join('.'),
-    });
+    sendErrorResponse(
+      res,
+      ErrorCode.VALIDATION_ERROR,
+      firstError?.message ?? "Invalid request",
+      {
+        field: firstError?.path?.join("."),
+      },
+    );
     return;
   }
 
   try {
     const { userId, type, content, summary, metadata } = parseResult.data;
-    const validType = type === 'correction' || type === 'preference' ? type : 'interaction';
+    const validType =
+      type === "correction" || type === "preference" ? type : "interaction";
     await remember({
       userId: userId.trim(),
       type: validType,
@@ -217,7 +255,7 @@ router.post('/remember', async (req: Request, res: Response): Promise<void> => {
     });
     res.status(201).json({ ok: true });
   } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'Memory remember error');
+    logger.warn({ error: (e as Error).message }, "Memory remember error");
     sendServerError(res, e);
   }
 });
@@ -238,18 +276,24 @@ router.post('/remember', async (req: Request, res: Response): Promise<void> => {
  * @returns {ApiErrorResponse} 400 - Validation error
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.post('/feedback', async (req: Request, res: Response): Promise<void> => {
+router.post("/feedback", async (req: Request, res: Response): Promise<void> => {
   const parseResult = feedbackSchema.safeParse(req.body);
   if (!parseResult.success) {
     const firstError = parseResult.error.errors[0];
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError?.message ?? 'Invalid request', {
-      field: firstError?.path?.join('.'),
-    });
+    sendErrorResponse(
+      res,
+      ErrorCode.VALIDATION_ERROR,
+      firstError?.message ?? "Invalid request",
+      {
+        field: firstError?.path?.join("."),
+      },
+    );
     return;
   }
 
   try {
-    const { userId, originalResponse, correctedResponse, context } = parseResult.data;
+    const { userId, originalResponse, correctedResponse, context } =
+      parseResult.data;
     await learnFromFeedback({
       userId: userId.trim(),
       originalResponse,
@@ -258,7 +302,7 @@ router.post('/feedback', async (req: Request, res: Response): Promise<void> => {
     });
     res.status(201).json({ ok: true });
   } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'Memory feedback error');
+    logger.warn({ error: (e as Error).message }, "Memory feedback error");
     sendServerError(res, e);
   }
 });
@@ -277,15 +321,21 @@ router.post('/feedback', async (req: Request, res: Response): Promise<void> => {
  * @returns {object} 200 - Memory statistics
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.get('/gagent/stats', async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const stats = gAgentMemoryService.getStats();
-    res.json(stats);
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent memory stats error');
-    sendServerError(res, e);
-  }
-});
+router.get(
+  "/gagent/stats",
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const stats = gAgentMemoryService.getStats();
+      res.json(stats);
+    } catch (e) {
+      logger.warn(
+        { error: (e as Error).message },
+        "G-Agent memory stats error",
+      );
+      sendServerError(res, e);
+    }
+  },
+);
 
 /**
  * GET /api/memory/gagent/patterns
@@ -297,15 +347,21 @@ router.get('/gagent/stats', async (_req: Request, res: Response): Promise<void> 
  * @returns {object} 200 - All patterns
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.get('/gagent/patterns', async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const patterns = gAgentMemoryService.getAllPatterns();
-    res.json({ patterns });
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent patterns list error');
-    sendServerError(res, e);
-  }
-});
+router.get(
+  "/gagent/patterns",
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const patterns = gAgentMemoryService.getAllPatterns();
+      res.json({ patterns });
+    } catch (e) {
+      logger.warn(
+        { error: (e as Error).message },
+        "G-Agent patterns list error",
+      );
+      sendServerError(res, e);
+    }
+  },
+);
 
 /**
  * GET /api/memory/gagent/patterns/search
@@ -320,28 +376,39 @@ router.get('/gagent/patterns', async (_req: Request, res: Response): Promise<voi
  * @returns {ApiErrorResponse} 400 - Validation error
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.get('/gagent/patterns/search', async (req: Request, res: Response): Promise<void> => {
-  const parseResult = searchQuerySchema.safeParse(req.query);
-  if (!parseResult.success) {
-    const firstError = parseResult.error.errors[0];
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError?.message ?? 'Invalid request', {
-      field: firstError?.path?.join('.'),
-    });
-    return;
-  }
+router.get(
+  "/gagent/patterns/search",
+  async (req: Request, res: Response): Promise<void> => {
+    const parseResult = searchQuerySchema.safeParse(req.query);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.errors[0];
+      sendErrorResponse(
+        res,
+        ErrorCode.VALIDATION_ERROR,
+        firstError?.message ?? "Invalid request",
+        {
+          field: firstError?.path?.join("."),
+        },
+      );
+      return;
+    }
 
-  try {
-    const { q, limit } = parseResult.data;
-    const patterns = await gAgentMemoryService.findPatterns(
-      q.trim(),
-      limit ? parseInt(limit, 10) : 5
-    );
-    res.json({ patterns });
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent patterns search error');
-    sendServerError(res, e);
-  }
-});
+    try {
+      const { q, limit } = parseResult.data;
+      const patterns = await gAgentMemoryService.findPatterns(
+        q.trim(),
+        limit ? parseInt(limit, 10) : 5,
+      );
+      res.json({ patterns });
+    } catch (e) {
+      logger.warn(
+        { error: (e as Error).message },
+        "G-Agent patterns search error",
+      );
+      sendServerError(res, e);
+    }
+  },
+);
 
 /**
  * GET /api/memory/gagent/patterns/:id
@@ -355,20 +422,23 @@ router.get('/gagent/patterns/search', async (req: Request, res: Response): Promi
  * @returns {ApiErrorResponse} 404 - Pattern not found
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.get('/gagent/patterns/:id', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const id = req.params.id as string;
-    const pattern = gAgentMemoryService.getPattern(id);
-    if (!pattern) {
-      sendErrorResponse(res, ErrorCode.NOT_FOUND, 'Pattern not found');
-      return;
+router.get(
+  "/gagent/patterns/:id",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = req.params.id as string;
+      const pattern = gAgentMemoryService.getPattern(id);
+      if (!pattern) {
+        sendErrorResponse(res, ErrorCode.NOT_FOUND, "Pattern not found");
+        return;
+      }
+      res.json({ pattern });
+    } catch (e) {
+      logger.warn({ error: (e as Error).message }, "G-Agent pattern get error");
+      sendServerError(res, e);
     }
-    res.json({ pattern });
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent pattern get error');
-    sendServerError(res, e);
-  }
-});
+  },
+);
 
 /**
  * GET /api/memory/gagent/skills
@@ -380,15 +450,18 @@ router.get('/gagent/patterns/:id', async (req: Request, res: Response): Promise<
  * @returns {object} 200 - All skills
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.get('/gagent/skills', async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const skills = gAgentMemoryService.getAllSkills();
-    res.json({ skills });
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent skills list error');
-    sendServerError(res, e);
-  }
-});
+router.get(
+  "/gagent/skills",
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const skills = gAgentMemoryService.getAllSkills();
+      res.json({ skills });
+    } catch (e) {
+      logger.warn({ error: (e as Error).message }, "G-Agent skills list error");
+      sendServerError(res, e);
+    }
+  },
+);
 
 /**
  * GET /api/memory/gagent/skills/search
@@ -403,25 +476,39 @@ router.get('/gagent/skills', async (_req: Request, res: Response): Promise<void>
  * @returns {ApiErrorResponse} 400 - Validation error
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.get('/gagent/skills/search', async (req: Request, res: Response): Promise<void> => {
-  const parseResult = searchQuerySchema.safeParse(req.query);
-  if (!parseResult.success) {
-    const firstError = parseResult.error.errors[0];
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError?.message ?? 'Invalid request', {
-      field: firstError?.path?.join('.'),
-    });
-    return;
-  }
+router.get(
+  "/gagent/skills/search",
+  async (req: Request, res: Response): Promise<void> => {
+    const parseResult = searchQuerySchema.safeParse(req.query);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.errors[0];
+      sendErrorResponse(
+        res,
+        ErrorCode.VALIDATION_ERROR,
+        firstError?.message ?? "Invalid request",
+        {
+          field: firstError?.path?.join("."),
+        },
+      );
+      return;
+    }
 
-  try {
-    const { q, limit } = parseResult.data;
-    const skills = await gAgentMemoryService.findSkills(q.trim(), limit ? parseInt(limit, 10) : 5);
-    res.json({ skills });
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent skills search error');
-    sendServerError(res, e);
-  }
-});
+    try {
+      const { q, limit } = parseResult.data;
+      const skills = await gAgentMemoryService.findSkills(
+        q.trim(),
+        limit ? parseInt(limit, 10) : 5,
+      );
+      res.json({ skills });
+    } catch (e) {
+      logger.warn(
+        { error: (e as Error).message },
+        "G-Agent skills search error",
+      );
+      sendServerError(res, e);
+    }
+  },
+);
 
 /**
  * GET /api/memory/gagent/lexicon
@@ -433,15 +520,21 @@ router.get('/gagent/skills/search', async (req: Request, res: Response): Promise
  * @returns {object} 200 - All lexicon entries
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.get('/gagent/lexicon', async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const entries = gAgentMemoryService.getAllLexiconEntries();
-    res.json({ entries });
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent lexicon list error');
-    sendServerError(res, e);
-  }
-});
+router.get(
+  "/gagent/lexicon",
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const entries = gAgentMemoryService.getAllLexiconEntries();
+      res.json({ entries });
+    } catch (e) {
+      logger.warn(
+        { error: (e as Error).message },
+        "G-Agent lexicon list error",
+      );
+      sendServerError(res, e);
+    }
+  },
+);
 
 /**
  * GET /api/memory/gagent/lexicon/search
@@ -456,28 +549,39 @@ router.get('/gagent/lexicon', async (_req: Request, res: Response): Promise<void
  * @returns {ApiErrorResponse} 400 - Validation error
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.get('/gagent/lexicon/search', async (req: Request, res: Response): Promise<void> => {
-  const parseResult = searchQuerySchema.safeParse(req.query);
-  if (!parseResult.success) {
-    const firstError = parseResult.error.errors[0];
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError?.message ?? 'Invalid request', {
-      field: firstError?.path?.join('.'),
-    });
-    return;
-  }
+router.get(
+  "/gagent/lexicon/search",
+  async (req: Request, res: Response): Promise<void> => {
+    const parseResult = searchQuerySchema.safeParse(req.query);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.errors[0];
+      sendErrorResponse(
+        res,
+        ErrorCode.VALIDATION_ERROR,
+        firstError?.message ?? "Invalid request",
+        {
+          field: firstError?.path?.join("."),
+        },
+      );
+      return;
+    }
 
-  try {
-    const { q, limit } = parseResult.data;
-    const entries = await gAgentMemoryService.searchLexicon(
-      q.trim(),
-      limit ? parseInt(limit, 10) : 10
-    );
-    res.json({ entries });
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent lexicon search error');
-    sendServerError(res, e);
-  }
-});
+    try {
+      const { q, limit } = parseResult.data;
+      const entries = await gAgentMemoryService.searchLexicon(
+        q.trim(),
+        limit ? parseInt(limit, 10) : 10,
+      );
+      res.json({ entries });
+    } catch (e) {
+      logger.warn(
+        { error: (e as Error).message },
+        "G-Agent lexicon search error",
+      );
+      sendServerError(res, e);
+    }
+  },
+);
 
 /**
  * GET /api/memory/gagent/lexicon/:term
@@ -491,20 +595,23 @@ router.get('/gagent/lexicon/search', async (req: Request, res: Response): Promis
  * @returns {ApiErrorResponse} 404 - Term not found
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.get('/gagent/lexicon/:term', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const term = req.params.term as string;
-    const entry = gAgentMemoryService.getLexiconEntry(term);
-    if (!entry) {
-      sendErrorResponse(res, ErrorCode.NOT_FOUND, 'Term not found');
-      return;
+router.get(
+  "/gagent/lexicon/:term",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const term = req.params.term as string;
+      const entry = gAgentMemoryService.getLexiconEntry(term);
+      if (!entry) {
+        sendErrorResponse(res, ErrorCode.NOT_FOUND, "Term not found");
+        return;
+      }
+      res.json({ entry });
+    } catch (e) {
+      logger.warn({ error: (e as Error).message }, "G-Agent lexicon get error");
+      sendServerError(res, e);
     }
-    res.json({ entry });
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent lexicon get error');
-    sendServerError(res, e);
-  }
-});
+  },
+);
 
 /**
  * POST /api/memory/gagent/lexicon
@@ -525,34 +632,49 @@ router.get('/gagent/lexicon/:term', async (req: Request, res: Response): Promise
  * @returns {ApiErrorResponse} 400 - Validation error
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.post('/gagent/lexicon', async (req: Request, res: Response): Promise<void> => {
-  const parseResult = lexiconEntrySchema.safeParse(req.body);
-  if (!parseResult.success) {
-    const firstError = parseResult.error.errors[0];
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError?.message ?? 'Invalid request', {
-      field: firstError?.path?.join('.'),
-    });
-    return;
-  }
+router.post(
+  "/gagent/lexicon",
+  async (req: Request, res: Response): Promise<void> => {
+    const parseResult = lexiconEntrySchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.errors[0];
+      sendErrorResponse(
+        res,
+        ErrorCode.VALIDATION_ERROR,
+        firstError?.message ?? "Invalid request",
+        {
+          field: firstError?.path?.join("."),
+        },
+      );
+      return;
+    }
 
-  try {
-    const { term, definition, category, aliases, relatedTerms, examples, source } =
-      parseResult.data;
-    const entry = await gAgentMemoryService.addLexiconEntry({
-      term,
-      definition,
-      category,
-      aliases: aliases ?? [],
-      relatedTerms: relatedTerms ?? [],
-      examples: examples ?? [],
-      source: source ?? 'user',
-    });
-    res.status(201).json({ entry });
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent lexicon add error');
-    sendServerError(res, e);
-  }
-});
+    try {
+      const {
+        term,
+        definition,
+        category,
+        aliases,
+        relatedTerms,
+        examples,
+        source,
+      } = parseResult.data;
+      const entry = await gAgentMemoryService.addLexiconEntry({
+        term,
+        definition,
+        category,
+        aliases: aliases ?? [],
+        relatedTerms: relatedTerms ?? [],
+        examples: examples ?? [],
+        source: source ?? "user",
+      });
+      res.status(201).json({ entry });
+    } catch (e) {
+      logger.warn({ error: (e as Error).message }, "G-Agent lexicon add error");
+      sendServerError(res, e);
+    }
+  },
+);
 
 /**
  * GET /api/memory/gagent/context/:workspaceRoot
@@ -566,20 +688,30 @@ router.post('/gagent/lexicon', async (req: Request, res: Response): Promise<void
  * @returns {ApiErrorResponse} 404 - Project context not found
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.get('/gagent/context/:workspaceRoot', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const workspaceRoot = decodeURIComponent(req.params.workspaceRoot as string);
-    const context = await gAgentMemoryService.getProjectContext(workspaceRoot);
-    if (!context) {
-      sendErrorResponse(res, ErrorCode.NOT_FOUND, 'Project context not found');
-      return;
+router.get(
+  "/gagent/context/:workspaceRoot",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const workspaceRoot = decodeURIComponent(
+        req.params.workspaceRoot as string,
+      );
+      const context =
+        await gAgentMemoryService.getProjectContext(workspaceRoot);
+      if (!context) {
+        sendErrorResponse(
+          res,
+          ErrorCode.NOT_FOUND,
+          "Project context not found",
+        );
+        return;
+      }
+      res.json({ context });
+    } catch (e) {
+      logger.warn({ error: (e as Error).message }, "G-Agent context get error");
+      sendServerError(res, e);
     }
-    res.json({ context });
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent context get error');
-    sendServerError(res, e);
-  }
-});
+  },
+);
 
 /**
  * POST /api/memory/gagent/context
@@ -601,38 +733,54 @@ router.get('/gagent/context/:workspaceRoot', async (req: Request, res: Response)
  * @returns {ApiErrorResponse} 400 - Validation error
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.post('/gagent/context', async (req: Request, res: Response): Promise<void> => {
-  const parseResult = projectContextSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    const firstError = parseResult.error.errors[0];
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError?.message ?? 'Invalid request', {
-      field: firstError?.path?.join('.'),
-    });
-    return;
-  }
+router.post(
+  "/gagent/context",
+  async (req: Request, res: Response): Promise<void> => {
+    const parseResult = projectContextSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.errors[0];
+      sendErrorResponse(
+        res,
+        ErrorCode.VALIDATION_ERROR,
+        firstError?.message ?? "Invalid request",
+        {
+          field: firstError?.path?.join("."),
+        },
+      );
+      return;
+    }
 
-  try {
-    const { workspaceRoot, name, type, techStack, architecture, conventions, files, dependencies } =
-      parseResult.data;
+    try {
+      const {
+        workspaceRoot,
+        name,
+        type,
+        techStack,
+        architecture,
+        conventions,
+        files,
+        dependencies,
+      } = parseResult.data;
 
-    const context = await gAgentMemoryService.setProjectContext({
-      workspaceRoot,
-      name,
-      type,
-      techStack,
-      architecture,
-      conventions: conventions ?? [],
-      files: files ?? [],
-      dependencies: dependencies ?? [],
-      lastAnalyzedAt: new Date().toISOString(),
-    });
+      const context = await gAgentMemoryService.setProjectContext({
+        workspaceRoot,
+        name,
+        type,
+        techStack,
+        architecture,
+        conventions: conventions ?? [],
+        files: files ?? [],
+        dependencies: dependencies ?? [],
+        lastAnalyzedAt: new Date().toISOString(),
+      });
 
-    res.status(201).json({ context });
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent context set error');
-    sendServerError(res, e);
-  }
-});
+      res.status(201).json({ context });
+    } catch (e) {
+      logger.warn({ error: (e as Error).message }, "G-Agent context set error");
+      sendServerError(res, e);
+    }
+  },
+);
 
 /**
  * POST /api/memory/gagent/search
@@ -649,27 +797,35 @@ router.post('/gagent/context', async (req: Request, res: Response): Promise<void
  * @returns {ApiErrorResponse} 400 - Validation error
  * @returns {ApiErrorResponse} 500 - Server error
  */
-router.post('/gagent/search', async (req: Request, res: Response): Promise<void> => {
-  const parseResult = gAgentSearchSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    const firstError = parseResult.error.errors[0];
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError?.message ?? 'Invalid request', {
-      field: firstError?.path?.join('.'),
-    });
-    return;
-  }
+router.post(
+  "/gagent/search",
+  async (req: Request, res: Response): Promise<void> => {
+    const parseResult = gAgentSearchSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.errors[0];
+      sendErrorResponse(
+        res,
+        ErrorCode.VALIDATION_ERROR,
+        firstError?.message ?? "Invalid request",
+        {
+          field: firstError?.path?.join("."),
+        },
+      );
+      return;
+    }
 
-  try {
-    const { query, categories, limit } = parseResult.data;
-    const results = await gAgentMemoryService.search(query.trim(), {
-      categories: categories as MemoryCategory[],
-      limit,
-    });
-    res.json(results);
-  } catch (e) {
-    logger.warn({ error: (e as Error).message }, 'G-Agent search error');
-    sendServerError(res, e);
-  }
-});
+    try {
+      const { query, categories, limit } = parseResult.data;
+      const results = await gAgentMemoryService.search(query.trim(), {
+        categories: categories as MemoryCategory[],
+        limit,
+      });
+      res.json(results);
+    } catch (e) {
+      logger.warn({ error: (e as Error).message }, "G-Agent search error");
+      sendServerError(res, e);
+    }
+  },
+);
 
 export default router;

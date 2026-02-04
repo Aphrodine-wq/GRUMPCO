@@ -3,26 +3,30 @@
  * Generates master context and enriches it for specific agents
  */
 
-import { getRequestLogger, default as _logger } from '../middleware/logger.js';
+import { getRequestLogger, default as _logger } from "../middleware/logger.js";
 import {
   createApiTimer,
   recordContextGeneration,
   recordContextCacheHit,
-} from '../middleware/metrics.js';
-import type { MasterContext, AgentContext, ContextGenerationRequest } from '../types/context.js';
-import type { SystemArchitecture } from '../types/architecture.js';
-import type { PRD } from '../types/prd.js';
-import type { AgentType } from '../types/agents.js';
-import { generateArchitecture } from './architectureService.js';
-import { generatePRD } from './prdGeneratorService.js';
+} from "../middleware/metrics.js";
+import type {
+  MasterContext,
+  AgentContext,
+  ContextGenerationRequest,
+} from "../types/context.js";
+import type { SystemArchitecture } from "../types/architecture.js";
+import type { PRD } from "../types/prd.js";
+import type { AgentType } from "../types/agents.js";
+import { generateArchitecture } from "./architectureService.js";
+import { generatePRD } from "./prdGeneratorService.js";
 import {
   optimizeEnrichedIntent,
   parseAndEnrichIntent,
   type EnrichedIntent,
-} from './intentCompilerService.js';
-import { getCachedContext, cacheContext } from './contextCache.js';
-import { withResilience } from './resilience.js';
-import { getCompletion } from './llmGatewayHelper.js';
+} from "./intentCompilerService.js";
+import { getCachedContext, cacheContext } from "./contextCache.js";
+import { withResilience } from "./resilience.js";
+import { getCompletion } from "./llmGatewayHelper.js";
 
 // Create resilient wrapper for LLM gateway calls
 const resilientLlmCall = withResilience(
@@ -30,11 +34,11 @@ const resilientLlmCall = withResilience(
     model: string;
     max_tokens: number;
     system: string;
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+    messages: Array<{ role: "user" | "assistant"; content: string }>;
   }) => {
     return await getCompletion(params);
   },
-  'llm-context'
+  "llm-context",
 );
 
 const UNIFIED_CONTEXT_PROMPT = `You are a comprehensive project context generator. Your role is to generate ALL project artifacts (enriched intent, architecture, PRD, and master context) in a single unified response.
@@ -204,10 +208,10 @@ Extract and synthesize information from the provided intent, architecture, and P
  * OPTIMIZED: Uses single comprehensive API call when all components need generation
  */
 export async function generateMasterContext(
-  request: ContextGenerationRequest
+  request: ContextGenerationRequest,
 ): Promise<MasterContext> {
   const log = getRequestLogger();
-  const timer = createApiTimer('generate_master_context');
+  const timer = createApiTimer("generate_master_context");
 
   try {
     // Check cache first
@@ -218,29 +222,30 @@ export async function generateMasterContext(
     });
 
     if (cached) {
-      log.info({ contextId: cached.id }, 'Using cached master context');
-      recordContextCacheHit('hit');
+      log.info({ contextId: cached.id }, "Using cached master context");
+      recordContextCacheHit("hit");
       timer.success();
       return cached;
     }
 
-    recordContextCacheHit('miss');
+    recordContextCacheHit("miss");
     const contextStart = process.hrtime.bigint();
 
     // Check if we need to generate all components (optimized path)
-    const needsAllGeneration = !request.enrichedIntent && !request.architecture && !request.prd;
+    const needsAllGeneration =
+      !request.enrichedIntent && !request.architecture && !request.prd;
 
     if (needsAllGeneration) {
       // OPTIMIZED: Single comprehensive API call for all components
-      log.info({}, 'Generating all components in single unified call');
+      log.info({}, "Generating all components in single unified call");
 
       const result = await resilientLlmCall({
-        model: 'claude-opus-4-5-20251101',
+        model: "claude-opus-4-5-20251101",
         max_tokens: 8192, // Increased for comprehensive output
         system: UNIFIED_CONTEXT_PROMPT,
         messages: [
           {
-            role: 'user',
+            role: "user",
             content: `Project Description: ${request.projectDescription}\n\nGenerate all project artifacts (enriched intent, architecture, PRD, and master context) in a single comprehensive response.`,
           },
         ],
@@ -251,10 +256,10 @@ export async function generateMasterContext(
       }
 
       let jsonText = result.text;
-      if (jsonText.includes('```json')) {
+      if (jsonText.includes("```json")) {
         const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
         if (match) jsonText = match[1];
-      } else if (jsonText.includes('```')) {
+      } else if (jsonText.includes("```")) {
         const match = jsonText.match(/```\n?([\s\S]*?)\n?```/);
         if (match) jsonText = match[1];
       } else {
@@ -265,7 +270,9 @@ export async function generateMasterContext(
       const unifiedData = JSON.parse(jsonText);
 
       // Extract all components from unified response
-      const enrichedIntent = optimizeEnrichedIntent(unifiedData.enrichedIntent as EnrichedIntent);
+      const enrichedIntent = optimizeEnrichedIntent(
+        unifiedData.enrichedIntent as EnrichedIntent,
+      );
       const architecture = unifiedData.architecture as SystemArchitecture;
       const prd = unifiedData.prd as PRD;
       const masterContextData = unifiedData.masterContext;
@@ -279,26 +286,33 @@ export async function generateMasterContext(
         codePatterns: masterContextData.codePatterns || [],
         architectureHints: masterContextData.architectureHints || [],
         qualityRequirements: masterContextData.qualityRequirements || {
-          type_safety: 'strict',
-          testing: { unit: true, integration: true, e2e: false, coverage_target: 80 },
-          documentation: ['code_comments', 'api_docs', 'readme'],
+          type_safety: "strict",
+          testing: {
+            unit: true,
+            integration: true,
+            e2e: false,
+            coverage_target: 80,
+          },
+          documentation: ["code_comments", "api_docs", "readme"],
           performance: { response_time_ms: 200, throughput_rps: 1000 },
-          security: ['authentication', 'authorization'],
+          security: ["authentication", "authorization"],
         },
-        optimizationOpportunities: masterContextData.optimizationOpportunities || [],
+        optimizationOpportunities:
+          masterContextData.optimizationOpportunities || [],
         createdAt: new Date().toISOString(),
       };
 
       log.info(
         { contextId: masterContext.id },
-        'Master context generated successfully (unified call)'
+        "Master context generated successfully (unified call)",
       );
 
       // Cache the result
       cacheContext(request.projectDescription, masterContext);
 
-      const contextDuration = Number(process.hrtime.bigint() - contextStart) / 1e9;
-      recordContextGeneration(contextDuration, 'success');
+      const contextDuration =
+        Number(process.hrtime.bigint() - contextStart) / 1e9;
+      recordContextGeneration(contextDuration, "success");
       timer.success();
 
       return masterContext;
@@ -310,7 +324,7 @@ export async function generateMasterContext(
     if (request.enrichedIntent) {
       enrichedIntent = optimizeEnrichedIntent(request.enrichedIntent);
     } else {
-      log.info({}, 'Parsing and enriching intent');
+      log.info({}, "Parsing and enriching intent");
       enrichedIntent = await parseAndEnrichIntent(request.projectDescription);
     }
 
@@ -319,16 +333,16 @@ export async function generateMasterContext(
     if (request.architecture) {
       architecture = request.architecture;
     } else {
-      log.info({}, 'Generating architecture');
+      log.info({}, "Generating architecture");
       const archResponse = await generateArchitecture(
         {
           projectDescription: request.projectDescription,
         },
         undefined,
-        enrichedIntent
+        enrichedIntent,
       );
-      if (archResponse.status === 'error' || !archResponse.architecture) {
-        throw new Error(archResponse.error || 'Architecture generation failed');
+      if (archResponse.status === "error" || !archResponse.architecture) {
+        throw new Error(archResponse.error || "Architecture generation failed");
       }
       architecture = archResponse.architecture;
     }
@@ -338,23 +352,23 @@ export async function generateMasterContext(
     if (request.prd) {
       prd = request.prd;
     } else {
-      log.info({}, 'Generating PRD');
+      log.info({}, "Generating PRD");
       const prdResponse = await generatePRD(
         {
           architectureId: architecture.id,
           projectName: architecture.projectName,
           projectDescription: request.projectDescription,
         },
-        architecture
+        architecture,
       );
-      if (prdResponse.status === 'error' || !prdResponse.prd) {
-        throw new Error(prdResponse.error || 'PRD generation failed');
+      if (prdResponse.status === "error" || !prdResponse.prd) {
+        throw new Error(prdResponse.error || "PRD generation failed");
       }
       prd = prdResponse.prd;
     }
 
     // Step 4: Generate unified context via LLM
-    log.info({}, 'Generating unified master context');
+    log.info({}, "Generating unified master context");
     const contextJson = JSON.stringify(
       {
         enrichedIntent: {
@@ -377,16 +391,16 @@ export async function generateMasterContext(
         },
       },
       null,
-      2
+      2,
     );
 
     const result = await resilientLlmCall({
-      model: 'claude-opus-4-5-20251101',
+      model: "claude-opus-4-5-20251101",
       max_tokens: 4096,
       system: MASTER_CONTEXT_PROMPT,
       messages: [
         {
-          role: 'user',
+          role: "user",
           content: `Project Description: ${request.projectDescription}\n\nContext Data:\n${contextJson}\n\nGenerate the master context document.`,
         },
       ],
@@ -397,10 +411,10 @@ export async function generateMasterContext(
     }
 
     let jsonText = result.text;
-    if (jsonText.includes('```json')) {
+    if (jsonText.includes("```json")) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
-    } else if (jsonText.includes('```')) {
+    } else if (jsonText.includes("```")) {
       const match = jsonText.match(/```\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
     } else {
@@ -416,20 +430,27 @@ export async function generateMasterContext(
       enrichedIntent.enriched?.code_patterns?.map((p) => ({
         pattern: p,
         description: `Code pattern: ${p}`,
-        applicability: 'medium' as const,
+        applicability: "medium" as const,
       })) ||
       [];
 
     const architectureHints =
-      contextData.architectureHints || enrichedIntent.enriched?.architecture_hints || [];
+      contextData.architectureHints ||
+      enrichedIntent.enriched?.architecture_hints ||
+      [];
 
     const qualityRequirements = contextData.qualityRequirements ||
       enrichedIntent.enriched?.code_quality_requirements || {
-        type_safety: 'strict',
-        testing: { unit: true, integration: true, e2e: false, coverage_target: 80 },
-        documentation: ['code_comments', 'api_docs', 'readme'],
+        type_safety: "strict",
+        testing: {
+          unit: true,
+          integration: true,
+          e2e: false,
+          coverage_target: 80,
+        },
+        documentation: ["code_comments", "api_docs", "readme"],
         performance: { response_time_ms: 200, throughput_rps: 1000 },
-        security: ['authentication', 'authorization'],
+        security: ["authentication", "authorization"],
       };
 
     const optimizationOpportunities =
@@ -450,7 +471,10 @@ export async function generateMasterContext(
       createdAt: new Date().toISOString(),
     };
 
-    log.info({ contextId: masterContext.id }, 'Master context generated successfully');
+    log.info(
+      { contextId: masterContext.id },
+      "Master context generated successfully",
+    );
 
     // Cache the result
     cacheContext(request.projectDescription, masterContext, {
@@ -463,9 +487,12 @@ export async function generateMasterContext(
 
     return masterContext;
   } catch (error) {
-    timer.failure('context_generation_error');
+    timer.failure("context_generation_error");
     const err = error as Error;
-    log.error({ error: err.message, stack: err.stack }, 'Master context generation failed');
+    log.error(
+      { error: err.message, stack: err.stack },
+      "Master context generation failed",
+    );
     throw error;
   }
 }
@@ -509,10 +536,10 @@ Return a JSON object:
  */
 export async function enrichContextForAgent(
   masterContext: MasterContext,
-  agentType: AgentType
+  agentType: AgentType,
 ): Promise<AgentContext> {
   const log = getRequestLogger();
-  const timer = createApiTimer('enrich_agent_context');
+  const timer = createApiTimer("enrich_agent_context");
 
   try {
     const masterContextJson = JSON.stringify(
@@ -533,16 +560,16 @@ export async function enrichContextForAgent(
         },
       },
       null,
-      2
+      2,
     );
 
     const result = await resilientLlmCall({
-      model: 'claude-sonnet-4-20250514',
+      model: "claude-sonnet-4-20250514",
       max_tokens: 2048,
       system: AGENT_CONTEXT_PROMPT,
       messages: [
         {
-          role: 'user',
+          role: "user",
           content: `Agent Type: ${agentType}\n\nMaster Context:\n${masterContextJson}\n\nGenerate agent-specific context.`,
         },
       ],
@@ -553,10 +580,10 @@ export async function enrichContextForAgent(
     }
 
     let jsonText = result.text;
-    if (jsonText.includes('```json')) {
+    if (jsonText.includes("```json")) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
-    } else if (jsonText.includes('```')) {
+    } else if (jsonText.includes("```")) {
       const match = jsonText.match(/```\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
     } else {
@@ -573,21 +600,26 @@ export async function enrichContextForAgent(
         focusAreas: agentData.focusAreas || [],
         relevantPatterns: agentData.relevantPatterns || [],
         relevantHints: agentData.relevantHints || [],
-        qualityFocus: agentData.qualityFocus || masterContext.qualityRequirements,
+        qualityFocus:
+          agentData.qualityFocus || masterContext.qualityRequirements,
       },
-      contextSummary: agentData.contextSummary || `Context for ${agentType} agent`,
+      contextSummary:
+        agentData.contextSummary || `Context for ${agentType} agent`,
     };
 
-    log.info({ agentType, contextId: masterContext.id }, 'Agent context enriched');
+    log.info(
+      { agentType, contextId: masterContext.id },
+      "Agent context enriched",
+    );
     timer.success();
 
     return agentContext;
   } catch (error) {
-    timer.failure('agent_context_error');
+    timer.failure("agent_context_error");
     const err = error as Error;
     log.warn(
       { agentType, error: err.message },
-      'Agent context enrichment failed, using master context'
+      "Agent context enrichment failed, using master context",
     );
 
     // Fallback to basic agent context
@@ -618,11 +650,12 @@ export function generateContextSummary(agentContext: AgentContext): string {
   summary += `## Architecture Overview\n`;
   summary += `- **Type**: ${masterContext.architecture.projectType}\n`;
   summary += `- **Complexity**: ${masterContext.architecture.complexity}\n`;
-  summary += `- **Tech Stack**: ${masterContext.architecture.techStack.join(', ')}\n\n`;
+  summary += `- **Tech Stack**: ${masterContext.architecture.techStack.join(", ")}\n\n`;
 
   if (agentSpecificContext.focusAreas.length > 0) {
     summary += `## Focus Areas for ${agentContext.agentType}\n`;
-    summary += agentSpecificContext.focusAreas.map((a) => `- ${a}`).join('\n') + '\n\n';
+    summary +=
+      agentSpecificContext.focusAreas.map((a) => `- ${a}`).join("\n") + "\n\n";
   }
 
   if (agentSpecificContext.relevantPatterns.length > 0) {
@@ -630,7 +663,7 @@ export function generateContextSummary(agentContext: AgentContext): string {
     summary +=
       agentSpecificContext.relevantPatterns
         .map((p) => `- **${p.pattern}**: ${p.description} (${p.applicability})`)
-        .join('\n') + '\n\n';
+        .join("\n") + "\n\n";
   }
 
   if (agentSpecificContext.relevantHints.length > 0) {
@@ -638,36 +671,36 @@ export function generateContextSummary(agentContext: AgentContext): string {
     summary +=
       agentSpecificContext.relevantHints
         .map((h) => `- **${h.pattern}**: ${h.description} (${h.applicability})`)
-        .join('\n') + '\n\n';
+        .join("\n") + "\n\n";
   }
 
   summary += `## Quality Requirements\n`;
   const qr = agentSpecificContext.qualityFocus;
-  summary += `- **Type Safety**: ${qr.type_safety || 'moderate'}\n`;
+  summary += `- **Type Safety**: ${qr.type_safety || "moderate"}\n`;
   if (qr.testing) {
-    summary += `- **Testing**: Unit: ${qr.testing.unit ? 'Yes' : 'No'}, Integration: ${qr.testing.integration ? 'Yes' : 'No'}, E2E: ${qr.testing.e2e ? 'Yes' : 'No'}`;
+    summary += `- **Testing**: Unit: ${qr.testing.unit ? "Yes" : "No"}, Integration: ${qr.testing.integration ? "Yes" : "No"}, E2E: ${qr.testing.e2e ? "Yes" : "No"}`;
     if (qr.testing.coverage_target) {
       summary += `, Coverage Target: ${qr.testing.coverage_target}%`;
     }
-    summary += '\n';
+    summary += "\n";
   }
   if (qr.documentation && qr.documentation.length > 0) {
-    summary += `- **Documentation**: ${qr.documentation.join(', ')}\n`;
+    summary += `- **Documentation**: ${qr.documentation.join(", ")}\n`;
   }
   if (qr.performance) {
     summary += `- **Performance**: Response Time: ${qr.performance.response_time_ms}ms, Throughput: ${qr.performance.throughput_rps} req/s\n`;
   }
   if (qr.security && qr.security.length > 0) {
-    summary += `- **Security**: ${qr.security.join(', ')}\n`;
+    summary += `- **Security**: ${qr.security.join(", ")}\n`;
   }
-  summary += '\n';
+  summary += "\n";
 
   if (masterContext.optimizationOpportunities.length > 0) {
     summary += `## Optimization Opportunities\n`;
     summary +=
       masterContext.optimizationOpportunities
         .map((o) => `- **${o.area}**: ${o.suggestion} (${o.impact} impact)`)
-        .join('\n') + '\n\n';
+        .join("\n") + "\n\n";
   }
 
   summary += agentContext.contextSummary;

@@ -6,41 +6,41 @@
 // ========== Integration Providers ==========
 
 export type IntegrationProviderId =
-  | 'discord'
-  | 'slack'
-  | 'spotify'
-  | 'imessage'
-  | 'signal'
-  | 'whatsapp'
-  | 'gmail'
-  | 'google_calendar'
-  | 'telegram'
-  | 'notion'
-  | 'obsidian'
-  | 'twitter'
-  | 'whoop'
-  | 'philips_hue'
-  | 'home_assistant'
-  | 'elevenlabs'
-  | 'twilio'
+  | "discord"
+  | "slack"
+  | "spotify"
+  | "imessage"
+  | "signal"
+  | "whatsapp"
+  | "gmail"
+  | "google_calendar"
+  | "telegram"
+  | "notion"
+  | "obsidian"
+  | "twitter"
+  | "whoop"
+  | "philips_hue"
+  | "home_assistant"
+  | "elevenlabs"
+  | "twilio"
   // New integrations (Phase 2.3+)
-  | 'jira'
-  | 'atlassian'
-  | 'vercel'
-  | 'netlify'
-  | 'aws'
-  | 'gcp'
-  | 'azure'
-  | 'supabase'
-  | 'firebase'
-  | 'github'
-  | 'gitlab'
-  | 'bitbucket'
-  | 'linear'
-  | 'stripe'
-  | 'figma';
+  | "jira"
+  | "atlassian"
+  | "vercel"
+  | "netlify"
+  | "aws"
+  | "gcp"
+  | "azure"
+  | "supabase"
+  | "firebase"
+  | "github"
+  | "gitlab"
+  | "bitbucket"
+  | "linear"
+  | "stripe"
+  | "figma";
 
-export type IntegrationStatus = 'active' | 'disabled' | 'error' | 'pending';
+export type IntegrationStatus = "active" | "disabled" | "error" | "pending";
 
 export interface IntegrationRecord {
   id: string;
@@ -83,15 +83,15 @@ export interface IntegrationSecretRecord {
 // ========== Audit Logs ==========
 
 export type AuditCategory =
-  | 'integration'
-  | 'system'
-  | 'security'
-  | 'automation'
-  | 'billing'
-  | 'agent'
-  | 'ai'
-  | 'tool'
-  | 'skill';
+  | "integration"
+  | "system"
+  | "security"
+  | "automation"
+  | "billing"
+  | "agent"
+  | "ai"
+  | "tool"
+  | "skill";
 
 export interface AuditLogRecord {
   id: string;
@@ -121,8 +121,8 @@ export interface HeartbeatRecord {
 
 // ========== Approval Requests ==========
 
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
-export type RiskLevel = 'low' | 'medium' | 'high';
+export type ApprovalStatus = "pending" | "approved" | "rejected" | "expired";
+export type RiskLevel = "low" | "medium" | "high";
 
 export interface ApprovalRequestRecord {
   id: string;
@@ -140,7 +140,12 @@ export interface ApprovalRequestRecord {
 
 // ========== Agent Swarm ==========
 
-export type SwarmStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type SwarmStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 export interface SwarmAgentRecord {
   id: string;
@@ -158,8 +163,13 @@ export interface SwarmAgentRecord {
 
 // ========== Skills ==========
 
-export type SkillLanguage = 'typescript' | 'python';
-export type SkillStatus = 'pending' | 'approved' | 'active' | 'disabled' | 'rejected';
+export type SkillLanguage = "typescript" | "python";
+export type SkillStatus =
+  | "pending"
+  | "approved"
+  | "active"
+  | "disabled"
+  | "rejected";
 
 export interface SkillRecord {
   id: string;
@@ -226,7 +236,12 @@ export interface SlackUserPairingRecord {
 
 // ========== Memory Records ==========
 
-export type MemoryType = 'conversation' | 'preference' | 'task' | 'fact' | 'context';
+export type MemoryType =
+  | "conversation"
+  | "preference"
+  | "task"
+  | "fact"
+  | "context";
 
 export interface MemoryRecord {
   id: string;
@@ -245,7 +260,7 @@ export interface MemoryRecord {
 
 // ========== Cost Budgets ==========
 
-export type BudgetPeriod = 'daily' | 'weekly' | 'monthly';
+export type BudgetPeriod = "daily" | "weekly" | "monthly";
 
 export interface CostBudgetRecord {
   id: string;
@@ -289,7 +304,7 @@ export interface SlackTokenRecord {
 
 // ========== Browser Allowlist ==========
 
-export type BrowserAllowedAction = 'read' | 'write' | 'full';
+export type BrowserAllowedAction = "read" | "write" | "full";
 
 export interface BrowserAllowlistRecord {
   id: string;

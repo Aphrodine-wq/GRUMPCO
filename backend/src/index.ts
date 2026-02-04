@@ -10,15 +10,15 @@
  */
 
 // MUST be first import - loads environment variables before other modules
-import './config/env.js';
+import "./config/env.js";
 
-import logger from './middleware/logger.js';
+import logger from "./middleware/logger.js";
 import {
   createApp,
   applyAsyncMiddleware,
   applyMetricsEndpoint,
   applyErrorHandlers,
-} from './server/app.js';
+} from "./server/app.js";
 import {
   initializeCore,
   initializeWorkers,
@@ -26,10 +26,10 @@ import {
   initializeSkills,
   startServer,
   registerShutdownHandlers,
-} from './server/lifecycle.js';
+} from "./server/lifecycle.js";
 
 /** Preferred port for the HTTP server */
-const PREFERRED_PORT = parseInt(process.env.PORT || '3000', 10) || 3000;
+const PREFERRED_PORT = parseInt(process.env.PORT || "3000", 10) || 3000;
 
 /** Promise that resolves when the app is fully initialized */
 let resolveAppReady: (() => void) | null = null;
@@ -75,8 +75,11 @@ async function bootstrap(): Promise<void> {
     registerShutdownHandlers();
   } catch (err) {
     const error = err as Error;
-    logger.error({ error: error.message, stack: error.stack }, 'Failed to start server');
-    if (process.env.NODE_ENV !== 'test') {
+    logger.error(
+      { error: error.message, stack: error.stack },
+      "Failed to start server",
+    );
+    if (process.env.NODE_ENV !== "test") {
       process.exit(1);
     }
   }

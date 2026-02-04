@@ -4,19 +4,23 @@
  */
 
 export type PlanStatus =
-  | 'draft'
-  | 'pending_approval'
-  | 'approved'
-  | 'executing'
-  | 'completed'
-  | 'rejected'
-  | 'cancelled';
+  | "draft"
+  | "pending_approval"
+  | "approved"
+  | "executing"
+  | "completed"
+  | "rejected"
+  | "cancelled";
 
-export type PlanPhase = 'exploration' | 'preparation' | 'implementation' | 'validation';
+export type PlanPhase =
+  | "exploration"
+  | "preparation"
+  | "implementation"
+  | "validation";
 
-export type RiskLevel = 'low' | 'medium' | 'high';
+export type RiskLevel = "low" | "medium" | "high";
 
-export type FileChangeType = 'create' | 'modify' | 'delete' | 'move';
+export type FileChangeType = "create" | "modify" | "delete" | "move";
 
 export interface FileChange {
   path: string;
@@ -44,7 +48,7 @@ export interface Phase {
   description: string;
   steps: string[]; // Step IDs
   checkpoint: boolean; // Requires approval before proceeding
-  status: 'pending' | 'in_progress' | 'completed' | 'skipped';
+  status: "pending" | "in_progress" | "completed" | "skipped";
 }
 
 export interface Plan {

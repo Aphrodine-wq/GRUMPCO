@@ -3,8 +3,12 @@
  * Full CRUD for issues, projects, sprints, and more via Jira REST API
  */
 
-import logger from '../middleware/logger.js';
-import { getAccessToken, isTokenExpired, refreshOAuthTokens } from './integrationService.js';
+import logger from "../middleware/logger.js";
+import {
+  getAccessToken,
+  isTokenExpired,
+  refreshOAuthTokens,
+} from "./integrationService.js";
 
 // ========== Types ==========
 
@@ -53,7 +57,7 @@ export interface JiraStatus {
 export interface JiraSprint {
   id: number;
   name: string;
-  state: 'active' | 'closed' | 'future';
+  state: "active" | "closed" | "future";
   startDate?: string;
   endDate?: string;
   completeDate?: string;
@@ -99,7 +103,7 @@ export interface JiraComment {
 export interface JiraBoard {
   id: number;
   name: string;
-  type: 'scrum' | 'kanban' | 'simple';
+  type: "scrum" | "kanban" | "simple";
   location?: {
     projectId: number;
     projectKey: string;
@@ -148,37 +152,53 @@ export interface JiraSearchResult {
  * Get a valid access token, refreshing if needed
  */
 async function getValidToken(userId: string): Promise<string | null> {
-  if (await isTokenExpired(userId, 'jira')) {
-    const refreshed = await refreshOAuthTokens(userId, 'jira');
+  if (await isTokenExpired(userId, "jira")) {
+    const refreshed = await refreshOAuthTokens(userId, "jira");
     if (!refreshed) {
-      logger.warn({ userId }, 'Failed to refresh Jira token');
+      logger.warn({ userId }, "Failed to refresh Jira token");
       return null;
     }
   }
-  return getAccessToken(userId, 'jira');
+  return getAccessToken(userId, "jira");
 }
 
 /**
  * Get Atlassian cloud resource (site) ID for API calls
  */
-async function getCloudId(userId: string, accessToken: string): Promise<string | null> {
+async function getCloudId(
+  userId: string,
+  accessToken: string,
+): Promise<string | null> {
   try {
-    const res = await fetch('https://api.atlassian.com/oauth/token/accessible-resources', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const res = await fetch(
+      "https://api.atlassian.com/oauth/token/accessible-resources",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
     if (!res.ok) {
-      logger.error({ status: res.status }, 'Failed to get Atlassian cloud resources');
+      logger.error(
+        { status: res.status },
+        "Failed to get Atlassian cloud resources",
+      );
       return null;
     }
-    const resources = (await res.json()) as Array<{ id: string; name: string; url: string }>;
+    const resources = (await res.json()) as Array<{
+      id: string;
+      name: string;
+      url: string;
+    }>;
     if (resources.length === 0) {
-      logger.warn({ userId }, 'No Atlassian cloud resources available');
+      logger.warn({ userId }, "No Atlassian cloud resources available");
       return null;
     }
     // Return first available resource (could be enhanced to support multiple)
     return resources[0].id;
   } catch (err) {
-    logger.error({ error: (err as Error).message }, 'Error fetching Atlassian resources');
+    logger.error(
+      { error: (err as Error).message },
+      "Error fetching Atlassian resources",
+    );
     return null;
   }
 }
@@ -189,11 +209,11 @@ async function getCloudId(userId: string, accessToken: string): Promise<string |
 async function jiraFetch<T>(
   userId: string,
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T | null> {
   const token = await getValidToken(userId);
   if (!token) {
-    logger.error({ userId }, 'No valid Jira token');
+    logger.error({ userId }, "No valid Jira token");
     return null;
   }
 
@@ -210,15 +230,18 @@ async function jiraFetch<T>(
       ...options,
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
+        "Content-Type": "application/json",
+        Accept: "application/json",
         ...options.headers,
       },
     });
 
     if (!res.ok) {
       const errorText = await res.text();
-      logger.error({ status: res.status, error: errorText, endpoint }, 'Jira API error');
+      logger.error(
+        { status: res.status, error: errorText, endpoint },
+        "Jira API error",
+      );
       return null;
     }
 
@@ -228,7 +251,10 @@ async function jiraFetch<T>(
 
     return (await res.json()) as T;
   } catch (err) {
-    logger.error({ error: (err as Error).message, endpoint }, 'Jira fetch error');
+    logger.error(
+      { error: (err as Error).message, endpoint },
+      "Jira fetch error",
+    );
     return null;
   }
 }
@@ -239,11 +265,11 @@ async function jiraFetch<T>(
 async function jiraAgileFetch<T>(
   userId: string,
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T | null> {
   const token = await getValidToken(userId);
   if (!token) {
-    logger.error({ userId }, 'No valid Jira token');
+    logger.error({ userId }, "No valid Jira token");
     return null;
   }
 
@@ -260,15 +286,18 @@ async function jiraAgileFetch<T>(
       ...options,
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
+        "Content-Type": "application/json",
+        Accept: "application/json",
         ...options.headers,
       },
     });
 
     if (!res.ok) {
       const errorText = await res.text();
-      logger.error({ status: res.status, error: errorText, endpoint }, 'Jira Agile API error');
+      logger.error(
+        { status: res.status, error: errorText, endpoint },
+        "Jira Agile API error",
+      );
       return null;
     }
 
@@ -278,7 +307,10 @@ async function jiraAgileFetch<T>(
 
     return (await res.json()) as T;
   } catch (err) {
-    logger.error({ error: (err as Error).message, endpoint }, 'Jira Agile fetch error');
+    logger.error(
+      { error: (err as Error).message, endpoint },
+      "Jira Agile fetch error",
+    );
     return null;
   }
 }
@@ -291,7 +323,7 @@ async function jiraAgileFetch<T>(
 export async function getProjects(userId: string): Promise<JiraProject[]> {
   const result = await jiraFetch<{ values: JiraProject[] }>(
     userId,
-    '/project/search?expand=description'
+    "/project/search?expand=description",
   );
   return result?.values ?? [];
 }
@@ -299,7 +331,10 @@ export async function getProjects(userId: string): Promise<JiraProject[]> {
 /**
  * Get a specific project by key
  */
-export async function getProject(userId: string, projectKey: string): Promise<JiraProject | null> {
+export async function getProject(
+  userId: string,
+  projectKey: string,
+): Promise<JiraProject | null> {
   return jiraFetch<JiraProject>(userId, `/project/${projectKey}`);
 }
 
@@ -311,7 +346,7 @@ export async function getProject(userId: string, projectKey: string): Promise<Ji
 export async function searchIssues(
   userId: string,
   jql: string,
-  options: { startAt?: number; maxResults?: number; fields?: string[] } = {}
+  options: { startAt?: number; maxResults?: number; fields?: string[] } = {},
 ): Promise<JiraSearchResult | null> {
   const params = new URLSearchParams({
     jql,
@@ -319,7 +354,7 @@ export async function searchIssues(
     maxResults: String(options.maxResults ?? 50),
   });
   if (options.fields) {
-    params.set('fields', options.fields.join(','));
+    params.set("fields", options.fields.join(","));
   }
   return jiraFetch<JiraSearchResult>(userId, `/search?${params.toString()}`);
 }
@@ -327,8 +362,14 @@ export async function searchIssues(
 /**
  * Get a specific issue by key
  */
-export async function getIssue(userId: string, issueKey: string): Promise<JiraIssue | null> {
-  return jiraFetch<JiraIssue>(userId, `/issue/${issueKey}?expand=renderedFields,names,changelog`);
+export async function getIssue(
+  userId: string,
+  issueKey: string,
+): Promise<JiraIssue | null> {
+  return jiraFetch<JiraIssue>(
+    userId,
+    `/issue/${issueKey}?expand=renderedFields,names,changelog`,
+  );
 }
 
 /**
@@ -336,7 +377,7 @@ export async function getIssue(userId: string, issueKey: string): Promise<JiraIs
  */
 export async function createIssue(
   userId: string,
-  input: CreateIssueInput
+  input: CreateIssueInput,
 ): Promise<JiraIssue | null> {
   const fields: Record<string, unknown> = {
     project: { key: input.projectKey },
@@ -347,12 +388,12 @@ export async function createIssue(
   if (input.description) {
     // Atlassian Document Format (ADF) for API v3
     fields.description = {
-      type: 'doc',
+      type: "doc",
       version: 1,
       content: [
         {
-          type: 'paragraph',
-          content: [{ type: 'text', text: input.description }],
+          type: "paragraph",
+          content: [{ type: "text", text: input.description }],
         },
       ],
     };
@@ -379,13 +420,17 @@ export async function createIssue(
     Object.assign(fields, input.customFields);
   }
 
-  const result = await jiraFetch<{ id: string; key: string; self: string }>(userId, '/issue', {
-    method: 'POST',
-    body: JSON.stringify({ fields }),
-  });
+  const result = await jiraFetch<{ id: string; key: string; self: string }>(
+    userId,
+    "/issue",
+    {
+      method: "POST",
+      body: JSON.stringify({ fields }),
+    },
+  );
 
   if (result) {
-    logger.info({ issueKey: result.key }, 'Jira issue created');
+    logger.info({ issueKey: result.key }, "Jira issue created");
     // Fetch full issue details
     return getIssue(userId, result.key);
   }
@@ -399,7 +444,7 @@ export async function createIssue(
 export async function updateIssue(
   userId: string,
   issueKey: string,
-  input: UpdateIssueInput
+  input: UpdateIssueInput,
 ): Promise<boolean> {
   const fields: Record<string, unknown> = {};
 
@@ -410,12 +455,12 @@ export async function updateIssue(
   if (input.description !== undefined) {
     fields.description = input.description
       ? {
-          type: 'doc',
+          type: "doc",
           version: 1,
           content: [
             {
-              type: 'paragraph',
-              content: [{ type: 'text', text: input.description }],
+              type: "paragraph",
+              content: [{ type: "text", text: input.description }],
             },
           ],
         }
@@ -427,7 +472,9 @@ export async function updateIssue(
   }
 
   if (input.assigneeAccountId !== undefined) {
-    fields.assignee = input.assigneeAccountId ? { accountId: input.assigneeAccountId } : null;
+    fields.assignee = input.assigneeAccountId
+      ? { accountId: input.assigneeAccountId }
+      : null;
   }
 
   if (input.labels !== undefined) {
@@ -444,12 +491,12 @@ export async function updateIssue(
   }
 
   const result = await jiraFetch<object>(userId, `/issue/${issueKey}`, {
-    method: 'PUT',
+    method: "PUT",
     body: JSON.stringify({ fields }),
   });
 
   if (result !== null) {
-    logger.info({ issueKey }, 'Jira issue updated');
+    logger.info({ issueKey }, "Jira issue updated");
     return true;
   }
 
@@ -459,13 +506,16 @@ export async function updateIssue(
 /**
  * Delete an issue
  */
-export async function deleteIssue(userId: string, issueKey: string): Promise<boolean> {
+export async function deleteIssue(
+  userId: string,
+  issueKey: string,
+): Promise<boolean> {
   const result = await jiraFetch<object>(userId, `/issue/${issueKey}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
 
   if (result !== null) {
-    logger.info({ issueKey }, 'Jira issue deleted');
+    logger.info({ issueKey }, "Jira issue deleted");
     return true;
   }
 
@@ -475,10 +525,13 @@ export async function deleteIssue(userId: string, issueKey: string): Promise<boo
 /**
  * Get available transitions for an issue
  */
-export async function getTransitions(userId: string, issueKey: string): Promise<JiraTransition[]> {
+export async function getTransitions(
+  userId: string,
+  issueKey: string,
+): Promise<JiraTransition[]> {
   const result = await jiraFetch<{ transitions: JiraTransition[] }>(
     userId,
-    `/issue/${issueKey}/transitions`
+    `/issue/${issueKey}/transitions`,
   );
   return result?.transitions ?? [];
 }
@@ -489,15 +542,19 @@ export async function getTransitions(userId: string, issueKey: string): Promise<
 export async function transitionIssue(
   userId: string,
   issueKey: string,
-  transitionId: string
+  transitionId: string,
 ): Promise<boolean> {
-  const result = await jiraFetch<object>(userId, `/issue/${issueKey}/transitions`, {
-    method: 'POST',
-    body: JSON.stringify({ transition: { id: transitionId } }),
-  });
+  const result = await jiraFetch<object>(
+    userId,
+    `/issue/${issueKey}/transitions`,
+    {
+      method: "POST",
+      body: JSON.stringify({ transition: { id: transitionId } }),
+    },
+  );
 
   if (result !== null) {
-    logger.info({ issueKey, transitionId }, 'Jira issue transitioned');
+    logger.info({ issueKey, transitionId }, "Jira issue transitioned");
     return true;
   }
 
@@ -510,18 +567,18 @@ export async function transitionIssue(
 export async function addComment(
   userId: string,
   issueKey: string,
-  body: string
+  body: string,
 ): Promise<JiraComment | null> {
   return jiraFetch<JiraComment>(userId, `/issue/${issueKey}/comment`, {
-    method: 'POST',
+    method: "POST",
     body: JSON.stringify({
       body: {
-        type: 'doc',
+        type: "doc",
         version: 1,
         content: [
           {
-            type: 'paragraph',
-            content: [{ type: 'text', text: body }],
+            type: "paragraph",
+            content: [{ type: "text", text: body }],
           },
         ],
       },
@@ -535,15 +592,19 @@ export async function addComment(
 export async function assignIssue(
   userId: string,
   issueKey: string,
-  assigneeAccountId: string | null
+  assigneeAccountId: string | null,
 ): Promise<boolean> {
-  const result = await jiraFetch<object>(userId, `/issue/${issueKey}/assignee`, {
-    method: 'PUT',
-    body: JSON.stringify({ accountId: assigneeAccountId }),
-  });
+  const result = await jiraFetch<object>(
+    userId,
+    `/issue/${issueKey}/assignee`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ accountId: assigneeAccountId }),
+    },
+  );
 
   if (result !== null) {
-    logger.info({ issueKey, assigneeAccountId }, 'Jira issue assigned');
+    logger.info({ issueKey, assigneeAccountId }, "Jira issue assigned");
     return true;
   }
 
@@ -555,10 +616,13 @@ export async function assignIssue(
 /**
  * Get issue types for a project
  */
-export async function getIssueTypes(userId: string, projectKey: string): Promise<JiraIssueType[]> {
+export async function getIssueTypes(
+  userId: string,
+  projectKey: string,
+): Promise<JiraIssueType[]> {
   const project = await jiraFetch<{ issueTypes: JiraIssueType[] }>(
     userId,
-    `/project/${projectKey}?expand=issueTypes`
+    `/project/${projectKey}?expand=issueTypes`,
   );
   return project?.issueTypes ?? [];
 }
@@ -571,16 +635,16 @@ export async function getIssueTypes(userId: string, projectKey: string): Promise
 export async function searchUsers(
   userId: string,
   projectKey: string,
-  query: string
+  query: string,
 ): Promise<JiraUser[]> {
   const params = new URLSearchParams({
     project: projectKey,
     query,
-    maxResults: '20',
+    maxResults: "20",
   });
   const result = await jiraFetch<JiraUser[]>(
     userId,
-    `/user/assignable/search?${params.toString()}`
+    `/user/assignable/search?${params.toString()}`,
   );
   return result ?? [];
 }
@@ -589,7 +653,7 @@ export async function searchUsers(
  * Get current user
  */
 export async function getCurrentUser(userId: string): Promise<JiraUser | null> {
-  return jiraFetch<JiraUser>(userId, '/myself');
+  return jiraFetch<JiraUser>(userId, "/myself");
 }
 
 // ========== Boards (Agile) ==========
@@ -598,14 +662,20 @@ export async function getCurrentUser(userId: string): Promise<JiraUser | null> {
  * Get all boards
  */
 export async function getBoards(userId: string): Promise<JiraBoard[]> {
-  const result = await jiraAgileFetch<{ values: JiraBoard[] }>(userId, '/board');
+  const result = await jiraAgileFetch<{ values: JiraBoard[] }>(
+    userId,
+    "/board",
+  );
   return result?.values ?? [];
 }
 
 /**
  * Get a specific board
  */
-export async function getBoard(userId: string, boardId: number): Promise<JiraBoard | null> {
+export async function getBoard(
+  userId: string,
+  boardId: number,
+): Promise<JiraBoard | null> {
   return jiraAgileFetch<JiraBoard>(userId, `/board/${boardId}`);
 }
 
@@ -617,15 +687,15 @@ export async function getBoard(userId: string, boardId: number): Promise<JiraBoa
 export async function getSprints(
   userId: string,
   boardId: number,
-  state?: 'active' | 'closed' | 'future'
+  state?: "active" | "closed" | "future",
 ): Promise<JiraSprint[]> {
   const params = new URLSearchParams();
   if (state) {
-    params.set('state', state);
+    params.set("state", state);
   }
   const result = await jiraAgileFetch<{ values: JiraSprint[] }>(
     userId,
-    `/board/${boardId}/sprint?${params.toString()}`
+    `/board/${boardId}/sprint?${params.toString()}`,
   );
   return result?.values ?? [];
 }
@@ -633,8 +703,11 @@ export async function getSprints(
 /**
  * Get active sprint for a board
  */
-export async function getActiveSprint(userId: string, boardId: number): Promise<JiraSprint | null> {
-  const sprints = await getSprints(userId, boardId, 'active');
+export async function getActiveSprint(
+  userId: string,
+  boardId: number,
+): Promise<JiraSprint | null> {
+  const sprints = await getSprints(userId, boardId, "active");
   return sprints[0] ?? null;
 }
 
@@ -644,13 +717,16 @@ export async function getActiveSprint(userId: string, boardId: number): Promise<
 export async function getSprintIssues(
   userId: string,
   sprintId: number,
-  options: { startAt?: number; maxResults?: number } = {}
+  options: { startAt?: number; maxResults?: number } = {},
 ): Promise<JiraSearchResult | null> {
   const params = new URLSearchParams({
     startAt: String(options.startAt ?? 0),
     maxResults: String(options.maxResults ?? 50),
   });
-  return jiraAgileFetch<JiraSearchResult>(userId, `/sprint/${sprintId}/issue?${params.toString()}`);
+  return jiraAgileFetch<JiraSearchResult>(
+    userId,
+    `/sprint/${sprintId}/issue?${params.toString()}`,
+  );
 }
 
 /**
@@ -659,15 +735,22 @@ export async function getSprintIssues(
 export async function moveIssuesToSprint(
   userId: string,
   sprintId: number,
-  issueKeys: string[]
+  issueKeys: string[],
 ): Promise<boolean> {
-  const result = await jiraAgileFetch<object>(userId, `/sprint/${sprintId}/issue`, {
-    method: 'POST',
-    body: JSON.stringify({ issues: issueKeys }),
-  });
+  const result = await jiraAgileFetch<object>(
+    userId,
+    `/sprint/${sprintId}/issue`,
+    {
+      method: "POST",
+      body: JSON.stringify({ issues: issueKeys }),
+    },
+  );
 
   if (result !== null) {
-    logger.info({ sprintId, issueCount: issueKeys.length }, 'Issues moved to sprint');
+    logger.info(
+      { sprintId, issueCount: issueKeys.length },
+      "Issues moved to sprint",
+    );
     return true;
   }
 
@@ -682,26 +765,32 @@ export async function moveIssuesToSprint(
 export async function getBacklogIssues(
   userId: string,
   boardId: number,
-  options: { startAt?: number; maxResults?: number } = {}
+  options: { startAt?: number; maxResults?: number } = {},
 ): Promise<JiraSearchResult | null> {
   const params = new URLSearchParams({
     startAt: String(options.startAt ?? 0),
     maxResults: String(options.maxResults ?? 50),
   });
-  return jiraAgileFetch<JiraSearchResult>(userId, `/board/${boardId}/backlog?${params.toString()}`);
+  return jiraAgileFetch<JiraSearchResult>(
+    userId,
+    `/board/${boardId}/backlog?${params.toString()}`,
+  );
 }
 
 /**
  * Move issues to backlog
  */
-export async function moveIssuesToBacklog(userId: string, issueKeys: string[]): Promise<boolean> {
-  const result = await jiraAgileFetch<object>(userId, '/backlog/issue', {
-    method: 'POST',
+export async function moveIssuesToBacklog(
+  userId: string,
+  issueKeys: string[],
+): Promise<boolean> {
+  const result = await jiraAgileFetch<object>(userId, "/backlog/issue", {
+    method: "POST",
     body: JSON.stringify({ issues: issueKeys }),
   });
 
   if (result !== null) {
-    logger.info({ issueCount: issueKeys.length }, 'Issues moved to backlog');
+    logger.info({ issueCount: issueKeys.length }, "Issues moved to backlog");
     return true;
   }
 
@@ -714,7 +803,7 @@ export async function moveIssuesToBacklog(userId: string, issueKeys: string[]): 
  * Get all priorities
  */
 export async function getPriorities(userId: string): Promise<JiraPriority[]> {
-  const result = await jiraFetch<JiraPriority[]>(userId, '/priority');
+  const result = await jiraFetch<JiraPriority[]>(userId, "/priority");
   return result ?? [];
 }
 
@@ -725,7 +814,7 @@ export async function getPriorities(userId: string): Promise<JiraPriority[]> {
  */
 export async function bulkCreateIssues(
   userId: string,
-  inputs: CreateIssueInput[]
+  inputs: CreateIssueInput[],
 ): Promise<Array<JiraIssue | null>> {
   const results: Array<JiraIssue | null> = [];
   for (const input of inputs) {
@@ -741,7 +830,7 @@ export async function bulkCreateIssues(
 export async function getMyOpenIssues(userId: string): Promise<JiraIssue[]> {
   const result = await searchIssues(
     userId,
-    'assignee = currentUser() AND resolution = Unresolved ORDER BY updated DESC'
+    "assignee = currentUser() AND resolution = Unresolved ORDER BY updated DESC",
   );
   return result?.issues ?? [];
 }
@@ -751,9 +840,12 @@ export async function getMyOpenIssues(userId: string): Promise<JiraIssue[]> {
  */
 export async function getRecentlyUpdatedIssues(
   userId: string,
-  days: number = 7
+  days: number = 7,
 ): Promise<JiraIssue[]> {
-  const result = await searchIssues(userId, `updated >= -${days}d ORDER BY updated DESC`);
+  const result = await searchIssues(
+    userId,
+    `updated >= -${days}d ORDER BY updated DESC`,
+  );
   return result?.issues ?? [];
 }
 
@@ -765,14 +857,14 @@ export async function createBug(
   projectKey: string,
   summary: string,
   description?: string,
-  priority?: string
+  priority?: string,
 ): Promise<JiraIssue | null> {
   return createIssue(userId, {
     projectKey,
     summary,
-    issueType: 'Bug',
+    issueType: "Bug",
     description,
-    priority: priority ?? 'Medium',
+    priority: priority ?? "Medium",
   });
 }
 
@@ -784,12 +876,12 @@ export async function createStory(
   projectKey: string,
   summary: string,
   description?: string,
-  storyPoints?: number
+  storyPoints?: number,
 ): Promise<JiraIssue | null> {
   return createIssue(userId, {
     projectKey,
     summary,
-    issueType: 'Story',
+    issueType: "Story",
     description,
     customFields: storyPoints ? { customfield_10016: storyPoints } : undefined,
   });
@@ -803,12 +895,12 @@ export async function createTask(
   projectKey: string,
   summary: string,
   description?: string,
-  assigneeAccountId?: string
+  assigneeAccountId?: string,
 ): Promise<JiraIssue | null> {
   return createIssue(userId, {
     projectKey,
     summary,
-    issueType: 'Task',
+    issueType: "Task",
     description,
     assigneeAccountId,
   });
@@ -821,18 +913,18 @@ export async function createSubtask(
   userId: string,
   parentKey: string,
   summary: string,
-  description?: string
+  description?: string,
 ): Promise<JiraIssue | null> {
   const parentIssue = await getIssue(userId, parentKey);
   if (!parentIssue) {
-    logger.error({ parentKey }, 'Parent issue not found');
+    logger.error({ parentKey }, "Parent issue not found");
     return null;
   }
 
   return createIssue(userId, {
     projectKey: parentIssue.fields.project.key,
     summary,
-    issueType: 'Sub-task',
+    issueType: "Sub-task",
     description,
     parentKey,
   });

@@ -13,11 +13,11 @@
  * @module gAgent/killSwitch
  */
 
-import { EventEmitter } from 'events';
-import { messageBus, CHANNELS } from './messageBus.js';
-import { supervisor } from './supervisor.js';
-import { budgetManager } from './budgetManager.js';
-import type { AgentStatus, Goal, AgentInstance } from './types.js';
+import { EventEmitter } from "events";
+import { messageBus, CHANNELS } from "./messageBus.js";
+import { supervisor } from "./supervisor.js";
+import { budgetManager } from "./budgetManager.js";
+import type { AgentStatus, Goal, AgentInstance } from "./types.js";
 
 // ============================================================================
 // CONSTANTS
@@ -37,15 +37,15 @@ export const MAX_STOP_WAIT_MS = 30000;
  * Stop reasons for audit trail
  */
 export const STOP_REASONS = {
-  USER_REQUESTED: 'user_requested',
-  BUDGET_EXCEEDED: 'budget_exceeded',
-  RUNAWAY_DETECTED: 'runaway_detected',
-  ERROR_THRESHOLD: 'error_threshold',
-  TIMEOUT: 'timeout',
-  ADMIN_OVERRIDE: 'admin_override',
-  SYSTEM_SHUTDOWN: 'system_shutdown',
-  SECURITY_VIOLATION: 'security_violation',
-  RESOURCE_EXHAUSTION: 'resource_exhaustion',
+  USER_REQUESTED: "user_requested",
+  BUDGET_EXCEEDED: "budget_exceeded",
+  RUNAWAY_DETECTED: "runaway_detected",
+  ERROR_THRESHOLD: "error_threshold",
+  TIMEOUT: "timeout",
+  ADMIN_OVERRIDE: "admin_override",
+  SYSTEM_SHUTDOWN: "system_shutdown",
+  SECURITY_VIOLATION: "security_violation",
+  RESOURCE_EXHAUSTION: "resource_exhaustion",
 } as const;
 
 export type StopReason = (typeof STOP_REASONS)[keyof typeof STOP_REASONS];
@@ -57,7 +57,7 @@ export type StopReason = (typeof STOP_REASONS)[keyof typeof STOP_REASONS];
 export interface StopResult {
   success: boolean;
   targetId: string;
-  targetType: 'global' | 'goal' | 'agent' | 'session';
+  targetType: "global" | "goal" | "agent" | "session";
   reason: StopReason;
   stoppedAt: string;
   gracefulShutdown: boolean;
@@ -71,7 +71,7 @@ export interface StopResult {
 export interface StopEvent {
   id: string;
   targetId: string;
-  targetType: 'global' | 'goal' | 'agent' | 'session';
+  targetType: "global" | "goal" | "agent" | "session";
   reason: StopReason;
   initiatedBy: string; // userId or 'system'
   timestamp: string;
@@ -98,13 +98,13 @@ export interface GracefulShutdownOptions {
 }
 
 export type KillSwitchEvent =
-  | { type: 'global_stop'; reason: StopReason; initiatedBy: string }
-  | { type: 'global_resume'; initiatedBy: string }
-  | { type: 'goal_stopped'; goalId: string; reason: StopReason }
-  | { type: 'agent_stopped'; agentId: string; reason: StopReason }
-  | { type: 'session_stopped'; sessionId: string; reason: StopReason }
-  | { type: 'graceful_shutdown_started'; affectedCount: number }
-  | { type: 'graceful_shutdown_complete'; savedState: boolean };
+  | { type: "global_stop"; reason: StopReason; initiatedBy: string }
+  | { type: "global_resume"; initiatedBy: string }
+  | { type: "goal_stopped"; goalId: string; reason: StopReason }
+  | { type: "agent_stopped"; agentId: string; reason: StopReason }
+  | { type: "session_stopped"; sessionId: string; reason: StopReason }
+  | { type: "graceful_shutdown_started"; affectedCount: number }
+  | { type: "graceful_shutdown_complete"; savedState: boolean };
 
 // ============================================================================
 // KILL SWITCH CLASS
@@ -146,14 +146,16 @@ export class KillSwitch extends EventEmitter {
    */
   async emergencyStopAll(
     reason: StopReason = STOP_REASONS.USER_REQUESTED,
-    initiatedBy: string = 'system'
+    initiatedBy: string = "system",
   ): Promise<StopResult> {
     const stoppedAt = new Date().toISOString();
     const errors: string[] = [];
     let affectedAgents = 0;
     const affectedGoals = 0;
 
-    console.warn(`[KillSwitch] ⚠️ EMERGENCY STOP ALL - Reason: ${reason}, By: ${initiatedBy}`);
+    console.warn(
+      `[KillSwitch] ⚠️ EMERGENCY STOP ALL - Reason: ${reason}, By: ${initiatedBy}`,
+    );
 
     // 1. Set global stop flag IMMEDIATELY
     this.state.globalStop = true;
@@ -178,7 +180,7 @@ export class KillSwitch extends EventEmitter {
     // 4. Stop all active agents via supervisor
     try {
       const activeAgents = supervisor.getAllInstances({
-        status: ['running', 'starting', 'waiting'],
+        status: ["running", "starting", "waiting"],
       });
       affectedAgents = activeAgents.length;
 
@@ -194,21 +196,25 @@ export class KillSwitch extends EventEmitter {
     }
 
     // 5. Broadcast emergency stop to message bus
-    messageBus.systemError('EMERGENCY STOP ACTIVATED', 'EMERGENCY_STOP', initiatedBy);
+    messageBus.systemError(
+      "EMERGENCY STOP ACTIVATED",
+      "EMERGENCY_STOP",
+      initiatedBy,
+    );
 
     // 6. Emit event
     const event: KillSwitchEvent = {
-      type: 'global_stop',
+      type: "global_stop",
       reason,
       initiatedBy,
     };
-    this.emit('stop', event);
+    this.emit("stop", event);
 
     // 7. Create audit log entry
     const result: StopResult = {
       success: errors.length === 0,
-      targetId: 'global',
-      targetType: 'global',
+      targetId: "global",
+      targetType: "global",
       reason,
       stoppedAt,
       gracefulShutdown: false,
@@ -217,15 +223,15 @@ export class KillSwitch extends EventEmitter {
       affectedGoals,
       message:
         errors.length === 0
-          ? 'All operations stopped successfully'
+          ? "All operations stopped successfully"
           : `Stopped with ${errors.length} errors`,
       errors: errors.length > 0 ? errors : undefined,
     };
 
     this.logStopEvent({
       id: crypto.randomUUID(),
-      targetId: 'global',
-      targetType: 'global',
+      targetId: "global",
+      targetType: "global",
       reason,
       initiatedBy,
       timestamp: stoppedAt,
@@ -238,9 +244,9 @@ export class KillSwitch extends EventEmitter {
   /**
    * Resume operations after global stop
    */
-  resumeAll(initiatedBy: string = 'system'): void {
+  resumeAll(initiatedBy: string = "system"): void {
     if (!this.state.globalStop) {
-      console.log('[KillSwitch] Already running, nothing to resume');
+      console.log("[KillSwitch] Already running, nothing to resume");
       return;
     }
 
@@ -256,13 +262,13 @@ export class KillSwitch extends EventEmitter {
 
     // Emit event
     const event: KillSwitchEvent = {
-      type: 'global_resume',
+      type: "global_resume",
       initiatedBy,
     };
-    this.emit('resume', event);
+    this.emit("resume", event);
 
     // Broadcast resume
-    messageBus.broadcast('system_resume', { initiatedBy }, 'killSwitch');
+    messageBus.broadcast("system_resume", { initiatedBy }, "killSwitch");
   }
 
   /**
@@ -299,7 +305,7 @@ export class KillSwitch extends EventEmitter {
   async stopGoal(
     goalId: string,
     reason: StopReason = STOP_REASONS.USER_REQUESTED,
-    initiatedBy: string = 'system'
+    initiatedBy: string = "system",
   ): Promise<StopResult> {
     const stoppedAt = new Date().toISOString();
     const errors: string[] = [];
@@ -317,7 +323,7 @@ export class KillSwitch extends EventEmitter {
     // 2. Stop all agents working on this goal
     try {
       const activeAgents = supervisor.getAllInstances({
-        status: ['running', 'starting', 'waiting'],
+        status: ["running", "starting", "waiting"],
         goalId,
       });
       affectedAgents = activeAgents.length;
@@ -334,21 +340,21 @@ export class KillSwitch extends EventEmitter {
     }
 
     // 3. Publish goal stopped event
-    messageBus.broadcast('goal_stopped', { goalId, reason }, 'killSwitch');
+    messageBus.broadcast("goal_stopped", { goalId, reason }, "killSwitch");
 
     // 4. Emit event
     const event: KillSwitchEvent = {
-      type: 'goal_stopped',
+      type: "goal_stopped",
       goalId,
       reason,
     };
-    this.emit('goal_stopped', event);
+    this.emit("goal_stopped", event);
 
     // 5. Create result
     const result: StopResult = {
       success: errors.length === 0,
       targetId: goalId,
-      targetType: 'goal',
+      targetType: "goal",
       reason,
       stoppedAt,
       gracefulShutdown: false,
@@ -366,7 +372,7 @@ export class KillSwitch extends EventEmitter {
     const stopEvent: StopEvent = {
       id: crypto.randomUUID(),
       targetId: goalId,
-      targetType: 'goal',
+      targetType: "goal",
       reason,
       initiatedBy,
       timestamp: stoppedAt,
@@ -395,7 +401,7 @@ export class KillSwitch extends EventEmitter {
   async stopAgent(
     agentId: string,
     reason: StopReason = STOP_REASONS.USER_REQUESTED,
-    initiatedBy: string = 'system'
+    initiatedBy: string = "system",
   ): Promise<StopResult> {
     const stoppedAt = new Date().toISOString();
     const errors: string[] = [];
@@ -418,17 +424,17 @@ export class KillSwitch extends EventEmitter {
 
     // 3. Emit event
     const event: KillSwitchEvent = {
-      type: 'agent_stopped',
+      type: "agent_stopped",
       agentId,
       reason,
     };
-    this.emit('agent_stopped', event);
+    this.emit("agent_stopped", event);
 
     // 4. Create result
     const result: StopResult = {
       success: errors.length === 0,
       targetId: agentId,
-      targetType: 'agent',
+      targetType: "agent",
       reason,
       stoppedAt,
       gracefulShutdown: false,
@@ -446,7 +452,7 @@ export class KillSwitch extends EventEmitter {
     const stopEvent: StopEvent = {
       id: crypto.randomUUID(),
       targetId: agentId,
-      targetType: 'agent',
+      targetType: "agent",
       reason,
       initiatedBy,
       timestamp: stoppedAt,
@@ -475,13 +481,15 @@ export class KillSwitch extends EventEmitter {
   async stopSession(
     sessionId: string,
     reason: StopReason = STOP_REASONS.USER_REQUESTED,
-    initiatedBy: string = 'system'
+    initiatedBy: string = "system",
   ): Promise<StopResult> {
     const stoppedAt = new Date().toISOString();
     const errors: string[] = [];
     const affectedAgents = 0;
 
-    console.log(`[KillSwitch] Stopping session: ${sessionId} - Reason: ${reason}`);
+    console.log(
+      `[KillSwitch] Stopping session: ${sessionId} - Reason: ${reason}`,
+    );
 
     // 1. Stop budget tracking for session
     budgetManager.stopSession(sessionId, reason);
@@ -495,17 +503,17 @@ export class KillSwitch extends EventEmitter {
 
     // 3. Emit event
     const event: KillSwitchEvent = {
-      type: 'session_stopped',
+      type: "session_stopped",
       sessionId,
       reason,
     };
-    this.emit('session_stopped', event);
+    this.emit("session_stopped", event);
 
     // 4. Create result
     const result: StopResult = {
       success: errors.length === 0,
       targetId: sessionId,
-      targetType: 'session',
+      targetType: "session",
       reason,
       stoppedAt,
       gracefulShutdown: false,
@@ -523,7 +531,7 @@ export class KillSwitch extends EventEmitter {
     const stopEvent: StopEvent = {
       id: crypto.randomUUID(),
       targetId: sessionId,
-      targetType: 'session',
+      targetType: "session",
       reason,
       initiatedBy,
       timestamp: stoppedAt,
@@ -549,7 +557,9 @@ export class KillSwitch extends EventEmitter {
   /**
    * Initiate graceful shutdown - allow in-flight operations to complete
    */
-  async gracefulShutdown(options: GracefulShutdownOptions = {}): Promise<StopResult> {
+  async gracefulShutdown(
+    options: GracefulShutdownOptions = {},
+  ): Promise<StopResult> {
     const {
       gracePeriodMs = DEFAULT_GRACE_PERIOD_MS,
       saveState = true,
@@ -560,30 +570,32 @@ export class KillSwitch extends EventEmitter {
     const stoppedAt = new Date().toISOString();
     let savedStateSuccess = false;
 
-    console.log(`[KillSwitch] Initiating graceful shutdown - Grace period: ${gracePeriodMs}ms`);
+    console.log(
+      `[KillSwitch] Initiating graceful shutdown - Grace period: ${gracePeriodMs}ms`,
+    );
 
     // 1. Get count of active operations
     const activeAgents = supervisor.getAllInstances({
-      status: ['running', 'starting', 'waiting'],
+      status: ["running", "starting", "waiting"],
     });
     const affectedCount = activeAgents.length;
 
     // 2. Emit shutdown started event
     const startEvent: KillSwitchEvent = {
-      type: 'graceful_shutdown_started',
+      type: "graceful_shutdown_started",
       affectedCount,
     };
-    this.emit('shutdown_started', startEvent);
+    this.emit("shutdown_started", startEvent);
 
     // 3. Notify agents if requested
     if (notifyAgents) {
       messageBus.broadcast(
-        'graceful_shutdown',
+        "graceful_shutdown",
         {
           gracePeriodMs,
           reason,
         },
-        'killSwitch'
+        "killSwitch",
       );
     }
 
@@ -596,23 +608,23 @@ export class KillSwitch extends EventEmitter {
         // Save current state to a checkpoint
         // In production, this would persist to database
         savedStateSuccess = true;
-        console.log('[KillSwitch] State saved successfully');
+        console.log("[KillSwitch] State saved successfully");
       } catch (err) {
-        console.error('[KillSwitch] Failed to save state:', err);
+        console.error("[KillSwitch] Failed to save state:", err);
       }
     }
 
     // 6. Now force stop any remaining operations
-    const result = await this.emergencyStopAll(reason, 'graceful_shutdown');
+    const result = await this.emergencyStopAll(reason, "graceful_shutdown");
     result.gracefulShutdown = true;
     result.savedState = savedStateSuccess;
 
     // 7. Emit complete event
     const completeEvent: KillSwitchEvent = {
-      type: 'graceful_shutdown_complete',
+      type: "graceful_shutdown_complete",
       savedState: savedStateSuccess,
     };
-    this.emit('shutdown_complete', completeEvent);
+    this.emit("shutdown_complete", completeEvent);
 
     return result;
   }
@@ -672,15 +684,18 @@ export class KillSwitch extends EventEmitter {
    */
   private setupAutoIntervention(): void {
     // Listen for budget runaway events
-    budgetManager.on('runaway', async (event: { type: string; reason: string }) => {
-      console.warn('[KillSwitch] Runaway detected, intervening...');
-      // The budget manager already handles this, but we log it
-    });
+    budgetManager.on(
+      "runaway",
+      async (event: { type: string; reason: string }) => {
+        console.warn("[KillSwitch] Runaway detected, intervening...");
+        // The budget manager already handles this, but we log it
+      },
+    );
 
     // Listen for system errors
     messageBus.subscribe(CHANNELS.SYSTEM_ERROR, (message) => {
-      if ('error' in message && message.error.includes('EMERGENCY')) {
-        console.warn('[KillSwitch] Emergency error detected');
+      if ("error" in message && message.error.includes("EMERGENCY")) {
+        console.warn("[KillSwitch] Emergency error detected");
       }
     });
   }
@@ -707,7 +722,7 @@ export class KillSwitch extends EventEmitter {
   getAuditLog(options?: {
     limit?: number;
     since?: string;
-    targetType?: StopEvent['targetType'];
+    targetType?: StopEvent["targetType"];
     reason?: StopReason;
   }): StopEvent[] {
     let log = [...this.state.auditLog];
@@ -770,7 +785,11 @@ export class KillSwitch extends EventEmitter {
    * Pre-operation safety check
    * Call this before starting any potentially dangerous operation
    */
-  canStartOperation(options: { sessionId?: string; goalId?: string; agentId?: string }): {
+  canStartOperation(options: {
+    sessionId?: string;
+    goalId?: string;
+    agentId?: string;
+  }): {
     allowed: boolean;
     reason?: string;
   } {
@@ -783,10 +802,13 @@ export class KillSwitch extends EventEmitter {
     }
 
     // Check session stop
-    if (options.sessionId && this.state.stoppedSessions.has(options.sessionId)) {
+    if (
+      options.sessionId &&
+      this.state.stoppedSessions.has(options.sessionId)
+    ) {
       return {
         allowed: false,
-        reason: 'Session has been stopped',
+        reason: "Session has been stopped",
       };
     }
 
@@ -794,7 +816,7 @@ export class KillSwitch extends EventEmitter {
     if (options.goalId && this.state.stoppedGoals.has(options.goalId)) {
       return {
         allowed: false,
-        reason: 'Goal has been stopped',
+        reason: "Goal has been stopped",
       };
     }
 
@@ -802,7 +824,7 @@ export class KillSwitch extends EventEmitter {
     if (options.agentId && this.state.stoppedAgents.has(options.agentId)) {
       return {
         allowed: false,
-        reason: 'Agent has been stopped',
+        reason: "Agent has been stopped",
       };
     }
 
@@ -825,7 +847,7 @@ export const killSwitch = KillSwitch.getInstance();
  */
 export async function emergencyStopAll(
   reason: StopReason = STOP_REASONS.USER_REQUESTED,
-  initiatedBy: string = 'system'
+  initiatedBy: string = "system",
 ): Promise<StopResult> {
   return killSwitch.emergencyStopAll(reason, initiatedBy);
 }
@@ -833,14 +855,20 @@ export async function emergencyStopAll(
 /**
  * Stop a specific goal
  */
-export async function stopGoal(goalId: string, reason?: StopReason): Promise<StopResult> {
+export async function stopGoal(
+  goalId: string,
+  reason?: StopReason,
+): Promise<StopResult> {
   return killSwitch.stopGoal(goalId, reason);
 }
 
 /**
  * Stop a specific agent
  */
-export async function stopAgent(agentId: string, reason?: StopReason): Promise<StopResult> {
+export async function stopAgent(
+  agentId: string,
+  reason?: StopReason,
+): Promise<StopResult> {
   return killSwitch.stopAgent(agentId, reason);
 }
 

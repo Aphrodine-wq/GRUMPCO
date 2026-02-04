@@ -18,14 +18,14 @@
  * @module agentOrchestrator/fixEngine
  */
 
-import { getRequestLogger } from '../../middleware/logger.js';
-import { generateFixPlan } from '../wrunnerService.js';
+import { getRequestLogger } from "../../middleware/logger.js";
+import { generateFixPlan } from "../wrunnerService.js";
 import type {
   GenerationSession,
   AgentType,
   GeneratedFile,
   WRunnerAnalysis,
-} from '../../types/agents.js';
+} from "../../types/agents.js";
 
 /**
  * Apply auto-fixes based on WRunner analysis.
@@ -48,11 +48,17 @@ import type {
  */
 export async function applyAutoFixes(
   session: GenerationSession,
-  analysis: WRunnerAnalysis
-): Promise<Array<{ issueId: string; fix: string; status: 'applied' | 'failed' }>> {
+  analysis: WRunnerAnalysis,
+): Promise<
+  Array<{ issueId: string; fix: string; status: "applied" | "failed" }>
+> {
   const log = getRequestLogger();
   const fixPlan = generateFixPlan(analysis);
-  const appliedFixes: Array<{ issueId: string; fix: string; status: 'applied' | 'failed' }> = [];
+  const appliedFixes: Array<{
+    issueId: string;
+    fix: string;
+    status: "applied" | "failed";
+  }> = [];
 
   if (!session.autoFixesApplied) {
     session.autoFixesApplied = [];
@@ -60,31 +66,39 @@ export async function applyAutoFixes(
 
   for (const issue of fixPlan.autoFixable) {
     try {
-      log.info({ issueId: issue.id, sessionId: session.sessionId }, 'Applying auto-fix');
+      log.info(
+        { issueId: issue.id, sessionId: session.sessionId },
+        "Applying auto-fix",
+      );
 
-      const fixDescription = issue.suggestedFixes.map((f) => f.action).join('; ');
+      const fixDescription = issue.suggestedFixes
+        .map((f) => f.action)
+        .join("; ");
       appliedFixes.push({
         issueId: issue.id,
         fix: fixDescription,
-        status: 'applied',
+        status: "applied",
       });
 
       session.autoFixesApplied.push({
         issueId: issue.id,
         fix: fixDescription,
-        status: 'applied',
+        status: "applied",
       });
     } catch (error) {
-      log.error({ issueId: issue.id, error: (error as Error).message }, 'Auto-fix failed');
+      log.error(
+        { issueId: issue.id, error: (error as Error).message },
+        "Auto-fix failed",
+      );
       appliedFixes.push({
         issueId: issue.id,
         fix: issue.description,
-        status: 'failed',
+        status: "failed",
       });
       session.autoFixesApplied.push({
         issueId: issue.id,
         fix: issue.description,
-        status: 'failed',
+        status: "failed",
       });
     }
   }
@@ -115,13 +129,16 @@ export async function applyAutoFixes(
 export async function regenerateAgentOutput(
   session: GenerationSession,
   agentType: AgentType,
-  fixes: WRunnerAnalysis['issues']
+  fixes: WRunnerAnalysis["issues"],
 ): Promise<GeneratedFile[]> {
   const log = getRequestLogger();
-  log.info({ agentType, sessionId: session.sessionId }, 'Regenerating agent output with fixes');
+  log.info(
+    { agentType, sessionId: session.sessionId },
+    "Regenerating agent output with fixes",
+  );
 
   const agentTask = session.agents[agentType];
-  if (!agentTask || agentTask.status !== 'completed') {
+  if (!agentTask || agentTask.status !== "completed") {
     throw new Error(`Agent ${agentType} has not completed or does not exist`);
   }
 
@@ -157,26 +174,30 @@ export async function regenerateAgentOutput(
 export function validateFixes(
   session: GenerationSession,
   analysis: WRunnerAnalysis,
-  appliedFixes: Array<{ issueId: string; fix: string; status: 'applied' | 'failed' }>
+  appliedFixes: Array<{
+    issueId: string;
+    fix: string;
+    status: "applied" | "failed";
+  }>,
 ): { valid: boolean; issues: string[] } {
   const log = getRequestLogger();
   const issues: string[] = [];
 
   const appliedIssueIds = new Set(
-    appliedFixes.filter((f) => f.status === 'applied').map((f) => f.issueId)
+    appliedFixes.filter((f) => f.status === "applied").map((f) => f.issueId),
   );
   const expectedIssueIds = new Set(
     analysis.issues
       .filter((i) => {
         const isAutoFixable =
-          (i.category === 'missing' ||
-            i.category === 'quality' ||
-            i.category === 'inconsistency') &&
-          i.severity !== 'critical' &&
+          (i.category === "missing" ||
+            i.category === "quality" ||
+            i.category === "inconsistency") &&
+          i.severity !== "critical" &&
           i.suggestedFixes.length > 0;
         return isAutoFixable;
       })
-      .map((i) => i.id)
+      .map((i) => i.id),
   );
 
   for (const issueId of expectedIssueIds) {
@@ -185,7 +206,7 @@ export function validateFixes(
     }
   }
 
-  const failedFixes = appliedFixes.filter((f) => f.status === 'failed');
+  const failedFixes = appliedFixes.filter((f) => f.status === "failed");
   if (failedFixes.length > 0) {
     issues.push(`${failedFixes.length} fixes failed to apply`);
   }
@@ -193,7 +214,7 @@ export function validateFixes(
   const valid = issues.length === 0;
   log.info(
     { sessionId: session.sessionId, valid, issueCount: issues.length },
-    'Fix validation completed'
+    "Fix validation completed",
   );
 
   return { valid, issues };

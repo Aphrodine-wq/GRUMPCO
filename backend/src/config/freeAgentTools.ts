@@ -10,7 +10,7 @@ export {
   isCapabilityAvailable,
   getAvailableCapabilities,
   CAPABILITY_PRESETS,
-} from './gAgentTools.js';
+} from "./gAgentTools.js";
 
 // Re-export the type for backward compatibility
-export type { GAgentCapabilityKey as FreeAgentCapabilityKey } from '../types/settings.js';
+export type { GAgentCapabilityKey as FreeAgentCapabilityKey } from "../types/settings.js";

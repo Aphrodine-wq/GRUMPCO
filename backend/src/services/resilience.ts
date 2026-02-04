@@ -39,10 +39,10 @@
  * @module services/resilience
  */
 
-import CircuitBreaker from 'opossum';
-import retry from 'async-retry';
-import logger from '../middleware/logger.js';
-import { updateCircuitState } from '../middleware/metrics.js';
+import CircuitBreaker from "opossum";
+import retry from "async-retry";
+import logger from "../middleware/logger.js";
+import { updateCircuitState } from "../middleware/metrics.js";
 
 // =============================================================================
 // Configuration
@@ -63,7 +63,8 @@ export const CIRCUIT_BREAKER_OPTIONS = {
   volumeThreshold: 5,
 };
 
-const isTestEnv = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+const isTestEnv =
+  process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
 
 /**
  * Default retry configuration with exponential backoff.
@@ -76,7 +77,7 @@ const RETRY_OPTIONS: retry.Options = {
   factor: 2,
   onRetry: (error: unknown, attempt: number) => {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.warn({ error: err.message, attempt }, 'Retrying Claude API call');
+    logger.warn({ error: err.message, attempt }, "Retrying Claude API call");
   },
 };
 
@@ -114,7 +115,7 @@ interface CircuitError extends Error {
  * Circuit breaker statistics for monitoring.
  */
 interface CircuitStats {
-  state: 'open' | 'half-open' | 'closed';
+  state: "open" | "half-open" | "closed";
   stats: unknown;
 }
 
@@ -141,9 +142,9 @@ export function isRetryableError(error: ErrorWithStatus): boolean {
   const status = error.status || error.statusCode;
   return (
     (status !== undefined && RETRYABLE_STATUS_CODES.includes(status)) ||
-    error.code === 'ECONNRESET' ||
-    error.code === 'ETIMEDOUT' ||
-    error.message?.toLowerCase().includes('overloaded')
+    error.code === "ECONNRESET" ||
+    error.code === "ETIMEDOUT" ||
+    error.message?.toLowerCase().includes("overloaded")
   );
 }
 
@@ -178,13 +179,15 @@ export function isRetryableError(error: ErrorWithStatus): boolean {
  */
 export function createCircuitBreaker<T extends unknown[], R>(
   fn: AsyncFunction<T, R>,
-  name = 'claude-api'
+  name = "claude-api",
 ): CircuitBreaker<T, R> {
   const breaker = new CircuitBreaker(fn, {
     ...CIRCUIT_BREAKER_OPTIONS,
     errorFilter: (error: ErrorWithStatus) => {
       const status = error.status || error.statusCode;
-      return status !== undefined && status >= 400 && status < 500 && status !== 429;
+      return (
+        status !== undefined && status >= 400 && status < 500 && status !== 429
+      );
     },
     ...(isTestEnv
       ? {
@@ -196,32 +199,32 @@ export function createCircuitBreaker<T extends unknown[], R>(
     name,
   });
 
-  let previousState: 'closed' | 'half-open' | 'open' = 'closed';
+  let previousState: "closed" | "half-open" | "open" = "closed";
 
-  breaker.on('open', () => {
-    logger.error({ circuit: name }, 'Circuit breaker opened - API unavailable');
-    updateCircuitState(name, 'open', previousState);
-    previousState = 'open';
+  breaker.on("open", () => {
+    logger.error({ circuit: name }, "Circuit breaker opened - API unavailable");
+    updateCircuitState(name, "open", previousState);
+    previousState = "open";
   });
 
-  breaker.on('halfOpen', () => {
-    logger.info({ circuit: name }, 'Circuit breaker half-open - testing API');
-    updateCircuitState(name, 'half-open', previousState);
-    previousState = 'half-open';
+  breaker.on("halfOpen", () => {
+    logger.info({ circuit: name }, "Circuit breaker half-open - testing API");
+    updateCircuitState(name, "half-open", previousState);
+    previousState = "half-open";
   });
 
-  breaker.on('close', () => {
-    logger.info({ circuit: name }, 'Circuit breaker closed - API recovered');
-    updateCircuitState(name, 'closed', previousState);
-    previousState = 'closed';
+  breaker.on("close", () => {
+    logger.info({ circuit: name }, "Circuit breaker closed - API recovered");
+    updateCircuitState(name, "closed", previousState);
+    previousState = "closed";
   });
 
-  breaker.on('timeout', () => {
-    logger.warn({ circuit: name }, 'Circuit breaker timeout');
+  breaker.on("timeout", () => {
+    logger.warn({ circuit: name }, "Circuit breaker timeout");
   });
 
-  breaker.on('reject', () => {
-    logger.warn({ circuit: name }, 'Circuit breaker rejected request');
+  breaker.on("reject", () => {
+    logger.warn({ circuit: name }, "Circuit breaker rejected request");
   });
 
   return breaker;
@@ -261,7 +264,7 @@ export function createCircuitBreaker<T extends unknown[], R>(
  */
 export function withRetry<T extends unknown[], R>(
   fn: AsyncFunction<T, R>,
-  options: Partial<retry.Options> = {}
+  options: Partial<retry.Options> = {},
 ): AsyncFunction<T, R> {
   return async (...args: T): Promise<R> => {
     return retry(
@@ -271,7 +274,12 @@ export function withRetry<T extends unknown[], R>(
         } catch (error) {
           const err = error as ErrorWithStatus;
           // Don't retry client errors (except rate limits)
-          if (err.status && err.status >= 400 && err.status < 500 && err.status !== 429) {
+          if (
+            err.status &&
+            err.status >= 400 &&
+            err.status < 500 &&
+            err.status !== 429
+          ) {
             bail(err);
             return undefined as R;
           }
@@ -285,7 +293,7 @@ export function withRetry<T extends unknown[], R>(
           throw error; // Triggers retry
         }
       },
-      { ...RETRY_OPTIONS, ...options }
+      { ...RETRY_OPTIONS, ...options },
     );
   };
 }
@@ -330,7 +338,7 @@ export function withRetry<T extends unknown[], R>(
  */
 export function withResilience<T extends unknown[], R>(
   fn: AsyncFunction<T, R>,
-  name = 'claude-api'
+  name = "claude-api",
 ): AsyncFunction<T, R> {
   const retriedFn = withRetry(fn);
   const breaker = createCircuitBreaker(retriedFn, name);
@@ -341,10 +349,14 @@ export function withResilience<T extends unknown[], R>(
     } catch (error) {
       // Enhance error with circuit state info
       if (breaker.opened) {
-        const enhancedError: CircuitError = new Error('Service temporarily unavailable');
-        enhancedError.code = 'CIRCUIT_OPEN';
+        const enhancedError: CircuitError = new Error(
+          "Service temporarily unavailable",
+        );
+        enhancedError.code = "CIRCUIT_OPEN";
         enhancedError.status = 503;
-        enhancedError.retryAfter = Math.ceil(CIRCUIT_BREAKER_OPTIONS.resetTimeout / 1000);
+        enhancedError.retryAfter = Math.ceil(
+          CIRCUIT_BREAKER_OPTIONS.resetTimeout / 1000,
+        );
         throw enhancedError;
       }
       throw error;
@@ -372,10 +384,10 @@ export function withResilience<T extends unknown[], R>(
  * ```
  */
 export function getCircuitStats<T extends unknown[], R>(
-  breaker: CircuitBreaker<T, R>
+  breaker: CircuitBreaker<T, R>,
 ): CircuitStats {
   return {
-    state: breaker.opened ? 'open' : breaker.halfOpen ? 'half-open' : 'closed',
+    state: breaker.opened ? "open" : breaker.halfOpen ? "half-open" : "closed",
     stats: breaker.stats,
   };
 }

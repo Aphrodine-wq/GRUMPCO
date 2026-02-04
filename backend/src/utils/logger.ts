@@ -3,14 +3,14 @@
  * Simple wrapper around pino logger for standalone use
  */
 
-import { getRequestLogger } from '../middleware/logger.js';
+import { getRequestLogger } from "../middleware/logger.js";
 
 // Create a default logger for use outside of request context
 const defaultLogger = {
-  debug: (...args: unknown[]) => console.debug('[DEBUG]', ...args),
-  info: (...args: unknown[]) => console.info('[INFO]', ...args),
-  warn: (...args: unknown[]) => console.warn('[WARN]', ...args),
-  error: (...args: unknown[]) => console.error('[ERROR]', ...args),
+  debug: (...args: unknown[]) => console.debug("[DEBUG]", ...args),
+  info: (...args: unknown[]) => console.info("[INFO]", ...args),
+  warn: (...args: unknown[]) => console.warn("[WARN]", ...args),
+  error: (...args: unknown[]) => console.error("[ERROR]", ...args),
 };
 
 // Export a logger that tries to use request context, falls back to default

@@ -9,9 +9,9 @@
  * - Cancel on actual request diverge
  */
 
-import { getTieredCache } from './tieredCache.js';
-import logger from '../middleware/logger.js';
-import type { LLMProvider, StreamParams, StreamEvent } from './llmGateway.js';
+import { getTieredCache } from "./tieredCache.js";
+import logger from "../middleware/logger.js";
+import type { LLMProvider, StreamParams, StreamEvent } from "./llmGateway.js";
 
 interface Speculation {
   id: string;
@@ -43,7 +43,7 @@ class SpeculativeExecutionEngine {
   predictIntent(
     input: string,
     _context: string[],
-    _cursorPosition: number
+    _cursorPosition: number,
   ): PredictionResult | null {
     // Don't speculate on very short inputs
     if (input.length < 10) return null;
@@ -53,10 +53,11 @@ class SpeculativeExecutionEngine {
     // Pattern 1: Code generation intent
     if (this.isCodeGenerationIntent(input)) {
       predictions.push({
-        intent: 'codegen',
+        intent: "codegen",
         confidence: 0.85,
         params: {
-          system: 'You are a code generation assistant. Generate clean, production-ready code.',
+          system:
+            "You are a code generation assistant. Generate clean, production-ready code.",
           max_tokens: 2000,
         },
       });
@@ -65,10 +66,10 @@ class SpeculativeExecutionEngine {
     // Pattern 2: Explanation intent
     if (this.isExplanationIntent(input)) {
       predictions.push({
-        intent: 'explain',
+        intent: "explain",
         confidence: 0.75,
         params: {
-          system: 'Explain the following in clear, concise terms.',
+          system: "Explain the following in clear, concise terms.",
           max_tokens: 1000,
         },
       });
@@ -77,10 +78,11 @@ class SpeculativeExecutionEngine {
     // Pattern 3: Debug intent
     if (this.isDebugIntent(input)) {
       predictions.push({
-        intent: 'debug',
+        intent: "debug",
         confidence: 0.8,
         params: {
-          system: 'Help debug this issue. Identify the problem and suggest fixes.',
+          system:
+            "Help debug this issue. Identify the problem and suggest fixes.",
           max_tokens: 1500,
         },
       });
@@ -89,10 +91,11 @@ class SpeculativeExecutionEngine {
     // Pattern 4: Refactor intent
     if (this.isRefactorIntent(input)) {
       predictions.push({
-        intent: 'refactor',
+        intent: "refactor",
         confidence: 0.78,
         params: {
-          system: 'Refactor this code to improve readability, performance, and maintainability.',
+          system:
+            "Refactor this code to improve readability, performance, and maintainability.",
           max_tokens: 2000,
         },
       });
@@ -111,7 +114,7 @@ class SpeculativeExecutionEngine {
     userId: string,
     predictedIntent: string,
     partialInput: string,
-    streamFn: (params: StreamParams) => AsyncGenerator<StreamEvent>
+    streamFn: (params: StreamParams) => AsyncGenerator<StreamEvent>,
   ): Promise<string | null> {
     // Check if we already have a speculation for this
     const cacheKey = `spec:${userId}:${this.hashInput(partialInput)}`;
@@ -128,17 +131,17 @@ class SpeculativeExecutionEngine {
 
     // Build prediction parameters
     const params: StreamParams = {
-      model: 'moonshotai/kimi-k2.5', // Fast model for speculation
+      model: "moonshotai/kimi-k2.5", // Fast model for speculation
       max_tokens: 1500,
-      system: 'Generate a quick preliminary response.',
-      messages: [{ role: 'user', content: partialInput }],
+      system: "Generate a quick preliminary response.",
+      messages: [{ role: "user", content: partialInput }],
     };
 
     const speculation: Speculation = {
       id: cacheKey,
       predictedIntent,
       params,
-      provider: 'nim', // Primary provider
+      provider: "nim", // Primary provider
       promise: this.executeSpeculation(streamFn, params, cacheKey),
       timestamp: Date.now(),
       confidence: 0.7,
@@ -153,7 +156,7 @@ class SpeculativeExecutionEngine {
         intent: predictedIntent,
         confidence: speculation.confidence,
       },
-      'Started speculative execution'
+      "Started speculative execution",
     );
 
     return speculation.id;
@@ -165,7 +168,7 @@ class SpeculativeExecutionEngine {
   private async executeSpeculation(
     streamFn: (params: StreamParams) => AsyncGenerator<StreamEvent>,
     params: StreamParams,
-    cacheKey: string
+    cacheKey: string,
   ): Promise<StreamEvent[]> {
     const events: StreamEvent[] = [];
     const speculation = this.activeSpeculations.get(cacheKey);
@@ -175,7 +178,7 @@ class SpeculativeExecutionEngine {
     try {
       for await (const event of streamFn(params)) {
         if (speculation.aborted) {
-          logger.debug({ cacheKey }, 'Speculation aborted');
+          logger.debug({ cacheKey }, "Speculation aborted");
           return events;
         }
 
@@ -187,12 +190,12 @@ class SpeculativeExecutionEngine {
 
       // Cache successful speculation
       if (events.length > 0 && !speculation.aborted) {
-        await this.cache.set('speculation', cacheKey, events, 60); // 1 min cache
+        await this.cache.set("speculation", cacheKey, events, 60); // 1 min cache
       }
 
       return events;
     } catch (error) {
-      logger.warn({ error, cacheKey }, 'Speculation failed');
+      logger.warn({ error, cacheKey }, "Speculation failed");
       return events;
     }
   }
@@ -200,7 +203,9 @@ class SpeculativeExecutionEngine {
   /**
    * Retrieve speculation result if available
    */
-  async getSpeculationResult(speculationId: string): Promise<StreamEvent[] | null> {
+  async getSpeculationResult(
+    speculationId: string,
+  ): Promise<StreamEvent[] | null> {
     // Check active speculations
     const active = this.activeSpeculations.get(speculationId);
     if (active && !active.aborted) {
@@ -213,9 +218,12 @@ class SpeculativeExecutionEngine {
     }
 
     // Check cache
-    const cached = await this.cache.get<StreamEvent[]>('speculation', speculationId);
+    const cached = await this.cache.get<StreamEvent[]>(
+      "speculation",
+      speculationId,
+    );
     if (cached) {
-      logger.debug({ speculationId }, 'Retrieved speculation from cache');
+      logger.debug({ speculationId }, "Retrieved speculation from cache");
       return cached;
     }
 
@@ -230,7 +238,7 @@ class SpeculativeExecutionEngine {
     if (speculation) {
       speculation.aborted = true;
       this.activeSpeculations.delete(speculationId);
-      logger.debug({ speculationId }, 'Cancelled speculation');
+      logger.debug({ speculationId }, "Cancelled speculation");
     }
   }
 
@@ -255,7 +263,7 @@ class SpeculativeExecutionEngine {
 
     // Check if input diverged significantly
     const content = speculation.params.messages[0]?.content;
-    const textContent = typeof content === 'string' ? content : '';
+    const textContent = typeof content === "string" ? content : "";
     const similarity = this.calculateSimilarity(textContent, actualInput);
 
     return similarity > 0.8;
@@ -266,7 +274,7 @@ class SpeculativeExecutionEngine {
    */
   private cleanupOldestSpeculation(): void {
     let oldest: Speculation | null = null;
-    let oldestKey = '';
+    let oldestKey = "";
 
     for (const [key, speculation] of this.activeSpeculations.entries()) {
       if (!oldest || speculation.timestamp < oldest.timestamp) {
@@ -297,7 +305,7 @@ class SpeculativeExecutionEngine {
     }
 
     if (cleaned > 0) {
-      logger.debug({ cleaned }, 'Cleaned up old speculations');
+      logger.debug({ cleaned }, "Cleaned up old speculations");
     }
   }
 
@@ -313,7 +321,11 @@ class SpeculativeExecutionEngine {
   }
 
   private isExplanationIntent(input: string): boolean {
-    const patterns = [/explain|how|what|why/i, /understand|clarify/i, /mean|does/i];
+    const patterns = [
+      /explain|how|what|why/i,
+      /understand|clarify/i,
+      /mean|does/i,
+    ];
     return patterns.some((p) => p.test(input));
   }
 
@@ -349,7 +361,7 @@ class SpeculativeExecutionEngine {
   private hashInput(input: string): string {
     return input
       .slice(0, 50)
-      .replace(/[^a-zA-Z0-9]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, "")
       .toLowerCase();
   }
 

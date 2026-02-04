@@ -3,14 +3,14 @@
  * Implements database operations using Supabase PostgreSQL
  */
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import logger from '../middleware/logger.js';
-import { recordDbOperation } from '../middleware/metrics.js';
-import type { GenerationSession, AgentWorkReport } from '../types/agents.js';
-import type { ShipSession } from '../types/ship.js';
-import type { Plan } from '../types/plan.js';
-import type { SpecSession } from '../types/spec.js';
-import type { Settings } from '../types/settings.js';
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import logger from "../middleware/logger.js";
+import { recordDbOperation } from "../middleware/metrics.js";
+import type { GenerationSession, AgentWorkReport } from "../types/agents.js";
+import type { ShipSession } from "../types/ship.js";
+import type { Plan } from "../types/plan.js";
+import type { SpecSession } from "../types/spec.js";
+import type { Settings } from "../types/settings.js";
 import type {
   IntegrationRecord,
   OAuthTokenRecord,
@@ -30,7 +30,7 @@ import type {
   MessagingSubscriptionRecord,
   SlackUserPairingRecord,
   ReminderRecord,
-} from '../types/integrations.js';
+} from "../types/integrations.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseRow = Record<string, any>;
@@ -49,19 +49,21 @@ export class SupabaseDatabaseService {
     if (this.initialized) return;
 
     // Test connection by checking if we can query
-    const { error } = await this.client.from('sessions').select('id').limit(1);
+    const { error } = await this.client.from("sessions").select("id").limit(1);
 
-    if (error && error.code === '42P01') {
+    if (error && error.code === "42P01") {
       // Table doesn't exist - user needs to run migrations
-      logger.warn('Supabase tables not found. Please run the SQL schema in Supabase Dashboard.');
-      logger.warn('See DEPLOY_VERCEL.md for setup instructions.');
+      logger.warn(
+        "Supabase tables not found. Please run the SQL schema in Supabase Dashboard.",
+      );
+      logger.warn("See DEPLOY_VERCEL.md for setup instructions.");
     } else if (error) {
-      logger.error({ error: error.message }, 'Supabase connection test failed');
+      logger.error({ error: error.message }, "Supabase connection test failed");
       throw new Error(`Supabase connection failed: ${error.message}`);
     }
 
     this.initialized = true;
-    logger.info('Supabase database initialized');
+    logger.info("Supabase database initialized");
   }
 
   async close(): Promise<void> {
@@ -75,7 +77,7 @@ export class SupabaseDatabaseService {
    */
   getDb(): never {
     throw new Error(
-      'Direct database access not supported in Supabase mode. Use Supabase methods instead.'
+      "Direct database access not supported in Supabase mode. Use Supabase methods instead.",
     );
   }
 
@@ -98,9 +100,9 @@ export class SupabaseDatabaseService {
   async saveSession(session: GenerationSession): Promise<void> {
     const start = process.hrtime.bigint();
     try {
-      const { error } = await this.client.from('sessions').upsert({
+      const { error } = await this.client.from("sessions").upsert({
         id: session.sessionId,
-        type: 'generation',
+        type: "generation",
         status: session.status,
         data: session,
         created_at: session.createdAt,
@@ -113,20 +115,20 @@ export class SupabaseDatabaseService {
       if (error) throw error;
 
       const duration = Number(process.hrtime.bigint() - start) / 1e9;
-      recordDbOperation('saveSession', 'sessions', duration, 'success');
+      recordDbOperation("saveSession", "sessions", duration, "success");
     } catch (error) {
       const duration = Number(process.hrtime.bigint() - start) / 1e9;
-      recordDbOperation('saveSession', 'sessions', duration, 'error');
+      recordDbOperation("saveSession", "sessions", duration, "error");
       throw error;
     }
   }
 
   async getSession(sessionId: string): Promise<GenerationSession | null> {
     const { data, error } = await this.client
-      .from('sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .eq('type', 'generation')
+      .from("sessions")
+      .select("*")
+      .eq("id", sessionId)
+      .eq("type", "generation")
       .single();
 
     if (error || !data) return null;
@@ -135,20 +137,23 @@ export class SupabaseDatabaseService {
 
   async listSessions(
     options: {
-      type?: 'generation' | 'ship' | 'spec' | 'plan';
+      type?: "generation" | "ship" | "spec" | "plan";
       status?: string;
       limit?: number;
       offset?: number;
-    } = {}
+    } = {},
   ): Promise<GenerationSession[]> {
-    let query = this.client.from('sessions').select('*');
+    let query = this.client.from("sessions").select("*");
 
-    if (options.type) query = query.eq('type', options.type);
-    if (options.status) query = query.eq('status', options.status);
-    query = query.order('created_at', { ascending: false });
+    if (options.type) query = query.eq("type", options.type);
+    if (options.status) query = query.eq("status", options.status);
+    query = query.order("created_at", { ascending: false });
     if (options.limit) query = query.limit(options.limit);
     if (options.offset)
-      query = query.range(options.offset, options.offset + (options.limit || 10) - 1);
+      query = query.range(
+        options.offset,
+        options.offset + (options.limit || 10) - 1,
+      );
 
     const { data, error } = await query;
     if (error || !data) return [];
@@ -156,14 +161,17 @@ export class SupabaseDatabaseService {
   }
 
   async deleteSession(sessionId: string): Promise<void> {
-    const { error } = await this.client.from('sessions').delete().eq('id', sessionId);
+    const { error } = await this.client
+      .from("sessions")
+      .delete()
+      .eq("id", sessionId);
     if (error) throw error;
   }
 
   // ========== Ship Sessions ==========
 
   async saveShipSession(session: ShipSession): Promise<void> {
-    const { error } = await this.client.from('ship_sessions').upsert({
+    const { error } = await this.client.from("ship_sessions").upsert({
       id: session.id,
       phase: session.phase,
       status: session.status,
@@ -178,9 +186,9 @@ export class SupabaseDatabaseService {
 
   async getShipSession(sessionId: string): Promise<ShipSession | null> {
     const { data, error } = await this.client
-      .from('ship_sessions')
-      .select('*')
-      .eq('id', sessionId)
+      .from("ship_sessions")
+      .select("*")
+      .eq("id", sessionId)
       .single();
 
     if (error || !data) return null;
@@ -193,14 +201,15 @@ export class SupabaseDatabaseService {
       status?: string;
       projectId?: string;
       limit?: number;
-    } = {}
+    } = {},
   ): Promise<ShipSession[]> {
-    let query = this.client.from('ship_sessions').select('*');
+    let query = this.client.from("ship_sessions").select("*");
 
-    if (options.phase) query = query.eq('phase', options.phase);
-    if (options.status) query = query.eq('status', options.status);
-    if (options.projectId != null) query = query.eq('project_id', options.projectId);
-    query = query.order('created_at', { ascending: false });
+    if (options.phase) query = query.eq("phase", options.phase);
+    if (options.status) query = query.eq("status", options.status);
+    if (options.projectId != null)
+      query = query.eq("project_id", options.projectId);
+    query = query.order("created_at", { ascending: false });
     if (options.limit) query = query.limit(options.limit);
 
     const { data, error } = await query;
@@ -211,7 +220,7 @@ export class SupabaseDatabaseService {
   // ========== Plans ==========
 
   async savePlan(plan: Plan): Promise<void> {
-    const { error } = await this.client.from('plans').upsert({
+    const { error } = await this.client.from("plans").upsert({
       id: plan.id,
       session_id: null,
       data: plan,
@@ -227,19 +236,25 @@ export class SupabaseDatabaseService {
   }
 
   async getPlan(planId: string): Promise<Plan | null> {
-    const { data, error } = await this.client.from('plans').select('*').eq('id', planId).single();
+    const { data, error } = await this.client
+      .from("plans")
+      .select("*")
+      .eq("id", planId)
+      .single();
 
     if (error || !data) return null;
     return data.data as Plan;
   }
 
-  async listPlans(options: { status?: string; limit?: number } = {}): Promise<Plan[]> {
-    let query = this.client.from('plans').select('*');
+  async listPlans(
+    options: { status?: string; limit?: number } = {},
+  ): Promise<Plan[]> {
+    let query = this.client.from("plans").select("*");
 
     if (options.status) {
-      query = query.eq('data->>status', options.status);
+      query = query.eq("data->>status", options.status);
     }
-    query = query.order('created_at', { ascending: false });
+    query = query.order("created_at", { ascending: false });
     if (options.limit) query = query.limit(options.limit);
 
     const { data, error } = await query;
@@ -250,7 +265,7 @@ export class SupabaseDatabaseService {
   // ========== Specs ==========
 
   async saveSpec(spec: SpecSession): Promise<void> {
-    const { error } = await this.client.from('specs').upsert({
+    const { error } = await this.client.from("specs").upsert({
       id: spec.id,
       session_id: null,
       data: spec,
@@ -263,7 +278,11 @@ export class SupabaseDatabaseService {
   }
 
   async getSpec(specId: string): Promise<SpecSession | null> {
-    const { data, error } = await this.client.from('specs').select('*').eq('id', specId).single();
+    const { data, error } = await this.client
+      .from("specs")
+      .select("*")
+      .eq("id", specId)
+      .single();
 
     if (error || !data) return null;
     return data.data as SpecSession;
@@ -273,7 +292,7 @@ export class SupabaseDatabaseService {
 
   async saveWorkReport(report: AgentWorkReport): Promise<void> {
     const reportId = `report_${report.sessionId}_${report.agentType}_${Date.now()}`;
-    const { error } = await this.client.from('work_reports').upsert({
+    const { error } = await this.client.from("work_reports").upsert({
       id: reportId,
       session_id: report.sessionId,
       agent_type: report.agentType,
@@ -286,10 +305,10 @@ export class SupabaseDatabaseService {
 
   async getWorkReports(sessionId: string): Promise<AgentWorkReport[]> {
     const { data, error } = await this.client
-      .from('work_reports')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('created_at', { ascending: true });
+      .from("work_reports")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("created_at", { ascending: true });
 
     if (error || !data) return [];
     return data.map((row: SupabaseRow) => row.report as AgentWorkReport);
@@ -299,9 +318,9 @@ export class SupabaseDatabaseService {
 
   async getSettings(userKey: string): Promise<Settings | null> {
     const { data, error } = await this.client
-      .from('settings')
-      .select('data')
-      .eq('id', userKey)
+      .from("settings")
+      .select("data")
+      .eq("id", userKey)
       .single();
 
     if (error || !data) return null;
@@ -312,7 +331,7 @@ export class SupabaseDatabaseService {
     const updatedAt = new Date().toISOString();
     const payload = { ...settings, updatedAt };
 
-    const { error } = await this.client.from('settings').upsert({
+    const { error } = await this.client.from("settings").upsert({
       id: userKey,
       data: payload,
       updated_at: updatedAt,
@@ -333,7 +352,7 @@ export class SupabaseDatabaseService {
     success: boolean;
   }): Promise<void> {
     const start = process.hrtime.bigint();
-    const { error } = await this.client.from('usage_records').insert({
+    const { error } = await this.client.from("usage_records").insert({
       id: record.id,
       user_id: record.userId,
       endpoint: record.endpoint,
@@ -349,7 +368,7 @@ export class SupabaseDatabaseService {
 
     if (error) {
       const duration = Number(process.hrtime.bigint() - start) / 1e9;
-      recordDbOperation('saveUsageRecord', 'usage_records', duration, 'error');
+      recordDbOperation("saveUsageRecord", "usage_records", duration, "error");
       throw error;
     }
   }
@@ -357,15 +376,15 @@ export class SupabaseDatabaseService {
   async getUsageForUser(
     userId: string,
     fromDate: Date,
-    toDate: Date
+    toDate: Date,
   ): Promise<Record<string, unknown>[]> {
     const { data, error } = await this.client
-      .from('usage_records')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('created_at', fromDate.toISOString())
-      .lte('created_at', toDate.toISOString())
-      .order('created_at', { ascending: false });
+      .from("usage_records")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("created_at", fromDate.toISOString())
+      .lte("created_at", toDate.toISOString())
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
     return data || [];
@@ -383,10 +402,10 @@ export class SupabaseDatabaseService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const { data, error } = await this.client
-      .from('usage_records')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('created_at', startOfMonth.toISOString());
+      .from("usage_records")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("created_at", startOfMonth.toISOString());
 
     if (error || !data) {
       return {
@@ -402,7 +421,7 @@ export class SupabaseDatabaseService {
     const successful = data.filter((r: SupabaseRow) => r.success === 1);
     const totalLatency = successful.reduce(
       (acc: number, r: SupabaseRow) => acc + (r.latency_ms || 0),
-      0
+      0,
     );
 
     return {
@@ -411,13 +430,16 @@ export class SupabaseDatabaseService {
       failedRequests: data.length - successful.length,
       monthlyInputTokens: data.reduce(
         (acc: number, r: SupabaseRow) => acc + (r.input_tokens || 0),
-        0
+        0,
       ),
       monthlyOutputTokens: data.reduce(
         (acc: number, r: SupabaseRow) => acc + (r.output_tokens || 0),
-        0
+        0,
       ),
-      avgLatencyMs: successful.length > 0 ? Math.round(totalLatency / successful.length) : 0,
+      avgLatencyMs:
+        successful.length > 0
+          ? Math.round(totalLatency / successful.length)
+          : 0,
     };
   }
 
@@ -425,7 +447,7 @@ export class SupabaseDatabaseService {
 
   /** Save an audit log entry */
   async saveAuditLog(record: AuditLogRecord): Promise<void> {
-    const { error } = await this.client.from('audit_logs').insert({
+    const { error } = await this.client.from("audit_logs").insert({
       id: record.id,
       user_id: record.user_id,
       actor: record.actor ?? null,
@@ -445,15 +467,18 @@ export class SupabaseDatabaseService {
       category?: string;
       limit?: number;
       offset?: number;
-    } = {}
+    } = {},
   ): Promise<AuditLogRecord[]> {
-    let query = this.client.from('audit_logs').select('*');
-    if (options.userId) query = query.eq('user_id', options.userId);
-    if (options.category) query = query.eq('category', options.category);
-    query = query.order('created_at', { ascending: false });
+    let query = this.client.from("audit_logs").select("*");
+    if (options.userId) query = query.eq("user_id", options.userId);
+    if (options.category) query = query.eq("category", options.category);
+    query = query.order("created_at", { ascending: false });
     if (options.limit) query = query.limit(options.limit);
     if (options.offset)
-      query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
+      query = query.range(
+        options.offset,
+        options.offset + (options.limit || 50) - 1,
+      );
     const { data, error } = await query;
     if (error) throw error;
     return (data || []) as AuditLogRecord[];
@@ -461,7 +486,7 @@ export class SupabaseDatabaseService {
 
   /** Save an integration */
   async saveIntegration(record: IntegrationRecord): Promise<void> {
-    const { error } = await this.client.from('integrations').upsert({
+    const { error } = await this.client.from("integrations").upsert({
       id: record.id,
       user_id: record.user_id,
       provider: record.provider,
@@ -477,9 +502,9 @@ export class SupabaseDatabaseService {
   /** Get integration by ID */
   async getIntegration(id: string): Promise<IntegrationRecord | null> {
     const { data, error } = await this.client
-      .from('integrations')
-      .select('*')
-      .eq('id', id)
+      .from("integrations")
+      .select("*")
+      .eq("id", id)
       .single();
     if (error || !data) return null;
     return data as IntegrationRecord;
@@ -488,10 +513,10 @@ export class SupabaseDatabaseService {
   /** Get integrations for user */
   async getIntegrationsForUser(userId: string): Promise<IntegrationRecord[]> {
     const { data, error } = await this.client
-      .from('integrations')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .from("integrations")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return (data || []) as IntegrationRecord[];
   }
@@ -499,13 +524,13 @@ export class SupabaseDatabaseService {
   /** Get integration by user and provider */
   async getIntegrationByProvider(
     userId: string,
-    provider: IntegrationProviderId
+    provider: IntegrationProviderId,
   ): Promise<IntegrationRecord | null> {
     const { data, error } = await this.client
-      .from('integrations')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('provider', provider)
+      .from("integrations")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("provider", provider)
       .single();
     if (error || !data) return null;
     return data as IntegrationRecord;
@@ -513,13 +538,16 @@ export class SupabaseDatabaseService {
 
   /** Delete integration */
   async deleteIntegration(id: string): Promise<void> {
-    const { error } = await this.client.from('integrations').delete().eq('id', id);
+    const { error } = await this.client
+      .from("integrations")
+      .delete()
+      .eq("id", id);
     if (error) throw error;
   }
 
   /** Save OAuth token */
   async saveOAuthToken(record: OAuthTokenRecord): Promise<void> {
-    const { error } = await this.client.from('oauth_tokens').upsert({
+    const { error } = await this.client.from("oauth_tokens").upsert({
       id: record.id,
       user_id: record.user_id,
       provider: record.provider,
@@ -537,31 +565,34 @@ export class SupabaseDatabaseService {
   /** Get OAuth token by user and provider */
   async getOAuthToken(
     userId: string,
-    provider: IntegrationProviderId
+    provider: IntegrationProviderId,
   ): Promise<OAuthTokenRecord | null> {
     const { data, error } = await this.client
-      .from('oauth_tokens')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('provider', provider)
+      .from("oauth_tokens")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("provider", provider)
       .single();
     if (error || !data) return null;
     return data as OAuthTokenRecord;
   }
 
   /** Delete OAuth token */
-  async deleteOAuthToken(userId: string, provider: IntegrationProviderId): Promise<void> {
+  async deleteOAuthToken(
+    userId: string,
+    provider: IntegrationProviderId,
+  ): Promise<void> {
     const { error } = await this.client
-      .from('oauth_tokens')
+      .from("oauth_tokens")
       .delete()
-      .eq('user_id', userId)
-      .eq('provider', provider);
+      .eq("user_id", userId)
+      .eq("provider", provider);
     if (error) throw error;
   }
 
   /** Save integration secret */
   async saveIntegrationSecret(record: IntegrationSecretRecord): Promise<void> {
-    const { error } = await this.client.from('integration_secrets').upsert({
+    const { error } = await this.client.from("integration_secrets").upsert({
       id: record.id,
       user_id: record.user_id,
       provider: record.provider,
@@ -577,14 +608,14 @@ export class SupabaseDatabaseService {
   async getIntegrationSecret(
     userId: string,
     provider: IntegrationProviderId,
-    name: string
+    name: string,
   ): Promise<IntegrationSecretRecord | null> {
     const { data, error } = await this.client
-      .from('integration_secrets')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('provider', provider)
-      .eq('name', name)
+      .from("integration_secrets")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("provider", provider)
+      .eq("name", name)
       .single();
     if (error || !data) return null;
     return data as IntegrationSecretRecord;
@@ -594,20 +625,20 @@ export class SupabaseDatabaseService {
   async deleteIntegrationSecret(
     userId: string,
     provider: IntegrationProviderId,
-    name: string
+    name: string,
   ): Promise<void> {
     const { error } = await this.client
-      .from('integration_secrets')
+      .from("integration_secrets")
       .delete()
-      .eq('user_id', userId)
-      .eq('provider', provider)
-      .eq('name', name);
+      .eq("user_id", userId)
+      .eq("provider", provider)
+      .eq("name", name);
     if (error) throw error;
   }
 
   /** Save heartbeat */
   async saveHeartbeat(record: HeartbeatRecord): Promise<void> {
-    const { error } = await this.client.from('heartbeats').upsert({
+    const { error } = await this.client.from("heartbeats").upsert({
       id: record.id,
       user_id: record.user_id,
       name: record.name,
@@ -624,7 +655,11 @@ export class SupabaseDatabaseService {
 
   /** Get heartbeat by ID */
   async getHeartbeat(id: string): Promise<HeartbeatRecord | null> {
-    const { data, error } = await this.client.from('heartbeats').select('*').eq('id', id).single();
+    const { data, error } = await this.client
+      .from("heartbeats")
+      .select("*")
+      .eq("id", id)
+      .single();
     if (error || !data) return null;
     return { ...data, enabled: Boolean(data.enabled) } as HeartbeatRecord;
   }
@@ -632,21 +667,24 @@ export class SupabaseDatabaseService {
   /** Get enabled heartbeats */
   async getEnabledHeartbeats(): Promise<HeartbeatRecord[]> {
     const { data, error } = await this.client
-      .from('heartbeats')
-      .select('*')
-      .eq('enabled', true)
-      .order('next_run_at', { ascending: true });
+      .from("heartbeats")
+      .select("*")
+      .eq("enabled", true)
+      .order("next_run_at", { ascending: true });
     if (error) throw error;
-    return (data || []).map((r: SupabaseRow) => ({ ...r, enabled: true })) as HeartbeatRecord[];
+    return (data || []).map((r: SupabaseRow) => ({
+      ...r,
+      enabled: true,
+    })) as HeartbeatRecord[];
   }
 
   /** Get heartbeats for user */
   async getHeartbeatsForUser(userId: string): Promise<HeartbeatRecord[]> {
     const { data, error } = await this.client
-      .from('heartbeats')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .from("heartbeats")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return (data || []).map((r: SupabaseRow) => ({
       ...r,
@@ -656,13 +694,16 @@ export class SupabaseDatabaseService {
 
   /** Delete heartbeat */
   async deleteHeartbeat(id: string): Promise<void> {
-    const { error } = await this.client.from('heartbeats').delete().eq('id', id);
+    const { error } = await this.client
+      .from("heartbeats")
+      .delete()
+      .eq("id", id);
     if (error) throw error;
   }
 
   /** Save approval request */
   async saveApprovalRequest(record: ApprovalRequestRecord): Promise<void> {
-    const { error } = await this.client.from('approval_requests').upsert({
+    const { error } = await this.client.from("approval_requests").upsert({
       id: record.id,
       user_id: record.user_id,
       status: record.status,
@@ -681,9 +722,9 @@ export class SupabaseDatabaseService {
   /** Get approval request by ID */
   async getApprovalRequest(id: string): Promise<ApprovalRequestRecord | null> {
     const { data, error } = await this.client
-      .from('approval_requests')
-      .select('*')
-      .eq('id', id)
+      .from("approval_requests")
+      .select("*")
+      .eq("id", id)
       .single();
     if (error || !data) return null;
     return data as ApprovalRequestRecord;
@@ -692,18 +733,18 @@ export class SupabaseDatabaseService {
   /** Get pending approvals for user */
   async getPendingApprovals(userId: string): Promise<ApprovalRequestRecord[]> {
     const { data, error } = await this.client
-      .from('approval_requests')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+      .from("approval_requests")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return (data || []) as ApprovalRequestRecord[];
   }
 
   /** Save swarm agent */
   async saveSwarmAgent(record: SwarmAgentRecord): Promise<void> {
-    const { error } = await this.client.from('agent_swarm').upsert({
+    const { error } = await this.client.from("agent_swarm").upsert({
       id: record.id,
       user_id: record.user_id,
       parent_id: record.parent_id ?? null,
@@ -721,7 +762,11 @@ export class SupabaseDatabaseService {
 
   /** Get swarm agent by ID */
   async getSwarmAgent(id: string): Promise<SwarmAgentRecord | null> {
-    const { data, error } = await this.client.from('agent_swarm').select('*').eq('id', id).single();
+    const { data, error } = await this.client
+      .from("agent_swarm")
+      .select("*")
+      .eq("id", id)
+      .single();
     if (error || !data) return null;
     return data as SwarmAgentRecord;
   }
@@ -729,10 +774,10 @@ export class SupabaseDatabaseService {
   /** Get swarm agents for parent */
   async getSwarmChildren(parentId: string): Promise<SwarmAgentRecord[]> {
     const { data, error } = await this.client
-      .from('agent_swarm')
-      .select('*')
-      .eq('parent_id', parentId)
-      .order('created_at', { ascending: true });
+      .from("agent_swarm")
+      .select("*")
+      .eq("parent_id", parentId)
+      .order("created_at", { ascending: true });
     if (error) throw error;
     return (data || []) as SwarmAgentRecord[];
   }
@@ -740,17 +785,17 @@ export class SupabaseDatabaseService {
   /** Get running swarm agents */
   async getRunningSwarmAgents(): Promise<SwarmAgentRecord[]> {
     const { data, error } = await this.client
-      .from('agent_swarm')
-      .select('*')
-      .eq('status', 'running')
-      .order('created_at', { ascending: true });
+      .from("agent_swarm")
+      .select("*")
+      .eq("status", "running")
+      .order("created_at", { ascending: true });
     if (error) throw error;
     return (data || []) as SwarmAgentRecord[];
   }
 
   /** Save skill */
   async saveSkill(record: SkillRecord): Promise<void> {
-    const { error } = await this.client.from('skills').upsert({
+    const { error } = await this.client.from("skills").upsert({
       id: record.id,
       user_id: record.user_id,
       name: record.name,
@@ -771,14 +816,22 @@ export class SupabaseDatabaseService {
 
   /** Get skill by ID */
   async getSkill(id: string): Promise<SkillRecord | null> {
-    const { data, error } = await this.client.from('skills').select('*').eq('id', id).single();
+    const { data, error } = await this.client
+      .from("skills")
+      .select("*")
+      .eq("id", id)
+      .single();
     if (error || !data) return null;
     return data as SkillRecord;
   }
 
   /** Get skill by name */
   async getSkillByName(name: string): Promise<SkillRecord | null> {
-    const { data, error } = await this.client.from('skills').select('*').eq('name', name).single();
+    const { data, error } = await this.client
+      .from("skills")
+      .select("*")
+      .eq("name", name)
+      .single();
     if (error || !data) return null;
     return data as SkillRecord;
   }
@@ -786,17 +839,17 @@ export class SupabaseDatabaseService {
   /** Get active skills */
   async getActiveSkills(): Promise<SkillRecord[]> {
     const { data, error } = await this.client
-      .from('skills')
-      .select('*')
-      .eq('status', 'active')
-      .order('name', { ascending: true });
+      .from("skills")
+      .select("*")
+      .eq("status", "active")
+      .order("name", { ascending: true });
     if (error) throw error;
     return (data || []) as SkillRecord[];
   }
 
   /** Save memory record */
   async saveMemoryRecord(record: MemoryRecord): Promise<void> {
-    const { error } = await this.client.from('memory_records').upsert({
+    const { error } = await this.client.from("memory_records").upsert({
       id: record.id,
       user_id: record.user_id,
       type: record.type,
@@ -816,23 +869,27 @@ export class SupabaseDatabaseService {
   /** Get memory record by ID */
   async getMemoryRecord(id: string): Promise<MemoryRecord | null> {
     const { data, error } = await this.client
-      .from('memory_records')
-      .select('*')
-      .eq('id', id)
+      .from("memory_records")
+      .select("*")
+      .eq("id", id)
       .single();
     if (error || !data) return null;
     return data as MemoryRecord;
   }
 
   /** Search memory records by type */
-  async getMemoryRecordsByType(userId: string, type: string, limit = 50): Promise<MemoryRecord[]> {
+  async getMemoryRecordsByType(
+    userId: string,
+    type: string,
+    limit = 50,
+  ): Promise<MemoryRecord[]> {
     const { data, error } = await this.client
-      .from('memory_records')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('type', type)
-      .order('importance', { ascending: false })
-      .order('last_accessed_at', { ascending: false })
+      .from("memory_records")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("type", type)
+      .order("importance", { ascending: false })
+      .order("last_accessed_at", { ascending: false })
       .limit(limit);
     if (error) throw error;
     return (data || []) as MemoryRecord[];
@@ -841,10 +898,10 @@ export class SupabaseDatabaseService {
   /** Get recent memories */
   async getRecentMemories(userId: string, limit = 20): Promise<MemoryRecord[]> {
     const { data, error } = await this.client
-      .from('memory_records')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+      .from("memory_records")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
       .limit(limit);
     if (error) throw error;
     return (data || []) as MemoryRecord[];
@@ -852,13 +909,16 @@ export class SupabaseDatabaseService {
 
   /** Delete memory record */
   async deleteMemoryRecord(id: string): Promise<void> {
-    const { error } = await this.client.from('memory_records').delete().eq('id', id);
+    const { error } = await this.client
+      .from("memory_records")
+      .delete()
+      .eq("id", id);
     if (error) throw error;
   }
 
   /** Save cost budget */
   async saveCostBudget(record: CostBudgetRecord): Promise<void> {
-    const { error } = await this.client.from('cost_budgets').upsert({
+    const { error } = await this.client.from("cost_budgets").upsert({
       id: record.id,
       user_id: record.user_id,
       period: record.period,
@@ -877,11 +937,11 @@ export class SupabaseDatabaseService {
   async getCurrentBudget(userId: string): Promise<CostBudgetRecord | null> {
     const now = new Date().toISOString();
     const { data, error } = await this.client
-      .from('cost_budgets')
-      .select('*')
-      .eq('user_id', userId)
-      .lte('period_start', now)
-      .gte('period_end', now)
+      .from("cost_budgets")
+      .select("*")
+      .eq("user_id", userId)
+      .lte("period_start", now)
+      .gte("period_end", now)
       .single();
     if (error || !data) return null;
     return data as CostBudgetRecord;
@@ -889,7 +949,7 @@ export class SupabaseDatabaseService {
 
   /** Save rate limit */
   async saveRateLimit(record: RateLimitRecord): Promise<void> {
-    const { error } = await this.client.from('rate_limits').upsert({
+    const { error } = await this.client.from("rate_limits").upsert({
       id: record.id,
       user_id: record.user_id,
       resource: record.resource,
@@ -903,12 +963,15 @@ export class SupabaseDatabaseService {
   }
 
   /** Get rate limit */
-  async getRateLimit(userId: string, resource: string): Promise<RateLimitRecord | null> {
+  async getRateLimit(
+    userId: string,
+    resource: string,
+  ): Promise<RateLimitRecord | null> {
     const { data, error } = await this.client
-      .from('rate_limits')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('resource', resource)
+      .from("rate_limits")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("resource", resource)
       .single();
     if (error || !data) return null;
     return data as RateLimitRecord;
@@ -917,22 +980,24 @@ export class SupabaseDatabaseService {
   /** Increment rate limit counter */
   async incrementRateLimit(
     userId: string,
-    resource: string
+    resource: string,
   ): Promise<{ allowed: boolean; remaining: number }> {
     const limit = await this.getRateLimit(userId, resource);
     if (!limit) return { allowed: true, remaining: 999 };
 
     const now = new Date();
     const windowStart = new Date(limit.window_start);
-    const windowEnd = new Date(windowStart.getTime() + limit.window_seconds * 1000);
+    const windowEnd = new Date(
+      windowStart.getTime() + limit.window_seconds * 1000,
+    );
 
     if (now > windowEnd) {
       // Reset window
       await this.client
-        .from('rate_limits')
+        .from("rate_limits")
         .update({ current_count: 1, window_start: now.toISOString() })
-        .eq('user_id', userId)
-        .eq('resource', resource);
+        .eq("user_id", userId)
+        .eq("resource", resource);
       return { allowed: true, remaining: limit.max_requests - 1 };
     }
 
@@ -941,16 +1006,19 @@ export class SupabaseDatabaseService {
     }
 
     await this.client
-      .from('rate_limits')
+      .from("rate_limits")
       .update({ current_count: limit.current_count + 1 })
-      .eq('user_id', userId)
-      .eq('resource', resource);
-    return { allowed: true, remaining: limit.max_requests - limit.current_count - 1 };
+      .eq("user_id", userId)
+      .eq("resource", resource);
+    return {
+      allowed: true,
+      remaining: limit.max_requests - limit.current_count - 1,
+    };
   }
 
   /** Save browser allowlist entry */
   async saveBrowserAllowlist(record: BrowserAllowlistRecord): Promise<void> {
-    const { error } = await this.client.from('browser_allowlist').upsert({
+    const { error } = await this.client.from("browser_allowlist").upsert({
       id: record.id,
       user_id: record.user_id,
       domain: record.domain,
@@ -963,21 +1031,24 @@ export class SupabaseDatabaseService {
   /** Get browser allowlist for user */
   async getBrowserAllowlist(userId: string): Promise<BrowserAllowlistRecord[]> {
     const { data, error } = await this.client
-      .from('browser_allowlist')
-      .select('*')
-      .eq('user_id', userId)
-      .order('domain', { ascending: true });
+      .from("browser_allowlist")
+      .select("*")
+      .eq("user_id", userId)
+      .order("domain", { ascending: true });
     if (error) throw error;
     return (data || []) as BrowserAllowlistRecord[];
   }
 
   /** Check if domain is allowed */
-  async isDomainAllowed(userId: string, domain: string): Promise<BrowserAllowlistRecord | null> {
+  async isDomainAllowed(
+    userId: string,
+    domain: string,
+  ): Promise<BrowserAllowlistRecord | null> {
     const { data, error } = await this.client
-      .from('browser_allowlist')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('domain', domain)
+      .from("browser_allowlist")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("domain", domain)
       .single();
     if (error || !data) return null;
     return data as BrowserAllowlistRecord;
@@ -986,10 +1057,10 @@ export class SupabaseDatabaseService {
   /** Delete browser allowlist entry */
   async deleteBrowserAllowlist(userId: string, domain: string): Promise<void> {
     const { error } = await this.client
-      .from('browser_allowlist')
+      .from("browser_allowlist")
       .delete()
-      .eq('user_id', userId)
-      .eq('domain', domain);
+      .eq("user_id", userId)
+      .eq("domain", domain);
     if (error) throw error;
   }
 
@@ -997,7 +1068,7 @@ export class SupabaseDatabaseService {
 
   /** Save or update Slack token */
   async saveSlackToken(record: SlackTokenRecord): Promise<void> {
-    const { error } = await this.client.from('slack_tokens').upsert({
+    const { error } = await this.client.from("slack_tokens").upsert({
       id: record.id,
       user_id: record.user_id,
       workspace_id: record.workspace_id,
@@ -1012,24 +1083,29 @@ export class SupabaseDatabaseService {
   }
 
   /** Get Slack token by user and workspace */
-  async getSlackToken(userId: string, workspaceId: string): Promise<SlackTokenRecord | null> {
+  async getSlackToken(
+    userId: string,
+    workspaceId: string,
+  ): Promise<SlackTokenRecord | null> {
     const { data, error } = await this.client
-      .from('slack_tokens')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('workspace_id', workspaceId)
+      .from("slack_tokens")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("workspace_id", workspaceId)
       .single();
     if (error || !data) return null;
     return data as SlackTokenRecord;
   }
 
   /** Get any Slack token for a workspace */
-  async getSlackTokenByWorkspace(workspaceId: string): Promise<SlackTokenRecord | null> {
+  async getSlackTokenByWorkspace(
+    workspaceId: string,
+  ): Promise<SlackTokenRecord | null> {
     const { data, error } = await this.client
-      .from('slack_tokens')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('updated_at', { ascending: false })
+      .from("slack_tokens")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .order("updated_at", { ascending: false })
       .limit(1)
       .single();
     if (error || !data) return null;
@@ -1039,10 +1115,10 @@ export class SupabaseDatabaseService {
   /** Get all Slack tokens for a user */
   async getSlackTokensForUser(userId: string): Promise<SlackTokenRecord[]> {
     const { data, error } = await this.client
-      .from('slack_tokens')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .from("slack_tokens")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return (data || []) as SlackTokenRecord[];
   }
@@ -1050,10 +1126,10 @@ export class SupabaseDatabaseService {
   /** Delete Slack token */
   async deleteSlackToken(userId: string, workspaceId: string): Promise<void> {
     const { error } = await this.client
-      .from('slack_tokens')
+      .from("slack_tokens")
       .delete()
-      .eq('user_id', userId)
-      .eq('workspace_id', workspaceId);
+      .eq("user_id", userId)
+      .eq("workspace_id", workspaceId);
     if (error) throw error;
   }
 
@@ -1061,20 +1137,22 @@ export class SupabaseDatabaseService {
 
   async getConversationMemory(
     platform: string,
-    platformUserId: string
+    platformUserId: string,
   ): Promise<ConversationMemoryRecord | null> {
     const { data, error } = await this.client
-      .from('conversation_memories')
-      .select('*')
-      .eq('platform', platform)
-      .eq('platform_user_id', platformUserId)
+      .from("conversation_memories")
+      .select("*")
+      .eq("platform", platform)
+      .eq("platform_user_id", platformUserId)
       .single();
     if (error || !data) return null;
     return data as ConversationMemoryRecord;
   }
 
-  async saveConversationMemory(record: ConversationMemoryRecord): Promise<void> {
-    const { error } = await this.client.from('conversation_memories').upsert(
+  async saveConversationMemory(
+    record: ConversationMemoryRecord,
+  ): Promise<void> {
+    const { error } = await this.client.from("conversation_memories").upsert(
       {
         id: record.id,
         platform: record.platform,
@@ -1086,26 +1164,30 @@ export class SupabaseDatabaseService {
         created_at: record.created_at,
       },
       {
-        onConflict: 'platform,platform_user_id',
-      }
+        onConflict: "platform,platform_user_id",
+      },
     );
     if (error) throw error;
   }
 
   // ========== Messaging Subscriptions ==========
 
-  async getMessagingSubscriptions(userId: string): Promise<MessagingSubscriptionRecord[]> {
+  async getMessagingSubscriptions(
+    userId: string,
+  ): Promise<MessagingSubscriptionRecord[]> {
     const { data, error } = await this.client
-      .from('messaging_subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .from("messaging_subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return (data || []) as MessagingSubscriptionRecord[];
   }
 
-  async saveMessagingSubscription(record: MessagingSubscriptionRecord): Promise<void> {
-    const { error } = await this.client.from('messaging_subscriptions').upsert(
+  async saveMessagingSubscription(
+    record: MessagingSubscriptionRecord,
+  ): Promise<void> {
+    const { error } = await this.client.from("messaging_subscriptions").upsert(
       {
         id: record.id,
         user_id: record.user_id,
@@ -1113,7 +1195,7 @@ export class SupabaseDatabaseService {
         platform_user_id: record.platform_user_id,
         created_at: record.created_at,
       },
-      { onConflict: 'user_id,platform,platform_user_id' }
+      { onConflict: "user_id,platform,platform_user_id" },
     );
     if (error) throw error;
   }
@@ -1121,38 +1203,41 @@ export class SupabaseDatabaseService {
   async deleteMessagingSubscription(
     userId: string,
     platform: string,
-    platformUserId: string
+    platformUserId: string,
   ): Promise<void> {
     const { error } = await this.client
-      .from('messaging_subscriptions')
+      .from("messaging_subscriptions")
       .delete()
-      .eq('user_id', userId)
-      .eq('platform', platform)
-      .eq('platform_user_id', platformUserId);
+      .eq("user_id", userId)
+      .eq("platform", platform)
+      .eq("platform_user_id", platformUserId);
     if (error) throw error;
   }
 
   // ========== Slack User Pairings ==========
 
   async saveSlackUserPairing(record: SlackUserPairingRecord): Promise<void> {
-    const { error } = await this.client.from('slack_user_pairings').upsert(
+    const { error } = await this.client.from("slack_user_pairings").upsert(
       {
         slack_user_id: record.slack_user_id,
         workspace_id: record.workspace_id,
         grump_user_id: record.grump_user_id,
         created_at: record.created_at,
       },
-      { onConflict: 'slack_user_id,workspace_id' }
+      { onConflict: "slack_user_id,workspace_id" },
     );
     if (error) throw error;
   }
 
-  async getGrumpUserIdFromSlack(slackUserId: string, workspaceId: string): Promise<string | null> {
+  async getGrumpUserIdFromSlack(
+    slackUserId: string,
+    workspaceId: string,
+  ): Promise<string | null> {
     const { data, error } = await this.client
-      .from('slack_user_pairings')
-      .select('grump_user_id')
-      .eq('slack_user_id', slackUserId)
-      .eq('workspace_id', workspaceId)
+      .from("slack_user_pairings")
+      .select("grump_user_id")
+      .eq("slack_user_id", slackUserId)
+      .eq("workspace_id", workspaceId)
       .single();
     if (error || !data) return null;
     return (data as { grump_user_id: string }).grump_user_id;
@@ -1161,7 +1246,7 @@ export class SupabaseDatabaseService {
   // ========== Reminders ==========
 
   async saveReminder(record: ReminderRecord): Promise<void> {
-    const { error } = await this.client.from('reminders').upsert(
+    const { error } = await this.client.from("reminders").upsert(
       {
         id: record.id,
         user_id: record.user_id,
@@ -1173,37 +1258,37 @@ export class SupabaseDatabaseService {
         created_at: record.created_at,
         updated_at: record.updated_at,
       },
-      { onConflict: 'id' }
+      { onConflict: "id" },
     );
     if (error) throw error;
   }
 
   async getDueReminders(before: string): Promise<ReminderRecord[]> {
     const { data, error } = await this.client
-      .from('reminders')
-      .select('*')
-      .lte('due_at', before)
-      .eq('notified', 0)
-      .order('due_at', { ascending: true });
+      .from("reminders")
+      .select("*")
+      .lte("due_at", before)
+      .eq("notified", 0)
+      .order("due_at", { ascending: true });
     if (error) throw error;
     return (data || []) as ReminderRecord[];
   }
 
   async getRemindersForUser(userId: string): Promise<ReminderRecord[]> {
     const { data, error } = await this.client
-      .from('reminders')
-      .select('*')
-      .eq('user_id', userId)
-      .order('due_at', { ascending: true });
+      .from("reminders")
+      .select("*")
+      .eq("user_id", userId)
+      .order("due_at", { ascending: true });
     if (error) throw error;
     return (data || []) as ReminderRecord[];
   }
 
   async setReminderNotified(id: string): Promise<void> {
     const { error } = await this.client
-      .from('reminders')
+      .from("reminders")
       .update({ notified: 1, updated_at: new Date().toISOString() })
-      .eq('id', id);
+      .eq("id", id);
     if (error) throw error;
   }
 }
