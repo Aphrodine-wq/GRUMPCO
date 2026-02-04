@@ -11,7 +11,6 @@ Model router and model registry for G-Rump. Used by the backend to select provid
 - **NVIDIA NIM** – Nemotron, Kimi K2.5, Llama models (primary for NVIDIA Golden Developer)
 - **OpenRouter** – Claude, GPT, Gemini, and more
 - **Groq** – Fast inference (Llama, Mixtral)
-- **Together AI** – Open source models
 - **Zhipu** – Chinese models
 - **Ollama** – Local models
 
@@ -36,7 +35,7 @@ const result = route({
   multimodal: false,
   costOptimization: true,
 });
-// result.provider === 'nim' | 'zhipu' | 'copilot' | 'openrouter' | 'groq' | 'together'
+// result.provider === 'nim' | 'zhipu' | 'copilot' | 'openrouter' | 'groq'
 // result.modelId === 'moonshotai/kimi-k2.5' | 'claude-sonnet-4-20250514' | ...
 ```
 

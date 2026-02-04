@@ -181,7 +181,6 @@ function createMigrateCommand(): Command {
         'openai',
         'anthropic',
         'groq',
-        'together',
         'openrouter',
         'ollama',
         'kimi'

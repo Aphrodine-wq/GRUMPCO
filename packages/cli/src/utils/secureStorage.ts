@@ -222,7 +222,6 @@ class SecureConfigManager {
       'openai',
       'anthropic',
       'groq',
-      'together',
       'openrouter',
       'ollama',
       'kimi'

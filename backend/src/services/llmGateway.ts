@@ -44,7 +44,6 @@ export type LLMProvider =
   | "anthropic"
   | "mistral"
   | "groq"
-  | "together"
   | "mock";
 
 /**
@@ -275,22 +274,6 @@ export const PROVIDER_CONFIGS: Record<
     speedRank: 1,
     qualityRank: 3,
     defaultModel: "llama3-70b-8192",
-    supportsTools: true,
-  },
-  together: {
-    name: "together",
-    baseUrl: "https://api.together.xyz/v1/chat/completions",
-    apiKeyEnvVar: "TOGETHER_API_KEY",
-    models: [
-      "meta-llama/Llama-3-70b-chat-hf",
-      "meta-llama/Llama-3-8b-chat-hf",
-      "mistralai/Mixtral-8x7B-Instruct-v0.1",
-    ],
-    capabilities: ["streaming", "json_mode", "function_calling"],
-    costPer1kTokens: 0.0008,
-    speedRank: 2,
-    qualityRank: 2,
-    defaultModel: "meta-llama/Llama-3-70b-chat-hf",
     supportsTools: true,
   },
 };
@@ -581,15 +564,6 @@ async function* streamMistral(
  */
 async function* streamGroq(params: StreamParams): AsyncGenerator<StreamEvent> {
   yield* streamOpenAICompatible(params, "groq");
-}
-
-/**
- * Stream from Together AI (OpenAI-compatible API).
- */
-async function* streamTogether(
-  params: StreamParams,
-): AsyncGenerator<StreamEvent> {
-  yield* streamOpenAICompatible(params, "together");
 }
 
 /**
@@ -997,9 +971,6 @@ export async function* getStream(
     case "groq":
       streamFn = streamGroq;
       break;
-    case "together":
-      streamFn = streamTogether;
-      break;
     case "nim":
     default:
       streamFn = streamNim;
@@ -1070,11 +1041,6 @@ try {
     supportsTools: true,
     stream: streamGroq,
   });
-  registerStreamProvider("together", {
-    name: "together",
-    supportsTools: true,
-    stream: streamTogether,
-  });
 } catch {
   // ai-core may not be available in all environments
 }
@@ -1104,8 +1070,6 @@ export function toApiProvider(provider: LLMProvider): ApiProvider | null {
       return "mistral";
     case "groq":
       return "groq" as ApiProvider;
-    case "together":
-      return "together" as ApiProvider;
     default:
       return null;
   }
@@ -1154,7 +1118,6 @@ export function getConfiguredProviders(): LLMProvider[] {
   if (isProviderConfigured("anthropic")) providers.push("anthropic");
   if (isProviderConfigured("mistral")) providers.push("mistral");
   if (isProviderConfigured("groq")) providers.push("groq");
-  if (isProviderConfigured("together")) providers.push("together");
   return providers;
 }
 

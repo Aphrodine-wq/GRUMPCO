@@ -56,7 +56,6 @@ class ConnectionPoolManager {
       { name: "groq", url: "https://api.groq.com" },
       { name: "openrouter", url: "https://openrouter.ai" },
       { name: "openai", url: "https://api.openai.com" },
-      { name: "together", url: "https://api.together.xyz" },
     ];
 
     for (const provider of providers) {

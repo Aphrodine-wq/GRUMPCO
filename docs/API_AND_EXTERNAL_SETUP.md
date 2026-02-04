@@ -15,7 +15,6 @@ This document lists **every** API key, external service, and environment variabl
 | `NVIDIA_NIM_URL` | Self-hosted NIM base URL (omit for cloud) | Your NIM endpoint | Optional |
 | `OPENROUTER_API_KEY` | Multi-model fallback | [openrouter.ai](https://openrouter.ai) | Optional |
 | `GROQ_API_KEY` | Fast inference | [groq.com](https://groq.com) | Optional |
-| `TOGETHER_API_KEY` | Open models | [together.ai](https://together.ai) | Optional |
 | `OLLAMA_BASE_URL` | Local models (default `http://localhost:11434`) | Local Ollama | Optional |
 
 \* Required unless `MOCK_AI_MODE=true` or another provider is set.

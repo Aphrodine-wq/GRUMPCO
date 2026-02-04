@@ -215,7 +215,7 @@ export function ${functionName}(data: any): Promise<any> {
 NOTES:
 - This is a placeholder response in MOCK_AI_MODE
 - To get real code generation, add an AI provider API key
-- Supported providers: NVIDIA NIM, OpenRouter, Groq, Together AI
+- Supported providers: NVIDIA NIM, OpenRouter, Groq
 */`;
 
     return this.createResponse(content, options.model || "mock-code");

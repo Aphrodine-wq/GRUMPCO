@@ -60,7 +60,6 @@ async function testAiProviderConnection(
     'anthropic': 'https://api.anthropic.com/v1/messages',
     'openai': 'https://api.openai.com/v1/models',
     'groq': 'https://api.groq.com/openai/v1/models',
-    'together': 'https://api.together.xyz/v1/models',
     'ollama': 'http://localhost:11434/api/tags'
   };
 

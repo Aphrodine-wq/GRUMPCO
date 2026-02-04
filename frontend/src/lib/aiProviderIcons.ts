@@ -26,7 +26,6 @@ export function getProviderFallbackLetter(providerId: string): string {
     openai: 'O',
     mistral: 'M',
     groq: 'G',
-    together: 'T',
     ollama: 'O',
     cohere: 'C',
     fireworks: 'F',
