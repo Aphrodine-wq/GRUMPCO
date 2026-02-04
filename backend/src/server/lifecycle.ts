@@ -156,7 +156,9 @@ export async function initializeWorkers(): Promise<void> {
   // Scheduled agents: Redis = BullMQ repeatable jobs; no Redis = node-cron
   if (process.env.REDIS_HOST?.trim()) {
     await startScheduledAgentsWorker();
-    await loadRepeatableJobsFromDb();
+    if (databaseSupportsRawDb()) {
+      await loadRepeatableJobsFromDb();
+    }
     logger.info("Scheduled agents worker started (Redis/BullMQ)");
   } else {
     const { loadAllFromDbAndSchedule: loadCron } =
