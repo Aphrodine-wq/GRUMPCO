@@ -23,15 +23,19 @@ FROM node:20-alpine AS node-builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++
+# Install build dependencies and enable pnpm
+RUN apk add --no-cache python3 make g++ && \
+    corepack enable && \
+    corepack prepare pnpm@8.15.4 --activate
 
-# Copy package files
-COPY package*.json ./
+# Copy package files and lockfile from root
+COPY ../package.json ../pnpm-lock.yaml ../pnpm-workspace.yaml* ../.npmrc* ./
+COPY package.json ./backend/
+COPY ../packages/ai-core/package.json ./packages/ai-core/
 
 # Install dependencies with cache
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --prefer-offline --no-audit
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prefer-offline --filter grump-backend...
 
 # Copy source and build config
 COPY tsconfig.json .swcrc ./
@@ -40,8 +44,8 @@ COPY scripts ./scripts
 
 # Build with SWC
 RUN --mount=type=cache,target=/app/.swc \
-    npm run build && \
-    npm prune --production
+    pnpm run build && \
+    pnpm prune --prod
 
 # Stage 3: Final production image
 FROM alpine:3.19

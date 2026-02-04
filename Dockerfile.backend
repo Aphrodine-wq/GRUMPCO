@@ -35,15 +35,19 @@ LABEL stage="node-builder"
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++
+# Install build dependencies and enable pnpm
+RUN apk add --no-cache python3 make g++ && \
+    corepack enable && \
+    corepack prepare pnpm@8.15.4 --activate
 
-# Copy backend package files
-COPY backend/package*.json ./
+# Copy package files and lockfile
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* .npmrc* ./
+COPY backend/package.json ./backend/
+COPY packages/ai-core/package.json ./packages/ai-core/
 
 # Install dependencies with cache mount for faster rebuilds
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --prefer-offline --no-audit
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prefer-offline --filter grump-backend...
 
 # Copy backend source code and build configuration
 COPY backend/tsconfig.json backend/.swcrc ./
@@ -52,7 +56,7 @@ COPY backend/scripts ./scripts
 
 # Build with SWC (much faster than tsc)
 RUN --mount=type=cache,target=/app/.swc \
-    npm run build
+    pnpm run build --filter grump-backend
 
 # =============================================================================
 # STAGE 3: Production Image
@@ -61,19 +65,21 @@ FROM node:20-alpine AS production
 
 # OCI/Docker labels for metadata
 LABEL org.opencontainers.image.title="G-Rump Backend" \
-      org.opencontainers.image.description="AI-powered development platform backend with Intent Compiler" \
-      org.opencontainers.image.version="2.1.0" \
-      org.opencontainers.image.vendor="G-Rump" \
-      org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.source="https://github.com/Aphrodine-wq/G-rump.com" \
-      org.opencontainers.image.documentation="https://docs.g-rump.com"
+    org.opencontainers.image.description="AI-powered development platform backend with Intent Compiler" \
+    org.opencontainers.image.version="2.1.0" \
+    org.opencontainers.image.vendor="G-Rump" \
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.source="https://github.com/Aphrodine-wq/G-rump.com" \
+    org.opencontainers.image.documentation="https://docs.g-rump.com"
 
-# Install runtime dependencies
+# Install runtime dependencies and enable pnpm
 RUN apk add --no-cache \
     tini \
     curl \
     dumb-init \
     ca-certificates \
+    && corepack enable \
+    && corepack prepare pnpm@8.15.4 --activate \
     && rm -rf /var/cache/apk/*
 
 # Security: Create non-root user
@@ -82,13 +88,15 @@ RUN addgroup -g 1001 -S grump && \
 
 WORKDIR /app
 
-# Copy package files
-COPY backend/package*.json ./
+# Copy package files and lockfile
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* .npmrc* ./
+COPY backend/package.json ./backend/
+COPY packages/ai-core/package.json ./packages/ai-core/
 
 # Install production dependencies only with cache mount
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production --prefer-offline --no-audit && \
-    npm cache clean --force
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prefer-offline --prod --filter grump-backend... && \
+    pnpm store prune
 
 # Copy built backend application from node-builder
 COPY --from=node-builder --chown=grump:grump /app/dist ./dist
