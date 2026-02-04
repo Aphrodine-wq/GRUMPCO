@@ -244,6 +244,8 @@ export function tracingMiddleware(
         span.addEvent("http.error", {
           "error.type": "http_error",
           "error.message": res.statusMessage || "Unknown error",
+          "http.path": req.path,
+          "http.status_code": res.statusCode,
         });
       } else {
         span.setStatus({ code: SpanStatusCode.OK });
