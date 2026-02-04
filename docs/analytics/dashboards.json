@@ -1,0 +1,370 @@
+{
+  "dashboards": [
+    {
+      "name": "Product Overview",
+      "description": "Key product metrics and user activity",
+      "tiles": [
+        {
+          "name": "Daily Active Users",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "$pageview",
+                "name": "$pageview",
+                "type": "events",
+                "math": "dau"
+              }
+            ],
+            "display": "ActionsLineGraph"
+          }
+        },
+        {
+          "name": "Weekly Active Users",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "$pageview",
+                "name": "$pageview",
+                "type": "events",
+                "math": "weekly_active"
+              }
+            ],
+            "display": "ActionsLineGraph"
+          }
+        },
+        {
+          "name": "New Signups",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "user_signed_up",
+                "name": "user_signed_up",
+                "type": "events"
+              }
+            ],
+            "display": "ActionsLineGraph"
+          }
+        },
+        {
+          "name": "Core Conversion Funnel",
+          "type": "insight",
+          "insight": {
+            "type": "funnels",
+            "funnels": [
+              {
+                "events": [
+                  {
+                    "id": "session_started",
+                    "type": "events"
+                  },
+                  {
+                    "id": "intent_submitted",
+                    "type": "events"
+                  },
+                  {
+                    "id": "architecture_viewed",
+                    "type": "events"
+                  },
+                  {
+                    "id": "code_generated",
+                    "type": "events"
+                  },
+                  {
+                    "id": "project_shipped",
+                    "type": "events"
+                  }
+                ],
+                "breakdown_attribution_type": "first_touch"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Feature Adoption",
+      "description": "Track which features users are discovering and using",
+      "tiles": [
+        {
+          "name": "Skills Usage",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "skill_used",
+                "name": "skill_used",
+                "type": "events"
+              }
+            ],
+            "breakdowns": [
+              {
+                "type": "event",
+                "property": "skill"
+              }
+            ],
+            "display": "ActionsBarChart"
+          }
+        },
+        {
+          "name": "Feature Discovery",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "feature_discovered",
+                "name": "feature_discovered",
+                "type": "events"
+              }
+            ],
+            "breakdowns": [
+              {
+                "type": "event",
+                "property": "feature"
+              }
+            ],
+            "display": "ActionsBarChart"
+          }
+        },
+        {
+          "name": "Chat Messages Sent",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "chat_message_sent",
+                "name": "chat_message_sent",
+                "type": "events"
+              }
+            ],
+            "breakdowns": [
+              {
+                "type": "event",
+                "property": "message_type"
+              }
+            ],
+            "display": "ActionsLineGraph"
+          }
+        },
+        {
+          "name": "Diagram Exports",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "diagram_exported",
+                "name": "diagram_exported",
+                "type": "events"
+              }
+            ],
+            "breakdowns": [
+              {
+                "type": "event",
+                "property": "format"
+              }
+            ],
+            "display": "ActionsBarChart"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Technical Performance",
+      "description": "System health and performance metrics",
+      "tiles": [
+        {
+          "name": "Generation Success Rate",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "code_generated",
+                "name": "code_generated",
+                "type": "events"
+              },
+              {
+                "id": "generation_failed",
+                "name": "generation_failed",
+                "type": "events"
+              }
+            ],
+            "display": "ActionsLineGraph",
+            "formula": "A / (A + B)"
+          }
+        },
+        {
+          "name": "Average Generation Time",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "code_generated",
+                "name": "code_generated",
+                "type": "events",
+                "math": "avg",
+                "math_property": "duration_ms"
+              }
+            ],
+            "display": "ActionsLineGraph"
+          }
+        },
+        {
+          "name": "Errors by Type",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "error_occurred",
+                "name": "error_occurred",
+                "type": "events"
+              },
+              {
+                "id": "generation_failed",
+                "name": "generation_failed",
+                "type": "events"
+              },
+              {
+                "id": "timeout_occurred",
+                "name": "timeout_occurred",
+                "type": "events"
+              },
+              {
+                "id": "provider_error",
+                "name": "provider_error",
+                "type": "events"
+              }
+            ],
+            "display": "ActionsBarChart"
+          }
+        },
+        {
+          "name": "Provider Performance",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "code_generated",
+                "name": "code_generated",
+                "type": "events",
+                "math": "avg",
+                "math_property": "duration_ms"
+              }
+            ],
+            "breakdowns": [
+              {
+                "type": "event",
+                "property": "model"
+              }
+            ],
+            "display": "ActionsLineGraph"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Journey",
+      "description": "Understanding how users move through the product",
+      "tiles": [
+        {
+          "name": "Onboarding Completion",
+          "type": "insight",
+          "insight": {
+            "type": "funnels",
+            "funnels": [
+              {
+                "events": [
+                  {
+                    "id": "user_signed_up",
+                    "type": "events"
+                  },
+                  {
+                    "id": "tour_started",
+                    "type": "events"
+                  },
+                  {
+                    "id": "tour_completed",
+                    "type": "events"
+                  },
+                  {
+                    "id": "first_project_created",
+                    "type": "events"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "Time to First Value",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "code_generated",
+                "name": "code_generated",
+                "type": "events",
+                "math": "avg",
+                "math_property": "time_since_signup_ms"
+              }
+            ],
+            "display": "ActionsLineGraph"
+          }
+        },
+        {
+          "name": "User Retention",
+          "type": "insight",
+          "insight": {
+            "type": "retention",
+            "retention": {
+              "target_entity": {
+                "id": "intent_submitted",
+                "type": "events"
+              },
+              "returning_entity": {
+                "id": "intent_submitted",
+                "type": "events"
+              },
+              "period": "Week"
+            }
+          }
+        },
+        {
+          "name": "Projects per User",
+          "type": "insight",
+          "insight": {
+            "type": "trends",
+            "events": [
+              {
+                "id": "first_project_created",
+                "name": "first_project_created",
+                "type": "events",
+                "math": "sum"
+              }
+            ],
+            "breakdowns": [
+              {
+                "type": "person",
+                "property": "$distinct_id"
+              }
+            ],
+            "display": "ActionsBarChart"
+          }
+        }
+      ]
+    }
+  ]
+}

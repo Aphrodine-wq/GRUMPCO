@@ -1,152 +1,221 @@
-<div align="center">
-
-<img src="docs/assets/grump-logo.svg" width="160" alt="G-Rump Logo - Grumpy AI Development Platform" />
-
 # G-Rump
 
-### Enterprise AI Development Platform
+<p align="center">
+  <img src="docs/assets/grump-logo.svg" width="120" alt="G-Rump Logo" />
+</p>
 
-**Transform natural language into production-ready code with 18x faster builds and 60-70% cost savings**
+<p align="center">
+  <strong>The AI Product Operating System</strong><br>
+  Transform natural language into production-ready code with 18x faster builds and 60-70% cost savings
+</p>
 
-[![GitHub Stars](https://img.shields.io/github/stars/Aphrodine-wq/G-rump.com?style=for-the-badge&logo=github)](https://github.com/Aphrodine-wq/G-rump.com/stargazers)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](./LICENSE)
-[![NPM](https://img.shields.io/npm/v/@g-rump/cli?style=for-the-badge&logo=npm)](https://www.npmjs.com/package/@g-rump/cli)
+<p align="center">
+  <a href="https://github.com/Aphrodine-wq/G-rump.com/releases/tag/v1.0.0">
+    <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version" />
+  </a>
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License" />
+  </a>
+  <a href="https://github.com/Aphrodine-wq/G-rump.com/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/Aphrodine-wq/G-rump.com/ci.yml?branch=main" alt="Build Status" />
+  </a>
+  <a href="https://www.typescriptlang.org/">
+    <img src="https://img.shields.io/badge/TypeScript-5.3-blue.svg" alt="TypeScript" />
+  </a>
+  <a href="https://www.rust-lang.org/">
+    <img src="https://img.shields.io/badge/Rust-1.77+-orange.svg" alt="Rust" />
+  </a>
+  <a href="https://svelte.dev/">
+    <img src="https://img.shields.io/badge/Svelte-5-ff3e00.svg" alt="Svelte" />
+  </a>
+  <a href="https://www.electronjs.org/">
+    <img src="https://img.shields.io/badge/Electron-28-47848F.svg" alt="Electron" />
+  </a>
+  <a href="https://build.nvidia.com/">
+    <img src="https://img.shields.io/badge/NVIDIA-NIM-76B900.svg" alt="NVIDIA NIM" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="#-quick-install">Quick Install</a> •
+  <a href="#-features">Features</a> •
+  <a href="#-demo-video">Demo</a> •
+  <a href="#-documentation">Docs</a> •
+  <a href="#-api-reference">API</a>
+</p>
+
+<p align="center">
+  <a href="https://g-rump.com">
+    <img src="https://img.shields.io/badge/🚀_Try_Live_Demo-g--rump.com-6366F1?style=for-the-badge" alt="Live Demo" />
+  </a>
+  &nbsp;
+  <a href="https://github.com/Aphrodine-wq/G-rump.com">
+    <img src="https://img.shields.io/badge/⭐_Star_on_GitHub-181717?style=for-the-badge&logo=github" alt="Star on GitHub" />
+  </a>
+</p>
 
 ---
 
-[Website](https://g-rump.com) | [Download](https://github.com/Aphrodine-wq/G-rump.com/releases) | [Documentation](https://docs.g-rump.com) | [NPM](https://www.npmjs.com/package/@g-rump/cli) | [Docker](https://hub.docker.com/r/grump/cli)
+## 📸 Screenshots
 
-</div>
+<p align="center">
+  <img src="docs/assets/screenshot-dashboard.png" width="800" alt="G-Rump Dashboard" />
+  <br>
+  <em>G-Rump Desktop App - Main Dashboard</em>
+</p>
 
----
+<p align="center">
+  <img src="docs/assets/screenshot-architecture.png" width="800" alt="Architecture Generation" />
+  <br>
+  <em>AI-Generated Architecture Diagrams</em>
+</p>
 
-## Overview
-
-**G-Rump** is an AI-powered development platform that transforms natural language into production-ready applications. Built with enterprise-grade architecture and optimized by NVIDIA-level engineering practices.
-
-<div align="center">
-
-| Feature | Benefit |
-|:-------:|:-------:|
-| **18x Faster Builds** | SWC compiler (45s → 2.5s) |
-| **60-70% Cost Savings** | Intelligent LLM routing & caching |
-| **GPU Acceleration** | NVIDIA NIM integration |
-| **Enterprise Security** | Built-in guardrails & monitoring |
-| **Multi-Platform** | Windows, macOS, Linux, Docker, Web |
-
-</div>
+<p align="center">
+  <img src="docs/assets/screenshot-code.png" width="800" alt="Code Generation" />
+  <br>
+  <em>Full-Stack Code Generation with Syntax Highlighting</em>
+</p>
 
 ---
 
-## Quick Start
+## 🎥 Demo Video
 
-### Desktop Application (Recommended)
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=YOUR_VIDEO_ID">
+    <img src="docs/assets/video-thumbnail.png" width="800" alt="G-Rump Demo Video - Install in 30 Seconds" />
+  </a>
+  <br>
+  <strong>🎬 Watch: "Install G-Rump in 30 Seconds"</strong>
+</p>
 
-Download the latest release for your platform:
+---
+
+## ⚡ Quick Install
+
+Get started in under a minute:
 
 ```bash
-# Windows - Portable executable available
-# Linux - AppImage or package manager
-# macOS - Universal binary (Coming Q1 2026)
+# 1. Clone the repository
+git clone https://github.com/Aphrodine-wq/G-rump.com.git
+cd G-rump.com
+
+# 2. Install dependencies
+npm install
+
+# 3. Build packages
+npm run build:packages
+
+# 4. Configure environment (optional - for real AI)
+cp backend/.env.example backend/.env
+# Get free API key at https://build.nvidia.com/
+
+# 5. Launch! 🚀
+cd backend && npm run dev &
+cd ../frontend && npm run electron:dev
 ```
 
-[**Download Latest Release**](https://github.com/Aphrodine-wq/G-rump.com/releases)
+> 💡 **Mock Mode**: Run without any API keys for realistic placeholder responses!
 
-### Command Line Interface
+### Alternative Installation Methods
 
+**CLI (Global):**
 ```bash
 npm install -g @g-rump/cli
-grump ship "Create a React component library"
+grump ship "Create a React dashboard with real-time charts"
 ```
 
-### Docker
-
+**Docker:**
 ```bash
 docker run -it grump/cli:latest ship "Build a REST API with authentication"
 ```
 
-### Web Platform
+---
 
-Visit [**app.g-rump.com**](https://app.g-rump.com) to get started instantly.
+## 🤔 What is G-Rump?
+
+**G-Rump** is an AI-powered development platform that bridges the gap between business requirements and production-ready applications. Describe what you want to build in natural language, and G-Rump automatically generates:
+
+- 🏗️ **Architecture diagrams** (Mermaid, C4, ERD)
+- 📋 **Technical specifications** (PRDs)
+- 💻 **Full-stack code** (frontend, backend, DevOps)
+- 🧪 **Tests and documentation**
+
+Think of it as **"Terraform for application development"** — Architecture-as-Code where your diagram and spec are the source of truth.
+
+### 🏆 NVIDIA Golden Developer
+
+G-Rump targets full NVIDIA ecosystem compliance:
+- **NVIDIA NIM** inference (Nemotron, Llama, Mistral)
+- **NGC-ready** cloud deployment (GCP/AWS)
+- **NeMo Curator** synthetic data pipeline
+- **NeMo Framework** fine-tuning
+- **NIM-aligned** observability with OpenTelemetry
 
 ---
 
-## Installation from Source
+## ✨ Features
 
-```bash
-# Clone the repository
-git clone https://github.com/Aphrodine-wq/G-rump.com.git
-cd G-rump.com
+| Feature | Description | Impact |
+|---------|-------------|--------|
+| **🚀 18x Faster Builds** | SWC compiler + Rust intent parser | 45s → 2.5s |
+| **💰 60-70% Cost Savings** | Intelligent LLM routing & 3-tier caching | Slash AI costs |
+| **🤖 Multi-Agent System** | G-Agent orchestrates specialized agents | End-to-end automation |
+| **🏗️ Architecture-First** | Design diagrams before code | Better planning |
+| **🔒 Enterprise Security** | Built-in guardrails & compliance | Production-ready |
+| **📊 Real-time Observability** | Prometheus + OpenTelemetry | Full visibility |
 
-# Install dependencies
-npm install
+### Two Primary Modes
 
-# Build and run
-cd backend && npm run build && npm start
-
-# Or run the desktop app
-cd frontend && npm run electron:dev
+#### 1. Architecture Mode (Design-First)
 ```
+Describe → Architecture (Mermaid) → Spec (PRD) → (optional) Code
+```
+Lead with the diagram; code is optional.
 
-### Prerequisites
-
-| Requirement | Version | Purpose |
-|:-----------:|:-------:|:-------:|
-| Node.js | 20+ | Runtime |
-| Rust | 1.77+ | Intent compiler (optional) |
-| Docker | Latest | Containerized deployment |
-
----
-
-## Performance
-
-<div align="center">
-
-| Operation | Traditional | G-Rump | Improvement |
-|:---------:|:-----------:|:------:|:-----------:|
-| Backend Build | 45s | 2.5s | **18x faster** |
-| Intent Parsing | 120ms | 8ms | **15x faster** |
-| CLI Startup | 850ms | 45ms | **19x faster** |
-| Docker Build | 180s | 25s | **7x faster** |
-
-</div>
-
-### Cost Optimization
-
-- **Intelligent Caching**: 40% cost reduction via L1/L2/L3 cache (50%+ hit rate)
-- **Smart Model Routing**: 30% savings through automatic LLM selection
-- **Infrastructure Optimization**: 25% reduction via parallel processing & SIMD
-
-**Total Savings: 60-70%**
+#### 2. Code Mode (Tool-Enabled)
+AI-powered chat with workspace-aware tools:
+- `bash_execute` - Run commands in sandboxed environment
+- `file_read` / `file_write` / `file_edit` - File operations
+- `list_directory` - Explore workspace
+- `git_*` - Version control operations
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
 ```mermaid
 graph TB
     subgraph Clients
         CLI[CLI Tool]
         Desktop[Desktop App]
+        VSCode[VS Code Extension]
         Docker[Docker]
+        Bots[Telegram/Discord/SMS]
     end
     
     subgraph API
-        Ship[/ship]
-        Chat[/chat]
-        Codegen[/codegen]
+        Ship[/api/ship]
+        Chat[/api/chat/stream]
+        Codegen[/api/codegen]
+        Agents[/api/agents]
+        MCP[MCP Server]
     end
     
     subgraph Core
         Compiler[SWC/Rust Compiler]
-        Cache[3-Tier Cache]
+        Cache[3-Tier Cache<br/>L1→L2→L3]
         Router[Smart Router]
+        RAG[RAG Engine]
+        Memory[Memory System]
     end
     
     subgraph Providers
         NIM[NVIDIA NIM]
         Kimi[Kimi K2.5]
         OpenRouter[OpenRouter]
+        Groq[Groq]
+        Together[Together AI]
+        Ollama[Ollama Local]
     end
     
     Clients --> API
@@ -154,104 +223,161 @@ graph TB
     Router --> Providers
 ```
 
----
+### Performance Optimizations
 
-## Key Technologies
-
-<div align="center">
-
-| Layer | Technologies |
-|:-----:|:------------:|
-| **Desktop** | Electron, Svelte 5, Vite, TailwindCSS |
-| **Backend** | Express, TypeScript, SWC |
-| **Compiler** | Rust, rayon, SIMD (AVX2/AVX-512) |
-| **AI/ML** | NVIDIA NIM, Kimi K2.5, OpenRouter |
-| **Infrastructure** | Docker, Redis, SQLite/MongoDB |
-| **Monitoring** | Prometheus, OpenTelemetry, Grafana |
-
-</div>
+| Operation | Traditional | G-Rump | Improvement |
+|-----------|-------------|--------|-------------|
+| Backend Build | 45s | 2.5s | **18x faster** |
+| Intent Parsing | 120ms | 8ms | **15x faster** |
+| CLI Startup | 850ms | 45ms | **19x faster** |
+| Docker Build | 180s | 25s | **7x faster** |
 
 ---
 
-## Documentation
-
-<div align="center">
+## 📖 Documentation
 
 | Guide | Description |
-|:-----:|:-----------:|
+|-------|-------------|
 | [Getting Started](./docs/GETTING_STARTED.md) | Fastest path to first use |
-| [Architecture](./docs/ARCHITECTURE.md) | System design |
-| [API Reference](./docs/API.md) | Complete API docs |
-| [Performance Guide](./docs/PERFORMANCE_GUIDE.md) | Optimization details |
-| [Production Checklist](./docs/PRODUCTION_CHECKLIST.md) | Deployment readiness |
-
-</div>
-
----
-
-## Security
-
-For production deployments, see [Production Checklist](./docs/PRODUCTION_CHECKLIST.md) and [Security Baseline](./docs/SECURITY_BASELINE.md).
-
-Required environment variables for production:
-- `BLOCK_SUSPICIOUS_PROMPTS=true`
-- `REQUIRE_AUTH_FOR_API=true`
-- `SECURITY_STRICT_PROD=true`
+| [Architecture](./docs/ARCHITECTURE.md) | System design deep dive |
+| [API Reference](./docs/API.md) | Complete API documentation |
+| [Agent System](./docs/AGENT_SYSTEM.md) | G-Agent orchestration |
+| [Production](./docs/PRODUCTION.md) | Deployment guide |
+| [Security](./docs/SECURITY.md) | Security configuration |
+| [Troubleshooting](./docs/TROUBLESHOOTING.md) | Common issues & fixes |
+| [Contributing](./docs/legal/CONTRIBUTING.md) | Contribution guidelines |
+| [Changelog](./CHANGELOG.md) | Version history |
+| [Launch Materials](./docs/launch/) | Launch checklists and progress |
+| [Reports](./docs/reports/) | Test reports and release notes |
+| [Project Planning](./docs/project/) | Roadmaps and optimization plans |
 
 ---
 
-## CLI Usage
+## 🔌 API Reference
+
+### Core Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/ship/start` | Start SHIP workflow |
+| `POST` | `/api/chat/stream` | Streaming chat with tools |
+| `POST` | `/api/codegen/start` | Start code generation |
+| `POST` | `/api/architecture/generate` | Generate architecture diagram |
+| `POST` | `/api/prd/generate` | Generate PRD document |
+| `POST` | `/api/rag/query` | RAG-enhanced query |
+| `GET` | `/health` | Health check |
+| `GET` | `/metrics` | Prometheus metrics |
+
+### Example: Start SHIP Workflow
 
 ```bash
-grump ship --message "Build a todo app"
-grump ship-parallel --messages "App 1,App 2,App 3"
-grump plan --message "Add authentication"
-grump analyze --workspace . --output arch.mmd
-grump cache-clear
+curl -X POST http://localhost:3000/api/ship/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectDescription": "Build a todo app with user authentication",
+    "preferences": {
+      "techStack": ["React", "Node.js", "PostgreSQL"]
+    }
+  }'
+```
+
+**Response:**
+```json
+{
+  "sessionId": "ship-abc123",
+  "phase": "design",
+  "status": "pending",
+  "createdAt": "2026-01-31T12:00:00Z"
+}
+```
+
+See [docs/API.md](./docs/API.md) for complete reference.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| **Desktop** | Electron 28, Svelte 5, Vite 5, TailwindCSS 3.4 |
+| **Frontend** | TypeScript 5.3, Mermaid.js, Shiki |
+| **Backend** | Node.js 20+, Express 5, TypeScript, SWC, Pino |
+| **Compiler** | Rust 1.77+, rayon, SIMD (AVX2/AVX-512), WASM |
+| **AI/ML** | NVIDIA NIM, Kimi K2.5, OpenRouter, Groq, Together AI, Ollama |
+| **Database** | SQLite (dev), PostgreSQL/Supabase (prod) |
+| **Queue** | BullMQ, Redis |
+| **Infrastructure** | Docker, Kubernetes, NGC (GCP/AWS) |
+| **Observability** | Prometheus, OpenTelemetry, Grafana, Pino |
+
+---
+
+## 🏁 Monorepo Structure
+
+```
+grump/
+├── frontend/              # Svelte 5 + Electron desktop
+├── backend/               # Express 5 API server
+├── packages/
+│   ├── ai-core/          # Model router & registry
+│   ├── cli/              # @g-rump/cli
+│   ├── shared-types/     # Shared TypeScript types
+│   ├── rag/              # RAG engine
+│   ├── voice/            # Voice ASR/TTS
+│   ├── memory/           # Conversation memory
+│   ├── kimi/             # Kimi K2.5 optimizations
+│   └── vscode-extension/ # VS Code extension
+├── intent-compiler/       # Rust NL→JSON parser
+├── services/
+│   ├── nemo-curator/     # Synthetic data pipeline
+│   └── nemo-training/    # Fine-tuning service
+├── deploy/                # Docker, K8s, NGC configs
+├── docs/                  # Documentation
+└── marketing/             # Launch materials
 ```
 
 ---
 
-## Development
+## 🧪 Development
 
 ```bash
+# Run all checks
+npm run check-all
+
 # Run tests
 npm test
 
 # Run benchmarks
 cd intent-compiler && cargo bench
 cd backend && npm run load-test
-
-# Type checking & linting
-npm run type-check
-npm run lint
 ```
 
 ---
 
-## Deployment
+## 🚀 Deployment
 
 ### Docker
 
 ```bash
-bash scripts/build-docker-optimized.sh
-docker-compose up -d
+docker compose -f deploy/docker-compose.yml up -d
 ```
 
-### Vercel
+### NGC-Ready Cloud (GCP/AWS)
 
 ```bash
-cd backend && vercel deploy --prod
+# GCP
+cd deploy/ngc/gcp && ./provision.sh && ./deploy.sh
+
+# AWS
+cd deploy/ngc/aws && ./provision.sh && ./deploy.sh
 ```
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+We welcome contributions! See [CONTRIBUTING.md](./docs/legal/CONTRIBUTING.md) for guidelines.
 
 ```bash
-# Quick contribution guide
 git checkout -b feature/amazing-feature
 npm run check-all
 npm test
@@ -260,35 +386,27 @@ npm test
 
 ---
 
-## FAQ
+## 📄 License
 
-**Q: What makes G-Rump different?**
-A: Enterprise-grade performance with 18x faster builds, 60-70% cost savings, and comprehensive safety guardrails.
-
-**Q: Can I use it commercially?**
-A: Yes! MIT license with free and paid tiers.
-
-**Q: Does it work offline?**
-A: Desktop app works offline for code generation. Cloud features require connectivity.
-
-**Q: What languages are supported?**
-A: TypeScript, JavaScript, Python, Rust, Go, and more.
+[MIT](./docs/legal/LICENSE)
 
 ---
 
-## License
+## 💬 Support
 
-MIT
+- 🐛 [Report Issues](https://github.com/Aphrodine-wq/G-rump.com/issues)
+- 💡 [Request Features](https://github.com/Aphrodine-wq/G-rump.com/discussions)
+- 📧 Email: support@g-rump.com
+- 💬 Discord: [Join Community](https://discord.gg/grump)
 
 ---
 
 <div align="center">
 
-**[Back to Top](#g-rump)**
+**[⬆ Back to Top](#g-rump)**
 
-Made with care by the G-Rump Team
+Made with ❤️ by the G-Rump Team
 
-[![GitHub Stars](https://img.shields.io/github/stars/Aphrodine-wq/G-rump.com?style=social)](https://github.com/Aphrodine-wq/G-rump.com/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/Aphrodine-wq/G-rump.com?style=social)](https://github.com/Aphrodine-wq/G-rump.com/network/members)
+[![GitHub Stars](https://img.shields.io/github/stars/Aphrodine-wq/G-rump.com?style=social)](https://github.com/Aphrodine-wq/G-rump.com)
 
 </div>

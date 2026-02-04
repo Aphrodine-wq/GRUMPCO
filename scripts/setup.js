@@ -200,7 +200,7 @@ ${colors.bright}Run tests:${colors.reset}
   ${colors.cyan}cd frontend && npm run test:run${colors.reset}  Run frontend tests
 
 ${colors.bright}Build Electron app:${colors.reset}
-  ${colors.cyan}cd electron && npm install && npm run dev${colors.reset}
+  ${colors.cyan}cd frontend && npm run electron:dev${colors.reset}
 
 ${colors.bright}Documentation:${colors.reset}
   See ${colors.cyan}TESTING.md${colors.reset} for full testing guide

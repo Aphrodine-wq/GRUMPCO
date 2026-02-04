@@ -35,8 +35,11 @@ export function parseGrump(source: string): GrumpAST {
     matches.push({ type, name, start: m.index });
   }
   for (let i = 0; i < matches.length; i++) {
-    const { type, name, start } = matches[i]!;
-    const nextStart = i + 1 < matches.length ? matches[i + 1]!.start : source.length;
+    const match = matches[i];
+    if (!match) continue;
+    const { type, name, start } = match;
+    const nextMatch = matches[i + 1];
+    const nextStart = nextMatch ? nextMatch.start : source.length;
     let depth = 0;
     let end = start;
     for (let j = source.indexOf('{', start); j < nextStart && j >= 0; j++) {
@@ -58,7 +61,10 @@ export function parseGrump(source: string): GrumpAST {
 /**
  * Chunk .grump source by semantic blocks for RAG. Each chunk is one block (entity/component/system/anim).
  */
-export function chunkGrumpByAST(source: string, filePath: string): { content: string; source: string; type: 'grump' }[] {
+export function chunkGrumpByAST(
+  source: string,
+  filePath: string
+): { content: string; source: string; type: 'grump' }[] {
   const ast = parseGrump(source);
   if (ast.blocks.length === 0) {
     return [{ content: source.trim(), source: filePath, type: 'grump' }];

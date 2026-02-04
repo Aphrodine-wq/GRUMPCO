@@ -218,6 +218,24 @@ export const llmStreamDurationSeconds = new client.Histogram({
   registers: [register],
 });
 
+// NVIDIA NIM-aligned: Time to first token (TTFB)
+export const llmTimeToFirstTokenSeconds = new client.Histogram({
+  name: 'llm_time_to_first_token_seconds',
+  help: 'Time from request start to first token received (NIM-aligned)',
+  labelNames: ['provider', 'model'] as const,
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+  registers: [register],
+});
+
+// NVIDIA NIM-aligned: Tokens per second (generation throughput)
+export const llmTokensPerSecond = new client.Histogram({
+  name: 'llm_tokens_per_second',
+  help: 'Output tokens per second during generation (NIM-aligned)',
+  labelNames: ['provider', 'model'] as const,
+  buckets: [1, 5, 10, 25, 50, 100, 200, 500],
+  registers: [register],
+});
+
 // LLM token usage (input/output)
 export const llmTokensTotal = new client.Counter({
   name: 'llm_tokens_total',
@@ -239,6 +257,14 @@ export const taskComplexityScore = new client.Histogram({
   help: 'Task complexity score (0-100)',
   labelNames: ['operation'] as const,
   buckets: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+  registers: [register],
+});
+
+// Chat requests by session type (chat vs freeAgent)
+export const chatRequestsTotal = new client.Counter({
+  name: 'chat_requests_total',
+  help: 'Total chat stream requests by session type',
+  labelNames: ['session_type'] as const,
   registers: [register],
 });
 
@@ -280,11 +306,7 @@ interface RouteRequest extends Omit<Request, 'route'> {
 }
 
 // Middleware to track HTTP metrics
-export function metricsMiddleware(
-  req: RouteRequest,
-  res: Response,
-  next: NextFunction
-): void {
+export function metricsMiddleware(req: RouteRequest, res: Response, next: NextFunction): void {
   const start = process.hrtime.bigint();
 
   res.on('finish', () => {
@@ -372,6 +394,11 @@ export function recordContextCacheHit(type: 'hit' | 'miss'): void {
   }
 }
 
+// Helper to record chat request (for Free Agent vs chat monitoring)
+export function recordChatRequest(sessionType: string): void {
+  chatRequestsTotal.inc({ session_type: sessionType });
+}
+
 // Helper to record session creation
 export function recordSessionCreated(type: string): void {
   sessionCreatedTotal.inc({ type });
@@ -422,7 +449,11 @@ export function updateGpuMetrics(gpuId: string, utilization: number, memoryUsed:
 }
 
 // Helper to record tiered cache hit/miss (namespace for per-namespace hit rate)
-export function recordTieredCacheAccess(layer: string, hit: boolean, namespace: string = 'default'): void {
+export function recordTieredCacheAccess(
+  layer: string,
+  hit: boolean,
+  namespace: string = 'default'
+): void {
   const labels = { layer, namespace };
   if (hit) {
     tieredCacheHits.inc(labels);
@@ -437,12 +468,15 @@ export function recordLlmRouterSelection(provider: string, modelId: string): voi
 }
 
 // Helper to record LLM stream duration and optional token usage
+// Supports NVIDIA NIM-aligned metrics: TTFB and tokens/sec
 export function recordLlmStreamMetrics(
   provider: string,
   model: string,
   durationSeconds: number,
   inputTokens?: number,
-  outputTokens?: number
+  outputTokens?: number,
+  timeToFirstTokenSeconds?: number,
+  tokensPerSecond?: number
 ): void {
   llmStreamDurationSeconds.observe({ provider, model }, durationSeconds);
   if (typeof inputTokens === 'number' && inputTokens > 0) {
@@ -450,6 +484,12 @@ export function recordLlmStreamMetrics(
   }
   if (typeof outputTokens === 'number' && outputTokens > 0) {
     llmTokensTotal.inc({ provider, model, type: 'output' }, outputTokens);
+  }
+  if (typeof timeToFirstTokenSeconds === 'number' && timeToFirstTokenSeconds >= 0) {
+    llmTimeToFirstTokenSeconds.observe({ provider, model }, timeToFirstTokenSeconds);
+  }
+  if (typeof tokensPerSecond === 'number' && tokensPerSecond > 0) {
+    llmTokensPerSecond.observe({ provider, model }, tokensPerSecond);
   }
 }
 

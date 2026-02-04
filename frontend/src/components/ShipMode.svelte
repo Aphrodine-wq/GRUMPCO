@@ -3,8 +3,12 @@
   import { getCurrentProjectId } from '../stores/projectStore';
   import { fetchApi, getApiBase } from '../lib/api.js';
   import { showToast } from '../stores/toastStore';
+  import { processError } from '../utils/errorHandler.js';
   import { downloadCodegenZip } from '../lib/codeGeneration.js';
+  import { optimizeIntent } from '../stores/featuresStore.js';
+  import { buildOptimizedDescription } from '../utils/intentOptimizer.js';
   import type { ShipStartRequest, ShipPhase } from '../types/ship';
+  import type { IntentOptimizerResult } from '../stores/featuresStore.js';
 
   const eventMode = import.meta.env?.VITE_EVENT_MODE ?? 'sse';
 
@@ -23,9 +27,17 @@
         if (event === 'ship.completed' && payload?.sessionId) {
           shipStore.getSession(payload.sessionId);
           showToast('SHIP completed', 'success');
+          (
+            window as { grump?: { notify?: (t: string, b: string, tag?: string) => void } }
+          ).grump?.notify?.('G-Rump', 'SHIP completed', 'ship');
         } else if (event === 'ship.failed' && payload?.sessionId) {
           shipStore.getSession(payload.sessionId);
-          showToast((payload.error as string) || 'SHIP failed', 'error');
+          const errMsg = (payload.error as string) || 'SHIP failed';
+          const ctx = processError(new Error(errMsg));
+          showToast(ctx.userMessage, 'error');
+          (
+            window as { grump?: { notify?: (t: string, b: string, tag?: string) => void } }
+          ).grump?.notify?.('G-Rump', ctx.userMessage, 'ship');
         }
       } catch (_) {}
     };
@@ -36,6 +48,9 @@
   let projectDescription = $state('');
   let repoNameInput = $state('');
   let showGitHubPrompt = $state(false);
+  let optimizeLoading = $state(false);
+  let optimizeResult = $state<IntentOptimizerResult | null>(null);
+  let optimizeError = $state<string | null>(null);
   let preferences = $state({
     frontendFramework: 'vue' as 'vue' | 'react',
     backendRuntime: 'node' as 'node' | 'python' | 'go',
@@ -105,7 +120,7 @@
     if (!codegenSessionId) return;
     try {
       await downloadCodegenZip(codegenSessionId);
-      showToast('Download started', 'success');
+      showToast('Download started. Check your Downloads folder.', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Download failed', 'error');
     }
@@ -141,19 +156,35 @@
     repoNameInput = '';
   }
 
-  function handleShipOpenInIde(ide: 'cursor' | 'vscode' | 'jetbrains') {
-    const grump = (window as { grump?: { isElectron?: boolean } }).grump;
-    const isElectron = !!grump?.isElectron;
-    const base = isElectron
-      ? 'Download the project, then open the folder in '
-      : 'Download the ZIP, extract it, then open the folder in ';
-    const msg = {
-      cursor: base + 'Cursor (File > Open Folder).',
-      vscode: base + 'VS Code (File > Open Folder).',
-      jetbrains: base + 'IntelliJ or WebStorm (File > Open).',
-    };
-    showToast(msg[ide], 'info', 8000);
-    handleShipDownload();
+  async function handleOptimizeIntent() {
+    const raw = projectDescription.trim();
+    if (!raw || optimizeLoading) return;
+    optimizeLoading = true;
+    optimizeError = null;
+    optimizeResult = null;
+    try {
+      const result = await optimizeIntent(raw, 'architecture');
+      optimizeResult = result;
+      showToast('Intent optimized', 'success');
+    } catch (err) {
+      optimizeError = err instanceof Error ? err.message : 'Optimization failed';
+      showToast(optimizeError, 'error');
+    } finally {
+      optimizeLoading = false;
+    }
+  }
+
+  function useOptimizedDescription() {
+    if (optimizeResult) {
+      projectDescription = buildOptimizedDescription(optimizeResult);
+      optimizeResult = null;
+      showToast('Using optimized description', 'success');
+    }
+  }
+
+  function dismissOptimizePanel() {
+    optimizeResult = null;
+    optimizeError = null;
   }
 </script>
 
@@ -188,7 +219,9 @@
     <div class="ship-content">
       {#if !session}
         <div class="start-section">
-          <p class="ship-empty-intro">Describe your app idea and we'll generate architecture, spec, plan, and code in one run.</p>
+          <p class="ship-empty-intro">
+            Describe your app idea and we'll generate architecture, spec, plan, and code in one run.
+          </p>
           <div class="form-group">
             <label for="description">Project Description</label>
             <textarea
@@ -197,7 +230,86 @@
               placeholder="Describe your project idea in detail..."
               rows="4"
             ></textarea>
+            <div class="optimize-row">
+              <button
+                type="button"
+                class="optimize-btn"
+                onclick={handleOptimizeIntent}
+                disabled={!projectDescription.trim() || optimizeLoading}
+                title="Refine your intent for architecture before SHIP"
+              >
+                {optimizeLoading ? 'Optimizing…' : 'Optimize intent'}
+              </button>
+            </div>
           </div>
+
+          {#if optimizeError}
+            <div class="optimize-error" role="alert">
+              {optimizeError}
+              <button type="button" class="dismiss-btn" onclick={dismissOptimizePanel}
+                >Dismiss</button
+              >
+            </div>
+          {/if}
+
+          {#if optimizeResult}
+            <div class="optimize-panel">
+              <h3 class="optimize-panel-title">Optimized intent</h3>
+              <div class="optimize-panel-content">
+                {#if optimizeResult.optimized.features?.length}
+                  <div class="optimize-section">
+                    <strong>Features</strong>
+                    <ul>
+                      {#each optimizeResult.optimized.features as f}
+                        <li>{f}</li>
+                      {/each}
+                    </ul>
+                  </div>
+                {/if}
+                {#if optimizeResult.optimized.constraints?.length}
+                  <div class="optimize-section">
+                    <strong>Constraints</strong>
+                    <ul>
+                      {#each optimizeResult.optimized.constraints as c}
+                        <li>{c.description}</li>
+                      {/each}
+                    </ul>
+                  </div>
+                {/if}
+                {#if optimizeResult.optimized.nonFunctionalRequirements?.length}
+                  <div class="optimize-section">
+                    <strong>Non-functional</strong>
+                    <ul>
+                      {#each optimizeResult.optimized.nonFunctionalRequirements as n}
+                        <li>{n.requirement}</li>
+                      {/each}
+                    </ul>
+                  </div>
+                {/if}
+                {#if optimizeResult.optimized.clarifications?.length}
+                  <div class="optimize-section">
+                    <strong>Clarifications</strong>
+                    <ul>
+                      {#each optimizeResult.optimized.clarifications as q}
+                        <li>{q.question}</li>
+                      {/each}
+                    </ul>
+                  </div>
+                {/if}
+                {#if optimizeResult.optimized.reasoning}
+                  <p class="optimize-reasoning">{optimizeResult.optimized.reasoning}</p>
+                {/if}
+              </div>
+              <div class="optimize-panel-actions">
+                <button type="button" class="action-btn secondary" onclick={dismissOptimizePanel}>
+                  Dismiss
+                </button>
+                <button type="button" class="action-btn primary" onclick={useOptimizedDescription}>
+                  Use optimized description
+                </button>
+              </div>
+            </div>
+          {/if}
 
           <div class="preferences-grid">
             <div class="preference-col">
@@ -278,6 +390,7 @@
           </div>
 
           {#if error}
+            {@const errorContext = processError(new Error(error))}
             <div class="error-banner">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -290,7 +403,7 @@
                 ><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"
                 ></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg
               >
-              <span>{error}</span>
+              <span>{errorContext.userMessage}</span>
             </div>
             {#if canResume && session?.id}
               <div class="resume-actions">
@@ -426,7 +539,6 @@
                   placeholder="my-awesome-project"
                   bind:value={repoNameInput}
                   onkeydown={(e) => e.key === 'Enter' && submitShipPush()}
-                  autoFocus
                 />
                 <div class="github-prompt-actions">
                   <button
@@ -470,7 +582,7 @@
   .ship-modal {
     background: white;
     width: 100%;
-    max-width: 700px;
+    max-width: 1000px;
     border-radius: 16px;
     box-shadow:
       0 20px 25px -5px rgba(0, 0, 0, 0.1),
@@ -585,6 +697,136 @@
   textarea:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .optimize-row {
+    margin-top: 0.75rem;
+  }
+
+  .optimize-btn {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .optimize-btn:hover:not(:disabled) {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: #eff6ff;
+  }
+
+  .optimize-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .optimize-error {
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .dismiss-btn {
+    background: transparent;
+    border: none;
+    color: #991b1b;
+    cursor: pointer;
+    font-size: 0.85rem;
+    text-decoration: underline;
+  }
+
+  .optimize-panel {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .optimize-panel-title {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: #334155;
+  }
+
+  .optimize-panel-content {
+    font-size: 0.9rem;
+    color: #475569;
+  }
+
+  .optimize-section {
+    margin-bottom: 1rem;
+  }
+
+  .optimize-section strong {
+    display: block;
+    color: #334155;
+    margin-bottom: 0.25rem;
+  }
+
+  .optimize-section ul {
+    margin: 0;
+    padding-left: 1.25rem;
+  }
+
+  .optimize-section li {
+    margin-bottom: 0.25rem;
+  }
+
+  .optimize-reasoning {
+    margin: 1rem 0 0 0;
+    font-style: italic;
+    color: #64748b;
+  }
+
+  .optimize-panel-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .optimize-panel-actions .action-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    font-weight: 500;
+  }
+
+  .optimize-panel-actions .action-btn.primary {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .optimize-panel-actions .action-btn.primary:hover {
+    background: #2563eb;
+  }
+
+  .optimize-panel-actions .action-btn.secondary {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .optimize-panel-actions .action-btn.secondary:hover {
+    background: #e2e8f0;
   }
 
   .preferences-grid {
@@ -941,13 +1183,6 @@
   .github-prompt .action-btn.primary:hover:not(:disabled) {
     background: #0052cc;
   }
-  .github-prompt .action-btn.subtle {
-    background: #e9ecef;
-    color: #6c757d;
-  }
-  .github-prompt .action-btn.subtle:hover {
-    background: #dee2e6;
-  }
 
   @media (prefers-reduced-motion: reduce) {
     .github-prompt-overlay,
@@ -967,4 +1202,3 @@
     }
   }
 </style>
-

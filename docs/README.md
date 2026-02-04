@@ -1,86 +1,175 @@
-# G-Rump Documentation
+# Documentation Index
 
-> **Last Updated:** January 2026
+> **Version:** 2.1.0 | **Complete documentation for the G-Rump platform**
 
-Welcome to the G-Rump documentation. This index will help you find what you need quickly.
-
-## 🚀 Getting Started (Pick One)
-
-New to G-Rump? Start here based on your use case:
-
-| Path | Best For | Document |
-|------|----------|----------|
-| **Desktop App** | Local development, easiest setup | [GETTING_STARTED.md](GETTING_STARTED.md) |
-| **Web (Self-Hosted)** | Teams, shared access | [SETUP.md](SETUP.md) → Website section |
-| **CLI** | Scripts, automation, power users | [QUICK_START.md](QUICK_START.md) → CLI section |
-| **Docker** | Containerized deployment, Linux | [SETUP.md](SETUP.md) → Docker section |
-
-## 📚 Documentation Sections
-
-### Quick Reference
-- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Command cheat sheet and quick lookups
-- **[API.md](API.md)** - Complete API reference by domain
-- **[CURSOR_GRUMP_API.md](CURSOR_GRUMP_API.md)** - Using G-Rump from Cursor IDE
-
-### Understanding G-Rump
-- **[OVERVIEW.md](OVERVIEW.md)** - What is G-Rump, architecture philosophy, core concepts
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, data flow, component details
-- **[HOW_IT_WORKS.md](HOW_IT_WORKS.md)** - Complete workflow walkthrough with diagrams
-- **[CAPABILITIES.md](CAPABILITIES.md)** - Feature overview and API domains
-
-### Setup & Installation
-- **[SETUP.md](SETUP.md)** - Complete setup guide (all platforms)
-- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Fastest path to first use
-- **[BUILD.md](BUILD.md)** - Building from source (Electron app)
-- **[LINUX_SETUP.md](LINUX_SETUP.md)** - Linux and WSL2 optimization
-- **[MACOS_APP.md](MACOS_APP.md)** - macOS-specific information
-
-### Development & Operations
-- **[CODEBASE.md](CODEBASE.md)** - Repository structure and entry points
-- **[TESTING.md](TESTING.md)** - Testing guide and best practices
-- **[PERFORMANCE_GUIDE.md](PERFORMANCE_GUIDE.md)** - Performance features and optimization
-
-### Production & Security
-- **[PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)** - Essential checklist for production
-- **[SECURITY_BASELINE.md](SECURITY_BASELINE.md)** - Required security posture
-- **[RUNBOOK.md](RUNBOOK.md)** - Operational runbook for incidents
-- **[RUNBOOK_REDIS.md](RUNBOOK_REDIS.md)** - Redis-specific operations
-
-### Advanced Topics
-- **[AGENT_SYSTEM.md](AGENT_SYSTEM.md)** - Multi-agent architecture details
-- **[INTENT_COMPILER.md](INTENT_COMPILER.md)** - Intent parsing and Rust compiler
-- **[AI_WORKFLOWS.md](AI_WORKFLOWS.md)** - AI workflow patterns
-- **[AGENTLIGHTNING.md](AGENTLIGHTNING.md)** - Agent observability setup
-
-### Project Information
-- **[ROADMAP.md](ROADMAP.md)** - Future enhancements and plans
-- **[KNOWN_ISSUES.md](KNOWN_ISSUES.md)** - Known issues and workarounds
-- **[MIGRATION.md](MIGRATION.md)** - Migration guides between versions
-
-### Legal
-- **[legal/TERMS_OF_SERVICE.md](legal/TERMS_OF_SERVICE.md)** - Terms of Service
-- **[legal/PRIVACY_POLICY.md](legal/PRIVACY_POLICY.md)** - Privacy Policy
-- **[legal/ACCEPTABLE_USE_POLICY.md](legal/ACCEPTABLE_USE_POLICY.md)** - Acceptable Use Policy
-
-## 🗺️ Documentation Site
-
-For a better browsing experience, visit our documentation site: `/docs-site/index.md`
-
-## 🆘 Getting Help
-
-1. Check [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for common problems
-2. Review the [troubleshooting section in SETUP.md](SETUP.md#troubleshooting)
-3. See [RUNBOOK.md](RUNBOOK.md) for operational issues
-4. Check component-specific READMEs in `frontend/`, `backend/`, etc.
-
-## 📝 Contributing to Documentation
-
-- Keep docs in the `docs/` folder (not root)
-- Use clear, concise language
-- Include code examples where helpful
-- Update links when moving files
-- Test all code snippets
+Welcome to the G-Rump documentation! This index will help you find what you need.
 
 ---
 
-**Quick Links**: [Main README](../README.md) | [API Reference](API.md) | [Quick Start](QUICK_START.md)
+## 🚀 Quick Start
+
+New to G-Rump? Start here:
+
+| Document | Description | Time |
+|----------|-------------|------|
+| [README.md](../README.md) | Project overview and quick start | 5 min |
+| [GETTING_STARTED.md](./GETTING_STARTED.md) | Detailed setup instructions | 10 min |
+| [FAQ.md](./FAQ.md) | Common questions and answers | 15 min |
+
+---
+
+## 📚 Core Documentation
+
+### For Users
+
+| Document | Description |
+|----------|-------------|
+| [GETTING_STARTED.md](./GETTING_STARTED.md) | Installation and first steps |
+| [HOW_IT_WORKS.md](./HOW_IT_WORKS.md) | Understanding the platform |
+| [CLI.md](./CLI.md) | Command-line interface reference |
+| [FAQ.md](./FAQ.md) | Frequently asked questions |
+| [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Common issues and solutions |
+
+### For Developers
+
+| Document | Description |
+|----------|-------------|
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | System design and architecture |
+| [API.md](./API.md) | Complete API reference |
+| [AGENT_SYSTEM.md](./AGENT_SYSTEM.md) | G-Agent orchestration |
+| [DEVELOPMENT.md](./DEVELOPMENT.md) | Development workflow |
+| [CONTRIBUTING.md](./legal/CONTRIBUTING.md) | Contribution guidelines |
+
+### For Operators
+
+| Document | Description |
+|----------|-------------|
+| [PRODUCTION.md](./PRODUCTION.md) | Production deployment guide |
+| [SECURITY.md](./SECURITY.md) | Security configuration |
+| [GPU_DEPLOYMENT.md](./GPU_DEPLOYMENT.md) | GPU deployment guide |
+| [NVIDIA_GOLDEN_DEVELOPER.md](./NVIDIA_GOLDEN_DEVELOPER.md) | NVIDIA ecosystem setup |
+| [NVIDIA_OBSERVABILITY.md](./NVIDIA_OBSERVABILITY.md) | Observability configuration |
+
+---
+
+## 📖 Documentation by Topic
+
+### Architecture & Design
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture overview
+- [HOW_IT_WORKS.md](./HOW_IT_WORKS.md) - Request pipeline and flows
+- [AGENT_SYSTEM.md](./AGENT_SYSTEM.md) - Multi-agent orchestration
+- [INTENT_RAG_FUSION.md](./INTENT_RAG_FUSION.md) - Intent-guided RAG
+- [adr/](./adr/) - Architecture Decision Records
+
+### API & Integration
+
+- [API.md](./API.md) - Complete API reference
+- [CLI.md](./CLI.md) - CLI documentation
+- [INTEGRATIONS.md](./INTEGRATIONS.md) - Third-party integrations
+- [BACKENDS.md](./BACKENDS.md) - Backend configuration
+
+### Deployment & Operations
+
+- [PRODUCTION.md](./PRODUCTION.md) - Production readiness
+- [SECURITY.md](./SECURITY.md) - Security hardening
+- [GPU_DEPLOYMENT.md](./GPU_DEPLOYMENT.md) - GPU deployment
+- [deploy/ngc/](../deploy/ngc/) - NGC cloud deployment
+
+### Development & Contributing
+
+- [DEVELOPMENT.md](./DEVELOPMENT.md) - Developer guide
+- [CONTRIBUTING.md](./legal/CONTRIBUTING.md) - Contribution guidelines
+- [CODE_OF_CONDUCT.md](./legal/CODE_OF_CONDUCT.md) - Community standards
+- [TESTING.md](./TESTING.md) - Testing guide
+
+### NVIDIA Ecosystem
+
+- [NVIDIA_GOLDEN_DEVELOPER.md](./NVIDIA_GOLDEN_DEVELOPER.md) - Award submission
+- [NVIDIA_OBSERVABILITY.md](./NVIDIA_OBSERVABILITY.md) - OTEL configuration
+- [services/nemo-curator/](../services/nemo-curator/) - Synthetic data pipeline
+- [services/nemo-training/](../services/nemo-training/) - Fine-tuning service
+
+### Support & Troubleshooting
+
+- [FAQ.md](./FAQ.md) - Frequently asked questions
+- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) - Troubleshooting guide
+- [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) - Known limitations
+
+### 📦 Launch & Releases
+
+- [launch/](./launch/) - Launch checklists, progress, and readiness reports
+- [reports/](./reports/) - Test reports and release notes
+- [CHANGELOG.md](../CHANGELOG.md) - Version history and changes
+
+### 📊 Project Planning
+
+- [project/](./project/) - Roadmaps, optimization plans, and project documentation
+- [ROADMAP.md](./ROADMAP.md) - Future development roadmap
+
+---
+
+## 🔗 Quick Reference
+
+### Environment Variables
+
+Key configuration files:
+- `backend/.env.example` - Backend configuration template
+- `frontend/.env.example` - Frontend configuration template
+
+### Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Start development servers |
+| `npm run build` | Build for production |
+| `npm test` | Run all tests |
+| `npm run check-all` | Type-check and lint |
+
+### Docker Commands
+
+```bash
+# Development
+docker compose -f deploy/docker-compose.yml up -d
+
+# Production
+docker compose -f deploy/docker-compose.prod.yml up -d
+```
+
+---
+
+## 📋 Documentation Standards
+
+All documentation follows these conventions:
+
+- **Markdown format** - All docs are Markdown files
+- **Front matter** - Version and last updated at top
+- **Table of contents** - Every doc has a TOC
+- **Code examples** - Runnable code snippets where possible
+- **Cross-references** - Links to related docs
+
+---
+
+## 🆘 Getting Help
+
+Can't find what you're looking for?
+
+- 📖 Check the [FAQ](./FAQ.md)
+- 🐛 Search [GitHub Issues](https://github.com/Aphrodine-wq/G-rump.com/issues)
+- 💬 Ask in [GitHub Discussions](https://github.com/Aphrodine-wq/G-rump.com/discussions)
+
+---
+
+## 📝 Contributing to Docs
+
+Found an error or want to improve documentation?
+
+1. Edit the relevant `.md` file
+2. Follow existing formatting conventions
+3. Submit a PR with `[docs]` prefix
+
+See [CONTRIBUTING.md](./legal/CONTRIBUTING.md) for details.
+
+---
+
+**Last Updated:** February 2026

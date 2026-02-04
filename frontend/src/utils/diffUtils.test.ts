@@ -1,6 +1,6 @@
 /**
  * Diff Utils Tests
- * 
+ *
  * Comprehensive tests for diff computation utilities
  */
 
@@ -19,8 +19,8 @@ describe('diffUtils', () => {
     it('should return empty array for identical content', () => {
       const content = 'line1\nline2\nline3';
       const result = computeLineDiff(content, content);
-      
-      result.forEach(line => {
+
+      result.forEach((line) => {
         expect(line.type).toBe('unchanged');
       });
     });
@@ -28,10 +28,10 @@ describe('diffUtils', () => {
     it('should detect added lines', () => {
       const before = 'line1\nline2';
       const after = 'line1\nline2\nline3';
-      
+
       const result = computeLineDiff(before, after);
-      const added = result.filter(l => l.type === 'added');
-      
+      const added = result.filter((l) => l.type === 'added');
+
       expect(added.length).toBe(1);
       expect(added[0].content).toBe('line3');
     });
@@ -39,10 +39,10 @@ describe('diffUtils', () => {
     it('should detect removed lines', () => {
       const before = 'line1\nline2\nline3';
       const after = 'line1\nline2';
-      
+
       const result = computeLineDiff(before, after);
-      const removed = result.filter(l => l.type === 'removed');
-      
+      const removed = result.filter((l) => l.type === 'removed');
+
       expect(removed.length).toBe(1);
       expect(removed[0].content).toBe('line3');
     });
@@ -50,58 +50,58 @@ describe('diffUtils', () => {
     it('should track line numbers correctly', () => {
       const before = 'a\nb\nc';
       const after = 'a\nx\nc';
-      
+
       const result = computeLineDiff(before, after);
-      
+
       // Should have some added and removed for the changed line
-      const added = result.filter(l => l.type === 'added');
-      const removed = result.filter(l => l.type === 'removed');
-      
+      const added = result.filter((l) => l.type === 'added');
+      const removed = result.filter((l) => l.type === 'removed');
+
       expect(added.length).toBeGreaterThan(0);
       expect(removed.length).toBeGreaterThan(0);
     });
 
     it('should handle empty before content', () => {
       const result = computeLineDiff('', 'new line');
-      const added = result.filter(l => l.type === 'added');
-      
+      const added = result.filter((l) => l.type === 'added');
+
       expect(added.length).toBe(1);
     });
 
     it('should handle empty after content', () => {
       const result = computeLineDiff('old line', '');
-      const removed = result.filter(l => l.type === 'removed');
-      
+      const removed = result.filter((l) => l.type === 'removed');
+
       expect(removed.length).toBe(1);
     });
 
     it('should handle multi-line additions', () => {
       const before = 'start';
       const after = 'start\nline1\nline2\nline3';
-      
+
       const result = computeLineDiff(before, after);
-      const added = result.filter(l => l.type === 'added');
-      
+      const added = result.filter((l) => l.type === 'added');
+
       expect(added.length).toBe(3);
     });
 
     it('should set oldLineNumber for removed lines', () => {
       const before = 'a\nb';
       const after = 'a';
-      
+
       const result = computeLineDiff(before, after);
-      const removed = result.find(l => l.type === 'removed');
-      
+      const removed = result.find((l) => l.type === 'removed');
+
       expect(removed?.oldLineNumber).toBeDefined();
     });
 
     it('should set newLineNumber for added lines', () => {
       const before = 'a';
       const after = 'a\nb';
-      
+
       const result = computeLineDiff(before, after);
-      const added = result.find(l => l.type === 'added');
-      
+      const added = result.find((l) => l.type === 'added');
+
       expect(added?.newLineNumber).toBeDefined();
     });
   });
@@ -110,38 +110,39 @@ describe('diffUtils', () => {
     it('should detect word-level changes', () => {
       const before = 'hello world';
       const after = 'hello there';
-      
+
       const result = computeWordDiff(before, after);
-      
+
       expect(result.length).toBeGreaterThan(0);
     });
 
     it('should return single unchanged item for identical strings', () => {
       const content = 'same content';
       const result = computeWordDiff(content, content);
-      
+
       expect(result.length).toBe(1);
-      expect(result[0].added).toBeUndefined();
-      expect(result[0].removed).toBeUndefined();
+      // diff package uses false (not undefined) for unchanged chunks
+      expect(result[0].added).toBeFalsy();
+      expect(result[0].removed).toBeFalsy();
     });
 
     it('should detect added words', () => {
       const before = 'hello';
       const after = 'hello world';
-      
+
       const result = computeWordDiff(before, after);
-      const added = result.find(c => c.added);
-      
+      const added = result.find((c) => c.added);
+
       expect(added).toBeDefined();
     });
 
     it('should detect removed words', () => {
       const before = 'hello world';
       const after = 'hello';
-      
+
       const result = computeWordDiff(before, after);
-      const removed = result.find(c => c.removed);
-      
+      const removed = result.find((c) => c.removed);
+
       expect(removed).toBeDefined();
     });
   });
@@ -154,9 +155,9 @@ describe('diffUtils', () => {
         afterContent: 'line1\nline2\nline3',
         changeType: 'modified',
       };
-      
+
       const summary = getDiffSummary(diff);
-      
+
       expect(summary.added).toBe(2);
     });
 
@@ -167,9 +168,9 @@ describe('diffUtils', () => {
         afterContent: 'line1',
         changeType: 'modified',
       };
-      
+
       const summary = getDiffSummary(diff);
-      
+
       expect(summary.removed).toBe(2);
     });
 
@@ -180,9 +181,9 @@ describe('diffUtils', () => {
         afterContent: 'same',
         changeType: 'modified',
       };
-      
+
       const summary = getDiffSummary(diff);
-      
+
       expect(summary.added).toBe(0);
       expect(summary.removed).toBe(0);
     });
@@ -194,9 +195,9 @@ describe('diffUtils', () => {
         afterContent: 'a\nc\nd',
         changeType: 'modified',
       };
-      
+
       const summary = getDiffSummary(diff);
-      
+
       expect(summary.total).toBe(summary.added + summary.removed);
     });
   });
@@ -271,9 +272,9 @@ describe('diffUtils', () => {
         afterContent: 'new line',
         changeType: 'created',
       };
-      
+
       const formatted = formatDiffSummary(diff);
-      
+
       expect(formatted).toContain('+');
     });
 
@@ -284,9 +285,9 @@ describe('diffUtils', () => {
         afterContent: '',
         changeType: 'deleted',
       };
-      
+
       const formatted = formatDiffSummary(diff);
-      
+
       expect(formatted).toContain('-');
     });
 
@@ -297,9 +298,9 @@ describe('diffUtils', () => {
         afterContent: 'new',
         changeType: 'modified',
       };
-      
+
       const formatted = formatDiffSummary(diff);
-      
+
       expect(formatted).toContain('+');
       expect(formatted).toContain('-');
     });
@@ -311,9 +312,9 @@ describe('diffUtils', () => {
         afterContent: 'same',
         changeType: 'modified',
       };
-      
+
       const formatted = formatDiffSummary(diff);
-      
+
       expect(formatted).toBe('No changes');
     });
   });

@@ -14,9 +14,9 @@
 
   let {
     name,
-    size = 20,
-    strokeWidth = 2,
-    color = 'currentColor',
+    size: _size = 20,
+    strokeWidth: _strokeWidth = 2,
+    color: _color = 'currentColor',
     class: className = '',
   }: Props = $props();
 </script>

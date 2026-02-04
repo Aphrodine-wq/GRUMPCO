@@ -9,19 +9,19 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { getStream, type StreamParams } from '../../services/llmGateway.js';
 import {
-  SecurityScanResult,
-  SecurityVulnerability,
-  SecurityScanRequest,
-  SBOMResult,
-  SBOMRequest,
-  SBOMComponent,
-  ComplianceReport,
-  ComplianceRequest,
-  ComplianceRequirement,
-  SecretsAuditResult,
-  SecretsAuditRequest,
-  SecretFinding,
-  PathValidationResult,
+  type SecurityScanResult,
+  type SecurityVulnerability,
+  type SecurityScanRequest,
+  type SBOMResult,
+  type SBOMRequest,
+  type SBOMComponent,
+  type ComplianceReport,
+  type ComplianceRequest,
+  type ComplianceRequirement,
+  type SecretsAuditResult,
+  type SecretsAuditRequest,
+  type SecretFinding,
+  type PathValidationResult,
 } from './types.js';
 import {
   SECURITY_ANALYSIS_SYSTEM_PROMPT,
@@ -63,42 +63,123 @@ export function validateWorkspacePath(workspacePath: string): PathValidationResu
   if (resolved !== root && !resolved.startsWith(rootSep)) {
     return {
       ok: false,
-      reason: 'workspacePath must be under the allowed scan root (set SECURITY_SCAN_ROOT or use a path under the current working directory)',
+      reason:
+        'workspacePath must be under the allowed scan root (set SECURITY_SCAN_ROOT or use a path under the current working directory)',
     };
   }
   return { ok: true, resolved };
 }
 
 // Known secret patterns (regex)
-const SECRET_PATTERNS: Array<{ name: string; pattern: RegExp; type: SecretFinding['type']; severity: SecretFinding['severity'] }> = [
+const SECRET_PATTERNS: Array<{
+  name: string;
+  pattern: RegExp;
+  type: SecretFinding['type'];
+  severity: SecretFinding['severity'];
+}> = [
   { name: 'AWS Access Key', pattern: /AKIA[0-9A-Z]{16}/g, type: 'api-key', severity: 'critical' },
   { name: 'AWS Secret Key', pattern: /[0-9a-zA-Z/+]{40}/g, type: 'api-key', severity: 'critical' },
   { name: 'GitHub Token', pattern: /ghp_[0-9a-zA-Z]{36}/g, type: 'token', severity: 'critical' },
   { name: 'GitHub OAuth', pattern: /gho_[0-9a-zA-Z]{36}/g, type: 'token', severity: 'critical' },
-  { name: 'Slack Token', pattern: /xox[baprs]-[0-9a-zA-Z-]{10,}/g, type: 'token', severity: 'high' },
-  { name: 'Stripe API Key', pattern: /sk_live_[0-9a-zA-Z]{24}/g, type: 'api-key', severity: 'critical' },
-  { name: 'Stripe Test Key', pattern: /sk_test_[0-9a-zA-Z]{24}/g, type: 'api-key', severity: 'medium' },
-  { name: 'Private Key', pattern: /-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----/g, type: 'private-key', severity: 'critical' },
-  { name: 'Generic API Key', pattern: /api[_-]?key[_-]?[=:]["']?[0-9a-zA-Z]{20,}/gi, type: 'api-key', severity: 'high' },
-  { name: 'Generic Secret', pattern: /secret[_-]?key[_-]?[=:]["']?[0-9a-zA-Z]{20,}/gi, type: 'credential', severity: 'high' },
-  { name: 'Password in Code', pattern: /password[_-]?[=:]["'][^"']{8,}/gi, type: 'password', severity: 'high' },
-  { name: 'Connection String', pattern: /(?:mongodb|postgres|mysql|redis):\/\/[^\s"']+/gi, type: 'connection-string', severity: 'high' },
-  { name: 'JWT Secret', pattern: /jwt[_-]?secret[_-]?[=:]["']?[0-9a-zA-Z]{16,}/gi, type: 'credential', severity: 'critical' },
-  { name: 'Anthropic API Key', pattern: /sk-ant-[a-zA-Z0-9-_]{20,}/g, type: 'api-key', severity: 'critical' },
+  {
+    name: 'Slack Token',
+    pattern: /xox[baprs]-[0-9a-zA-Z-]{10,}/g,
+    type: 'token',
+    severity: 'high',
+  },
+  {
+    name: 'Stripe API Key',
+    pattern: /sk_live_[0-9a-zA-Z]{24}/g,
+    type: 'api-key',
+    severity: 'critical',
+  },
+  {
+    name: 'Stripe Test Key',
+    pattern: /sk_test_[0-9a-zA-Z]{24}/g,
+    type: 'api-key',
+    severity: 'medium',
+  },
+  {
+    name: 'Private Key',
+    pattern: /-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----/g,
+    type: 'private-key',
+    severity: 'critical',
+  },
+  {
+    name: 'Generic API Key',
+    pattern: /api[_-]?key[_-]?[=:]["']?[0-9a-zA-Z]{20,}/gi,
+    type: 'api-key',
+    severity: 'high',
+  },
+  {
+    name: 'Generic Secret',
+    pattern: /secret[_-]?key[_-]?[=:]["']?[0-9a-zA-Z]{20,}/gi,
+    type: 'credential',
+    severity: 'high',
+  },
+  {
+    name: 'Password in Code',
+    pattern: /password[_-]?[=:]["'][^"']{8,}/gi,
+    type: 'password',
+    severity: 'high',
+  },
+  {
+    name: 'Connection String',
+    pattern: /(?:mongodb|postgres|mysql|redis):\/\/[^\s"']+/gi,
+    type: 'connection-string',
+    severity: 'high',
+  },
+  {
+    name: 'JWT Secret',
+    pattern: /jwt[_-]?secret[_-]?[=:]["']?[0-9a-zA-Z]{16,}/gi,
+    type: 'credential',
+    severity: 'critical',
+  },
+  {
+    name: 'Anthropic API Key',
+    pattern: /sk-ant-[a-zA-Z0-9-_]{20,}/g,
+    type: 'api-key',
+    severity: 'critical',
+  },
   { name: 'OpenAI API Key', pattern: /sk-[a-zA-Z0-9]{48}/g, type: 'api-key', severity: 'critical' },
 ];
 
 // Files to scan for secrets
 const SECRET_SCAN_EXTENSIONS = new Set([
-  '.js', '.ts', '.jsx', '.tsx', '.py', '.go', '.rb', '.php',
-  '.java', '.kt', '.swift', '.cs', '.env', '.yaml', '.yml',
-  '.json', '.xml', '.conf', '.config', '.ini', '.properties',
+  '.js',
+  '.ts',
+  '.jsx',
+  '.tsx',
+  '.py',
+  '.go',
+  '.rb',
+  '.php',
+  '.java',
+  '.kt',
+  '.swift',
+  '.cs',
+  '.env',
+  '.yaml',
+  '.yml',
+  '.json',
+  '.xml',
+  '.conf',
+  '.config',
+  '.ini',
+  '.properties',
 ]);
 
 // Directories to ignore
 const IGNORE_DIRS = new Set([
-  'node_modules', '.git', 'dist', 'build', 'coverage',
-  '__pycache__', 'venv', '.venv', 'vendor',
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  'coverage',
+  '__pycache__',
+  'venv',
+  '.venv',
+  'vendor',
 ]);
 
 /**
@@ -151,7 +232,11 @@ function scanFileForSecrets(filePath: string, content: string): SecretFinding[] 
 /**
  * Recursively scan directory for files
  */
-function scanDirectory(dirPath: string, extensions: Set<string>, excludePatterns: string[] = []): string[] {
+function scanDirectory(
+  dirPath: string,
+  extensions: Set<string>,
+  excludePatterns: string[] = []
+): string[] {
   const files: string[] = [];
 
   try {
@@ -183,7 +268,17 @@ function scanDirectory(dirPath: string, extensions: Set<string>, excludePatterns
  * Read code files for analysis
  */
 function readCodeFiles(workspacePath: string, maxFiles: number = 20): string {
-  const codeExtensions = new Set(['.js', '.ts', '.jsx', '.tsx', '.py', '.go', '.java', '.php', '.rb']);
+  const codeExtensions = new Set([
+    '.js',
+    '.ts',
+    '.jsx',
+    '.tsx',
+    '.py',
+    '.go',
+    '.java',
+    '.php',
+    '.rb',
+  ]);
   const files = scanDirectory(workspacePath, codeExtensions);
 
   const snippets: string[] = [];
@@ -224,16 +319,29 @@ function readPackageJson(workspacePath: string): string | null {
 /**
  * Calculate security score and grade
  */
-function calculateSecurityScore(vulnerabilities: SecurityVulnerability[]): { score: number; grade: 'A' | 'B' | 'C' | 'D' | 'F' } {
+function calculateSecurityScore(vulnerabilities: SecurityVulnerability[]): {
+  score: number;
+  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+} {
   let score = 100;
 
   for (const vuln of vulnerabilities) {
     switch (vuln.severity) {
-      case 'critical': score -= 25; break;
-      case 'high': score -= 15; break;
-      case 'medium': score -= 10; break;
-      case 'low': score -= 5; break;
-      case 'info': score -= 1; break;
+      case 'critical':
+        score -= 25;
+        break;
+      case 'high':
+        score -= 15;
+        break;
+      case 'medium':
+        score -= 10;
+        break;
+      case 'low':
+        score -= 5;
+        break;
+      case 'info':
+        score -= 1;
+        break;
     }
   }
 
@@ -252,8 +360,14 @@ function calculateSecurityScore(vulnerabilities: SecurityVulnerability[]): { sco
 /**
  * Perform security scan
  */
-export async function performSecurityScan(request: SecurityScanRequest): Promise<SecurityScanResult> {
-  const { workspacePath, scanTypes = ['sast', 'deps', 'secrets', 'config'], excludePatterns = [] } = request;
+export async function performSecurityScan(
+  request: SecurityScanRequest
+): Promise<SecurityScanResult> {
+  const {
+    workspacePath,
+    scanTypes = ['sast', 'deps', 'secrets', 'config'],
+    excludePatterns = [],
+  } = request;
   const startTime = Date.now();
   const scanId = crypto.randomUUID();
 
@@ -333,9 +447,15 @@ export async function performSecurityScan(request: SecurityScanRequest): Promise
     },
     vulnerabilities,
     categories: {
-      injection: vulnerabilities.filter((v) => ['sql-injection', 'xss', 'command-injection'].includes(v.type)).length,
-      authentication: vulnerabilities.filter((v) => ['auth-bypass', 'broken-access-control'].includes(v.type)).length,
-      dataExposure: vulnerabilities.filter((v) => ['sensitive-data-exposure', 'secret-exposure'].includes(v.type)).length,
+      injection: vulnerabilities.filter((v) =>
+        ['sql-injection', 'xss', 'command-injection'].includes(v.type)
+      ).length,
+      authentication: vulnerabilities.filter((v) =>
+        ['auth-bypass', 'broken-access-control'].includes(v.type)
+      ).length,
+      dataExposure: vulnerabilities.filter((v) =>
+        ['sensitive-data-exposure', 'secret-exposure'].includes(v.type)
+      ).length,
       configuration: vulnerabilities.filter((v) => v.type === 'security-misconfiguration').length,
       dependencies: vulnerabilities.filter((v) => v.type === 'dependency-vulnerability').length,
     },
@@ -431,7 +551,9 @@ export async function generateSBOM(request: SBOMRequest): Promise<SBOMResult> {
 /**
  * Generate compliance report
  */
-export async function generateComplianceReport(request: ComplianceRequest): Promise<ComplianceReport> {
+export async function generateComplianceReport(
+  request: ComplianceRequest
+): Promise<ComplianceReport> {
   const { workspacePath, standard, projectType } = request;
 
   const codeSnippets = readCodeFiles(workspacePath, 10);
@@ -479,9 +601,8 @@ Dev Dependencies: ${Object.keys(pkg.devDependencies || {}).length}
     summary: {
       totalRequirements: requirements.length,
       ...summary,
-      compliancePercentage: requirements.length > 0
-        ? Math.round((summary.compliant / requirements.length) * 100)
-        : 0,
+      compliancePercentage:
+        requirements.length > 0 ? Math.round((summary.compliant / requirements.length) * 100) : 0,
     },
     requirements,
     recommendations,
@@ -513,14 +634,15 @@ export async function auditSecrets(request: SecretsAuditRequest): Promise<Secret
     filesScanned: files.length,
     secretsFound: findings.length,
     findings,
-    recommendations: findings.length > 0
-      ? [
-          'Move all secrets to environment variables',
-          'Use a secrets manager like HashiCorp Vault or AWS Secrets Manager',
-          'Add secret patterns to .gitignore',
-          'Rotate any exposed credentials immediately',
-          'Implement pre-commit hooks to prevent secret commits',
-        ]
-      : ['No secrets detected. Continue following security best practices.'],
+    recommendations:
+      findings.length > 0
+        ? [
+            'Move all secrets to environment variables',
+            'Use a secrets manager like HashiCorp Vault or AWS Secrets Manager',
+            'Add secret patterns to .gitignore',
+            'Rotate any exposed credentials immediately',
+            'Implement pre-commit hooks to prevent secret commits',
+          ]
+        : ['No secrets detected. Continue following security best practices.'],
   };
 }

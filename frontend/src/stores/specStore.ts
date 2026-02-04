@@ -25,22 +25,22 @@ const initialState: SpecState = {
 const state = writable<SpecState>(initialState);
 
 // Derived stores
-export const currentSession = derived(state, s => s.currentSession);
-export const isSpecLoading = derived(state, s => s.isLoading);
-export const specError = derived(state, s => s.error);
-export const currentQuestions = derived(state, s => s.currentSession?.questions || []);
-export const currentAnswers = derived(state, s => s.currentSession?.answers || {});
-export const isComplete = derived(state, s => {
+export const currentSession = derived(state, (s) => s.currentSession);
+export const isSpecLoading = derived(state, (s) => s.isLoading);
+export const specError = derived(state, (s) => s.error);
+export const currentQuestions = derived(state, (s) => s.currentSession?.questions || []);
+export const currentAnswers = derived(state, (s) => s.currentSession?.answers || {});
+export const isComplete = derived(state, (s) => {
   if (!s.currentSession) return false;
-  const required = s.currentSession.questions.filter(q => q.required);
-  return required.every(q => s.currentSession!.answers[q.id] !== undefined);
+  const required = s.currentSession.questions.filter((q) => q.required);
+  return required.every((q) => s.currentSession!.answers[q.id] !== undefined);
 });
 
 /**
  * Start a new spec session
  */
 export async function startSpecSession(request: SpecStartRequest): Promise<SpecSession> {
-  state.update(s => ({ ...s, isLoading: true, error: null }));
+  state.update((s) => ({ ...s, isLoading: true, error: null }));
 
   try {
     const response = await fetchApi('/api/spec/start', {
@@ -56,7 +56,7 @@ export async function startSpecSession(request: SpecStartRequest): Promise<SpecS
     const data = await response.json();
     const session = data.session;
 
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       currentSession: session,
       isLoading: false,
@@ -66,7 +66,7 @@ export async function startSpecSession(request: SpecStartRequest): Promise<SpecS
     return session;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       isLoading: false,
       error: message,
@@ -79,7 +79,7 @@ export async function startSpecSession(request: SpecStartRequest): Promise<SpecS
  * Load spec session by ID
  */
 export async function loadSpecSession(sessionId: string): Promise<SpecSession> {
-  state.update(s => ({ ...s, isLoading: true, error: null }));
+  state.update((s) => ({ ...s, isLoading: true, error: null }));
 
   try {
     const response = await fetchApi(`/api/spec/${sessionId}`);
@@ -92,7 +92,7 @@ export async function loadSpecSession(sessionId: string): Promise<SpecSession> {
     const data = await response.json();
     const session = data.session;
 
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       currentSession: session,
       isLoading: false,
@@ -102,7 +102,7 @@ export async function loadSpecSession(sessionId: string): Promise<SpecSession> {
     return session;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       isLoading: false,
       error: message,
@@ -114,8 +114,11 @@ export async function loadSpecSession(sessionId: string): Promise<SpecSession> {
 /**
  * Submit answer to a question
  */
-export async function submitAnswer(sessionId: string, answer: SpecAnswerRequest): Promise<SpecSession> {
-  state.update(s => ({ ...s, isLoading: true, error: null }));
+export async function submitAnswer(
+  sessionId: string,
+  answer: SpecAnswerRequest
+): Promise<SpecSession> {
+  state.update((s) => ({ ...s, isLoading: true, error: null }));
 
   try {
     const response = await fetchApi(`/api/spec/${sessionId}/answer`, {
@@ -131,7 +134,7 @@ export async function submitAnswer(sessionId: string, answer: SpecAnswerRequest)
     const data = await response.json();
     const session = data.session;
 
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       currentSession: session,
       isLoading: false,
@@ -141,7 +144,7 @@ export async function submitAnswer(sessionId: string, answer: SpecAnswerRequest)
     return session;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       isLoading: false,
       error: message,
@@ -153,8 +156,10 @@ export async function submitAnswer(sessionId: string, answer: SpecAnswerRequest)
 /**
  * Generate specification from answered questions
  */
-export async function generateSpecification(sessionId: string): Promise<{ specification: Specification; session: SpecSession }> {
-  state.update(s => ({ ...s, isLoading: true, error: null }));
+export async function generateSpecification(
+  sessionId: string
+): Promise<{ specification: Specification; session: SpecSession }> {
+  state.update((s) => ({ ...s, isLoading: true, error: null }));
 
   try {
     const response = await fetchApi(`/api/spec/${sessionId}/generate`, {
@@ -169,7 +174,7 @@ export async function generateSpecification(sessionId: string): Promise<{ specif
     const data = await response.json();
     const { specification, session } = data;
 
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       currentSession: session,
       isLoading: false,
@@ -179,7 +184,7 @@ export async function generateSpecification(sessionId: string): Promise<{ specif
     return { specification, session };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       isLoading: false,
       error: message,
@@ -193,7 +198,9 @@ export async function generateSpecification(sessionId: string): Promise<{ specif
  */
 export function getNextQuestion(): SpecQuestion | null {
   let session: SpecSession | null = null;
-  currentSession.subscribe(s => { session = s; })();
+  currentSession.subscribe((s) => {
+    session = s;
+  })();
 
   if (!session) return null;
 

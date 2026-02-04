@@ -1,6 +1,6 @@
 /**
  * Mermaid to Code Store Tests
- * 
+ *
  * Comprehensive tests for Mermaid diagram to code conversion state management
  */
 
@@ -12,54 +12,70 @@ import { resetMocks } from '../test/setup';
 const mockStorage: Record<string, string> = {};
 const localStorageMock = {
   getItem: vi.fn((key: string) => mockStorage[key] || null),
-  setItem: vi.fn((key: string, value: string) => { mockStorage[key] = value; }),
-  removeItem: vi.fn((key: string) => { delete mockStorage[key]; }),
-  clear: vi.fn(() => { Object.keys(mockStorage).forEach(k => delete mockStorage[k]); }),
+  setItem: vi.fn((key: string, value: string) => {
+    mockStorage[key] = value;
+  }),
+  removeItem: vi.fn((key: string) => {
+    delete mockStorage[key];
+  }),
+  clear: vi.fn(() => {
+    Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
+  }),
 };
-Object.defineProperty(global, 'localStorage', { value: localStorageMock });
+Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock });
 
 describe('mermaidToCodeStore', () => {
   beforeEach(async () => {
     resetMocks();
     vi.resetModules();
     localStorageMock.clear();
-    Object.keys(mockStorage).forEach(k => delete mockStorage[k]);
+    Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
   });
 
   describe('initial state', () => {
     it('should have empty mermaid code', async () => {
       const { mermaidToCodeStore } = await import('./mermaidToCodeStore');
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.mermaidCode).toBe('');
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.mermaidCode).toBe('');
     });
 
     it('should have default framework as react', async () => {
       const { mermaidToCodeStore } = await import('./mermaidToCodeStore');
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.framework).toBe('react');
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.framework).toBe('react');
     });
 
     it('should have default language as typescript', async () => {
       const { mermaidToCodeStore } = await import('./mermaidToCodeStore');
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.language).toBe('typescript');
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.language).toBe('typescript');
     });
 
     it('should be idle status', async () => {
       const { mermaidToCodeStore } = await import('./mermaidToCodeStore');
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.status).toBe('idle');
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.status).toBe('idle');
     });
 
     it('should have empty history', async () => {
       const { mermaidToCodeStore } = await import('./mermaidToCodeStore');
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.history).toEqual([]);
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.history).toEqual([]);
     });
   });
 
@@ -69,9 +85,11 @@ describe('mermaidToCodeStore', () => {
 
       mermaidToCodeStore.setMermaidCode('graph TD\nA-->B');
 
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.mermaidCode).toBe('graph TD\nA-->B');
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.mermaidCode).toBe('graph TD\nA-->B');
     });
 
     it('should persist to localStorage', async () => {
@@ -89,9 +107,11 @@ describe('mermaidToCodeStore', () => {
 
       mermaidToCodeStore.setFramework('vue');
 
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.framework).toBe('vue');
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.framework).toBe('vue');
     });
   });
 
@@ -101,9 +121,11 @@ describe('mermaidToCodeStore', () => {
 
       mermaidToCodeStore.setLanguage('javascript');
 
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.language).toBe('javascript');
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.language).toBe('javascript');
     });
   });
 
@@ -122,9 +144,11 @@ describe('mermaidToCodeStore', () => {
       mermaidToCodeStore.setError('Previous error');
       mermaidToCodeStore.startGeneration();
 
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.error).toBeUndefined();
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.error).toBeUndefined();
     });
   });
 
@@ -138,9 +162,11 @@ describe('mermaidToCodeStore', () => {
 
       expect(get(isCompleted)).toBe(true);
 
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.generatedCode).toBe('const component = () => {}');
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.generatedCode).toBe('const component = () => {}');
     });
 
     it('should add to history', async () => {
@@ -148,14 +174,17 @@ describe('mermaidToCodeStore', () => {
 
       mermaidToCodeStore.setMermaidCode('graph TD\nA-->B');
       mermaidToCodeStore.completeGeneration('code1');
-      
+
       mermaidToCodeStore.setMermaidCode('graph LR\nC-->D');
       mermaidToCodeStore.completeGeneration('code2');
 
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.history.length).toBe(2);
-      expect(state.history[0].generatedCode).toBe('code2');
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      const history = state?.history as Array<Record<string, unknown>>;
+      expect(history.length).toBe(2);
+      expect(history[0].generatedCode).toBe('code2');
     });
 
     it('should limit history to 50 entries', async () => {
@@ -167,9 +196,12 @@ describe('mermaidToCodeStore', () => {
         mermaidToCodeStore.completeGeneration(`code${i}`);
       }
 
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.history.length).toBeLessThanOrEqual(50);
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      const history = state?.history as Array<unknown>;
+      expect(history.length).toBeLessThanOrEqual(50);
     });
   });
 
@@ -188,9 +220,12 @@ describe('mermaidToCodeStore', () => {
       mermaidToCodeStore.setMermaidCode('invalid mermaid');
       mermaidToCodeStore.setError('Parse error');
 
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.history[0].error).toBe('Parse error');
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      const history = state?.history as Array<Record<string, unknown>>;
+      expect(history[0].error).toBe('Parse error');
     });
   });
 
@@ -204,12 +239,14 @@ describe('mermaidToCodeStore', () => {
 
       mermaidToCodeStore.reset();
 
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.mermaidCode).toBe('');
-      expect(state.framework).toBe('react');
-      expect(state.status).toBe('idle');
-      expect(state.history).toEqual([]);
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.mermaidCode).toBe('');
+      expect(state?.framework).toBe('react');
+      expect(state?.status).toBe('idle');
+      expect(state?.history).toEqual([]);
     });
   });
 
@@ -221,21 +258,26 @@ describe('mermaidToCodeStore', () => {
       mermaidToCodeStore.setFramework('vue');
       mermaidToCodeStore.completeGeneration('original generated');
 
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      const historyId = state.history[0].id;
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      const history = state?.history as Array<Record<string, unknown>>;
+      const historyId = history[0].id;
 
       // Change state
       mermaidToCodeStore.setMermaidCode('new code');
       mermaidToCodeStore.setFramework('react');
 
       // Load from history
-      mermaidToCodeStore.loadFromHistory(historyId);
+      mermaidToCodeStore.loadFromHistory(historyId as string);
 
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.mermaidCode).toBe('original code');
-      expect(state.framework).toBe('vue');
-      expect(state.generatedCode).toBe('original generated');
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.mermaidCode).toBe('original code');
+      expect(state?.framework).toBe('vue');
+      expect(state?.generatedCode).toBe('original generated');
     });
 
     it('should not change state for unknown history id', async () => {
@@ -244,9 +286,11 @@ describe('mermaidToCodeStore', () => {
       mermaidToCodeStore.setMermaidCode('current code');
       mermaidToCodeStore.loadFromHistory('unknown-id');
 
-      let state: any;
-      mermaidToCodeStore.subscribe(s => { state = s; })();
-      expect(state.mermaidCode).toBe('current code');
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.mermaidCode).toBe('current code');
     });
   });
 
@@ -267,6 +311,71 @@ describe('mermaidToCodeStore', () => {
       }
 
       expect(get(recentHistory).length).toBe(10);
+    });
+  });
+
+  describe('localStorage persistence', () => {
+    it('should load stored state from localStorage', async () => {
+      const storedState = {
+        mermaidCode: 'graph TD\nStored-->Code',
+        framework: 'angular',
+        language: 'javascript',
+        history: [{ id: 'h1', mermaidCode: 'old', generatedCode: 'oldgen' }],
+      };
+      mockStorage['mermaid-to-code-state'] = JSON.stringify(storedState);
+
+      vi.resetModules();
+      const { mermaidToCodeStore } = await import('./mermaidToCodeStore');
+
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+
+      expect(state?.mermaidCode).toBe('graph TD\nStored-->Code');
+      expect(state?.framework).toBe('angular');
+      expect(state?.language).toBe('javascript');
+      // Status should always be idle on load
+      expect(state?.status).toBe('idle');
+    });
+
+    it('should handle invalid JSON in localStorage gracefully', async () => {
+      mockStorage['mermaid-to-code-state'] = 'not-valid-json{';
+
+      vi.resetModules();
+      const { mermaidToCodeStore } = await import('./mermaidToCodeStore');
+
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+
+      // Should fall back to defaults
+      expect(state?.mermaidCode).toBe('');
+      expect(state?.framework).toBe('react');
+    });
+
+    it('should handle localStorage.setItem errors gracefully', async () => {
+      vi.resetModules();
+      const { mermaidToCodeStore } = await import('./mermaidToCodeStore');
+
+      localStorageMock.setItem.mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+
+      // Should not throw
+      expect(() => mermaidToCodeStore.setMermaidCode('new code')).not.toThrow();
+
+      let state: Record<string, unknown> | undefined;
+      mermaidToCodeStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
+      expect(state?.mermaidCode).toBe('new code');
+
+      // Restore
+      localStorageMock.setItem.mockImplementation((key: string, value: string) => {
+        mockStorage[key] = value;
+      });
     });
   });
 });

@@ -7,6 +7,8 @@ const request = supertest as unknown as (app: any) => any;
 process.env.ANTHROPIC_API_KEY = 'test_api_key_for_testing';
 process.env.NVIDIA_NIM_API_KEY = 'test_nim_key';
 process.env.NODE_ENV = 'test';
+process.env.CSRF_PROTECTION = 'false'; // Disable CSRF for tests
+process.env.REQUIRE_AUTH_FOR_API = 'false'; // Disable auth requirement for tests
 
 // Mock the LLM gateway to prevent real API calls
 const mockStreamLLM = vi.fn();

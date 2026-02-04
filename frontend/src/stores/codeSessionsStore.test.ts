@@ -1,6 +1,6 @@
 /**
  * Code Sessions Store Tests
- * 
+ *
  * Comprehensive tests for code session persistence state management
  */
 
@@ -11,18 +11,24 @@ import { resetMocks } from '../test/setup';
 const mockStorage: Record<string, string> = {};
 const localStorageMock = {
   getItem: vi.fn((key: string) => mockStorage[key] || null),
-  setItem: vi.fn((key: string, value: string) => { mockStorage[key] = value; }),
-  removeItem: vi.fn((key: string) => { delete mockStorage[key]; }),
-  clear: vi.fn(() => { Object.keys(mockStorage).forEach(k => delete mockStorage[k]); }),
+  setItem: vi.fn((key: string, value: string) => {
+    mockStorage[key] = value;
+  }),
+  removeItem: vi.fn((key: string) => {
+    delete mockStorage[key];
+  }),
+  clear: vi.fn(() => {
+    Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
+  }),
 };
-Object.defineProperty(global, 'localStorage', { value: localStorageMock });
+Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock });
 
 describe('codeSessionsStore', () => {
   beforeEach(async () => {
     resetMocks();
     vi.resetModules();
     localStorageMock.clear();
-    Object.keys(mockStorage).forEach(k => delete mockStorage[k]);
+    Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
   });
 
   describe('initial state', () => {
@@ -38,7 +44,7 @@ describe('codeSessionsStore', () => {
 
       const messages = [
         { role: 'user' as const, content: 'Hello' },
-        { role: 'assistant' as const, content: 'Hi there' }
+        { role: 'assistant' as const, content: 'Hi there' },
       ];
 
       const id = codeSessionsStore.save('Test Session', messages, '/workspace');
@@ -166,8 +172,8 @@ describe('codeSessionsStore', () => {
     it('should notify on changes', async () => {
       const { codeSessionsStore } = await import('./codeSessionsStore');
 
-      const updates: any[] = [];
-      const unsubscribe = codeSessionsStore.subscribe(sessions => {
+      const updates: unknown[] = [];
+      const unsubscribe = codeSessionsStore.subscribe((sessions) => {
         updates.push([...sessions]);
       });
 
@@ -188,7 +194,7 @@ describe('codeSessionsStore', () => {
         name: 'Existing Session',
         messages: [],
         workspaceRoot: '/old-workspace',
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
       };
       mockStorage['grump-code-sessions'] = JSON.stringify([existingSession]);
 
@@ -199,6 +205,37 @@ describe('codeSessionsStore', () => {
       const sessions = codeSessionsStore.list();
       expect(sessions).toHaveLength(1);
       expect(sessions[0].name).toBe('Existing Session');
+    });
+
+    it('should handle invalid JSON in localStorage gracefully', async () => {
+      // Pre-populate with invalid JSON
+      mockStorage['grump-code-sessions'] = 'not-valid-json{';
+
+      vi.resetModules();
+      const { codeSessionsStore } = await import('./codeSessionsStore');
+
+      // Should return empty array when JSON parse fails
+      const sessions = codeSessionsStore.list();
+      expect(sessions).toEqual([]);
+    });
+
+    it('should handle localStorage.setItem errors gracefully', async () => {
+      vi.resetModules();
+      const { codeSessionsStore } = await import('./codeSessionsStore');
+
+      // Make setItem throw
+      localStorageMock.setItem.mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+
+      // Should not throw when saving
+      expect(() => {
+        codeSessionsStore.save('Test Session', [], '/workspace');
+      }).not.toThrow();
+
+      // Session should still be added to in-memory store
+      const sessions = codeSessionsStore.list();
+      expect(sessions).toHaveLength(1);
     });
   });
 });

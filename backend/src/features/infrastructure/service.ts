@@ -6,15 +6,15 @@
 
 import { getStream, type StreamParams } from '../../services/llmGateway.js';
 import {
-  K8sGenerationRequest,
-  K8sGenerationResult,
-  K8sManifest,
-  TerraformGenerationRequest,
-  TerraformGenerationResult,
-  DockerGenerationRequest,
-  DockerGenerationResult,
-  CICDGenerationRequest,
-  CICDGenerationResult,
+  type K8sGenerationRequest,
+  type K8sGenerationResult,
+  type K8sManifest,
+  type TerraformGenerationRequest,
+  type TerraformGenerationResult,
+  type DockerGenerationRequest,
+  type DockerGenerationResult,
+  type CICDGenerationRequest,
+  type CICDGenerationResult,
 } from './types.js';
 
 const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
@@ -53,8 +53,16 @@ Generate production-ready, well-documented infrastructure code.`;
 /**
  * Generate Kubernetes manifests
  */
-export async function generateK8sManifests(request: K8sGenerationRequest): Promise<K8sGenerationResult> {
-  const { projectName, services, ingress, namespace = 'default', environment = 'production' } = request;
+export async function generateK8sManifests(
+  request: K8sGenerationRequest
+): Promise<K8sGenerationResult> {
+  const {
+    projectName,
+    services,
+    ingress,
+    namespace = 'default',
+    environment = 'production',
+  } = request;
 
   const prompt = `Generate Kubernetes manifests for the following application:
 
@@ -63,9 +71,13 @@ Environment: ${environment}
 Namespace: ${namespace}
 
 Services:
-${services.map(s => `- ${s.name}: image=${s.image}, port=${s.port}, replicas=${s.replicas || 1}
+${services
+  .map(
+    (s) => `- ${s.name}: image=${s.image}, port=${s.port}, replicas=${s.replicas || 1}
   Resources: CPU=${s.resources?.cpu || '100m'}, Memory=${s.resources?.memory || '128Mi'}
-  Env vars: ${s.env?.map(e => e.name).join(', ') || 'none'}`).join('\n')}
+  Env vars: ${s.env?.map((e) => e.name).join(', ') || 'none'}`
+  )
+  .join('\n')}
 
 ${ingress ? `Ingress: host=${ingress.host}, tls=${ingress.tls}` : 'No ingress required'}
 
@@ -99,7 +111,9 @@ Respond with each manifest as a separate YAML block:
 
   // Parse YAML blocks from response
   const yamlBlocks = responseText.match(/```yaml\n?([\s\S]*?)\n?```/g) || [];
-  const manifests = yamlBlocks.map((block) => block.replace(/```yaml\n?/, '').replace(/\n?```/, ''));
+  const manifests = yamlBlocks.map((block) =>
+    block.replace(/```yaml\n?/, '').replace(/\n?```/, '')
+  );
 
   // Categorize manifests
   const deployments: K8sManifest[] = [];
@@ -112,7 +126,12 @@ Respond with each manifest as a separate YAML block:
 
   for (const manifest of manifests) {
     if (manifest.includes('kind: Deployment')) {
-      deployments.push({ kind: 'Deployment', apiVersion: 'apps/v1', metadata: { name: '' }, spec: {} });
+      deployments.push({
+        kind: 'Deployment',
+        apiVersion: 'apps/v1',
+        metadata: { name: '' },
+        spec: {},
+      });
     } else if (manifest.includes('kind: Service')) {
       k8sServices.push({ kind: 'Service', apiVersion: 'v1', metadata: { name: '' }, spec: {} });
     } else if (manifest.includes('kind: ConfigMap')) {
@@ -120,9 +139,19 @@ Respond with each manifest as a separate YAML block:
     } else if (manifest.includes('kind: Secret')) {
       secrets.push({ kind: 'Secret', apiVersion: 'v1', metadata: { name: '' }, spec: {} });
     } else if (manifest.includes('kind: Ingress')) {
-      ingressManifest = { kind: 'Ingress', apiVersion: 'networking.k8s.io/v1', metadata: { name: '' }, spec: {} };
+      ingressManifest = {
+        kind: 'Ingress',
+        apiVersion: 'networking.k8s.io/v1',
+        metadata: { name: '' },
+        spec: {},
+      };
     } else if (manifest.includes('kind: HorizontalPodAutoscaler')) {
-      hpas.push({ kind: 'HorizontalPodAutoscaler', apiVersion: 'autoscaling/v2', metadata: { name: '' }, spec: {} });
+      hpas.push({
+        kind: 'HorizontalPodAutoscaler',
+        apiVersion: 'autoscaling/v2',
+        metadata: { name: '' },
+        spec: {},
+      });
     } else if (manifest.includes('kind: Namespace')) {
       namespaceManifest = manifest;
     }
@@ -143,8 +172,17 @@ Respond with each manifest as a separate YAML block:
 /**
  * Generate Terraform configuration
  */
-export async function generateTerraform(request: TerraformGenerationRequest): Promise<TerraformGenerationResult> {
-  const { provider, projectName, resources, region, environment = 'production', tags = {} } = request;
+export async function generateTerraform(
+  request: TerraformGenerationRequest
+): Promise<TerraformGenerationResult> {
+  const {
+    provider,
+    projectName,
+    resources,
+    region,
+    environment = 'production',
+    tags = {},
+  } = request;
 
   const providerConfig: Record<string, string> = {
     aws: 'us-east-1',
@@ -159,7 +197,7 @@ Region: ${region || providerConfig[provider]}
 Environment: ${environment}
 
 Resources requested:
-${resources.map(r => `- ${r.type}: ${r.name}${r.config ? ` (config: ${JSON.stringify(r.config)})` : ''}`).join('\n')}
+${resources.map((r) => `- ${r.type}: ${r.name}${r.config ? ` (config: ${JSON.stringify(r.config)})` : ''}`).join('\n')}
 
 Default tags: ${JSON.stringify({ ...tags, Environment: environment, Project: projectName, ManagedBy: 'Terraform' })}
 
@@ -208,7 +246,9 @@ Respond with each file as a separate code block:
 /**
  * Generate Docker configuration
  */
-export async function generateDocker(request: DockerGenerationRequest): Promise<DockerGenerationResult> {
+export async function generateDocker(
+  request: DockerGenerationRequest
+): Promise<DockerGenerationResult> {
   const {
     projectType,
     projectName,
@@ -250,8 +290,12 @@ Generate:
 
 2. **.dockerignore** - Exclude unnecessary files
 
-${includeCompose ? `3. **docker-compose.yml** - Development setup
-${services ? `Services: ${services.map(s => s.name).join(', ')}` : 'Include main application service'}` : ''}
+${
+  includeCompose
+    ? `3. **docker-compose.yml** - Development setup
+${services ? `Services: ${services.map((s) => s.name).join(', ')}` : 'Include main application service'}`
+    : ''
+}
 
 Respond with each file as a separate code block:
 \`\`\`dockerfile
@@ -264,10 +308,14 @@ Respond with each file as a separate code block:
 ...
 \`\`\`
 
-${includeCompose ? `\`\`\`yaml
+${
+  includeCompose
+    ? `\`\`\`yaml
 # docker-compose.yml
 ...
-\`\`\`` : ''}`;
+\`\`\``
+    : ''
+}`;
 
   const responseText = await callLLM({
     model: DEFAULT_MODEL,
@@ -279,11 +327,15 @@ ${includeCompose ? `\`\`\`yaml
   // Extract files
   const dockerfileMatch = responseText.match(/```dockerfile\n?([\s\S]*?)\n?```/i);
   const dockerignoreMatch = responseText.match(/# \.dockerignore[\s\S]*?```\n?([\s\S]*?)\n?```/);
-  const composeMatch = responseText.match(/# docker-compose\.yml[\s\S]*?```yaml\n?([\s\S]*?)\n?```/i);
+  const composeMatch = responseText.match(
+    /# docker-compose\.yml[\s\S]*?```yaml\n?([\s\S]*?)\n?```/i
+  );
 
   return {
     dockerfile: dockerfileMatch ? dockerfileMatch[1].trim() : '',
-    dockerignore: dockerignoreMatch ? dockerignoreMatch[1].trim() : 'node_modules\n.git\n*.log\n.env*\ndist\ncoverage',
+    dockerignore: dockerignoreMatch
+      ? dockerignoreMatch[1].trim()
+      : 'node_modules\n.git\n*.log\n.env*\ndist\ncoverage',
     composeFile: composeMatch ? composeMatch[1].trim() : undefined,
   };
 }
@@ -303,8 +355,8 @@ export async function generateCICD(request: CICDGenerationRequest): Promise<CICD
   const platformConfigs: Record<string, { filename: string; format: string }> = {
     'github-actions': { filename: '.github/workflows/ci.yml', format: 'yaml' },
     'gitlab-ci': { filename: '.gitlab-ci.yml', format: 'yaml' },
-    'jenkins': { filename: 'Jenkinsfile', format: 'groovy' },
-    'circleci': { filename: '.circleci/config.yml', format: 'yaml' },
+    jenkins: { filename: 'Jenkinsfile', format: 'groovy' },
+    circleci: { filename: '.circleci/config.yml', format: 'yaml' },
   };
 
   const config = platformConfigs[platform];

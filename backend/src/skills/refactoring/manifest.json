@@ -17,8 +17,20 @@
   },
   "permissions": ["file_read", "file_write"],
   "triggers": {
-    "keywords": ["refactor", "extract", "rename", "restructure", "clean up", "simplify", "optimize"],
-    "patterns": ["refactor\\s+(this|the)?\\s*code", "extract\\s+(function|method|variable)", "rename\\s+\\w+"],
+    "keywords": [
+      "refactor",
+      "extract",
+      "rename",
+      "restructure",
+      "clean up",
+      "simplify",
+      "optimize"
+    ],
+    "patterns": [
+      "refactor\\s+(this|the)?\\s*code",
+      "extract\\s+(function|method|variable)",
+      "rename\\s+\\w+"
+    ],
     "commands": ["/refactor", "/extract", "/rename"],
     "fileExtensions": [".ts", ".js", ".tsx", ".jsx", ".py", ".go", ".rs", ".java"]
   }

@@ -1,65 +1,160 @@
 /**
  * OpenTelemetry Distributed Tracing
  * Sets up tracing for HTTP requests, Claude API calls, and database operations
+ *
+ * OPTIMIZATION: Lazy-loads heavy OpenTelemetry modules to reduce cold start time.
+ * In serverless environments, tracing is disabled by default unless OTLP_ENDPOINT is set.
  */
 
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { Resource } from '@opentelemetry/resources';
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-base';
-import { trace, context, Span, SpanStatusCode } from '@opentelemetry/api';
-import type { Request, Response, NextFunction } from 'express';
-import { getCorrelationIdFromHeaders, setCorrelationIdHeader, generateCorrelationId } from '../utils/correlationId.js';
-import logger from './logger.js';
+// Lazy imports - these are only loaded when tracing is actually enabled
+let NodeSDK: typeof import('@opentelemetry/sdk-node').NodeSDK | null = null;
+let getNodeAutoInstrumentations:
+  | typeof import('@opentelemetry/auto-instrumentations-node').getNodeAutoInstrumentations
+  | null = null;
+let Resource: typeof import('@opentelemetry/resources').Resource | null = null;
+let SemanticResourceAttributes:
+  | typeof import('@opentelemetry/semantic-conventions').SemanticResourceAttributes
+  | null = null;
+let OTLPTraceExporter:
+  | typeof import('@opentelemetry/exporter-trace-otlp-http').OTLPTraceExporter
+  | null = null;
+let ConsoleSpanExporter: typeof import('@opentelemetry/sdk-trace-base').ConsoleSpanExporter | null =
+  null;
 
-let sdk: NodeSDK | null = null;
+// These lightweight API imports are always needed for the middleware signature
+import { trace, context, type Span, SpanStatusCode } from '@opentelemetry/api';
+import type { Request, Response, NextFunction } from 'express';
+import {
+  getCorrelationIdFromHeaders,
+  setCorrelationIdHeader,
+  generateCorrelationId,
+} from '../utils/correlationId.js';
+import logger from './logger.js';
+import { isServerlessRuntime } from '../config/runtime.js';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let sdk: any = null;
 let isInitialized = false;
+let initPromise: Promise<void> | null = null;
 
 /**
- * Initialize OpenTelemetry SDK
+ * Lazy-load OpenTelemetry modules (heavy dependencies ~2MB)
+ */
+async function loadOtelModules(): Promise<void> {
+  if (NodeSDK) return; // Already loaded
+
+  const [sdkMod, autoInstrMod, resourceMod, semconvMod, otlpMod, traceMod] = await Promise.all([
+    import('@opentelemetry/sdk-node'),
+    import('@opentelemetry/auto-instrumentations-node'),
+    import('@opentelemetry/resources'),
+    import('@opentelemetry/semantic-conventions'),
+    import('@opentelemetry/exporter-trace-otlp-http'),
+    import('@opentelemetry/sdk-trace-base'),
+  ]);
+
+  NodeSDK = sdkMod.NodeSDK;
+  getNodeAutoInstrumentations = autoInstrMod.getNodeAutoInstrumentations;
+  Resource = resourceMod.Resource;
+  SemanticResourceAttributes = semconvMod.SemanticResourceAttributes;
+  OTLPTraceExporter = otlpMod.OTLPTraceExporter;
+  ConsoleSpanExporter = traceMod.ConsoleSpanExporter;
+}
+
+/**
+ * Check if tracing should be enabled
+ */
+function shouldEnableTracing(): boolean {
+  // Always skip in test
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+    return false;
+  }
+
+  // In serverless, only enable if OTLP endpoint is explicitly configured
+  const otlpEndpoint =
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim() || process.env.OTLP_ENDPOINT?.trim();
+  if (isServerlessRuntime) {
+    return Boolean(otlpEndpoint);
+  }
+
+  // In development without OTLP, skip (console tracing is noisy)
+  if (process.env.NODE_ENV === 'development' && !otlpEndpoint) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Initialize OpenTelemetry SDK (lazy-loaded for cold start optimization)
  */
 export function initializeTracing(): void {
-  if (isInitialized) {
+  if (isInitialized || initPromise) {
     return;
   }
 
-  try {
-    const serviceName = process.env.SERVICE_NAME || 'grump-backend';
-    const environment = process.env.NODE_ENV || 'development';
-    const otlpEndpoint = process.env.OTLP_ENDPOINT;
-
-    // Choose exporter based on environment
-    const traceExporter = otlpEndpoint
-      ? new OTLPTraceExporter({
-          url: `${otlpEndpoint}/v1/traces`,
-        })
-      : new ConsoleSpanExporter(); // Use console in dev
-
-    sdk = new NodeSDK({
-      resource: new Resource({
-        [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
-        [SemanticResourceAttributes.SERVICE_VERSION]: process.env.npm_package_version || '1.0.0',
-        [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: environment,
-      }),
-      traceExporter,
-      instrumentations: [
-        getNodeAutoInstrumentations({
-          // Disable some instrumentations that might conflict
-          '@opentelemetry/instrumentation-fs': {
-            enabled: false,
-          },
-        }),
-      ],
-    });
-
-    sdk.start();
+  if (!shouldEnableTracing()) {
+    logger.debug('OpenTelemetry tracing disabled (serverless/dev mode without OTLP_ENDPOINT)');
     isInitialized = true;
-    logger.info({ serviceName, environment, otlpEndpoint: !!otlpEndpoint }, 'OpenTelemetry tracing initialized');
-  } catch (error) {
-    logger.error({ error: (error as Error).message }, 'Failed to initialize OpenTelemetry tracing');
+    return;
   }
+
+  // Start async initialization but don't block
+  initPromise = (async () => {
+    try {
+      await loadOtelModules();
+
+      if (!NodeSDK || !Resource || !SemanticResourceAttributes || !getNodeAutoInstrumentations) {
+        throw new Error('Failed to load OpenTelemetry modules');
+      }
+
+      const serviceName =
+        process.env.OTEL_SERVICE_NAME || process.env.SERVICE_NAME || 'grump-backend';
+      const environment = process.env.NODE_ENV || 'development';
+      const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || process.env.OTLP_ENDPOINT;
+
+      // Choose exporter based on environment
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let traceExporter: any = undefined;
+      if (otlpEndpoint && OTLPTraceExporter) {
+        const tracesUrl = otlpEndpoint.endsWith('/v1/traces')
+          ? otlpEndpoint
+          : `${otlpEndpoint.replace(/\/$/, '')}/v1/traces`;
+        traceExporter = new OTLPTraceExporter({ url: tracesUrl });
+      } else if (ConsoleSpanExporter) {
+        traceExporter = new ConsoleSpanExporter();
+      }
+
+      sdk = new NodeSDK({
+        resource: new Resource({
+          [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
+          [SemanticResourceAttributes.SERVICE_VERSION]: process.env.npm_package_version || '1.0.0',
+          [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: environment,
+        }),
+        traceExporter,
+        instrumentations: [
+          getNodeAutoInstrumentations({
+            // Disable some instrumentations that might conflict
+            '@opentelemetry/instrumentation-fs': {
+              enabled: false,
+            },
+          }),
+        ],
+      });
+
+      sdk.start();
+      isInitialized = true;
+      logger.info(
+        { serviceName, environment, otlpEndpoint: !!otlpEndpoint },
+        'OpenTelemetry tracing initialized (lazy)'
+      );
+    } catch (error) {
+      logger.error(
+        { error: (error as Error).message },
+        'Failed to initialize OpenTelemetry tracing'
+      );
+      isInitialized = true; // Mark as initialized to prevent retry
+    }
+  })();
 }
 
 /**
@@ -77,11 +172,7 @@ export async function shutdownTracing(): Promise<void> {
 /**
  * Express middleware for tracing HTTP requests
  */
-export function tracingMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function tracingMiddleware(req: Request, res: Response, next: NextFunction): void {
   const tracer = trace.getTracer('grump-http');
   const correlationId = getCorrelationIdFromHeaders(req.headers) || generateCorrelationId();
 
@@ -148,7 +239,10 @@ export function tracingMiddleware(
 /**
  * Create a span for a named operation
  */
-export function createSpan(name: string, attributes?: Record<string, string | number | boolean>): Span {
+export function createSpan(
+  name: string,
+  attributes?: Record<string, string | number | boolean>
+): Span {
   const tracer = trace.getTracer('grump-service');
   const span = tracer.startSpan(name, { attributes });
   return span;
@@ -178,7 +272,7 @@ export async function withSpan<T>(
       'parent.trace_id': parentSpan.spanContext().traceId,
     });
   }
-  
+
   try {
     const result = await context.with(trace.setSpan(context.active(), span), async () => {
       return await fn(span);
@@ -233,7 +327,10 @@ export function getCurrentSpan(): Span | undefined {
 /**
  * Add event to current span
  */
-export function addSpanEvent(name: string, attributes?: Record<string, string | number | boolean>): void {
+export function addSpanEvent(
+  name: string,
+  attributes?: Record<string, string | number | boolean>
+): void {
   const span = getCurrentSpan();
   if (span) {
     span.addEvent(name, attributes);
@@ -247,5 +344,27 @@ export function setSpanAttribute(key: string, value: string | number | boolean):
   const span = getCurrentSpan();
   if (span) {
     span.setAttribute(key, value);
+  }
+}
+
+/**
+ * Add NVIDIA NIM attributes to the current span for LLM operations.
+ * Aligns with NVIDIA NIM observability schema.
+ */
+export function addNimSpanAttributes(
+  provider: string,
+  model: string,
+  extra?: Record<string, string | number | boolean | undefined>
+): void {
+  const span = getCurrentSpan();
+  if (span) {
+    span.setAttribute('nvidia.nim.provider', provider);
+    span.setAttribute('nvidia.nim.model', model);
+    if (extra) {
+      for (const [key, value] of Object.entries(extra)) {
+        if (value === undefined) continue;
+        span.setAttribute(`nvidia.nim.${key}`, value);
+      }
+    }
   }
 }

@@ -4,10 +4,17 @@
     disabled?: boolean;
     loading?: boolean;
     variant?: 'primary' | 'secondary';
+    background?: 'white' | 'purple';
     children?: import('svelte').Snippet;
   }
 
-  let { onclick, disabled = false, loading = false, variant = 'primary', children }: Props = $props();
+  let {
+    onclick,
+    disabled = false,
+    loading = false,
+    background = 'purple',
+    children,
+  }: Props = $props();
 
   let isPressed = $state(false);
   let ripples = $state<{ id: number; x: number; y: number }[]>([]);
@@ -16,20 +23,20 @@
 
   function handleClick(e: MouseEvent) {
     if (disabled || loading) return;
-    
+
     // Create ripple effect
     const rect = buttonRef.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     const newRipple = { id: rippleId++, x, y };
     ripples = [...ripples, newRipple];
-    
+
     // Remove ripple after animation
     setTimeout(() => {
-      ripples = ripples.filter(r => r.id !== newRipple.id);
+      ripples = ripples.filter((r) => r.id !== newRipple.id);
     }, 600);
-    
+
     onclick?.();
   }
 
@@ -48,11 +55,10 @@
   bind:this={buttonRef}
   class="relative overflow-hidden px-10 py-4 rounded-full font-semibold text-lg
          transition-all duration-200 ease-out
-         focus:outline-none focus-visible:ring-4 focus-visible:ring-white/50
-         disabled:opacity-50 disabled:cursor-not-allowed
-         {variant === 'primary'
-           ? 'bg-white text-purple-700 hover:bg-white/95 shadow-xl hover:shadow-2xl'
-           : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'}
+         focus:outline-none focus-visible:ring-4 disabled:opacity-50 disabled:cursor-not-allowed
+         {background === 'purple'
+    ? 'focus-visible:ring-white/50 bg-white text-purple-700 hover:bg-white/95 shadow-xl hover:shadow-2xl'
+    : 'focus-visible:ring-[#7C3AED]/50 bg-[#7C3AED] text-white hover:bg-[#6D28D9] shadow-xl hover:shadow-2xl'}
          {isPressed ? 'scale-[0.97] shadow-lg' : 'scale-100'}"
   {disabled}
   onclick={handleClick}
@@ -75,13 +81,7 @@
   <span class="relative flex items-center justify-center gap-2">
     {#if loading}
       <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
-        <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
         ></circle>
         <path
           class="opacity-75"
@@ -90,11 +90,11 @@
         ></path>
       </svg>
     {/if}
-    
+
     {#if children}
       {@render children()}
     {/if}
-    
+
     <!-- Arrow icon -->
     {#if !loading}
       <svg
@@ -110,9 +110,6 @@
       </svg>
     {/if}
   </span>
-
-  <!-- Gradient shine overlay -->
-  <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
 </button>
 
 <style>

@@ -5,6 +5,7 @@
    */
   import type { Snippet } from 'svelte';
   import { colors } from '../../tokens/colors';
+  import { animations } from '../../tokens/animations';
 
   interface Props {
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -50,6 +51,7 @@
   style:--border-default={colors.diff.lineNumber.border}
   style:--error-color={colors.status.error}
   style:--radius-md={colors.shadow.md ? '6px' : '4px'}
+  style:--transition-micro={animations.transition.fast}
 >
   {#if loading}
     <span class="btn-spinner"></span>
@@ -68,9 +70,13 @@
     font-family: inherit;
     font-weight: 500;
     border: 0;
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition:
+      transform var(--transition-micro),
+      box-shadow var(--transition-micro),
+      background-color var(--transition-micro),
+      color var(--transition-micro);
     position: relative;
     white-space: nowrap;
     user-select: none;
@@ -78,8 +84,8 @@
   }
 
   .btn:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
   }
 
   .btn:disabled {
@@ -99,6 +105,11 @@
     transform: translateY(-1px);
   }
 
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
   .btn-secondary {
     background-color: white;
     color: var(--text-primary);
@@ -109,6 +120,11 @@
     background-color: #fafafa;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     transform: translateY(-1px);
+  }
+
+  .btn-secondary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   .btn-ghost {
@@ -122,6 +138,10 @@
     color: var(--text-primary);
   }
 
+  .btn-ghost:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
   .btn-danger {
     background-color: white;
     color: var(--error-color);
@@ -132,6 +152,11 @@
     background-color: #fee2e2;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     transform: translateY(-1px);
+  }
+
+  .btn-danger:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   /* Sizes */
@@ -174,6 +199,27 @@
   @keyframes spin {
     to {
       transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn {
+      transition:
+        background-color var(--transition-micro),
+        color var(--transition-micro),
+        opacity var(--transition-micro);
+    }
+    .btn-primary:hover:not(:disabled),
+    .btn-primary:active:not(:disabled),
+    .btn-secondary:hover:not(:disabled),
+    .btn-secondary:active:not(:disabled),
+    .btn-danger:hover:not(:disabled),
+    .btn-danger:active:not(:disabled) {
+      transform: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    .btn-ghost:active:not(:disabled) {
+      transform: none;
     }
   }
 </style>

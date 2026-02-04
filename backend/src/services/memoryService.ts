@@ -4,8 +4,7 @@
  */
 
 import { embed } from './embeddingService.js';
-import { getMemoryStore } from './vectorStoreAdapter.js';
-import type { VectorChunk } from './vectorStoreAdapter.js';
+import { getMemoryStore, type VectorChunk } from './vectorStoreAdapter.js';
 import logger from '../middleware/logger.js';
 
 const MEMORY_NAMESPACE = 'grump-memory';
@@ -78,7 +77,9 @@ export async function recall(userId: string, query: string): Promise<MemoryRecor
     const store = getMemoryStore();
     const [embedding] = await embed([query], { inputType: 'query' });
     const results = await store.query(embedding, { topK: MEMORY_TOP_K * 2 });
-    const filtered = results.filter((r) => (r.chunk.metadata as Record<string, unknown>)?.userId === userId);
+    const filtered = results.filter(
+      (r) => (r.chunk.metadata as Record<string, unknown>)?.userId === userId
+    );
     return filtered.slice(0, MEMORY_TOP_K).map((r) => memoryChunkToRecord(r.chunk));
   } catch (e) {
     logger.warn({ error: (e as Error).message }, 'Memory recall failed');

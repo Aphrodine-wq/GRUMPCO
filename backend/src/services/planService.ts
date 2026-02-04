@@ -4,6 +4,7 @@
  */
 
 import { getCompletion } from './llmGatewayHelper.js';
+import { getIntentGuidedRagContext } from './ragService.js';
 import type {
   Plan,
   PlanStep,
@@ -18,11 +19,9 @@ import { getDatabase } from '../db/database.js';
 /**
  * Generate a structured plan from user request
  */
-export async function generatePlan(
-  request: PlanGenerationRequest
-): Promise<Plan> {
+export async function generatePlan(request: PlanGenerationRequest): Promise<Plan> {
   const planId = `plan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+
   logger.info({ planId, workspaceRoot: request.workspaceRoot }, 'Generating plan');
 
   const basePlanPrompt = `You are a planning assistant that creates detailed, structured implementation plans.
@@ -72,9 +71,21 @@ Return a JSON object with this structure:
 }
 
 Be specific about file paths and changes. Include all necessary steps.`;
-  const systemPrompt = request.systemPromptPrefix
+  let systemPrompt = request.systemPromptPrefix
     ? `${request.systemPromptPrefix}\n\n${basePlanPrompt}`
     : basePlanPrompt;
+  if (request.namespace) {
+    try {
+      const ragResult = await getIntentGuidedRagContext(request.userRequest, {
+        namespace: request.namespace,
+        maxChunks: 6,
+      });
+      if (ragResult?.context)
+        systemPrompt += `\n\nRelevant context from knowledge base:\n\n${ragResult.context}`;
+    } catch {
+      // RAG optional
+    }
+  }
 
   const userPrompt = `Create a detailed implementation plan for:
 
@@ -106,7 +117,7 @@ Generate a comprehensive plan with all necessary steps, file changes, and phases
     }
 
     let jsonText = response.text.trim();
-    
+
     // Extract JSON from markdown code blocks if present
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
@@ -183,7 +194,7 @@ function createDefaultPhases(steps: PlanStep[]): Phase[] {
       id: 'exploration',
       name: 'Exploration',
       description: 'Understanding the codebase and requirements',
-      steps: steps.filter(s => s.phase === 'exploration').map(s => s.id),
+      steps: steps.filter((s) => s.phase === 'exploration').map((s) => s.id),
       checkpoint: true,
       status: 'pending',
     },
@@ -191,7 +202,7 @@ function createDefaultPhases(steps: PlanStep[]): Phase[] {
       id: 'preparation',
       name: 'Preparation',
       description: 'Setting up scaffolding and dependencies',
-      steps: steps.filter(s => s.phase === 'preparation').map(s => s.id),
+      steps: steps.filter((s) => s.phase === 'preparation').map((s) => s.id),
       checkpoint: true,
       status: 'pending',
     },
@@ -199,7 +210,7 @@ function createDefaultPhases(steps: PlanStep[]): Phase[] {
       id: 'implementation',
       name: 'Implementation',
       description: 'Making code changes',
-      steps: steps.filter(s => s.phase === 'implementation').map(s => s.id),
+      steps: steps.filter((s) => s.phase === 'implementation').map((s) => s.id),
       checkpoint: false,
       status: 'pending',
     },
@@ -207,18 +218,18 @@ function createDefaultPhases(steps: PlanStep[]): Phase[] {
       id: 'validation',
       name: 'Validation',
       description: 'Testing and verification',
-      steps: steps.filter(s => s.phase === 'validation').map(s => s.id),
+      steps: steps.filter((s) => s.phase === 'validation').map((s) => s.id),
       checkpoint: true,
       status: 'pending',
     },
   ];
 
   // If no steps match phases, put all in implementation
-  if (phases.every(p => p.steps.length === 0)) {
-    phases[2].steps = steps.map(s => s.id);
+  if (phases.every((p) => p.steps.length === 0)) {
+    phases[2].steps = steps.map((s) => s.id);
   }
 
-  return phases.filter(p => p.steps.length > 0);
+  return phases.filter((p) => p.steps.length > 0);
 }
 
 /**
@@ -298,7 +309,7 @@ export async function editPlan(planId: string, edits: PlanEditRequest): Promise<
   // Update steps
   if (edits.steps) {
     for (const stepEdit of edits.steps) {
-      const step = plan.steps.find(s => s.id === stepEdit.id);
+      const step = plan.steps.find((s) => s.id === stepEdit.id);
       if (step) {
         Object.assign(step, stepEdit);
       }
@@ -308,7 +319,7 @@ export async function editPlan(planId: string, edits: PlanEditRequest): Promise<
   // Update phases
   if (edits.phases) {
     for (const phaseEdit of edits.phases) {
-      const phase = plan.phases.find(p => p.id === phaseEdit.id);
+      const phase = plan.phases.find((p) => p.id === phaseEdit.id);
       if (phase) {
         Object.assign(phase, phaseEdit);
       }
@@ -371,7 +382,7 @@ export async function completePlanExecution(planId: string): Promise<Plan> {
   plan.updatedAt = new Date().toISOString();
 
   // Mark all phases as completed
-  plan.phases.forEach(phase => {
+  plan.phases.forEach((phase) => {
     if (phase.status !== 'skipped') {
       phase.status = 'completed';
     }
@@ -397,7 +408,7 @@ export async function updatePhaseStatus(
     throw new Error(`Plan ${planId} not found`);
   }
 
-  const phase = plan.phases.find(p => p.id === phaseId);
+  const phase = plan.phases.find((p) => p.id === phaseId);
   if (!phase) {
     throw new Error(`Phase ${phaseId} not found in plan ${planId}`);
   }

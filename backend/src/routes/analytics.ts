@@ -2,10 +2,9 @@
  * Analytics routes – usage and project metrics for the dashboard.
  */
 
-import { Response, Router } from 'express';
+import { type Response, Router } from 'express';
 import { requireAuth, type AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { getUsageForUser, getMonthlyCallCount } from '../services/usageTracker.js';
-import { getBillingStatus } from '../services/analyticsBilling.js';
 
 const router = Router();
 
@@ -15,12 +14,11 @@ router.get('/usage', requireAuth, async (req: AuthenticatedRequest, res: Respons
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
-  const status = await getBillingStatus(userId);
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const calls = await getUsageForUser(userId, startOfMonth, now);
   res.json({
-    ...status,
+    tier: 'unlimited',
     callsThisMonth: calls.length,
     recentCalls: calls.slice(-20).map((c) => ({
       endpoint: c.endpoint,
@@ -38,12 +36,11 @@ router.get('/summary', requireAuth, async (req: AuthenticatedRequest, res: Respo
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
-  const status = await getBillingStatus(userId);
   res.json({
     apiCallsThisMonth: await getMonthlyCallCount(userId),
-    limit: status.apiCallsLimit,
-    remaining: status.remaining,
-    tier: status.tier,
+    limit: -1, // unlimited
+    remaining: -1, // unlimited
+    tier: 'unlimited',
   });
 });
 

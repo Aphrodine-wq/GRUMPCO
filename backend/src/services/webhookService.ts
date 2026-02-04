@@ -22,7 +22,10 @@ const webhookUrls: { url: string; events?: WebhookEvent[] }[] = [];
 function getUrls(): string[] {
   const env = process.env.GRUMP_WEBHOOK_URLS;
   if (env && env.trim()) {
-    return env.split(',').map((u) => u.trim()).filter(Boolean);
+    return env
+      .split(',')
+      .map((u) => u.trim())
+      .filter(Boolean);
   }
   return webhookUrls.map((w) => w.url);
 }
@@ -60,11 +63,21 @@ async function recordEvent(event: WebhookEvent, payload: Record<string, unknown>
 
 /**
  * Dispatch an event to all registered URLs and to SSE subscribers (desktop).
+ * Also notifies messaging users (Telegram, Discord, Twilio) on ship.completed/ship.failed.
  * Runs async so caller is not blocked.
  */
 export function dispatchWebhook(event: WebhookEvent, payload: Record<string, unknown>): void {
   broadcastEvent(event, payload);
   void recordEvent(event, payload);
+
+  const sessionId = payload.sessionId as string | undefined;
+  if (sessionId && (event === 'ship.completed' || event === 'ship.failed')) {
+    const msg =
+      event === 'ship.completed'
+        ? 'SHIP completed! Check the app to download your code.'
+        : `SHIP failed: ${(payload.error as string) ?? 'Unknown error'}`;
+    void import('./messagingShipNotifier.js').then(({ notify }) => notify(sessionId, msg));
+  }
 
   const urls = getUrls();
   if (urls.length === 0) return;
@@ -75,11 +88,13 @@ export function dispatchWebhook(event: WebhookEvent, payload: Record<string, unk
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
-      }).then((res) => {
-        if (!res.ok) logger.warn({ url, status: res.status, event }, 'Webhook delivery failed');
-      }).catch((e) => {
-        logger.warn({ url, err: (e as Error).message, event }, 'Webhook delivery error');
-      });
+      })
+        .then((res) => {
+          if (!res.ok) logger.warn({ url, status: res.status, event }, 'Webhook delivery failed');
+        })
+        .catch((e) => {
+          logger.warn({ url, err: (e as Error).message, event }, 'Webhook delivery error');
+        });
     });
   });
 }

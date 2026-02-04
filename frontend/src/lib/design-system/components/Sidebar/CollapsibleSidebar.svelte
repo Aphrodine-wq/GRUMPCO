@@ -5,9 +5,11 @@
    */
   import type { Snippet } from 'svelte';
   import { colors } from '../../tokens/colors';
+  import { animations } from '../../tokens/animations';
 
   interface Props {
     collapsed?: boolean;
+    onToggle?: () => void;
     width?: number;
     collapsedWidth?: number;
     children: Snippet;
@@ -17,6 +19,7 @@
 
   let {
     collapsed = $bindable(false),
+    onToggle,
     width = 260,
     collapsedWidth = 64,
     children,
@@ -25,7 +28,8 @@
   }: Props = $props();
 
   function toggleCollapse() {
-    collapsed = !collapsed;
+    if (onToggle) onToggle();
+    else collapsed = !collapsed;
   }
 </script>
 
@@ -37,6 +41,8 @@
   style:--bg-header={colors.background.tertiary}
   style:--primary-color={colors.accent.primary}
   style:--text-muted={colors.text.muted}
+  style:--transition-default={animations.transition.default}
+  style:--transition-micro={animations.transition.fast}
 >
   <div class="sidebar-inner">
     {#if header}
@@ -89,7 +95,7 @@
     background-color: var(--bg-sidebar);
     border: 1px solid var(--border-color);
     border-radius: 16px;
-    transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width var(--transition-default);
     position: relative;
     font-family: inherit;
     z-index: 20;
@@ -134,6 +140,10 @@
     padding: 16px;
     border-top: 1px solid var(--border-color);
     background-color: rgba(255, 255, 255, 0.5);
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex-shrink: 0;
+    min-height: 0;
   }
 
   .sidebar-footer-spacer {
@@ -155,7 +165,11 @@
     justify-content: center;
     color: var(--text-muted);
     z-index: 10;
-    transition: all 150ms ease;
+    transition:
+      transform var(--transition-micro),
+      background-color var(--transition-micro),
+      color var(--transition-micro),
+      border-color var(--transition-micro);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* iOS soft shadow */
   }
 
@@ -166,8 +180,13 @@
     transform: scale(1.05); /* Subtle scale */
   }
 
+  .collapse-toggle:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
   .toggle-icon {
-    transition: transform 200ms ease;
+    transition: transform var(--transition-default);
   }
 
   .toggle-icon.is-collapsed {

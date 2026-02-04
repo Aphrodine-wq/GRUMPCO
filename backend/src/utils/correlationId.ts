@@ -1,7 +1,7 @@
 /**
  * Correlation ID Utilities
  * Generates and propagates correlation IDs for distributed tracing
- * 
+ *
  * Uses AsyncLocalStorage to maintain request context across async operations
  */
 
@@ -48,16 +48,16 @@ export function generateRequestId(): string {
 export function getCorrelationIdFromHeaders(
   headers: Record<string, string | string[] | undefined>
 ): string {
-  const headerValue = 
-    headers[CORRELATION_ID_HEADER] || 
+  const headerValue =
+    headers[CORRELATION_ID_HEADER] ||
     headers[CORRELATION_ID_HEADER.toLowerCase()] ||
     headers['x-amzn-trace-id'] || // AWS trace ID
     headers['traceparent']; // W3C trace context
-  
+
   if (Array.isArray(headerValue)) {
     return headerValue[0] || generateCorrelationId();
   }
-  
+
   if (typeof headerValue === 'string') {
     // Extract correlation ID from W3C traceparent format if present
     if (headerValue.includes('-')) {
@@ -68,7 +68,7 @@ export function getCorrelationIdFromHeaders(
     }
     return headerValue;
   }
-  
+
   return generateCorrelationId();
 }
 
@@ -146,10 +146,7 @@ export function setContextSessionId(sessionId: string): void {
  * Run a function within a correlation context
  * Useful for background jobs and async operations
  */
-export function runWithCorrelationId<T>(
-  correlationId: string,
-  fn: () => T
-): T {
+export function runWithCorrelationId<T>(correlationId: string, fn: () => T): T {
   const context: RequestContext = {
     correlationId,
     requestId: generateRequestId(),
@@ -194,7 +191,7 @@ export function createChildContext(): RequestContext {
 export function getLoggingContext(): Record<string, unknown> {
   const ctx = requestContextStorage.getStore();
   if (!ctx) return {};
-  
+
   return {
     correlationId: ctx.correlationId,
     requestId: ctx.requestId,

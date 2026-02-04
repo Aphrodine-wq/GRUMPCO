@@ -1,5 +1,12 @@
 // Frontend plan types (mirror of backend types)
-export type PlanStatus = 'draft' | 'pending_approval' | 'approved' | 'executing' | 'completed' | 'rejected' | 'cancelled';
+export type PlanStatus =
+  | 'draft'
+  | 'pending_approval'
+  | 'approved'
+  | 'executing'
+  | 'completed'
+  | 'rejected'
+  | 'cancelled';
 export type PlanPhase = 'exploration' | 'preparation' | 'implementation' | 'validation';
 export type RiskLevel = 'low' | 'medium' | 'high';
 export type FileChangeType = 'create' | 'modify' | 'delete' | 'move';

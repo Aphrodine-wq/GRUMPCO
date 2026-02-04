@@ -3,7 +3,7 @@
  * Handles spec session management, Q&A, and specification generation
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import {
   startSpecSession,
   submitAnswer,
@@ -12,13 +12,10 @@ import {
   isSessionComplete,
   getNextQuestion,
 } from '../services/specService.js';
-import type {
-  SpecStartRequest,
-  SpecAnswerRequest,
-  SpecGenerateRequest,
-} from '../types/spec.js';
-import { logger } from '../utils/logger.js';
+import type { SpecStartRequest, SpecAnswerRequest, SpecGenerateRequest } from '../types/spec.js';
+import logger from '../middleware/logger.js';
 import { sendServerError } from '../utils/errorResponse.js';
+import { MAX_USER_REQUEST_LENGTH } from '../config/limits.js';
 
 const router = Router();
 
@@ -30,10 +27,17 @@ router.post('/start', async (req: Request, res: Response): Promise<void> => {
   try {
     const request: SpecStartRequest = req.body;
 
-    if (!request.userRequest) {
+    if (!request.userRequest || typeof request.userRequest !== 'string') {
       res.status(400).json({
         error: 'Invalid request',
-        message: 'userRequest is required',
+        message: 'userRequest is required and must be a string',
+      });
+      return;
+    }
+    if (request.userRequest.length > MAX_USER_REQUEST_LENGTH) {
+      res.status(413).json({
+        error: 'Invalid request',
+        message: `userRequest exceeds maximum length of ${MAX_USER_REQUEST_LENGTH} characters`,
       });
       return;
     }
@@ -55,7 +59,7 @@ router.post('/start', async (req: Request, res: Response): Promise<void> => {
  */
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const session = await getSpecSession(id);
 
     if (!session) {
@@ -86,7 +90,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
  */
 router.post('/:id/answer', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const answerRequest: SpecAnswerRequest = req.body;
 
     if (!answerRequest.questionId || answerRequest.value === undefined) {
@@ -119,7 +123,7 @@ router.post('/:id/answer', async (req: Request, res: Response): Promise<void> =>
  */
 router.post('/:id/generate', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const request: SpecGenerateRequest = { sessionId: id };
 
     const complete = await isSessionComplete(id);

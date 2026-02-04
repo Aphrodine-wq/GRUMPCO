@@ -4,6 +4,7 @@
   import { fetchApi } from '../lib/api.js';
   import { showToast } from '../stores/toastStore.js';
   import { colors } from '../lib/design-system/tokens/colors.js';
+  import { setCurrentView } from '../stores/uiStore.js';
 
   interface Props {
     onBack?: () => void;
@@ -39,17 +40,12 @@
     ctx.fillRect(0, 0, w, h);
     const barCount = Math.min(32, Math.floor(w / 4));
     const step = Math.floor(data.length / barCount);
-    const barWidth = Math.max(2, (w / barCount) - 2);
+    const barWidth = Math.max(2, w / barCount - 2);
     for (let i = 0; i < barCount; i++) {
       const v = data[i * step] ?? 0;
       const barHeight = Math.max(2, (v / 255) * (h * 0.8));
       ctx.fillStyle = 'var(--color-primary, #18181b)';
-      ctx.fillRect(
-        i * (w / barCount) + 1,
-        h / 2 - barHeight / 2,
-        barWidth,
-        barHeight
-      );
+      ctx.fillRect(i * (w / barCount) + 1, h / 2 - barHeight / 2, barWidth, barHeight);
     }
     waveformAnimationId = requestAnimationFrame(drawWaveform);
   }
@@ -57,7 +53,10 @@
   async function startRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const ctx = new (
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      )();
       audioContext = ctx;
       const src = ctx.createMediaStreamSource(stream);
       const node = ctx.createAnalyser();
@@ -66,7 +65,7 @@
       src.connect(node);
       analyser = node;
 
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+      MediaRecorder.isTypeSupported('audio/webm;codecs=opus');
       const recorder = new MediaRecorder(stream);
       mediaRecorder = recorder;
       audioChunks = [];
@@ -169,7 +168,14 @@
     <div class="header-left">
       {#if onBack}
         <Button variant="ghost" size="sm" onclick={onBack}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
@@ -182,7 +188,21 @@
 
   <div class="voice-code-container">
     <Card title="Record" padding="md">
-      <p class="section-desc">Describe what you want in code. Your voice is transcribed, then RAG + chat generate code and a spoken summary.</p>
+      <p class="section-desc">
+        Describe what you want in code. Your voice is transcribed, then RAG + chat generate code and
+        a spoken summary.
+      </p>
+      <p class="section-link">
+        <button type="button" class="link-btn" onclick={() => setCurrentView('talkMode')}
+          >Switch to Talk Mode</button
+        > for continuous conversation.
+      </p>
+      {#if recording}
+        <div class="waveform-container">
+          <canvas bind:this={waveformCanvas} class="waveform-canvas" width="300" height="60"
+          ></canvas>
+        </div>
+      {/if}
       <div class="record-row">
         {#if recording}
           <Button variant="secondary" size="md" onclick={stopRecording} disabled={loading}>
@@ -283,7 +303,27 @@
   .section-desc {
     font-size: 14px;
     color: #71717a;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
+  }
+
+  .section-link {
+    font-size: 13px;
+    color: #71717a;
+    margin: 0 0 16px;
+  }
+
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--color-primary, #18181b);
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  .link-btn:hover {
+    color: #52525b;
   }
 
   .waveform-container {

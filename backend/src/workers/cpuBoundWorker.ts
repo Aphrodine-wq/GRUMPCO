@@ -7,7 +7,8 @@
 import { parentPort, workerData } from 'worker_threads';
 import { runIntentCli } from '../services/intentCliRunner.js';
 
-const workerIndex = (workerData as { workerIndex?: number; cpuCount?: number } | undefined)?.workerIndex ?? -1;
+const _workerIndex =
+  (workerData as { workerIndex?: number; cpuCount?: number } | undefined)?.workerIndex ?? -1;
 
 interface WorkerMessage {
   type: string;
@@ -25,7 +26,10 @@ interface WorkerResponse {
 /**
  * Parse intent via grump-intent CLI (CPU-bound spawn + parse).
  */
-async function parseIntent(data: { text: string; constraints?: Record<string, unknown> }): Promise<unknown> {
+async function parseIntent(data: {
+  text: string;
+  constraints?: Record<string, unknown>;
+}): Promise<unknown> {
   return runIntentCli(data.text, data.constraints);
 }
 
@@ -43,7 +47,10 @@ async function generateContext(data: { projectDescription: string }): Promise<un
 /**
  * Process large JSON (CPU-intensive parsing/stringifying)
  */
-async function processLargeJson(data: { json: string; operation: 'parse' | 'stringify' }): Promise<unknown> {
+async function processLargeJson(data: {
+  json: string;
+  operation: 'parse' | 'stringify';
+}): Promise<unknown> {
   if (data.operation === 'parse') {
     return JSON.parse(data.json);
   } else {
@@ -66,7 +73,9 @@ if (parentPort) {
 
       switch (message.type) {
         case 'parseIntent':
-          result = await parseIntent(message.data as { text: string; constraints?: Record<string, unknown> });
+          result = await parseIntent(
+            message.data as { text: string; constraints?: Record<string, unknown> }
+          );
           break;
 
         case 'generateContext':
@@ -74,7 +83,9 @@ if (parentPort) {
           break;
 
         case 'processLargeJson':
-          result = await processLargeJson(message.data as { json: string; operation: 'parse' | 'stringify' });
+          result = await processLargeJson(
+            message.data as { json: string; operation: 'parse' | 'stringify' }
+          );
           break;
 
         default:
@@ -88,6 +99,8 @@ if (parentPort) {
       response.error = error instanceof Error ? error.message : String(error);
     }
 
-    parentPort!.postMessage(response);
+    if (parentPort) {
+      parentPort.postMessage(response);
+    }
   });
 }

@@ -1,10 +1,19 @@
 import { vi } from 'vitest';
 
+// Ensure browser environment for Svelte 5
+// This must be set before any Svelte imports
+if (typeof globalThis !== 'undefined') {
+  // Mark this as a browser environment for Svelte
+  (globalThis as Record<string, unknown>).__BROWSER__ = true;
+}
+
 // Mock localStorage
 const localStorageStore: Record<string, string> = {};
 
 const localStorageMock = {
-  get store() { return localStorageStore; },
+  get store() {
+    return localStorageStore;
+  },
   getItem: vi.fn((key: string): string | null => localStorageStore[key] || null),
   setItem: vi.fn((key: string, value: string): void => {
     localStorageStore[key] = value;
@@ -13,7 +22,7 @@ const localStorageMock = {
     delete localStorageStore[key];
   }),
   clear: vi.fn((): void => {
-    Object.keys(localStorageStore).forEach(key => delete localStorageStore[key]);
+    Object.keys(localStorageStore).forEach((key) => delete localStorageStore[key]);
   }),
 };
 
@@ -36,6 +45,16 @@ Object.defineProperty(navigator, 'clipboard', {
 URL.createObjectURL = vi.fn(() => 'blob:mock-url');
 URL.revokeObjectURL = vi.fn();
 
+// Mock lucide-svelte - SVG parsing fails in jsdom (from_svg is not a function)
+vi.mock('lucide-svelte', () => {
+  const MockIcon = Object.assign(() => null, { displayName: 'MockIcon' });
+  return new Proxy({} as Record<string, unknown>, {
+    get() {
+      return MockIcon;
+    },
+  });
+});
+
 // Mock mermaid
 vi.mock('mermaid', () => ({
   default: {
@@ -48,8 +67,15 @@ vi.mock('mermaid', () => ({
 
 // Helper to reset all mocks between tests
 export function resetMocks(): void {
-  Object.keys(localStorageStore).forEach(key => delete localStorageStore[key]);
+  Object.keys(localStorageStore).forEach((key) => delete localStorageStore[key]);
   vi.clearAllMocks();
+  // Restore original implementations (clearAllMocks does not restore them)
+  localStorageMock.setItem.mockImplementation((key: string, value: string) => {
+    localStorageStore[key] = value;
+  });
+  localStorageMock.removeItem.mockImplementation((key: string) => {
+    delete localStorageStore[key];
+  });
 }
 
 // Export mocks for direct access in tests

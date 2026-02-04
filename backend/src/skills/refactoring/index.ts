@@ -29,10 +29,9 @@ import logger from '../../middleware/logger.js';
 import { withResilience } from '../../services/resilience.js';
 
 // Load manifest
-import manifest from './manifest.json' with { type: 'json' };
 
 class RefactoringSkill extends BaseSkill {
-  manifest: SkillManifest = manifest as SkillManifest;
+  manifest!: SkillManifest;
 
   prompts: SkillPrompts = {
     system: REFACTORING_SYSTEM_PROMPT,
@@ -156,7 +155,8 @@ class RefactoringSkill extends BaseSkill {
       if (!codeToRefactor) {
         yield {
           type: 'output',
-          content: 'Please provide code to refactor, either in a code block or by specifying a file.',
+          content:
+            'Please provide code to refactor, either in a code block or by specifying a file.',
         };
 
         return {
@@ -268,41 +268,41 @@ class RefactoringSkill extends BaseSkill {
     context?: SkillContext
   ): Promise<RefactoringResult> {
     try {
-      const templateKey = (type === 'extract-function' ? 'extractFunction' : type === 'rename' ? 'renameSymbol' : type === 'apply-pattern' ? 'applyPattern' : 'simplifyCode') as keyof typeof templates;
+      const templateKey = (
+        type === 'extract-function'
+          ? 'extractFunction'
+          : type === 'rename'
+            ? 'renameSymbol'
+            : type === 'apply-pattern'
+              ? 'applyPattern'
+              : 'simplifyCode'
+      ) as keyof typeof templates;
       const template = templates[templateKey] ?? templates.simplifyCode;
-      const prompt = template
-        .replace('{{language}}', language || 'code')
-        .replace('{{code}}', code);
+      const prompt = template.replace('{{language}}', language || 'code').replace('{{code}}', code);
 
       let responseText: string;
 
       if (context) {
         // Use LLM service from context (uses Kimi K2.5 via LLM Gateway)
-        const callLLM = withResilience(
-          async () => {
-            return await context.services.llm.complete({
-              messages: [{ role: 'user', content: prompt }],
-              system: REFACTORING_SYSTEM_PROMPT,
-              maxTokens: 4096,
-            });
-          },
-          'refactoring'
-        );
+        const callLLM = withResilience(async () => {
+          return await context.services.llm.complete({
+            messages: [{ role: 'user', content: prompt }],
+            system: REFACTORING_SYSTEM_PROMPT,
+            maxTokens: 4096,
+          });
+        }, 'refactoring');
         responseText = await callLLM();
       } else {
         // Fallback: create temporary context and use LLM service
         const { createSkillContext } = await import('../base/SkillContext.js');
         const tempContext = createSkillContext({});
-        const callLLM = withResilience(
-          async () => {
-            return await tempContext.services.llm.complete({
-              messages: [{ role: 'user', content: prompt }],
-              system: REFACTORING_SYSTEM_PROMPT,
-              maxTokens: 4096,
-            });
-          },
-          'refactoring'
-        );
+        const callLLM = withResilience(async () => {
+          return await tempContext.services.llm.complete({
+            messages: [{ role: 'user', content: prompt }],
+            system: REFACTORING_SYSTEM_PROMPT,
+            maxTokens: 4096,
+          });
+        }, 'refactoring');
         responseText = await callLLM();
       }
 
@@ -334,10 +334,7 @@ class RefactoringSkill extends BaseSkill {
   /**
    * Parse LLM refactoring response into structured RefactoringResult
    */
-  private parseRefactoringResponse(
-    response: string,
-    originalCode: string
-  ): RefactoringResult {
+  private parseRefactoringResponse(response: string, originalCode: string): RefactoringResult {
     const changes: CodeChange[] = [];
     let refactoredCode = originalCode;
     let explanation = '';
@@ -388,7 +385,9 @@ class RefactoringSkill extends BaseSkill {
             refactoredLines.length > originalLines.length
               ? `Added ${refactoredLines.length - originalLines.length} lines`
               : `Removed ${originalLines.length - refactoredLines.length} lines`,
-          newText: refactoredLines.slice(originalLines.length).join('\n') || originalLines.slice(refactoredLines.length).join('\n'),
+          newText:
+            refactoredLines.slice(originalLines.length).join('\n') ||
+            originalLines.slice(refactoredLines.length).join('\n'),
         });
       }
     }
@@ -398,9 +397,7 @@ class RefactoringSkill extends BaseSkill {
       original: originalCode,
       refactored: refactoredCode,
       changes,
-      explanation:
-        explanation ||
-        'Code has been refactored according to best practices.',
+      explanation: explanation || 'Code has been refactored according to best practices.',
     };
   }
 
@@ -639,10 +636,13 @@ class RefactoringSkill extends BaseSkill {
       const pattern = input.pattern as string;
 
       const patternDescriptions: Record<string, string> = {
-        strategy: 'Define a family of algorithms, encapsulate each one, and make them interchangeable.',
-        factory: 'Define an interface for creating objects, letting subclasses decide which class to instantiate.',
+        strategy:
+          'Define a family of algorithms, encapsulate each one, and make them interchangeable.',
+        factory:
+          'Define an interface for creating objects, letting subclasses decide which class to instantiate.',
         decorator: 'Attach additional responsibilities to an object dynamically.',
-        observer: 'Define a one-to-many dependency so that when one object changes, all dependents are notified.',
+        observer:
+          'Define a one-to-many dependency so that when one object changes, all dependents are notified.',
         builder: 'Separate the construction of a complex object from its representation.',
         singleton: 'Ensure a class has only one instance and provide global access to it.',
       };
@@ -653,7 +653,9 @@ class RefactoringSkill extends BaseSkill {
 
       return this.successResult(output);
     } catch (error) {
-      return this.errorResult(error instanceof Error ? error.message : 'Pattern application failed');
+      return this.errorResult(
+        error instanceof Error ? error.message : 'Pattern application failed'
+      );
     }
   }
 

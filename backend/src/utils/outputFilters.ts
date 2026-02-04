@@ -9,11 +9,21 @@ const REDACTED = '[REDACTED]';
 const SECRET_PATTERNS: Array<{ pattern: RegExp; replace: string }> = [
   { pattern: /sk-[a-zA-Z0-9]{20,}/g, replace: REDACTED },
   { pattern: /sk-ant-[a-zA-Z0-9-]{10,}/g, replace: REDACTED },
-  { pattern: /api[_-]?key['"]?\s*[:=]\s*['"]?[a-zA-Z0-9_-]{20,}/gi, replace: `api_key=${REDACTED}` },
+  {
+    pattern: /api[_-]?key['"]?\s*[:=]\s*['"]?[a-zA-Z0-9_-]{20,}/gi,
+    replace: `api_key=${REDACTED}`,
+  },
   { pattern: /bearer\s+[a-zA-Z0-9_.-]{20,}/gi, replace: `Bearer ${REDACTED}` },
-  { pattern: /['"]?password['"]?\s*[:=]\s*['"]?[^\s'"]{8,}['"]?/gi, replace: `password=${REDACTED}` },
+  {
+    pattern: /['"]?password['"]?\s*[:=]\s*['"]?[^\s'"]{8,}['"]?/gi,
+    replace: `password=${REDACTED}`,
+  },
   { pattern: /['"]?secret['"]?\s*[:=]\s*['"]?[^\s'"]{8,}['"]?/gi, replace: `secret=${REDACTED}` },
-  { pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g, replace: REDACTED },
+  {
+    pattern:
+      /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g,
+    replace: REDACTED,
+  },
 ];
 
 // Optional PII patterns
@@ -30,7 +40,10 @@ const HARMFUL_PATTERNS: RegExp[] = [
   /\b(?:curl|wget)\s+.*\|\s*sh\s*(?:\s|$)/,
 ];
 
-function applyPatterns(text: string, patterns: Array<{ pattern: RegExp; replace: string }>): string {
+function applyPatterns(
+  text: string,
+  patterns: Array<{ pattern: RegExp; replace: string }>
+): string {
   let out = text;
   for (const { pattern, replace } of patterns) {
     out = out.replace(pattern, replace);

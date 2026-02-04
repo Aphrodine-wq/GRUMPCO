@@ -87,7 +87,14 @@
     <div class="header-left">
       {#if onBack}
         <Button variant="ghost" size="sm" onclick={onBack}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
@@ -100,17 +107,27 @@
 
   <div class="design-container">
     <Card title="Input" padding="md">
-      <p class="section-desc">Upload a screenshot or design image and describe what you want. Kimi will generate framework code.</p>
+      <p class="section-desc">
+        Upload a screenshot or design image and describe what you want. Kimi will generate framework
+        code.
+      </p>
       <div class="field">
-        <label class="label">Image</label>
-        <input type="file" accept="image/*" onchange={onFileChange} class="file-input" />
+        <label class="label" for="design-image-input">Image</label>
+        <input
+          id="design-image-input"
+          type="file"
+          accept="image/*"
+          onchange={onFileChange}
+          class="file-input"
+        />
         {#if imagePreview}
           <img src={imagePreview} alt="Preview" class="image-preview" />
         {/if}
       </div>
       <div class="field">
-        <label class="label">Description</label>
+        <label class="label" for="design-description">Description</label>
         <textarea
+          id="design-description"
           class="textarea"
           bind:value={description}
           placeholder="e.g. A login form with email, password, and Submit button"
@@ -119,8 +136,13 @@
         ></textarea>
       </div>
       <div class="field">
-        <label class="label">Framework</label>
-        <select bind:value={targetFramework} class="select" disabled={loading}>
+        <label class="label" for="design-framework">Framework</label>
+        <select
+          id="design-framework"
+          bind:value={targetFramework}
+          class="select"
+          disabled={loading}
+        >
           <option value="svelte">Svelte</option>
           <option value="react">React</option>
           <option value="vue">Vue</option>

@@ -533,3 +533,38 @@ export function createInMemoryPipeline(
     chunker: new DocumentChunker(options),
   });
 }
+
+// ============================================================================
+// Small-to-Big Retrieval
+// ============================================================================
+
+export {
+  chunkSmallToBig,
+  type SmallChunk,
+  type SmallToBigChunkerOptions,
+} from './smallToBigChunker.js';
+
+export { BM25Index, type BM25Document, type BM25IndexOptions } from './bm25Index.js';
+
+export {
+  buildKnowledgeGraph,
+  extractEntities,
+  getRelatedChunks,
+  type KnowledgeGraph,
+  type GraphEntity,
+  type GraphRelation,
+} from './graphRag.js';
+
+export {
+  ColBERTRetriever,
+  maxSimScore,
+  splitIntoSentences,
+  type MultiVectorChunk,
+  type ColBERTRetrieverOptions,
+} from './colbertRetriever.js';
+
+export {
+  SemanticChunker,
+  type HierarchicalChunk,
+  type SemanticChunkerOptions,
+} from './semanticChunker.js';

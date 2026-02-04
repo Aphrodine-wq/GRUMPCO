@@ -1,69 +1,170 @@
-// Intent Parser Service
-// Pre-processes user input to detect diagram type, C4 level, project type, and constraints
+/**
+ * @fileoverview Intent Parser Service for diagram and project request analysis.
+ *
+ * This module pre-processes user input to detect:
+ * - **Diagram type**: flowchart, sequence, class, ER, state, C4, etc.
+ * - **C4 abstraction level**: context, container, component, or code
+ * - **Project type**: web app, mobile, API, SaaS, fullstack
+ * - **Constraints**: complexity, style, focus areas, exclusions
+ * - **Tech stack**: React, Vue, Node.js, PostgreSQL, etc.
+ *
+ * ## How It Works
+ *
+ * The parser uses regex pattern matching to score different categories and
+ * returns confidence scores for ambiguous requests. This enables:
+ *
+ * 1. **Smart defaults** - Automatically select the best diagram type
+ * 2. **Clarification prompts** - Ask users when intent is unclear
+ * 3. **Enriched prompts** - Add context to LLM system prompts
+ *
+ * ## Usage
+ *
+ * ```typescript
+ * import { analyzeIntent, getIntentAugmentation } from './intentParser';
+ *
+ * const intent = analyzeIntent("Create a microservices architecture for an e-commerce site");
+ *
+ * console.log(intent);
+ * // {
+ * //   isValid: true,
+ * //   confidence: 0.85,
+ * //   suggestedType: 'c4-container',
+ * //   c4Level: 'container',
+ * //   constraints: { complexity: 'standard' },
+ * //   requiresClarification: false,
+ * //   project: {
+ * //     isProjectRequest: true,
+ * //     projectType: 'fullstack',
+ * //     phase: 'architecture',
+ * //     techStack: [],
+ * //     features: []
+ * //   }
+ * // }
+ * ```
+ *
+ * @module services/intentParser
+ */
 
 import type { C4Level } from '../prompts/shared/c4-examples.js';
 
-export type DiagramType =
-  | 'flowchart' | 'sequence' | 'class' | 'er' | 'state' | 'gantt'
-  | 'c4-context' | 'c4-container' | 'c4-component' | 'mindmap' | 'pie' | 'journey';
+// =============================================================================
+// Type Definitions
+// =============================================================================
 
+/**
+ * Supported Mermaid diagram types.
+ * Includes standard Mermaid types plus C4 architecture diagrams.
+ */
+export type DiagramType =
+  | 'flowchart'
+  | 'sequence'
+  | 'class'
+  | 'er'
+  | 'state'
+  | 'gantt'
+  | 'c4-context'
+  | 'c4-container'
+  | 'c4-component'
+  | 'mindmap'
+  | 'pie'
+  | 'journey';
+
+/** Software project categories for vibe coder mode */
 export type ProjectType = 'web' | 'mobile' | 'api' | 'fullstack' | 'saas' | 'general';
+
+/** Development phase for project requests */
 export type ProjectPhase = 'intent' | 'architecture' | 'coding';
 
+/**
+ * User-specified constraints for diagram generation.
+ * Extracted from natural language cues in the request.
+ */
 export interface Constraints {
+  /** Desired level of detail */
   complexity?: 'simple' | 'detailed' | 'mvp' | 'standard' | 'enterprise';
+  /** Specific areas to emphasize */
   focusAreas?: string[];
+  /** Areas to exclude from the diagram */
   excludeAreas?: string[];
+  /** Target audience style */
   style?: 'technical' | 'business';
 }
 
+/**
+ * Analysis result for project-style requests (vibe coder mode).
+ * Captures software development context.
+ */
 export interface ProjectAnalysis {
+  /** Whether this appears to be a software project request */
   isProjectRequest: boolean;
+  /** Detected project category */
   projectType: ProjectType | null;
+  /** Current development phase */
   phase: ProjectPhase;
+  /** Mentioned technologies */
   techStack: string[];
+  /** Mentioned features/capabilities */
   features: string[];
 }
 
+/**
+ * Complete intent analysis result.
+ * Contains all extracted information about the user's request.
+ */
 export interface IntentAnalysis {
+  /** Whether the request appears valid for diagram/project generation */
   isValid: boolean;
-  confidence: number; // 0.0 to 1.0
+  /** Confidence score from 0.0 to 1.0 */
+  confidence: number;
+  /** Best-guess diagram type (null if undetermined) */
   suggestedType: DiagramType | null;
+  /** Detected C4 abstraction level */
   c4Level?: C4Level;
+  /** Extracted user constraints */
   constraints: Constraints;
+  /** Whether clarification should be requested */
   requiresClarification: boolean;
+  /** Explanation for why clarification is needed */
   clarificationContext?: string;
-  // Vibe coder additions
+  /** Project analysis for vibe coder mode */
   project?: ProjectAnalysis;
 }
 
+// =============================================================================
+// Detection Patterns
+// =============================================================================
+
+// =============================================================================
+// Diagram Type Detection
+// =============================================================================
+
 // Keyword patterns for diagram type detection
 const DIAGRAM_PATTERNS: Record<DiagramType, RegExp[]> = {
-  'flowchart': [
+  flowchart: [
     /\b(flow|process|workflow|steps?|procedure|algorithm|decision\s*tree)\b/i,
     /\b(if|then|else|branch|path|route)\b/i,
     /\b(flow\s*chart|flowchart)\b/i,
   ],
-  'sequence': [
+  sequence: [
     /\b(sequence|interaction|call|request|response|message|communicate)\b/i,
     /\b(api\s*calls?|http|rest|endpoint|service\s*calls?)\b/i,
     /\b(actor|user\s*journey|step\s*by\s*step)\b/i,
   ],
-  'class': [
+  class: [
     /\b(class|interface|inheritance|extends|implements|object|oop)\b/i,
     /\b(method|property|attribute|member|encapsulation)\b/i,
     /\b(uml|class\s*diagram)\b/i,
   ],
-  'er': [
+  er: [
     /\b(entity|relationship|database|schema|table|foreign\s*key)\b/i,
     /\b(erd?|data\s*model|one\s*to\s*many|many\s*to\s*many)\b/i,
     /\b(primary\s*key|column|record)\b/i,
   ],
-  'state': [
+  state: [
     /\b(state|transition|status|lifecycle|finite\s*state)\b/i,
     /\b(machine|fsm|current\s*state|next\s*state)\b/i,
   ],
-  'gantt': [
+  gantt: [
     /\b(gantt|timeline|schedule|project\s*plan|milestone)\b/i,
     /\b(duration|deadline|task|phase|sprint)\b/i,
   ],
@@ -80,45 +181,48 @@ const DIAGRAM_PATTERNS: Record<DiagramType, RegExp[]> = {
     /\b(component|module|controller|service\s*layer|repository)\b/i,
     /\b(c4\s*component|internal\s*structure)\b/i,
   ],
-  'mindmap': [
+  mindmap: [
     /\b(mindmap|mind\s*map|brainstorm|ideas?|hierarchy)\b/i,
     /\b(concept|topic|branch\s*out)\b/i,
   ],
-  'pie': [
-    /\b(pie|percentage|proportion|distribution|breakdown)\b/i,
-    /\b(share|ratio|part\s*of)\b/i,
-  ],
-  'journey': [
+  pie: [/\b(pie|percentage|proportion|distribution|breakdown)\b/i, /\b(share|ratio|part\s*of)\b/i],
+  journey: [
     /\b(user\s*journey|customer\s*journey|experience|touchpoint)\b/i,
     /\b(satisfaction|emotion|feeling)\b/i,
   ],
 };
 
+// =============================================================================
+// C4 Level Detection
+// =============================================================================
+
 // C4 level detection patterns
 const C4_LEVEL_PATTERNS: Record<C4Level, RegExp[]> = {
-  'context': [
+  context: [
     /\b(system\s*context|high\s*level|bird'?s?\s*eye|overview|external)\b/i,
     /\b(actors?|users?\s*and\s*systems?|landscape)\b/i,
   ],
-  'container': [
+  container: [
     /\b(container|services?|applications?|microservices?)\b/i,
     /\b(deployment|infrastructure|backend|frontend|api)\b/i,
     /\b(databases?|message\s*queue|cache)\b/i,
   ],
-  'component': [
+  component: [
     /\b(components?|modules?|internal|controllers?|handlers?)\b/i,
     /\b(layers?|repository|service\s*layer)\b/i,
   ],
-  'code': [
-    /\b(code|class|implementation|method|function)\b/i,
-    /\b(detail|specific|exact)\b/i,
-  ],
+  code: [/\b(code|class|implementation|method|function)\b/i, /\b(detail|specific|exact)\b/i],
 };
 
-// Architecture keywords that suggest C4-style diagrams
-const ARCHITECTURE_KEYWORDS = /\b(architecture|system\s*design|infrastructure|tech\s*stack|deployment)\b/i;
+// =============================================================================
+// Constraint Detection
+// =============================================================================
 
-// Constraint detection patterns
+// Architecture keywords that suggest C4-style diagrams
+const ARCHITECTURE_KEYWORDS =
+  /\b(architecture|system\s*design|infrastructure|tech\s*stack|deployment)\b/i;
+
+// Complexity level patterns
 const COMPLEXITY_PATTERNS = {
   simple: /\b(simple|minimal|basic|quick|brief|just|only|overview)\b/i,
   detailed: /\b(detailed|comprehensive|complete|thorough|full|in-depth|elaborate)\b/i,
@@ -131,29 +235,33 @@ const STYLE_PATTERNS = {
   business: /\b(business|stakeholder|executive|non-technical|simple)\b/i,
 };
 
+// =============================================================================
+// Project/Vibe Coder Detection
+// =============================================================================
+
 // Project type detection patterns for vibe coder
 const PROJECT_PATTERNS: Record<ProjectType, RegExp[]> = {
-  'web': [
+  web: [
     /\b(web\s*app|website|web\s*application|browser|spa|single\s*page)\b/i,
     /\b(react|vue|angular|next\.?js|nuxt|svelte)\b/i,
   ],
-  'mobile': [
+  mobile: [
     /\b(mobile\s*app|ios|android|react\s*native|flutter|phone|tablet)\b/i,
     /\b(app\s*store|play\s*store|native\s*app)\b/i,
   ],
-  'api': [
+  api: [
     /\b(api|rest|graphql|backend\s*service|microservice|endpoint)\b/i,
     /\b(server|express|fastapi|django|rails)\b/i,
   ],
-  'fullstack': [
+  fullstack: [
     /\b(full\s*stack|fullstack|end\s*to\s*end|complete\s*app)\b/i,
     /\b(frontend\s*and\s*backend|front\s*end.*back\s*end)\b/i,
   ],
-  'saas': [
+  saas: [
     /\b(saas|software\s*as\s*a\s*service|subscription|platform|multi-tenant)\b/i,
     /\b(billing|subscription|tenant|pricing\s*plan)\b/i,
   ],
-  'general': [], // fallback
+  general: [], // fallback
 };
 
 // Project intent indicators
@@ -161,31 +269,53 @@ const BUILD_VERBS = /\b(build|create|make|develop|implement|design|architect)\b/
 
 // Tech stack detection patterns
 const TECH_STACK_PATTERNS: Record<string, RegExp> = {
-  'react': /\breact\b/i,
-  'vue': /\bvue(\.?js)?\b/i,
-  'angular': /\bangular\b/i,
+  react: /\breact\b/i,
+  vue: /\bvue(\.?js)?\b/i,
+  angular: /\bangular\b/i,
   'next.js': /\bnext\.?js\b/i,
   'node.js': /\bnode(\.?js)?\b/i,
-  'express': /\bexpress(\.?js)?\b/i,
-  'python': /\bpython\b/i,
-  'fastapi': /\bfastapi\b/i,
-  'django': /\bdjango\b/i,
-  'postgresql': /\b(postgres|postgresql|psql)\b/i,
-  'mongodb': /\bmongo(db)?\b/i,
-  'supabase': /\bsupabase\b/i,
-  'firebase': /\bfirebase\b/i,
-  'typescript': /\btypescript\b/i,
-  'tailwind': /\btailwind(\s*css)?\b/i,
-  'prisma': /\bprisma\b/i,
+  express: /\bexpress(\.?js)?\b/i,
+  python: /\bpython\b/i,
+  fastapi: /\bfastapi\b/i,
+  django: /\bdjango\b/i,
+  postgresql: /\b(postgres|postgresql|psql)\b/i,
+  mongodb: /\bmongo(db)?\b/i,
+  supabase: /\bsupabase\b/i,
+  firebase: /\bfirebase\b/i,
+  typescript: /\btypescript\b/i,
+  tailwind: /\btailwind(\s*css)?\b/i,
+  prisma: /\bprisma\b/i,
 };
 
+// =============================================================================
+// Public API Functions
+// =============================================================================
+
 /**
- * Detect the most likely diagram type from user message
+ * Detects the most likely diagram type from a user message.
+ *
+ * Uses keyword pattern matching to score each diagram type and returns
+ * the highest-scoring match with a confidence level.
+ *
+ * @param message - User's natural language request
+ * @returns Object with detected type and confidence (0.0-1.0)
+ *
+ * @example
+ * ```typescript
+ * detectDiagramType("Show me the user login flow")
+ * // => { type: 'flowchart', confidence: 0.8 }
+ *
+ * detectDiagramType("API request/response between services")
+ * // => { type: 'sequence', confidence: 0.7 }
+ * ```
  */
-export function detectDiagramType(message: string): { type: DiagramType | null; confidence: number } {
+export function detectDiagramType(message: string): {
+  type: DiagramType | null;
+  confidence: number;
+} {
   const scores: Record<string, number> = {};
   const lowerMessage = message.toLowerCase();
-  
+
   // Check each diagram type's patterns
   for (const [type, patterns] of Object.entries(DIAGRAM_PATTERNS)) {
     let matchCount = 0;
@@ -198,20 +328,20 @@ export function detectDiagramType(message: string): { type: DiagramType | null; 
       scores[type] = matchCount / patterns.length;
     }
   }
-  
+
   // Find the highest scoring type
   const entries = Object.entries(scores);
   if (entries.length === 0) {
     return { type: null, confidence: 0 };
   }
-  
+
   entries.sort((a, b) => b[1] - a[1]);
   const [bestType, bestScore] = entries[0];
-  
+
   // Check for competing high scores (ambiguity)
   const hasCompetition = entries.length > 1 && entries[1][1] > bestScore * 0.7;
   const adjustedConfidence = hasCompetition ? bestScore * 0.6 : bestScore;
-  
+
   return {
     type: bestType as DiagramType,
     confidence: Math.min(adjustedConfidence, 1.0),
@@ -219,7 +349,25 @@ export function detectDiagramType(message: string): { type: DiagramType | null; 
 }
 
 /**
- * Detect C4 abstraction level from user message
+ * Detects the C4 abstraction level from a user message.
+ *
+ * C4 levels (from high-level to detailed):
+ * - `context`: System context - external actors and systems
+ * - `container`: Containers - applications, services, databases
+ * - `component`: Components - internal modules and layers
+ * - `code`: Code - class-level implementation details
+ *
+ * @param message - User's natural language request
+ * @returns Detected C4 level, or null if not applicable
+ *
+ * @example
+ * ```typescript
+ * detectC4Level("Show the microservices and databases")
+ * // => 'container'
+ *
+ * detectC4Level("Internal controller and service layer")
+ * // => 'component'
+ * ```
  */
 export function detectC4Level(message: string): C4Level | null {
   const lowerMessage = message.toLowerCase();
@@ -231,7 +379,7 @@ export function detectC4Level(message: string): C4Level | null {
     component: 0,
     code: 0,
   };
-  
+
   for (const [level, patterns] of Object.entries(C4_LEVEL_PATTERNS)) {
     for (const pattern of patterns) {
       if (pattern.test(lowerMessage)) {
@@ -239,11 +387,11 @@ export function detectC4Level(message: string): C4Level | null {
       }
     }
   }
-  
+
   // Find highest scoring level
   const entries = Object.entries(scores) as [C4Level, number][];
   entries.sort((a, b) => b[1] - a[1]);
-  
+
   if (entries[0][1] > 0) {
     return entries[0][0];
   }
@@ -257,60 +405,101 @@ export function detectC4Level(message: string): C4Level | null {
   if (isArchitectureRequest) {
     return 'container';
   }
-  
+
   return null;
 }
 
 /**
- * Extract user constraints from message
+ * Extracts user constraints from a message.
+ *
+ * Detects preferences for:
+ * - Complexity (simple, detailed, MVP, enterprise)
+ * - Style (technical vs business audience)
+ * - Focus areas ("focus on authentication")
+ * - Exclusions ("without the payment system")
+ *
+ * @param message - User's natural language request
+ * @returns Extracted constraints object
+ *
+ * @example
+ * ```typescript
+ * extractConstraints("Create a simple diagram focusing on auth, without billing")
+ * // => {
+ * //   complexity: 'simple',
+ * //   focusAreas: ['auth'],
+ * //   excludeAreas: ['billing']
+ * // }
+ * ```
  */
 export function extractConstraints(message: string): Constraints {
   const constraints: Constraints = {};
   const lowerMessage = message.toLowerCase();
-  
+
   // Detect complexity preference
   if (COMPLEXITY_PATTERNS.simple.test(lowerMessage)) {
     constraints.complexity = 'simple';
   } else if (COMPLEXITY_PATTERNS.detailed.test(lowerMessage)) {
     constraints.complexity = 'detailed';
   }
-  
+
   // Detect style preference
   if (STYLE_PATTERNS.business.test(lowerMessage)) {
     constraints.style = 'business';
   } else if (STYLE_PATTERNS.technical.test(lowerMessage)) {
     constraints.style = 'technical';
   }
-  
+
   // Extract focus areas (quoted strings or "focus on X" patterns)
   const focusMatch = message.match(/focus(?:ing)?\s+on\s+([^,.]+)/i);
   if (focusMatch) {
     constraints.focusAreas = [focusMatch[1].trim()];
   }
-  
+
   // Extract exclusions
   const excludeMatch = message.match(/(?:without|exclude|skip|ignore)\s+([^,.]+)/i);
   if (excludeMatch) {
     constraints.excludeAreas = [excludeMatch[1].trim()];
   }
-  
+
   return constraints;
 }
 
 /**
- * Determine if request is actually diagram-related
+ * Determines if a request is diagram-related.
+ *
+ * Checks for diagram-related verbs (draw, create, show, generate) and
+ * context indicators (architecture, flow, process, system).
+ *
+ * @param message - User's message to analyze
+ * @returns True if the message appears to request a diagram
  */
 export function isDiagramRequest(message: string): boolean {
-  const diagramIndicators = /\b(diagram|chart|visual|draw|create|show|generate|make|build|map|model)\b/i;
+  const diagramIndicators =
+    /\b(diagram|chart|visual|draw|create|show|generate|make|build|map|model)\b/i;
   const contextIndicators = /\b(architecture|flow|process|system|database|class|sequence|state)\b/i;
 
   return diagramIndicators.test(message) || contextIndicators.test(message);
 }
 
 /**
- * Detect project type from message
+ * Detects the software project type from a message.
+ *
+ * @param message - User's natural language request
+ * @returns Object with detected project type and confidence
+ *
+ * @example
+ * ```typescript
+ * detectProjectType("Build a React web application")
+ * // => { type: 'web', confidence: 0.8 }
+ *
+ * detectProjectType("Create a REST API with Express")
+ * // => { type: 'api', confidence: 0.7 }
+ * ```
  */
-export function detectProjectType(message: string): { type: ProjectType | null; confidence: number } {
+export function detectProjectType(message: string): {
+  type: ProjectType | null;
+  confidence: number;
+} {
   const lowerMessage = message.toLowerCase();
   const scores: Record<string, number> = {};
 
@@ -346,7 +535,22 @@ export function detectProjectType(message: string): { type: ProjectType | null; 
 }
 
 /**
- * Detect tech stack mentioned in message
+ * Detects technology stack mentions in a message.
+ *
+ * Scans for known technologies including:
+ * - Frontend: React, Vue, Angular, Next.js, Svelte, Tailwind
+ * - Backend: Node.js, Express, Python, FastAPI, Django
+ * - Database: PostgreSQL, MongoDB, Supabase, Firebase
+ * - Tools: TypeScript, Prisma
+ *
+ * @param message - User's message to analyze
+ * @returns Array of detected technology names
+ *
+ * @example
+ * ```typescript
+ * detectTechStack("Build with React, Node.js, and PostgreSQL")
+ * // => ['react', 'node.js', 'postgresql']
+ * ```
  */
 export function detectTechStack(message: string): string[] {
   const detected: string[] = [];
@@ -362,14 +566,24 @@ export function detectTechStack(message: string): string[] {
 }
 
 /**
- * Detect current phase from message context
+ * Detects the current development phase from message context.
+ *
+ * Phases:
+ * - `intent`: Initial request, understanding requirements
+ * - `architecture`: System design and planning
+ * - `coding`: Implementation phase
+ *
+ * @param message - User's message to analyze
+ * @returns Detected development phase
  */
 export function detectPhase(message: string): ProjectPhase {
   const lowerMessage = message.toLowerCase();
 
   // Check for coding phase indicators
-  if (/\b(code|implement|write|create\s*the|build\s*the|start\s*coding)\b/i.test(lowerMessage) &&
-      /\b(frontend|backend|database|api|auth|component|service)\b/i.test(lowerMessage)) {
+  if (
+    /\b(code|implement|write|create\s*the|build\s*the|start\s*coding)\b/i.test(lowerMessage) &&
+    /\b(frontend|backend|database|api|auth|component|service)\b/i.test(lowerMessage)
+  ) {
     return 'coding';
   }
 
@@ -383,7 +597,14 @@ export function detectPhase(message: string): ProjectPhase {
 }
 
 /**
- * Check if this is a software project build request
+ * Checks if this is a software project build request.
+ *
+ * A project request requires:
+ * 1. A build verb (build, create, make, develop, implement)
+ * 2. A project indicator (app, application, platform, system, etc.)
+ *
+ * @param message - User's message to analyze
+ * @returns True if this appears to be a project request
  */
 export function isProjectRequest(message: string): boolean {
   const lowerMessage = message.toLowerCase();
@@ -394,12 +615,34 @@ export function isProjectRequest(message: string): boolean {
   }
 
   // Check for project indicators
-  const projectIndicators = /\b(app|application|platform|system|service|website|site|tool|product|software)\b/i;
+  const projectIndicators =
+    /\b(app|application|platform|system|service|website|site|tool|product|software)\b/i;
   return projectIndicators.test(lowerMessage);
 }
 
 /**
- * Analyze project intent for vibe coder mode
+ * Analyzes project intent for vibe coder mode.
+ *
+ * Performs comprehensive analysis of a project request including:
+ * - Project type detection
+ * - Tech stack extraction
+ * - Development phase detection
+ * - Feature extraction (auth, payments, search, etc.)
+ *
+ * @param message - User's project request
+ * @returns Complete project analysis
+ *
+ * @example
+ * ```typescript
+ * analyzeProjectIntent("Build a SaaS dashboard with React and Supabase, include auth and billing")
+ * // => {
+ * //   isProjectRequest: true,
+ * //   projectType: 'saas',
+ * //   phase: 'intent',
+ * //   techStack: ['react', 'supabase'],
+ * //   features: ['authentication', 'billing']
+ * // }
+ * ```
  */
 export function analyzeProjectIntent(message: string): ProjectAnalysis {
   const isProject = isProjectRequest(message);
@@ -438,7 +681,31 @@ export function analyzeProjectIntent(message: string): ProjectAnalysis {
 }
 
 /**
- * Main intent analysis function
+ * Main intent analysis function - the primary entry point.
+ *
+ * Performs comprehensive analysis of a user's request to determine:
+ * - Whether it's a valid diagram or project request
+ * - The best diagram type to generate
+ * - C4 abstraction level (for architecture diagrams)
+ * - User constraints and preferences
+ * - Whether clarification is needed
+ * - Project context for vibe coder mode
+ *
+ * @param message - User's natural language request
+ * @returns Complete intent analysis with confidence scores
+ *
+ * @example
+ * ```typescript
+ * const intent = analyzeIntent("Create a detailed sequence diagram for user checkout");
+ *
+ * if (intent.requiresClarification) {
+ *   // Ask user for more details
+ *   const augmentation = getIntentAugmentation(intent);
+ * } else {
+ *   // Proceed with generation
+ *   generateDiagram(message, { c4Level: intent.c4Level, ...intent.constraints });
+ * }
+ * ```
  */
 export function analyzeIntent(message: string): IntentAnalysis {
   if (!message || typeof message !== 'string') {
@@ -509,31 +776,49 @@ export function analyzeIntent(message: string): IntentAnalysis {
 }
 
 /**
- * Generate clarification prompt augmentation for Claude
+ * Generates a clarification prompt augmentation for the LLM.
+ *
+ * When intent analysis indicates clarification is needed, this function
+ * generates context that can be appended to the LLM system prompt to
+ * encourage asking the user for more details.
+ *
+ * @param analysis - Intent analysis result
+ * @returns Augmentation string to add to the prompt, or null if not needed
+ *
+ * @example
+ * ```typescript
+ * const intent = analyzeIntent("make a diagram");
+ * const augmentation = getIntentAugmentation(intent);
+ *
+ * if (augmentation) {
+ *   systemPrompt += '\n\n' + augmentation;
+ *   // LLM will now ask user to clarify what type of diagram they want
+ * }
+ * ```
  */
 export function getIntentAugmentation(analysis: IntentAnalysis): string | null {
   if (!analysis.requiresClarification) {
     return null;
   }
-  
+
   const parts: string[] = [];
-  
+
   parts.push('[Intent Analysis Context]');
   parts.push(`Confidence: ${Math.round(analysis.confidence * 100)}%`);
-  
+
   if (analysis.suggestedType) {
     parts.push(`Detected type hint: ${analysis.suggestedType}`);
   }
-  
+
   if (analysis.c4Level) {
     parts.push(`Detected C4 level hint: ${analysis.c4Level}`);
   }
-  
+
   if (analysis.clarificationContext) {
     parts.push(`Note: ${analysis.clarificationContext}`);
   }
-  
+
   parts.push('Action: Ask the user to clarify their requirements before generating the diagram.');
-  
+
   return parts.join('\n');
 }

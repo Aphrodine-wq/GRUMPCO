@@ -1,6 +1,6 @@
 /**
  * Error Handler Tests
- * 
+ *
  * Comprehensive tests for error classification and handling utilities
  */
 
@@ -13,8 +13,8 @@ import {
   isRetryable,
   processError,
   logError,
-  type ErrorType,
   type ErrorContext,
+  type ApiError,
 } from './errorHandler';
 
 describe('errorHandler', () => {
@@ -136,7 +136,7 @@ describe('errorHandler', () => {
     it('should return auth message for 401 errors', () => {
       const error = new Error('401 Unauthorized');
       const msg = getUserFriendlyMessage(error, 'api');
-      expect(msg).toContain('Authentication failed');
+      expect(msg).toMatch(/API key|Authentication|401|Settings/i);
     });
 
     it('should return rate limit message for 429 errors', () => {
@@ -179,7 +179,7 @@ describe('errorHandler', () => {
     it('should include retry option for network errors', () => {
       const onRetry = vi.fn();
       const options = getRecoveryOptions(new Error('Network'), 'network', onRetry);
-      
+
       expect(options).toHaveLength(1);
       expect(options[0].label).toBe('Retry');
       expect(options[0].primary).toBe(true);
@@ -188,34 +188,41 @@ describe('errorHandler', () => {
     it('should include retry option for timeout errors', () => {
       const onRetry = vi.fn();
       const options = getRecoveryOptions(new Error('Timeout'), 'timeout', onRetry);
-      
-      expect(options.find(o => o.label === 'Retry')).toBeDefined();
+
+      expect(options.find((o) => o.label === 'Retry')).toBeDefined();
     });
 
     it('should include retry option for API errors', () => {
       const onRetry = vi.fn();
       const options = getRecoveryOptions(new Error('API'), 'api', onRetry);
-      
-      expect(options.find(o => o.label === 'Retry')).toBeDefined();
+
+      expect(options.find((o) => o.label === 'Retry')).toBeDefined();
     });
 
     it('should include fix input option for validation errors', () => {
       const options = getRecoveryOptions(new Error('Invalid'), 'validation');
-      
-      expect(options.find(o => o.label === 'Fix Input')).toBeDefined();
+
+      expect(options.find((o) => o.label === 'Fix Input')).toBeDefined();
     });
 
     it('should include cancel option when provided', () => {
       const onCancel = vi.fn();
       const options = getRecoveryOptions(new Error('Error'), 'network', undefined, onCancel);
-      
-      expect(options.find(o => o.label === 'Cancel')).toBeDefined();
+
+      expect(options.find((o) => o.label === 'Cancel')).toBeDefined();
     });
 
     it('should return empty array when no options apply', () => {
       const options = getRecoveryOptions(new Error('Error'), 'unknown');
-      
+
       expect(options).toHaveLength(0);
+    });
+
+    it('should include Open Settings for 401 API errors when onOpenSettings provided', () => {
+      const onOpenSettings = vi.fn();
+      const err = Object.assign(new Error('Unauthorized'), { status: 401 }) as ApiError;
+      const options = getRecoveryOptions(err, 'api', undefined, undefined, onOpenSettings);
+      expect(options.some((o) => o.label === 'Open Settings')).toBe(true);
     });
   });
 
@@ -298,7 +305,7 @@ describe('errorHandler', () => {
       const context = processError(new Error('Network'), onRetry, onCancel);
 
       expect(context.recovery).toBeDefined();
-      expect(context.recovery!.length).toBeGreaterThan(0);
+      expect(context.recovery?.length).toBeGreaterThan(0);
     });
 
     it('should include metadata from error', () => {

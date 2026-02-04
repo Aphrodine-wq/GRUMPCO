@@ -1,49 +1,68 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import ChatInterface from './components/ChatInterface.svelte';
-  import SessionsSidebar from './components/SessionsSidebar.svelte';
-  import MobileNav from './components/MobileNav.svelte';
+  import { fade } from 'svelte/transition';
+  import ChatInterface from './components/RefactoredChatInterface.svelte';
+  import { UnifiedSidebar } from './components/sidebar';
   import Toast from './components/Toast.svelte';
   import QuestionModal from './components/QuestionModal.svelte';
   import PricingModal from './components/PricingModal.svelte';
-  import SettingsScreen from './components/SettingsScreen.svelte';
-  import SetupScreen from './components/SetupScreen.svelte';
-  import { OnboardingCarousel } from './components/onboarding';
-  
-  // Lazy load heavy components for better initial load performance
-  const AskDocsScreen = () => import('./components/AskDocsScreen.svelte');
-  const VoiceCodeScreen = () => import('./components/VoiceCodeScreen.svelte');
-  const AgentSwarmVisualizer = () => import('./components/AgentSwarmVisualizer.svelte');
-  const DesignToCodeScreen = () => import('./components/DesignToCodeScreen.svelte');
-  const LazyCostDashboard = () => import('./components/LazyCostDashboard.svelte');
-  
-  // Integrations platform components - lazy loaded
-  const IntegrationsHub = () => import('./components/IntegrationsHub.svelte');
-  const ApprovalsCenter = () => import('./components/ApprovalsCenter.svelte');
-  const HeartbeatsManager = () => import('./components/HeartbeatsManager.svelte');
-  const MemoryManager = () => import('./components/MemoryManager.svelte');
-  const AuditLogViewer = () => import('./components/AuditLogViewer.svelte');
-  const AdvancedAIDashboard = () => import('./components/AdvancedAIDashboard.svelte');
+  import SettingsScreen from './components/TabbedSettingsScreen.svelte';
+  import ElectronTitleBar from './components/ElectronTitleBar.svelte';
+  import { OnboardingFlow, isOnboardingComplete } from './components/onboarding-v2';
+
+  // Lazy-loaded views are defined in the view registry (data-driven)
+  import LazyView from './components/LazyView.svelte';
+  import { VIEW_REGISTRY } from './lib/viewRegistry';
   const TutorialOverlay = () => import('./components/TutorialOverlay.svelte');
-  
-  // Docker and Cloud components - lazy loaded
-  const DockerPanel = () => import('./components/DockerPanel.svelte');
-  const CloudDashboard = () => import('./components/CloudDashboard.svelte');
-  
+
+  import { get } from 'svelte/store';
   import { sessionsStore, currentSession } from './stores/sessionsStore';
   import { settingsStore } from './stores/settingsStore';
-  import { preferencesStore, setupComplete } from './stores/preferencesStore';
-  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode, showCostDashboard, showIntegrations, showApprovals, showHeartbeats, showMemory, showAuditLog, showAdvancedAI, showDocker, showCloudDashboard, sidebarCollapsed, focusChatTrigger } from './stores/uiStore';
+  import { preferencesStore, density } from './stores/preferencesStore';
+  import { onboardingStore } from './stores/onboardingStore';
+  import { setUserAndSession, checkAuth } from './stores/authStore';
+  import {
+    currentView,
+    setCurrentView,
+    sidebarCollapsed,
+    focusChatTrigger,
+    showPricing,
+  } from './stores/uiStore';
+  import { workspaceStore } from './stores/workspaceStore';
   import { demoStore } from './stores/demoStore';
   import { isMobileDevice } from './utils/touchGestures';
+  import { showToast } from './stores/toastStore';
   import type { Message } from './types';
+  import ConnectionStatusBanner from './components/ConnectionStatusBanner.svelte';
+  import CommandPalette from './components/CommandPalette.svelte';
+
+  const SHORTCUTS_TIP_SHOWN_KEY = 'g-rump-shortcuts-tip-shown';
 
   let isMobile = $state(false);
-  let showPricing = $state(false);
+  let densityValue = $state<'comfortable' | 'compact'>('comfortable');
+  let commandPaletteOpen = $state(false);
+
+  $effect(() => {
+    densityValue = get(density);
+  });
+
+  // One-time tip after user reaches main chat (onboarding complete)
+  $effect(() => {
+    const view = get(currentView);
+    const onboardingDone = get(isOnboardingComplete);
+    if (view !== 'chat' || !onboardingDone) return;
+    try {
+      if (typeof window === 'undefined') return;
+      if (localStorage.getItem(SHORTCUTS_TIP_SHOWN_KEY) === 'true') return;
+      localStorage.setItem(SHORTCUTS_TIP_SHOWN_KEY, 'true');
+      showToast('Tip: Press / to focus chat or Ctrl+K for commands.', 'info', 6000);
+    } catch (_) {}
+  });
 
   onMount(() => {
     localStorage.removeItem('mermaid-app-state');
     settingsStore.load().catch(() => {});
+    checkAuth().catch(() => {});
 
     if (!$currentSession) {
       sessionsStore.createSession([]);
@@ -51,7 +70,7 @@
 
     // Detect mobile device
     isMobile = isMobileDevice();
-    
+
     // Auto-collapse sidebar on mobile
     if (isMobile) {
       sidebarCollapsed.set(true);
@@ -59,11 +78,19 @@
 
     function onKeydown(e: KeyboardEvent) {
       const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === 'k') {
+        e.preventDefault();
+        commandPaletteOpen = !commandPaletteOpen;
+        return;
+      }
       if (mod && e.key === 'b') {
         e.preventDefault();
         sidebarCollapsed.update((v) => !v);
       }
-      if ((mod && e.shiftKey && e.key === 'L') || (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey)) {
+      if (
+        (mod && e.shiftKey && e.key === 'L') ||
+        (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey)
+      ) {
         const target = e.target as HTMLElement;
         if (target?.tagName !== 'INPUT' && target?.tagName !== 'TEXTAREA') {
           e.preventDefault();
@@ -73,15 +100,76 @@
     }
     window.addEventListener('keydown', onKeydown);
 
-    // Signal readiness to Electron (close splash, show main window)
-    const grump = (window as { grump?: { isElectron?: boolean; closeSplashShowMain?: () => Promise<void> } }).grump;
+    // Signal readiness to Electron (close splash, show main window) – main.ts also calls closeSplashShowMain after mount for reliability
+    const grump = (
+      window as {
+        grump?: {
+          isElectron?: boolean;
+          closeSplashShowMain?: () => Promise<void>;
+          onAppCommand?: (event: string, callback: () => void) => () => void;
+          onProtocolUrl?: (callback: (url: string) => void) => () => void;
+          openPath?: (path: string) => Promise<{ error?: string }>;
+        };
+      }
+    ).grump;
     if (grump?.isElectron && grump.closeSplashShowMain) {
       setTimeout(() => {
-        grump.closeSplashShowMain!().catch((err: unknown) => console.error('[App] Failed to close splash:', err));
-      }, 400);
+        grump.closeSplashShowMain!().catch((err: unknown) =>
+          console.error('[App] Failed to close splash:', err)
+        );
+      }, 100);
     }
 
-    return () => window.removeEventListener('keydown', onKeydown);
+    // Wake word: when detected, switch to Talk Mode (Electron only)
+    const unsubs: (() => void)[] = [];
+    const grumpAny = grump as { wakeWord?: { onDetected?: (cb: () => void) => () => void } };
+    if (grumpAny?.wakeWord?.onDetected) {
+      unsubs.push(grumpAny.wakeWord.onDetected(() => setCurrentView('talkMode')));
+    }
+
+    // Tray quick actions: focus chat, settings, open workspace folder
+    if (grump?.isElectron && grump.onAppCommand) {
+      unsubs.push(grump.onAppCommand('app:focus-chat', () => setCurrentView('chat')));
+      unsubs.push(grump.onAppCommand('app:focus-settings', () => setCurrentView('settings')));
+      unsubs.push(
+        grump.onAppCommand('app:open-workspace', () => {
+          const root = get(workspaceStore).root;
+          if (root && grump.openPath) grump.openPath(root).catch(() => {});
+        })
+      );
+    }
+
+    if (grump?.isElectron && grump.onProtocolUrl) {
+      unsubs.push(
+        grump.onProtocolUrl((url: string) => {
+          if (url.startsWith('grump://auth/done')) {
+            try {
+              const parsed = new URL(url);
+              const accessToken = parsed.searchParams.get('access_token');
+              const userId = parsed.searchParams.get('user_id');
+              const email = parsed.searchParams.get('email') ?? '';
+              if (accessToken && userId) {
+                setUserAndSession(
+                  { id: userId, email, name: email.split('@')[0] },
+                  { access_token: accessToken }
+                );
+              }
+            } catch (_) {
+              /* ignore parse errors */
+            }
+            return;
+          }
+          const path = url.replace(/^grump:\/\//i, '').split('/')[0] || '';
+          if (path === 'settings') setCurrentView('settings');
+          else if (path === 'chat' || !path) setCurrentView('chat');
+        })
+      );
+    }
+
+    return () => {
+      window.removeEventListener('keydown', onKeydown);
+      unsubs.forEach((u) => u());
+    };
   });
 
   function getInitialMessages(): Message[] | undefined {
@@ -97,84 +185,53 @@
   }
 </script>
 
-<div class="app">
-  <SessionsSidebar />
-
-  <div class="main-content">
-    {#if $showSettings}
-      <SettingsScreen onBack={() => showSettings.set(false)} />
-    {:else if $showAskDocs}
-      {#await AskDocsScreen() then { default: Component }}
-        <Component onBack={() => showAskDocs.set(false)} />
-      {/await}
-    {:else if $showVoiceCode}
-      {#await VoiceCodeScreen() then { default: Component }}
-        <Component onBack={() => showVoiceCode.set(false)} />
-      {/await}
-    {:else if $showSwarm}
-      {#await AgentSwarmVisualizer() then { default: Component }}
-        <Component onBack={() => showSwarm.set(false)} />
-      {/await}
-    {:else if $showDesignToCode}
-      {#await DesignToCodeScreen() then { default: Component }}
-        <Component onBack={() => showDesignToCode.set(false)} />
-      {/await}
-    {:else if $showCostDashboard}
-      {#await LazyCostDashboard() then { default: Component }}
-        <Component onBack={() => showCostDashboard.set(false)} />
-      {/await}
-    {:else if $showIntegrations}
-      {#await IntegrationsHub() then { default: Component }}
-        <Component onBack={() => showIntegrations.set(false)} />
-      {/await}
-    {:else if $showApprovals}
-      {#await ApprovalsCenter() then { default: Component }}
-        <Component onBack={() => showApprovals.set(false)} />
-      {/await}
-    {:else if $showHeartbeats}
-      {#await HeartbeatsManager() then { default: Component }}
-        <Component onBack={() => showHeartbeats.set(false)} />
-      {/await}
-    {:else if $showMemory}
-      {#await MemoryManager() then { default: Component }}
-        <Component onBack={() => showMemory.set(false)} />
-      {/await}
-    {:else if $showAuditLog}
-      {#await AuditLogViewer() then { default: Component }}
-        <Component onBack={() => showAuditLog.set(false)} />
-      {/await}
-    {:else if $showAdvancedAI}
-      {#await AdvancedAIDashboard() then { default: Component }}
-        <Component onBack={() => showAdvancedAI.set(false)} />
-      {/await}
-    {:else if $showDocker}
-      {#await DockerPanel() then { default: Component }}
-        <Component onBack={() => showDocker.set(false)} />
-      {/await}
-    {:else if $showCloudDashboard}
-      {#await CloudDashboard() then { default: Component }}
-        <Component onBack={() => showCloudDashboard.set(false)} />
-      {/await}
-    {:else if !$setupComplete}
-      <!-- iOS-style onboarding carousel -->
-      <OnboardingCarousel
-        onComplete={() => preferencesStore.completeSetup()}
-        onSkip={() => preferencesStore.completeSetup()}
-      />
-    {:else}
-      {#key $currentSession?.id ?? 'none'}
-        <ChatInterface
-          initialMessages={getInitialMessages()}
-          onmessagesUpdated={handleMessagesUpdate}
-        />
-      {/key}
+<div class="app" data-density={densityValue}>
+  <ConnectionStatusBanner />
+  <ElectronTitleBar />
+  <div class="app-body">
+    {#if $isOnboardingComplete}
+      <UnifiedSidebar />
     {/if}
+
+    <div class="main-content">
+      {#key $currentView}
+        <div class="main-content-view" transition:fade={{ duration: 200 }}>
+          {#if $currentView === 'settings'}
+            <SettingsScreen onBack={() => setCurrentView('chat')} />
+          {:else if VIEW_REGISTRY[$currentView]}
+            <LazyView definition={VIEW_REGISTRY[$currentView]} />
+          {:else if !$isOnboardingComplete}
+            <!-- New unified onboarding flow (auth, API setup, tech stack, preferences - all in one) -->
+            <OnboardingFlow
+              onComplete={() => {
+                // New onboarding handles everything - mark setup complete for backwards compat
+                preferencesStore.completeSetup();
+                // Also mark old onboarding as seen for any legacy checks
+                onboardingStore.markOnboardingSeenOnDevice();
+              }}
+              onSkip={() => {
+                preferencesStore.completeSetup();
+                onboardingStore.markOnboardingSeenOnDevice();
+              }}
+            />
+          {:else}
+            {#key $currentSession?.id ?? 'none'}
+              <ChatInterface
+                initialMessages={getInitialMessages()}
+                onmessagesUpdated={handleMessagesUpdate}
+              />
+            {/key}
+          {/if}
+        </div>
+      {/key}
+    </div>
   </div>
 
   <Toast />
   <QuestionModal />
-  {#if showPricing}
-    <PricingModal onClose={() => (showPricing = false)} />
+  <CommandPalette bind:open={commandPaletteOpen} onClose={() => (commandPaletteOpen = false)} />
+  {#if $showPricing}
+    <PricingModal onClose={() => showPricing.set(false)} />
   {/if}
 
   {#if $demoStore.active && $demoStore.steps.length > 0}
@@ -186,25 +243,44 @@
       />
     {/await}
   {/if}
-  
-  <!-- Mobile Navigation -->
-  {#if isMobile}
-    <MobileNav activeView={$showSettings ? 'settings' : 'chat'} />
-  {/if}
 </div>
 
 <style>
   .app {
     display: flex;
+    flex-direction: column;
     height: 100vh;
     width: 100%;
-    /* Reverting centered container to full width to reduce "white space" on sides */
-    /* max-width: 1400px; */
-    /* margin: 0 auto; */
-
-    background: linear-gradient(135deg, #fafafa 0%, #f5f7fa 100%);
+    /* Removed max-width constraint - now full width on maximize */
+    margin: 0 auto;
+    background: #fafafa;
     overflow: hidden;
     position: relative;
+  }
+
+  .app-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Spacious layout: content padding */
+  .app {
+    --space-content: 24px;
+  }
+
+  /* Compact density: ~20% less padding */
+  .app[data-density='compact'] {
+    --space-content: 16px;
+  }
+  .app[data-density='compact'] .main-content {
+    padding: var(--space-content);
+  }
+  .app[data-density='compact'] :global(.settings-btn),
+  .app[data-density='compact'] :global(.session-item) {
+    padding-top: 6px;
+    padding-bottom: 6px;
   }
 
   /* Ensure background fills the "void" outside the app on large screens */
@@ -228,23 +304,21 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    padding: var(--space-content, 20px);
   }
 
-  /* Responsive adjustments */
-  @media (max-width: 1024px) {
-    .app {
-      /* Sidebar will automatically collapse to 64px on smaller screens */
-    }
+  .main-content-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
   }
 
+  /* Responsive adjustments (tablet: sidebar collapses to 64px via layout) */
   @media (max-width: 768px) {
     .app {
-      flex-direction: column;
       height: 100dvh;
-    }
-    
-    .main-content {
-      padding-bottom: 70px; /* Space for mobile nav */
     }
   }
 
@@ -261,16 +335,10 @@
       min-height: 44px;
       min-width: 44px;
     }
-    
-    :global(input), :global(textarea) {
-      font-size: 16px; /* Prevent zoom on iOS */
-    }
-  }
 
-  /* Landscape mobile */
-  @media (max-width: 768px) and (orientation: landscape) {
-    .main-content {
-      padding-bottom: 60px;
+    :global(input),
+    :global(textarea) {
+      font-size: 16px; /* Prevent zoom on iOS */
     }
   }
 </style>

@@ -20,15 +20,15 @@
   function parseMermaidStructure(code: string): Node[] {
     const nodes: Node[] = [];
     const nodeMap = new Map<string, Node>();
-    
+
     // Extract flowchart/graph nodes
     const flowchartRegex = /flowchart\s+(?:TD|TB|BT|LR|RL|[\s\S]*?)\n([\s\S]*)/i;
     const graphRegex = /graph\s+(?:TD|TB|BT|LR|RL|[\s\S]*?)\n([\s\S]*)/i;
-    
+
     let content = code;
     const flowchartMatch = code.match(flowchartRegex);
     const graphMatch = code.match(graphRegex);
-    
+
     if (flowchartMatch) {
       content = flowchartMatch[1];
     } else if (graphMatch) {
@@ -38,13 +38,13 @@
     // Extract node definitions: A[Label] or A --> B
     const nodeDefRegex = /(\w+)(?:\[([^\]]+)\])?/g;
     const edgeRegex = /(\w+)\s*(?:-->|--|==>|==)\s*(\w+)/g;
-    
+
     // First pass: collect all nodes
     let match;
     while ((match = nodeDefRegex.exec(content)) !== null) {
       const nodeId = match[1];
       const label = match[2] || nodeId;
-      
+
       if (!nodeMap.has(nodeId)) {
         const node: Node = {
           id: nodeId,
@@ -72,8 +72,8 @@
     // Build tree structure (simple: first node as root, others as children)
     const rootNodes = new Set<string>();
     const childNodes = new Set<string>();
-    
-    edges.forEach(edge => {
+
+    edges.forEach((edge) => {
       childNodes.add(edge.to);
       if (!childNodes.has(edge.from)) {
         rootNodes.add(edge.from);
@@ -86,7 +86,7 @@
     }
 
     // Build tree
-    rootNodes.forEach(rootId => {
+    rootNodes.forEach((rootId) => {
       const root = nodeMap.get(rootId);
       if (root) {
         buildTree(root, nodeMap, edges);
@@ -104,14 +104,18 @@
     return nodes.length > 0 ? nodes : Array.from(nodeMap.values());
   }
 
-  function buildTree(node: Node, nodeMap: Map<string, Node>, edges: Array<{ from: string; to: string }>) {
+  function buildTree(
+    node: Node,
+    nodeMap: Map<string, Node>,
+    edges: Array<{ from: string; to: string }>
+  ) {
     const children = edges
-      .filter(e => e.from === node.id)
-      .map(e => nodeMap.get(e.to))
+      .filter((e) => e.from === node.id)
+      .map((e) => nodeMap.get(e.to))
       .filter((n): n is Node => n !== undefined);
-    
+
     node.children = children;
-    children.forEach(child => {
+    children.forEach((child) => {
       buildTree(child, nodeMap, edges);
     });
   }
@@ -137,7 +141,7 @@
     if (mermaidCode) {
       structure = parseMermaidStructure(mermaidCode);
       // Expand first level by default
-      structure.forEach(node => {
+      structure.forEach((node) => {
         if (node.children && node.children.length > 0) {
           expandedNodes.add(node.id);
         }
@@ -145,7 +149,6 @@
       expandedNodes = new Set(expandedNodes);
     }
   });
-
 </script>
 
 <div class="architecture-preview">
@@ -172,9 +175,26 @@
 
 {#snippet renderTreeNode(node: Node, level: number)}
   <div class="tree-node" style="padding-left: {level * 1.5}rem">
-    <div class="tree-node-content" onclick={() => handleNodeClick(node, new MouseEvent('click'))} role="button" tabindex="0">
+    <div
+      class="tree-node-content"
+      onclick={() => handleNodeClick(node, new MouseEvent('click'))}
+      onkeydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleNodeClick(node, new MouseEvent('click'));
+        }
+      }}
+      role="button"
+      tabindex="0"
+    >
       {#if node.children && node.children.length > 0}
-        <button class="tree-toggle" onclick={(e) => { e.stopPropagation(); toggleNode(node.id); }}>
+        <button
+          class="tree-toggle"
+          onclick={(e) => {
+            e.stopPropagation();
+            toggleNode(node.id);
+          }}
+        >
           {expandedNodes.has(node.id) ? '▼' : '▶'}
         </button>
       {:else}
@@ -213,7 +233,7 @@
   .preview-title {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #E5E5E5;
+    color: #e5e5e5;
     margin: 0;
   }
 
@@ -225,7 +245,7 @@
 
   .preview-empty {
     text-align: center;
-    color: #6B7280;
+    color: #6b7280;
     font-size: 0.875rem;
     padding: 2rem;
   }
@@ -267,7 +287,7 @@
     justify-content: center;
     background: transparent;
     border: none;
-    color: #6B7280;
+    color: #6b7280;
     cursor: pointer;
     font-size: 0.75rem;
     padding: 0;
@@ -275,7 +295,7 @@
   }
 
   .tree-toggle:hover {
-    color: #E5E5E5;
+    color: #e5e5e5;
   }
 
   .tree-toggle-spacer {
@@ -285,12 +305,12 @@
 
   .tree-node-label {
     flex: 1;
-    color: #E5E5E5;
+    color: #e5e5e5;
     font-size: 0.875rem;
   }
 
   .tree-node-type {
-    color: #6B7280;
+    color: #6b7280;
     font-size: 0.75rem;
     padding: 0.125rem 0.5rem;
     background: #0d0d0d;

@@ -4,19 +4,14 @@
  * API endpoints for test generation, load testing, and coverage analysis.
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import logger from '../../middleware/logger.js';
+import { generateTests, generateLoadTestPlan, analyzeCoverage, generateMocks } from './service.js';
 import {
-  generateTests,
-  generateLoadTestPlan,
-  analyzeCoverage,
-  generateMocks,
-} from './service.js';
-import {
-  TestGenerationRequest,
-  LoadTestPlanRequest,
-  CoverageAnalysisRequest,
-  MockGenerationRequest,
+  type TestGenerationRequest,
+  type LoadTestPlanRequest,
+  type CoverageAnalysisRequest,
+  type MockGenerationRequest,
 } from './types.js';
 
 const router = Router();

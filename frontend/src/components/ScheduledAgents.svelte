@@ -6,7 +6,7 @@
   import { onMount } from 'svelte';
   import { fetchApi } from '../lib/api.js';
   import { showToast } from '../stores/toastStore.js';
-  import { Card, Button, Input } from '../lib/design-system';
+  import { Card, Button } from '../lib/design-system';
 
   interface ScheduledAgent {
     id: string;
@@ -100,7 +100,9 @@
 </script>
 
 <Card title="Scheduled agents (24/7)" padding="md">
-  <p class="section-desc">Run SHIP (design → spec → plan → code) on a cron schedule. Requires backend with optional Redis.</p>
+  <p class="section-desc">
+    Run SHIP (design → spec → plan → code) on a cron schedule. Requires backend with optional Redis.
+  </p>
 
   {#if loading}
     <p class="muted">Loading…</p>
@@ -112,7 +114,12 @@
             <strong>{agent.name}</strong>
             <span class="cron">{agent.cronExpression}</span>
             {#if agent.action === 'ship' && agent.params?.projectDescription}
-              <span class="desc">{agent.params.projectDescription.slice(0, 60)}{agent.params.projectDescription.length > 60 ? '…' : ''}</span>
+              <span class="desc"
+                >{agent.params.projectDescription.slice(0, 60)}{agent.params.projectDescription
+                  .length > 60
+                  ? '…'
+                  : ''}</span
+              >
             {/if}
           </div>
           {#if agent.enabled}
@@ -125,18 +132,42 @@
       {/if}
     </div>
 
-    <form class="add-form" onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
+    <form
+      class="add-form"
+      onsubmit={(e) => {
+        e.preventDefault();
+        handleCreate();
+      }}
+    >
       <div class="field-group">
         <label class="field-label" for="sched-name">Name</label>
-        <input id="sched-name" type="text" class="custom-input" placeholder="Daily build" bind:value={name} />
+        <input
+          id="sched-name"
+          type="text"
+          class="custom-input"
+          placeholder="Daily build"
+          bind:value={name}
+        />
       </div>
       <div class="field-group">
         <label class="field-label" for="sched-cron">Cron (e.g. 0 9 * * * = daily 9am)</label>
-        <input id="sched-cron" type="text" class="custom-input" placeholder="0 9 * * *" bind:value={cronExpression} />
+        <input
+          id="sched-cron"
+          type="text"
+          class="custom-input"
+          placeholder="0 9 * * *"
+          bind:value={cronExpression}
+        />
       </div>
       <div class="field-group">
         <label class="field-label" for="sched-desc">Project description (for SHIP)</label>
-        <textarea id="sched-desc" class="custom-textarea" rows="2" placeholder="A todo app with auth" bind:value={projectDescription}></textarea>
+        <textarea
+          id="sched-desc"
+          class="custom-textarea"
+          rows="2"
+          placeholder="A todo app with auth"
+          bind:value={projectDescription}
+        ></textarea>
       </div>
       <Button type="submit" variant="primary" size="sm" disabled={submitting}>
         {submitting ? 'Adding…' : 'Add scheduled agent'}

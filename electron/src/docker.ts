@@ -342,7 +342,7 @@ async function listVolumes(): Promise<VolumeInfo[]> {
   const client = getDockerClient();
   const { Volumes } = await client.listVolumes();
   
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Docker SDK volume shape (intentional)
   return (Volumes || []).map((volume: any) => ({
     name: volume.Name,
     driver: volume.Driver,
@@ -449,6 +449,276 @@ async function composePs(cwd?: string): Promise<string> {
 }
 
 // ============================================
+// Free Agent Sandbox Container
+// ============================================
+
+const FREE_AGENT_CONTAINER_NAME = 'grump-freeagent-sandbox';
+const FREE_AGENT_IMAGE = 'grump/freeagent-sandbox:latest';
+
+interface FreeAgentConfig {
+  workspaceRoot: string;
+  capabilities?: string[];
+  resourceLimits?: {
+    cpus?: string;
+    memory?: string;
+  };
+}
+
+interface FreeAgentStatus {
+  running: boolean;
+  containerId?: string;
+  health?: 'healthy' | 'unhealthy' | 'starting';
+  uptime?: number;
+  workspaceRoot?: string;
+}
+
+let freeAgentStartTime: Date | null = null;
+
+/**
+ * Start Free Agent sandbox container
+ */
+async function startFreeAgentSandbox(config: FreeAgentConfig): Promise<{ containerId: string }> {
+  const client = getDockerClient();
+  
+  // Check if already running
+  const existing = await getFreeAgentContainer();
+  if (existing && existing.running) {
+    return { containerId: existing.containerId! };
+  }
+  
+  // Remove existing stopped container
+  if (existing) {
+    try {
+      const container = client.getContainer(existing.containerId!);
+      await container.remove({ force: true });
+    } catch {
+      // Ignore removal errors
+    }
+  }
+  
+  // Create container with workspace mount
+  const container = await client.createContainer({
+    name: FREE_AGENT_CONTAINER_NAME,
+    Image: FREE_AGENT_IMAGE,
+    Env: [
+      `WORKSPACE_ROOT=/workspace`,
+      `CAPABILITIES=${(config.capabilities || []).join(',')}`,
+    ],
+    HostConfig: {
+      Binds: [`${config.workspaceRoot}:/workspace:rw`],
+      RestartPolicy: { Name: 'unless-stopped' },
+      Resources: {
+        CpuQuota: config.resourceLimits?.cpus ? parseFloat(config.resourceLimits.cpus) * 100000 : 200000, // 2 CPUs default
+        Memory: config.resourceLimits?.memory ? parseMemory(config.resourceLimits.memory) : 2 * 1024 * 1024 * 1024, // 2GB default
+      },
+      SecurityOpt: ['no-new-privileges'],
+      // Limit capabilities
+      CapDrop: ['ALL'],
+      CapAdd: ['CHOWN', 'DAC_OVERRIDE', 'FOWNER', 'SETGID', 'SETUID'],
+    },
+    NetworkingConfig: {
+      EndpointsConfig: {
+        'grump-network': {},
+      },
+    },
+    ExposedPorts: {
+      '8080/tcp': {},
+    },
+  });
+  
+  await container.start();
+  freeAgentStartTime = new Date();
+  
+  return { containerId: container.id };
+}
+
+/**
+ * Stop Free Agent sandbox container
+ */
+async function stopFreeAgentSandbox(): Promise<void> {
+  const client = getDockerClient();
+  
+  try {
+    const containers = await client.listContainers({ all: true });
+    const freeAgent = containers.find(c => c.Names.some(n => n.includes(FREE_AGENT_CONTAINER_NAME)));
+    
+    if (freeAgent) {
+      const container = client.getContainer(freeAgent.Id);
+      if (freeAgent.State === 'running') {
+        await container.stop();
+      }
+    }
+    
+    freeAgentStartTime = null;
+  } catch (err) {
+    throw new Error(`Failed to stop Free Agent: ${(err as Error).message}`);
+  }
+}
+
+/**
+ * Get Free Agent container status
+ */
+async function getFreeAgentContainer(): Promise<FreeAgentStatus> {
+  const client = getDockerClient();
+  
+  try {
+    const containers = await client.listContainers({ all: true });
+    const freeAgent = containers.find(c => c.Names.some(n => n.includes(FREE_AGENT_CONTAINER_NAME)));
+    
+    if (!freeAgent) {
+      return { running: false };
+    }
+    
+    // Get health status
+    let health: 'healthy' | 'unhealthy' | 'starting' | undefined;
+    if (freeAgent.Status?.includes('healthy')) {
+      health = freeAgent.Status.includes('unhealthy') ? 'unhealthy' : 'healthy';
+    } else if (freeAgent.Status?.includes('starting')) {
+      health = 'starting';
+    }
+    
+    // Calculate uptime
+    let uptime: number | undefined;
+    if (freeAgentStartTime && freeAgent.State === 'running') {
+      uptime = Date.now() - freeAgentStartTime.getTime();
+    }
+    
+    return {
+      running: freeAgent.State === 'running',
+      containerId: freeAgent.Id,
+      health,
+      uptime,
+    };
+  } catch {
+    return { running: false };
+  }
+}
+
+/**
+ * Execute a command in the Free Agent sandbox
+ */
+async function execInFreeAgent(
+  command: string[],
+  options?: { timeout?: number; workDir?: string }
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  const client = getDockerClient();
+  
+  const status = await getFreeAgentContainer();
+  if (!status.running || !status.containerId) {
+    throw new Error('Free Agent sandbox is not running');
+  }
+  
+  const container = client.getContainer(status.containerId);
+  
+  const exec = await container.exec({
+    Cmd: command,
+    WorkingDir: options?.workDir || '/workspace',
+    AttachStdout: true,
+    AttachStderr: true,
+  });
+  
+  return new Promise((resolve, reject) => {
+    exec.start({ hijack: true, stdin: false }, (err: Error | null, stream: NodeJS.ReadableStream) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      
+      let stdout = '';
+      let stderr = '';
+      
+      // Parse multiplexed output
+      stream.on('data', (chunk: Buffer) => {
+        // Docker exec stream format: first 8 bytes are header
+        // Byte 0: stream type (1=stdout, 2=stderr)
+        // Bytes 4-7: length
+        let pos = 0;
+        while (pos < chunk.length) {
+          if (pos + 8 > chunk.length) break;
+          const streamType = chunk[pos];
+          const len = chunk.readUInt32BE(pos + 4);
+          pos += 8;
+          const data = chunk.slice(pos, pos + len).toString('utf-8');
+          pos += len;
+          
+          if (streamType === 1) {
+            stdout += data;
+          } else if (streamType === 2) {
+            stderr += data;
+          }
+        }
+      });
+      
+      stream.on('end', async () => {
+        try {
+          const inspectData = await exec.inspect();
+          resolve({
+            exitCode: inspectData.ExitCode || 0,
+            stdout,
+            stderr,
+          });
+        } catch {
+          resolve({ exitCode: 0, stdout, stderr });
+        }
+      });
+      
+      stream.on('error', reject);
+      
+      // Timeout
+      if (options?.timeout) {
+        setTimeout(() => {
+          reject(new Error('Execution timeout'));
+        }, options.timeout);
+      }
+    });
+  });
+}
+
+/**
+ * Restart Free Agent sandbox
+ */
+async function restartFreeAgentSandbox(): Promise<void> {
+  const status = await getFreeAgentContainer();
+  if (status.containerId) {
+    const client = getDockerClient();
+    const container = client.getContainer(status.containerId);
+    await container.restart();
+    freeAgentStartTime = new Date();
+  }
+}
+
+/**
+ * Get Free Agent sandbox logs
+ */
+async function getFreeAgentLogs(tail = 100): Promise<string> {
+  const status = await getFreeAgentContainer();
+  if (!status.containerId) {
+    return '';
+  }
+  
+  return containerLogs(status.containerId, tail);
+}
+
+// Helper to parse memory strings like "2g" or "512m"
+function parseMemory(memStr: string): number {
+  const match = memStr.toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(k|m|g|t)?b?$/);
+  if (!match) return 2 * 1024 * 1024 * 1024; // Default 2GB
+  
+  const value = parseFloat(match[1]);
+  const unit = match[2] || '';
+  
+  const multipliers: Record<string, number> = {
+    '': 1,
+    'k': 1024,
+    'm': 1024 * 1024,
+    'g': 1024 * 1024 * 1024,
+    't': 1024 * 1024 * 1024 * 1024,
+  };
+  
+  return value * (multipliers[unit] || 1);
+}
+
+// ============================================
 // IPC Handler Registration
 // ============================================
 
@@ -458,6 +728,13 @@ interface DockerArgs {
   tail?: number;
   force?: boolean;
   cwd?: string;
+}
+
+interface FreeAgentArgs {
+  config?: FreeAgentConfig;
+  command?: string[];
+  timeout?: number;
+  workDir?: string;
 }
 
 /**
@@ -533,6 +810,32 @@ export function registerDockerHandlers(): void {
       default:
         throw new Error(`Unknown Docker method: ${method}`);
     }
+  });
+  
+  // Free Agent sandbox handlers
+  ipcMain.handle('freeagent:start', async (_event: IpcMainInvokeEvent, config: FreeAgentConfig) => {
+    return startFreeAgentSandbox(config);
+  });
+  
+  ipcMain.handle('freeagent:stop', async () => {
+    return stopFreeAgentSandbox();
+  });
+  
+  ipcMain.handle('freeagent:status', async () => {
+    return getFreeAgentContainer();
+  });
+  
+  ipcMain.handle('freeagent:restart', async () => {
+    return restartFreeAgentSandbox();
+  });
+  
+  ipcMain.handle('freeagent:logs', async (_event: IpcMainInvokeEvent, tail?: number) => {
+    return getFreeAgentLogs(tail);
+  });
+  
+  ipcMain.handle('freeagent:exec', async (_event: IpcMainInvokeEvent, args: FreeAgentArgs) => {
+    if (!args.command) throw new Error('Command required');
+    return execInFreeAgent(args.command, { timeout: args.timeout, workDir: args.workDir });
   });
 }
 

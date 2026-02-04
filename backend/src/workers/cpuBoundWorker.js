@@ -1,7 +1,7 @@
 /**
  * CPU-Bound Worker (Compiled JavaScript version)
  * This file is generated from cpuBoundWorker.ts during build
- * 
+ *
  * Note: In production, this should be compiled from the TypeScript source
  * For now, this is a minimal implementation that will be replaced by the compiled version
  */

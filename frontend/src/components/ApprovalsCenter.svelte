@@ -2,7 +2,6 @@
   import { onMount, onDestroy } from 'svelte';
   import {
     listApprovals,
-    getPendingApprovals,
     approveRequest,
     rejectRequest,
     type ApprovalRequest,
@@ -10,6 +9,7 @@
     type RiskLevel,
   } from '../lib/integrationsApi';
   import { showToast } from '../stores/toastStore';
+  import EmptyState from './EmptyState.svelte';
 
   interface Props {
     onBack: () => void;
@@ -55,29 +55,42 @@
 
   function getRiskColor(level: RiskLevel): string {
     switch (level) {
-      case 'low': return '#10B981';
-      case 'medium': return '#F59E0B';
-      case 'high': return '#EF4444';
-      default: return '#6B7280';
+      case 'low':
+        return '#10B981';
+      case 'medium':
+        return '#F59E0B';
+      case 'high':
+        return '#EF4444';
+      default:
+        return '#6B7280';
     }
   }
 
   function getRiskBg(level: RiskLevel): string {
     switch (level) {
-      case 'low': return '#D1FAE5';
-      case 'medium': return '#FEF3C7';
-      case 'high': return '#FEE2E2';
-      default: return '#F3F4F6';
+      case 'low':
+        return '#D1FAE5';
+      case 'medium':
+        return '#FEF3C7';
+      case 'high':
+        return '#FEE2E2';
+      default:
+        return '#F3F4F6';
     }
   }
 
   function getStatusColor(status: ApprovalStatus): string {
     switch (status) {
-      case 'pending': return '#F59E0B';
-      case 'approved': return '#10B981';
-      case 'rejected': return '#EF4444';
-      case 'expired': return '#6B7280';
-      default: return '#6B7280';
+      case 'pending':
+        return '#F59E0B';
+      case 'approved':
+        return '#10B981';
+      case 'rejected':
+        return '#EF4444';
+      case 'expired':
+        return '#6B7280';
+      default:
+        return '#6B7280';
     }
   }
 
@@ -154,14 +167,21 @@
     return JSON.stringify(payload, null, 2);
   }
 
-  const pendingCount = $derived(approvals.filter(a => a.status === 'pending').length);
+  const pendingCount = $derived(approvals.filter((a) => a.status === 'pending').length);
 </script>
 
 <div class="approvals-center">
   <header class="header">
     <button class="back-btn" onclick={onBack}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M19 12H5M12 19l-7-7 7-7" />
       </svg>
       Back
     </button>
@@ -178,34 +198,46 @@
 
   <!-- Filter tabs -->
   <div class="filter-tabs">
-    <button 
-      class="tab" 
-      class:active={filter === 'pending'} 
-      onclick={() => { filter = 'pending'; loadApprovals(); }}
+    <button
+      class="tab"
+      class:active={filter === 'pending'}
+      onclick={() => {
+        filter = 'pending';
+        loadApprovals();
+      }}
     >
       Pending
       {#if pendingCount > 0}
         <span class="tab-count">{pendingCount}</span>
       {/if}
     </button>
-    <button 
-      class="tab" 
-      class:active={filter === 'approved'} 
-      onclick={() => { filter = 'approved'; loadApprovals(); }}
+    <button
+      class="tab"
+      class:active={filter === 'approved'}
+      onclick={() => {
+        filter = 'approved';
+        loadApprovals();
+      }}
     >
       Approved
     </button>
-    <button 
-      class="tab" 
-      class:active={filter === 'rejected'} 
-      onclick={() => { filter = 'rejected'; loadApprovals(); }}
+    <button
+      class="tab"
+      class:active={filter === 'rejected'}
+      onclick={() => {
+        filter = 'rejected';
+        loadApprovals();
+      }}
     >
       Rejected
     </button>
-    <button 
-      class="tab" 
-      class:active={filter === 'all'} 
-      onclick={() => { filter = 'all'; loadApprovals(); }}
+    <button
+      class="tab"
+      class:active={filter === 'all'}
+      onclick={() => {
+        filter = 'all';
+        loadApprovals();
+      }}
     >
       All
     </button>
@@ -217,34 +249,32 @@
       <p>Loading approvals...</p>
     </div>
   {:else if approvals.length === 0}
-    <div class="empty-state">
-      <div class="empty-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-      </div>
-      <h3>No {filter === 'all' ? '' : filter} approvals</h3>
-      <p>
-        {#if filter === 'pending'}
-          All caught up! There are no pending requests.
-        {:else}
-          No {filter} requests to show.
-        {/if}
-      </p>
-    </div>
+    <EmptyState
+      headline={filter === 'all' ? 'No approvals' : `No ${filter} approvals`}
+      description={filter === 'pending'
+        ? 'All caught up! There are no pending requests.'
+        : `No ${filter} requests to show.`}
+    />
   {:else}
     <div class="approvals-list">
       {#each approvals as approval}
         <div class="approval-card" class:pending={approval.status === 'pending'}>
           <div class="card-header">
             <div class="action-info">
-              <span class="risk-badge" style="background: {getRiskBg(approval.riskLevel)}; color: {getRiskColor(approval.riskLevel)}">
+              <span
+                class="risk-badge"
+                style="background: {getRiskBg(approval.riskLevel)}; color: {getRiskColor(
+                  approval.riskLevel
+                )}"
+              >
                 {approval.riskLevel} risk
               </span>
               <h3>{approval.action}</h3>
             </div>
             <div class="status-time">
-              <span class="status" style="color: {getStatusColor(approval.status)}">{approval.status}</span>
+              <span class="status" style="color: {getStatusColor(approval.status)}"
+                >{approval.status}</span
+              >
               <span class="time">{formatTime(approval.createdAt)}</span>
             </div>
           </div>
@@ -267,15 +297,15 @@
                 <span class="expiry" class:warning={expiry.includes('Expires in')}>{expiry}</span>
               {/if}
               <div class="actions">
-                <button 
-                  class="reject-btn" 
+                <button
+                  class="reject-btn"
                   onclick={() => openRejectModal(approval)}
                   disabled={processingId === approval.id}
                 >
                   Reject
                 </button>
-                <button 
-                  class="approve-btn" 
+                <button
+                  class="approve-btn"
                   onclick={() => handleApprove(approval)}
                   disabled={processingId === approval.id}
                 >
@@ -286,8 +316,8 @@
           {:else if approval.resolvedAt}
             <div class="resolution-info">
               <span>
-                {approval.status === 'approved' ? 'Approved' : 'Rejected'} 
-                {approval.resolvedBy ? `by ${approval.resolvedBy}` : ''} 
+                {approval.status === 'approved' ? 'Approved' : 'Rejected'}
+                {approval.resolvedBy ? `by ${approval.resolvedBy}` : ''}
                 on {new Date(approval.resolvedAt).toLocaleDateString()}
               </span>
             </div>
@@ -300,15 +330,27 @@
 
 <!-- Reject Modal -->
 {#if showRejectModal && selectedApproval}
-  <div class="modal-overlay" onclick={closeRejectModal}>
-    <div class="modal" onclick={(e) => e.stopPropagation()}>
+  <div
+    class="modal-overlay"
+    role="button"
+    tabindex="-1"
+    onclick={closeRejectModal}
+    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && closeRejectModal()}
+  >
+    <div
+      class="modal"
+      role="dialog"
+      tabindex="-1"
+      onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
+    >
       <h2>Reject Request</h2>
       <p class="modal-desc">
         Are you sure you want to reject the action "{selectedApproval.action}"?
       </p>
       <div class="form-group">
         <label for="reason">Reason (optional)</label>
-        <textarea 
+        <textarea
           id="reason"
           bind:value={rejectReason}
           placeholder="Why are you rejecting this request?"
@@ -317,11 +359,7 @@
       </div>
       <div class="modal-actions">
         <button class="cancel-btn" onclick={closeRejectModal}>Cancel</button>
-        <button 
-          class="confirm-reject-btn" 
-          onclick={handleReject}
-          disabled={processingId !== null}
-        >
+        <button class="confirm-reject-btn" onclick={handleReject} disabled={processingId !== null}>
           {processingId ? 'Rejecting...' : 'Reject Request'}
         </button>
       </div>
@@ -371,7 +409,7 @@
   }
 
   .pending-badge {
-    background: #EF4444;
+    background: #ef4444;
     color: white;
     font-size: 0.875rem;
     font-weight: 600;
@@ -423,7 +461,7 @@
     font-size: 0.75rem;
   }
 
-  .loading-state, .empty-state {
+  .loading-state {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -443,29 +481,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  .empty-icon {
-    width: 80px;
-    height: 80px;
-    background: #f3f4f6;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #9ca3af;
-  }
-
-  .empty-state h3 {
-    margin: 0;
-    font-size: 1.125rem;
-    color: #374151;
-  }
-
-  .empty-state p {
-    margin: 0;
-    color: #6b7280;
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .approvals-list {
@@ -582,7 +600,8 @@
     gap: 0.5rem;
   }
 
-  .approve-btn, .reject-btn {
+  .approve-btn,
+  .reject-btn {
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
     font-weight: 500;
@@ -593,7 +612,7 @@
   }
 
   .approve-btn {
-    background: #10B981;
+    background: #10b981;
     color: white;
   }
 
@@ -610,7 +629,8 @@
     background: #fecaca;
   }
 
-  .approve-btn:disabled, .reject-btn:disabled {
+  .approve-btn:disabled,
+  .reject-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
@@ -686,7 +706,8 @@
     justify-content: flex-end;
   }
 
-  .cancel-btn, .confirm-reject-btn {
+  .cancel-btn,
+  .confirm-reject-btn {
     padding: 0.625rem 1.25rem;
     font-size: 0.875rem;
     font-weight: 500;
@@ -706,7 +727,7 @@
   }
 
   .confirm-reject-btn {
-    background: #EF4444;
+    background: #ef4444;
     color: white;
   }
 

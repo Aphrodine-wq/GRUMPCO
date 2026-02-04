@@ -14,15 +14,23 @@
     <div class="panel-header">
       <h3 class="panel-title">{component.name}</h3>
       {#if onClose}
-        <button class="close-btn" on:click={onClose} aria-label="Close panel">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="close-btn" onclick={onClose} aria-label="Close panel">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
         </button>
       {/if}
     </div>
-    
+
     <div class="panel-content">
       {#if component.description}
         <div class="info-section">
@@ -30,14 +38,14 @@
           <div class="section-value">{component.description}</div>
         </div>
       {/if}
-      
+
       <div class="info-section">
         <div class="section-label">Type</div>
         <div class="section-value">
           <span class="type-badge type-{component.type}">{component.type}</span>
         </div>
       </div>
-      
+
       {#if component.technology && component.technology.length > 0}
         <div class="info-section">
           <div class="section-label">Technology Stack</div>
@@ -64,8 +72,8 @@
     right: 1rem;
     width: 320px;
     max-width: calc(100% - 2rem);
-    background: #FFFFFF;
-    border: 1px solid #E5E5E5;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 1000;
@@ -89,8 +97,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    border-bottom: 1px solid #E5E5E5;
-    background: #F9FAFB;
+    border-bottom: 1px solid #e5e5e5;
+    background: #f9fafb;
     border-radius: 8px 8px 0 0;
   }
 
@@ -112,14 +120,14 @@
     background: transparent;
     border: none;
     border-radius: 4px;
-    color: #6B7280;
+    color: #6b7280;
     cursor: pointer;
     transition: all 0.15s;
     flex-shrink: 0;
   }
 
   .close-btn:hover {
-    background: #F5F5F5;
+    background: #f5f5f5;
     color: #000000;
   }
 
@@ -145,7 +153,7 @@
   .section-label {
     font-size: 0.75rem;
     font-weight: 600;
-    color: #6B7280;
+    color: #6b7280;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 0.5rem;
@@ -158,7 +166,7 @@
   }
 
   .section-value.no-tech {
-    color: #9CA3AF;
+    color: #9ca3af;
     font-style: italic;
   }
 
@@ -172,33 +180,33 @@
   }
 
   .type-badge.type-frontend {
-    background: #DBEAFE;
-    color: #1E40AF;
+    background: #dbeafe;
+    color: #1e40af;
   }
 
   .type-badge.type-backend {
-    background: #D1FAE5;
-    color: #065F46;
+    background: #d1fae5;
+    color: #065f46;
   }
 
   .type-badge.type-database {
-    background: #FEF3C7;
-    color: #92400E;
+    background: #fef3c7;
+    color: #92400e;
   }
 
   .type-badge.type-service {
-    background: #E9D5FF;
-    color: #6B21A8;
+    background: #e9d5ff;
+    color: #6b21a8;
   }
 
   .type-badge.type-external {
-    background: #FCE7F3;
-    color: #9F1239;
+    background: #fce7f3;
+    color: #9f1239;
   }
 
   .type-badge.type-queue {
-    background: #FED7AA;
-    color: #9A3412;
+    background: #fed7aa;
+    color: #9a3412;
   }
 
   .tech-stack {
@@ -210,8 +218,8 @@
   .tech-badge {
     display: inline-block;
     padding: 0.375rem 0.75rem;
-    background: #F3F4F6;
-    border: 1px solid #E5E7EB;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
     border-radius: 4px;
     font-size: 0.75rem;
     color: #374151;

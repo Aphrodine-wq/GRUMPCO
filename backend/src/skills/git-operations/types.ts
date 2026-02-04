@@ -2,7 +2,18 @@
  * Git Operations Skill - Type Definitions
  */
 
-export type CommitType = 'feat' | 'fix' | 'docs' | 'style' | 'refactor' | 'perf' | 'test' | 'build' | 'ci' | 'chore' | 'revert';
+export type CommitType =
+  | 'feat'
+  | 'fix'
+  | 'docs'
+  | 'style'
+  | 'refactor'
+  | 'perf'
+  | 'test'
+  | 'build'
+  | 'ci'
+  | 'chore'
+  | 'revert';
 
 export interface CommitMessageRequest {
   diff?: string;

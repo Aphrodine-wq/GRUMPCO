@@ -29,7 +29,7 @@ const initialState: MermaidToCodeState = {
 // Load from localStorage
 function loadState(): MermaidToCodeState {
   if (typeof window === 'undefined') return initialState;
-  
+
   try {
     const stored = localStorage.getItem('mermaid-to-code-state');
     if (stored) {
@@ -44,14 +44,14 @@ function loadState(): MermaidToCodeState {
   } catch (error) {
     console.error('Failed to load mermaid-to-code state:', error);
   }
-  
+
   return initialState;
 }
 
 // Save to localStorage
 function saveState(state: MermaidToCodeState) {
   if (typeof window === 'undefined') return;
-  
+
   try {
     const toSave = {
       mermaidCode: state.mermaidCode,
@@ -71,46 +71,46 @@ const createMermaidToCodeStore = () => {
 
   return {
     subscribe,
-    
+
     // Set Mermaid code
     setMermaidCode: (code: string) => {
-      update(state => {
+      update((state) => {
         const newState = { ...state, mermaidCode: code };
         saveState(newState);
         return newState;
       });
     },
-    
+
     // Set framework
     setFramework: (framework: string) => {
-      update(state => {
+      update((state) => {
         const newState = { ...state, framework };
         saveState(newState);
         return newState;
       });
     },
-    
+
     // Set language
     setLanguage: (language: string) => {
-      update(state => {
+      update((state) => {
         const newState = { ...state, language };
         saveState(newState);
         return newState;
       });
     },
-    
+
     // Start generation
     startGeneration: () => {
-      update(state => ({
+      update((state) => ({
         ...state,
         status: 'generating' as const,
         error: undefined,
       }));
     },
-    
+
     // Complete generation
     completeGeneration: (generatedCode: string) => {
-      update(state => {
+      update((state) => {
         const historyEntry = {
           id: `gen-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           mermaidCode: state.mermaidCode,
@@ -119,7 +119,7 @@ const createMermaidToCodeStore = () => {
           timestamp: Date.now(),
           generatedCode,
         };
-        
+
         const newState: MermaidToCodeState = {
           ...state,
           status: 'completed',
@@ -127,15 +127,15 @@ const createMermaidToCodeStore = () => {
           error: undefined,
           history: [historyEntry, ...state.history].slice(0, 50), // Keep last 50
         };
-        
+
         saveState(newState);
         return newState;
       });
     },
-    
+
     // Set error
     setError: (error: string) => {
-      update(state => {
+      update((state) => {
         const historyEntry = {
           id: `gen-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           mermaidCode: state.mermaidCode,
@@ -145,30 +145,30 @@ const createMermaidToCodeStore = () => {
           generatedCode: undefined,
           error,
         };
-        
+
         const newState: MermaidToCodeState = {
           ...state,
           status: 'error',
           error,
           history: [historyEntry, ...state.history].slice(0, 50),
         };
-        
+
         saveState(newState);
         return newState;
       });
     },
-    
+
     // Reset state
     reset: () => {
       const newState = initialState;
       set(newState);
       saveState(newState);
     },
-    
+
     // Load from history
     loadFromHistory: (historyId: string) => {
-      update(state => {
-        const entry = state.history.find(h => h.id === historyId);
+      update((state) => {
+        const entry = state.history.find((h) => h.id === historyId);
         if (entry) {
           const newState: MermaidToCodeState = {
             ...state,
@@ -191,7 +191,7 @@ const createMermaidToCodeStore = () => {
 export const mermaidToCodeStore = createMermaidToCodeStore();
 
 // Derived stores
-export const isGenerating = derived(mermaidToCodeStore, $store => $store.status === 'generating');
-export const hasError = derived(mermaidToCodeStore, $store => $store.status === 'error');
-export const isCompleted = derived(mermaidToCodeStore, $store => $store.status === 'completed');
-export const recentHistory = derived(mermaidToCodeStore, $store => $store.history.slice(0, 10));
+export const isGenerating = derived(mermaidToCodeStore, ($store) => $store.status === 'generating');
+export const hasError = derived(mermaidToCodeStore, ($store) => $store.status === 'error');
+export const isCompleted = derived(mermaidToCodeStore, ($store) => $store.status === 'completed');
+export const recentHistory = derived(mermaidToCodeStore, ($store) => $store.history.slice(0, 10));

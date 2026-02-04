@@ -9,11 +9,10 @@ import type { Request, Response } from 'express';
 import {
   optimizeIntent,
   optimizeIntentWithMetadata,
-  type OptimizedIntent,
   type OptimizationMode,
   type OptimizationOptions,
 } from './intentOptimizer.js';
-import { OptimizationRequest, OptimizationResponse } from './types.js';
+import { type OptimizationRequest } from './types.js';
 
 // Mock the dependencies
 vi.mock('../../middleware/logger.js', () => ({
@@ -42,72 +41,76 @@ vi.mock('../../services/cacheService.js', () => ({
 vi.mock('../../services/llmGateway.js', () => ({
   getStream: vi.fn(() => ({
     [Symbol.asyncIterator]: () => ({
-      next: vi.fn()
+      next: vi
+        .fn()
         .mockResolvedValueOnce({
           done: false,
           value: {
             type: 'content_block_delta',
-            delta: { type: 'text_delta', text: JSON.stringify({
-              features: ['User authentication', 'Profile management'],
-              constraints: [
-                {
-                  type: 'technical',
-                  description: 'Must use OAuth 2.0',
-                  priority: 'must',
-                  impact: 'Requires third-party integration'
-                }
-              ],
-              nonFunctionalRequirements: [
-                {
-                  category: 'security',
-                  requirement: 'Passwords must be hashed',
-                  metric: 'bcrypt with salt rounds 12',
-                  priority: 'critical'
-                }
-              ],
-              techStack: [
-                {
-                  technology: 'React',
-                  category: 'frontend',
-                  rationale: 'Modern UI library',
-                  confidence: 0.9
-                }
-              ],
-              actors: [
-                {
-                  id: 'user',
-                  name: 'End User',
-                  type: 'human',
-                  responsibilities: ['Login', 'Manage profile'],
-                  priority: 'primary'
-                }
-              ],
-              dataFlows: [
-                {
-                  name: 'Authentication flow',
-                  source: 'User',
-                  target: 'Auth Service',
-                  data: 'Credentials',
-                  direction: 'inbound'
-                }
-              ],
-              ambiguity: {
-                score: 0.2,
-                reason: 'Clear requirements',
-                ambiguousAreas: []
-              },
-              reasoning: 'Based on authentication requirements',
-              clarifications: [
-                {
-                  id: 'q1',
-                  question: 'What OAuth provider?',
-                  importance: 'Affects implementation',
-                  suggestedOptions: ['Google', 'GitHub', 'Custom']
-                }
-              ],
-              confidence: 0.85
-            }) }
-          }
+            delta: {
+              type: 'text_delta',
+              text: JSON.stringify({
+                features: ['User authentication', 'Profile management'],
+                constraints: [
+                  {
+                    type: 'technical',
+                    description: 'Must use OAuth 2.0',
+                    priority: 'must',
+                    impact: 'Requires third-party integration',
+                  },
+                ],
+                nonFunctionalRequirements: [
+                  {
+                    category: 'security',
+                    requirement: 'Passwords must be hashed',
+                    metric: 'bcrypt with salt rounds 12',
+                    priority: 'critical',
+                  },
+                ],
+                techStack: [
+                  {
+                    technology: 'React',
+                    category: 'frontend',
+                    rationale: 'Modern UI library',
+                    confidence: 0.9,
+                  },
+                ],
+                actors: [
+                  {
+                    id: 'user',
+                    name: 'End User',
+                    type: 'human',
+                    responsibilities: ['Login', 'Manage profile'],
+                    priority: 'primary',
+                  },
+                ],
+                dataFlows: [
+                  {
+                    name: 'Authentication flow',
+                    source: 'User',
+                    target: 'Auth Service',
+                    data: 'Credentials',
+                    direction: 'inbound',
+                  },
+                ],
+                ambiguity: {
+                  score: 0.2,
+                  reason: 'Clear requirements',
+                  ambiguousAreas: [],
+                },
+                reasoning: 'Based on authentication requirements',
+                clarifications: [
+                  {
+                    id: 'q1',
+                    question: 'What OAuth provider?',
+                    importance: 'Affects implementation',
+                    suggestedOptions: ['Google', 'GitHub', 'Custom'],
+                  },
+                ],
+                confidence: 0.85,
+              }),
+            },
+          },
         })
         .mockResolvedValueOnce({ done: true }),
     }),
@@ -176,9 +179,7 @@ describe('Intent Optimizer Service', () => {
     it('should throw error when NIM is not configured', async () => {
       delete process.env.NVIDIA_NIM_API_KEY;
 
-      await expect(optimizeIntent('test', 'codegen')).rejects.toThrow(
-        'NVIDIA NIM API key'
-      );
+      await expect(optimizeIntent('test', 'codegen')).rejects.toThrow('NVIDIA NIM API key');
     });
   });
 
@@ -206,9 +207,7 @@ describe('Intent Optimizer Service', () => {
         { intent: 'Feature 2', mode: 'architecture' },
       ];
 
-      const results = await Promise.all(
-        requests.map((req) => optimizeIntentWithMetadata(req))
-      );
+      const results = await Promise.all(requests.map((req) => optimizeIntentWithMetadata(req)));
 
       expect(results).toHaveLength(2);
       results.forEach((result) => {
@@ -269,7 +268,14 @@ describe('Intent Optimizer Service', () => {
         expect(nfr).toHaveProperty('category');
         expect(nfr).toHaveProperty('requirement');
         expect(nfr).toHaveProperty('priority');
-        expect(['performance', 'security', 'scalability', 'reliability', 'usability', 'maintainability']).toContain(nfr.category);
+        expect([
+          'performance',
+          'security',
+          'scalability',
+          'reliability',
+          'usability',
+          'maintainability',
+        ]).toContain(nfr.category);
         expect(['critical', 'high', 'medium', 'low']).toContain(nfr.priority);
       }
     });
@@ -277,15 +283,17 @@ describe('Intent Optimizer Service', () => {
 });
 
 describe('Intent Optimizer Routes', () => {
-  let mockReq: Partial<Request>;
-  let mockRes: Partial<Response>;
+  let _mockReq: Partial<Request>;
+  let _mockRes: Partial<Response>;
   let jsonMock: ReturnType<typeof vi.fn>;
   let statusMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     jsonMock = vi.fn();
-    statusMock = vi.fn().mockReturnValue({ json: jsonMock, status: statusMock } as unknown as Response);
-    mockRes = {
+    statusMock = vi
+      .fn()
+      .mockReturnValue({ json: jsonMock, status: statusMock } as unknown as Response);
+    _mockRes = {
       json: jsonMock,
       status: statusMock,
     } as unknown as Response;
@@ -305,9 +313,7 @@ describe('Intent Optimizer Routes', () => {
       }
 
       expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'validation_error' })
-      );
+      expect(jsonMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'validation_error' }));
     });
 
     it('should validate mode field', async () => {
@@ -339,7 +345,10 @@ describe('Intent Optimizer Routes', () => {
     });
 
     it('should reject intent exceeding max length', async () => {
-      const body = { intent: 'a'.repeat(10001), mode: 'codegen' } as { intent: string; mode: string };
+      const body = { intent: 'a'.repeat(10001), mode: 'codegen' } as {
+        intent: string;
+        mode: string;
+      };
 
       if (body.intent.length > 10000) {
         statusMock(400);

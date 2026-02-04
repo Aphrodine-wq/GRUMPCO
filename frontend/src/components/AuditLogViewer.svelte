@@ -1,10 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import {
-    listAuditLogs,
-    type AuditLogEntry,
-  } from '../lib/integrationsApi';
+  import { listAuditLogs, type AuditLogEntry } from '../lib/integrationsApi';
   import { showToast } from '../stores/toastStore';
+  import EmptyState from './EmptyState.svelte';
 
   interface Props {
     onBack: () => void;
@@ -18,13 +16,48 @@
   let hasMore = $state(true);
   const pageSize = 50;
 
-  const categories: { value: AuditLogEntry['category']; label: string; icon: string; color: string }[] = [
-    { value: 'integration', label: 'Integration', icon: 'M12 2v4M12 18v4m-7.07-3.93l2.83-2.83m8.48 2.83l2.83 2.83M2 12h4m12 0h4m-3.93-7.07l-2.83 2.83m-5.66 5.66l-2.83 2.83', color: '#6366f1' },
-    { value: 'system', label: 'System', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', color: '#8b5cf6' },
-    { value: 'security', label: 'Security', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', color: '#ef4444' },
-    { value: 'automation', label: 'Automation', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', color: '#10b981' },
-    { value: 'billing', label: 'Billing', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: '#f59e0b' },
-    { value: 'agent', label: 'Agent', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', color: '#ec4899' },
+  const categories: {
+    value: AuditLogEntry['category'];
+    label: string;
+    icon: string;
+    color: string;
+  }[] = [
+    {
+      value: 'integration',
+      label: 'Integration',
+      icon: 'M12 2v4M12 18v4m-7.07-3.93l2.83-2.83m8.48 2.83l2.83 2.83M2 12h4m12 0h4m-3.93-7.07l-2.83 2.83m-5.66 5.66l-2.83 2.83',
+      color: '#6366f1',
+    },
+    {
+      value: 'system',
+      label: 'System',
+      icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
+      color: '#8b5cf6',
+    },
+    {
+      value: 'security',
+      label: 'Security',
+      icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+      color: '#ef4444',
+    },
+    {
+      value: 'automation',
+      label: 'Automation',
+      icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
+      color: '#10b981',
+    },
+    {
+      value: 'billing',
+      label: 'Billing',
+      icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+      color: '#f59e0b',
+    },
+    {
+      value: 'agent',
+      label: 'Agent',
+      icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+      color: '#ec4899',
+    },
   ];
 
   onMount(async () => {
@@ -37,7 +70,7 @@
       const category = filterCategory === 'all' ? undefined : filterCategory;
       const offset = reset ? 0 : currentPage * pageSize;
       const newLogs = await listAuditLogs({ category, limit: pageSize, offset });
-      
+
       if (reset) {
         logs = newLogs;
         currentPage = 0;
@@ -46,8 +79,8 @@
       }
       hasMore = newLogs.length === pageSize;
     } catch (e) {
-      showToast('Failed to load audit logs', 'error');
-      console.error(e);
+      if (reset) logs = [];
+      showToast('Audit log unavailable', 'error');
     } finally {
       loading = false;
     }
@@ -59,7 +92,7 @@
   }
 
   function getCategoryInfo(category: AuditLogEntry['category']) {
-    return categories.find(c => c.value === category) || categories[0];
+    return categories.find((c) => c.value === category) || categories[0];
   }
 
   function formatDate(dateStr: string): string {
@@ -68,7 +101,7 @@
   }
 
   function formatAction(action: string): string {
-    return action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    return action.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   }
 
   $effect(() => {
@@ -81,8 +114,15 @@
 <div class="audit-log-viewer">
   <header class="header">
     <button class="back-btn" onclick={onBack}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M19 12H5M12 19l-7-7 7-7" />
       </svg>
       Back
     </button>
@@ -95,16 +135,16 @@
   <!-- Category Filter -->
   <div class="controls">
     <div class="category-filter">
-      <button 
-        class="filter-btn" 
+      <button
+        class="filter-btn"
         class:active={filterCategory === 'all'}
         onclick={() => (filterCategory = 'all')}
       >
         All Events
       </button>
       {#each categories as cat}
-        <button 
-          class="filter-btn" 
+        <button
+          class="filter-btn"
           class:active={filterCategory === cat.value}
           style="--color: {cat.color}"
           onclick={() => (filterCategory = cat.value)}
@@ -121,15 +161,10 @@
       <p>Loading audit logs...</p>
     </div>
   {:else if logs.length === 0}
-    <div class="empty-state">
-      <div class="empty-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-        </svg>
-      </div>
-      <h3>No audit events yet</h3>
-      <p>Activity will appear here as you use integrations and features.</p>
-    </div>
+    <EmptyState
+      headline="No audit events yet"
+      description="Activity will appear here as you use integrations and features."
+    />
   {:else}
     <div class="stats-bar">
       <span>{logs.length} events loaded</span>
@@ -147,7 +182,7 @@
         <div class="col-actor">Actor</div>
         <div class="col-target">Target</div>
       </div>
-      
+
       {#each logs as log}
         {@const catInfo = getCategoryInfo(log.category)}
         <div class="log-row">
@@ -155,9 +190,19 @@
             <span class="time-value">{formatDate(log.createdAt)}</span>
           </div>
           <div class="col-category">
-            <span class="category-badge" style="background: {catInfo.color}15; color: {catInfo.color}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d={catInfo.icon}/>
+            <span
+              class="category-badge"
+              style="background: {catInfo.color}15; color: {catInfo.color}"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d={catInfo.icon} />
               </svg>
               {catInfo.label}
             </span>
@@ -272,7 +317,7 @@
     color: white;
   }
 
-  .loading-state, .empty-state {
+  .loading-state {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -301,29 +346,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  .empty-icon {
-    width: 80px;
-    height: 80px;
-    background: #f3f4f6;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #9ca3af;
-  }
-
-  .empty-state h3 {
-    margin: 0;
-    font-size: 1.125rem;
-    color: #374151;
-  }
-
-  .empty-state p {
-    margin: 0;
-    color: #6b7280;
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .stats-bar {
@@ -441,10 +466,11 @@
 
   /* Responsive */
   @media (max-width: 1024px) {
-    .table-header, .log-row {
+    .table-header,
+    .log-row {
       grid-template-columns: 140px 100px 1fr 120px;
     }
-    
+
     .col-target {
       display: none;
     }

@@ -4,7 +4,7 @@
  * API endpoints for generating Kubernetes, Terraform, Docker, and CI/CD configs.
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import {
   generateK8sManifests,
   generateTerraform,
@@ -12,10 +12,10 @@ import {
   generateCICD,
 } from './service.js';
 import {
-  K8sGenerationRequest,
-  TerraformGenerationRequest,
-  DockerGenerationRequest,
-  CICDGenerationRequest,
+  type K8sGenerationRequest,
+  type TerraformGenerationRequest,
+  type DockerGenerationRequest,
+  type CICDGenerationRequest,
 } from './types.js';
 
 const router = Router();
@@ -194,7 +194,21 @@ router.get('/templates', (_req: Request, res: Response) => {
         description: 'Generate Terraform infrastructure as code',
         providers: ['aws', 'gcp', 'azure'],
         resources: {
-          aws: ['vpc', 'subnet', 'ec2', 'rds', 's3', 'eks', 'ecs', 'lambda', 'api-gateway', 'cloudfront', 'elb', 'security-group', 'iam'],
+          aws: [
+            'vpc',
+            'subnet',
+            'ec2',
+            'rds',
+            's3',
+            'eks',
+            'ecs',
+            'lambda',
+            'api-gateway',
+            'cloudfront',
+            'elb',
+            'security-group',
+            'iam',
+          ],
           gcp: ['vpc', 'gke', 'cloud-run', 'cloud-sql', 'gcs', 'cloud-functions'],
           azure: ['vnet', 'aks', 'app-service', 'azure-sql', 'storage', 'functions'],
         },

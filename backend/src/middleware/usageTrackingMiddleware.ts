@@ -3,7 +3,7 @@
  * Automatically records API usage for all requests
  */
 
-import { Request, Response, NextFunction } from 'express';
+import { type Request, type Response, type NextFunction } from 'express';
 import logger from './logger.js';
 import { recordApiCall } from '../services/usageTracker.js';
 
@@ -73,9 +73,10 @@ export function usageTrackingMiddleware(req: TrackingRequest, res: Response, nex
       let estimatedInputTokens = req.estimatedInputTokens;
       let estimatedOutputTokens = req.estimatedOutputTokens;
 
-      const usage = responseBody && typeof responseBody === 'object' && 'usage' in responseBody
-        ? (responseBody as { usage?: { input_tokens?: number; output_tokens?: number } }).usage
-        : undefined;
+      const usage =
+        responseBody && typeof responseBody === 'object' && 'usage' in responseBody
+          ? (responseBody as { usage?: { input_tokens?: number; output_tokens?: number } }).usage
+          : undefined;
       if (usage) {
         estimatedInputTokens = usage.input_tokens;
         estimatedOutputTokens = usage.output_tokens;

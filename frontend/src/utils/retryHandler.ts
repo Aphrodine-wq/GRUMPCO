@@ -31,7 +31,7 @@ function calculateDelay(attempt: number, options: Required<RetryOptions>): numbe
  * Sleep for specified milliseconds
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

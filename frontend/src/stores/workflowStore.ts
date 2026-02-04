@@ -2,10 +2,7 @@ import { writable, derived, get } from 'svelte/store';
 import { fetchApi, getApiBase } from '../lib/api.js';
 import { getCurrentProjectId } from './projectStore.js';
 import { DEFAULT_PREFERENCES } from '../types/workflow';
-import type {
-  WorkflowState,
-  GenerationPreferences,
-} from '../types/workflow';
+import type { WorkflowState, GenerationPreferences } from '../types/workflow';
 
 // Create store
 const state = writable<WorkflowState>({
@@ -26,15 +23,15 @@ let statusPollingInterval: ReturnType<typeof setInterval> | null = null;
 let codegenEventSource: EventSource | null = null;
 
 // Derived stores
-export const phase = derived(state, s => s.phase);
-export const isStreaming = derived(state, s => s.isStreaming);
-export const error = derived(state, s => s.error);
-export const architecture = derived(state, s => s.architecture);
-export const architectureRaw = derived(state, s => s.architectureRaw);
-export const prd = derived(state, s => s.prd);
-export const prdRaw = derived(state, s => s.prdRaw);
-export const codegenSession = derived(state, s => s.codegenSession);
-export const preferences = derived(state, s => s.preferences);
+export const phase = derived(state, (s) => s.phase);
+export const isStreaming = derived(state, (s) => s.isStreaming);
+export const error = derived(state, (s) => s.error);
+export const architecture = derived(state, (s) => s.architecture);
+export const architectureRaw = derived(state, (s) => s.architectureRaw);
+export const prd = derived(state, (s) => s.prd);
+export const prdRaw = derived(state, (s) => s.prdRaw);
+export const codegenSession = derived(state, (s) => s.codegenSession);
+export const preferences = derived(state, (s) => s.preferences);
 
 const EVENT_MODE = import.meta.env?.VITE_EVENT_MODE ?? 'sse';
 
@@ -46,14 +43,12 @@ export const canProceedToPrd = derived(
 
 export const canProceedToCodegen = derived(
   [phase, prd, isStreaming],
-  ([$phase, $prd, $isStreaming]) =>
-    $phase === 'prd' && $prd !== null && !$isStreaming
+  ([$phase, $prd, $isStreaming]) => $phase === 'prd' && $prd !== null && !$isStreaming
 );
 
 export const canDownload = derived(
   [phase, codegenSession],
-  ([$phase, $codegenSession]) =>
-    $phase === 'complete' && $codegenSession?.status === 'completed'
+  ([$phase, $codegenSession]) => $phase === 'complete' && $codegenSession?.status === 'completed'
 );
 
 // PHASE 1: ARCHITECTURE GENERATION
@@ -66,7 +61,7 @@ export async function* streamArchitecture(
     demo?: boolean;
   }
 ): AsyncGenerator<string> {
-  state.update(s => ({
+  state.update((s) => ({
     ...s,
     phase: 'architecture',
     isStreaming: true,
@@ -113,14 +108,14 @@ export async function* streamArchitecture(
           try {
             const parsed = JSON.parse(data);
             if (parsed.text) {
-              state.update(s => ({
+              state.update((s) => ({
                 ...s,
                 architectureRaw: s.architectureRaw + parsed.text,
               }));
               yield parsed.text;
             }
             if (parsed.type === 'complete' && parsed.architecture) {
-              state.update(s => ({
+              state.update((s) => ({
                 ...s,
                 architecture: parsed.architecture,
               }));
@@ -132,9 +127,9 @@ export async function* streamArchitecture(
       }
     }
 
-    state.update(s => ({ ...s, isStreaming: false }));
+    state.update((s) => ({ ...s, isStreaming: false }));
   } catch (err) {
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       error: err instanceof Error ? err.message : 'Unknown error',
       isStreaming: false,
@@ -151,7 +146,7 @@ export async function* streamPrd(options?: { demo?: boolean }): AsyncGenerator<s
     throw new Error('No architecture available - generate architecture first');
   }
 
-  state.update(s => ({
+  state.update((s) => ({
     ...s,
     phase: 'prd',
     isStreaming: true,
@@ -198,14 +193,14 @@ export async function* streamPrd(options?: { demo?: boolean }): AsyncGenerator<s
           try {
             const parsed = JSON.parse(data);
             if (parsed.text) {
-              state.update(s => ({
+              state.update((s) => ({
                 ...s,
                 prdRaw: s.prdRaw + parsed.text,
               }));
               yield parsed.text;
             }
             if (parsed.type === 'complete' && parsed.prd) {
-              state.update(s => ({
+              state.update((s) => ({
                 ...s,
                 prd: parsed.prd,
               }));
@@ -217,9 +212,9 @@ export async function* streamPrd(options?: { demo?: boolean }): AsyncGenerator<s
       }
     }
 
-    state.update(s => ({ ...s, isStreaming: false }));
+    state.update((s) => ({ ...s, isStreaming: false }));
   } catch (err) {
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       error: err instanceof Error ? err.message : 'Unknown error',
       isStreaming: false,
@@ -241,7 +236,7 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
 
   const projectId = projectIdOverride ?? getCurrentProjectId() ?? undefined;
 
-  state.update(s => ({
+  state.update((s) => ({
     ...s,
     phase: 'codegen',
     error: null,
@@ -266,7 +261,7 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
 
     const data = await response.json();
 
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       codegenSession: {
         sessionId: data.sessionId,
@@ -281,7 +276,8 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
     startStatusPolling(data.sessionId);
     // Subscribe to SSE for codegen.ready / codegen.failed
     if (EVENT_MODE !== 'poll' && typeof EventSource !== 'undefined') {
-      const url = getApiBase() + '/api/events/stream?sessionId=' + encodeURIComponent(data.sessionId);
+      const url =
+        getApiBase() + '/api/events/stream?sessionId=' + encodeURIComponent(data.sessionId);
       const es = new EventSource(url);
       codegenEventSource = es;
       es.onmessage = (e: MessageEvent) => {
@@ -290,10 +286,10 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
           if (payload?.sessionId !== data.sessionId) return;
           if (event === 'codegen.ready') {
             fetchApi(`/api/codegen/status/${data.sessionId}`)
-              .then((r) => r.ok ? r.json() : null)
+              .then((r) => (r.ok ? r.json() : null))
               .then((d) => {
                 if (d) {
-                  state.update(s => ({
+                  state.update((s) => ({
                     ...s,
                     codegenSession: {
                       sessionId: d.sessionId,
@@ -305,27 +301,41 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
                     },
                     phase: 'complete',
                   }));
+                  if (typeof window !== 'undefined')
+                    (
+                      window as {
+                        grump?: { notify?: (t: string, b: string, tag?: string) => void };
+                      }
+                    ).grump?.notify?.('G-Rump', 'Code generation ready', 'codegen');
                 }
                 stopCodegenEventSource();
                 stopStatusPolling();
               });
           } else if (event === 'codegen.failed') {
-            state.update(s => ({
+            const errMsg = (payload.error as string) || 'Code generation failed';
+            state.update((s) => ({
               ...s,
-              error: (payload.error as string) || 'Code generation failed',
+              error: errMsg,
             }));
+            if (typeof window !== 'undefined')
+              (
+                window as { grump?: { notify?: (t: string, b: string, tag?: string) => void } }
+              ).grump?.notify?.('G-Rump', errMsg, 'codegen');
             stopCodegenEventSource();
             stopStatusPolling();
           }
         } catch (err) {
           // Failed to parse codegen event from stream - don't break event handling
-          console.warn('Failed to parse codegen event:', err instanceof Error ? err.message : String(err));
+          console.warn(
+            'Failed to parse codegen event:',
+            err instanceof Error ? err.message : String(err)
+          );
         }
       };
       es.onerror = () => stopCodegenEventSource();
     }
   } catch (err) {
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       error: err instanceof Error ? err.message : 'Unknown error',
     }));
@@ -345,7 +355,7 @@ function startStatusPolling(sessionId: string) {
 
       const data = await response.json();
 
-      state.update(s => ({
+      state.update((s) => ({
         ...s,
         codegenSession: {
           sessionId: data.sessionId,
@@ -358,14 +368,23 @@ function startStatusPolling(sessionId: string) {
       }));
 
       if (data.status === 'completed') {
-        state.update(s => ({ ...s, phase: 'complete' }));
+        state.update((s) => ({ ...s, phase: 'complete' }));
+        if (typeof window !== 'undefined')
+          (
+            window as { grump?: { notify?: (t: string, b: string, tag?: string) => void } }
+          ).grump?.notify?.('G-Rump', 'Code generation ready', 'codegen');
         stopStatusPolling();
         stopCodegenEventSource();
       } else if (data.status === 'failed') {
-        state.update(s => ({
+        const errMsg = data.error || 'Code generation failed';
+        state.update((s) => ({
           ...s,
-          error: data.error || 'Code generation failed',
+          error: errMsg,
         }));
+        if (typeof window !== 'undefined')
+          (
+            window as { grump?: { notify?: (t: string, b: string, tag?: string) => void } }
+          ).grump?.notify?.('G-Rump', errMsg, 'codegen');
         stopStatusPolling();
         stopCodegenEventSource();
       }
@@ -413,8 +432,9 @@ export async function downloadProject(): Promise<void> {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      const message = (errorData as { error?: string }).error ?? `Download failed: ${response.status}`;
-      state.update(s => ({ ...s, error: message }));
+      const message =
+        (errorData as { error?: string }).error ?? `Download failed: ${response.status}`;
+      state.update((s) => ({ ...s, error: message }));
       throw new Error(message);
     }
 
@@ -431,8 +451,11 @@ export async function downloadProject(): Promise<void> {
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
   } catch (err) {
-    if (err instanceof Error && !(err.message.startsWith('Download failed') || err.message.startsWith('No code generation'))) {
-      state.update(s => ({ ...s, error: err.message }));
+    if (
+      err instanceof Error &&
+      !(err.message.startsWith('Download failed') || err.message.startsWith('No code generation'))
+    ) {
+      state.update((s) => ({ ...s, error: err.message }));
     }
     throw err;
   }
@@ -452,6 +475,16 @@ export async function runDemo(): Promise<void> {
   }
 }
 
+/**
+ * Run full demo: Architecture → Spec (PRD) → Plan → Code.
+ * Uses prebaked Architecture and PRD, then starts code generation.
+ * Single "Run full demo" flow for guided walkthrough.
+ */
+export async function runFullDemoMode(): Promise<void> {
+  await runDemo();
+  await startCodeGeneration();
+}
+
 // UTILITIES
 export function reset() {
   stopStatusPolling();
@@ -469,7 +502,7 @@ export function reset() {
 }
 
 export function setPreferences(prefs: Partial<GenerationPreferences>) {
-  state.update(s => ({
+  state.update((s) => ({
     ...s,
     preferences: { ...s.preferences, ...prefs },
   }));
@@ -492,14 +525,7 @@ export function exportArchitectureJson(): void {
 export function exportPrdMarkdown(): void {
   const prdDoc = get(prd);
   if (!prdDoc) return;
-  const lines: string[] = [
-    `# ${prdDoc.projectName}`,
-    '',
-    prdDoc.projectDescription,
-    '',
-    '---',
-    '',
-  ];
+  const lines: string[] = [`# ${prdDoc.projectName}`, '', prdDoc.projectDescription, '', '---', ''];
   const o = prdDoc.sections?.overview;
   if (o) {
     lines.push('## Overview');
@@ -518,4 +544,56 @@ export function exportPrdMarkdown(): void {
   a.download = `prd-${prdDoc.id || 'export'}.md`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/** Create shareable link for architecture. Returns full URL or null on error. */
+export async function shareArchitectureLink(): Promise<string | null> {
+  const arch = get(architecture);
+  if (!arch) return null;
+  try {
+    const { createShareLink, getApiBase } = await import('../lib/api.js');
+    const base = getApiBase();
+    const mermaidCode = arch.c4Diagrams?.context ?? arch.c4Diagrams?.container ?? '';
+    const { shareId } = await createShareLink({
+      type: 'architecture',
+      content: JSON.stringify(arch),
+      title: arch.projectName,
+      mermaidCode: mermaidCode || undefined,
+      expiresIn: 168,
+    });
+    return `${base}/api/share/${shareId}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Create shareable link for PRD. Returns full URL or null on error. */
+export async function sharePrdLink(): Promise<string | null> {
+  const prdDoc = get(prd);
+  if (!prdDoc) return null;
+  const lines: string[] = [`# ${prdDoc.projectName}`, '', prdDoc.projectDescription, '', '---', ''];
+  const o = prdDoc.sections?.overview;
+  if (o) {
+    lines.push('## Overview');
+    lines.push('');
+    lines.push(`**Vision:** ${o.vision}`);
+    lines.push('');
+    lines.push(`**Problem:** ${o.problem}`);
+    lines.push('');
+    lines.push(`**Solution:** ${o.solution}`);
+  }
+  const content = lines.join('\n');
+  try {
+    const { createShareLink, getApiBase } = await import('../lib/api.js');
+    const base = getApiBase();
+    const { shareId } = await createShareLink({
+      type: 'prd',
+      content,
+      title: prdDoc.projectName,
+      expiresIn: 168,
+    });
+    return `${base}/api/share/${shareId}`;
+  } catch {
+    return null;
+  }
 }

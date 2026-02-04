@@ -1,13 +1,15 @@
 /**
  * Kimi K2.5 Optimizations
- * 
+ *
  * Kimi K2.5 is NVIDIA's implementation of Moonshot AI's Kimi model with:
- * - 256K context window (vs Claude's 200K)
- * - 5x cheaper pricing ($0.6/M vs $3/M)
+ * - 256K context window
+ * - Cost-effective pricing ($0.6/M tokens)
  * - Superior multilingual support (especially Chinese)
  * - Strong coding capabilities
  * - OpenAI-compatible API via NIM
- * 
+ *
+ * Powered by NVIDIA NIM - https://build.nvidia.com/
+ *
  * This module provides optimizations to leverage Kimi K2.5's unique strengths.
  */
 
@@ -25,19 +27,19 @@ export const KIMI_K25_CONFIG = {
   contextWindow: 256_000,
   // Reserve tokens for response
   maxInputTokens: 240_000,
-  // Kimi has 56K more context than Claude - use this for:
+  // Kimi has large context advantage - use this for:
   // - Extended conversation history
   // - Larger codebases
   // - More comprehensive documentation
   contextAdvantage: 56_000,
   // Optimal temperature settings for Kimi
   temperature: {
-    coding: 0.1,      // Low temp for deterministic code
-    creative: 0.7,    // Higher for creative tasks
-    default: 0.3,     // Balanced
+    coding: 0.1, // Low temp for deterministic code
+    creative: 0.7, // Higher for creative tasks
+    default: 0.3, // Balanced
   },
   // Token efficiency - Kimi is efficient with structured prompts
-  tokenEfficiency: 0.95, // 95% efficiency vs Claude
+  tokenEfficiency: 0.95,
 } as const;
 
 /**
@@ -49,42 +51,42 @@ export function containsNonEnglish(text: string): boolean {
   const cjkRegex = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
   // Check for other non-Latin scripts
   const nonLatinRegex = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\u0900-\u097f\u0400-\u04ff]/;
-  
+
   return cjkRegex.test(text) || nonLatinRegex.test(text);
 }
 
 /**
  * Calculate optimal context retention for Kimi
- * Uses the extra 56K tokens for better context
+ * Maximizes use of Kimi's large context window
  */
 export function calculateKimiContextRetention(
   currentTokens: number,
-  maxTokens: number = 200_000 // Claude's limit for comparison
+  maxTokens: number = 200_000
 ): {
   retainTokens: number;
   advantageUsed: number;
   recommendation: string;
 } {
   const advantage = KIMI_K25_CONFIG.contextAdvantage;
-  
+
   if (currentTokens <= maxTokens) {
-    // We're within Claude's limit, can add more context
+    // Well within limits, can add more context
     return {
       retainTokens: currentTokens,
       advantageUsed: 0,
       recommendation: 'Can add up to 56K more tokens of context',
     };
   }
-  
+
   if (currentTokens <= KIMI_K25_CONFIG.maxInputTokens) {
-    // Using Kimi's advantage
+    // Using Kimi's extended context
     return {
       retainTokens: currentTokens,
       advantageUsed: currentTokens - maxTokens,
       recommendation: `Using ${currentTokens - maxTokens} of ${advantage} extra tokens`,
     };
   }
-  
+
   // Exceeding even Kimi's limit - need truncation
   return {
     retainTokens: KIMI_K25_CONFIG.maxInputTokens,
@@ -106,27 +108,27 @@ export function optimizePromptForKimi(
   optimizations: string[];
 } {
   const optimizations: string[] = [];
-  
+
   // Detect language
   const hasNonEnglish = containsNonEnglish(userContent);
-  
+
   // Optimize system prompt
   let optimizedSystem = systemPrompt;
-  
+
   // Add multilingual instruction if needed
   if (hasNonEnglish) {
     optimizedSystem += `\n\n## Multilingual Support\nYou can understand and respond in multiple languages. Match the user's language and maintain technical accuracy across languages.`;
     optimizations.push('Added multilingual support instruction');
   }
-  
+
   // Kimi prefers explicit formatting instructions
   if (!optimizedSystem.includes('## Output Format')) {
     optimizedSystem += `\n\n## Output Format\nProvide clear, well-structured responses. Use markdown formatting appropriately. For code, always include language tags and ensure syntax correctness.`;
     optimizations.push('Added output format guidance');
   }
-  
+
   // Optimize user content if very long
-  let optimizedUser = userContent;
+  const optimizedUser = userContent;
   if (userContent.length > 10000 && !hasNonEnglish) {
     // For long English content, ensure clear structure
     if (!userContent.includes('#') && !userContent.includes('##')) {
@@ -134,12 +136,12 @@ export function optimizePromptForKimi(
       optimizations.push('Content is long but lacks structure');
     }
   }
-  
+
   // If Chinese detected, ensure proper handling
   if (hasNonEnglish && /[\u4e00-\u9fff]/.test(userContent)) {
     optimizations.push('Chinese content detected - using optimized processing');
   }
-  
+
   return {
     optimizedSystem,
     optimizedUser,
@@ -150,60 +152,58 @@ export function optimizePromptForKimi(
 /**
  * Route to Kimi K2.5 when beneficial
  */
-export function shouldRouteToKimi(
-  request: {
-    content: string;
-    requiresTools: boolean;
-    isComplex: boolean;
-    hasImage: boolean;
-    isCodeGeneration: boolean;
-  }
-): {
+export function shouldRouteToKimi(request: {
+  content: string;
+  requiresTools: boolean;
+  isComplex: boolean;
+  hasImage: boolean;
+  isCodeGeneration: boolean;
+}): {
   useKimi: boolean;
   confidence: number;
   reasons: string[];
 } {
   const reasons: string[] = [];
   let confidence = 0;
-  
+
   // Multilingual content - Kimi excels here
   if (containsNonEnglish(request.content)) {
     confidence += 0.3;
     reasons.push('Multilingual content detected');
   }
-  
+
   // Code generation - Kimi is strong and cheaper
   if (request.isCodeGeneration && !request.requiresTools) {
     confidence += 0.25;
     reasons.push('Code generation without tools - Kimi is 5x cheaper');
   }
-  
+
   // Long context - use Kimi's extra 56K
   if (request.content.length > 150000) {
     confidence += 0.2;
-    reasons.push('Long context - using Kimi\'s 256K window');
+    reasons.push("Long context - using Kimi's 256K window");
   }
-  
+
   // Simple tasks - Kimi is cost-effective
   if (!request.isComplex && !request.requiresTools) {
     confidence += 0.25;
     reasons.push('Simple task - cost optimization with Kimi');
   }
-  
+
   // Vision tasks - Kimi supports vision
   if (request.hasImage) {
     confidence += 0.15;
     reasons.push('Vision task - Kimi has vision capabilities');
   }
-  
-  // Tool requirements reduce confidence (Claude's tool use is more mature)
+
+  // Tool requirements reduce confidence (Llama 405B may be better for complex tool use)
   if (request.requiresTools) {
     confidence -= 0.2;
-    reasons.push('Note: Tool use may be more reliable with Claude');
+    reasons.push('Note: Tool use may benefit from Llama 405B for complex scenarios');
   }
-  
+
   const useKimi = confidence > 0.4;
-  
+
   return {
     useKimi,
     confidence: Math.min(confidence, 1.0),
@@ -212,29 +212,31 @@ export function shouldRouteToKimi(
 }
 
 /**
- * Estimate cost savings from using Kimi vs Claude
+ * Estimate cost savings from using Kimi vs Llama 405B
  */
 export function estimateKimiSavings(
   inputTokens: number,
   outputTokens: number,
   requestCount: number = 1
 ): {
-  claudeCost: number;
+  llama405bCost: number;
   kimiCost: number;
   savings: number;
   savingsPercent: number;
 } {
-  // Claude Sonnet pricing: $3/M input, $15/M output
-  const claudeCost = ((inputTokens / 1_000_000) * 3.0 + (outputTokens / 1_000_000) * 15.0) * requestCount;
-  
+  // Llama 405B pricing estimate: $5/M input, $15/M output
+  const llama405bCost =
+    ((inputTokens / 1_000_000) * 5.0 + (outputTokens / 1_000_000) * 15.0) * requestCount;
+
   // Kimi K2.5 pricing: $0.6/M input, $0.6/M output
-  const kimiCost = ((inputTokens / 1_000_000) * 0.6 + (outputTokens / 1_000_000) * 0.6) * requestCount;
-  
-  const savings = claudeCost - kimiCost;
-  const savingsPercent = (savings / claudeCost) * 100;
-  
+  const kimiCost =
+    ((inputTokens / 1_000_000) * 0.6 + (outputTokens / 1_000_000) * 0.6) * requestCount;
+
+  const savings = llama405bCost - kimiCost;
+  const savingsPercent = llama405bCost > 0 ? (savings / llama405bCost) * 100 : 0;
+
   return {
-    claudeCost,
+    llama405bCost,
     kimiCost,
     savings,
     savingsPercent,
@@ -243,7 +245,7 @@ export function estimateKimiSavings(
 
 /**
  * Kimi-optimized conversation history management
- * Leverages the extra 56K context window
+ * Leverages the extra context window capacity
  */
 export function optimizeConversationForKimi(
   messages: Message[],
@@ -254,10 +256,10 @@ export function optimizeConversationForKimi(
   advantageUtilized: boolean;
   summary?: string;
 } {
-  const maxClaudeTokens = 200_000;
+  const standardLimit = 200_000;
   const maxKimiTokens = KIMI_K25_CONFIG.maxInputTokens;
-  
-  if (currentTokenCount <= maxClaudeTokens) {
+
+  if (currentTokenCount <= standardLimit) {
     // Well within limits, return all messages
     return {
       optimizedMessages: messages,
@@ -265,28 +267,28 @@ export function optimizeConversationForKimi(
       advantageUtilized: false,
     };
   }
-  
+
   if (currentTokenCount <= maxKimiTokens) {
-    // Using Kimi's advantage
+    // Using Kimi's extended context
     logger.info(
-      { 
+      {
         tokens: currentTokenCount,
-        advantage: currentTokenCount - maxClaudeTokens 
+        advantage: currentTokenCount - standardLimit,
       },
       'Using Kimi K2.5 extended context'
     );
-    
+
     return {
       optimizedMessages: messages,
       tokensRetained: currentTokenCount,
       advantageUtilized: true,
     };
   }
-  
+
   // Exceeds even Kimi's limit - need to truncate
   // Keep last 20 messages (system is handled separately in StreamParams)
   const recentMessages = messages.slice(-20);
-  
+
   return {
     optimizedMessages: recentMessages,
     tokensRetained: maxKimiTokens, // Approximate
@@ -329,7 +331,7 @@ export function getKimiTaskConfig(taskType: 'coding' | 'chat' | 'analysis' | 'cr
       frequencyPenalty: 0.2,
     },
   };
-  
+
   return configs[taskType];
 }
 
@@ -350,70 +352,70 @@ export interface KimiRoutingInput {
 }
 
 export function getKimiRoutingDecision(input: KimiRoutingInput): {
-  recommendedModel: 'kimi' | 'claude' | 'either';
+  recommendedModel: 'kimi' | 'llama405b' | 'either';
   confidence: number;
   estimatedSavings?: number;
   rationale: string[];
 } {
   const rationale: string[] = [];
   let kimiScore = 0;
-  
+
   // Language preference
   if (input.detectedLanguage && !['en', 'english'].includes(input.detectedLanguage.toLowerCase())) {
     kimiScore += 30;
     rationale.push(`Multilingual content (${input.detectedLanguage}) - Kimi excels here`);
   }
-  
+
   // Context size advantage
   if (input.contextSize > 150000) {
     kimiScore += 25;
-    rationale.push('Large context - using Kimi\'s 256K window');
+    rationale.push("Large context - using Kimi's 256K window");
   }
-  
+
   // Code generation (Kimi is strong and cheaper)
   if (input.hasCode && !input.toolsRequested) {
     kimiScore += 20;
     rationale.push('Code generation - Kimi is capable and 5x cheaper');
   }
-  
+
   // Simple tasks
   if (!input.isComplex && !input.toolsRequested && input.messageChars < 5000) {
     kimiScore += 15;
     rationale.push('Simple task - cost-effective with Kimi');
   }
-  
-  // Tool requirements favor Claude
+
+  // Tool requirements favor Llama 405B for complex scenarios
   if (input.toolsRequested) {
     kimiScore -= 20;
-    rationale.push('Tool use required - Claude may be more reliable');
+    rationale.push('Tool use required - Llama 405B may be more reliable for complex tool chains');
   }
-  
-  // Very complex tasks favor Claude
+
+  // Very complex tasks may favor larger models
   if (input.isComplex && input.messageChars > 10000) {
     kimiScore -= 15;
-    rationale.push('Complex task - Claude\'s reasoning may be superior');
+    rationale.push('Complex task - Llama 405B reasoning may be superior');
   }
-  
+
   // Calculate confidence and recommendation
-  let recommendedModel: 'kimi' | 'claude' | 'either';
+  let recommendedModel: 'kimi' | 'llama405b' | 'either';
   let confidence: number;
-  
+
   if (kimiScore >= 40) {
     recommendedModel = 'kimi';
     confidence = Math.min(kimiScore / 100, 0.95);
   } else if (kimiScore <= -20) {
-    recommendedModel = 'claude';
+    recommendedModel = 'llama405b';
     confidence = Math.min(Math.abs(kimiScore) / 100, 0.95);
   } else {
     recommendedModel = 'either';
     confidence = 0.5;
   }
-  
+
   // Estimate savings
   const estimatedInputTokens = Math.ceil(input.messageChars * 0.25);
   const estimatedOutputTokens = Math.ceil(estimatedInputTokens * 0.5);
   const savings = estimateKimiSavings(estimatedInputTokens, estimatedOutputTokens);
-  
+
   return {
     recommendedModel,
     confidence,

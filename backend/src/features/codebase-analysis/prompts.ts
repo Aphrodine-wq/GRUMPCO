@@ -20,19 +20,31 @@ When analyzing code:
 
 Always provide specific, actionable recommendations backed by evidence from the code.`;
 
-export const generateAnalysisPrompt = (fileList: string, packageJson: string | null, configFiles: string[]): string => {
+export const generateAnalysisPrompt = (
+  fileList: string,
+  packageJson: string | null,
+  configFiles: string[]
+): string => {
   return `Analyze this codebase and provide a comprehensive assessment.
 
 ## Files in the project:
 ${fileList}
 
-${packageJson ? `## package.json contents:
+${
+  packageJson
+    ? `## package.json contents:
 \`\`\`json
 ${packageJson}
-\`\`\`` : ''}
+\`\`\``
+    : ''
+}
 
-${configFiles.length > 0 ? `## Configuration files found:
-${configFiles.join('\n')}` : ''}
+${
+  configFiles.length > 0
+    ? `## Configuration files found:
+${configFiles.join('\n')}`
+    : ''
+}
 
 Please analyze and provide:
 
@@ -89,19 +101,19 @@ Use: Person, System, System_Ext, Rel`,
 - Communication paths between containers
 Use: Container, ContainerDb, Container_Ext, Rel`,
 
-    'component': `Generate a Component diagram showing:
+    component: `Generate a Component diagram showing:
 - Major internal components/modules
 - Dependencies between components
 - Interfaces and data flow
 Use: Component, Rel`,
 
-    'dependency': `Generate a dependency graph showing:
+    dependency: `Generate a dependency graph showing:
 - All major modules/packages
 - Import/require relationships
 - Circular dependency warnings
 Use: graph TD with module nodes and dependency edges`,
 
-    'flow': `Generate a data flow diagram showing:
+    flow: `Generate a data flow diagram showing:
 - How data moves through the system
 - Processing steps and transformations
 - Data stores and external sources
@@ -127,14 +139,21 @@ Respond with ONLY the Mermaid code block:
 \`\`\``;
 };
 
-export const generateDependencyAnalysisPrompt = (dependencies: string, lockfile: string | null): string => {
+export const generateDependencyAnalysisPrompt = (
+  dependencies: string,
+  lockfile: string | null
+): string => {
   return `Analyze these project dependencies:
 
 ## Dependencies:
 ${dependencies}
 
-${lockfile ? `## Lock file excerpt:
-${lockfile.substring(0, 5000)}` : ''}
+${
+  lockfile
+    ? `## Lock file excerpt:
+${lockfile.substring(0, 5000)}`
+    : ''
+}
 
 Provide analysis in JSON format:
 \`\`\`json

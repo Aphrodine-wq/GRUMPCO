@@ -23,10 +23,9 @@ import logger from '../../middleware/logger.js';
 import { withResilience } from '../../services/resilience.js';
 
 // Load manifest
-import manifest from './manifest.json' with { type: 'json' };
 
 class CodeReviewSkill extends BaseSkill {
-  manifest: SkillManifest = manifest as SkillManifest;
+  manifest!: SkillManifest;
 
   prompts: SkillPrompts = {
     system: CODE_REVIEW_SYSTEM_PROMPT,
@@ -238,31 +237,25 @@ class CodeReviewSkill extends BaseSkill {
 
       if (context) {
         // Use LLM service from context (uses Kimi K2.5 via LLM Gateway)
-        const callLLM = withResilience(
-          async () => {
-            return await context.services.llm.complete({
-              messages: [{ role: 'user', content: prompt }],
-              system: CODE_REVIEW_SYSTEM_PROMPT,
-              maxTokens: 2048,
-            });
-          },
-          'code-review'
-        );
+        const callLLM = withResilience(async () => {
+          return await context.services.llm.complete({
+            messages: [{ role: 'user', content: prompt }],
+            system: CODE_REVIEW_SYSTEM_PROMPT,
+            maxTokens: 2048,
+          });
+        }, 'code-review');
         responseText = await callLLM();
       } else {
         // Fallback: create temporary context and use LLM service
         const { createSkillContext } = await import('../base/SkillContext.js');
         const tempContext = createSkillContext({});
-        const callLLM = withResilience(
-          async () => {
-            return await tempContext.services.llm.complete({
-              messages: [{ role: 'user', content: prompt }],
-              system: CODE_REVIEW_SYSTEM_PROMPT,
-              maxTokens: 2048,
-            });
-          },
-          'code-review'
-        );
+        const callLLM = withResilience(async () => {
+          return await tempContext.services.llm.complete({
+            messages: [{ role: 'user', content: prompt }],
+            system: CODE_REVIEW_SYSTEM_PROMPT,
+            maxTokens: 2048,
+          });
+        }, 'code-review');
         responseText = await callLLM();
       }
 
@@ -279,8 +272,7 @@ class CodeReviewSkill extends BaseSkill {
 
       // Return empty review on error
       return {
-        summary:
-          'Code review could not be completed. Please try again later.',
+        summary: 'Code review could not be completed. Please try again later.',
         issues: [],
         positives: [],
         metrics: {
@@ -300,7 +292,7 @@ class CodeReviewSkill extends BaseSkill {
     const positives = [];
     let summary = '';
     let currentSection = '';
-    let metrics = {
+    const metrics = {
       linesOfCode: code.split('\n').length,
       issueCount: { critical: 0, warning: 0, suggestion: 0, info: 0 },
     };
@@ -334,10 +326,7 @@ class CodeReviewSkill extends BaseSkill {
           });
 
           metrics.issueCount[severity]++;
-        } else if (
-          currentSection === 'positives' &&
-          line.trim().startsWith('- ')
-        ) {
+        } else if (currentSection === 'positives' && line.trim().startsWith('- ')) {
           positives.push(line.trim().substring(2));
         }
       }
@@ -358,9 +347,7 @@ class CodeReviewSkill extends BaseSkill {
   /**
    * Detect issue severity from issue text
    */
-  private detectSeverity(
-    text: string
-  ): 'critical' | 'warning' | 'suggestion' | 'info' {
+  private detectSeverity(text: string): 'critical' | 'warning' | 'suggestion' | 'info' {
     const lower = text.toLowerCase();
 
     if (
@@ -516,9 +503,7 @@ class CodeReviewSkill extends BaseSkill {
 
       return this.successResult(this.formatReview(review), { review });
     } catch (error) {
-      return this.errorResult(
-        error instanceof Error ? error.message : 'Review failed'
-      );
+      return this.errorResult(error instanceof Error ? error.message : 'Review failed');
     }
   }
 
@@ -548,9 +533,7 @@ class CodeReviewSkill extends BaseSkill {
         review,
       });
     } catch (error) {
-      return this.errorResult(
-        error instanceof Error ? error.message : 'File analysis failed'
-      );
+      return this.errorResult(error instanceof Error ? error.message : 'File analysis failed');
     }
   }
 
@@ -572,7 +555,10 @@ class CodeReviewSkill extends BaseSkill {
       ];
 
       const output = suggestions
-        .map((s) => `### ${s.title}\n${s.description}\n\nBefore:\n\`\`\`\n${s.before}\n\`\`\`\n\nAfter:\n\`\`\`\n${s.after}\n\`\`\``)
+        .map(
+          (s) =>
+            `### ${s.title}\n${s.description}\n\nBefore:\n\`\`\`\n${s.before}\n\`\`\`\n\nAfter:\n\`\`\`\n${s.after}\n\`\`\``
+        )
         .join('\n\n');
 
       return this.successResult(output, { suggestions });

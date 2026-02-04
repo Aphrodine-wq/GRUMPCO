@@ -1,5 +1,7 @@
 <script lang="ts">
+  import type { ComponentType } from 'svelte';
   import type { WorkflowPhase, AgentType, AgentTask } from '../types/workflow';
+  import { Layers, Palette, Cog, Rocket, CheckCircle, BookOpen, Wrench } from 'lucide-svelte';
 
   interface Props {
     phase: WorkflowPhase;
@@ -10,10 +12,20 @@
   let {
     phase = $bindable('idle'),
     progress = $bindable(undefined),
-    agents = $bindable(undefined)
+    agents = $bindable(undefined),
   }: Props = $props();
 
   const phaseOrder: WorkflowPhase[] = ['idle', 'architecture', 'prd', 'codegen', 'complete'];
+
+  // Agent icon mappings
+  const agentIconMap: Record<string, ComponentType> = {
+    architect: Layers,
+    frontend: Palette,
+    backend: Cog,
+    devops: Rocket,
+    test: CheckCircle,
+    docs: BookOpen,
+  };
 
   function isPhaseComplete(checkPhase: WorkflowPhase): boolean {
     const currentIndex = phaseOrder.indexOf(phase);
@@ -21,16 +33,8 @@
     return currentIndex > checkIndex || phase === 'complete';
   }
 
-  function getAgentIcon(type: string): string {
-    const icons: Record<string, string> = {
-      architect: '🏗️',
-      frontend: '🎨',
-      backend: '⚙️',
-      devops: '🚀',
-      test: '🧪',
-      docs: '📚',
-    };
-    return icons[type] || '🔧';
+  function getAgentIcon(type: string): ComponentType {
+    return agentIconMap[type] || Wrench;
   }
 
   function formatAgentName(type: string): string {
@@ -41,14 +45,22 @@
 {#if phase !== 'idle'}
   <div class="workflow-phase-bar">
     <div class="phase-steps">
-      <div 
+      <div
         class="phase-step"
         class:active={phase === 'architecture'}
         class:complete={isPhaseComplete('architecture')}
       >
         <div class="phase-icon">
           {#if isPhaseComplete('architecture')}
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="3"
+            >
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           {:else}
@@ -60,14 +72,22 @@
 
       <div class="phase-connector" class:complete={isPhaseComplete('architecture')}></div>
 
-      <div 
+      <div
         class="phase-step"
         class:active={phase === 'prd'}
         class:complete={isPhaseComplete('prd')}
       >
         <div class="phase-icon">
           {#if isPhaseComplete('prd')}
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="3"
+            >
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           {:else}
@@ -79,14 +99,22 @@
 
       <div class="phase-connector" class:complete={isPhaseComplete('prd')}></div>
 
-      <div 
+      <div
         class="phase-step"
         class:active={phase === 'codegen'}
         class:complete={isPhaseComplete('codegen')}
       >
         <div class="phase-icon">
           {#if isPhaseComplete('codegen')}
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="3"
+            >
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           {:else if phase === 'codegen' && (progress ?? 0) > 0}
@@ -102,11 +130,13 @@
     {#if phase === 'codegen' && agents}
       <div class="agent-progress">
         {#each Object.entries(agents) as [type, agent] (type)}
-          <div 
-            class="agent-status {agent.status}"
-            title={agent.description}
-          >
-            <span class="agent-icon">{getAgentIcon(type)}</span>
+          <div class="agent-status {agent.status}" title={agent.description}>
+            <span class="agent-icon">
+              {#if getAgentIcon(type)}
+                {@const AgentIcon = getAgentIcon(type)}
+                <AgentIcon size={16} />
+              {/if}
+            </span>
             <span class="agent-name">{formatAgentName(type)}</span>
             <span class="agent-status-dot"></span>
           </div>
@@ -118,7 +148,7 @@
 
 <style>
   .workflow-phase-bar {
-    background: #FAFAFA;
+    background: #fafafa;
     padding: 1rem 0;
   }
 
@@ -150,14 +180,14 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #E4E4E7;
+    background: #e4e4e7;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #71717A;
+    color: #71717a;
   }
 
   .phase-step.active .phase-icon {
@@ -174,7 +204,7 @@
   .phase-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
-    color: #71717A;
+    color: #71717a;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -187,7 +217,7 @@
   .phase-connector {
     width: 40px;
     height: 2px;
-    background: #E4E4E7;
+    background: #e4e4e7;
     transition: background 0.2s;
   }
 
@@ -217,15 +247,15 @@
   }
 
   .agent-status.running {
-    background: #E0F2FE;
+    background: #e0f2fe;
   }
 
   .agent-status.completed {
-    background: #D1FAE5;
+    background: #d1fae5;
   }
 
   .agent-status.failed {
-    background: #FEE2E2;
+    background: #fee2e2;
   }
 
   .agent-icon {
@@ -240,7 +270,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #9CA3AF;
+    background: #9ca3af;
   }
 
   .agent-status.running .agent-status-dot {
@@ -249,15 +279,16 @@
   }
 
   .agent-status.completed .agent-status-dot {
-    background: #10B981;
+    background: #10b981;
   }
 
   .agent-status.failed .agent-status-dot {
-    background: #DC2626;
+    background: #dc2626;
   }
 
   @keyframes pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
     }
     50% {
@@ -265,4 +296,3 @@
     }
   }
 </style>
-

@@ -66,7 +66,9 @@ export async function executeUserTool(
   const def = userTools.get(name);
   if (!def) throw new Error(`Unknown user tool: ${name}`);
   if (def.handler) return def.handler(input, context);
-  return { output: `Tool "${name}" executed (no custom implementation). Input: ${JSON.stringify(input).slice(0, 200)}` };
+  return {
+    output: `Tool "${name}" executed (no custom implementation). Input: ${JSON.stringify(input).slice(0, 200)}`,
+  };
 }
 
 /**

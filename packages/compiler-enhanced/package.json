@@ -1,7 +1,7 @@
 {
   "name": "@grump/compiler-enhanced",
   "version": "1.0.0",
-  "description": "Enhanced compiler system for G-Rump with incremental compilation, watch mode, bundle analysis, and more",
+  "description": "Enhanced compiler system for G-Rump with incremental compilation, watch mode, bundle analysis, HyperCompiler 40x optimization, and more",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -41,6 +41,42 @@
     "./hotreload": {
       "import": "./dist/hotreload.js",
       "types": "./dist/hotreload.d.ts"
+    },
+    "./hyper": {
+      "import": "./dist/hyper/index.js",
+      "types": "./dist/hyper/index.d.ts"
+    },
+    "./hyper/gpu": {
+      "import": "./dist/hyper/gpu.js",
+      "types": "./dist/hyper/gpu.d.ts"
+    },
+    "./hyper/jit": {
+      "import": "./dist/hyper/jit.js",
+      "types": "./dist/hyper/jit.d.ts"
+    },
+    "./hyper/distributed": {
+      "import": "./dist/hyper/distributed.js",
+      "types": "./dist/hyper/distributed.d.ts"
+    },
+    "./hyper/quantum": {
+      "import": "./dist/hyper/quantum.js",
+      "types": "./dist/hyper/quantum.d.ts"
+    },
+    "./hyper/probabilistic": {
+      "import": "./dist/hyper/probabilistic.js",
+      "types": "./dist/hyper/probabilistic.d.ts"
+    },
+    "./hyper/speculative": {
+      "import": "./dist/hyper/speculative.js",
+      "types": "./dist/hyper/speculative.d.ts"
+    },
+    "./hyper/mmap": {
+      "import": "./dist/hyper/mmap.js",
+      "types": "./dist/hyper/mmap.d.ts"
+    },
+    "./hyper/splitting": {
+      "import": "./dist/hyper/splitting.js",
+      "types": "./dist/hyper/splitting.d.ts"
     }
   },
   "scripts": {
@@ -48,22 +84,30 @@
     "build:watch": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:hyper": "vitest run --dir src/hyper",
+    "bench": "vitest bench",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "bullmq": "^5.0.0",
     "chokidar": "^4.0.0",
+    "ioredis": "^5.3.0",
     "ws": "^8.18.0",
     "xxhash-addon": "^2.0.3"
+  },
+  "optionalDependencies": {
+    "@aspect-build/dawn-node": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/ws": "^8.5.13",
+    "fast-check": "^3.15.0",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"
   },
   "peerDependencies": {
-    "@grump/shared-types": "^1.0.0"
+    "@grump/shared-types": "workspace:*"
   },
   "engines": {
     "node": ">=20"
@@ -74,7 +118,12 @@
     "g-rump",
     "incremental-compilation",
     "watch-mode",
-    "bundle-analyzer"
+    "bundle-analyzer",
+    "hyper-compiler",
+    "gpu-acceleration",
+    "jit-compilation",
+    "distributed-compilation",
+    "code-splitting"
   ],
   "license": "MIT"
 }

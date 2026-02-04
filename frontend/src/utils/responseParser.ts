@@ -37,7 +37,7 @@ export function parseAssistantResponse(content: string): ParsedResponse {
     return {
       type: textWithoutMermaid ? 'mixed' : 'diagram',
       mermaidCode: mermaidMatch[1].trim(),
-      textContent: textWithoutMermaid || undefined
+      textContent: textWithoutMermaid || undefined,
     };
   }
 
@@ -50,7 +50,9 @@ export function parseAssistantResponse(content: string): ParsedResponse {
  * Used during streaming to detect when we have a full clarification payload.
  */
 export function hasCompleteClarification(content: string): boolean {
-  return content.includes('<!--CLARIFICATION_START-->') && content.includes('<!--CLARIFICATION_END-->');
+  return (
+    content.includes('<!--CLARIFICATION_START-->') && content.includes('<!--CLARIFICATION_END-->')
+  );
 }
 
 /**

@@ -8,6 +8,7 @@ process.env.ANTHROPIC_API_KEY = 'test_api_key_for_testing';
 process.env.NODE_ENV = 'test';
 process.env.SUPABASE_URL = 'https://test.supabase.co';
 process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+process.env.CSRF_PROTECTION = 'false'; // Disable CSRF for tests
 
 // Mock Supabase client
 vi.mock('../../src/services/supabaseClient.ts', async () => {

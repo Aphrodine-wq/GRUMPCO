@@ -5,6 +5,7 @@
    */
   import type { Snippet } from 'svelte';
   import { colors } from '../../tokens/colors';
+  import { animations } from '../../tokens/animations';
 
   interface Props {
     variant?: 'default' | 'outlined' | 'flat';
@@ -31,19 +32,25 @@
   }: Props = $props();
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
   class="card card-{variant} card-padding-{padding} {className}"
   class:card-interactive={interactive}
   onclick={interactive ? onclick : undefined}
   role={interactive ? 'button' : undefined}
   tabindex={interactive ? 0 : undefined}
-  onkeydown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') onclick?.(e as any); } : undefined}
+  onkeydown={interactive
+    ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') onclick?.(e as any);
+      }
+    : undefined}
   style:--bg-card={colors.background.secondary}
   style:--border-color={colors.border.default}
   style:--text-primary={colors.text.primary}
   style:--text-secondary={colors.text.secondary}
   style:--shadow-md={colors.shadow.md}
   style:--primary-color={colors.accent.primary}
+  style:--transition-micro={animations.transition.fast}
 >
   {#if title || header}
     <div class="card-header">
@@ -69,17 +76,19 @@
 <style>
   .card {
     background-color: var(--bg-card);
-    border-radius: 8px;
+    border-radius: 16px;
     overflow: hidden;
     font-family: inherit;
     position: relative;
     border: 0;
-    transition: all 200ms ease;
+    transition:
+      transform var(--transition-micro),
+      box-shadow var(--transition-micro);
   }
 
   /* Variants */
   .card-default {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   }
 
   .card-outlined {
@@ -87,20 +96,28 @@
   }
 
   .card-flat {
-    background-color: #F5F5F5;
+    background-color: #f5f5f5;
     border: 0;
     box-shadow: none;
   }
 
   /* Padding */
-  .card-padding-none .card-content { padding: 0; }
-  .card-padding-sm .card-content { padding: 12px; }
-  .card-padding-md .card-content { padding: 20px; }
-  .card-padding-lg .card-content { padding: 32px; }
+  .card-padding-none .card-content {
+    padding: 0;
+  }
+  .card-padding-sm .card-content {
+    padding: 12px;
+  }
+  .card-padding-md .card-content {
+    padding: 20px;
+  }
+  .card-padding-lg .card-content {
+    padding: 32px;
+  }
 
   /* Header & Footer */
   .card-header {
-    border-bottom: 1px solid #F0F0F0;
+    border-bottom: 1px solid #f0f0f0;
     padding: 16px 20px;
     display: flex;
     align-items: center;
@@ -115,8 +132,8 @@
   }
 
   .card-footer {
-    border-top: 1px solid #F0F0F0;
-    background-color: #F9F9F9;
+    border-top: 1px solid #f0f0f0;
+    background-color: #f9f9f9;
     padding: 12px 20px;
   }
 
@@ -130,8 +147,24 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
   }
 
+  .card-interactive:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
   .card-interactive:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card {
+      transition: none;
+    }
+    .card-interactive:hover,
+    .card-interactive:active {
+      transform: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
   }
 </style>

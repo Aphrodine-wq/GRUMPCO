@@ -1,14 +1,16 @@
 version: '3.8'
 
 # G-Rump Docker Compose Configuration
-# 
-# Standard: docker compose up -d
-# With GPU: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+#
+# Run from project root: docker compose -f deploy/docker-compose.yml up --build -d
+# With GPU: docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.gpu.yml up -d
+#
+# Build context is relative to this file's directory (deploy/), so we use ../ to reach project root.
 
 services:
   backend:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile
       cache_from:
         - ghcr.io/your-org/grump-backend:latest
@@ -85,7 +87,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ../frontend
       dockerfile: Dockerfile
       cache_from:
         - ghcr.io/your-org/grump-frontend:latest
@@ -95,8 +97,6 @@ services:
     container_name: grump-frontend
     ports:
       - "5173:80"
-    environment:
-      - VITE_API_URL=http://backend:3000
     depends_on:
       - backend
     restart: unless-stopped

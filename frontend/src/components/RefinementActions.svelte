@@ -5,9 +5,7 @@
 </script>
 
 <div class="refinement-actions">
-  <button class="refine-btn" on:click={() => dispatch('refine')}>
-    Refine Diagram
-  </button>
+  <button class="refine-btn" onclick={() => dispatch('refine')}> Refine Diagram </button>
 </div>
 
 <style>
@@ -20,7 +18,7 @@
   .refine-btn {
     padding: 0.5rem 1rem;
     background: var(--color-primary);
-    color: #FFFFFF;
+    color: #ffffff;
     border: none;
     border-radius: 4px;
     font-family: 'JetBrains Mono', monospace;
@@ -28,4 +26,3 @@
     cursor: pointer;
   }
 </style>
-

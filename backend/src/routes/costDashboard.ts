@@ -3,7 +3,7 @@
  * API endpoints for cost analytics and optimization
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { getCostAnalytics } from '../services/costAnalytics.js';
 import { getCostOptimizer } from '../services/costOptimizer.js';
 import { getTieredCache } from '../services/tieredCache.js';
@@ -34,9 +34,11 @@ router.get('/snippet', async (req: Request, res: Response) => {
       { error: error instanceof Error ? error.message : String(error) },
       'Failed to get cost snippet'
     );
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get cost snippet',
+    // Return 200 with zeros so UI does not break when DB/analytics not ready
+    res.json({
+      success: true,
+      todayUsd: 0,
+      requestCount: 0,
     });
   }
 });
@@ -48,9 +50,7 @@ router.get('/snippet', async (req: Request, res: Response) => {
 router.get('/summary', async (req: Request, res: Response) => {
   try {
     const userId = (req.query.userId as string) || 'default';
-    const startDate = req.query.startDate
-      ? new Date(req.query.startDate as string)
-      : undefined;
+    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
     const analytics = getCostAnalytics();

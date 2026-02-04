@@ -27,7 +27,7 @@ export class CacheWarmer {
   private accessPatterns = new Map<string, AccessPattern>();
   private warmingInterval: NodeJS.Timeout | null = null;
   private strategy: WarmingStrategy;
-  private warmingCallbacks = new Map<string, (key: string) => Promise<any>>();
+  private warmingCallbacks = new Map<string, (key: string) => Promise<unknown>>();
 
   constructor(strategy: Partial<WarmingStrategy> = {}) {
     this.strategy = {
@@ -51,13 +51,14 @@ export class CacheWarmer {
   public recordAccess(namespace: string, key: string): void {
     const patternKey = `${namespace}:${key}`;
     const now = Date.now();
-    
+
     const existing = this.accessPatterns.get(patternKey);
-    
+
     if (existing) {
       const interval = now - existing.lastAccess;
-      const newAvgInterval = (existing.avgAccessInterval * existing.frequency + interval) / (existing.frequency + 1);
-      
+      const newAvgInterval =
+        (existing.avgAccessInterval * existing.frequency + interval) / (existing.frequency + 1);
+
       this.accessPatterns.set(patternKey, {
         ...existing,
         frequency: existing.frequency + 1,
@@ -80,7 +81,10 @@ export class CacheWarmer {
   /**
    * Register a callback to warm specific cache entries
    */
-  public registerWarmingCallback(namespace: string, callback: (key: string) => Promise<any>): void {
+  public registerWarmingCallback(
+    namespace: string,
+    callback: (key: string) => Promise<unknown>
+  ): void {
     this.warmingCallbacks.set(namespace, callback);
   }
 
@@ -120,7 +124,7 @@ export class CacheWarmer {
    */
   private async warmCache(): Promise<void> {
     const patterns = this.getPatternsToWarm();
-    
+
     if (patterns.length === 0) {
       logger.debug('No patterns to warm');
       return;
@@ -131,10 +135,10 @@ export class CacheWarmer {
     for (const pattern of patterns) {
       try {
         const callback = this.warmingCallbacks.get(pattern.namespace);
-        
+
         if (callback) {
           const cache = getTieredCache();
-          
+
           // Check if already cached
           const existing = await cache.get(pattern.namespace, pattern.key);
           if (existing) {
@@ -145,11 +149,8 @@ export class CacheWarmer {
           // Warm the cache
           const data = await callback(pattern.key);
           await cache.set(pattern.namespace, pattern.key, data);
-          
-          logger.debug(
-            { namespace: pattern.namespace, key: pattern.key },
-            'Cache warmed'
-          );
+
+          logger.debug({ namespace: pattern.namespace, key: pattern.key }, 'Cache warmed');
         }
       } catch (error) {
         logger.warn(

@@ -30,7 +30,6 @@
     }
   }
 
-  let svgContent = $state('');
   let sanitizedSvgContent = $state('');
   let diagramRef: HTMLElement | null = $state(null);
   let isRendering = $state(false);
@@ -44,7 +43,7 @@
 
   async function performRender(mermaidCode: string) {
     if (!mermaidCode) {
-      svgContent = '';
+      sanitizedSvgContent = '';
       return;
     }
 
@@ -65,14 +64,13 @@
       renderCount++;
       const elementId = `mermaid-diagram-${renderCount}`;
       const { svg } = await renderDiagram(elementId, mermaidCode);
-      svgContent = svg;
-      
+
       // Sanitize SVG content with DOMPurify before rendering
       // Allow SVG-specific elements and attributes for Mermaid diagrams
       sanitizedSvgContent = DOMPurify.sanitize(svg, {
         USE_PROFILES: { svg: true, svgFilters: true },
         ADD_TAGS: ['foreignObject'],
-        ADD_ATTR: ['dominant-baseline', 'text-anchor', 'transform', 'marker-end', 'marker-start']
+        ADD_ATTR: ['dominant-baseline', 'text-anchor', 'transform', 'marker-end', 'marker-start'],
       });
 
       // Wait for DOM update
@@ -421,7 +419,6 @@
       isValidSyntax = validateMermaidSyntax(code);
       performRender(code);
     } else {
-      svgContent = '';
       sanitizedSvgContent = '';
       isValidSyntax = true;
       selectedComponent = null;
@@ -554,6 +551,11 @@
       class="diagram-output"
       class:success-animation={showSuccessAnimation}
       class:has-metadata={!!architectureMetadata}
+      role="button"
+      tabindex="0"
+      onkeydown={(e) => {
+        if (e.key === 'Escape') closeComponentPanel();
+      }}
       onclick={(e) => {
         // Close panel if clicking outside the panel itself
         if (selectedComponent && !(e.target as HTMLElement).closest('.component-info-panel')) {
@@ -779,4 +781,3 @@
     }
   }
 </style>
-

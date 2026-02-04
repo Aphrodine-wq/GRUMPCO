@@ -16,7 +16,7 @@
   let {
     code = $bindable(''),
     language = $bindable('javascript'),
-    fileName = $bindable(undefined)
+    fileName = $bindable(undefined),
   }: Props = $props();
 
   let highlightedCode = $state('');
@@ -61,7 +61,7 @@
   });
 </script>
 
-<div 
+<div
   class="code-block"
   style:--bg-header={colors.background.tertiary}
   style:--bg-content={colors.background.code}
@@ -82,19 +82,38 @@
     </div>
     <div class="code-actions">
       <Button variant="ghost" size="sm" onclick={copyCode} title="Copy code">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
         </svg>
       </Button>
       {#if lineCount > 30}
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           onclick={() => (isCollapsed = !isCollapsed)}
           title={isCollapsed ? 'Expand' : 'Collapse'}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style:transform={isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)'}>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style:transform={isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)'}
+          >
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </Button>
@@ -111,10 +130,23 @@
           {/each}
         </div>
       {/if}
-      <div class="code-content" class:with-line-numbers={showLineNumbers}>{@html highlightedCode}</div>
+      <div class="code-content" class:with-line-numbers={showLineNumbers}>
+        {@html highlightedCode}
+      </div>
     </div>
   {:else}
-    <div class="collapsed-placeholder" onclick={() => (isCollapsed = false)}>
+    <div
+      class="collapsed-placeholder"
+      role="button"
+      tabindex="0"
+      onclick={() => (isCollapsed = false)}
+      onkeydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          isCollapsed = false;
+        }
+      }}
+    >
       <span class="collapsed-text">Code collapsed ({lineCount} lines)</span>
       <Button variant="secondary" size="sm">Expand</Button>
     </div>

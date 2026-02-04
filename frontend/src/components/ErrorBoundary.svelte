@@ -1,13 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import type { Snippet } from 'svelte';
+  import FrownyFace from './FrownyFace.svelte';
+  import { Button, Card } from '$lib/design-system';
   import { showToast } from '../stores/toastStore';
   import { processError, logError, type ErrorContext } from '../utils/errorHandler';
 
   interface Props {
     fallback?: (error: ErrorContext) => string;
+    children?: Snippet;
   }
 
-  let { fallback }: Props = $props();
+  let { fallback: _fallback, children }: Props = $props();
 
   let error: ErrorContext | null = $state(null);
   let hasError = $state(false);
@@ -17,7 +21,7 @@
     error = errorContext;
     hasError = true;
     logError(errorContext);
-    
+
     showToast(errorContext.userMessage, 'error');
   }
 
@@ -47,41 +51,44 @@
 
 {#if hasError && error}
   <div class="error-boundary">
-    <div class="error-content">
-      <div class="error-icon">⚠️</div>
-      <h2 class="error-title">Something went wrong</h2>
-      <p class="error-message">{error.userMessage}</p>
-      
-      {#if error.recovery && error.recovery.length > 0}
-        <div class="error-actions">
-          {#each error.recovery as option}
-            <button
-              class="error-action-btn"
-              class:primary={option.primary}
-              on:click={option.action}
-            >
-              {option.label}
-            </button>
-          {/each}
+    <div class="error-card-wrap">
+      <Card title="Something went wrong" padding="lg">
+        <div class="error-content">
+          <div class="error-icon-wrap">
+            <FrownyFace size="lg" state="error" />
+          </div>
+          <p class="error-message">{error.userMessage}</p>
+
+          {#if error.recovery && error.recovery.length > 0}
+            <div class="error-actions">
+              {#each error.recovery as option}
+                <Button
+                  variant={option.primary ? 'primary' : 'secondary'}
+                  size="sm"
+                  onclick={option.action}
+                >
+                  {option.label}
+                </Button>
+              {/each}
+            </div>
+          {:else}
+            <div class="error-actions">
+              <Button variant="primary" size="sm" onclick={retry}>Reload Page</Button>
+            </div>
+          {/if}
+
+          {#if error.metadata && error.metadata.stack}
+            <details class="error-details">
+              <summary>Technical Details</summary>
+              <pre class="error-stack">{error.metadata.stack}</pre>
+            </details>
+          {/if}
         </div>
-      {:else}
-        <div class="error-actions">
-          <button class="error-action-btn primary" on:click={retry}>
-            Reload Page
-          </button>
-        </div>
-      {/if}
-      
-      {#if error.metadata && error.metadata.stack}
-        <details class="error-details">
-          <summary>Technical Details</summary>
-          <pre class="error-stack">{error.metadata.stack}</pre>
-        </details>
-      {/if}
+      </Card>
     </div>
   </div>
-{:else}
-  <slot />
+{:else if children}
+  {@render children()}
 {/if}
 
 <style>
@@ -91,35 +98,33 @@
     justify-content: center;
     min-height: 100vh;
     padding: 2rem;
-    background: #0d1117;
+    background: var(--color-bg-subtle, #f5f3ff);
+  }
+
+  .error-card-wrap {
+    max-width: 500px;
+    width: 100%;
   }
 
   .error-content {
-    max-width: 500px;
     text-align: center;
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    padding: 2rem;
   }
 
-  .error-icon {
-    font-size: 3rem;
+  .error-icon-wrap {
+    display: flex;
+    justify-content: center;
     margin-bottom: 1rem;
   }
 
-  .error-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #c9d1d9;
-    margin: 0 0 1rem 0;
+  .error-icon-wrap :global(svg) {
+    width: 3rem;
+    height: 3rem;
+    color: var(--color-error, #ff3b30);
   }
 
   .error-message {
-    font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
-    color: #8b949e;
+    color: var(--color-text-muted, #6d28d9);
     margin: 0 0 1.5rem 0;
     line-height: 1.6;
   }
@@ -129,35 +134,7 @@
     gap: 0.75rem;
     justify-content: center;
     margin-bottom: 1rem;
-  }
-
-  .error-action-btn {
-    padding: 0.75rem 1.5rem;
-    border: 1px solid #30363d;
-    border-radius: 4px;
-    background: #21262d;
-    color: #c9d1d9;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .error-action-btn:hover {
-    background: #30363d;
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-
-  .error-action-btn.primary {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: #ffffff;
-  }
-
-  .error-action-btn.primary:hover {
-    background: #0052cc;
-    border-color: #0052cc;
+    flex-wrap: wrap;
   }
 
   .error-details {
@@ -166,24 +143,23 @@
   }
 
   .error-details summary {
-    font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
-    color: #6e7681;
+    color: var(--color-text-muted, #6d28d9);
     cursor: pointer;
     margin-bottom: 0.5rem;
   }
 
   .error-stack {
-    font-family: 'SF Mono', Monaco, monospace;
+    font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 0.75rem;
-    color: #8b949e;
-    background: #0d1117;
+    color: var(--color-text-muted, #6d28d9);
+    background: var(--color-bg-subtle, #f5f3ff);
     padding: 1rem;
-    border-radius: 4px;
+    border-radius: var(--radius-sm, 8px);
     overflow-x: auto;
     margin: 0;
     white-space: pre-wrap;
     word-break: break-word;
+    border: 1px solid var(--color-border, #e9d5ff);
   }
 </style>
-

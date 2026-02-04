@@ -15,9 +15,7 @@ export interface PathPolicyOptions {
   allowlistOnly?: boolean;
 }
 
-export type ResolvePathResult =
-  | { ok: true; resolved: string }
-  | { ok: false; reason: string };
+export type ResolvePathResult = { ok: true; resolved: string } | { ok: false; reason: string };
 
 /** Paths/patterns that are always blocked (sensitive or dangerous). */
 const BLOCKLIST_PATTERNS: Array<string | RegExp> = [
@@ -52,7 +50,9 @@ export function resolvePath(
   const normalizedRoot = path.resolve(workspaceRoot);
   const normalized = path.normalize(requestedPath);
   const isAbsolute = path.isAbsolute(requestedPath);
-  const resolved = isAbsolute ? path.resolve(requestedPath) : path.resolve(normalizedRoot, normalized);
+  const resolved = isAbsolute
+    ? path.resolve(requestedPath)
+    : path.resolve(normalizedRoot, normalized);
 
   // Blocklist: sensitive paths
   const pathForBlock = resolved.replace(/\\/g, '/');
@@ -63,14 +63,19 @@ export function resolvePath(
       }
     } else {
       if (p.test(pathForBlock)) {
-        return { ok: false, reason: 'Access blocked: path matches sensitive blocklist (e.g. .env, .git, node_modules, .ssh)' };
+        return {
+          ok: false,
+          reason:
+            'Access blocked: path matches sensitive blocklist (e.g. .env, .git, node_modules, .ssh)',
+        };
       }
     }
   }
 
   // Allowlist: must be under workspace or explicitly allowed
   if (allowlistOnly) {
-    const underWorkspace = resolved === normalizedRoot || resolved.startsWith(normalizedRoot + path.sep);
+    const underWorkspace =
+      resolved === normalizedRoot || resolved.startsWith(normalizedRoot + path.sep);
     let allowed = underWorkspace;
     if (!allowed && allowedDirs.length > 0) {
       for (const dir of allowedDirs) {
@@ -84,7 +89,8 @@ export function resolvePath(
     if (!allowed) {
       return {
         ok: false,
-        reason: 'Path is outside workspace and not in allowed directories. Use a path under the workspace root or add the directory to allowed dirs in settings.',
+        reason:
+          'Path is outside workspace and not in allowed directories. Use a path under the workspace root or add the directory to allowed dirs in settings.',
       };
     }
   }

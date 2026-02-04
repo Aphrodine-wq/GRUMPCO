@@ -4,7 +4,7 @@
  * Tier-based limits: free < pro < team < enterprise (when X-Tier header or tier context is set).
  */
 
-import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit';
+import rateLimit, { type RateLimitRequestHandler } from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
 import type { Request, Response } from 'express';
 import logger from './logger.js';
@@ -133,7 +133,10 @@ async function getRedisStoreIfConfigured(): Promise<Store | undefined> {
         client.call(command, ...args) as Promise<number>,
     });
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, 'Redis store for rate limiting unavailable, using in-memory');
+    logger.warn(
+      { err: (err as Error).message },
+      'Redis store for rate limiting unavailable, using in-memory'
+    );
     return undefined;
   }
 }
@@ -163,19 +166,21 @@ function createRateLimiter(
       ip: false,
       keyGeneratorIpFallback: false,
     },
-    keyGenerator: keyGenerator || ((req: Request) => {
-      // Default: use IP address
-      const forwarded = req.headers['x-forwarded-for'];
-      if (forwarded && typeof forwarded === 'string') {
-        return `ip:${forwarded.split(',')[0].trim()}`;
-      }
-      let ip = req.ip || req.socket.remoteAddress || 'unknown';
-      // Sanitize IPv6 localhost
-      if (ip === '::1') {
-        ip = '127.0.0.1';
-      }
-      return `ip:${ip}`;
-    }),
+    keyGenerator:
+      keyGenerator ||
+      ((req: Request) => {
+        // Default: use IP address
+        const forwarded = req.headers['x-forwarded-for'];
+        if (forwarded && typeof forwarded === 'string') {
+          return `ip:${forwarded.split(',')[0].trim()}`;
+        }
+        let ip = req.ip || req.socket.remoteAddress || 'unknown';
+        // Sanitize IPv6 localhost
+        if (ip === '::1') {
+          ip = '127.0.0.1';
+        }
+        return `ip:${ip}`;
+      }),
     skip: (req: Request) => {
       // Skip rate limiting for health checks
       return req.path.startsWith('/health');
@@ -232,7 +237,10 @@ function createEndpointRateLimiter(
   tier: TierId,
   store?: Store
 ): RateLimitRequestHandler {
-  const scaled = { ...config, max: Math.max(1, Math.floor(config.max * (TIER_MULTIPLIERS[tier] ?? 1))) };
+  const scaled = {
+    ...config,
+    max: Math.max(1, Math.floor(config.max * (TIER_MULTIPLIERS[tier] ?? 1))),
+  };
   return createRateLimiter(
     scaled,
     (req: Request) => {
@@ -247,7 +255,11 @@ function createEndpointRateLimiter(
 /**
  * Get rate limiter for a specific endpoint and tier (optional Redis store for multi-instance)
  */
-export function getEndpointRateLimiter(path: string, tier: TierId, store?: Store): RateLimitRequestHandler | null {
+export function getEndpointRateLimiter(
+  path: string,
+  tier: TierId,
+  store?: Store
+): RateLimitRequestHandler | null {
   const config = ENDPOINT_LIMITS[path];
   if (!config) return null;
   return createEndpointRateLimiter(path, config, tier, store);
@@ -271,17 +283,23 @@ function buildTierLimiters(store?: Store): Map<string, RateLimitRequestHandler> 
   const tiers: TierId[] = ['free', 'pro', 'team', 'enterprise'];
   for (const tier of tiers) {
     const globalMax = Math.max(1, Math.floor(GLOBAL_LIMIT.max * (TIER_MULTIPLIERS[tier] ?? 1)));
-    limiters.set(`global:${tier}`, createRateLimiter(
-      { ...GLOBAL_LIMIT, max: globalMax },
-      (req: Request) => {
-        const userId = getUserId(req);
-        const base = userId ? `user:${userId}` : `ip:${req.ip || 'unknown'}`;
-        return `global:tier:${tier}:${base}`;
-      },
-      store
-    ));
+    limiters.set(
+      `global:${tier}`,
+      createRateLimiter(
+        { ...GLOBAL_LIMIT, max: globalMax },
+        (req: Request) => {
+          const userId = getUserId(req);
+          const base = userId ? `user:${userId}` : `ip:${req.ip || 'unknown'}`;
+          return `global:tier:${tier}:${base}`;
+        },
+        store
+      )
+    );
     for (const path of Object.keys(ENDPOINT_LIMITS)) {
-      limiters.set(`${path}:${tier}`, createEndpointRateLimiter(path, ENDPOINT_LIMITS[path], tier, store));
+      limiters.set(
+        `${path}:${tier}`,
+        createEndpointRateLimiter(path, ENDPOINT_LIMITS[path], tier, store)
+      );
     }
   }
   return limiters;

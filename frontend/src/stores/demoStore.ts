@@ -29,7 +29,10 @@ export const demoStore = {
     try {
       const base = getApiBase();
       const url = `${base}/api/demo/start`;
-      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         return { ok: false, error: data.error || `Request failed (${res.status})` };

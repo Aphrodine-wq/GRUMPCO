@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import Button from '$lib/design-system/components/Button/Button.svelte';
   import Card from '$lib/design-system/components/Card/Card.svelte';
   import { preferencesStore, type UserPreferences } from '../stores/preferencesStore';
   import { trackSetupComplete, trackSetupSkipped } from '$lib/analytics';
+  import { Building2, FileText, Code2, Sparkles, Check } from 'lucide-svelte';
 
   interface Props {
     onComplete?: () => void;
@@ -14,13 +14,23 @@
 
   let currentStep = $state(0);
   let isSubmitting = $state(false);
+  let connectionStatus = $state<'idle' | 'checking' | 'ok' | 'error'>('idle');
 
-  const steps = ['Welcome', 'Preferences', 'Tech Stack', 'Complete'];
+  const steps = ['Welcome', 'Preferences', 'Model', 'Tech Stack', 'Complete'];
+
+  type ModelChoice = 'kimi' | 'nemotron-ultra' | 'nemotron-super' | 'auto';
+  let selectedModel = $state<ModelChoice>('kimi');
+
+  const modelOptions: { value: ModelChoice; label: string; desc: string }[] = [
+    { value: 'kimi', label: 'KimiK2.5', desc: 'Recommended for most users (cost-effective)' },
+    { value: 'nemotron-ultra', label: 'NemoTRON Ultra 253B', desc: 'Highest quality' },
+    { value: 'nemotron-super', label: 'NemoTRON Super 49B', desc: 'Balanced' },
+    { value: 'auto', label: 'Let G-Rump decide', desc: 'Auto-routing by task' },
+  ];
 
   let preferences = $state<Partial<UserPreferences>>({
     diagramStyle: 'detailed',
     primaryTechStack: [],
-    theme: 'auto',
     analyticsOptIn: true,
   });
 
@@ -79,7 +89,6 @@
       preferencesStore.update({
         diagramStyle: preferences.diagramStyle as 'minimal' | 'detailed' | 'comprehensive',
         primaryTechStack: preferences.primaryTechStack || [],
-        theme: preferences.theme as 'light' | 'dark' | 'auto',
         analyticsOptIn: preferences.analyticsOptIn ?? true,
         setupComplete: true,
       });
@@ -104,6 +113,18 @@
     trackSetupSkipped();
     onSkip?.();
   }
+
+  async function testConnection() {
+    connectionStatus = 'checking';
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${apiUrl.replace(/\/$/, '')}/health/quick`, { method: 'GET' });
+      const data = (await res.json()) as { status?: string };
+      connectionStatus = data?.status === 'healthy' ? 'ok' : 'error';
+    } catch {
+      connectionStatus = 'error';
+    }
+  }
 </script>
 
 <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -113,10 +134,7 @@
       <div class="mb-8">
         <div class="flex justify-between items-center mb-4">
           {#each steps as step, i}
-            <div
-              class="flex flex-col items-center flex-1"
-              class:opacity-50={i > currentStep}
-            >
+            <div class="flex flex-col items-center flex-1" class:opacity-50={i > currentStep}>
               <div
                 class="w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors"
                 class:bg-blue-500={i <= currentStep}
@@ -145,28 +163,69 @@
           <div class="text-center">
             <h2 class="text-3xl font-bold mb-4">Welcome to G-Rump</h2>
             <p class="text-gray-600 mb-6">
-              Let's set up your preferences to get you started quickly. Or try the one-click demo first.
+              Let's set up your preferences to get you started quickly. Or try the one-click demo
+              first.
+            </p>
+            <p class="text-sm text-gray-500 mb-2">
+              <strong>API key:</strong> For Architecture, PRD, and Code generation, add
+              <code class="text-xs bg-gray-100 px-1 rounded">NVIDIA_NIM_API_KEY</code>
+              or <code class="text-xs bg-gray-100 px-1 rounded">OPENROUTER_API_KEY</code> to your
+              backend <code class="text-xs bg-gray-100 px-1 rounded">.env</code>. Get keys from
+              <a
+                href="https://build.nvidia.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-blue-600 hover:underline">NVIDIA</a
+              >
+              or
+              <a
+                href="https://openrouter.ai/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-blue-600 hover:underline">OpenRouter</a
+              >.
             </p>
             <p class="text-sm text-gray-500 mb-4">
-              After completing or skipping setup, use <strong>Run demo</strong> in the chat to see Architecture → PRD with sample data (no API key required for demo).
+              After completing or skipping setup, use <strong>Run demo</strong> in the chat to see Architecture
+              → PRD with sample data (no API key required for demo).
             </p>
+            <div class="mb-4 flex justify-center gap-2">
+              <button
+                type="button"
+                class="text-sm px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+                onclick={testConnection}
+                disabled={connectionStatus === 'checking'}
+              >
+                {connectionStatus === 'checking' ? 'Checking…' : 'Test connection'}
+              </button>
+              {#if connectionStatus === 'ok'}
+                <span class="text-sm text-green-600">Backend connected</span>
+              {:else if connectionStatus === 'error'}
+                <span class="text-sm text-amber-600"
+                  >Backend unreachable. Start it with <code class="text-xs">npm run dev</code> or
+                  <code class="text-xs">start-app.bat</code>.</span
+                >
+              {/if}
+            </div>
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 text-left space-y-3">
               <div class="flex items-start gap-3">
-                <span class="text-2xl">🏗️</span>
+                <Building2 class="w-8 h-8 shrink-0 text-blue-600" strokeWidth={1.5} />
                 <div>
                   <h3 class="font-semibold">Design Architecture</h3>
-                  <p class="text-sm text-gray-600">Generate system architecture diagrams from descriptions</p>
+                  <p class="text-sm text-gray-600">
+                    Generate system architecture diagrams from descriptions
+                  </p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <span class="text-2xl">📋</span>
+                <FileText class="w-8 h-8 shrink-0 text-blue-600" strokeWidth={1.5} />
                 <div>
                   <h3 class="font-semibold">Create PRDs</h3>
                   <p class="text-sm text-gray-600">Automatic Product Requirements Documents</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <span class="text-2xl">💻</span>
+                <Code2 class="w-8 h-8 shrink-0 text-blue-600" strokeWidth={1.5} />
                 <div>
                   <h3 class="font-semibold">Generate Code</h3>
                   <p class="text-sm text-gray-600">Complete applications from your designs</p>
@@ -176,14 +235,18 @@
           </div>
         {/if}
 
-        <!-- Step 1: Diagram Style -->
+        <!-- Step 1: Diagram Style (Preferences) -->
         {#if currentStep === 1}
           <div>
             <h2 class="text-2xl font-bold mb-6">Diagram Preference</h2>
             <p class="text-gray-600 mb-6">How detailed should your diagrams be?</p>
             <div class="space-y-3">
               {#each diagramStyles as style}
-                <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors" class:border-blue-500={preferences.diagramStyle === style.value} class:bg-blue-50={preferences.diagramStyle === style.value}>
+                <label
+                  class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                  class:border-blue-500={preferences.diagramStyle === style.value}
+                  class:bg-blue-50={preferences.diagramStyle === style.value}
+                >
                   <input
                     type="radio"
                     name="diagramStyle"
@@ -232,33 +295,52 @@
             {#if preferences.primaryTechStack && preferences.primaryTechStack.length > 0}
               <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p class="text-sm text-gray-700">
-                  <strong>Selected:</strong> {preferences.primaryTechStack.join(', ')}
+                  <strong>Selected:</strong>
+                  {preferences.primaryTechStack.join(', ')}
                 </p>
               </div>
             {/if}
           </div>
         {/if}
 
-        <!-- Step 3: Complete -->
-        {#if currentStep === 3}
+        <!-- Step 4: Complete -->
+        {#if currentStep === 4}
           <div class="text-center">
-            <div class="mb-6 text-6xl">✨</div>
+            <div class="mb-6 flex justify-center">
+              <Sparkles class="w-16 h-16 text-amber-500" strokeWidth={1.5} />
+            </div>
             <h2 class="text-2xl font-bold mb-4">All Set!</h2>
             <p class="text-gray-600 mb-6">
               Your preferences have been saved. You're ready to start creating amazing projects.
             </p>
             <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-left space-y-2">
               <div class="flex items-center gap-2 text-sm">
-                <span class="text-green-600">✓</span>
+                <Check class="w-4 h-4 shrink-0 text-green-600" strokeWidth={2} />
                 <span>Diagram style: <strong>{preferences.diagramStyle}</strong></span>
               </div>
               <div class="flex items-center gap-2 text-sm">
-                <span class="text-green-600">✓</span>
-                <span>Tech stack: <strong>{preferences.primaryTechStack?.length || 0} technologies</strong></span>
+                <Check class="w-4 h-4 shrink-0 text-green-600" strokeWidth={2} />
+                <span
+                  >Default model: <strong
+                    >{modelOptions.find((m) => m.value === selectedModel)?.label ??
+                      selectedModel}</strong
+                  ></span
+                >
               </div>
               <div class="flex items-center gap-2 text-sm">
-                <span class="text-green-600">✓</span>
-                <span>Analytics: <strong>{preferences.analyticsOptIn ? 'Enabled' : 'Disabled'}</strong></span>
+                <Check class="w-4 h-4 shrink-0 text-green-600" strokeWidth={2} />
+                <span
+                  >Tech stack: <strong
+                    >{preferences.primaryTechStack?.length || 0} technologies</strong
+                  ></span
+                >
+              </div>
+              <div class="flex items-center gap-2 text-sm">
+                <Check class="w-4 h-4 shrink-0 text-green-600" strokeWidth={2} />
+                <span
+                  >Analytics: <strong>{preferences.analyticsOptIn ? 'Enabled' : 'Disabled'}</strong
+                  ></span
+                >
               </div>
             </div>
           </div>
@@ -269,35 +351,17 @@
       <div class="mt-12 flex justify-between items-center gap-4">
         <div>
           {#if currentStep > 0}
-            <Button
-              variant="ghost"
-              size="sm"
-              onclick={goBack}
-              disabled={isSubmitting}
-            >
-              Back
-            </Button>
+            <Button variant="ghost" size="sm" onclick={goBack} disabled={isSubmitting}>Back</Button>
           {/if}
         </div>
         <div class="flex gap-3">
           {#if currentStep < steps.length - 1}
-            <Button
-              variant="ghost"
-              size="sm"
-              onclick={handleSkip}
-              disabled={isSubmitting}
-            >
+            <Button variant="ghost" size="sm" onclick={handleSkip} disabled={isSubmitting}>
               Skip
             </Button>
           {/if}
           {#if currentStep < steps.length - 1}
-            <Button
-              size="sm"
-              onclick={goNext}
-              disabled={isSubmitting}
-            >
-              Next
-            </Button>
+            <Button size="sm" onclick={goNext} disabled={isSubmitting}>Next</Button>
           {:else}
             <Button
               size="sm"

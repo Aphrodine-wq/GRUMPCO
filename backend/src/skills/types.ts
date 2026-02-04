@@ -4,7 +4,7 @@
  */
 
 import type { Router } from 'express';
-import type { StreamParams, StreamEvent } from '../services/llmGateway.js';
+import type { StreamEvent } from '../services/llmGateway.js';
 
 /**
  * Skill manifest - metadata about a skill
@@ -48,14 +48,15 @@ export interface SkillManifest {
 }
 
 export type SkillCategory =
-  | 'code'       // Code analysis, generation, refactoring
-  | 'git'        // Git operations
-  | 'docs'       // Documentation
-  | 'test'       // Testing
-  | 'deploy'     // Deployment, CI/CD
-  | 'analyze'    // Analysis, metrics
-  | 'security'   // Security scanning
-  | 'custom';    // User-defined
+  | 'code' // Code analysis, generation, refactoring
+  | 'git' // Git operations
+  | 'docs' // Documentation
+  | 'test' // Testing
+  | 'deploy' // Deployment, CI/CD
+  | 'analyze' // Analysis, metrics
+  | 'security' // Security scanning
+  | 'life' // Life automation: reminders, calendar, inbox
+  | 'custom'; // User-defined
 
 export interface SkillCapabilities {
   /** Skill provides LLM tools */
@@ -78,13 +79,13 @@ export interface SkillCapabilities {
 }
 
 export type SkillPermission =
-  | 'file_read'      // Read files
-  | 'file_write'     // Write/modify files
-  | 'file_delete'    // Delete files
-  | 'bash_execute'   // Execute shell commands
-  | 'network'        // Make network requests
-  | 'git'            // Git operations
-  | 'env_read';      // Read environment variables
+  | 'file_read' // Read files
+  | 'file_write' // Write/modify files
+  | 'file_delete' // Delete files
+  | 'bash_execute' // Execute shell commands
+  | 'network' // Make network requests
+  | 'git' // Git operations
+  | 'env_read'; // Read environment variables
 
 export interface SkillTriggers {
   /** Keywords that suggest this skill */
@@ -117,7 +118,7 @@ export interface SkillContext {
   request: {
     id: string;
     timestamp: Date;
-    source: 'chat' | 'api' | 'command';
+    source: 'chat' | 'api' | 'command' | 'skill_test';
   };
 
   /** Available services */
@@ -270,10 +271,7 @@ export interface Skill {
   ): AsyncGenerator<SkillEvent, SkillExecutionResult, undefined>;
 
   /** Quick execution (non-streaming) */
-  run?(
-    input: SkillExecutionInput,
-    context: SkillContext
-  ): Promise<SkillExecutionResult>;
+  run?(input: SkillExecutionInput, context: SkillContext): Promise<SkillExecutionResult>;
 
   /** Check if this skill should handle the input */
   shouldHandle?(input: string, context: SkillContext): boolean | Promise<boolean>;

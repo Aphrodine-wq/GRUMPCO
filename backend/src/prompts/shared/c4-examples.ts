@@ -82,10 +82,13 @@ C4Dynamic
 `;
 
 export const C4_LEVEL_DESCRIPTIONS = {
-  context: 'System Context: Shows the system in scope and its relationships with external users and systems. Big picture view.',
-  container: 'Container: Zooms into the system to show the high-level technical building blocks (applications, data stores, microservices).',
-  component: 'Component: Zooms into an individual container to show its internal components and their relationships.',
-  code: 'Code: Optional level showing class diagrams, ER diagrams, or other code-level details within a component.'
+  context:
+    'System Context: Shows the system in scope and its relationships with external users and systems. Big picture view.',
+  container:
+    'Container: Zooms into the system to show the high-level technical building blocks (applications, data stores, microservices).',
+  component:
+    'Component: Zooms into an individual container to show its internal components and their relationships.',
+  code: 'Code: Optional level showing class diagrams, ER diagrams, or other code-level details within a component.',
 } as const;
 
 export const C4_SYNTAX_GUIDE = `

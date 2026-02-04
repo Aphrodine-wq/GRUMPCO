@@ -4,20 +4,29 @@
  * GET /api/share/:id - Retrieve shared content
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { getRequestLogger } from '../middleware/logger.js';
 import { sendServerError, sendErrorResponse, ErrorCode } from '../utils/errorResponse.js';
 import { randomBytes } from 'crypto';
 
 const router = Router();
 
+interface BundleItem {
+  type: 'diagram' | 'architecture' | 'prd' | 'plan' | 'code';
+  content: string;
+  title?: string;
+  mermaidCode?: string;
+}
+
 interface SharePayload {
-  type: 'diagram' | 'architecture' | 'prd' | 'code';
+  type: 'diagram' | 'architecture' | 'prd' | 'code' | 'bundle';
   content: string;
   title?: string;
   description?: string;
   mermaidCode?: string;
   expiresIn?: number; // hours, default 168 (7 days)
+  /** For type 'bundle': items to include (diagram, PRD, plan, etc.) */
+  items?: BundleItem[];
 }
 
 interface SharedItem {
@@ -61,58 +70,75 @@ setInterval(cleanupExpiredItems, 10 * 60 * 1000);
  * POST /api/share
  * Create a shareable link for content
  */
-router.post('/', async (req: Request<Record<string, never>, object, SharePayload>, res: Response) => {
-  const log = getRequestLogger();
-  const { type, content, title, description, mermaidCode, expiresIn = 168 } = req.body;
+router.post(
+  '/',
+  async (req: Request<Record<string, never>, object, SharePayload>, res: Response) => {
+    const log = getRequestLogger();
+    const { type, content, title, description, mermaidCode, expiresIn = 168 } = req.body;
 
-  if (!type || !content) {
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, 'type and content are required');
-    return;
+    if (!type || !content) {
+      sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, 'type and content are required');
+      return;
+    }
+
+    if (!['diagram', 'architecture', 'prd', 'code', 'bundle'].includes(type)) {
+      sendErrorResponse(
+        res,
+        ErrorCode.VALIDATION_ERROR,
+        'type must be one of: diagram, architecture, prd, code, bundle'
+      );
+      return;
+    }
+
+    let payloadContent = content;
+    if (type === 'bundle' && req.body.items && Array.isArray(req.body.items)) {
+      payloadContent = JSON.stringify({ items: req.body.items, title });
+    }
+
+    if (expiresIn < 1 || expiresIn > 720) {
+      // 1 hour to 30 days
+      sendErrorResponse(
+        res,
+        ErrorCode.VALIDATION_ERROR,
+        'expiresIn must be between 1 and 720 hours'
+      );
+      return;
+    }
+
+    try {
+      const shareId = generateShareId();
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + expiresIn * 60 * 60 * 1000);
+
+      const sharedItem: SharedItem = {
+        id: shareId,
+        type,
+        content: payloadContent,
+        title,
+        description,
+        mermaidCode,
+        createdAt: now.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        views: 0,
+      };
+
+      // Store in memory
+      sharedItems.set(shareId, sharedItem);
+
+      log.info({ shareId, type, expiresIn }, 'Shareable link created');
+
+      res.status(201).json({
+        success: true,
+        shareId,
+        shareUrl: `/share/${shareId}`,
+        expiresAt: sharedItem.expiresAt,
+      });
+    } catch (e) {
+      log.error({ error: (e as Error).message }, 'Failed to create shareable link');
+      sendServerError(res, e as Error);
+    }
   }
-
-  if (!['diagram', 'architecture', 'prd', 'code'].includes(type)) {
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, 'type must be one of: diagram, architecture, prd, code');
-    return;
-  }
-
-  if (expiresIn < 1 || expiresIn > 720) { // 1 hour to 30 days
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, 'expiresIn must be between 1 and 720 hours');
-    return;
-  }
-
-  try {
-    const shareId = generateShareId();
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + expiresIn * 60 * 60 * 1000);
-
-    const sharedItem: SharedItem = {
-      id: shareId,
-      type,
-      content,
-      title,
-      description,
-      mermaidCode,
-      createdAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      views: 0,
-    };
-
-    // Store in memory
-    sharedItems.set(shareId, sharedItem);
-
-    log.info({ shareId, type, expiresIn }, 'Shareable link created');
-
-    res.status(201).json({
-      success: true,
-      shareId,
-      shareUrl: `/share/${shareId}`,
-      expiresAt: sharedItem.expiresAt,
-    });
-  } catch (e) {
-    log.error({ error: (e as Error).message }, 'Failed to create shareable link');
-    sendServerError(res, e as Error);
-  }
-});
+);
 
 /**
  * GET /api/share/:id
@@ -145,7 +171,10 @@ router.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
     // Increment view count
     sharedItem.views++;
 
-    log.info({ shareId: id, type: sharedItem.type, views: sharedItem.views }, 'Shared item accessed');
+    log.info(
+      { shareId: id, type: sharedItem.type, views: sharedItem.views },
+      'Shared item accessed'
+    );
 
     res.json({
       success: true,

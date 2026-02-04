@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** [Date]
+**Last updated:** January 31, 2026
 
 This Privacy Policy describes how G-Rump ("we," "our") collects, uses, and protects information when you use our service ("Service").
 
@@ -18,9 +18,13 @@ We use the information to: (a) provide, operate, and improve the Service; (b) au
 
 We use third-party services that may process your data, including:
 
-- **Anthropic** – For AI model capabilities. See [Anthropic’s privacy policy](https://www.anthropic.com/legal/privacy).
-- **Supabase** – For authentication and data storage when applicable. See [Supabase’s privacy policy](https://supabase.com/privacy).
-- **Stripe** – For payment processing when applicable. See [Stripe’s privacy policy](https://stripe.com/privacy).
+- **NVIDIA NIM** – For AI inference (Kimi K2.5). See [NVIDIA's privacy policy](https://www.nvidia.com/en-us/about-nvidia/privacy-policy/).
+- **OpenRouter** – For AI model routing. See [OpenRouter's privacy policy](https://openrouter.ai/privacy).
+- **Groq** – For fast AI inference. See [Groq's privacy policy](https://groq.com/privacy/).
+- **Together AI** – For open source model inference.
+- **Anthropic** – For Claude AI model capabilities. See [Anthropic's privacy policy](https://www.anthropic.com/legal/privacy).
+- **Supabase** – For authentication and data storage when applicable. See [Supabase's privacy policy](https://supabase.com/privacy).
+- **Stripe** – For payment processing when applicable. See [Stripe's privacy policy](https://stripe.com/privacy).
 
 We do not sell your personal information to third parties.
 

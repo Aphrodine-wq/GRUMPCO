@@ -41,7 +41,14 @@ export interface CodeMetrics {
 }
 
 export interface ArchitecturePattern {
-  pattern: 'monolith' | 'microservices' | 'modular-monolith' | 'layered' | 'hexagonal' | 'event-driven' | 'unknown';
+  pattern:
+    | 'monolith'
+    | 'microservices'
+    | 'modular-monolith'
+    | 'layered'
+    | 'hexagonal'
+    | 'event-driven'
+    | 'unknown';
   confidence: number;
   indicators: string[];
 }
@@ -54,7 +61,14 @@ export interface TechStackItem {
 }
 
 export interface CodeSmell {
-  type: 'large-file' | 'deep-nesting' | 'long-function' | 'duplicate-code' | 'god-class' | 'magic-number' | 'unused-import';
+  type:
+    | 'large-file'
+    | 'deep-nesting'
+    | 'long-function'
+    | 'duplicate-code'
+    | 'god-class'
+    | 'magic-number'
+    | 'unused-import';
   severity: 'info' | 'warning' | 'error';
   file: string;
   line?: number;

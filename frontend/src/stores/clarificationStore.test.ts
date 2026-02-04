@@ -1,6 +1,6 @@
 /**
  * Clarification Store Tests
- * 
+ *
  * Comprehensive tests for clarification modal state management
  */
 
@@ -44,11 +44,11 @@ describe('clarificationStore', () => {
             selectionType: 'single' as const,
             options: [
               { id: 'simple', label: 'Simple' },
-              { id: 'complex', label: 'Complex' }
+              { id: 'complex', label: 'Complex' },
             ],
-            required: true
-          }
-        ]
+            required: true,
+          },
+        ],
       };
 
       // Don't await - it returns a promise that resolves on submit
@@ -59,13 +59,22 @@ describe('clarificationStore', () => {
     });
 
     it('should reset answers when opening', async () => {
-      const { openModal, answers, setAnswer, resetClarificationState } = await import('./clarificationStore');
+      const { openModal, answers, setAnswer, resetClarificationState } =
+        await import('./clarificationStore');
 
       // Set some answers first
       setAnswer('old-q', ['old-answer']);
 
       const clarification = {
-        questions: [{ id: 'q1', category: 'scope' as const, question: 'Q?', selectionType: 'single' as const, options: [] }]
+        questions: [
+          {
+            id: 'q1',
+            category: 'scope' as const,
+            question: 'Q?',
+            selectionType: 'single' as const,
+            options: [],
+          },
+        ],
       };
 
       openModal(clarification);
@@ -77,10 +86,25 @@ describe('clarificationStore', () => {
 
   describe('closeModal', () => {
     it('should close modal and clear state', async () => {
-      const { openModal, closeModal, isOpen, currentClarification, answers, resetClarificationState } = await import('./clarificationStore');
+      const {
+        openModal,
+        closeModal,
+        isOpen,
+        currentClarification,
+        answers,
+        resetClarificationState,
+      } = await import('./clarificationStore');
 
       const clarification = {
-        questions: [{ id: 'q1', category: 'scope' as const, question: 'Q?', selectionType: 'single' as const, options: [] }]
+        questions: [
+          {
+            id: 'q1',
+            category: 'scope' as const,
+            question: 'Q?',
+            selectionType: 'single' as const,
+            options: [],
+          },
+        ],
       };
 
       openModal(clarification);
@@ -116,7 +140,8 @@ describe('clarificationStore', () => {
 
   describe('toggleOption', () => {
     it('should toggle option for single selection', async () => {
-      const { toggleOption, answers, resetClarificationState } = await import('./clarificationStore');
+      const { toggleOption, answers, resetClarificationState } =
+        await import('./clarificationStore');
 
       toggleOption('q1', 'opt1', 'single');
       expect(get(answers).get('q1')).toEqual(['opt1']);
@@ -127,7 +152,8 @@ describe('clarificationStore', () => {
     });
 
     it('should toggle option for multiple selection', async () => {
-      const { toggleOption, answers, resetClarificationState } = await import('./clarificationStore');
+      const { toggleOption, answers, resetClarificationState } =
+        await import('./clarificationStore');
 
       toggleOption('q1', 'opt1', 'multiple');
       expect(get(answers).get('q1')).toEqual(['opt1']);
@@ -148,8 +174,15 @@ describe('clarificationStore', () => {
 
       openModal({
         questions: [
-          { id: 'q1', category: 'scope' as const, question: 'Q?', selectionType: 'single' as const, options: [], required: true }
-        ]
+          {
+            id: 'q1',
+            category: 'scope' as const,
+            question: 'Q?',
+            selectionType: 'single' as const,
+            options: [],
+            required: true,
+          },
+        ],
       });
 
       expect(get(isValid)).toBe(false);
@@ -157,12 +190,20 @@ describe('clarificationStore', () => {
     });
 
     it('should be true when all required questions answered', async () => {
-      const { openModal, setAnswer, isValid, resetClarificationState } = await import('./clarificationStore');
+      const { openModal, setAnswer, isValid, resetClarificationState } =
+        await import('./clarificationStore');
 
       openModal({
         questions: [
-          { id: 'q1', category: 'scope' as const, question: 'Q?', selectionType: 'single' as const, options: [], required: true }
-        ]
+          {
+            id: 'q1',
+            category: 'scope' as const,
+            question: 'Q?',
+            selectionType: 'single' as const,
+            options: [],
+            required: true,
+          },
+        ],
       });
 
       setAnswer('q1', ['answer']);
@@ -176,8 +217,15 @@ describe('clarificationStore', () => {
 
       openModal({
         questions: [
-          { id: 'q1', category: 'scope' as const, question: 'Q?', selectionType: 'single' as const, options: [], required: false }
-        ]
+          {
+            id: 'q1',
+            category: 'scope' as const,
+            question: 'Q?',
+            selectionType: 'single' as const,
+            options: [],
+            required: false,
+          },
+        ],
       });
 
       expect(get(isValid)).toBe(true);
@@ -187,33 +235,47 @@ describe('clarificationStore', () => {
 
   describe('submitAnswers', () => {
     it('should resolve promise with formatted answers', async () => {
-      const { openModal, setAnswer, submitAnswers, resetClarificationState } = await import('./clarificationStore');
+      const { openModal, setAnswer, submitAnswers, resetClarificationState } =
+        await import('./clarificationStore');
 
       const clarification = {
         questions: [
-          { id: 'q1', category: 'scope' as const, question: 'Q1?', selectionType: 'single' as const, options: [] },
-          { id: 'q2', category: 'scope' as const, question: 'Q2?', selectionType: 'multiple' as const, options: [] }
-        ]
+          {
+            id: 'q1',
+            category: 'scope' as const,
+            question: 'Q1?',
+            selectionType: 'single' as const,
+            options: [],
+          },
+          {
+            id: 'q2',
+            category: 'scope' as const,
+            question: 'Q2?',
+            selectionType: 'multiple' as const,
+            options: [],
+          },
+        ],
       };
 
       const promise = openModal(clarification);
-      
+
       setAnswer('q1', ['a1']);
       setAnswer('q2', ['a2', 'a3']);
-      
+
       submitAnswers();
 
       const result = await promise;
-      
+
       expect(result).toEqual([
         { questionId: 'q1', selectedOptionIds: ['a1'] },
-        { questionId: 'q2', selectedOptionIds: ['a2', 'a3'] }
+        { questionId: 'q2', selectedOptionIds: ['a2', 'a3'] },
       ]);
       resetClarificationState();
     });
 
     it('should close modal after submit', async () => {
-      const { openModal, submitAnswers, isOpen, resetClarificationState } = await import('./clarificationStore');
+      const { openModal, submitAnswers, isOpen, resetClarificationState } =
+        await import('./clarificationStore');
 
       openModal({ questions: [] });
       submitAnswers();
@@ -221,15 +283,65 @@ describe('clarificationStore', () => {
       expect(get(isOpen)).toBe(false);
       resetClarificationState();
     });
+
+    it('should handle submitAnswers when called without callback', async () => {
+      vi.resetModules();
+      const { submitAnswers, currentClarification, resetClarificationState } =
+        await import('./clarificationStore');
+
+      // Set clarification without callback (directly)
+      currentClarification.set({
+        questions: [
+          {
+            id: 'q1',
+            category: 'scope' as const,
+            question: 'Q?',
+            selectionType: 'single' as const,
+            options: [],
+          },
+        ],
+      });
+
+      // Should not throw when no callback
+      expect(() => submitAnswers()).not.toThrow();
+      resetClarificationState();
+    });
+
+    it('should early return when no callback and no current clarification', async () => {
+      vi.resetModules();
+      const { submitAnswers, resetClarificationState } = await import('./clarificationStore');
+
+      // No openModal called, no clarification set
+      // Should not throw and should early return
+      expect(() => submitAnswers()).not.toThrow();
+      resetClarificationState();
+    });
   });
 
   describe('resetClarificationState', () => {
     it('should reset all state', async () => {
-      const { openModal, setAnswer, resetClarificationState, isOpen, currentClarification, answers } = await import('./clarificationStore');
+      const {
+        openModal,
+        setAnswer,
+        resetClarificationState,
+        isOpen,
+        currentClarification,
+        answers,
+      } = await import('./clarificationStore');
 
-      openModal({ questions: [{ id: 'q1', category: 'scope' as const, question: 'Q?', selectionType: 'single' as const, options: [] }] });
+      openModal({
+        questions: [
+          {
+            id: 'q1',
+            category: 'scope' as const,
+            question: 'Q?',
+            selectionType: 'single' as const,
+            options: [],
+          },
+        ],
+      });
       setAnswer('q1', ['answer']);
-      
+
       resetClarificationState();
 
       expect(get(isOpen)).toBe(false);

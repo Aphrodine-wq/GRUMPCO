@@ -10,6 +10,7 @@
   <meta name="author" content="G-Rump Team" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#7C3AED" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:* ws://localhost:*;">
   <link rel="canonical" href="https://g-rump.com/app" />
   
   <!-- Open Graph -->
@@ -37,12 +38,12 @@
   
   <!-- Preload critical fonts with display=swap -->
   <link rel="preload" 
-        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" 
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap" 
         as="style"
         onload="this.onload=null;this.rel='stylesheet'">
   <noscript>
     <link rel="stylesheet" 
-          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
   </noscript>
   
   <!-- Critical CSS inline for above-the-fold content -->
@@ -62,7 +63,7 @@
   
   <!-- Deferred font loading -->
   <link rel="stylesheet" 
-        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
         media="print" 
         onload="this.media='all'">
 </head>

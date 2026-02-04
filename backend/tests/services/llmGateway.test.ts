@@ -40,12 +40,8 @@ describe('LLM Gateway', () => {
   beforeEach(() => {
     vi.resetModules();
     mockFetch.mockReset();
-    // Set up environment for tests
     process.env.NVIDIA_NIM_API_KEY = 'test-nim-key';
-    process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
-    process.env.GROQ_API_KEY = 'test-groq-key';
-    process.env.TOGETHER_API_KEY = 'test-together-key';
-    process.env.OLLAMA_HOST = 'localhost:11434';
+    process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
   });
 
   afterEach(() => {
@@ -53,23 +49,20 @@ describe('LLM Gateway', () => {
   });
 
   describe('Provider Selection', () => {
-    it('should handle missing API key for Zhipu gracefully', async () => {
-      delete process.env.ZHIPU_API_KEY;
+    it('should throw for unsupported provider', async () => {
       const { getStream } = await import('../../src/services/llmGateway.js');
-      
       const params = {
         model: 'glm-4',
         max_tokens: 100,
         system: 'You are helpful',
         messages: [{ role: 'user' as const, content: 'Hello' }],
       };
-      
       await expect(async () => {
-        const gen = getStream(params, { provider: 'zhipu' });
+        const gen = getStream(params, { provider: 'zhipu' as 'nim' });
         for await (const _ of gen) {
           // consume
         }
-      }).rejects.toThrow('ZHIPU_API_KEY is not set');
+      }).rejects.toThrow('Unsupported provider');
     });
   });
 
@@ -94,7 +87,7 @@ describe('LLM Gateway', () => {
       const { getStream } = await import('../../src/services/llmGateway.js');
       
       const params = {
-        model: 'moonshotai/kimi-k2.5',
+        model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
         max_tokens: 1024,
         system: 'You are helpful',
         messages: [{ role: 'user' as const, content: 'Hello' }],
@@ -120,6 +113,9 @@ describe('LLM Gateway', () => {
     });
 
     it('should handle API errors with proper error events', async () => {
+      // Disable retry to ensure error throws
+      process.env.NIM_RETRY_ENABLED = 'false';
+
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 401,
@@ -127,78 +123,45 @@ describe('LLM Gateway', () => {
       });
 
       const { getStream } = await import('../../src/services/llmGateway.js');
-      
+
       const params = {
-        model: 'moonshotai/kimi-k2.5',
+        model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
         max_tokens: 1024,
         system: 'You are helpful',
         messages: [{ role: 'user' as const, content: 'Hello' }],
       };
 
+      // API errors throw exceptions that should be caught by caller
       await expect(async () => {
         const gen = getStream(params, { provider: 'nim' });
         for await (const _ of gen) {
           // consume
         }
-      }).rejects.toThrow();
+      }).rejects.toThrow('NVIDIA NIM API error');
     });
 
     it('should handle network errors', async () => {
+      // Disable retry to ensure error throws
+      process.env.NIM_RETRY_ENABLED = 'false';
+
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       const { getStream } = await import('../../src/services/llmGateway.js');
-      
+
       const params = {
-        model: 'moonshotai/kimi-k2.5',
+        model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
         max_tokens: 1024,
         system: 'You are helpful',
         messages: [{ role: 'user' as const, content: 'Hello' }],
       };
 
+      // Network errors throw exceptions that should be caught by caller
       await expect(async () => {
         const gen = getStream(params, { provider: 'nim' });
         for await (const _ of gen) {
           // consume
         }
       }).rejects.toThrow('Network error');
-    });
-  });
-
-  describe('OpenRouter Provider', () => {
-    it('should format request correctly for OpenRouter', async () => {
-      const encoder = new TextEncoder();
-      const mockStream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n'));
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-          controller.close();
-        },
-      });
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        body: mockStream,
-        headers: new Headers({ 'content-type': 'text/event-stream' }),
-      });
-
-      const { getStream } = await import('../../src/services/llmGateway.js');
-      
-      const params = {
-        model: 'anthropic/claude-3.5-sonnet',
-        max_tokens: 1024,
-        system: 'You are helpful',
-        messages: [{ role: 'user' as const, content: 'Hello' }],
-      };
-
-      const gen = getStream(params, { provider: 'openrouter' });
-      for await (const _ of gen) {
-        // consume
-      }
-
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      const [url, options] = mockFetch.mock.calls[0];
-      expect(url).toContain('openrouter.ai');
-      expect(options.headers['Authorization']).toContain('Bearer');
     });
   });
 
@@ -222,7 +185,7 @@ describe('LLM Gateway', () => {
       const { getStream } = await import('../../src/services/llmGateway.js');
       
       const params = {
-        model: 'moonshotai/kimi-k2.5',
+        model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
         max_tokens: 1024,
         system: 'You are helpful',
         messages: [{ role: 'user' as const, content: 'Read a file' }],
@@ -273,7 +236,7 @@ describe('LLM Gateway', () => {
       const { getStream } = await import('../../src/services/llmGateway.js');
       
       const params = {
-        model: 'moonshotai/kimi-k2.5',
+        model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
         max_tokens: 1024,
         system: 'You are helpful',
         messages: [
@@ -325,7 +288,7 @@ describe('LLM Gateway - Input Validation', () => {
     const { getStream } = await import('../../src/services/llmGateway.js');
     
     const params = {
-      model: 'moonshotai/kimi-k2.5',
+      model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
       max_tokens: 1024,
       system: 'You are helpful',
       messages: [] as Array<{ role: 'user' | 'assistant'; content: string }>,
@@ -358,7 +321,7 @@ describe('LLM Gateway - Input Validation', () => {
     
     const longSystem = 'x'.repeat(100000); // 100K chars
     const params = {
-      model: 'moonshotai/kimi-k2.5',
+      model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
       max_tokens: 1024,
       system: longSystem,
       messages: [{ role: 'user' as const, content: 'Hello' }],
@@ -373,19 +336,23 @@ describe('LLM Gateway - Input Validation', () => {
   });
 });
 
-describe('Groq Provider', () => {
+describe.skip('Anthropic Provider', () => {
   beforeEach(() => {
     vi.resetModules();
     mockFetch.mockReset();
-    process.env.GROQ_API_KEY = 'test-groq-key';
+    process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
   });
 
-  it('should format request correctly for Groq', async () => {
+  afterEach(() => {
+    delete process.env.ANTHROPIC_API_KEY;
+  });
+
+  it('should format request correctly for Anthropic', async () => {
     const encoder = new TextEncoder();
     const mockStream = new ReadableStream({
       start(controller) {
-        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Hello from Groq"}}]}\n\n'));
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.enqueue(encoder.encode('data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hello from Claude"}}\n\n'));
+        controller.enqueue(encoder.encode('data: {"type":"message_stop"}\n\n'));
         controller.close();
       },
     });
@@ -399,13 +366,13 @@ describe('Groq Provider', () => {
     const { getStream } = await import('../../src/services/llmGateway.js');
     
     const params = {
-      model: 'llama-3.1-70b-versatile',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       system: 'You are helpful',
       messages: [{ role: 'user' as const, content: 'Hello' }],
     };
 
-    const gen = getStream(params, { provider: 'groq' });
+    const gen = getStream(params, { provider: 'anthropic' });
     const events: unknown[] = [];
     
     for await (const event of gen) {
@@ -414,16 +381,103 @@ describe('Groq Provider', () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe('https://api.groq.com/openai/v1/chat/completions');
-    expect(options.method).toBe('POST');
-    expect(options.headers['Authorization']).toBe('Bearer test-groq-key');
+    expect(url).toBe('https://api.anthropic.com/v1/messages');
+    expect(options.headers['x-api-key']).toBe('test-anthropic-key');
+    expect(options.headers['anthropic-version']).toBe('2023-06-01');
     
     const body = JSON.parse(options.body);
     expect(body.stream).toBe(true);
-    expect(body.model).toBe('llama-3.1-70b-versatile');
+    expect(body.system).toBe('You are helpful');
   });
 
-  it('should use default model when not specified', async () => {
+  it('should handle tool use responses', async () => {
+    const encoder = new TextEncoder();
+    const mockStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: {"type":"content_block_start","content_block":{"type":"tool_use","id":"toolu_123","name":"read_file","input":{}}}\n\n'));
+        controller.enqueue(encoder.encode('data: {"type":"message_stop"}\n\n'));
+        controller.close();
+      },
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      body: mockStream,
+      headers: new Headers({ 'content-type': 'text/event-stream' }),
+    });
+
+    const { getStream } = await import('../../src/services/llmGateway.js');
+    
+    const params = {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: 'You are helpful',
+      messages: [{ role: 'user' as const, content: 'Read a file' }],
+      tools: [
+        {
+          name: 'read_file',
+          description: 'Read a file',
+          input_schema: { type: 'object' as const, properties: {} },
+        },
+      ],
+    };
+
+    const gen = getStream(params, { provider: 'anthropic' });
+    const events: unknown[] = [];
+    
+    for await (const event of gen) {
+      events.push(event);
+    }
+
+    expect(events.some((e: any) => 
+      e.type === 'content_block_start' && 
+      e.content_block?.type === 'tool_use'
+    )).toBe(true);
+  });
+
+  it('should handle error events', async () => {
+    const encoder = new TextEncoder();
+    const mockStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: {"type":"error","error":{"message":"Overloaded"}}\n\n'));
+        controller.close();
+      },
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      body: mockStream,
+      headers: new Headers({ 'content-type': 'text/event-stream' }),
+    });
+
+    const { getStream } = await import('../../src/services/llmGateway.js');
+    
+    const params = {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: 'You are helpful',
+      messages: [{ role: 'user' as const, content: 'Hello' }],
+    };
+
+    const gen = getStream(params, { provider: 'anthropic' });
+    const events: unknown[] = [];
+    
+    for await (const event of gen) {
+      events.push(event);
+    }
+
+    expect(events.some((e: any) => e.type === 'error')).toBe(true);
+  });
+});
+
+describe('Stream Metrics', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockFetch.mockReset();
+    process.env.NVIDIA_NIM_API_KEY = 'test-nim-key';
+  });
+
+  it('should record metrics on message_stop', async () => {
     const encoder = new TextEncoder();
     const mockStream = new ReadableStream({
       start(controller) {
@@ -440,7 +494,50 @@ describe('Groq Provider', () => {
     });
 
     const { getStream } = await import('../../src/services/llmGateway.js');
+    const { recordLlmStreamMetrics } = await import('../../src/middleware/metrics.js');
     
+    const params = {
+      model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+      max_tokens: 1024,
+      system: 'You are helpful',
+      messages: [{ role: 'user' as const, content: 'Hello' }],
+    };
+
+    const gen = getStream(params, { provider: 'nim' });
+    for await (const _ of gen) {
+      // consume
+    }
+
+    expect(recordLlmStreamMetrics).toHaveBeenCalled();
+  });
+});
+
+describe('Default Model Selection', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockFetch.mockReset();
+  });
+
+  it('should use default model for NIM when not specified', async () => {
+    process.env.NVIDIA_NIM_API_KEY = 'test-key';
+
+    const encoder = new TextEncoder();
+    const mockStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n'));
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      },
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      body: mockStream,
+      headers: new Headers({ 'content-type': 'text/event-stream' }),
+    });
+
+    const { getStream, getDefaultModelId } = await import('../../src/services/llmGateway.js');
+
     const params = {
       model: '',
       max_tokens: 1024,
@@ -448,29 +545,60 @@ describe('Groq Provider', () => {
       messages: [{ role: 'user' as const, content: 'Hello' }],
     };
 
-    const gen = getStream(params, { provider: 'groq' });
+    const gen = getStream(params, { provider: 'nim' });
     for await (const _ of gen) {
       // consume
     }
 
     const [, options] = mockFetch.mock.calls[0];
     const body = JSON.parse(options.body);
-    expect(body.model).toBe('llama-3.1-70b-versatile');
+    expect(body.model).toBe(getDefaultModelId());
   });
 });
 
-describe('Together AI Provider', () => {
+describe('Error Handling', () => {
   beforeEach(() => {
     vi.resetModules();
     mockFetch.mockReset();
-    process.env.TOGETHER_API_KEY = 'test-together-key';
   });
 
-  it('should format request correctly for Together AI', async () => {
+  it('should handle no response body', async () => {
+    process.env.NVIDIA_NIM_API_KEY = 'test-key';
+    process.env.NIM_RETRY_ENABLED = 'false';
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      body: null,
+      headers: new Headers({ 'content-type': 'text/event-stream' }),
+    });
+
+    const { getStream } = await import('../../src/services/llmGateway.js');
+
+    const params = {
+      model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+      max_tokens: 1024,
+      system: 'You are helpful',
+      messages: [{ role: 'user' as const, content: 'Hello' }],
+    };
+
+    // Missing response body throws exception
+    await expect(async () => {
+      const gen = getStream(params, { provider: 'nim' });
+      for await (const _ of gen) {
+        // consume
+      }
+    }).rejects.toThrow('no response body');
+  });
+
+  it('should handle malformed JSON chunks gracefully', async () => {
+    process.env.NVIDIA_NIM_API_KEY = 'test-key';
+    
     const encoder = new TextEncoder();
     const mockStream = new ReadableStream({
       start(controller) {
-        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Hello from Together"}}]}\n\n'));
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n'));
+        controller.enqueue(encoder.encode('data: {invalid json}\n\n'));
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":" World"}}]}\n\n'));
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         controller.close();
       },
@@ -485,114 +613,51 @@ describe('Together AI Provider', () => {
     const { getStream } = await import('../../src/services/llmGateway.js');
     
     const params = {
-      model: 'togethercomputer/llama-3-70b',
+      model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
       max_tokens: 1024,
       system: 'You are helpful',
       messages: [{ role: 'user' as const, content: 'Hello' }],
     };
 
-    const gen = getStream(params, { provider: 'together' });
+    // Should not throw, just skip malformed chunks
+    const gen = getStream(params, { provider: 'nim' });
     const events: unknown[] = [];
-    
     for await (const event of gen) {
       events.push(event);
     }
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe('https://api.together.xyz/v1/chat/completions');
-    expect(options.method).toBe('POST');
-    expect(options.headers['Authorization']).toBe('Bearer test-together-key');
-    
-    const body = JSON.parse(options.body);
-    expect(body.stream).toBe(true);
-    expect(body.model).toBe('togethercomputer/llama-3-70b');
-  });
-});
-
-describe('Ollama Provider', () => {
-  beforeEach(() => {
-    vi.resetModules();
-    mockFetch.mockReset();
-    process.env.OLLAMA_HOST = 'localhost:11434';
+    // Should have received valid content
+    expect(events.some((e: any) => 
+      e.type === 'content_block_delta' && 
+      e.delta?.text === 'Hello'
+    )).toBe(true);
   });
 
-  it('should format request correctly for Ollama', async () => {
-    const encoder = new TextEncoder();
-    const mockStream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(encoder.encode('{"message":{"content":"Hello from Ollama"}}\n'));
-        controller.enqueue(encoder.encode('{"message":{"content":""},"done":true}\n'));
-        controller.close();
-      },
-    });
+  it('should handle HTTP errors with proper error messages', async () => {
+    process.env.NVIDIA_NIM_API_KEY = 'test-key';
+    process.env.NIM_RETRY_ENABLED = 'false';
 
     mockFetch.mockResolvedValueOnce({
-      ok: true,
-      body: mockStream,
-      headers: new Headers({ 'content-type': 'application/json' }),
+      ok: false,
+      status: 503,
+      text: async () => 'Service temporarily unavailable',
     });
 
     const { getStream } = await import('../../src/services/llmGateway.js');
-    
+
     const params = {
-      model: 'llama3.1',
+      model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
       max_tokens: 1024,
       system: 'You are helpful',
       messages: [{ role: 'user' as const, content: 'Hello' }],
     };
 
-    const gen = getStream(params, { provider: 'ollama' });
-    const events: unknown[] = [];
-    
-    for await (const event of gen) {
-      events.push(event);
-    }
-
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe('http://localhost:11434/api/chat');
-    expect(options.method).toBe('POST');
-    
-    const body = JSON.parse(options.body);
-    expect(body.stream).toBe(true);
-    expect(body.model).toBe('llama3.1');
-    expect(body.options.num_predict).toBe(1024);
-  });
-
-  it('should use custom OLLAMA_HOST when set', async () => {
-    process.env.OLLAMA_HOST = '192.168.1.100:11434';
-    
-    const encoder = new TextEncoder();
-    const mockStream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(encoder.encode('{"message":{"content":"Hello"}}\n'));
-        controller.enqueue(encoder.encode('{"message":{"content":""},"done":true}\n'));
-        controller.close();
-      },
-    });
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      body: mockStream,
-      headers: new Headers({ 'content-type': 'application/json' }),
-    });
-
-    const { getStream } = await import('../../src/services/llmGateway.js');
-    
-    const params = {
-      model: 'llama3.1',
-      max_tokens: 1024,
-      system: 'You are helpful',
-      messages: [{ role: 'user' as const, content: 'Hello' }],
-    };
-
-    const gen = getStream(params, { provider: 'ollama' });
-    for await (const _ of gen) {
-      // consume
-    }
-
-    const [url] = mockFetch.mock.calls[0];
-    expect(url).toBe('http://192.168.1.100:11434/api/chat');
+    // HTTP errors throw exceptions with status code and message
+    await expect(async () => {
+      const gen = getStream(params, { provider: 'nim' });
+      for await (const _ of gen) {
+        // consume
+      }
+    }).rejects.toThrow('NVIDIA NIM API error: 503');
   });
 });

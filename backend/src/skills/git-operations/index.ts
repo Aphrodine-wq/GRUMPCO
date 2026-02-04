@@ -20,10 +20,9 @@ import { definitions } from './tools.js';
 import type { CommitMessage, CommitType, BranchSuggestion } from './types.js';
 
 // Load manifest
-import manifest from './manifest.json' with { type: 'json' };
 
 class GitOperationsSkill extends BaseSkill {
-  manifest: SkillManifest = manifest as SkillManifest;
+  manifest!: SkillManifest;
 
   prompts: SkillPrompts = {
     system: GIT_OPERATIONS_SYSTEM_PROMPT,
@@ -240,7 +239,11 @@ class GitOperationsSkill extends BaseSkill {
       lines.push('');
     }
 
-    if (status.staged.length === 0 && status.unstaged.length === 0 && status.untracked.length === 0) {
+    if (
+      status.staged.length === 0 &&
+      status.unstaged.length === 0 &&
+      status.untracked.length === 0
+    ) {
       lines.push('Working tree is clean.');
     }
 
@@ -283,9 +286,7 @@ class GitOperationsSkill extends BaseSkill {
     const scope = this.inferScope(stagedFiles);
     const subject = this.generateSubject(stagedFiles, diff, type);
 
-    const full = scope
-      ? `${type}(${scope}): ${subject}`
-      : `${type}: ${subject}`;
+    const full = scope ? `${type}(${scope}): ${subject}` : `${type}: ${subject}`;
 
     return {
       type,
@@ -380,10 +381,18 @@ class GitOperationsSkill extends BaseSkill {
   /**
    * Generate PR description
    */
-  private generatePRDescription(branch: string, log: Array<{ message: string }>): { title: string; body: string } {
-    const title = branch.replace(/^(feature|fix|refactor|docs|test|chore)\//, '').replace(/-/g, ' ');
+  private generatePRDescription(
+    branch: string,
+    log: Array<{ message: string }>
+  ): { title: string; body: string } {
+    const title = branch
+      .replace(/^(feature|fix|refactor|docs|test|chore)\//, '')
+      .replace(/-/g, ' ');
 
-    const commits = log.slice(0, 5).map((c) => `- ${c.message}`).join('\n');
+    const commits = log
+      .slice(0, 5)
+      .map((c) => `- ${c.message}`)
+      .join('\n');
 
     const body = `## Summary
 

@@ -26,7 +26,7 @@ export async function generateMigrations(
   targetDb: MigrationTargetDb = 'sqlite'
 ): Promise<GenerateMigrationsResult> {
   const userMsg = `Target DB: ${targetDb}\n\nSchema DDL:\n${schemaDdl}\n\nProduce ordered migration SQL blocks.`;
-  
+
   try {
     const result = await getCompletion({
       model: 'claude-sonnet-4-20250514',
@@ -34,12 +34,12 @@ export async function generateMigrations(
       system: MIGRATION_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMsg }],
     });
-    
+
     if (result.error) {
       logger.warn({ err: result.error }, 'migrationService: generateMigrations failed');
       return { migrations: [`-- Error: ${result.error}`], summary: 'Error' };
     }
-    
+
     const migrations: string[] = [];
     const sqlBlocks = result.text.matchAll(/```sql\n?([\s\S]*?)\n?```/g);
     for (const m of sqlBlocks) migrations.push(m[1].trim());

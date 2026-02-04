@@ -23,13 +23,15 @@
 
     try {
       await editPlan(plan.id, {
-        steps: [{
-          id: editingStep.id,
-          title: editingStep.title,
-          description: editingStep.description,
-          estimatedTime: editingStep.estimatedTime,
-          risk: editingStep.risk,
-        }],
+        steps: [
+          {
+            id: editingStep.id,
+            title: editingStep.title,
+            description: editingStep.description,
+            estimatedTime: editingStep.estimatedTime,
+            risk: editingStep.risk,
+          },
+        ],
       });
       editingStep = null;
     } catch (error) {
@@ -40,7 +42,7 @@
 
 <div class="plan-editor">
   <h3>Edit Plan</h3>
-  
+
   {#if editingStep}
     <div class="edit-form">
       <label>
@@ -64,19 +66,30 @@
         </select>
       </label>
       <div class="form-actions">
-        <button class="btn btn-primary" on:click={saveEdit}>Save</button>
-        <button class="btn btn-secondary" on:click={cancelEdit}>Cancel</button>
+        <button class="btn btn-primary" onclick={saveEdit}>Save</button>
+        <button class="btn btn-secondary" onclick={cancelEdit}>Cancel</button>
       </div>
     </div>
   {:else}
-    <p>Select a step to edit</p>
+    <ul class="step-list">
+      {#each plan.steps as step}
+        <li>
+          <button type="button" class="step-btn" onclick={() => startEdit(step)}>
+            {step.title}
+          </button>
+        </li>
+      {/each}
+    </ul>
+    {#if plan.steps.length === 0}
+      <p>No steps to edit</p>
+    {/if}
   {/if}
 </div>
 
 <style>
   .plan-editor {
     padding: 1rem;
-    background: #FFFFFF;
+    background: #ffffff;
     border-radius: 8px;
   }
 
@@ -94,9 +107,11 @@
     font-weight: 500;
   }
 
-  input, textarea, select {
+  input,
+  textarea,
+  select {
     padding: 0.5rem;
-    border: 1px solid #E5E5E5;
+    border: 1px solid #e5e5e5;
     border-radius: 4px;
     font-family: inherit;
   }
@@ -122,12 +137,33 @@
 
   .btn-primary {
     background: var(--color-primary);
-    color: #FFFFFF;
+    color: #ffffff;
   }
 
   .btn-secondary {
-    background: #F5F5F5;
+    background: #f5f5f5;
     color: #000000;
   }
-</style>
 
+  .step-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .step-btn {
+    display: block;
+    width: 100%;
+    padding: 0.5rem;
+    text-align: left;
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    background: #fafafa;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .step-btn:hover {
+    background: #f0f0f0;
+  }
+</style>

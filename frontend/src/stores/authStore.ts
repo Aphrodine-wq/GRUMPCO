@@ -67,10 +67,7 @@ export const isAuthenticated = derived(
   ([$user, $session]) => !!$user && !!$session
 );
 
-export const accessToken = derived(
-  session,
-  ($session) => $session?.access_token || null
-);
+export const accessToken = derived(session, ($session) => $session?.access_token || null);
 
 // Load persisted auth
 function loadAuth(): void {
@@ -94,7 +91,7 @@ function saveAuth(): void {
     if (u && s) {
       const auth: StoredAuth = {
         user: u,
-        session: s
+        session: s,
       };
       authStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
     } else {
@@ -115,7 +112,7 @@ async function authFetch(endpoint: string, options: RequestInit = {}): Promise<R
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...options.headers
+    ...options.headers,
   };
 
   if (token) {
@@ -139,20 +136,20 @@ export async function checkAuthStatus(): Promise<void> {
 export async function signup(email: string, password: string, name?: string): Promise<boolean> {
   loading.set(true);
   error.set(null);
-  
+
   try {
     const res = await authFetch('/auth/signup', {
       method: 'POST',
-      body: JSON.stringify({ email, password, name })
+      body: JSON.stringify({ email, password, name }),
     });
-    
+
     const data = await res.json();
-    
+
     if (!res.ok) {
       error.set(data.error || 'Signup failed');
       return false;
     }
-    
+
     user.set(data.user);
     session.set(data.session);
 
@@ -168,20 +165,20 @@ export async function signup(email: string, password: string, name?: string): Pr
 export async function login(email: string, password: string): Promise<boolean> {
   loading.set(true);
   error.set(null);
-  
+
   try {
     const res = await authFetch('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password }),
     });
-    
+
     const data = await res.json();
-    
+
     if (!res.ok) {
       error.set(data.error || 'Login failed');
       return false;
     }
-    
+
     user.set(data.user);
     session.set(data.session);
 
@@ -248,6 +245,13 @@ export function resetAuthState(): void {
   loading.set(false);
   error.set(null);
   authStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
+/** Set user and session from OAuth callback (e.g. Google Sign-In) */
+export function setUserAndSession(userData: User | null, sessionData: AuthSession | null): void {
+  user.set(userData);
+  session.set(sessionData);
+  error.set(null);
 }
 
 // Initialize on load

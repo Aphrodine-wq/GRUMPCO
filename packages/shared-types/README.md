@@ -1,5 +1,7 @@
 # @grump/shared-types
 
+> **Version 2.1.0** | Updated January 31, 2026
+
 Shared TypeScript type definitions for the G-Rump monorepo.
 
 ## Installation

@@ -1,6 +1,6 @@
 /**
  * Chat Mode Store Tests
- * 
+ *
  * Comprehensive tests for chat mode state management
  */
 
@@ -15,7 +15,7 @@ describe('chatModeStore', () => {
     resetMocks();
     localStorage.clear();
     vi.resetModules();
-    
+
     const module = await import('./chatModeStore');
     chatModeStore = module.chatModeStore;
   });
@@ -27,19 +27,19 @@ describe('chatModeStore', () => {
 
     it('should load stored mode from localStorage', async () => {
       localStorage.setItem('grump-chat-mode', 'code');
-      
+
       vi.resetModules();
       const module = await import('./chatModeStore');
-      
+
       expect(get(module.chatModeStore)).toBe('code');
     });
 
     it('should default to design for invalid stored value', async () => {
       localStorage.setItem('grump-chat-mode', 'invalid');
-      
+
       vi.resetModules();
       const module = await import('./chatModeStore');
-      
+
       expect(get(module.chatModeStore)).toBe('design');
     });
   });
@@ -62,20 +62,20 @@ describe('chatModeStore', () => {
 
     it('should persist to localStorage', () => {
       chatModeStore.setMode('code');
-      
+
       expect(localStorage.getItem('grump-chat-mode')).toBe('code');
     });
 
     it('should update subscribers', () => {
       const values: string[] = [];
-      const unsubscribe = chatModeStore.subscribe(v => values.push(v));
-      
+      const unsubscribe = chatModeStore.subscribe((v) => values.push(v));
+
       chatModeStore.setMode('code');
       chatModeStore.setMode('argument');
       chatModeStore.setMode('design');
-      
+
       unsubscribe();
-      
+
       // Initial + 3 updates
       expect(values).toEqual(['design', 'code', 'argument', 'design']);
     });
@@ -85,15 +85,47 @@ describe('chatModeStore', () => {
     it('should allow switching between all modes', () => {
       chatModeStore.setMode('design');
       expect(get(chatModeStore)).toBe('design');
-      
+
       chatModeStore.setMode('code');
       expect(get(chatModeStore)).toBe('code');
-      
+
       chatModeStore.setMode('argument');
       expect(get(chatModeStore)).toBe('argument');
-      
+
       chatModeStore.setMode('design');
       expect(get(chatModeStore)).toBe('design');
+    });
+  });
+
+  describe('localStorage error handling', () => {
+    it('should default to design when localStorage.getItem throws', async () => {
+      const originalGetItem = localStorage.getItem;
+      localStorage.getItem = vi.fn(() => {
+        throw new Error('localStorage not available');
+      });
+
+      vi.resetModules();
+      const module = await import('./chatModeStore');
+
+      expect(get(module.chatModeStore)).toBe('design');
+
+      localStorage.getItem = originalGetItem;
+    });
+
+    it('should silently ignore localStorage.setItem errors', async () => {
+      vi.resetModules();
+      const module = await import('./chatModeStore');
+
+      const originalSetItem = localStorage.setItem;
+      localStorage.setItem = vi.fn(() => {
+        throw new Error('QuotaExceededError');
+      });
+
+      // Should not throw
+      expect(() => module.chatModeStore.setMode('code')).not.toThrow();
+      expect(get(module.chatModeStore)).toBe('code');
+
+      localStorage.setItem = originalSetItem;
     });
   });
 });

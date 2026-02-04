@@ -2,18 +2,15 @@
  * Bulkheads Service
  * Implements bulkhead pattern with per-service circuit breakers and rate limiting
  * Isolates failures between different service types
+ *
+ * Powered by NVIDIA NIM - https://build.nvidia.com/
  */
 
-import CircuitBreaker from 'opossum';
+import type CircuitBreaker from 'opossum';
 import { createCircuitBreaker } from './resilience.js';
 import logger from '../middleware/logger.js';
 
-export type ServiceType = 
-  | 'claude-chat'
-  | 'claude-context'
-  | 'claude-diagram'
-  | 'claude-code'
-  | 'claude-agent';
+export type ServiceType = 'nim-chat' | 'nim-context' | 'nim-diagram' | 'nim-code' | 'nim-agent';
 
 interface ServiceConfig {
   maxConcurrent: number;
@@ -26,7 +23,7 @@ interface ServiceConfig {
 
 // Service-specific configurations
 const SERVICE_CONFIGS: Record<ServiceType, ServiceConfig> = {
-  'claude-chat': {
+  'nim-chat': {
     maxConcurrent: 10,
     queueSize: 50,
     rateLimit: {
@@ -34,7 +31,7 @@ const SERVICE_CONFIGS: Record<ServiceType, ServiceConfig> = {
       windowMs: 60000, // 1 minute
     },
   },
-  'claude-context': {
+  'nim-context': {
     maxConcurrent: 5,
     queueSize: 20,
     rateLimit: {
@@ -42,7 +39,7 @@ const SERVICE_CONFIGS: Record<ServiceType, ServiceConfig> = {
       windowMs: 60000,
     },
   },
-  'claude-diagram': {
+  'nim-diagram': {
     maxConcurrent: 8,
     queueSize: 30,
     rateLimit: {
@@ -50,7 +47,7 @@ const SERVICE_CONFIGS: Record<ServiceType, ServiceConfig> = {
       windowMs: 60000,
     },
   },
-  'claude-code': {
+  'nim-code': {
     maxConcurrent: 5,
     queueSize: 20,
     rateLimit: {
@@ -58,7 +55,7 @@ const SERVICE_CONFIGS: Record<ServiceType, ServiceConfig> = {
       windowMs: 60000,
     },
   },
-  'claude-agent': {
+  'nim-agent': {
     maxConcurrent: 10,
     queueSize: 50,
     rateLimit: {
@@ -89,19 +86,22 @@ export function getCircuitBreaker<T extends unknown[], R>(
   if (!circuitBreakers.has(serviceType)) {
     const _config = SERVICE_CONFIGS[serviceType];
     const breaker = createCircuitBreaker(fn, serviceType);
-    
+
     circuitBreakers.set(serviceType, breaker);
     logger.info({ serviceType }, 'Circuit breaker created for service');
     return breaker;
   }
-  
+
   return circuitBreakers.get(serviceType) as CircuitBreaker<T, R>;
 }
 
 /**
  * Check if request should be rate limited
  */
-export function checkRateLimit(serviceType: ServiceType): { allowed: boolean; retryAfter?: number } {
+export function checkRateLimit(serviceType: ServiceType): {
+  allowed: boolean;
+  retryAfter?: number;
+} {
   const config = SERVICE_CONFIGS[serviceType];
   if (!config.rateLimit) {
     return { allowed: true };
@@ -121,15 +121,11 @@ export function checkRateLimit(serviceType: ServiceType): { allowed: boolean; re
 
   const rateLimit = config.rateLimit;
   // Remove old requests outside the window
-  state.requests = state.requests.filter(
-    timestamp => now - timestamp < rateLimit.windowMs
-  );
+  state.requests = state.requests.filter((timestamp) => now - timestamp < rateLimit.windowMs);
 
   if (state.requests.length >= rateLimit.requests) {
     const oldestRequest = state.requests[0];
-    const retryAfter = Math.ceil(
-      (rateLimit.windowMs - (now - oldestRequest)) / 1000
-    );
+    const retryAfter = Math.ceil((rateLimit.windowMs - (now - oldestRequest)) / 1000);
     logger.warn(
       { serviceType, count: state.requests.length, limit: rateLimit.requests },
       'Rate limit exceeded'
@@ -159,7 +155,11 @@ export function getServiceState(serviceType: ServiceType): {
   const rateLimitState = rateLimitStates.get(serviceType);
 
   const state = breaker
-    ? (breaker.opened ? 'open' : breaker.halfOpen ? 'half-open' : 'closed')
+    ? breaker.opened
+      ? 'open'
+      : breaker.halfOpen
+        ? 'half-open'
+        : 'closed'
     : 'closed';
 
   const stats = breaker && 'stats' in breaker ? (breaker.stats ?? {}) : {};

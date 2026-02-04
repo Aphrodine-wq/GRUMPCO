@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import Button from '$lib/design-system/components/Button/Button.svelte';
   import Card from '$lib/design-system/components/Card/Card.svelte';
 
@@ -27,7 +26,7 @@
     if (currentStep < steps.length) {
       const step = steps[currentStep];
       const element = document.querySelector(step.target) as HTMLElement;
-      
+
       if (element) {
         highlightElement = element;
         updateTooltipPosition(element, step.position || 'bottom');
@@ -103,7 +102,14 @@
 
 {#if currentStep < steps.length}
   <!-- Overlay -->
-  <div class="tutorial-overlay" onclick={skip}>
+  <div
+    class="tutorial-overlay"
+    role="button"
+    tabindex="0"
+    onclick={skip}
+    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && skip()}
+    aria-label="Skip tutorial"
+  >
     <!-- Highlight cutout -->
     {#if highlightElement}
       <div
@@ -120,8 +126,10 @@
     <!-- Tooltip -->
     <div
       class="tutorial-tooltip"
+      role="presentation"
       style="top: {tooltipPosition.top}px; left: {tooltipPosition.left}px;"
       onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
     >
       <Card>
         <div class="p-6">
@@ -138,7 +146,12 @@
               aria-label="Skip tutorial"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -146,12 +159,7 @@
           <p class="text-gray-700 mb-6">{steps[currentStep].content}</p>
 
           <div class="flex justify-between items-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onclick={prevStep}
-              disabled={currentStep === 0}
-            >
+            <Button variant="ghost" size="sm" onclick={prevStep} disabled={currentStep === 0}>
               Previous
             </Button>
 
@@ -165,10 +173,7 @@
               {/each}
             </div>
 
-            <Button
-              size="sm"
-              onclick={nextStep}
-            >
+            <Button size="sm" onclick={nextStep}>
               {currentStep === steps.length - 1 ? 'Finish' : 'Next'}
             </Button>
           </div>

@@ -1,14 +1,55 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import type { ComponentType } from 'svelte';
   import { chatModeStore } from '../stores/chatModeStore';
-  import { showSettings } from '../stores/uiStore';
-  import { get } from 'svelte/store';
+  import { setCurrentView, focusChatTrigger } from '../stores/uiStore';
+  import {
+    MessageSquare,
+    Clipboard,
+    FileText,
+    Rocket,
+    Palette,
+    Code2,
+    Bot,
+    Layout,
+    Mic,
+    MessagesSquare,
+    BookOpen,
+    Blocks,
+    Users,
+    Brain,
+    Check,
+    Clock,
+    Container,
+    Cog,
+    Cloud,
+    Plug,
+    DollarSign,
+    Settings,
+    BarChart2,
+    Wrench,
+    RefreshCw,
+    Trash2,
+    Save,
+    FolderOpen,
+    Keyboard,
+  } from 'lucide-svelte';
+
+  type CommandCategory =
+    | 'build'
+    | 'tools'
+    | 'ai'
+    | 'infra'
+    | 'manage'
+    | 'settings'
+    | 'actions'
+    | 'modes';
 
   interface Command {
     id: string;
     label: string;
-    category: 'navigation' | 'actions' | 'settings';
-    icon: string;
+    category: CommandCategory;
+    icon: ComponentType;
     shortcut?: string;
     action: () => void | Promise<void>;
   }
@@ -26,51 +67,314 @@
   let filteredCommands: Command[] = $state([]);
   let searchInput: HTMLInputElement | null = $state(null);
 
+  const categoryLabels: Record<CommandCategory, string> = {
+    modes: 'Modes',
+    build: 'Build',
+    tools: 'Tools',
+    ai: 'AI',
+    infra: 'Infra',
+    manage: 'Manage',
+    settings: 'Settings',
+    actions: 'Actions',
+  };
+
   // Initialize commands
   function initializeCommands() {
     commands = [
+      // Modes
       {
-        id: 'switch-design',
-        label: 'Switch to Design Mode',
-        category: 'navigation',
-        icon: '🎨',
+        id: 'switch-argument',
+        label: 'Argument',
+        category: 'modes',
+        icon: MessageSquare,
         action: () => {
-          chatModeStore.setMode('design');
+          chatModeStore.setMode('argument');
+          setCurrentView('chat');
           close();
         },
       },
       {
-        id: 'switch-code',
-        label: 'Switch to Code Mode',
-        category: 'navigation',
-        icon: '💻',
+        id: 'switch-plan',
+        label: 'Plan',
+        category: 'modes',
+        icon: Clipboard,
         action: () => {
           chatModeStore.setMode('code');
+          window.dispatchEvent(new CustomEvent('switch-plan-mode'));
+          setCurrentView('chat');
+          close();
+        },
+      },
+      {
+        id: 'switch-spec',
+        label: 'Spec',
+        category: 'modes',
+        icon: FileText,
+        action: () => {
+          chatModeStore.setMode('code');
+          window.dispatchEvent(new CustomEvent('switch-spec-mode'));
+          setCurrentView('chat');
           close();
         },
       },
       {
         id: 'open-ship-mode',
-        label: 'Open SHIP Mode',
-        category: 'navigation',
-        icon: '🚀',
+        label: 'SHIP',
+        category: 'modes',
+        icon: Rocket,
         action: () => {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('open-ship-mode'));
-          }
+          window.dispatchEvent(new CustomEvent('open-ship-mode'));
+          setCurrentView('chat');
           close();
         },
       },
       {
+        id: 'switch-design',
+        label: 'Design',
+        category: 'modes',
+        icon: Palette,
+        action: () => {
+          chatModeStore.setMode('design');
+          setCurrentView('chat');
+          close();
+        },
+      },
+      {
+        id: 'switch-code',
+        label: 'Code',
+        category: 'modes',
+        icon: Code2,
+        action: () => {
+          chatModeStore.setMode('code');
+          setCurrentView('chat');
+          close();
+        },
+      },
+      // Build
+      {
+        id: 'view-freeAgent',
+        label: 'G-Agent',
+        category: 'build',
+        icon: Bot,
+        action: () => {
+          setCurrentView('freeAgent');
+          close();
+        },
+      },
+      {
+        id: 'view-designToCode',
+        label: 'Design to code',
+        category: 'build',
+        icon: Layout,
+        action: () => {
+          setCurrentView('designToCode');
+          close();
+        },
+      },
+      // Tools
+      {
+        id: 'view-voiceCode',
+        label: 'Voice code',
+        category: 'tools',
+        icon: Mic,
+        action: () => {
+          setCurrentView('voiceCode');
+          close();
+        },
+      },
+      {
+        id: 'view-talkMode',
+        label: 'Talk Mode',
+        category: 'tools',
+        icon: MessagesSquare,
+        action: () => {
+          setCurrentView('talkMode');
+          close();
+        },
+      },
+      {
+        id: 'view-askDocs',
+        label: 'Ask docs',
+        category: 'tools',
+        icon: BookOpen,
+        action: () => {
+          setCurrentView('askDocs');
+          close();
+        },
+      },
+      {
+        id: 'view-skills',
+        label: 'Skills',
+        category: 'tools',
+        icon: Blocks,
+        action: () => {
+          setCurrentView('skills');
+          close();
+        },
+      },
+      // AI
+      {
+        id: 'view-swarm',
+        label: 'Agent swarm',
+        category: 'ai',
+        icon: Users,
+        action: () => {
+          setCurrentView('swarm');
+          close();
+        },
+      },
+      {
+        id: 'view-memory',
+        label: 'Memory bank',
+        category: 'ai',
+        icon: Brain,
+        action: () => {
+          setCurrentView('memory');
+          close();
+        },
+      },
+      {
+        id: 'view-approvals',
+        label: 'Approvals',
+        category: 'ai',
+        icon: Check,
+        action: () => {
+          setCurrentView('approvals');
+          close();
+        },
+      },
+      {
+        id: 'view-heartbeats',
+        label: 'Scheduled tasks',
+        category: 'ai',
+        icon: Clock,
+        action: () => {
+          setCurrentView('heartbeats');
+          close();
+        },
+      },
+      // Infra
+      {
+        id: 'view-docker',
+        label: 'Docker',
+        category: 'infra',
+        icon: Container,
+        action: () => {
+          setCurrentView('docker');
+          close();
+        },
+      },
+      {
+        id: 'view-docker-setup',
+        label: 'Docker setup',
+        category: 'infra',
+        icon: Cog,
+        action: () => {
+          setCurrentView('docker-setup');
+          close();
+        },
+      },
+      {
+        id: 'view-cloud',
+        label: 'Cloud',
+        category: 'infra',
+        icon: Cloud,
+        action: () => {
+          setCurrentView('cloud');
+          close();
+        },
+      },
+      {
+        id: 'view-integrations',
+        label: 'Integrations',
+        category: 'infra',
+        icon: Plug,
+        action: () => {
+          setCurrentView('integrations');
+          close();
+        },
+      },
+      // Manage
+      {
+        id: 'view-cost',
+        label: 'Cost dashboard',
+        category: 'manage',
+        icon: DollarSign,
+        action: () => {
+          setCurrentView('cost');
+          close();
+        },
+      },
+      {
+        id: 'view-auditLog',
+        label: 'Audit log',
+        category: 'manage',
+        icon: Clipboard,
+        action: () => {
+          setCurrentView('auditLog');
+          close();
+        },
+      },
+      {
+        id: 'view-advancedAI',
+        label: 'Advanced AI',
+        category: 'manage',
+        icon: Brain,
+        action: () => {
+          setCurrentView('advancedAI');
+          close();
+        },
+      },
+      // Settings
+      {
+        id: 'view-settings',
+        label: 'Settings',
+        category: 'settings',
+        icon: Settings,
+        shortcut: 'Ctrl+,',
+        action: () => {
+          setCurrentView('settings');
+          close();
+        },
+      },
+      {
+        id: 'view-model-benchmark',
+        label: 'Model benchmark',
+        category: 'settings',
+        icon: BarChart2,
+        action: () => {
+          setCurrentView('model-benchmark');
+          close();
+        },
+      },
+      {
+        id: 'view-troubleshooting',
+        label: 'Troubleshooting',
+        category: 'settings',
+        icon: Wrench,
+        action: () => {
+          setCurrentView('troubleshooting');
+          close();
+        },
+      },
+      {
+        id: 'view-reset',
+        label: 'Reset settings',
+        category: 'settings',
+        icon: RefreshCw,
+        action: () => {
+          setCurrentView('reset');
+          close();
+        },
+      },
+      // Actions
+      {
         id: 'clear-chat',
         label: 'Clear Chat',
         category: 'actions',
-        icon: '🗑️',
+        icon: Trash2,
         action: () => {
-          // Dispatch event to clear chat
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('clear-chat'));
-          }
+          window.dispatchEvent(new CustomEvent('clear-chat'));
           close();
         },
       },
@@ -78,12 +382,10 @@
         id: 'save-session',
         label: 'Save Session',
         category: 'actions',
-        icon: '💾',
+        icon: Save,
         shortcut: 'Ctrl+S',
         action: () => {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('save-session'));
-          }
+          window.dispatchEvent(new CustomEvent('save-session'));
           close();
         },
       },
@@ -91,47 +393,20 @@
         id: 'load-session',
         label: 'Load Session',
         category: 'actions',
-        icon: '📂',
+        icon: FolderOpen,
         action: () => {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('load-session'));
-          }
+          window.dispatchEvent(new CustomEvent('load-session'));
           close();
         },
       },
       {
         id: 'focus-input',
         label: 'Focus Chat Input',
-        category: 'navigation',
-        icon: '⌨️',
-        shortcut: 'Ctrl+Shift+I',
+        category: 'actions',
+        icon: Keyboard,
+        shortcut: 'Ctrl+Shift+L',
         action: () => {
-          const input = document.querySelector('.message-input') as HTMLInputElement;
-          input?.focus();
-          close();
-        },
-      },
-      {
-        id: 'open-settings',
-        label: 'Open Settings',
-        category: 'settings',
-        icon: '⚙️',
-        shortcut: 'Ctrl+,',
-        action: () => {
-          showSettings.set(true);
-          close();
-        },
-      },
-      {
-        id: 'show-shortcuts',
-        label: 'Show Keyboard Shortcuts',
-        category: 'settings',
-        icon: '⌨️',
-        shortcut: 'Ctrl+/',
-        action: () => {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('show-shortcuts'));
-          }
+          focusChatTrigger.update((n) => n + 1);
           close();
         },
       },
@@ -143,9 +418,9 @@
   function fuzzyMatch(query: string, text: string): boolean {
     const lowerQuery = query.toLowerCase();
     const lowerText = text.toLowerCase();
-    
+
     if (lowerText.includes(lowerQuery)) return true;
-    
+
     // Simple fuzzy matching: check if all query chars appear in order
     let queryIndex = 0;
     for (let i = 0; i < lowerText.length && queryIndex < lowerQuery.length; i++) {
@@ -163,12 +438,31 @@
       return;
     }
 
-    filteredCommands = commands.filter(cmd => 
-      fuzzyMatch(searchQuery, cmd.label) || 
-      fuzzyMatch(searchQuery, cmd.category)
+    filteredCommands = commands.filter(
+      (cmd) =>
+        fuzzyMatch(searchQuery, cmd.label) ||
+        fuzzyMatch(searchQuery, cmd.category) ||
+        fuzzyMatch(searchQuery, categoryLabels[cmd.category])
     );
-    selectedIndex = Math.min(selectedIndex, filteredCommands.length - 1);
+    selectedIndex = Math.min(Math.max(0, selectedIndex), filteredCommands.length - 1);
   }
+
+  type ListItem =
+    | { type: 'header'; category: CommandCategory }
+    | { type: 'command'; command: Command; index: number };
+  const listItems = $derived.by(() => {
+    const items: ListItem[] = [];
+    const seen = new Set<CommandCategory>();
+    let idx = 0;
+    for (const cmd of filteredCommands) {
+      if (!seen.has(cmd.category)) {
+        seen.add(cmd.category);
+        items.push({ type: 'header', category: cmd.category });
+      }
+      items.push({ type: 'command', command: cmd, index: idx++ });
+    }
+    return items;
+  });
 
   function close() {
     open = false;
@@ -227,8 +521,22 @@
 </script>
 
 {#if open}
-  <div class="command-palette-overlay" on:click={close} role="dialog" aria-modal="true" aria-label="Command Palette">
-    <div class="command-palette" on:click|stopPropagation role="menu">
+  <div
+    class="command-palette-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Command Palette"
+    tabindex="-1"
+    onclick={close}
+    onkeydown={(e) => e.key === 'Escape' && close()}
+  >
+    <div
+      class="command-palette"
+      role="menu"
+      tabindex="0"
+      onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
+    >
       <div class="command-palette-header">
         <input
           bind:this={searchInput}
@@ -240,31 +548,37 @@
           role="combobox"
           aria-expanded="true"
           aria-autocomplete="list"
+          aria-controls="command-list"
         />
       </div>
-      <div class="command-palette-list" role="listbox">
+      <div class="command-palette-list" role="listbox" id="command-list">
         {#if filteredCommands.length === 0}
-          <div class="command-palette-empty">
-            No commands found
-          </div>
+          <div class="command-palette-empty">No commands found</div>
         {:else}
-          {#each filteredCommands as command, index (command.id)}
-            <button
-              class="command-item"
-              class:selected={index === selectedIndex}
-              on:click={() => executeCommand(command)}
-              on:mouseenter={() => selectedIndex = index}
-              role="option"
-              aria-selected={index === selectedIndex}
-            >
-              <span class="command-icon">{command.icon}</span>
-              <span class="command-label">{command.label}</span>
-              {#if command.shortcut}
-                <span class="command-shortcut">
-                  {command.shortcut}
+          {#each listItems as item}
+            {#if item.type === 'header'}
+              <div class="command-category-header">{categoryLabels[item.category]}</div>
+            {:else}
+              <button
+                class="command-item"
+                class:selected={item.index === selectedIndex}
+                onclick={() => executeCommand(item.command)}
+                onmouseenter={() => (selectedIndex = item.index)}
+                role="option"
+                aria-selected={item.index === selectedIndex}
+              >
+                <span class="command-icon">
+                  {#if item.command.icon}
+                    {@const IconC = item.command.icon}
+                    <IconC size={18} />
+                  {/if}
                 </span>
-              {/if}
-            </button>
+                <span class="command-label">{item.command.label}</span>
+                {#if item.command.shortcut}
+                  <span class="command-shortcut">{item.command.shortcut}</span>
+                {/if}
+              </button>
+            {/if}
           {/each}
         {/if}
       </div>
@@ -272,6 +586,8 @@
         <span class="command-hint">↑↓ Navigate</span>
         <span class="command-hint">↵ Select</span>
         <span class="command-hint">Esc Close</span>
+        <span class="command-hint">/ Focus input</span>
+        <span class="command-hint">Ctrl+B Sidebar</span>
       </div>
     </div>
   </div>
@@ -330,7 +646,7 @@
   .command-palette-input {
     width: 100%;
     padding: 0.75rem 1rem;
-    background: #F0F0F0;
+    background: #f0f0f0;
     border-radius: 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
@@ -343,7 +659,7 @@
   }
 
   .command-palette-input::placeholder {
-    color: #9CA3AF;
+    color: #9ca3af;
   }
 
   .command-palette-list {
@@ -355,9 +671,24 @@
   .command-palette-empty {
     padding: 2rem;
     text-align: center;
-    color: #6B7280;
+    color: #6b7280;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
+  }
+
+  .command-category-header {
+    padding: 6px 1rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9ca3af;
+    background: #262626;
+    margin-top: 4px;
+  }
+
+  .command-category-header:first-child {
+    margin-top: 0;
   }
 
   .command-item {
@@ -368,7 +699,7 @@
     padding: 0.75rem 1rem;
     background: transparent;
     border: none;
-    color: #E5E5E5;
+    color: #e5e5e5;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
     cursor: pointer;
@@ -391,7 +722,7 @@
   }
 
   .command-shortcut {
-    color: #6B7280;
+    color: #6b7280;
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
     background: #262626;
@@ -406,7 +737,7 @@
   }
 
   .command-hint {
-    color: #6B7280;
+    color: #6b7280;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
   }

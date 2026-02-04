@@ -7,7 +7,13 @@ import { getRedisClient, isRedisConnected } from './redis.js';
 import logger from '../middleware/logger.js';
 import crypto from 'crypto';
 
-export type CacheType = 'intent' | 'architecture' | 'prd' | 'work_report' | 'context' | 'intent-optimization';
+export type CacheType =
+  | 'intent'
+  | 'architecture'
+  | 'prd'
+  | 'work_report'
+  | 'context'
+  | 'intent-optimization';
 
 export interface CacheConfig {
   ttl: number; // Time to live in seconds
@@ -45,7 +51,7 @@ export async function getFromCache<T>(type: CacheType, input: string): Promise<T
     const redis = getRedisClient();
     const key = generateCacheKey(type, input);
     const data = await redis.get(key);
-    
+
     if (!data) {
       return null;
     }
@@ -71,7 +77,7 @@ export async function setInCache<T>(type: CacheType, input: string, value: T): P
     const config = CACHE_CONFIGS[type];
     const key = generateCacheKey(type, input);
     const data = JSON.stringify(value);
-    
+
     await redis.setex(key, config.ttl, data);
     return true;
   } catch (error) {
@@ -111,7 +117,7 @@ export async function clearCacheType(type: CacheType): Promise<number> {
     const redis = getRedisClient();
     const config = CACHE_CONFIGS[type];
     const keys = await redis.keys(`${config.prefix}*`);
-    
+
     if (keys.length === 0) {
       return 0;
     }

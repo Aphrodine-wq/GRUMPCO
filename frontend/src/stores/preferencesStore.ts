@@ -3,21 +3,150 @@ import type { Writable } from 'svelte/store';
 import { fetchApi } from '../lib/api.js';
 import { session } from './authStore.js';
 
+/** G-Agent capability keys (new naming) */
+export type GAgentCapabilityKey =
+  | 'file'
+  | 'git'
+  | 'bash'
+  | 'npm'
+  | 'docker'
+  | 'cloud'
+  | 'webhooks'
+  | 'heartbeats'
+  | 'internet_search'
+  | 'database'
+  | 'api_call'
+  | 'monitoring'
+  | 'cicd'
+  | 'skills_self_edit'
+  | 'task_planning'
+  | 'memory'
+  | 'self_improve';
+
+/** @deprecated Use GAgentCapabilityKey instead */
+export type FreeAgentCapabilityKey = GAgentCapabilityKey;
+
+/** Capabilities that require PRO+ tier */
+export const PREMIUM_CAPABILITIES: GAgentCapabilityKey[] = [
+  'cloud',
+  'cicd',
+  'task_planning',
+  'memory',
+  'self_improve',
+];
+
+/** Capability descriptions for UI */
+export const CAPABILITY_DESCRIPTIONS: Record<GAgentCapabilityKey, string> = {
+  file: 'Read, write, and edit files in your workspace',
+  git: 'Git operations: status, diff, commit, branch, push',
+  bash: 'Execute shell commands',
+  npm: 'Run npm/pnpm/yarn commands',
+  docker: 'Docker container and compose operations',
+  internet_search: 'Web search and URL screenshots',
+  webhooks: 'Send and manage webhooks',
+  heartbeats: 'Scheduled tasks and health checks',
+  database: 'Database queries and migrations (read-only by default)',
+  api_call: 'Make HTTP/GraphQL API calls (allowlisted domains)',
+  monitoring: 'Query metrics, create alerts, search logs',
+  cloud: 'Kubernetes deployments and cloud operations (PRO+)',
+  cicd: 'CI/CD pipeline management (PRO+)',
+  skills_self_edit: 'Create, edit, test, and list your own skills',
+  task_planning: 'Plan-first execution with task decomposition',
+  memory: 'Persistent memory across sessions',
+  self_improve: 'Self-improvement and skill learning',
+};
+
+export interface GAgentModelPreference {
+  source?: 'cloud' | 'ollama' | 'auto';
+  provider?: string;
+  modelId?: string;
+}
+
+/** @deprecated Use GAgentModelPreference instead */
+export type FreeAgentModelPreference = GAgentModelPreference;
+
+export interface GAgentPersona {
+  tone?: string;
+  style?: string;
+  expertise?: string[];
+}
+
+/** @deprecated Use GAgentPersona instead */
+export type FreeAgentPersona = GAgentPersona;
+
 export interface UserPreferences {
   diagramStyle: 'minimal' | 'detailed' | 'comprehensive';
   primaryTechStack: string[];
-  theme: 'light' | 'dark' | 'auto';
   analyticsOptIn: boolean;
   apiKey?: string;
   setupComplete: boolean;
+  density?: 'comfortable' | 'compact';
+
+  // G-Agent preferences (new naming)
+  gAgentCapabilities?: GAgentCapabilityKey[];
+  gAgentExternalAllowlist?: string[];
+  gAgentPreferredModelSource?: 'cloud' | 'ollama' | 'auto';
+  gAgentOllamaModel?: string;
+  gAgentModelPreference?: GAgentModelPreference;
+  gAgentPersona?: GAgentPersona;
+  gAgentGoals?: string[];
+  gAgentAutoApprove?: boolean;
+  gAgentPersistent?: boolean;
+
+  // Deprecated - use gAgent* equivalents
+  /** @deprecated Use gAgentCapabilities instead */
+  freeAgentCapabilities?: GAgentCapabilityKey[];
+  /** @deprecated Use gAgentExternalAllowlist instead */
+  freeAgentExternalAllowlist?: string[];
+  /** @deprecated Use gAgentPreferredModelSource instead */
+  freeAgentPreferredModelSource?: 'cloud' | 'ollama' | 'auto';
+  /** @deprecated Use gAgentOllamaModel instead */
+  freeAgentOllamaModel?: string;
+  /** @deprecated Use gAgentModelPreference instead */
+  freeAgentModelPreference?: GAgentModelPreference;
+  /** @deprecated Use gAgentPersona instead */
+  freeAgentPersona?: GAgentPersona;
+  /** @deprecated Use gAgentGoals instead */
+  freeAgentGoals?: string[];
+
+  /** When true, inject RAG context into chat for more tailored answers from indexed docs. */
+  includeRagContext?: boolean;
 }
+
+const DEFAULT_G_AGENT_CAPABILITIES: GAgentCapabilityKey[] = [
+  'file',
+  'git',
+  'bash',
+  'npm',
+  'docker',
+  'webhooks',
+  'heartbeats',
+  'internet_search',
+  'database',
+  'api_call',
+  'monitoring',
+  // Premium capabilities not enabled by default
+  // 'cloud',
+  // 'cicd',
+  // 'task_planning',
+  // 'memory',
+  // 'self_improve',
+];
+
+/** @deprecated Use DEFAULT_G_AGENT_CAPABILITIES instead. Exported for backward compatibility. */
+export const DEFAULT_FREE_AGENT_CAPABILITIES = DEFAULT_G_AGENT_CAPABILITIES;
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   diagramStyle: 'detailed',
   primaryTechStack: ['React', 'Node.js', 'PostgreSQL'],
-  theme: 'auto',
   analyticsOptIn: true,
   setupComplete: false,
+  density: 'comfortable',
+  gAgentCapabilities: DEFAULT_G_AGENT_CAPABILITIES,
+  gAgentExternalAllowlist: [],
+  // Also set deprecated fields for backward compatibility
+  freeAgentCapabilities: DEFAULT_G_AGENT_CAPABILITIES,
+  freeAgentExternalAllowlist: [],
 };
 
 // Local storage key
@@ -52,7 +181,7 @@ async function saveToBackend(prefs: UserPreferences) {
   if (!currentSession?.access_token) return;
 
   try {
-    await fetchApi('/settings', {
+    await fetchApi('/api/settings', {
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${currentSession.access_token}`,
@@ -70,7 +199,7 @@ export async function syncPreferences() {
   if (!currentSession?.access_token) return;
 
   try {
-    const res = await fetchApi('/settings', {
+    const res = await fetchApi('/api/settings', {
       headers: {
         Authorization: `Bearer ${currentSession.access_token}`,
       },
@@ -79,7 +208,7 @@ export async function syncPreferences() {
     if (res.ok) {
       const data = await res.json();
       if (data.settings?.preferences) {
-        preferences.update(current => {
+        preferences.update((current) => {
           const merged = { ...current, ...data.settings.preferences };
           // Persist to local storage immediately to keep them in sync
           if (typeof window !== 'undefined') {
@@ -125,30 +254,74 @@ session.subscribe((s) => {
 });
 
 // Derived stores for individual preferences
-export const diagramStyle = derived(
-  preferences,
-  ($preferences) => $preferences.diagramStyle
-);
+export const diagramStyle = derived(preferences, ($preferences) => $preferences.diagramStyle);
 
 export const primaryTechStack = derived(
   preferences,
   ($preferences) => $preferences.primaryTechStack
 );
 
-export const theme = derived(
+export const analyticsOptIn = derived(preferences, ($preferences) => $preferences.analyticsOptIn);
+
+export const setupComplete = derived(preferences, ($preferences) => $preferences.setupComplete);
+
+export const density = derived(
   preferences,
-  ($preferences) => $preferences.theme
+  ($preferences) => $preferences.density ?? 'comfortable'
 );
 
-export const analyticsOptIn = derived(
+export const includeRagContext = derived(preferences, (p) => p.includeRagContext ?? false);
+
+// G-Agent derived stores (new naming)
+export const gAgentCapabilities = derived(
   preferences,
-  ($preferences) => $preferences.analyticsOptIn
+  (p) => p.gAgentCapabilities ?? p.freeAgentCapabilities ?? DEFAULT_G_AGENT_CAPABILITIES
 );
 
-export const setupComplete = derived(
+export const gAgentExternalAllowlist = derived(
   preferences,
-  ($preferences) => $preferences.setupComplete
+  (p) => p.gAgentExternalAllowlist ?? p.freeAgentExternalAllowlist ?? []
 );
+
+export const gAgentPreferredModelSource = derived(
+  preferences,
+  (p) => p.gAgentPreferredModelSource ?? p.freeAgentPreferredModelSource ?? 'auto'
+);
+
+export const gAgentOllamaModel = derived(
+  preferences,
+  (p) => p.gAgentOllamaModel ?? p.freeAgentOllamaModel ?? 'glm4'
+);
+
+export const gAgentPersona = derived(
+  preferences,
+  (p) => p.gAgentPersona ?? p.freeAgentPersona ?? {}
+);
+
+export const gAgentGoals = derived(preferences, (p) => p.gAgentGoals ?? p.freeAgentGoals ?? []);
+
+export const gAgentAutoApprove = derived(preferences, (p) => p.gAgentAutoApprove ?? false);
+
+export const gAgentPersistent = derived(preferences, (p) => p.gAgentPersistent ?? false);
+
+// Deprecated aliases - use gAgent* instead
+/** @deprecated Use gAgentCapabilities instead */
+export const freeAgentCapabilities = gAgentCapabilities;
+
+/** @deprecated Use gAgentExternalAllowlist instead */
+export const freeAgentExternalAllowlist = gAgentExternalAllowlist;
+
+/** @deprecated Use gAgentPreferredModelSource instead */
+export const freeAgentPreferredModelSource = gAgentPreferredModelSource;
+
+/** @deprecated Use gAgentOllamaModel instead */
+export const freeAgentOllamaModel = gAgentOllamaModel;
+
+/** @deprecated Use gAgentPersona instead */
+export const freeAgentPersona = gAgentPersona;
+
+/** @deprecated Use gAgentGoals instead */
+export const freeAgentGoals = gAgentGoals;
 
 // Store actions
 export const preferencesStore = {
@@ -173,9 +346,160 @@ export const preferencesStore = {
     preferences.update((p) => ({ ...p, primaryTechStack: stack }));
   },
 
-  // Set theme
-  setTheme: (t: 'light' | 'dark' | 'auto') => {
-    preferences.update((p) => ({ ...p, theme: t }));
+  // Set density
+  setDensity: (d: 'comfortable' | 'compact') => {
+    preferences.update((p) => ({ ...p, density: d }));
+  },
+
+  setIncludeRagContext: (enabled: boolean) => {
+    preferences.update((p) => ({ ...p, includeRagContext: enabled }));
+  },
+
+  // G-Agent methods (new naming)
+  setGAgentCapabilities: (capabilities: GAgentCapabilityKey[]) => {
+    preferences.update((p) => ({
+      ...p,
+      gAgentCapabilities: capabilities,
+      freeAgentCapabilities: capabilities, // Keep deprecated field in sync
+    }));
+  },
+  setGAgentExternalAllowlist: (allowlist: string[]) => {
+    preferences.update((p) => ({
+      ...p,
+      gAgentExternalAllowlist: allowlist,
+      freeAgentExternalAllowlist: allowlist, // Keep deprecated field in sync
+    }));
+  },
+  toggleGAgentCapability: (key: GAgentCapabilityKey) => {
+    preferences.update((p) => {
+      const current =
+        p.gAgentCapabilities ?? p.freeAgentCapabilities ?? DEFAULT_G_AGENT_CAPABILITIES;
+      const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+      return {
+        ...p,
+        gAgentCapabilities: next,
+        freeAgentCapabilities: next, // Keep deprecated field in sync
+      };
+    });
+  },
+  addGAgentAllowlistDomain: (domain: string) => {
+    const trimmed = domain.trim().toLowerCase();
+    if (!trimmed) return;
+    preferences.update((p) => {
+      const current = p.gAgentExternalAllowlist ?? p.freeAgentExternalAllowlist ?? [];
+      if (current.includes(trimmed)) return p;
+      const next = [...current, trimmed];
+      return {
+        ...p,
+        gAgentExternalAllowlist: next,
+        freeAgentExternalAllowlist: next, // Keep deprecated field in sync
+      };
+    });
+  },
+  removeGAgentAllowlistDomain: (domain: string) => {
+    preferences.update((p) => {
+      const current = p.gAgentExternalAllowlist ?? p.freeAgentExternalAllowlist ?? [];
+      const next = current.filter((d) => d !== domain);
+      return {
+        ...p,
+        gAgentExternalAllowlist: next,
+        freeAgentExternalAllowlist: next, // Keep deprecated field in sync
+      };
+    });
+  },
+  setGAgentPreferredModelSource: (source: 'cloud' | 'ollama' | 'auto') => {
+    preferences.update((p) => {
+      const modelPref =
+        source === 'ollama'
+          ? {
+              source: 'ollama' as const,
+              provider: 'ollama',
+              modelId: p.gAgentOllamaModel ?? p.freeAgentOllamaModel ?? 'glm4',
+            }
+          : source === 'cloud'
+            ? { source: 'cloud' as const }
+            : { source: 'auto' as const };
+      return {
+        ...p,
+        gAgentPreferredModelSource: source,
+        gAgentModelPreference: modelPref,
+        freeAgentPreferredModelSource: source, // Keep deprecated field in sync
+        freeAgentModelPreference: modelPref,
+      };
+    });
+  },
+  setGAgentOllamaModel: (model: string) => {
+    preferences.update((p) => {
+      const next: Partial<UserPreferences> = {
+        gAgentOllamaModel: model,
+        freeAgentOllamaModel: model, // Keep deprecated field in sync
+      };
+      const source = p.gAgentPreferredModelSource ?? p.freeAgentPreferredModelSource;
+      if (source === 'ollama') {
+        const modelPref = { source: 'ollama' as const, provider: 'ollama', modelId: model };
+        next.gAgentModelPreference = modelPref;
+        next.freeAgentModelPreference = modelPref;
+      }
+      return { ...p, ...next };
+    });
+  },
+  setGAgentPersona: (persona: GAgentPersona) => {
+    preferences.update((p) => ({
+      ...p,
+      gAgentPersona: persona,
+      freeAgentPersona: persona, // Keep deprecated field in sync
+    }));
+  },
+  setGAgentGoals: (goals: string[]) => {
+    preferences.update((p) => ({
+      ...p,
+      gAgentGoals: goals,
+      freeAgentGoals: goals, // Keep deprecated field in sync
+    }));
+  },
+  setGAgentAutoApprove: (autoApprove: boolean) => {
+    preferences.update((p) => ({ ...p, gAgentAutoApprove: autoApprove }));
+  },
+  setGAgentPersistent: (persistent: boolean) => {
+    preferences.update((p) => ({ ...p, gAgentPersistent: persistent }));
+  },
+
+  // Deprecated Free Agent methods - use gAgent* equivalents
+  /** @deprecated Use setGAgentCapabilities instead */
+  setFreeAgentCapabilities: (capabilities: GAgentCapabilityKey[]) => {
+    preferencesStore.setGAgentCapabilities(capabilities);
+  },
+  /** @deprecated Use setGAgentExternalAllowlist instead */
+  setFreeAgentExternalAllowlist: (allowlist: string[]) => {
+    preferencesStore.setGAgentExternalAllowlist(allowlist);
+  },
+  /** @deprecated Use toggleGAgentCapability instead */
+  toggleFreeAgentCapability: (key: GAgentCapabilityKey) => {
+    preferencesStore.toggleGAgentCapability(key);
+  },
+  /** @deprecated Use addGAgentAllowlistDomain instead */
+  addFreeAgentAllowlistDomain: (domain: string) => {
+    preferencesStore.addGAgentAllowlistDomain(domain);
+  },
+  /** @deprecated Use removeGAgentAllowlistDomain instead */
+  removeFreeAgentAllowlistDomain: (domain: string) => {
+    preferencesStore.removeGAgentAllowlistDomain(domain);
+  },
+  /** @deprecated Use setGAgentPreferredModelSource instead */
+  setFreeAgentPreferredModelSource: (source: 'cloud' | 'ollama' | 'auto') => {
+    preferencesStore.setGAgentPreferredModelSource(source);
+  },
+  /** @deprecated Use setGAgentOllamaModel instead */
+  setFreeAgentOllamaModel: (model: string) => {
+    preferencesStore.setGAgentOllamaModel(model);
+  },
+  /** @deprecated Use setGAgentPersona instead */
+  setFreeAgentPersona: (persona: GAgentPersona) => {
+    preferencesStore.setGAgentPersona(persona);
+  },
+  /** @deprecated Use setGAgentGoals instead */
+  setFreeAgentGoals: (goals: string[]) => {
+    preferencesStore.setGAgentGoals(goals);
   },
 
   // Update analytics opt-in
@@ -209,7 +533,7 @@ export const preferencesStore = {
   },
 
   // Expose sync for manual triggering
-  sync: syncPreferences
+  sync: syncPreferences,
 };
 
 export default preferences;

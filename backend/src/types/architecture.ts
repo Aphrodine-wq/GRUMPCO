@@ -103,6 +103,8 @@ export interface ArchitectureRequest {
   refinements?: string[];
   /** Optional head + mode prompt prepended for SHIP/chat consistency */
   systemPromptPrefix?: string;
+  /** Optional namespace for RAG context (workspace/project id) */
+  namespace?: string;
 }
 
 export interface ArchitectureResponse {

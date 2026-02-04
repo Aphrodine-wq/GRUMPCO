@@ -1,8 +1,12 @@
 <script lang="ts">
+  import { get } from 'svelte/store';
   import { Button, Card } from '../lib/design-system';
   import { fetchApi } from '../lib/api.js';
   import { showToast } from '../stores/toastStore.js';
+  import { workspaceStore } from '../stores/workspaceStore.js';
   import { colors } from '../lib/design-system/tokens/colors.js';
+
+  type DocType = 'doc' | 'code' | 'spec';
 
   interface RagCitation {
     id: number;
@@ -26,7 +30,13 @@
   let citations = $state<RagCitation[]>([]);
   let structured = $state<Record<string, unknown> | null>(null);
   let outputFormat = $state<'natural' | 'structured'>('natural');
+  let typesFilter = $state<DocType[]>([]);
+  let hybridSearch = $state(false);
+  let namespaceOverride = $state('');
   let error = $state<string | null>(null);
+  let uploadProgress = $state<'idle' | 'uploading' | 'done' | 'error'>('idle');
+  let uploadError = $state<string | null>(null);
+  let dragOver = $state(false);
   let recording = $state(false);
   let transcribing = $state(false);
   let speaking = $state(false);
@@ -36,7 +46,9 @@
   async function startVoiceInput() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
       const recorder = new MediaRecorder(stream);
       mediaRecorder = recorder;
       audioChunks = [];
@@ -141,13 +153,18 @@
     structured = null;
     error = null;
     try {
+      const namespace = namespaceOverride.trim() || get(workspaceStore).root || undefined;
       const res = await fetchApi('/api/rag/query', {
         method: 'POST',
         body: JSON.stringify({
           query: q,
           outputFormat,
+          ...(typesFilter.length > 0 && { types: typesFilter }),
+          ...(hybridSearch && { hybrid: true }),
+          ...(namespace && { namespace }),
           ...(outputFormat === 'structured' && {
-            structuredSchema: 'tasks: string[] or endpoints: Array<{ method: string, path: string, description: string }>',
+            structuredSchema:
+              'tasks: string[] or endpoints: Array<{ method: string, path: string, description: string }>',
           }),
         }),
       });
@@ -174,6 +191,58 @@
       showToast('Ask docs failed', 'error');
     } finally {
       loading = false;
+    }
+  }
+
+  function toggleType(t: DocType) {
+    typesFilter = typesFilter.includes(t)
+      ? typesFilter.filter((x) => x !== t)
+      : [...typesFilter, t];
+  }
+
+  const ACCEPTED_EXT = '.md,.mdx,.mdoc,.ts,.tsx,.js,.jsx,.svelte,.vue,.py,.json,.yaml,.yml';
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB per file
+  const MAX_TOTAL_SIZE = 5 * 1024 * 1024; // 5MB total
+
+  async function handleFileUpload(files: FileList | null) {
+    if (!files?.length) return;
+    uploadProgress = 'uploading';
+    uploadError = null;
+    try {
+      const docs: { content: string; source: string; type: DocType }[] = [];
+      let totalSize = 0;
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i]!;
+        if (f.size > MAX_FILE_SIZE) {
+          throw new Error(`File ${f.name} exceeds 2MB limit`);
+        }
+        totalSize += f.size;
+        if (totalSize > MAX_TOTAL_SIZE) throw new Error('Total upload size exceeds 5MB');
+        const ext = f.name.includes('.') ? f.name.slice(f.name.lastIndexOf('.')).toLowerCase() : '';
+        let type: DocType = 'doc';
+        if (['.md', '.mdx', '.mdoc'].includes(ext)) type = 'doc';
+        else if (['.ts', '.tsx', '.js', '.jsx', '.svelte', '.vue', '.py', '.json'].includes(ext))
+          type = 'code';
+        else type = 'doc';
+        const content = await f.text();
+        docs.push({ content, source: f.name, type });
+      }
+      const namespace = namespaceOverride.trim() || get(workspaceStore).root || undefined;
+      const res = await fetchApi('/api/rag/reindex', {
+        method: 'POST',
+        body: JSON.stringify({ docs, ...(namespace && { namespace }) }),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data?.error ?? `Upload failed: ${res.status}`);
+      }
+      const data = (await res.json()) as { chunks?: number };
+      uploadProgress = 'done';
+      showToast(`Indexed ${data.chunks ?? docs.length} chunks`, 'success');
+    } catch (e) {
+      uploadError = (e as Error).message;
+      uploadProgress = 'error';
+      showToast('Upload failed', 'error');
     }
   }
 </script>
@@ -205,7 +274,9 @@
 
   <div class="ask-docs-container">
     <Card title="Query" padding="md">
-      <p class="section-desc">Ask a question about the docs, codebase, or specs. Answers are grounded in the RAG index.</p>
+      <p class="section-desc">
+        Ask a question about the docs, codebase, or specs. Answers are grounded in the RAG index.
+      </p>
       <div class="field-group">
         <label class="field-label" for="ask-docs-input">Question</label>
         <div class="query-row">
@@ -228,25 +299,89 @@
             {#if transcribing}
               <span class="mic-status">…</span>
             {:else if recording}
-              <svg class="mic-icon recording" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="6" y="6" width="12" height="12" rx="2"/>
+              <svg
+                class="mic-icon recording"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="6" y="6" width="12" height="12" rx="2" />
               </svg>
             {:else}
-              <svg class="mic-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 1a3 3 0 0 1 3 3v8a3 3 0 0 1-6 0V4a3 3 0 0 1 3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="23"/>
-                <line x1="8" y1="23" x2="16" y2="23"/>
+              <svg
+                class="mic-icon"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M12 1a3 3 0 0 1 3 3v8a3 3 0 0 1-6 0V4a3 3 0 0 1 3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
               </svg>
             {/if}
           </button>
         </div>
         <div class="format-row">
           <label class="field-label" for="ask-docs-format">Output</label>
-          <select id="ask-docs-format" class="format-select" bind:value={outputFormat} disabled={loading}>
+          <select
+            id="ask-docs-format"
+            class="format-select"
+            bind:value={outputFormat}
+            disabled={loading}
+          >
             <option value="natural">Natural language</option>
             <option value="structured">Structured (JSON)</option>
           </select>
+        </div>
+        <div class="options-row">
+          <span class="field-label">Filter by type</span>
+          <div class="type-chips">
+            <button
+              type="button"
+              class="type-chip"
+              class:active={typesFilter.includes('doc')}
+              onclick={() => toggleType('doc')}
+              disabled={loading}>Docs</button
+            >
+            <button
+              type="button"
+              class="type-chip"
+              class:active={typesFilter.includes('code')}
+              onclick={() => toggleType('code')}
+              disabled={loading}>Code</button
+            >
+            <button
+              type="button"
+              class="type-chip"
+              class:active={typesFilter.includes('spec')}
+              onclick={() => toggleType('spec')}
+              disabled={loading}>Spec</button
+            >
+          </div>
+        </div>
+        <div class="options-row">
+          <label class="checkbox-label">
+            <input type="checkbox" bind:checked={hybridSearch} disabled={loading} />
+            Hybrid search (vector + keyword)
+          </label>
+        </div>
+        <div class="options-row">
+          <label class="field-label" for="namespace-input">Workspace namespace (optional)</label>
+          <input
+            id="namespace-input"
+            type="text"
+            class="namespace-input"
+            placeholder="Leave empty to use workspace, or enter custom namespace"
+            bind:value={namespaceOverride}
+            disabled={loading}
+          />
         </div>
         <Button variant="primary" size="sm" onclick={submit} disabled={loading || !query.trim()}>
           {#if loading}
@@ -256,6 +391,62 @@
           {/if}
         </Button>
       </div>
+    </Card>
+
+    <Card title="Upload documents" padding="md">
+      <p class="section-desc">
+        Add your own documents to the RAG index. Supports .md, .ts, .tsx, .svelte, .json, etc. Max
+        2MB per file, 5MB total.
+      </p>
+      <div
+        class="upload-zone"
+        class:dragover={dragOver}
+        role="button"
+        tabindex="0"
+        aria-label="Upload files by dropping or clicking"
+        ondragover={(e) => {
+          e.preventDefault();
+          dragOver = true;
+        }}
+        ondragleave={() => {
+          dragOver = false;
+        }}
+        ondrop={(e) => {
+          e.preventDefault();
+          dragOver = false;
+          handleFileUpload(e.dataTransfer?.files ?? null);
+        }}
+        onkeydown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            document.getElementById('rag-upload')?.click();
+          }
+        }}
+      >
+        <input
+          type="file"
+          id="rag-upload"
+          class="upload-input"
+          accept={ACCEPTED_EXT}
+          multiple
+          onchange={(e) => {
+            handleFileUpload((e.target as HTMLInputElement)?.files ?? null);
+            (e.target as HTMLInputElement).value = '';
+          }}
+        />
+        <label for="rag-upload" class="upload-label">
+          {#if uploadProgress === 'uploading'}
+            Indexing…
+          {:else if uploadProgress === 'done'}
+            Upload complete
+          {:else}
+            Drop files or click to upload
+          {/if}
+        </label>
+      </div>
+      {#if uploadError}
+        <p class="upload-error">{uploadError}</p>
+      {/if}
     </Card>
 
     {#if error}
@@ -270,7 +461,13 @@
         {#if confidence !== undefined}
           <div class="confidence-row">
             <span class="result-label">Confidence</span>
-            <div class="confidence-bar" role="progressbar" aria-valuenow={confidence} aria-valuemin="0" aria-valuemax="1">
+            <div
+              class="confidence-bar"
+              role="progressbar"
+              aria-valuenow={confidence}
+              aria-valuemin="0"
+              aria-valuemax="1"
+            >
               <div class="confidence-fill" style="width: {Math.round(confidence * 100)}%"></div>
             </div>
             <span class="confidence-value">{Math.round(confidence * 100)}%</span>
@@ -301,7 +498,9 @@
               <li>
                 <span class="citation-id">[{c.id}]</span>
                 {#if c.url}
-                  <a class="citation-link" href={c.url} target="_blank" rel="noopener noreferrer">{c.source}</a>
+                  <a class="citation-link" href={c.url} target="_blank" rel="noopener noreferrer"
+                    >{c.source}</a
+                  >
                 {:else}
                   <span class="source-type">{c.type}</span> {c.source}
                 {/if}
@@ -440,7 +639,9 @@
   }
 
   @keyframes pulse {
-    50% { opacity: 0.6; }
+    50% {
+      opacity: 0.6;
+    }
   }
 
   .speak-row {
@@ -583,5 +784,81 @@
   .citation-link:hover {
     text-decoration: underline;
   }
-</style>
 
+  .options-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .type-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .type-chip {
+    padding: 6px 12px;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .type-chip:hover:not(:disabled) {
+    border-color: var(--color-primary);
+  }
+
+  .type-chip.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .namespace-input {
+    padding: 8px 12px;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    font-size: 14px;
+    max-width: 360px;
+  }
+
+  .upload-zone {
+    border: 2px dashed #e4e4e7;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .upload-zone:hover,
+  .upload-zone.dragover {
+    border-color: var(--color-primary);
+    background: #fafafa;
+  }
+
+  .upload-input {
+    display: none;
+  }
+
+  .upload-label {
+    cursor: pointer;
+    font-size: 14px;
+    color: #71717a;
+  }
+
+  .upload-error {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #dc2626;
+  }
+</style>

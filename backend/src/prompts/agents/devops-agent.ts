@@ -154,6 +154,6 @@ ${contextSummary}
 
 Use the context above to guide your configuration generation. Ensure your setup aligns with the project's architecture, patterns, and quality requirements.`;
   }
-  
+
   return basePrompt;
 }

@@ -15,6 +15,7 @@ export interface UsageRecord {
   inputTokens?: number;
   outputTokens?: number;
   latencyMs?: number;
+  storageBytes?: number;
   success: boolean;
   createdAt: Date;
 }
@@ -48,6 +49,7 @@ export async function recordApiCall(record: Omit<UsageRecord, 'createdAt'>): Pro
       inputTokens: record.inputTokens,
       outputTokens: record.outputTokens,
       latencyMs: record.latencyMs,
+      storageBytes: record.storageBytes,
       success: record.success,
     });
 
@@ -90,6 +92,24 @@ export async function recordTokenUsage(
 }
 
 /**
+ * Record storage usage for generated artifacts.
+ */
+export async function recordStorageUsage(
+  userId: string,
+  storageBytes: number,
+  source: 'codegen' | 'ship' | 'other' = 'codegen'
+): Promise<void> {
+  if (!userId || storageBytes <= 0) return;
+  await recordApiCall({
+    userId,
+    endpoint: `/api/storage/${source}`,
+    method: 'POST',
+    storageBytes,
+    success: true,
+  });
+}
+
+/**
  * Get usage records for a user within a date range
  * Returns cached records first, then queries database for historical data
  */
@@ -117,6 +137,7 @@ export async function getUsageForUser(
       inputTokens: r.input_tokens != null ? Number(r.input_tokens) : undefined,
       outputTokens: r.output_tokens != null ? Number(r.output_tokens) : undefined,
       latencyMs: r.latency_ms != null ? Number(r.latency_ms) : undefined,
+      storageBytes: r.storage_bytes != null ? Number(r.storage_bytes) : undefined,
       success: r.success === 1,
       createdAt: new Date(String(r.created_at ?? '')),
     })) as UsageRecord[];

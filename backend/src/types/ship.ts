@@ -19,6 +19,8 @@ export interface ShipSession {
   status: 'initializing' | 'running' | 'paused' | 'completed' | 'failed';
   createdAt: string;
   updatedAt: string;
+  /** Owning user (for usage metering) */
+  userId?: string;
   /** Optional project/workspace id linking chat, ship, and codegen */
   projectId?: string;
 
@@ -81,6 +83,8 @@ export interface CodePhaseResult {
 export interface ShipStartRequest {
   projectDescription: string;
   preferences?: ShipPreferences;
+  /** Owning user (internal, set by backend) */
+  userId?: string;
   /** Optional project/workspace id to associate with this session */
   projectId?: string;
 }

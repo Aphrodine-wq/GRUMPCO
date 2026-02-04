@@ -5,7 +5,6 @@
   import { Badge } from '../lib/design-system';
   import { colors } from '../lib/design-system/tokens/colors';
 
-
   interface Props {
     toolCall?: {
       type: 'tool_call';
@@ -34,7 +33,7 @@
 </script>
 
 {#if toolCall}
-  <div 
+  <div
     class="tool-call-card"
     style:--border-color={colors.border.default}
     style:--bg-header={colors.background.tertiary}
@@ -45,11 +44,27 @@
   >
     <div class="tool-call-header">
       <div class="tool-info">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-code-2"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-code-2"
+          ><path d="m18 16 4-4-4-4" /><path d="m6 8-4 4 4 4" /><path d="m14.5 4-5 16" /></svg
+        >
         <span class="tool-name">{toolCall.name}</span>
       </div>
       {#if toolCall.status}
-        <Badge variant={getStatusVariant(toolCall.status)} size="sm" dot={toolCall.status === 'executing'}>
+        <Badge
+          variant={getStatusVariant(toolCall.status)}
+          size="sm"
+          dot={toolCall.status === 'executing'}
+        >
           {formatStatus(toolCall.status)}
         </Badge>
       {/if}
@@ -86,13 +101,6 @@
     display: flex;
     align-items: center;
     gap: 8px;
-  }
-
-  .tool-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--accent-color);
   }
 
   .tool-name {

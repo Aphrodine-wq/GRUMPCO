@@ -56,8 +56,21 @@ export interface TerraformGenerationRequest {
   provider: 'aws' | 'gcp' | 'azure';
   projectName: string;
   resources: Array<{
-    type: 'vpc' | 'subnet' | 'ec2' | 'rds' | 's3' | 'eks' | 'ecs' | 'lambda' |
-          'api-gateway' | 'cloudfront' | 'elb' | 'security-group' | 'iam' | 'custom';
+    type:
+      | 'vpc'
+      | 'subnet'
+      | 'ec2'
+      | 'rds'
+      | 's3'
+      | 'eks'
+      | 'ecs'
+      | 'lambda'
+      | 'api-gateway'
+      | 'cloudfront'
+      | 'elb'
+      | 'security-group'
+      | 'iam'
+      | 'custom';
     name: string;
     config?: Record<string, unknown>;
   }>;

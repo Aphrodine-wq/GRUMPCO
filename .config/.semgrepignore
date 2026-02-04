@@ -1,0 +1,45 @@
+{
+  "exclude": {
+    "global": [
+      "cwe-top-25",
+      "owasp-top-ten",
+      "security-audit"
+    ],
+    "paths": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/coverage/**",
+      "**/*.test.ts",
+      "**/*.spec.ts",
+      "**/tests/**",
+      "**/test/**",
+      "**/e2e/**"
+    ]
+  },
+  "rules": {
+    "typescript.react.security.audit.react-no-refs-dom": {
+      "severity": "ERROR"
+    },
+    "typescript.react.security.audit.react-props-injection": {
+      "severity": "ERROR"
+    },
+    "typescript.lang.security.audit.detect-non-literal-regexp": {
+      "severity": "WARNING"
+    },
+    "typescript.lang.security.audit.detect-eval-with-expression": {
+      "severity": "ERROR"
+    },
+    "typescript.lang.security.audit.detect-no-csrf-before-method-override": {
+      "severity": "ERROR"
+    },
+    "typescript.express.security.audit.express-check-directory-listing": {
+      "severity": "WARNING"
+    },
+    "typescript.express.security.audit.express-open-redirect": {
+      "severity": "ERROR"
+    },
+    "typescript.express.security.audit.express-ssrf": {
+      "severity": "ERROR"
+    }
+  }
+}

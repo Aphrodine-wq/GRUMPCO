@@ -18,11 +18,12 @@ function generateVersionId(): string {
 
 // Generate session name from first user message
 function generateSessionName(messages: Message[]): string {
-  const firstUserMessage = messages.find(m => m.role === 'user');
+  const firstUserMessage = messages.find((m) => m.role === 'user');
   if (firstUserMessage) {
-    const content = typeof firstUserMessage.content === 'string' 
-      ? firstUserMessage.content 
-      : JSON.stringify(firstUserMessage.content);
+    const content =
+      typeof firstUserMessage.content === 'string'
+        ? firstUserMessage.content
+        : JSON.stringify(firstUserMessage.content);
     if (content.length > 40) {
       return content.substring(0, 40) + '...';
     }
@@ -33,7 +34,7 @@ function generateSessionName(messages: Message[]): string {
 
 // Check if session has a diagram
 export function sessionHasDiagram(session: Session): boolean {
-  return session.messages.some(m => {
+  return session.messages.some((m) => {
     if (m.role !== 'assistant') return false;
     const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
     return content.includes('```mermaid');
@@ -63,7 +64,7 @@ export const currentSession = derived(
   [sessions, currentSessionId],
   ([$sessions, $currentSessionId]) => {
     if (!$currentSessionId) return null;
-    return $sessions.find(s => s.id === $currentSessionId) || null;
+    return $sessions.find((s) => s.id === $currentSessionId) || null;
   }
 );
 
@@ -90,10 +91,13 @@ function saveSessions(): void {
   try {
     const s = get(sessions);
     const id = get(currentSessionId);
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify({
-      sessions: s,
-      currentSessionId: id
-    }));
+    localStorage.setItem(
+      SESSIONS_KEY,
+      JSON.stringify({
+        sessions: s,
+        currentSessionId: id,
+      })
+    );
   } catch (e) {
     console.warn('Failed to save sessions:', e);
   }
@@ -110,17 +114,25 @@ function migrateLegacySession(legacySession: LegacySession): Session {
     name: generateSessionName(legacySession.messages),
     messages: legacySession.messages,
     timestamp: legacySession.timestamp,
-    updatedAt: legacySession.timestamp
+    updatedAt: legacySession.timestamp,
   };
 }
 
 // Store actions
 export const sessionsStore = {
   // State
-  get sessions() { return sessions; },
-  get currentSessionId() { return currentSessionId; },
-  get currentSession() { return currentSession; },
-  get sortedSessions() { return sortedSessions; },
+  get sessions() {
+    return sessions;
+  },
+  get currentSessionId() {
+    return currentSessionId;
+  },
+  get currentSession() {
+    return currentSession;
+  },
+  get sortedSessions() {
+    return sortedSessions;
+  },
 
   // Initialize
   init() {
@@ -128,7 +140,11 @@ export const sessionsStore = {
   },
 
   // Actions
-  createSession(messages: Message[] = [], projectId?: string | null): Session {
+  createSession(
+    messages: Message[] = [],
+    projectId?: string | null,
+    sessionType?: Session['sessionType']
+  ): Session {
     const session: Session = {
       id: generateId(),
       name: messages.length > 0 ? generateSessionName(messages) : 'New Session',
@@ -136,9 +152,10 @@ export const sessionsStore = {
       timestamp: Date.now(),
       updatedAt: Date.now(),
       projectId: projectId !== undefined ? projectId : (getCurrentProjectId() ?? undefined),
+      sessionType,
     };
 
-    sessions.update(s => {
+    sessions.update((s) => {
       const updated = [session, ...s];
       // Trim old sessions if over limit
       if (updated.length > MAX_SESSIONS) {
@@ -146,18 +163,18 @@ export const sessionsStore = {
       }
       return updated;
     });
-    
+
     currentSessionId.set(session.id);
     return session;
   },
 
   updateSession(id: string, messages: Message[]): void {
-    sessions.update(s => {
-      const session = s.find(sess => sess.id === id);
+    sessions.update((s) => {
+      const session = s.find((sess) => sess.id === id);
       if (session) {
         session.messages = messages;
         session.updatedAt = Date.now();
-        
+
         // Update name if it was default
         if (session.name === 'New Session' && messages.length > 0) {
           session.name = generateSessionName(messages);
@@ -168,10 +185,10 @@ export const sessionsStore = {
   },
 
   deleteSession(id: string): void {
-    sessions.update(s => {
-      const filtered = s.filter(sess => sess.id !== id);
+    sessions.update((s) => {
+      const filtered = s.filter((sess) => sess.id !== id);
       // If deleted current session, switch to most recent
-      currentSessionId.update(currentId => {
+      currentSessionId.update((currentId) => {
         if (currentId === id) {
           return filtered[0]?.id || null;
         }
@@ -181,9 +198,19 @@ export const sessionsStore = {
     });
   },
 
+  setSessionType(id: string, sessionType: Session['sessionType']): void {
+    sessions.update((s) => {
+      const session = s.find((sess) => sess.id === id);
+      if (session) {
+        session.sessionType = sessionType;
+      }
+      return [...s];
+    });
+  },
+
   renameSession(id: string, name: string): void {
-    sessions.update(s => {
-      const session = s.find(sess => sess.id === id);
+    sessions.update((s) => {
+      const session = s.find((sess) => sess.id === id);
       if (session) {
         session.name = name.trim() || 'Untitled Session';
       }
@@ -193,8 +220,8 @@ export const sessionsStore = {
 
   /** Set or clear the project id for a chat session; used when starting ship/codegen from chat. */
   setSessionProjectId(id: string, projectId: string | null): void {
-    sessions.update(s => {
-      const session = s.find(sess => sess.id === id);
+    sessions.update((s) => {
+      const session = s.find((sess) => sess.id === id);
       if (session) {
         session.projectId = projectId ?? undefined;
       }
@@ -203,8 +230,8 @@ export const sessionsStore = {
   },
 
   switchSession(id: string): void {
-    sessions.update(s => {
-      const session = s.find(sess => sess.id === id);
+    sessions.update((s) => {
+      const session = s.find((sess) => sess.id === id);
       if (session) {
         currentSessionId.set(id);
       }
@@ -217,7 +244,7 @@ export const sessionsStore = {
   },
 
   exportSession(id: string): void {
-    const session = get(sessions).find(sess => sess.id === id);
+    const session = get(sessions).find((sess) => sess.id === id);
 
     if (!session) return;
 
@@ -240,7 +267,7 @@ export const sessionsStore = {
       name: session.name,
       exportedAt: new Date().toISOString(),
       messages: session.messages,
-      diagramCodes: diagrams
+      diagramCodes: diagrams,
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -254,7 +281,7 @@ export const sessionsStore = {
 
   importLegacySession(legacy: LegacySession): void {
     const session = migrateLegacySession(legacy);
-    sessions.update(s => {
+    sessions.update((s) => {
       const updated = [session, ...s];
       if (updated.length > MAX_SESSIONS) {
         return updated.slice(0, MAX_SESSIONS);
@@ -266,15 +293,15 @@ export const sessionsStore = {
 
   // Diagram versioning
   addDiagramVersion(
-    sessionId: string, 
-    code: string, 
-    userPrompt: string, 
+    sessionId: string,
+    code: string,
+    userPrompt: string,
     parentVersionId?: string
   ): DiagramVersion | null {
     let version: DiagramVersion | null = null;
-    
-    sessions.update(s => {
-      const session = s.find(sess => sess.id === sessionId);
+
+    sessions.update((s) => {
+      const session = s.find((sess) => sess.id === sessionId);
       if (!session) return s;
 
       version = {
@@ -305,25 +332,25 @@ export const sessionsStore = {
   },
 
   getDiagramVersions(sessionId: string): DiagramVersion[] {
-    const session = get(sessions).find(sess => sess.id === sessionId);
+    const session = get(sessions).find((sess) => sess.id === sessionId);
     return session?.diagramVersions || [];
   },
 
   getCurrentDiagram(sessionId: string): DiagramVersion | null {
-    const session = get(sessions).find(sess => sess.id === sessionId);
+    const session = get(sessions).find((sess) => sess.id === sessionId);
     if (!session?.currentDiagramId || !session.diagramVersions) {
       return null;
     }
-    return session.diagramVersions.find(v => v.id === session.currentDiagramId) || null;
+    return session.diagramVersions.find((v) => v.id === session.currentDiagramId) || null;
   },
 
   revertToDiagramVersion(sessionId: string, versionId: string): boolean {
     let success = false;
-    sessions.update(s => {
-      const session = s.find(sess => sess.id === sessionId);
+    sessions.update((s) => {
+      const session = s.find((sess) => sess.id === sessionId);
       if (!session?.diagramVersions) return s;
 
-      const version = session.diagramVersions.find(v => v.id === versionId);
+      const version = session.diagramVersions.find((v) => v.id === versionId);
       if (!version) return s;
 
       session.currentDiagramId = versionId;
@@ -335,9 +362,9 @@ export const sessionsStore = {
 
   // Conversation context helpers
   getRecentMessages(sessionId: string, count: number = 10): Message[] {
-    const session = get(sessions).find(sess => sess.id === sessionId);
+    const session = get(sessions).find((sess) => sess.id === sessionId);
     return session ? session.messages.slice(-count) : [];
-  }
+  },
 };
 
 // Initialize on load

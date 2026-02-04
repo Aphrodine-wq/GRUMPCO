@@ -39,12 +39,14 @@ export async function writeAuditLog(entry: AuditLogInput): Promise<void> {
 /**
  * Query audit logs with optional filters
  */
-export async function queryAuditLogs(options: {
-  userId?: string;
-  category?: AuditCategory;
-  limit?: number;
-  offset?: number;
-} = {}): Promise<AuditLogRecord[]> {
+export async function queryAuditLogs(
+  options: {
+    userId?: string;
+    category?: AuditCategory;
+    limit?: number;
+    offset?: number;
+  } = {}
+): Promise<AuditLogRecord[]> {
   try {
     const db = getDatabase();
     return await db.getAuditLogs({

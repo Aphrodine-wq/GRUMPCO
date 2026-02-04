@@ -39,8 +39,8 @@ export const isValid = derived(
     if (!$currentClarification) return false;
 
     return $currentClarification.questions
-      .filter(q => q.required !== false)
-      .every(q => {
+      .filter((q) => q.required !== false)
+      .every((q) => {
         const answer = $answers.get(q.id);
         return answer && answer.length > 0;
       });
@@ -70,15 +70,19 @@ export function closeModal(): void {
 }
 
 export function setAnswer(questionId: string, optionIds: string[]): void {
-  answers.update(a => {
+  answers.update((a) => {
     const newMap = new Map(a);
     newMap.set(questionId, optionIds);
     return newMap;
   });
 }
 
-export function toggleOption(questionId: string, optionId: string, selectionType: 'single' | 'multiple'): void {
-  answers.update(a => {
+export function toggleOption(
+  questionId: string,
+  optionId: string,
+  selectionType: 'single' | 'multiple'
+): void {
+  answers.update((a) => {
     const current = a.get(questionId) || [];
     const newMap = new Map(a);
 
@@ -102,7 +106,7 @@ export function toggleOption(questionId: string, optionId: string, selectionType
 export function submitAnswers(): void {
   if (!resolveCallback) {
     let current: ClarificationPayload | null = null;
-    currentClarification.subscribe(c => {
+    currentClarification.subscribe((c) => {
       current = c;
     })();
     if (!current) return;
@@ -110,22 +114,24 @@ export function submitAnswers(): void {
 
   let current: ClarificationPayload | null = null;
   let currentAnswers: Map<string, string[]> = new Map();
-  
-  currentClarification.subscribe(c => {
+
+  currentClarification.subscribe((c) => {
     current = c;
   })();
-  
-  answers.subscribe(a => {
+
+  answers.subscribe((a) => {
     currentAnswers = a;
   })();
 
   if (!resolveCallback || !current) return;
 
   const payload: ClarificationPayload = current;
-  const formattedAnswers: ClarificationAnswer[] = payload.questions.map((q: ClarificationQuestion) => ({
-    questionId: q.id,
-    selectedOptionIds: currentAnswers.get(q.id) || []
-  }));
+  const formattedAnswers: ClarificationAnswer[] = payload.questions.map(
+    (q: ClarificationQuestion) => ({
+      questionId: q.id,
+      selectedOptionIds: currentAnswers.get(q.id) || [],
+    })
+  );
 
   resolveCallback(formattedAnswers);
   isOpen.set(false);

@@ -20,7 +20,9 @@ function loadStored(): WorkspaceState {
         isRemote: !!repoUrl,
       };
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return { root: null, repoUrl: null, isRemote: false };
 }
 
@@ -33,7 +35,9 @@ function persist(state: WorkspaceState) {
       if (state.repoUrl) localStorage.setItem(REPO_URL_KEY, state.repoUrl);
       else localStorage.removeItem(REPO_URL_KEY);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 const { subscribe, set } = writable<WorkspaceState>(loadStored());

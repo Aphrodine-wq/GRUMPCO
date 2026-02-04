@@ -7,8 +7,7 @@ import { execSync } from 'child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
-import { getRequestLogger } from '../middleware/logger.js';
-import logger from '../middleware/logger.js';
+import { getRequestLogger, default as logger } from '../middleware/logger.js';
 import { getSession } from './agentOrchestrator.js';
 
 const REDIRECT_URI = process.env.GITHUB_REDIRECT_URI || 'http://localhost:3000/api/github/callback';

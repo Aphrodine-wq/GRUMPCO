@@ -1,21 +1,36 @@
 /**
  * Agent swarm service – decompose user request with Kimi into subtasks,
- * run specialist agents in parallel (capped concurrency), merge results.
- * 
- * Also includes persistent swarm tracking via database.
+ * run specialist agents with 2-at-a-time concurrency and dependency ordering.
+ *
+ * Key features:
+ * - Dependency-aware scheduling (arch runs first, then dependent agents)
+ * - 2-agent concurrency to reduce overload and improve results
+ * - Real-time streaming of agent progress
+ * - Persistent swarm tracking via database
  */
 
 import logger from '../middleware/logger.js';
 import { getNimChatUrl } from '../config/nim.js';
+import { getCompletion } from './llmGatewayHelper.js';
 import { getDatabase } from '../db/database.js';
 import { writeAuditLog } from './auditLogService.js';
+import { getSwarmLimit, type TierId } from '../config/pricing.js';
+import { messageBus, CHANNELS } from '../gAgent/messageBus.js';
+import type { AgentType } from '../gAgent/types.js';
 import type {
   SwarmAgentRecord,
   SwarmStatus,
   CreateSwarmAgentInput,
 } from '../types/integrations.js';
 
-const NIM_MODEL = 'moonshotai/kimi-k2.5';
+/** Nemotron Super for swarm when USE_NEMOTRON_SWARM !== 'false'; set to 'false' to stage rollout (Kimi). */
+const NIM_MODEL =
+  process.env.USE_NEMOTRON_SWARM === 'false'
+    ? 'moonshotai/kimi-k2.5'
+    : 'nvidia/llama-3.3-nemotron-super-49b-v1.5';
+
+/** Default concurrency: 2 agents at a time */
+const DEFAULT_CONCURRENCY = 2;
 
 export const SWARM_AGENT_IDS = [
   'arch',
@@ -34,9 +49,29 @@ export const SWARM_AGENT_IDS = [
 
 export type SwarmAgentId = (typeof SWARM_AGENT_IDS)[number];
 
+/**
+ * Agent dependency graph
+ * An agent can only start when all its dependencies have completed
+ */
+export const AGENT_DEPENDENCIES: Record<SwarmAgentId, SwarmAgentId[]> = {
+  arch: [], // No dependencies - runs first
+  frontend: ['arch'], // Needs architecture
+  backend: ['arch'], // Needs architecture
+  devops: ['arch'], // Needs architecture
+  data: ['arch'], // Needs architecture
+  ux: ['arch'], // Needs architecture
+  test: ['frontend', 'backend'], // Needs code to test
+  docs: ['frontend', 'backend'], // Needs code to document
+  security: ['backend'], // Needs backend to review
+  perf: ['frontend', 'backend'], // Needs code to optimize
+  a11y: ['frontend', 'ux'], // Needs UI to check
+  review: ['frontend', 'backend', 'test'], // Final review
+};
+
 export interface SwarmTask {
   agentId: string;
   task: string;
+  priority?: number; // Lower = higher priority
 }
 
 export interface SwarmAgentResult {
@@ -44,13 +79,34 @@ export interface SwarmAgentResult {
   task: string;
   output: string;
   error?: string;
+  startedAt?: number;
+  completedAt?: number;
+  durationMs?: number;
+}
+
+export interface SwarmOptions {
+  workspaceRoot?: string;
+  /** Max concurrent agents (default: 2) */
+  concurrency?: number;
+  /** User tier for swarm limits */
+  userTier?: TierId;
+  /** User ID for audit logging */
+  userId?: string;
+  /** Goal ID for MessageBus tracking */
+  goalId?: string;
+  /** Whether to publish events to MessageBus (default: true) */
+  publishToMessageBus?: boolean;
+  /** Override default model (Kimi); use NVIDIA NIM models */
+  modelPreference?: { provider: 'nim'; modelId: string };
 }
 
 export type SwarmProgressEvent =
   | { type: 'decompose_start' }
   | { type: 'decompose_done'; tasks: SwarmTask[] }
-  | { type: 'agent_start'; agentId: string; task: string }
-  | { type: 'agent_done'; agentId: string; output: string; error?: string }
+  | { type: 'queue_status'; pending: number; running: number; completed: number }
+  | { type: 'agent_start'; agentId: string; task: string; slot: number }
+  | { type: 'agent_done'; agentId: string; output: string; error?: string; durationMs: number }
+  | { type: 'agent_waiting'; agentId: string; waitingFor: string[] }
   | { type: 'summary_start' }
   | { type: 'summary_done'; text: string }
   | { type: 'error'; message: string };
@@ -76,7 +132,10 @@ const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
 };
 
 function getAgentSystemPrompt(agentId: string): string {
-  return AGENT_SYSTEM_PROMPTS[agentId] ?? `You are the ${agentId} specialist. Complete the task concisely.`;
+  return (
+    AGENT_SYSTEM_PROMPTS[agentId] ??
+    `You are the ${agentId} specialist. Complete the task concisely.`
+  );
 }
 
 async function nimChat(system: string, user: string): Promise<string> {
@@ -107,8 +166,21 @@ async function nimChat(system: string, user: string): Promise<string> {
   return content;
 }
 
+async function llmCompletion(
+  system: string,
+  user: string,
+  modelPreference?: { provider: 'nim'; modelId: string }
+): Promise<string> {
+  // All completions go through NVIDIA NIM
+  const model = modelPreference?.modelId || NIM_MODEL;
+  return nimChat(system, user);
+}
+
 function parseTasksJson(raw: string): SwarmTask[] {
-  const trimmed = raw.replace(/^```\w*\n?/, '').replace(/\n?```$/, '').trim();
+  const trimmed = raw
+    .replace(/^```\w*\n?/, '')
+    .replace(/\n?```$/, '')
+    .trim();
   const match = trimmed.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('No JSON object in decompose response');
   const parsed = JSON.parse(match[0]) as { tasks?: Array<{ agentId?: string; task?: string }> };
@@ -116,23 +188,130 @@ function parseTasksJson(raw: string): SwarmTask[] {
   if (!Array.isArray(tasks) || tasks.length === 0) return [];
   return tasks
     .filter((t) => t && typeof t.agentId === 'string' && typeof t.task === 'string')
-    .map((t) => ({ agentId: t.agentId!, task: t.task! }))
+    .map((t) => ({ agentId: t.agentId as string, task: t.task as string }))
     .slice(0, 20);
 }
 
 /**
- * Run swarm: decompose with Kimi, then run each task with specialist agent (Kimi) in parallel, capped concurrency.
+ * Calculate task priority based on dependency depth
+ * Lower priority number = runs earlier
+ */
+function calculatePriority(agentId: string): number {
+  const deps = AGENT_DEPENDENCIES[agentId as SwarmAgentId] || [];
+  if (deps.length === 0) return 0; // No deps = highest priority
+
+  // Recursive depth calculation
+  let maxDepth = 0;
+  for (const dep of deps) {
+    const depPriority = calculatePriority(dep);
+    maxDepth = Math.max(maxDepth, depPriority + 1);
+  }
+  return maxDepth;
+}
+
+/**
+ * Sort tasks by dependency order
+ */
+function sortTasksByDependency(tasks: SwarmTask[]): SwarmTask[] {
+  return tasks
+    .map((t) => ({ ...t, priority: calculatePriority(t.agentId) }))
+    .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+}
+
+/**
+ * Check if all dependencies for an agent are satisfied
+ */
+function areDependenciesSatisfied(
+  agentId: string,
+  completedAgents: Set<string>,
+  activeAgents: Set<string>
+): { satisfied: boolean; waiting: string[] } {
+  const deps = AGENT_DEPENDENCIES[agentId as SwarmAgentId] || [];
+  const _waiting = deps.filter((dep) => !completedAgents.has(dep) && activeAgents.has(dep));
+  const unsatisfied = deps.filter((dep) => !completedAgents.has(dep));
+
+  return {
+    satisfied: unsatisfied.length === 0,
+    waiting: unsatisfied,
+  };
+}
+
+/**
+ * Run a single agent task
+ */
+async function runAgentTask(
+  task: SwarmTask,
+  userPrompt: string,
+  completedResults: Map<string, SwarmAgentResult>,
+  modelPreference?: { provider: 'nim'; modelId: string }
+): Promise<SwarmAgentResult> {
+  const startedAt = Date.now();
+
+  try {
+    const deps = AGENT_DEPENDENCIES[task.agentId as SwarmAgentId] || [];
+    let context = '';
+    for (const dep of deps) {
+      const depResult = completedResults.get(dep);
+      if (depResult && depResult.output) {
+        context += `\n\n[${dep} output]\n${depResult.output.slice(0, 2000)}`;
+      }
+    }
+
+    const system = getAgentSystemPrompt(task.agentId);
+    const prompt = `Task: ${task.task}\n\nOriginal request: ${userPrompt}${context ? '\n\nContext from previous agents:' + context : ''}`;
+
+    const output = await llmCompletion(system, prompt, modelPreference);
+    const completedAt = Date.now();
+
+    return {
+      agentId: task.agentId,
+      task: task.task,
+      output,
+      startedAt,
+      completedAt,
+      durationMs: completedAt - startedAt,
+    };
+  } catch (e) {
+    const completedAt = Date.now();
+    return {
+      agentId: task.agentId,
+      task: task.task,
+      output: '',
+      error: (e as Error).message,
+      startedAt,
+      completedAt,
+      durationMs: completedAt - startedAt,
+    };
+  }
+}
+
+/**
+ * Run swarm with 2-at-a-time concurrency and dependency ordering
+ * Publishes events to MessageBus for unified agent tracking
  */
 export async function* runSwarm(
   userPrompt: string,
-  _options?: { workspaceRoot?: string }
+  options?: SwarmOptions
 ): AsyncGenerator<SwarmProgressEvent, { summary: string; results: SwarmAgentResult[] }, unknown> {
+  const concurrency = options?.concurrency ?? DEFAULT_CONCURRENCY;
+  const userTier = options?.userTier ?? 'free';
+  const maxAgents = getSwarmLimit(userTier);
+  const publishEvents = options?.publishToMessageBus !== false;
+  const goalId = options?.goalId;
+
+  const completedResults = new Map<string, SwarmAgentResult>();
+  const completedAgents = new Set<string>();
+  const activeAgents = new Map<string, Promise<SwarmAgentResult>>();
+  const agentInstanceIds = new Map<string, string>(); // agentId -> instanceId for tracking
   const results: SwarmAgentResult[] = [];
 
+  const modelPreference = options?.modelPreference;
+
+  // Phase 1: Decompose
   yield { type: 'decompose_start' };
   let tasks: SwarmTask[];
   try {
-    const raw = await nimChat(DECOMPOSE_SYSTEM, userPrompt);
+    const raw = await llmCompletion(DECOMPOSE_SYSTEM, userPrompt, modelPreference);
     tasks = parseTasksJson(raw);
   } catch (e) {
     const msg = (e as Error).message;
@@ -140,44 +319,184 @@ export async function* runSwarm(
     yield { type: 'error', message: msg };
     return { summary: '', results: [] };
   }
+
+  // Apply tier limit
+  if (tasks.length > maxAgents) {
+    tasks = tasks.slice(0, maxAgents);
+    logger.info({ tier: userTier, limit: maxAgents }, 'Swarm tasks limited by tier');
+  }
+
+  // Sort by dependency order
+  tasks = sortTasksByDependency(tasks);
+
   yield { type: 'decompose_done', tasks };
 
   if (tasks.length === 0) {
-    yield { type: 'summary_done', text: 'No subtasks were generated. Try rephrasing your request.' };
+    yield {
+      type: 'summary_done',
+      text: 'No subtasks were generated. Try rephrasing your request.',
+    };
     return { summary: 'No subtasks.', results: [] };
   }
 
-  for (const task of tasks) {
-    yield { type: 'agent_start', agentId: task.agentId, task: task.task };
-  }
-  const agentPromises = tasks.map(async (task) => {
-    try {
-      const system = getAgentSystemPrompt(task.agentId);
-      const output = await nimChat(system, `Task: ${task.task}\n\nOriginal request: ${userPrompt}`);
-      return { agentId: task.agentId, task: task.task, output, error: undefined };
-    } catch (e) {
-      const msg = (e as Error).message;
-      return { agentId: task.agentId, task: task.task, output: '', error: msg };
+  // Phase 2: Execute with dependency-aware scheduling
+  const pendingTasks = [...tasks];
+  let slot = 0;
+
+  while (pendingTasks.length > 0 || activeAgents.size > 0) {
+    // Fill available slots with ready tasks
+    while (activeAgents.size < concurrency && pendingTasks.length > 0) {
+      // Find next task whose dependencies are satisfied
+      const readyIndex = pendingTasks.findIndex((task) => {
+        const { satisfied } = areDependenciesSatisfied(
+          task.agentId,
+          completedAgents,
+          new Set(activeAgents.keys())
+        );
+        return satisfied;
+      });
+
+      if (readyIndex === -1) {
+        // No ready tasks, but some are pending - must wait for active ones
+        break;
+      }
+
+      const task = pendingTasks.splice(readyIndex, 1)[0];
+      slot++;
+
+      // Generate instance ID for tracking
+      const instanceId = `swarm_${task.agentId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      agentInstanceIds.set(task.agentId, instanceId);
+
+      yield { type: 'agent_start', agentId: task.agentId, task: task.task, slot };
+
+      // Publish to MessageBus for unified agent tracking
+      if (publishEvents) {
+        messageBus.updateAgentStatus(instanceId, task.agentId as AgentType, 'running', {
+          taskId: instanceId,
+          message: task.task,
+        });
+
+        // Publish task progress
+        messageBus.updateTaskProgress(instanceId, instanceId, 0, `Starting ${task.agentId} agent`);
+      }
+
+      const promise = runAgentTask(task, userPrompt, completedResults, modelPreference);
+      activeAgents.set(task.agentId, promise);
     }
-  });
 
-  const settled = await Promise.all(agentPromises);
-  for (const r of settled) {
-    results.push(r);
-    yield { type: 'agent_done', agentId: r.agentId, output: r.output, error: r.error };
+    // Emit queue status
+    yield {
+      type: 'queue_status',
+      pending: pendingTasks.length,
+      running: activeAgents.size,
+      completed: completedAgents.size,
+    };
+
+    // Wait for any active agent to complete
+    if (activeAgents.size > 0) {
+      const entries = Array.from(activeAgents.entries());
+      const raceResult = await Promise.race(
+        entries.map(async ([agentId, promise]) => {
+          const result = await promise;
+          return { agentId, result };
+        })
+      );
+
+      // Process completed agent
+      const { agentId, result } = raceResult;
+      activeAgents.delete(agentId);
+      completedAgents.add(agentId);
+      completedResults.set(agentId, result);
+      results.push(result);
+
+      // Get the instance ID for this agent
+      const instanceId = agentInstanceIds.get(agentId) || agentId;
+
+      yield {
+        type: 'agent_done',
+        agentId: result.agentId,
+        output: result.output,
+        error: result.error,
+        durationMs: result.durationMs || 0,
+      };
+
+      // Publish to MessageBus for unified agent tracking
+      if (publishEvents) {
+        if (result.error) {
+          messageBus.failTask(instanceId, instanceId, result.error, false);
+          messageBus.updateAgentStatus(instanceId, agentId as AgentType, 'failed', {
+            taskId: instanceId,
+            message: result.error,
+          });
+        } else {
+          messageBus.completeTask(instanceId, instanceId, result.output, result.durationMs || 0);
+          messageBus.updateAgentStatus(instanceId, agentId as AgentType, 'completed', {
+            taskId: instanceId,
+            progress: 100,
+          });
+        }
+      }
+
+      // Check for waiting agents
+      for (const task of pendingTasks) {
+        const { satisfied, waiting } = areDependenciesSatisfied(
+          task.agentId,
+          completedAgents,
+          new Set(activeAgents.keys())
+        );
+        if (!satisfied && waiting.length > 0) {
+          yield { type: 'agent_waiting', agentId: task.agentId, waitingFor: waiting };
+        }
+      }
+    }
   }
 
+  // Phase 3: Summarize
   yield { type: 'summary_start' };
-  const context = results.map((r) => `[${r.agentId}]\n${r.error ? r.error : r.output}`).join('\n\n---\n\n');
+  const context = results
+    .map((r) => `[${r.agentId}]\n${r.error ? r.error : r.output}`)
+    .join('\n\n---\n\n');
   let summary = '';
   try {
-    summary = await nimChat(
+    summary = await llmCompletion(
       'You are a summarizer. Synthesize the following agent outputs into one coherent response for the user. Be concise.',
-      `Original request: ${userPrompt}\n\nAgent outputs:\n\n${context}`
+      `Original request: ${userPrompt}\n\nAgent outputs:\n\n${context}`,
+      modelPreference
     );
   } catch (e) {
     summary = `Summary failed: ${(e as Error).message}. Raw outputs:\n${context.slice(0, 2000)}`;
   }
+
+  // Audit log
+  if (options?.userId) {
+    await writeAuditLog({
+      userId: options.userId,
+      action: 'swarm.completed',
+      category: 'agent',
+      target: 'swarm',
+      metadata: {
+        taskCount: tasks.length,
+        successCount: results.filter((r) => !r.error).length,
+        totalDurationMs: results.reduce((sum, r) => sum + (r.durationMs || 0), 0),
+      },
+    });
+  }
+
+  // Publish goal completion to MessageBus if goalId was provided
+  if (publishEvents && goalId) {
+    const failedCount = results.filter((r) => r.error).length;
+    if (failedCount === 0) {
+      messageBus.goalCompleted(goalId, summary);
+    } else {
+      messageBus.goalUpdated(goalId, {
+        status: 'completed',
+        result: summary,
+        error: `${failedCount} of ${results.length} agents failed`,
+      });
+    }
+  }
+
   yield { type: 'summary_done', text: summary };
   return { summary, results };
 }
@@ -187,10 +506,12 @@ export async function* runSwarm(
 /**
  * Create a persistent swarm agent record
  */
-export async function createPersistentSwarmAgent(input: CreateSwarmAgentInput): Promise<SwarmAgentRecord> {
+export async function createPersistentSwarmAgent(
+  input: CreateSwarmAgentInput
+): Promise<SwarmAgentRecord> {
   const db = getDatabase();
   const now = new Date().toISOString();
-  
+
   const record: SwarmAgentRecord = {
     id: `swarm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     user_id: input.userId,
@@ -204,9 +525,9 @@ export async function createPersistentSwarmAgent(input: CreateSwarmAgentInput): 
     updated_at: now,
     completed_at: null,
   };
-  
+
   await db.saveSwarmAgent(record);
-  
+
   await writeAuditLog({
     userId: input.userId,
     action: 'swarm.agent_created',
@@ -214,12 +535,12 @@ export async function createPersistentSwarmAgent(input: CreateSwarmAgentInput): 
     target: input.name,
     metadata: { agentId: record.id, agentType: input.agentType, parentId: input.parentId },
   });
-  
+
   logger.info(
     { id: record.id, name: input.name, type: input.agentType },
     'Persistent swarm agent created'
   );
-  
+
   return record;
 }
 
@@ -260,7 +581,7 @@ export async function updateSwarmAgentStatus(
   if (!record) {
     throw new Error(`Swarm agent not found: ${id}`);
   }
-  
+
   const now = new Date().toISOString();
   const updated: SwarmAgentRecord = {
     ...record,
@@ -269,7 +590,7 @@ export async function updateSwarmAgentStatus(
     updated_at: now,
     completed_at: ['completed', 'failed', 'cancelled'].includes(status) ? now : null,
   };
-  
+
   await db.saveSwarmAgent(updated);
   logger.debug({ id, name: record.name, status }, 'Swarm agent status updated');
 }
@@ -283,10 +604,10 @@ export async function completeSwarmAgent(
   userId: string
 ): Promise<void> {
   await updateSwarmAgentStatus(id, 'completed', result);
-  
+
   const db = getDatabase();
   const record = await db.getSwarmAgent(id);
-  
+
   await writeAuditLog({
     userId,
     action: 'swarm.agent_completed',
@@ -299,16 +620,12 @@ export async function completeSwarmAgent(
 /**
  * Fail a swarm agent with error
  */
-export async function failSwarmAgent(
-  id: string,
-  error: string,
-  userId: string
-): Promise<void> {
+export async function failSwarmAgent(id: string, error: string, userId: string): Promise<void> {
   await updateSwarmAgentStatus(id, 'failed', { error });
-  
+
   const db = getDatabase();
   const record = await db.getSwarmAgent(id);
-  
+
   await writeAuditLog({
     userId,
     action: 'swarm.agent_failed',
@@ -316,7 +633,7 @@ export async function failSwarmAgent(
     target: record?.name ?? id,
     metadata: { agentId: id, error },
   });
-  
+
   logger.error({ id, error }, 'Swarm agent failed');
 }
 
@@ -325,10 +642,10 @@ export async function failSwarmAgent(
  */
 export async function cancelSwarmAgent(id: string, userId: string): Promise<void> {
   await updateSwarmAgentStatus(id, 'cancelled');
-  
+
   const db = getDatabase();
   const record = await db.getSwarmAgent(id);
-  
+
   await writeAuditLog({
     userId,
     action: 'swarm.agent_cancelled',
@@ -350,14 +667,14 @@ export async function getSwarmProgress(swarmId: string): Promise<{
   cancelled: number;
 }> {
   const children = await getSwarmChildren(swarmId);
-  
+
   return {
     total: children.length,
-    pending: children.filter(c => c.status === 'pending').length,
-    running: children.filter(c => c.status === 'running').length,
-    completed: children.filter(c => c.status === 'completed').length,
-    failed: children.filter(c => c.status === 'failed').length,
-    cancelled: children.filter(c => c.status === 'cancelled').length,
+    pending: children.filter((c) => c.status === 'pending').length,
+    running: children.filter((c) => c.status === 'running').length,
+    completed: children.filter((c) => c.status === 'completed').length,
+    failed: children.filter((c) => c.status === 'failed').length,
+    cancelled: children.filter((c) => c.status === 'cancelled').length,
   };
 }
 
@@ -366,9 +683,7 @@ export async function getSwarmProgress(swarmId: string): Promise<{
  */
 export async function isSwarmComplete(swarmId: string): Promise<boolean> {
   const children = await getSwarmChildren(swarmId);
-  return children.every(child =>
-    ['completed', 'failed', 'cancelled'].includes(child.status)
-  );
+  return children.every((child) => ['completed', 'failed', 'cancelled'].includes(child.status));
 }
 
 // Re-export types for convenience

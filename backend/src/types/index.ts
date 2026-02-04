@@ -116,7 +116,43 @@ export interface ClarificationResponse {
 }
 
 // Re-export new types for convenience
-export type { SystemArchitecture, ArchitectureRequest, ArchitectureResponse, ArchitectureMetadata, Component, Integration, DataModel, APIEndpoint, C4Diagrams, ProjectType as ArchProjectType, Complexity } from './architecture.js';
-export type { PRD, PRDRequest, PRDResponse, Persona, Feature, UserStory, APIEndpointSpec, NonFunctionalRequirement, SuccessMetric } from './prd.js';
-export type { GenerationSession, AgentType, GenerationPreferences, CodeGenRequest, GeneratedFile, CodeGenResponse } from './agents.js';
-export type { CreativeDesignDoc, LayoutSpec, UIPrinciples, KeyScreen, UXFlow, PRDOverviewForCDD } from './creativeDesignDoc.js';
+export type {
+  SystemArchitecture,
+  ArchitectureRequest,
+  ArchitectureResponse,
+  ArchitectureMetadata,
+  Component,
+  Integration,
+  DataModel,
+  APIEndpoint,
+  C4Diagrams,
+  ProjectType as ArchProjectType,
+  Complexity,
+} from './architecture.js';
+export type {
+  PRD,
+  PRDRequest,
+  PRDResponse,
+  Persona,
+  Feature,
+  UserStory,
+  APIEndpointSpec,
+  NonFunctionalRequirement,
+  SuccessMetric,
+} from './prd.js';
+export type {
+  GenerationSession,
+  AgentType,
+  GenerationPreferences,
+  CodeGenRequest,
+  GeneratedFile,
+  CodeGenResponse,
+} from './agents.js';
+export type {
+  CreativeDesignDoc,
+  LayoutSpec,
+  UIPrinciples,
+  KeyScreen,
+  UXFlow,
+  PRDOverviewForCDD,
+} from './creativeDesignDoc.js';

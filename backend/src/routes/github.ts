@@ -2,7 +2,7 @@
  * GitHub routes: OAuth, create-and-push
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import {
   getAuthUrl,
   exchangeCodeForToken,
@@ -34,23 +34,26 @@ router.get('/auth-url', (_req: Request, res: Response) => {
  * GET /api/github/callback?code=...
  * OAuth callback. Exchange code, store token, redirect to frontend.
  */
-router.get('/callback', async (req: Request<Record<string, never>, object, object, { code?: string }>, res: Response) => {
-  const log = getRequestLogger();
-  const code = req.query.code;
-  if (!code) {
-    res.redirect(getCallbackRedirectError('missing_code'));
-    return;
+router.get(
+  '/callback',
+  async (req: Request<Record<string, never>, object, object, { code?: string }>, res: Response) => {
+    const log = getRequestLogger();
+    const code = req.query.code;
+    if (!code) {
+      res.redirect(getCallbackRedirectError('missing_code'));
+      return;
+    }
+    try {
+      await exchangeCodeForToken(code);
+      log.info('GitHub OAuth callback success');
+      res.redirect(getCallbackRedirectSuccess());
+    } catch (e) {
+      const err = e as Error;
+      log.error({ error: err.message }, 'GitHub OAuth callback failed');
+      res.redirect(getCallbackRedirectError(getClientErrorMessage(err)));
+    }
   }
-  try {
-    await exchangeCodeForToken(code);
-    log.info('GitHub OAuth callback success');
-    res.redirect(getCallbackRedirectSuccess());
-  } catch (e) {
-    const err = e as Error;
-    log.error({ error: err.message }, 'GitHub OAuth callback failed');
-    res.redirect(getCallbackRedirectError(getClientErrorMessage(err)));
-  }
-});
+);
 
 /**
  * GET /api/github/token
@@ -69,7 +72,11 @@ router.get('/token', (_req: Request, res: Response) => {
 router.post(
   '/create-and-push',
   async (
-    req: Request<Record<string, never>, object, { sessionId: string; repoName: string; token?: string }>,
+    req: Request<
+      Record<string, never>,
+      object,
+      { sessionId: string; repoName: string; token?: string }
+    >,
     res: Response
   ) => {
     const log = getRequestLogger();

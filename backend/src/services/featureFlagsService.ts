@@ -85,7 +85,7 @@ export function getTierForUser(_userKey?: string): TierId {
  * Return feature flags for a given tier.
  */
 export function getFeatureFlagsForTier(tier: TierId): FeatureFlags {
-  return { ...TIER_FLAGS[tier] ?? TIER_FLAGS.free };
+  return { ...(TIER_FLAGS[tier] ?? TIER_FLAGS.free) };
 }
 
 /**
@@ -110,5 +110,7 @@ export function formatCapabilityListForPrompt(flags: FeatureFlags): string {
   if (flags.has_codegen) list.push('Codegen (multi-agent code generation)');
   if (flags.has_mcp_browser) list.push('MCP/browser tools');
   if (flags.has_github) list.push('GitHub (create repo, push)');
-  return list.length ? list.map((l) => `- ${l}`).join('\n') : '- Design, Plan, Spec, Argument, Code (basic)';
+  return list.length
+    ? list.map((l) => `- ${l}`).join('\n')
+    : '- Design, Plan, Spec, Argument, Code (basic)';
 }

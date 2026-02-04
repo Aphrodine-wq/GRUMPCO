@@ -33,7 +33,7 @@ describe('outputFilters', () => {
     });
 
     it('redacts api_key= style', () => {
-      const text = 'api_key=abc123def456ghi789jkl012';
+      const text = 'api_key=abc123def456ghi789jkl012'; // gitleaks:allow
       expect(redactSecrets(text)).toContain('[REDACTED]');
     });
 

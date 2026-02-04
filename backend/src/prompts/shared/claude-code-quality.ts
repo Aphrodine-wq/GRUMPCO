@@ -13,7 +13,9 @@ export const CLAUDE_CODE_QUALITY_BLOCK = `
 `;
 
 export function withClaudeCodeQuality(prompt: string): string {
-  if (prompt.includes('Claude Code Quality Standards')) return prompt
-  return prompt.replace(/\n## Output Format:/, `${CLAUDE_CODE_QUALITY_BLOCK}\n\n## Output Format:`)
-    || prompt + CLAUDE_CODE_QUALITY_BLOCK
+  if (prompt.includes('Claude Code Quality Standards')) return prompt;
+  return (
+    prompt.replace(/\n## Output Format:/, `${CLAUDE_CODE_QUALITY_BLOCK}\n\n## Output Format:`) ||
+    prompt + CLAUDE_CODE_QUALITY_BLOCK
+  );
 }

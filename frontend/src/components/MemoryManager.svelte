@@ -9,6 +9,7 @@
     type MemoryType,
   } from '../lib/integrationsApi';
   import { showToast } from '../stores/toastStore';
+  import EmptyState from './EmptyState.svelte';
 
   interface Props {
     onBack: () => void;
@@ -29,11 +30,36 @@
   let newImportance = $state(0.5);
 
   const memoryTypes: { value: MemoryType; label: string; icon: string; color: string }[] = [
-    { value: 'fact', label: 'Fact', icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5', color: '#6366f1' },
-    { value: 'preference', label: 'Preference', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z', color: '#ec4899' },
-    { value: 'task', label: 'Task', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', color: '#10b981' },
-    { value: 'context', label: 'Context', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', color: '#f59e0b' },
-    { value: 'conversation', label: 'Conversation', icon: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z', color: '#8b5cf6' },
+    {
+      value: 'fact',
+      label: 'Fact',
+      icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+      color: '#6366f1',
+    },
+    {
+      value: 'preference',
+      label: 'Preference',
+      icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z',
+      color: '#ec4899',
+    },
+    {
+      value: 'task',
+      label: 'Task',
+      icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+      color: '#10b981',
+    },
+    {
+      value: 'context',
+      label: 'Context',
+      icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
+      color: '#f59e0b',
+    },
+    {
+      value: 'conversation',
+      label: 'Conversation',
+      icon: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z',
+      color: '#8b5cf6',
+    },
   ];
 
   onMount(async () => {
@@ -45,8 +71,8 @@
     try {
       memories = await listMemories(filterType === 'all' ? undefined : filterType, 100);
     } catch (e) {
-      showToast('Failed to load memories', 'error');
-      console.error(e);
+      memories = [];
+      showToast('Memories unavailable', 'error');
     } finally {
       loading = false;
     }
@@ -108,7 +134,7 @@
   }
 
   function getTypeInfo(type: MemoryType) {
-    return memoryTypes.find(t => t.value === type) || memoryTypes[0];
+    return memoryTypes.find((t) => t.value === type) || memoryTypes[0];
   }
 
   function formatDate(dateStr: string): string {
@@ -130,8 +156,15 @@
 <div class="memory-manager">
   <header class="header">
     <button class="back-btn" onclick={onBack}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M19 12H5M12 19l-7-7 7-7" />
       </svg>
       Back
     </button>
@@ -140,8 +173,15 @@
       <p class="subtitle">Long-term knowledge that persists across conversations</p>
     </div>
     <button class="primary-btn" onclick={openAddModal}>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 5v14M5 12h14"/>
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M12 5v14M5 12h14" />
       </svg>
       Add Memory
     </button>
@@ -150,36 +190,57 @@
   <!-- Search and Filter -->
   <div class="controls">
     <div class="search-box">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/>
-        <path d="M21 21l-4.35-4.35"/>
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <circle cx="11" cy="11" r="8" />
+        <path d="M21 21l-4.35-4.35" />
       </svg>
-      <input 
-        type="text" 
+      <input
+        type="text"
         placeholder="Search memories..."
         bind:value={searchQuery}
         onkeydown={(e) => e.key === 'Enter' && handleSearch()}
       />
       {#if searchQuery}
-        <button class="clear-btn" onclick={() => { searchQuery = ''; loadMemories(); }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 6L6 18M6 6l12 12"/>
+        <button
+          class="clear-btn"
+          aria-label="Clear search"
+          onclick={() => {
+            searchQuery = '';
+            loadMemories();
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>
       {/if}
     </div>
 
     <div class="type-filter">
-      <button 
-        class="filter-btn" 
+      <button
+        class="filter-btn"
         class:active={filterType === 'all'}
         onclick={() => (filterType = 'all')}
       >
         All
       </button>
       {#each memoryTypes as type}
-        <button 
-          class="filter-btn" 
+        <button
+          class="filter-btn"
           class:active={filterType === type.value}
           style="--color: {type.color}"
           onclick={() => (filterType = type.value)}
@@ -196,22 +257,18 @@
       <p>{searching ? 'Searching...' : 'Loading memories...'}</p>
     </div>
   {:else if memories.length === 0}
-    <div class="empty-state">
-      <div class="empty-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-        </svg>
-      </div>
-      <h3>No memories yet</h3>
-      <p>Add facts, preferences, and context for the AI to remember.</p>
+    <EmptyState
+      headline="No memories yet"
+      description="Add facts, preferences, and context for the AI to remember."
+    >
       <button class="primary-btn" onclick={openAddModal}>Add First Memory</button>
-    </div>
+    </EmptyState>
   {:else}
     <div class="stats-bar">
       <span>{memories.length} memories</span>
       <span>|</span>
-      <span>{memories.filter(m => m.type === 'fact').length} facts</span>
-      <span>{memories.filter(m => m.type === 'preference').length} preferences</span>
+      <span>{memories.filter((m) => m.type === 'fact').length} facts</span>
+      <span>{memories.filter((m) => m.type === 'preference').length} preferences</span>
     </div>
 
     <div class="memories-grid">
@@ -220,14 +277,28 @@
         <div class="memory-card">
           <div class="card-header">
             <div class="type-badge" style="background: {typeInfo.color}20; color: {typeInfo.color}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d={typeInfo.icon}/>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d={typeInfo.icon} />
               </svg>
               {typeInfo.label}
             </div>
             <button class="delete-btn" onclick={() => handleDelete(memory)} title="Delete">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 6L6 18M6 6l12 12"/>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
           </div>
@@ -251,22 +322,41 @@
 
 <!-- Add Memory Modal -->
 {#if showAddModal}
-  <div class="modal-overlay" onclick={closeAddModal}>
-    <div class="modal" onclick={(e) => e.stopPropagation()}>
+  <div
+    class="modal-overlay"
+    role="button"
+    tabindex="-1"
+    onclick={closeAddModal}
+    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && closeAddModal()}
+  >
+    <div
+      class="modal"
+      role="dialog"
+      tabindex="-1"
+      onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
+    >
       <h2>Add Memory</h2>
-      
-      <div class="form-group">
-        <label>Memory Type</label>
+
+      <div class="form-group" role="group" aria-labelledby="memory-type-label">
+        <span id="memory-type-label" class="form-label">Memory Type</span>
         <div class="type-selector">
           {#each memoryTypes as type}
-            <button 
-              class="type-option" 
+            <button
+              class="type-option"
               class:selected={newType === type.value}
               style="--color: {type.color}"
               onclick={() => (newType = type.value)}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d={type.icon}/>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d={type.icon} />
               </svg>
               {type.label}
             </button>
@@ -276,7 +366,7 @@
 
       <div class="form-group">
         <label for="content">Content</label>
-        <textarea 
+        <textarea
           id="content"
           bind:value={newContent}
           rows="4"
@@ -286,21 +376,14 @@
 
       <div class="form-group">
         <label for="importance">Importance: {Math.round(newImportance * 100)}%</label>
-        <input 
-          type="range"
-          id="importance"
-          bind:value={newImportance}
-          min="0"
-          max="1"
-          step="0.1"
-        />
+        <input type="range" id="importance" bind:value={newImportance} min="0" max="1" step="0.1" />
         <p class="hint">Higher importance = more likely to be recalled</p>
       </div>
 
       <div class="modal-actions">
         <button class="cancel-btn" onclick={closeAddModal}>Cancel</button>
-        <button 
-          class="submit-btn" 
+        <button
+          class="submit-btn"
           onclick={handleCreate}
           disabled={!newContent.trim() || processing}
         >
@@ -446,7 +529,7 @@
     color: white;
   }
 
-  .loading-state, .empty-state {
+  .loading-state {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -466,29 +549,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  .empty-icon {
-    width: 80px;
-    height: 80px;
-    background: #f3f4f6;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #9ca3af;
-  }
-
-  .empty-state h3 {
-    margin: 0;
-    font-size: 1.125rem;
-    color: #374151;
-  }
-
-  .empty-state p {
-    margin: 0 0 1rem;
-    color: #6b7280;
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .stats-bar {
@@ -625,7 +688,8 @@
     margin-bottom: 1.25rem;
   }
 
-  .form-group label {
+  .form-group label,
+  .form-label {
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
@@ -679,7 +743,7 @@
     border-color: #6366f1;
   }
 
-  .form-group input[type="range"] {
+  .form-group input[type='range'] {
     width: 100%;
   }
 
@@ -695,7 +759,8 @@
     justify-content: flex-end;
   }
 
-  .cancel-btn, .submit-btn {
+  .cancel-btn,
+  .submit-btn {
     padding: 0.625rem 1.25rem;
     font-size: 0.875rem;
     font-weight: 500;

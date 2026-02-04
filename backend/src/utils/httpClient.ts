@@ -44,7 +44,7 @@ export class HttpClient {
     // Add agent for connection pooling
     const fetchOptions: RequestInit = {
       ...options,
-      // @ts-expect-error - Node.js fetch supports agent
+      // @ts-expect-error - Node.js fetch supports agent (see docs/KNOWN_ISSUES.md)
       agent: isHttps ? this.httpsAgent : this.httpAgent,
     };
 

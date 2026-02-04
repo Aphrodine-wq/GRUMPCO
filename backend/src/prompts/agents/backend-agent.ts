@@ -3,36 +3,42 @@
  * Generates backend code (APIs, models, services) from PRD
  */
 
-export function getBackendAgentPrompt(runtime: 'node' | 'python' | 'go' = 'node', database: 'postgres' | 'mongodb' = 'postgres', contextSummary?: string): string {
-  const runtimeGuide = runtime === 'node'
-    ? `- Node.js/Express.js
+export function getBackendAgentPrompt(
+  runtime: 'node' | 'python' | 'go' = 'node',
+  database: 'postgres' | 'mongodb' = 'postgres',
+  contextSummary?: string
+): string {
+  const runtimeGuide =
+    runtime === 'node'
+      ? `- Node.js/Express.js
      - TypeScript for type safety
      - Prisma ORM (for relational) or Mongoose (for MongoDB)
      - Express for REST API
      - JWT for authentication
      - Winston for logging
      - Jest for testing`
-    : runtime === 'python'
-    ? `- Python 3.11+
+      : runtime === 'python'
+        ? `- Python 3.11+
      - FastAPI or Django REST Framework
      - SQLAlchemy or Django ORM
      - Pydantic for validation
      - JWT for authentication
      - Structlog for logging
      - Pytest for testing`
-    : `- Go 1.21+
+        : `- Go 1.21+
      - Gin or Echo for HTTP
      - Gorm for ORM
      - JWT for authentication
      - Zap for logging
      - Testing with Go's built-in testing`;
 
-  const dbGuide = database === 'postgres'
-    ? `- PostgreSQL with schema migrations
+  const dbGuide =
+    database === 'postgres'
+      ? `- PostgreSQL with schema migrations
      - ACID transactions
      - Indexes for performance
      - Connection pooling`
-    : `- MongoDB with collections
+      : `- MongoDB with collections
      - Document validation schemas
      - Indexes for performance`;
 
@@ -224,6 +230,6 @@ ${contextSummary}
 
 Use the context above to guide your code generation. Ensure your implementation aligns with the project's architecture, patterns, and quality requirements.`;
   }
-  
+
   return basePrompt;
 }

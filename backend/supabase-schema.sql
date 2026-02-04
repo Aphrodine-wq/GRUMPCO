@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS usage_records (
   input_tokens INTEGER,
   output_tokens INTEGER,
   latency_ms INTEGER,
+  storage_bytes INTEGER,
   success BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

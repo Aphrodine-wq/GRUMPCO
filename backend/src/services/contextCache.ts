@@ -30,11 +30,14 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 /**
  * Generate hash from project description for cache key
  */
-function generateCacheKey(projectDescription: string, options?: {
-  enrichedIntent?: unknown;
-  architecture?: unknown;
-  prd?: unknown;
-}): string {
+function generateCacheKey(
+  projectDescription: string,
+  options?: {
+    enrichedIntent?: unknown;
+    architecture?: unknown;
+    prd?: unknown;
+  }
+): string {
   const data = {
     projectDescription,
     enrichedIntent: options?.enrichedIntent ? 'provided' : undefined,
@@ -130,8 +133,8 @@ export function getCacheStats(): {
   let newestEntry: string | undefined;
 
   if (entries.length > 0) {
-    const sorted = entries.sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    const sorted = entries.sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
     oldestEntry = sorted[0].createdAt;
     newestEntry = sorted[sorted.length - 1].createdAt;

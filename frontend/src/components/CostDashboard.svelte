@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { Lightbulb } from 'lucide-svelte';
   import { getApiBase } from '../lib/api';
 
   interface CostSummary {
@@ -27,7 +28,12 @@
   let budget: BudgetStatus | null = null;
   let recommendations: string[] = [];
   let realtime: { last24Hours: number; lastHour: number; currentRate: number } | null = null;
-  let savings: { totalRequests: number; cheapModelUsed: number; cheapModelPercentage: number; estimatedSavings: number } | null = null;
+  let savings: {
+    totalRequests: number;
+    cheapModelUsed: number;
+    cheapModelPercentage: number;
+    estimatedSavings: number;
+  } | null = null;
   let statsData: {
     cache?: { byNamespace?: Record<string, { hits: number; misses: number; hitRate: number }> };
     gpu?: { utilization: number; memoryUsed: number; memoryTotal: number } | null;
@@ -43,14 +49,15 @@
       loading = true;
       error = null;
 
-      const [summaryRes, budgetRes, recommendationsRes, realtimeRes, savingsRes, statsRes] = await Promise.all([
-        fetch(`${API_BASE}/summary`),
-        fetch(`${API_BASE}/budget`),
-        fetch(`${API_BASE}/recommendations`),
-        fetch(`${API_BASE}/realtime`),
-        fetch(`${API_BASE}/savings`),
-        fetch(`${API_BASE}/stats`),
-      ]);
+      const [summaryRes, budgetRes, recommendationsRes, realtimeRes, savingsRes, statsRes] =
+        await Promise.all([
+          fetch(`${API_BASE}/summary`),
+          fetch(`${API_BASE}/budget`),
+          fetch(`${API_BASE}/recommendations`),
+          fetch(`${API_BASE}/realtime`),
+          fetch(`${API_BASE}/savings`),
+          fetch(`${API_BASE}/stats`),
+        ]);
 
       if (summaryRes.ok) {
         const data = await summaryRes.json();
@@ -118,14 +125,15 @@
 <div class="cost-dashboard">
   <div class="header">
     <h1>Cost Analytics Dashboard</h1>
-    <button on:click={fetchData} disabled={loading}>
+    <button onclick={fetchData} disabled={loading}>
       {loading ? 'Loading...' : 'Refresh'}
     </button>
   </div>
 
   {#if error}
     <div class="error-banner">
-      <strong>Error:</strong> {error}
+      <strong>Error:</strong>
+      {error}
     </div>
   {/if}
 
@@ -171,7 +179,9 @@
             <div class="budget-bar">
               <div
                 class="budget-fill"
-                style="width: {budget.dailyLimit ? Math.min(100, (budget.dailyUsed / budget.dailyLimit) * 100) : 0}%"
+                style="width: {budget.dailyLimit
+                  ? Math.min(100, (budget.dailyUsed / budget.dailyLimit) * 100)
+                  : 0}%"
               ></div>
             </div>
             <div class="budget-text">
@@ -187,7 +197,9 @@
             <div class="budget-bar">
               <div
                 class="budget-fill"
-                style="width: {budget.monthlyLimit ? Math.min(100, (budget.monthlyUsed / budget.monthlyLimit) * 100) : 0}%"
+                style="width: {budget.monthlyLimit
+                  ? Math.min(100, (budget.monthlyUsed / budget.monthlyLimit) * 100)
+                  : 0}%"
               ></div>
             </div>
             <div class="budget-text">
@@ -200,9 +212,7 @@
         </div>
 
         {#if budget.alertTriggered}
-          <div class="alert warning">
-            Budget alert triggered! You're approaching your limit.
-          </div>
+          <div class="alert warning">Budget alert triggered! You're approaching your limit.</div>
         {/if}
 
         {#if !budget.withinBudget}
@@ -216,7 +226,7 @@
     <!-- Cost breakdown -->
     <div class="breakdown-section">
       <h2>Cost Breakdown</h2>
-      
+
       <div class="breakdown-grid">
         <div class="breakdown-card">
           <h3>By Model</h3>
@@ -251,7 +261,11 @@
         <div class="simple-chart">
           {#each summary.costByDay as day}
             <div class="chart-bar">
-              <div class="bar-fill" style="height: {(day.cost / Math.max(...summary.costByDay.map(d => d.cost))) * 100}%"></div>
+              <div
+                class="bar-fill"
+                style="height: {(day.cost / Math.max(...summary.costByDay.map((d) => d.cost))) *
+                  100}%"
+              ></div>
               <div class="bar-label">{day.date.split('-')[2]}</div>
               <div class="bar-value">{formatCurrency(day.cost)}</div>
             </div>
@@ -267,7 +281,7 @@
         <div class="recommendations-list">
           {#each recommendations as recommendation}
             <div class="recommendation-item">
-              <span class="recommendation-icon">💡</span>
+              <span class="recommendation-icon"><Lightbulb size={16} /></span>
               <span class="recommendation-text">{recommendation}</span>
             </div>
           {/each}
@@ -283,7 +297,9 @@
           <div class="savings-card">
             <h4>Requests Using Cheap Model</h4>
             <div class="savings-value">{savings.cheapModelPercentage.toFixed(1)}%</div>
-            <div class="savings-label">{savings.cheapModelUsed} / {savings.totalRequests} requests</div>
+            <div class="savings-label">
+              {savings.cheapModelUsed} / {savings.totalRequests} requests
+            </div>
           </div>
           <div class="savings-card">
             <h4>Estimated Savings</h4>
@@ -317,7 +333,9 @@
       {:else}
         <div class="gpu-placeholder">
           <p>GPU utilization is shown here when NVIDIA NIM or local GPU inference is enabled.</p>
-          <p class="gpu-hint">Set <code>NVIDIA_NIM_API_KEY</code> (or configure local GPU) to see metrics.</p>
+          <p class="gpu-hint">
+            Set <code>NVIDIA_NIM_API_KEY</code> (or configure local GPU) to see metrics.
+          </p>
         </div>
       {/if}
     </div>
@@ -401,40 +419,6 @@
   .metric-label {
     font-size: 0.85rem;
     color: #888;
-  }
-
-  .cache-namespace-section {
-    margin-bottom: 2rem;
-  }
-
-  .cache-namespace-table-wrap {
-    overflow-x: auto;
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-  }
-
-  .cache-namespace-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-
-  .cache-namespace-table th,
-  .cache-namespace-table td {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-  }
-
-  .cache-namespace-table th {
-    background: #f8f9fa;
-    color: #666;
-    font-weight: 600;
-  }
-
-  .cache-namespace-table tbody tr:hover {
-    background: #f8f9fa;
   }
 
   .budget-section,
@@ -705,5 +689,11 @@
     padding: 1rem;
     border-radius: 4px;
     margin-bottom: 1rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bar-fill {
+      transition: none !important;
+    }
   }
 </style>

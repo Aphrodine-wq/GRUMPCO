@@ -6,7 +6,11 @@
 
 import { getDatabase } from '../db/database.js';
 import { executeShipMode } from './shipModeService.js';
-import { executeCodeGeneration, executeCodeGenerationMulti, getSession } from './agentOrchestrator.js';
+import {
+  executeCodeGeneration,
+  executeCodeGenerationMulti,
+  getSession,
+} from './agentOrchestrator.js';
 import { runExpoTestsInDocker } from './expoTestService.js';
 import logger from '../middleware/logger.js';
 import { db as supabaseDb, isMockMode } from './supabaseClient.js';
@@ -42,7 +46,10 @@ function supabaseTable(table: string) {
   return supabaseDb.from(table);
 }
 
-async function dispatchServerlessJob(path: string, payload: Record<string, unknown>): Promise<void> {
+async function dispatchServerlessJob(
+  path: string,
+  payload: Record<string, unknown>
+): Promise<void> {
   const baseUrl = getPublicBaseUrl();
   if (!baseUrl) {
     logger.error({ path }, 'PUBLIC_BASE_URL or VERCEL_URL is required for serverless job dispatch');
@@ -99,8 +106,12 @@ async function getBullQueue(): Promise<import('bullmq').Queue> {
 export async function enqueueShipJob(sessionId: string): Promise<string> {
   const id = `${JOB_PREFIX}ship_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   if (isServerlessRuntime) {
-    const { error } = await supabaseTable('ship_jobs')
-      .insert({ id, session_id: sessionId, status: 'pending', created_at: new Date().toISOString() });
+    const { error } = await supabaseTable('ship_jobs').insert({
+      id,
+      session_id: sessionId,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    });
     if (error) throw error;
     await dispatchServerlessJob('/api/jobs/ship', { jobId: id, sessionId });
     logger.info({ jobId: id, sessionId }, 'Ship job enqueued (serverless)');
@@ -123,8 +134,12 @@ export async function enqueueShipJob(sessionId: string): Promise<string> {
 export async function enqueueCodegenJob(sessionId: string): Promise<string> {
   const id = `${JOB_PREFIX}codegen_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   if (isServerlessRuntime) {
-    const { error } = await supabaseTable('codegen_jobs')
-      .insert({ id, session_id: sessionId, status: 'pending', created_at: new Date().toISOString() });
+    const { error } = await supabaseTable('codegen_jobs').insert({
+      id,
+      session_id: sessionId,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    });
     if (error) throw error;
     await dispatchServerlessJob('/api/jobs/codegen', { jobId: id, sessionId });
     logger.info({ jobId: id, sessionId }, 'Codegen job enqueued (serverless)');
@@ -140,20 +155,26 @@ export async function enqueueCodegenJob(sessionId: string): Promise<string> {
 
 function getNextShipJob(): { id: string; session_id: string } | null {
   const db = getDatabase().getDb();
-  const row = db.prepare(
-    `SELECT id, session_id FROM ship_jobs WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1`
-  ).get() as { id: string; session_id: string } | undefined;
+  const row = db
+    .prepare(
+      `SELECT id, session_id FROM ship_jobs WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1`
+    )
+    .get() as { id: string; session_id: string } | undefined;
   return row ?? null;
 }
 
 function markShipJobRunning(id: string): void {
   const db = getDatabase().getDb();
-  db.prepare(`UPDATE ship_jobs SET status = 'running', updated_at = datetime('now') WHERE id = ?`).run(id);
+  db.prepare(
+    `UPDATE ship_jobs SET status = 'running', updated_at = datetime('now') WHERE id = ?`
+  ).run(id);
 }
 
 function markShipJobCompleted(id: string): void {
   const db = getDatabase().getDb();
-  db.prepare(`UPDATE ship_jobs SET status = 'completed', updated_at = datetime('now') WHERE id = ?`).run(id);
+  db.prepare(
+    `UPDATE ship_jobs SET status = 'completed', updated_at = datetime('now') WHERE id = ?`
+  ).run(id);
 }
 
 function markShipJobFailed(id: string, error: string): void {
@@ -187,10 +208,7 @@ export async function processShipJob(jobId: string): Promise<void> {
     return;
   }
   const now = new Date().toISOString();
-  const { data, error } = await supabaseTable('ship_jobs')
-    .select('*')
-    .eq('id', jobId)
-    .single();
+  const { data, error } = await supabaseTable('ship_jobs').select('*').eq('id', jobId).single();
   if (error || !data) {
     throw new Error(error?.message || 'Ship job not found');
   }
@@ -200,7 +218,9 @@ export async function processShipJob(jobId: string): Promise<void> {
   await supabaseTable('ship_jobs').update({ status: 'running', updated_at: now }).eq('id', jobId);
   try {
     await executeShipMode(data.session_id as string);
-    await supabaseTable('ship_jobs').update({ status: 'completed', updated_at: now }).eq('id', jobId);
+    await supabaseTable('ship_jobs')
+      .update({ status: 'completed', updated_at: now })
+      .eq('id', jobId);
     logger.info({ jobId, sessionId: data.session_id }, 'Ship job completed (serverless)');
   } catch (err) {
     const msg = (err as Error).message;
@@ -226,15 +246,19 @@ export async function enqueueExpoTestJob(projectPath: string): Promise<string> {
 
 function getNextExpoTestJob(): { id: string; project_path: string } | null {
   const db = getDatabase().getDb();
-  const row = db.prepare(
-    `SELECT id, project_path FROM expo_test_jobs WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1`
-  ).get() as { id: string; project_path: string } | undefined;
+  const row = db
+    .prepare(
+      `SELECT id, project_path FROM expo_test_jobs WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1`
+    )
+    .get() as { id: string; project_path: string } | undefined;
   return row ?? null;
 }
 
 function markExpoJobRunning(id: string): void {
   const db = getDatabase().getDb();
-  db.prepare(`UPDATE expo_test_jobs SET status = 'running', updated_at = datetime('now') WHERE id = ?`).run(id);
+  db.prepare(
+    `UPDATE expo_test_jobs SET status = 'running', updated_at = datetime('now') WHERE id = ?`
+  ).run(id);
 }
 
 function markExpoJobCompleted(id: string, resultJson: string): void {
@@ -265,12 +289,18 @@ async function processOneExpoJob(): Promise<boolean> {
       logger.info({ jobId: job.id, projectPath: job.project_path }, 'Expo test job completed');
     } else {
       markExpoJobFailed(job.id, result.error ?? result.stderr ?? 'Test failed');
-      logger.warn({ jobId: job.id, projectPath: job.project_path, error: result.error }, 'Expo test job failed');
+      logger.warn(
+        { jobId: job.id, projectPath: job.project_path, error: result.error },
+        'Expo test job failed'
+      );
     }
   } catch (err) {
     const msg = (err as Error).message;
     markExpoJobFailed(job.id, msg);
-    logger.error({ jobId: job.id, projectPath: job.project_path, error: msg }, 'Expo test job failed');
+    logger.error(
+      { jobId: job.id, projectPath: job.project_path, error: msg },
+      'Expo test job failed'
+    );
   }
   return true;
 }
@@ -298,8 +328,12 @@ export async function startJobWorker(): Promise<void> {
       },
       { connection: conn, concurrency: 1 }
     );
-    bullWorker.on('completed', (job) => logger.info({ jobId: job.id }, 'BullMQ ship job completed'));
-    bullWorker.on('failed', (job, err) => logger.error({ jobId: job?.id, err: (err as Error).message }, 'BullMQ ship job failed'));
+    bullWorker.on('completed', (job) =>
+      logger.info({ jobId: job.id }, 'BullMQ ship job completed')
+    );
+    bullWorker.on('failed', (job, err) =>
+      logger.error({ jobId: job?.id, err: (err as Error).message }, 'BullMQ ship job failed')
+    );
     logger.info('BullMQ ship worker started');
     return;
   }
@@ -321,17 +355,16 @@ export async function processCodegenJob(jobId: string): Promise<void> {
     return;
   }
   const now = new Date().toISOString();
-  const { data, error } = await supabaseTable('codegen_jobs')
-    .select('*')
-    .eq('id', jobId)
-    .single();
+  const { data, error } = await supabaseTable('codegen_jobs').select('*').eq('id', jobId).single();
   if (error || !data) {
     throw new Error(error?.message || 'Codegen job not found');
   }
   if (data.status === 'completed' || data.status === 'failed') {
     return;
   }
-  await supabaseTable('codegen_jobs').update({ status: 'running', updated_at: now }).eq('id', jobId);
+  await supabaseTable('codegen_jobs')
+    .update({ status: 'running', updated_at: now })
+    .eq('id', jobId);
   try {
     const session = await getSession(data.session_id as string);
     if (!session) throw new Error('Codegen session not found');
@@ -342,14 +375,19 @@ export async function processCodegenJob(jobId: string): Promise<void> {
     } else {
       throw new Error('Codegen session missing PRD or architecture');
     }
-    await supabaseTable('codegen_jobs').update({ status: 'completed', updated_at: now }).eq('id', jobId);
+    await supabaseTable('codegen_jobs')
+      .update({ status: 'completed', updated_at: now })
+      .eq('id', jobId);
     logger.info({ jobId, sessionId: data.session_id }, 'Codegen job completed (serverless)');
   } catch (err) {
     const msg = (err as Error).message;
     await supabaseTable('codegen_jobs')
       .update({ status: 'failed', updated_at: now, error: msg })
       .eq('id', jobId);
-    logger.error({ jobId, sessionId: data.session_id, error: msg }, 'Codegen job failed (serverless)');
+    logger.error(
+      { jobId, sessionId: data.session_id, error: msg },
+      'Codegen job failed (serverless)'
+    );
     throw err;
   }
 }

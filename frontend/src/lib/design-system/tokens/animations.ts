@@ -15,7 +15,7 @@ export const animations = {
     normal: '250ms',
     slow: '350ms',
     slower: '500ms',
-    screen: '400ms',    // Page transitions
+    screen: '400ms', // Page transitions
   },
 
   // Easing functions
@@ -40,7 +40,8 @@ export const animations = {
     // Spring for playful motion
     spring: '400ms cubic-bezier(0.68, -0.15, 0.265, 1.15)',
     // Colors only
-    color: 'color 150ms cubic-bezier(0, 0, 0.2, 1), background-color 150ms cubic-bezier(0, 0, 0.2, 1)',
+    color:
+      'color 150ms cubic-bezier(0, 0, 0.2, 1), background-color 150ms cubic-bezier(0, 0, 0.2, 1)',
     // Transform transitions
     transform: 'transform 250ms cubic-bezier(0.4, 0, 0.2, 1)',
     // Opacity

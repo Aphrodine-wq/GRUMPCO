@@ -35,7 +35,14 @@ export interface Dependency {
 }
 
 export interface CodeSmell {
-  type: 'long_method' | 'large_class' | 'duplicate_code' | 'dead_code' | 'magic_number' | 'god_object' | 'feature_envy';
+  type:
+    | 'long_method'
+    | 'large_class'
+    | 'duplicate_code'
+    | 'dead_code'
+    | 'magic_number'
+    | 'god_object'
+    | 'feature_envy';
   severity: 'critical' | 'high' | 'medium' | 'low';
   location: string;
   description: string;
@@ -63,7 +70,14 @@ export interface PerformanceOptimization {
 }
 
 export interface SecurityIssue {
-  type: 'sql_injection' | 'xss' | 'csrf' | 'auth_bypass' | 'sensitive_data' | 'insecure_dependency' | 'weak_crypto';
+  type:
+    | 'sql_injection'
+    | 'xss'
+    | 'csrf'
+    | 'auth_bypass'
+    | 'sensitive_data'
+    | 'insecure_dependency'
+    | 'weak_crypto';
   severity: 'critical' | 'high' | 'medium' | 'low';
   location: string;
   description: string;

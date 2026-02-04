@@ -15,7 +15,9 @@ const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
 export function getCurrentVersion(db: Database.Database): number {
   try {
-    const row = db.prepare('SELECT version FROM schema_version LIMIT 1').get() as { version: number } | undefined;
+    const row = db.prepare('SELECT version FROM schema_version LIMIT 1').get() as
+      | { version: number }
+      | undefined;
     return row?.version ?? 0;
   } catch {
     return 0;

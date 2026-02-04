@@ -59,61 +59,225 @@
   const activeTab = writable<'overview' | 'deployments' | 'resources' | 'costs'>('overview');
 
   // Derived
-  const connectedIntegrations = derived(integrations, $i => $i.filter(i => i.connected));
-  const recentDeployments = derived(deployments, $d => $d.slice(0, 5));
-  const totalMonthlyCost = derived(costs, $c => $c.reduce((sum, c) => sum + c.current, 0));
+  const connectedIntegrations = derived(integrations, ($i) => $i.filter((i) => i.connected));
+  const recentDeployments = derived(deployments, ($d) => $d.slice(0, 5));
+  const totalMonthlyCost = derived(costs, ($c) => $c.reduce((sum, c) => sum + c.current, 0));
 
   // Fallback mock data when API is unavailable
   function getMockData() {
     return {
       integrations: [
-        { id: 'vercel', name: 'Vercel', icon: 'vercel', category: 'deploy' as const, connected: true, lastSync: new Date().toISOString(), status: 'healthy' as const },
-        { id: 'netlify', name: 'Netlify', icon: 'netlify', category: 'deploy' as const, connected: true, lastSync: new Date().toISOString(), status: 'healthy' as const },
-        { id: 'aws', name: 'AWS', icon: 'aws', category: 'cloud' as const, connected: true, lastSync: new Date().toISOString(), status: 'healthy' as const },
-        { id: 'gcp', name: 'Google Cloud', icon: 'gcp', category: 'cloud' as const, connected: false },
+        {
+          id: 'vercel',
+          name: 'Vercel',
+          icon: 'vercel',
+          category: 'deploy' as const,
+          connected: true,
+          lastSync: new Date().toISOString(),
+          status: 'healthy' as const,
+        },
+        {
+          id: 'netlify',
+          name: 'Netlify',
+          icon: 'netlify',
+          category: 'deploy' as const,
+          connected: true,
+          lastSync: new Date().toISOString(),
+          status: 'healthy' as const,
+        },
+        {
+          id: 'aws',
+          name: 'AWS',
+          icon: 'aws',
+          category: 'cloud' as const,
+          connected: true,
+          lastSync: new Date().toISOString(),
+          status: 'healthy' as const,
+        },
+        {
+          id: 'gcp',
+          name: 'Google Cloud',
+          icon: 'gcp',
+          category: 'cloud' as const,
+          connected: false,
+        },
         { id: 'azure', name: 'Azure', icon: 'azure', category: 'cloud' as const, connected: false },
-        { id: 'supabase', name: 'Supabase', icon: 'supabase', category: 'baas' as const, connected: true, lastSync: new Date().toISOString(), status: 'healthy' as const },
-        { id: 'firebase', name: 'Firebase', icon: 'firebase', category: 'baas' as const, connected: false },
-        { id: 'github', name: 'GitHub', icon: 'github', category: 'vcs' as const, connected: true, lastSync: new Date().toISOString(), status: 'healthy' as const },
-        { id: 'jira', name: 'Jira', icon: 'jira', category: 'pm' as const, connected: true, lastSync: new Date().toISOString(), status: 'warning' as const },
+        {
+          id: 'supabase',
+          name: 'Supabase',
+          icon: 'supabase',
+          category: 'baas' as const,
+          connected: true,
+          lastSync: new Date().toISOString(),
+          status: 'healthy' as const,
+        },
+        {
+          id: 'firebase',
+          name: 'Firebase',
+          icon: 'firebase',
+          category: 'baas' as const,
+          connected: false,
+        },
+        {
+          id: 'github',
+          name: 'GitHub',
+          icon: 'github',
+          category: 'vcs' as const,
+          connected: true,
+          lastSync: new Date().toISOString(),
+          status: 'healthy' as const,
+        },
+        {
+          id: 'jira',
+          name: 'Jira',
+          icon: 'jira',
+          category: 'pm' as const,
+          connected: true,
+          lastSync: new Date().toISOString(),
+          status: 'warning' as const,
+        },
         { id: 'linear', name: 'Linear', icon: 'linear', category: 'pm' as const, connected: false },
       ],
       deployments: [
-        { id: 'd1', project: 'g-rump-app', provider: 'vercel' as const, status: 'ready' as const, url: 'https://g-rump.vercel.app', branch: 'main', commit: 'abc123', createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(), duration: 45 },
-        { id: 'd2', project: 'g-rump-docs', provider: 'netlify' as const, status: 'building' as const, branch: 'main', commit: 'def456', createdAt: new Date(Date.now() - 1000 * 60 * 2).toISOString() },
-        { id: 'd3', project: 'g-rump-api', provider: 'vercel' as const, status: 'ready' as const, url: 'https://api.g-rump.dev', branch: 'main', commit: 'ghi789', createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), duration: 62 },
-        { id: 'd4', project: 'g-rump-app', provider: 'vercel' as const, status: 'error' as const, branch: 'feature/dark-mode', commit: 'jkl012', createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
-        { id: 'd5', project: 'landing-page', provider: 'netlify' as const, status: 'ready' as const, url: 'https://grump.io', branch: 'main', commit: 'mno345', createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(), duration: 28 },
+        {
+          id: 'd1',
+          project: 'g-rump-app',
+          provider: 'vercel' as const,
+          status: 'ready' as const,
+          url: 'https://g-rump.vercel.app',
+          branch: 'main',
+          commit: 'abc123',
+          createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+          duration: 45,
+        },
+        {
+          id: 'd2',
+          project: 'g-rump-docs',
+          provider: 'netlify' as const,
+          status: 'building' as const,
+          branch: 'main',
+          commit: 'def456',
+          createdAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
+        },
+        {
+          id: 'd3',
+          project: 'g-rump-api',
+          provider: 'vercel' as const,
+          status: 'ready' as const,
+          url: 'https://api.g-rump.dev',
+          branch: 'main',
+          commit: 'ghi789',
+          createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+          duration: 62,
+        },
+        {
+          id: 'd4',
+          project: 'g-rump-app',
+          provider: 'vercel' as const,
+          status: 'error' as const,
+          branch: 'feature/new-ui',
+          commit: 'jkl012',
+          createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+        },
+        {
+          id: 'd5',
+          project: 'landing-page',
+          provider: 'netlify' as const,
+          status: 'ready' as const,
+          url: 'https://grump.io',
+          branch: 'main',
+          commit: 'mno345',
+          createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+          duration: 28,
+        },
       ],
       resources: [
-        { id: 'r1', name: 'prod-api-cluster', provider: 'aws' as const, type: 'container' as const, status: 'running' as const, region: 'us-east-1', cost: 145.50 },
-        { id: 'r2', name: 'main-db', provider: 'aws' as const, type: 'database' as const, status: 'running' as const, region: 'us-east-1', cost: 89.99 },
-        { id: 'r3', name: 'static-assets', provider: 'aws' as const, type: 'storage' as const, status: 'running' as const, region: 'us-east-1', cost: 12.30 },
-        { id: 'r4', name: 'ai-inference', provider: 'gcp' as const, type: 'compute' as const, status: 'running' as const, region: 'us-central1', cost: 234.00 },
-        { id: 'r5', name: 'edge-functions', provider: 'aws' as const, type: 'serverless' as const, status: 'running' as const, region: 'global', cost: 45.67 },
+        {
+          id: 'r1',
+          name: 'prod-api-cluster',
+          provider: 'aws' as const,
+          type: 'container' as const,
+          status: 'running' as const,
+          region: 'us-east-1',
+          cost: 145.5,
+        },
+        {
+          id: 'r2',
+          name: 'main-db',
+          provider: 'aws' as const,
+          type: 'database' as const,
+          status: 'running' as const,
+          region: 'us-east-1',
+          cost: 89.99,
+        },
+        {
+          id: 'r3',
+          name: 'static-assets',
+          provider: 'aws' as const,
+          type: 'storage' as const,
+          status: 'running' as const,
+          region: 'us-east-1',
+          cost: 12.3,
+        },
+        {
+          id: 'r4',
+          name: 'ai-inference',
+          provider: 'gcp' as const,
+          type: 'compute' as const,
+          status: 'running' as const,
+          region: 'us-central1',
+          cost: 234.0,
+        },
+        {
+          id: 'r5',
+          name: 'edge-functions',
+          provider: 'aws' as const,
+          type: 'serverless' as const,
+          status: 'running' as const,
+          region: 'global',
+          cost: 45.67,
+        },
       ],
       costs: [
-        { provider: 'AWS', current: 293.46, forecast: 320.00, trend: 'up' as const, trendPercent: 8 },
-        { provider: 'GCP', current: 234.00, forecast: 250.00, trend: 'up' as const, trendPercent: 5 },
-        { provider: 'Vercel', current: 20.00, forecast: 20.00, trend: 'stable' as const, trendPercent: 0 },
-        { provider: 'Supabase', current: 25.00, forecast: 25.00, trend: 'stable' as const, trendPercent: 0 },
-      ]
+        {
+          provider: 'AWS',
+          current: 293.46,
+          forecast: 320.0,
+          trend: 'up' as const,
+          trendPercent: 8,
+        },
+        { provider: 'GCP', current: 234.0, forecast: 250.0, trend: 'up' as const, trendPercent: 5 },
+        {
+          provider: 'Vercel',
+          current: 20.0,
+          forecast: 20.0,
+          trend: 'stable' as const,
+          trendPercent: 0,
+        },
+        {
+          provider: 'Supabase',
+          current: 25.0,
+          forecast: 25.0,
+          trend: 'stable' as const,
+          trendPercent: 0,
+        },
+      ],
     };
   }
 
   // Load data from API with fallback to mock data
   async function loadDashboardData() {
     isLoading.set(true);
-    
+
     try {
       const response = await fetch('/api/cloud/dashboard');
-      
+
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Use API data if available
       integrations.set(data.integrations || getMockData().integrations);
       deployments.set(data.deployments || getMockData().deployments);
@@ -198,23 +362,35 @@
 
   function getProviderIcon(provider: string): string {
     switch (provider) {
-      case 'vercel': return 'M12 2L2 20h20L12 2z';
-      case 'netlify': return 'M12 2L2 12l10 10 10-10L12 2z';
-      case 'aws': return 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z';
-      case 'gcp': return 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5';
-      case 'azure': return 'M12 2L2 12l10 10 10-10L12 2z';
-      default: return 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z';
+      case 'vercel':
+        return 'M12 2L2 20h20L12 2z';
+      case 'netlify':
+        return 'M12 2L2 12l10 10 10-10L12 2z';
+      case 'aws':
+        return 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z';
+      case 'gcp':
+        return 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5';
+      case 'azure':
+        return 'M12 2L2 12l10 10 10-10L12 2z';
+      default:
+        return 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z';
     }
   }
 
   function getResourceIcon(type: string): string {
     switch (type) {
-      case 'compute': return 'M4 6h16M4 10h16M4 14h16M4 18h16';
-      case 'database': return 'M12 2C6.48 2 2 4.5 2 7.5v9C2 19.5 6.48 22 12 22s10-2.5 10-5.5v-9C22 4.5 17.52 2 12 2z';
-      case 'storage': return 'M20 6H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2z';
-      case 'serverless': return 'M13 10V3L4 14h7v7l9-11h-7z';
-      case 'container': return 'M21 8v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM7 12h2M11 12h2M15 12h2';
-      default: return 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z';
+      case 'compute':
+        return 'M4 6h16M4 10h16M4 14h16M4 18h16';
+      case 'database':
+        return 'M12 2C6.48 2 2 4.5 2 7.5v9C2 19.5 6.48 22 12 22s10-2.5 10-5.5v-9C22 4.5 17.52 2 12 2z';
+      case 'storage':
+        return 'M20 6H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2z';
+      case 'serverless':
+        return 'M13 10V3L4 14h7v7l9-11h-7z';
+      case 'container':
+        return 'M21 8v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM7 12h2M11 12h2M15 12h2';
+      default:
+        return 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z';
     }
   }
 </script>
@@ -224,9 +400,9 @@
   <header class="dashboard-header">
     <div class="header-left">
       {#if onBack}
-        <button class="back-btn" onclick={onBack}>
+        <button class="back-btn" onclick={onBack} aria-label="Back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
+            <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
       {/if}
@@ -238,7 +414,7 @@
     <div class="header-actions">
       <button class="action-btn primary">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M5 12h14"/>
+          <path d="M12 5v14M5 12h14" />
         </svg>
         Connect Integration
       </button>
@@ -247,29 +423,29 @@
 
   <!-- Tabs -->
   <nav class="tabs">
-    <button 
-      class="tab" 
+    <button
+      class="tab"
       class:active={$activeTab === 'overview'}
       onclick={() => activeTab.set('overview')}
     >
       Overview
     </button>
-    <button 
-      class="tab" 
+    <button
+      class="tab"
       class:active={$activeTab === 'deployments'}
       onclick={() => activeTab.set('deployments')}
     >
       Deployments
     </button>
-    <button 
-      class="tab" 
+    <button
+      class="tab"
       class:active={$activeTab === 'resources'}
       onclick={() => activeTab.set('resources')}
     >
       Resources
     </button>
-    <button 
-      class="tab" 
+    <button
+      class="tab"
       class:active={$activeTab === 'costs'}
       onclick={() => activeTab.set('costs')}
     >
@@ -292,8 +468,8 @@
           <div class="stat-card">
             <div class="stat-icon connected">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
             </div>
             <div class="stat-info">
@@ -305,7 +481,9 @@
           <div class="stat-card">
             <div class="stat-icon deployments">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <path
+                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                />
               </svg>
             </div>
             <div class="stat-info">
@@ -317,10 +495,10 @@
           <div class="stat-card">
             <div class="stat-icon resources">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
-                <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
-                <line x1="6" y1="6" x2="6.01" y2="6"/>
-                <line x1="6" y1="18" x2="6.01" y2="18"/>
+                <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+                <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+                <line x1="6" y1="6" x2="6.01" y2="6" />
+                <line x1="6" y1="18" x2="6.01" y2="18" />
               </svg>
             </div>
             <div class="stat-info">
@@ -332,8 +510,8 @@
           <div class="stat-card">
             <div class="stat-icon costs">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="1" x2="12" y2="23"/>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                <line x1="12" y1="1" x2="12" y2="23" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
             </div>
             <div class="stat-info">
@@ -348,8 +526,8 @@
           <h2 class="section-title">Integrations</h2>
           <div class="integrations-grid">
             {#each $integrations as integration}
-              <div 
-                class="integration-card" 
+              <div
+                class="integration-card"
                 class:connected={integration.connected}
                 class:disconnected={!integration.connected}
               >
@@ -359,7 +537,9 @@
                 <div class="integration-info">
                   <span class="integration-name">{integration.name}</span>
                   {#if integration.connected}
-                    <span class="integration-status {getStatusColor(integration.status || 'healthy')}">
+                    <span
+                      class="integration-status {getStatusColor(integration.status || 'healthy')}"
+                    >
                       Connected
                     </span>
                   {:else}
@@ -387,8 +567,14 @@
               <div class="deployment-row" transition:slide>
                 <div class="deployment-info">
                   <div class="deployment-project">
-                    <svg class="provider-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d={getProviderIcon(deployment.provider)}/>
+                    <svg
+                      class="provider-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d={getProviderIcon(deployment.provider)} />
                     </svg>
                     <span>{deployment.project}</span>
                   </div>
@@ -406,11 +592,17 @@
                     {deployment.status}
                   </span>
                   {#if deployment.url}
-                    <a href={deployment.url} target="_blank" rel="noopener" class="visit-link">
+                    <a
+                      href={deployment.url}
+                      target="_blank"
+                      rel="noopener"
+                      class="visit-link"
+                      aria-label="Visit deployment"
+                    >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                        <polyline points="15 3 21 3 21 9"/>
-                        <line x1="10" y1="14" x2="21" y2="3"/>
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
                       </svg>
                     </a>
                   {/if}
@@ -436,17 +628,17 @@
                 <div class="cost-trend {cost.trend}">
                   {#if cost.trend === 'up'}
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-                      <polyline points="17 6 23 6 23 12"/>
+                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                      <polyline points="17 6 23 6 23 12" />
                     </svg>
                   {:else if cost.trend === 'down'}
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>
-                      <polyline points="17 18 23 18 23 12"/>
+                      <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+                      <polyline points="17 18 23 18 23 12" />
                     </svg>
                   {:else}
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="5" y1="12" x2="19" y2="12"/>
+                      <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
                   {/if}
                   <span>{cost.trendPercent}%</span>
@@ -456,7 +648,6 @@
           </div>
         </section>
       </div>
-
     {:else if $activeTab === 'deployments'}
       <!-- Deployments Tab -->
       <div class="deployments-tab" in:fly={{ y: 20, duration: 200 }}>
@@ -473,25 +664,39 @@
           {#each $deployments as deployment}
             <div class="table-row">
               <span class="project-cell">
-                <svg class="provider-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d={getProviderIcon(deployment.provider)}/>
+                <svg
+                  class="provider-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d={getProviderIcon(deployment.provider)} />
                 </svg>
                 {deployment.project}
               </span>
               <span class="branch-cell">{deployment.branch}</span>
               <span class="commit-cell">{deployment.commit.slice(0, 7)}</span>
               <span class="status-cell">
-                <span class="status-badge {getStatusBg(deployment.status)}">{deployment.status}</span>
+                <span class="status-badge {getStatusBg(deployment.status)}"
+                  >{deployment.status}</span
+                >
               </span>
               <span class="duration-cell">{formatDuration(deployment.duration)}</span>
               <span class="time-cell">{formatTime(deployment.createdAt)}</span>
               <span class="actions-cell">
                 {#if deployment.url}
-                  <a href={deployment.url} target="_blank" rel="noopener" class="action-icon">
+                  <a
+                    href={deployment.url}
+                    target="_blank"
+                    rel="noopener"
+                    class="action-icon"
+                    aria-label="Visit deployment"
+                  >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                      <polyline points="15 3 21 3 21 9"/>
-                      <line x1="10" y1="14" x2="21" y2="3"/>
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
                     </svg>
                   </a>
                 {/if}
@@ -500,7 +705,6 @@
           {/each}
         </div>
       </div>
-
     {:else if $activeTab === 'resources'}
       <!-- Resources Tab -->
       <div class="resources-tab" in:fly={{ y: 20, duration: 200 }}>
@@ -510,7 +714,7 @@
               <div class="resource-header">
                 <div class="resource-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d={getResourceIcon(resource.type)}/>
+                    <path d={getResourceIcon(resource.type)} />
                   </svg>
                 </div>
                 <span class="status-indicator {resource.status}"></span>
@@ -528,7 +732,6 @@
           {/each}
         </div>
       </div>
-
     {:else if $activeTab === 'costs'}
       <!-- Costs Tab -->
       <div class="costs-tab" in:fly={{ y: 20, duration: 200 }}>
@@ -553,8 +756,8 @@
                   <span class="breakdown-amount">{formatCurrency(cost.current)}</span>
                 </div>
                 <div class="breakdown-bar">
-                  <div 
-                    class="breakdown-fill" 
+                  <div
+                    class="breakdown-fill"
                     style="width: {(cost.current / $totalMonthlyCost) * 100}%"
                   ></div>
                 </div>
@@ -569,11 +772,15 @@
         <div class="cost-by-resource">
           <h3>Cost by Resource</h3>
           <div class="resource-cost-list">
-            {#each $resources.filter(r => r.cost).sort((a, b) => (b.cost || 0) - (a.cost || 0)) as resource}
+            {#each $resources
+              .filter((r) => r.cost)
+              .sort((a, b) => (b.cost || 0) - (a.cost || 0)) as resource}
               <div class="resource-cost-item">
                 <div class="resource-cost-info">
                   <span class="resource-cost-name">{resource.name}</span>
-                  <span class="resource-cost-type">{resource.type} - {resource.provider.toUpperCase()}</span>
+                  <span class="resource-cost-type"
+                    >{resource.type} - {resource.provider.toUpperCase()}</span
+                  >
                 </div>
                 <span class="resource-cost-amount">{formatCurrency(resource.cost || 0)}</span>
               </div>
@@ -723,7 +930,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* Overview Grid */
@@ -751,7 +960,7 @@
   }
 
   .stat-card:hover {
-    box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.1));
+    box-shadow: var(--shadow-md, 0 4px 16px rgba(0, 0, 0, 0.1));
   }
 
   .stat-icon {
@@ -885,16 +1094,37 @@
     font-size: 1rem;
   }
 
-  .integration-icon.vercel { background: #000; }
-  .integration-icon.netlify { background: #00c7b7; }
-  .integration-icon.aws { background: #ff9900; }
-  .integration-icon.gcp { background: #4285f4; }
-  .integration-icon.azure { background: #0078d4; }
-  .integration-icon.supabase { background: #3ecf8e; }
-  .integration-icon.firebase { background: #ffca28; color: #000; }
-  .integration-icon.github { background: #24292e; }
-  .integration-icon.jira { background: #0052cc; }
-  .integration-icon.linear { background: #5e6ad2; }
+  .integration-icon.vercel {
+    background: #000;
+  }
+  .integration-icon.netlify {
+    background: #00c7b7;
+  }
+  .integration-icon.aws {
+    background: #ff9900;
+  }
+  .integration-icon.gcp {
+    background: #4285f4;
+  }
+  .integration-icon.azure {
+    background: #0078d4;
+  }
+  .integration-icon.supabase {
+    background: #3ecf8e;
+  }
+  .integration-icon.firebase {
+    background: #ffca28;
+    color: #000;
+  }
+  .integration-icon.github {
+    background: #24292e;
+  }
+  .integration-icon.jira {
+    background: #0052cc;
+  }
+  .integration-icon.linear {
+    background: #5e6ad2;
+  }
 
   .integration-info {
     display: flex;
@@ -920,9 +1150,15 @@
     border-radius: 50%;
   }
 
-  .status-dot.healthy { background: #22c55e; }
-  .status-dot.warning { background: #eab308; }
-  .status-dot.error { background: #ef4444; }
+  .status-dot.healthy {
+    background: #22c55e;
+  }
+  .status-dot.warning {
+    background: #eab308;
+  }
+  .status-dot.error {
+    background: #ef4444;
+  }
 
   /* Deployments List */
   .deployments-list {
@@ -966,8 +1202,12 @@
     color: var(--color-text-muted, #6d28d9);
   }
 
-  .branch::before { content: ''; }
-  .commit { font-family: var(--font-mono, monospace); }
+  .branch::before {
+    content: '';
+  }
+  .commit {
+    font-family: var(--font-mono, monospace);
+  }
 
   .deployment-status {
     display: flex;
@@ -1047,9 +1287,15 @@
     margin-top: 0.25rem;
   }
 
-  .cost-trend.up { color: #ef4444; }
-  .cost-trend.down { color: #22c55e; }
-  .cost-trend.stable { color: var(--color-text-muted, #6d28d9); }
+  .cost-trend.up {
+    color: #ef4444;
+  }
+  .cost-trend.down {
+    color: #22c55e;
+  }
+  .cost-trend.stable {
+    color: var(--color-text-muted, #6d28d9);
+  }
 
   .cost-trend svg {
     width: 12px;
@@ -1134,7 +1380,7 @@
   }
 
   .resource-card:hover {
-    box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.1));
+    box-shadow: var(--shadow-md, 0 4px 16px rgba(0, 0, 0, 0.1));
   }
 
   .resource-header {
@@ -1166,10 +1412,18 @@
     border-radius: 50%;
   }
 
-  .status-indicator.running { background: #22c55e; }
-  .status-indicator.stopped { background: #6b7280; }
-  .status-indicator.pending { background: #eab308; }
-  .status-indicator.error { background: #ef4444; }
+  .status-indicator.running {
+    background: #22c55e;
+  }
+  .status-indicator.stopped {
+    background: #6b7280;
+  }
+  .status-indicator.pending {
+    background: #eab308;
+  }
+  .status-indicator.error {
+    background: #ef4444;
+  }
 
   .resource-name {
     font-weight: 600;
@@ -1205,7 +1459,11 @@
 
   .cost-summary-card {
     padding: 2rem;
-    background: linear-gradient(135deg, var(--color-primary, #7c3aed), var(--color-primary-hover, #6d28d9));
+    background: linear-gradient(
+      135deg,
+      var(--color-primary, #7c3aed),
+      var(--color-primary-hover, #6d28d9)
+    );
     border-radius: 16px;
     color: white;
     text-align: center;
@@ -1298,9 +1556,15 @@
     text-align: right;
   }
 
-  .breakdown-trend.up { color: #ef4444; }
-  .breakdown-trend.down { color: #22c55e; }
-  .breakdown-trend.stable { color: var(--color-text-muted, #6d28d9); }
+  .breakdown-trend.up {
+    color: #ef4444;
+  }
+  .breakdown-trend.down {
+    color: #22c55e;
+  }
+  .breakdown-trend.stable {
+    color: var(--color-text-muted, #6d28d9);
+  }
 
   .resource-cost-list {
     display: flex;
@@ -1332,11 +1596,21 @@
   }
 
   /* Text colors */
-  .text-green-500 { color: #22c55e; }
-  .text-yellow-500 { color: #eab308; }
-  .text-red-500 { color: #ef4444; }
-  .text-gray-400 { color: #9ca3af; }
-  .text-gray-500 { color: #6b7280; }
+  .text-green-500 {
+    color: #22c55e;
+  }
+  .text-yellow-500 {
+    color: #eab308;
+  }
+  .text-red-500 {
+    color: #ef4444;
+  }
+  .text-gray-400 {
+    color: #9ca3af;
+  }
+  .text-gray-500 {
+    color: #6b7280;
+  }
 
   /* Responsive */
   @media (max-width: 768px) {
@@ -1369,6 +1643,14 @@
       flex-direction: column;
       gap: 0.75rem;
       border: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .deployment-row,
+    .stat-card,
+    .tab-btn {
+      transition: none !important;
     }
   }
 </style>

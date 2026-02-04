@@ -1,10 +1,6 @@
 import { writable, derived } from 'svelte/store';
 import { fetchApi } from '../lib/api.js';
-import type {
-  Plan,
-  PlanGenerationRequest,
-  PlanEditRequest,
-} from '../types/plan';
+import type { Plan, PlanGenerationRequest, PlanEditRequest } from '../types/plan';
 
 // Plan state
 interface PlanState {
@@ -22,15 +18,15 @@ const initialState: PlanState = {
 const state = writable<PlanState>(initialState);
 
 // Derived stores
-export const currentPlan = derived(state, s => s.currentPlan);
-export const isPlanLoading = derived(state, s => s.isLoading);
-export const planError = derived(state, s => s.error);
+export const currentPlan = derived(state, (s) => s.currentPlan);
+export const isPlanLoading = derived(state, (s) => s.isLoading);
+export const planError = derived(state, (s) => s.error);
 
 /**
  * Generate a new plan
  */
 export async function generatePlan(request: PlanGenerationRequest): Promise<Plan> {
-  state.update(s => ({ ...s, isLoading: true, error: null }));
+  state.update((s) => ({ ...s, isLoading: true, error: null }));
 
   try {
     const response = await fetchApi('/api/plan/generate', {
@@ -46,7 +42,7 @@ export async function generatePlan(request: PlanGenerationRequest): Promise<Plan
     const data = await response.json();
     const plan = data.plan;
 
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       currentPlan: plan,
       isLoading: false,
@@ -56,7 +52,7 @@ export async function generatePlan(request: PlanGenerationRequest): Promise<Plan
     return plan;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       isLoading: false,
       error: message,
@@ -69,7 +65,7 @@ export async function generatePlan(request: PlanGenerationRequest): Promise<Plan
  * Get plan by ID
  */
 export async function loadPlan(planId: string): Promise<Plan> {
-  state.update(s => ({ ...s, isLoading: true, error: null }));
+  state.update((s) => ({ ...s, isLoading: true, error: null }));
 
   try {
     const response = await fetchApi(`/api/plan/${planId}`);
@@ -82,7 +78,7 @@ export async function loadPlan(planId: string): Promise<Plan> {
     const data = await response.json();
     const plan = data.plan;
 
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       currentPlan: plan,
       isLoading: false,
@@ -92,7 +88,7 @@ export async function loadPlan(planId: string): Promise<Plan> {
     return plan;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       isLoading: false,
       error: message,
@@ -104,8 +100,12 @@ export async function loadPlan(planId: string): Promise<Plan> {
 /**
  * Approve plan
  */
-export async function approvePlan(planId: string, approved: boolean = true, comments?: string): Promise<Plan> {
-  state.update(s => ({ ...s, isLoading: true, error: null }));
+export async function approvePlan(
+  planId: string,
+  approved: boolean = true,
+  comments?: string
+): Promise<Plan> {
+  state.update((s) => ({ ...s, isLoading: true, error: null }));
 
   try {
     const endpoint = approved ? 'approve' : 'reject';
@@ -122,7 +122,7 @@ export async function approvePlan(planId: string, approved: boolean = true, comm
     const data = await response.json();
     const plan = data.plan;
 
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       currentPlan: plan,
       isLoading: false,
@@ -132,7 +132,7 @@ export async function approvePlan(planId: string, approved: boolean = true, comm
     return plan;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       isLoading: false,
       error: message,
@@ -145,7 +145,7 @@ export async function approvePlan(planId: string, approved: boolean = true, comm
  * Edit plan
  */
 export async function editPlan(planId: string, edits: PlanEditRequest): Promise<Plan> {
-  state.update(s => ({ ...s, isLoading: true, error: null }));
+  state.update((s) => ({ ...s, isLoading: true, error: null }));
 
   try {
     const response = await fetchApi(`/api/plan/${planId}/edit`, {
@@ -161,7 +161,7 @@ export async function editPlan(planId: string, edits: PlanEditRequest): Promise<
     const data = await response.json();
     const plan = data.plan;
 
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       currentPlan: plan,
       isLoading: false,
@@ -171,7 +171,7 @@ export async function editPlan(planId: string, edits: PlanEditRequest): Promise<
     return plan;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       isLoading: false,
       error: message,
@@ -183,8 +183,12 @@ export async function editPlan(planId: string, edits: PlanEditRequest): Promise<
 /**
  * Start plan execution
  */
-export async function startPlanExecution(planId: string, startFromPhase?: string, skipPhases?: string[]): Promise<Plan> {
-  state.update(s => ({ ...s, isLoading: true, error: null }));
+export async function startPlanExecution(
+  planId: string,
+  startFromPhase?: string,
+  skipPhases?: string[]
+): Promise<Plan> {
+  state.update((s) => ({ ...s, isLoading: true, error: null }));
 
   try {
     const response = await fetchApi(`/api/plan/${planId}/execute`, {
@@ -204,7 +208,7 @@ export async function startPlanExecution(planId: string, startFromPhase?: string
     const data = await response.json();
     const plan = data.plan;
 
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       currentPlan: plan,
       isLoading: false,
@@ -214,7 +218,7 @@ export async function startPlanExecution(planId: string, startFromPhase?: string
     return plan;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       isLoading: false,
       error: message,
@@ -231,7 +235,7 @@ export async function updatePhaseStatus(
   phaseId: string,
   status: 'pending' | 'in_progress' | 'completed' | 'skipped'
 ): Promise<Plan> {
-  state.update(s => ({ ...s, isLoading: true, error: null }));
+  state.update((s) => ({ ...s, isLoading: true, error: null }));
 
   try {
     const response = await fetchApi(`/api/plan/${planId}/phase/${phaseId}/status`, {
@@ -247,7 +251,7 @@ export async function updatePhaseStatus(
     const data = await response.json();
     const plan = data.plan;
 
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       currentPlan: plan,
       isLoading: false,
@@ -257,7 +261,7 @@ export async function updatePhaseStatus(
     return plan;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    state.update(s => ({
+    state.update((s) => ({
       ...s,
       isLoading: false,
       error: message,

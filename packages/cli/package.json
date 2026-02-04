@@ -37,6 +37,7 @@
     "outputPath": "dist-native"
   },
   "dependencies": {
+    "@grump/shared-types": "workspace:*",
     "boxen": "^8.0.1",
     "chalk": "^5.6.2",
     "commander": "^12.1.0",

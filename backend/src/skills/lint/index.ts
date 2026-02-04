@@ -3,21 +3,39 @@
  */
 
 import { BaseSkill } from '../base/BaseSkill.js';
-import type { SkillContext, ToolExecutionResult, SkillManifest, SkillTools, SkillPrompts } from '../types.js';
-import { definitions, handlers } from './tools.js';
+import type {
+  SkillContext,
+  ToolExecutionResult,
+  SkillManifest,
+  SkillTools,
+  SkillPrompts,
+} from '../types.js';
+import { definitions, handlers as _handlers } from './tools.js';
 import { getLintSystemPrompt } from './prompts.js';
-import manifest from './manifest.json' with { type: 'json' };
 import { ESLint } from 'eslint';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const manifest: SkillManifest = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, './manifest.json'), 'utf-8')
+);
 
 class LintSkill extends BaseSkill {
   manifest: SkillManifest = manifest as SkillManifest;
-  
-  tools: SkillTools = {
-    definitions,
-    handlers: {
-      lint_file: this.handleLintFile.bind(this),
-    },
-  };
+  tools: SkillTools;
+
+  constructor() {
+    super();
+    this.tools = {
+      definitions,
+      handlers: {
+        lint_file: this.handleLintFile.bind(this),
+      },
+    };
+  }
 
   prompts: SkillPrompts = {
     system: getLintSystemPrompt('typescript'), // Default to typescript

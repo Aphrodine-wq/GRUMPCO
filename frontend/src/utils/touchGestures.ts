@@ -164,14 +164,14 @@ export class PullToRefreshHandler {
     if (pullDistance > 0 && this.element.scrollTop === 0) {
       e.preventDefault();
       const translateY = Math.min(pullDistance, this.options.threshold * 1.5);
-      
+
       if (this.indicator) {
         this.indicator.style.transform = `translateY(${translateY}px)`;
-        
-        if (pullDistance >= this.options.threshold) {
-          this.indicator.querySelector('.pull-to-refresh-text')!.textContent = 'Release to refresh';
-        } else {
-          this.indicator.querySelector('.pull-to-refresh-text')!.textContent = 'Pull to refresh';
+
+        const textEl = this.indicator.querySelector('.pull-to-refresh-text');
+        if (textEl) {
+          textEl.textContent =
+            pullDistance >= this.options.threshold ? 'Release to refresh' : 'Pull to refresh';
         }
       }
     }
@@ -181,22 +181,28 @@ export class PullToRefreshHandler {
     if (!this.pulling) return;
 
     const pullDistance = this.currentY - this.startY;
-    
+
     if (pullDistance >= this.options.threshold) {
       // Trigger refresh
       if (this.indicator) {
-        this.indicator.querySelector('.pull-to-refresh-text')!.textContent = 'Refreshing...';
+        const textEl = this.indicator.querySelector('.pull-to-refresh-text');
+        if (textEl) {
+          textEl.textContent = 'Refreshing...';
+        }
       }
-      
+
       await this.options.onRefresh();
     }
 
     // Reset
     if (this.indicator) {
       this.indicator.style.transform = 'translateY(0)';
-      this.indicator.querySelector('.pull-to-refresh-text')!.textContent = 'Pull to refresh';
+      const textEl = this.indicator.querySelector('.pull-to-refresh-text');
+      if (textEl) {
+        textEl.textContent = 'Pull to refresh';
+      }
     }
-    
+
     this.pulling = false;
     this.startY = 0;
     this.currentY = 0;
@@ -206,7 +212,7 @@ export class PullToRefreshHandler {
     this.element.removeEventListener('touchstart', this.handleTouchStart);
     this.element.removeEventListener('touchmove', this.handleTouchMove);
     this.element.removeEventListener('touchend', this.handleTouchEnd);
-    
+
     if (this.indicator) {
       this.indicator.remove();
     }
@@ -230,8 +236,8 @@ export function pullToRefresh(node: HTMLElement, options: PullToRefreshOptions =
  * Edge swipe handler for sidebar toggle
  */
 export interface EdgeSwipeOptions {
-  edgeWidth?: number;         // Width of edge detection zone
-  threshold?: number;         // Minimum swipe distance
+  edgeWidth?: number; // Width of edge detection zone
+  threshold?: number; // Minimum swipe distance
   onSwipeFromLeft?: () => void;
   onSwipeFromRight?: () => void;
 }
@@ -257,13 +263,12 @@ export class EdgeSwipeHandler {
   private handleTouchStart = (e: TouchEvent) => {
     this.startX = e.touches[0].clientX;
     this.startY = e.touches[0].clientY;
-    
+
     const windowWidth = window.innerWidth;
-    
+
     // Check if touch started at edge
-    this.isEdgeSwipe = 
-      this.startX <= this.options.edgeWidth ||
-      this.startX >= windowWidth - this.options.edgeWidth;
+    this.isEdgeSwipe =
+      this.startX <= this.options.edgeWidth || this.startX >= windowWidth - this.options.edgeWidth;
   };
 
   private handleTouchEnd = (e: TouchEvent) => {
@@ -285,7 +290,7 @@ export class EdgeSwipeHandler {
       this.options.onSwipeFromLeft();
       triggerHaptic('light');
     }
-    
+
     // Swipe from right edge to left
     if (this.startX >= windowWidth - this.options.edgeWidth && deltaX < -this.options.threshold) {
       this.options.onSwipeFromRight();
@@ -337,7 +342,7 @@ export class SwipeToDeleteHandler {
       position: relative;
       overflow: hidden;
     `;
-    
+
     this.deleteIndicator = document.createElement('div');
     this.deleteIndicator.innerHTML = '🗑️ Delete';
     this.deleteIndicator.style.cssText = `
@@ -355,11 +360,11 @@ export class SwipeToDeleteHandler {
       transform: translateX(100%);
       transition: transform 0.3s ease;
     `;
-    
+
     this.element.parentNode?.insertBefore(wrapper, this.element);
     wrapper.appendChild(this.deleteIndicator);
     wrapper.appendChild(this.element);
-    
+
     this.element.style.transition = 'transform 0.3s ease';
     this.element.style.background = 'white';
     this.element.style.position = 'relative';
@@ -379,7 +384,7 @@ export class SwipeToDeleteHandler {
       e.preventDefault();
       const translateX = Math.max(deltaX, -this.options.threshold - 20);
       this.element.style.transform = `translateX(${translateX}px)`;
-      
+
       if (this.deleteIndicator) {
         const indicatorTranslate = Math.max(0, -translateX - this.options.threshold);
         this.deleteIndicator.style.transform = `translateX(${100 - indicatorTranslate}%)`;
@@ -480,9 +485,9 @@ export function initEdgeSwipe(options: EdgeSwipeOptions): () => void {
   if (edgeSwipeInstance) {
     edgeSwipeInstance.destroy();
   }
-  
+
   edgeSwipeInstance = new EdgeSwipeHandler(options);
-  
+
   return () => {
     edgeSwipeInstance?.destroy();
     edgeSwipeInstance = null;

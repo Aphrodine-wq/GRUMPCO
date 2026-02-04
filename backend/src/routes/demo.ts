@@ -2,7 +2,7 @@
  * Demo mode: create a copy of the sample project and return workspace path + guided steps.
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import path from 'path';
 import fs from 'fs/promises';
 import fsSync from 'fs';
@@ -15,9 +15,26 @@ const router = Router();
 
 /** Demo tutorial steps for the frontend */
 export const DEMO_STEPS = [
-  { target: '.chat-input', title: 'Demo workspace ready', content: 'Your demo project is set as the workspace. Try: "Add a /health endpoint that returns { status: \"ok\" }"', position: 'top' as const },
-  { target: '[data-mode-selector]', title: 'Code mode', content: 'Stay in Code mode so the AI can use file and terminal tools.', position: 'bottom' as const },
-  { target: '[data-tool-calls]', title: 'Watch tools', content: 'The AI will use file_read, file_write, and terminal_execute to implement your request.', position: 'left' as const },
+  {
+    target: '.chat-input',
+    title: 'Demo workspace ready',
+    content:
+      'Your demo project is set as the workspace. Try: "Add a /health endpoint that returns { status: "ok" }"',
+    position: 'top' as const,
+  },
+  {
+    target: '[data-mode-selector]',
+    title: 'Code mode',
+    content: 'Stay in Code mode so the AI can use file and terminal tools.',
+    position: 'bottom' as const,
+  },
+  {
+    target: '[data-tool-calls]',
+    title: 'Watch tools',
+    content:
+      'The AI will use file_read, file_write, and terminal_execute to implement your request.',
+    position: 'left' as const,
+  },
 ];
 
 function getDemoTemplatePath(): string | null {

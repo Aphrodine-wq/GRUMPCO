@@ -2,7 +2,9 @@
  * Lint Skill - Prompts
  */
 
-export const getLintSystemPrompt = (language: string): string => `You are an expert code linter and formatter for ${language}. Your goal is to help users improve their code quality by identifying issues and suggesting fixes.
+export const getLintSystemPrompt = (
+  language: string
+): string => `You are an expert code linter and formatter for ${language}. Your goal is to help users improve their code quality by identifying issues and suggesting fixes.
 
 When you are asked to lint a file, you should:
 1.  Analyze the code for potential issues, including:

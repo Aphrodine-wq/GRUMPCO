@@ -32,7 +32,9 @@ export async function downloadCodegenZip(sessionId: string): Promise<void> {
   const response = await fetchApi(`/api/codegen/download/${sessionId}`);
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error((errorData as { error?: string }).error ?? `Download failed: ${response.status}`);
+    throw new Error(
+      (errorData as { error?: string }).error ?? `Download failed: ${response.status}`
+    );
   }
   const blob = await response.blob();
   const disposition = response.headers.get('Content-Disposition');
@@ -61,7 +63,7 @@ export async function generateCode(request: CodeGenRequest): Promise<boolean> {
 
     // Get the ZIP blob
     const blob = await response.blob();
-    
+
     // Create download link
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -69,7 +71,7 @@ export async function generateCode(request: CodeGenRequest): Promise<boolean> {
     a.download = `${request.projectName || 'generated-project'}.zip`;
     document.body.appendChild(a);
     a.click();
-    
+
     // Cleanup
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);

@@ -4,7 +4,9 @@
 
 <div class="recommended-extensions">
   <h2 class="section-title">Recommended VS Code extensions</h2>
-  <p class="section-desc">Useful extensions when working with G-Rump–generated code. Open in Marketplace to install.</p>
+  <p class="section-desc">
+    Useful extensions when working with G-Rump–generated code. Open in Marketplace to install.
+  </p>
   <ul class="ext-list">
     {#each RECOMMENDED_EXTENSIONS as ext}
       <li class="ext-item">
@@ -12,12 +14,7 @@
           <span class="ext-name">{ext.name}</span>
           <span class="ext-desc">{ext.description}</span>
         </div>
-        <a
-          href={marketplaceUrl(ext)}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="ext-link"
-        >
+        <a href={marketplaceUrl(ext)} target="_blank" rel="noopener noreferrer" class="ext-link">
           Open in Marketplace
         </a>
       </li>
@@ -88,4 +85,3 @@
     text-decoration: underline;
   }
 </style>
-

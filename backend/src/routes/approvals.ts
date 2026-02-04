@@ -40,12 +40,12 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId?: string }).userId ?? 'default';
     const approvals = await getPendingApprovals(userId);
-    
-    const parsed = approvals.map(apr => ({
+
+    const parsed = approvals.map((apr) => ({
       ...apr,
       payload: apr.payload ? JSON.parse(apr.payload) : null,
     }));
-    
+
     res.json({ approvals: parsed });
   } catch (err) {
     logger.error({ error: (err as Error).message }, 'Failed to list approvals');
@@ -59,13 +59,14 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const approval = await getApprovalRequest(req.params.id);
-    
+    const { id } = req.params as { id: string };
+    const approval = await getApprovalRequest(id);
+
     if (!approval) {
       res.status(404).json({ error: 'Approval request not found' });
       return;
     }
-    
+
     res.json({
       ...approval,
       payload: approval.payload ? JSON.parse(approval.payload) : null,
@@ -84,10 +85,10 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId?: string }).userId ?? 'default';
     const data = createApprovalSchema.parse(req.body);
-    
+
     // Auto-assess risk level if not provided
     const riskLevel = data.riskLevel ?? assessRiskLevel(data.action, data.payload);
-    
+
     const approval = await createApprovalRequest({
       userId,
       action: data.action,
@@ -96,7 +97,7 @@ router.post('/', async (req: Request, res: Response) => {
       payload: data.payload,
       expiresAt: data.expiresAt,
     });
-    
+
     res.status(201).json({
       ...approval,
       payload: approval.payload ? JSON.parse(approval.payload) : null,
@@ -118,14 +119,15 @@ router.post('/', async (req: Request, res: Response) => {
 router.post('/:id/approve', async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId?: string }).userId ?? 'default';
-    
-    const approval = await approveRequest(req.params.id, userId);
-    
+    const { id } = req.params as { id: string };
+
+    const approval = await approveRequest(id, userId);
+
     if (!approval) {
       res.status(404).json({ error: 'Approval request not found' });
       return;
     }
-    
+
     res.json({
       ...approval,
       payload: approval.payload ? JSON.parse(approval.payload) : null,
@@ -144,14 +146,15 @@ router.post('/:id/reject', async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId?: string }).userId ?? 'default';
     const { reason } = resolveApprovalSchema.parse(req.body);
-    
-    const approval = await rejectRequest(req.params.id, userId, reason);
-    
+    const { id } = req.params as { id: string };
+
+    const approval = await rejectRequest(id, userId, reason);
+
     if (!approval) {
       res.status(404).json({ error: 'Approval request not found' });
       return;
     }
-    
+
     res.json({
       ...approval,
       payload: approval.payload ? JSON.parse(approval.payload) : null,
@@ -174,12 +177,12 @@ router.get('/count/pending', async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId?: string }).userId ?? 'default';
     const approvals = await getPendingApprovals(userId);
-    
+
     res.json({
       count: approvals.length,
-      highRisk: approvals.filter(a => a.risk_level === 'high').length,
-      mediumRisk: approvals.filter(a => a.risk_level === 'medium').length,
-      lowRisk: approvals.filter(a => a.risk_level === 'low').length,
+      highRisk: approvals.filter((a) => a.risk_level === 'high').length,
+      mediumRisk: approvals.filter((a) => a.risk_level === 'medium').length,
+      lowRisk: approvals.filter((a) => a.risk_level === 'low').length,
     });
   } catch (err) {
     logger.error({ error: (err as Error).message }, 'Failed to count approvals');

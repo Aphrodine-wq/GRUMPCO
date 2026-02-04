@@ -1,21 +1,21 @@
 /**
  * Holographic Memory Service
- * 
+ *
  * Implements Holographic Reduced Representations (HRR) for fixed-size associative memory.
  * This allows storing unlimited key-value pairs in a fixed-dimension vector using
  * circular convolution (binding) and correlation (unbinding).
- * 
+ *
  * Key insight: In frequency domain, circular convolution = element-wise multiply.
  * So we use FFT to make this O(n log n) instead of O(n²).
- * 
+ *
  * Memory = v1 ⊛ k1 + v2 ⊛ k2 + ... + vN ⊛ kN
  * Retrieve v_i ≈ Memory ⊛ k_i⁻¹ (correlation with inverse)
- * 
+ *
  * This is the "HoloKV" concept - infinite context in fixed memory.
  */
 
-// Complex number representation
-interface Complex {
+// Complex number representation (reserved for future use)
+interface _Complex {
   re: number;
   im: number;
 }
@@ -129,11 +129,11 @@ export class HRRVector {
    */
   static fromText(text: string, dimension: number = 4096): HRRVector {
     const vec = new HRRVector(dimension);
-    
+
     // Use hash-based random projection (deterministic for same text)
     const seed = HRRVector.hashString(text);
     const rng = HRRVector.seededRandom(seed);
-    
+
     // Generate pseudo-random unit vector
     let magnitude = 0;
     for (let i = 0; i < vec.dimension; i++) {
@@ -144,14 +144,14 @@ export class HRRVector {
       vec.imag[i] = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2);
       magnitude += vec.real[i] * vec.real[i] + vec.imag[i] * vec.imag[i];
     }
-    
+
     // Normalize to unit vector
     magnitude = Math.sqrt(magnitude);
     for (let i = 0; i < vec.dimension; i++) {
       vec.real[i] /= magnitude;
       vec.imag[i] /= magnitude;
     }
-    
+
     return vec;
   }
 
@@ -160,13 +160,13 @@ export class HRRVector {
    */
   static fromEmbedding(embedding: number[], dimension: number = 4096): HRRVector {
     const vec = new HRRVector(dimension);
-    
+
     // Pad or truncate embedding to match dimension
     const len = Math.min(embedding.length, dimension);
     for (let i = 0; i < len; i++) {
       vec.real[i] = embedding[i];
     }
-    
+
     // If embedding is smaller, use learned random projection
     if (embedding.length < dimension) {
       const seed = embedding.reduce((a, b) => a + b, 0);
@@ -175,7 +175,7 @@ export class HRRVector {
         vec.real[i] = (rng() - 0.5) * 0.01;
       }
     }
-    
+
     return vec;
   }
 
@@ -199,26 +199,26 @@ export class HRRVector {
     }
 
     const result = new HRRVector(this.dimension);
-    
+
     // Copy to result for FFT
     const aReal = new Float64Array(this.real);
     const aImag = new Float64Array(this.imag);
     const bReal = new Float64Array(other.real);
     const bImag = new Float64Array(other.imag);
-    
+
     // FFT both vectors
     this.fft.forward(aReal, aImag);
     this.fft.forward(bReal, bImag);
-    
+
     // Element-wise complex multiply in frequency domain
     for (let i = 0; i < this.dimension; i++) {
       result.real[i] = aReal[i] * bReal[i] - aImag[i] * bImag[i];
       result.imag[i] = aReal[i] * bImag[i] + aImag[i] * bReal[i];
     }
-    
+
     // Inverse FFT to get circular convolution result
     this.fft.inverse(result.real, result.imag);
-    
+
     return result;
   }
 
@@ -237,17 +237,17 @@ export class HRRVector {
    */
   inverse(): HRRVector {
     const inv = new HRRVector(this.dimension);
-    
+
     // Element 0 stays the same
     inv.real[0] = this.real[0];
     inv.imag[0] = -this.imag[0];
-    
+
     // Reverse the rest
     for (let i = 1; i < this.dimension; i++) {
       inv.real[i] = this.real[this.dimension - i];
       inv.imag[i] = -this.imag[this.dimension - i];
     }
-    
+
     return inv;
   }
 
@@ -383,7 +383,7 @@ export class HolographicMemory {
   store(key: string | HRRVector, value: string | HRRVector): void {
     const keyVec = typeof key === 'string' ? HRRVector.fromText(key, this.dimension) : key;
     const valueVec = typeof value === 'string' ? HRRVector.fromText(value, this.dimension) : value;
-    
+
     // Apply decay to existing memory (prevents saturation over time)
     if (this.decayFactor < 1) {
       for (let i = 0; i < this.dimension; i++) {
@@ -391,7 +391,7 @@ export class HolographicMemory {
         this.memory.imag[i] *= this.decayFactor;
       }
     }
-    
+
     // Bind key and value, then add to memory
     const binding = keyVec.bind(valueVec);
     this.memory.addInPlace(binding);
@@ -411,13 +411,17 @@ export class HolographicMemory {
    * Retrieve and compute similarity to known value
    * Useful for checking if a key-value pair exists
    */
-  retrieveWithSimilarity(key: string | HRRVector, expectedValue: string | HRRVector): {
+  retrieveWithSimilarity(
+    key: string | HRRVector,
+    expectedValue: string | HRRVector
+  ): {
     retrieved: HRRVector;
     similarity: number;
   } {
-    const valueVec = typeof expectedValue === 'string' 
-      ? HRRVector.fromText(expectedValue, this.dimension) 
-      : expectedValue;
+    const valueVec =
+      typeof expectedValue === 'string'
+        ? HRRVector.fromText(expectedValue, this.dimension)
+        : expectedValue;
     const retrieved = this.retrieve(key);
     return {
       retrieved,
@@ -430,14 +434,13 @@ export class HolographicMemory {
    */
   queryMultiple(keys: (string | HRRVector)[], weights?: number[]): HRRVector {
     const w = weights || keys.map(() => 1 / keys.length);
-    let result = new HRRVector(this.dimension);
-    
+    const result = new HRRVector(this.dimension);
     for (let i = 0; i < keys.length; i++) {
       const retrieved = this.retrieve(keys[i]);
       const scaled = retrieved.scale(w[i]);
       result.addInPlace(scaled);
     }
-    
+
     return result;
   }
 
@@ -500,7 +503,7 @@ export class HolographicMemory {
 
 /**
  * Holographic KV Cache - Application to LLM context
- * 
+ *
  * This is the "HoloKV" concept: store unlimited KV pairs in fixed memory.
  * Traditional KV cache: O(seq_len × d_model × layers)
  * HoloKV cache: O(d_holo × layers) - FIXED regardless of sequence length
@@ -514,7 +517,7 @@ export class HoloKVCache {
   constructor(numLayers: number = 32, dimension: number = 4096) {
     this.dimension = dimension;
     this.numLayers = numLayers;
-    
+
     // Initialize memory for each layer
     for (let i = 0; i < numLayers; i++) {
       this.layers.set(i, new HolographicMemory(dimension));
@@ -535,19 +538,15 @@ export class HoloKVCache {
 
     // Create position-aware key (include positional encoding)
     const positionVec = HRRVector.fromText(`pos_${position}`, this.dimension);
-    const keyVec = Array.isArray(key) 
-      ? HRRVector.fromEmbedding(key, this.dimension)
-      : key;
-    const valueVec = Array.isArray(value)
-      ? HRRVector.fromEmbedding(value, this.dimension)
-      : value;
+    const keyVec = Array.isArray(key) ? HRRVector.fromEmbedding(key, this.dimension) : key;
+    const valueVec = Array.isArray(value) ? HRRVector.fromEmbedding(value, this.dimension) : value;
 
     // Bind position with key to create unique retrieval key
     const boundKey = positionVec.bind(keyVec);
-    
+
     // Store in holographic memory
     layer.store(boundKey, valueVec);
-    
+
     if (layerIdx === 0) this.tokenCount++;
   }
 
@@ -563,20 +562,20 @@ export class HoloKVCache {
     if (!layer) throw new Error(`Layer ${layerIdx} not found`);
 
     const results: HRRVector[] = [];
-    
+
     for (let i = 0; i < queryPositions.length; i++) {
       const positionVec = HRRVector.fromText(`pos_${queryPositions[i]}`, this.dimension);
       const queryVec = Array.isArray(queries[i])
         ? HRRVector.fromEmbedding(queries[i] as number[], this.dimension)
-        : queries[i] as HRRVector;
-      
+        : (queries[i] as HRRVector);
+
       // Bind position with query to create retrieval key
       const boundQuery = positionVec.bind(queryVec);
-      
+
       // Retrieve from holographic memory
       results.push(layer.retrieve(boundQuery));
     }
-    
+
     return results;
   }
 
@@ -595,11 +594,11 @@ export class HoloKVCache {
   } {
     const memoryPerLayer = this.dimension * 16; // Complex float64
     const totalMemory = memoryPerLayer * this.numLayers;
-    
+
     // Compare to traditional KV cache
     // Traditional: 2 (K+V) × seq_len × d_model × 2 bytes (fp16) × layers
     const traditionalBytes = 2 * this.tokenCount * this.dimension * 2 * this.numLayers;
-    
+
     return {
       numLayers: this.numLayers,
       dimension: this.dimension,

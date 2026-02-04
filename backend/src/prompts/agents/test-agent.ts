@@ -171,6 +171,6 @@ ${contextSummary}
 
 Use the context above to guide your test generation. Ensure your tests align with the project's quality requirements and testing strategy.`;
   }
-  
+
   return basePrompt;
 }

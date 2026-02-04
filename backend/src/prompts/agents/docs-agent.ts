@@ -177,6 +177,6 @@ ${contextSummary}
 
 Use the context above to guide your documentation generation. Ensure your documentation accurately reflects the project's architecture, patterns, and implementation.`;
   }
-  
+
   return basePrompt;
 }

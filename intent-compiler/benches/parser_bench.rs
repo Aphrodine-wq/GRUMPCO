@@ -6,6 +6,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
 
 extern crate grump_intent;
+extern crate serde_json;
 
 use grump_intent::{extract_actors, extract_features, extract_data_flows, extract_tech_stack_hints, parse_intent, parse_intents_batch};
 
@@ -188,6 +189,29 @@ fn benchmark_batch_parsing(c: &mut Criterion) {
 }
 
 // ============================================================================
+// Enrichment Pipeline Benchmarks
+// ============================================================================
+
+fn benchmark_enrichment_pipeline(c: &mut Criterion) {
+    let test_cases = vec![
+        ("simple", "Build a React app with auth"),
+        ("medium", "Build an e-commerce platform with authentication, RBAC, dashboard, payments using React, Node, PostgreSQL"),
+        ("complex", "As an admin, build a comprehensive SaaS platform with authentication, RBAC, e-commerce, real-time chat, \
+                      notifications, dashboard, task management, billing, subscriptions, file upload, search, analytics, \
+                      monitoring, logging using React, Node, Express, PostgreSQL, Redis, Docker, Kubernetes, AWS"),
+    ];
+
+    let mut group = c.benchmark_group("enrichment_pipeline");
+    for (name, input) in test_cases {
+        group.throughput(Throughput::Bytes(input.len() as u64));
+        group.bench_with_input(BenchmarkId::from_parameter(name), &input, |b, &text| {
+            b.iter(|| parse_intent(black_box(text), serde_json::json!({})));
+        });
+    }
+    group.finish();
+}
+
+// ============================================================================
 // Criterion Groups
 // ============================================================================
 
@@ -200,6 +224,7 @@ criterion_group!(
     benchmark_simd_functions,
     benchmark_full_parse,
     benchmark_batch_parsing,
+    benchmark_enrichment_pipeline,
 );
 
 #[cfg(target_arch = "wasm32")]
@@ -210,6 +235,7 @@ criterion_group!(
     benchmark_keyword_extraction,
     benchmark_full_parse,
     benchmark_batch_parsing,
+    benchmark_enrichment_pipeline,
 );
 
 criterion_main!(benches);

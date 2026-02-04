@@ -1,7 +1,7 @@
 /**
  * Hybrid Intent Compiler Service
  * AI-integrated compiler that combines Rust's speed with LLM's intelligence for intent parsing.
- * 
+ *
  * Features:
  * - Hybrid parsing: Rust for structural extraction, LLM for ambiguity resolution
  * - LLM-first mode for unstructured prompts with Rust validation
@@ -15,8 +15,12 @@ import logger from '../middleware/logger.js';
 import { getStream, type StreamParams } from './llmGateway.js';
 import { withResilience } from './resilience.js';
 import { withCache, type CacheType } from './cacheService.js';
-import { parseIntent as parseIntentRust, parseIntentWithFallback as parseIntentRustWithFallback } from './intentCompilerService.js';
+import {
+  parseIntent as _parseIntentRust,
+  parseIntentWithFallback as parseIntentRustWithFallback,
+} from './intentCompilerService.js';
 import type { StructuredIntent, EnrichedIntent } from './intentCompilerService.js';
+import { getConfidenceThreshold } from './adaptiveConfidenceService.js';
 
 // Configuration types
 export interface HybridCompilerConfig {
@@ -30,8 +34,8 @@ export interface HybridCompilerConfig {
   cachingEnabled: boolean;
   /** Cache type for intents */
   cacheType: CacheType;
-  /** LLM provider to use for LLM-first mode */
-  llmProvider: 'nim' | 'zhipu' | 'copilot' | 'openrouter' | 'groq' | 'together' | 'ollama';
+  /** LLM provider to use for LLM-first mode (NVIDIA NIM exclusive) */
+  llmProvider: 'nim';
   /** LLM model to use */
   llmModel: string;
   /** Timeout for LLM parsing in ms */
@@ -91,16 +95,27 @@ interface ParseAttempt {
  */
 export function getHybridConfig(): HybridCompilerConfig {
   return {
-    mode: (process.env.HYBRID_INTENT_MODE as HybridCompilerConfig['mode']) || DEFAULT_HYBRID_CONFIG.mode,
-    confidenceThreshold: parseFloat(process.env.HYBRID_CONFIDENCE_THRESHOLD || String(DEFAULT_HYBRID_CONFIG.confidenceThreshold)),
+    mode:
+      (process.env.HYBRID_INTENT_MODE as HybridCompilerConfig['mode']) ||
+      DEFAULT_HYBRID_CONFIG.mode,
+    confidenceThreshold: getConfidenceThreshold(),
     parallelProcessing: process.env.HYBRID_PARALLEL_PROCESSING !== 'false',
     cachingEnabled: process.env.HYBRID_CACHING_ENABLED !== 'false',
     cacheType: (process.env.HYBRID_CACHE_TYPE as CacheType) || DEFAULT_HYBRID_CONFIG.cacheType,
-    llmProvider: (process.env.HYBRID_LLM_PROVIDER as HybridCompilerConfig['llmProvider']) || DEFAULT_HYBRID_CONFIG.llmProvider,
+    llmProvider: (process.env.HYBRID_LLM_PROVIDER as 'nim') || DEFAULT_HYBRID_CONFIG.llmProvider,
     llmModel: process.env.HYBRID_LLM_MODEL || DEFAULT_HYBRID_CONFIG.llmModel,
-    llmTimeout: parseInt(process.env.HYBRID_LLM_TIMEOUT || String(DEFAULT_HYBRID_CONFIG.llmTimeout), 10),
-    rustTimeout: parseInt(process.env.HYBRID_RUST_TIMEOUT || String(DEFAULT_HYBRID_CONFIG.rustTimeout), 10),
-    maxTokens: parseInt(process.env.HYBRID_MAX_TOKENS || String(DEFAULT_HYBRID_CONFIG.maxTokens), 10),
+    llmTimeout: parseInt(
+      process.env.HYBRID_LLM_TIMEOUT || String(DEFAULT_HYBRID_CONFIG.llmTimeout),
+      10
+    ),
+    rustTimeout: parseInt(
+      process.env.HYBRID_RUST_TIMEOUT || String(DEFAULT_HYBRID_CONFIG.rustTimeout),
+      10
+    ),
+    maxTokens: parseInt(
+      process.env.HYBRID_MAX_TOKENS || String(DEFAULT_HYBRID_CONFIG.maxTokens),
+      10
+    ),
     fallbackEnabled: process.env.HYBRID_FALLBACK_ENABLED !== 'false',
   };
 }
@@ -114,11 +129,27 @@ export function detectAmbiguity(raw: string): AmbiguityResult {
 
   // Check for ambiguous keywords
   const ambiguousPatterns = [
-    { pattern: /\b(something|anything|stuff|things?)\b/gi, weight: 0.3, reason: 'Contains vague nouns' },
-    { pattern: /\b(make it|fix it|do it|handle it)\b/gi, weight: 0.4, reason: 'Contains vague action phrases' },
-    { pattern: /\b(better|improve|enhance|optimize)\b/gi, weight: 0.3, reason: 'Contains vague improvement requests' },
+    {
+      pattern: /\b(something|anything|stuff|things?)\b/gi,
+      weight: 0.3,
+      reason: 'Contains vague nouns',
+    },
+    {
+      pattern: /\b(make it|fix it|do it|handle it)\b/gi,
+      weight: 0.4,
+      reason: 'Contains vague action phrases',
+    },
+    {
+      pattern: /\b(better|improve|enhance|optimize)\b/gi,
+      weight: 0.3,
+      reason: 'Contains vague improvement requests',
+    },
     { pattern: /\?$/g, weight: 0.2, reason: 'Input ends with question mark' },
-    { pattern: /\b(can you|could you|would you|please)\b/gi, weight: 0.1, reason: 'Polite but potentially ambiguous phrasing' },
+    {
+      pattern: /\b(can you|could you|would you|please)\b/gi,
+      weight: 0.1,
+      reason: 'Polite but potentially ambiguous phrasing',
+    },
   ];
 
   for (const { pattern, weight, reason } of ambiguousPatterns) {
@@ -154,7 +185,8 @@ export function detectAmbiguity(raw: string): AmbiguityResult {
   }
 
   // Check for technical specificity
-  const techKeywords = /\b(api|endpoint|database|table|function|class|module|service|component|microservice|graphql|rest|websocket|queue|cache|auth|oauth|jwt)\b/gi;
+  const techKeywords =
+    /\b(api|endpoint|database|table|function|class|module|service|component|microservice|graphql|rest|websocket|queue|cache|auth|oauth|jwt)\b/gi;
   const techMatches = raw.match(techKeywords);
   if (!techMatches || techMatches.length < 2) {
     score += 0.15;
@@ -198,7 +230,7 @@ export function scoreRustConfidence(intent: StructuredIntent): number {
   }
 
   // Check for empty arrays which indicate low confidence
-  const hasEmptyArrays = 
+  const hasEmptyArrays =
     (!intent.features || intent.features.length === 0) &&
     (!intent.actors || intent.actors.length === 0) &&
     (!intent.data_flows || intent.data_flows.length === 0);
@@ -304,9 +336,9 @@ Extract actors, features, data flows, and provide enriched analysis.`;
     messages: [{ role: 'user', content: userMsg }],
   };
 
-  const stream = getStream(params, { 
-    provider: fullConfig.llmProvider, 
-    modelId: fullConfig.llmModel 
+  const stream = getStream(params, {
+    provider: fullConfig.llmProvider,
+    modelId: fullConfig.llmModel,
   });
 
   let fullText = '';
@@ -320,7 +352,7 @@ Extract actors, features, data flows, and provide enriched analysis.`;
 
   // Extract JSON from response
   let jsonText = fullText.trim();
-  
+
   // Try to find JSON in markdown code blocks
   if (jsonText.includes('```json')) {
     const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
@@ -335,7 +367,7 @@ Extract actors, features, data flows, and provide enriched analysis.`;
   }
 
   const parsed = JSON.parse(jsonText) as EnrichedIntent;
-  
+
   // Ensure raw field is set
   if (!parsed.raw) {
     parsed.raw = raw;
@@ -354,7 +386,7 @@ async function parseIntentWithRust(
 ): Promise<EnrichedIntent> {
   // Use existing Rust-based parser
   const result = await parseIntentRustWithFallback(raw, constraints);
-  
+
   // Convert to EnrichedIntent format
   return {
     ...result,
@@ -376,16 +408,13 @@ async function runRustWithTimeout(
   timeoutMs?: number
 ): Promise<ParseAttempt> {
   const startTime = Date.now();
-  
+
   try {
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Rust parsing timeout')), timeoutMs || 5000);
     });
 
-    const result = await Promise.race([
-      parseIntentWithRust(raw, constraints),
-      timeoutPromise,
-    ]);
+    const result = await Promise.race([parseIntentWithRust(raw, constraints), timeoutPromise]);
 
     const timeMs = Date.now() - startTime;
     const confidence = scoreRustConfidence(result);
@@ -419,19 +448,16 @@ async function runLLMWithTimeout(
   const fullConfig = { ...getHybridConfig(), ...config };
 
   try {
-    const resilientParse = withResilience(
-      async () => {
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('LLM parsing timeout')), timeoutMs || fullConfig.llmTimeout);
-        });
+    const resilientParse = withResilience(async () => {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error('LLM parsing timeout')),
+          timeoutMs || fullConfig.llmTimeout
+        );
+      });
 
-        return await Promise.race([
-          parseIntentWithLLM(raw, constraints, config),
-          timeoutPromise,
-        ]);
-      },
-      'hybrid-intent-llm'
-    );
+      return await Promise.race([parseIntentWithLLM(raw, constraints, config), timeoutPromise]);
+    }, 'hybrid-intent-llm');
 
     const result = await resilientParse();
     const timeMs = Date.now() - startTime;
@@ -460,7 +486,7 @@ function mergeResults(rustResult: EnrichedIntent, llmResult: EnrichedIntent): En
   // Deduplication helper
   const dedupe = (arr: string[] | undefined): string[] => {
     if (!arr) return [];
-    return [...new Set(arr.map(s => s.trim()).filter(Boolean))];
+    return [...new Set(arr.map((s) => s.trim()).filter(Boolean))];
   };
 
   // Merge base fields
@@ -468,7 +494,10 @@ function mergeResults(rustResult: EnrichedIntent, llmResult: EnrichedIntent): En
     actors: dedupe([...(rustResult.actors || []), ...(llmResult.actors || [])]),
     features: dedupe([...(rustResult.features || []), ...(llmResult.features || [])]),
     data_flows: dedupe([...(rustResult.data_flows || []), ...(llmResult.data_flows || [])]),
-    tech_stack_hints: dedupe([...(rustResult.tech_stack_hints || []), ...(llmResult.tech_stack_hints || [])]),
+    tech_stack_hints: dedupe([
+      ...(rustResult.tech_stack_hints || []),
+      ...(llmResult.tech_stack_hints || []),
+    ]),
     constraints: { ...(rustResult.constraints || {}), ...(llmResult.constraints || {}) },
     raw: rustResult.raw || llmResult.raw,
     enriched: {
@@ -511,7 +540,7 @@ export async function parseIntentHybrid(
   // Check cache first if enabled
   if (fullConfig.cachingEnabled) {
     const cacheKey = JSON.stringify({ raw: raw.trim(), constraints, mode: fullConfig.mode });
-    const cached = await withCache<ParseResult | null>(
+    const _cached = await withCache<ParseResult | null>(
       fullConfig.cacheType,
       cacheKey,
       async () => null,
@@ -524,7 +553,7 @@ export async function parseIntentHybrid(
 
   // Detect ambiguity to determine parsing strategy
   const ambiguity = detectAmbiguity(raw);
-  
+
   let result: EnrichedIntent;
   let method: 'rust' | 'llm' | 'hybrid';
   let confidence: number;
@@ -537,15 +566,15 @@ export async function parseIntentHybrid(
       case 'rust-first': {
         // Try Rust first, fall back to LLM if confidence is low
         rustAttempt = await runRustWithTimeout(raw, constraints, fullConfig.rustTimeout);
-        
+
         if (rustAttempt.error) {
           if (fullConfig.fallbackEnabled) {
             logger.debug({ error: rustAttempt.error.message }, 'Rust failed, falling back to LLM');
             llmAttempt = await runLLMWithTimeout(raw, constraints, fullConfig.llmTimeout, config);
-            if (llmAttempt.error) {
-              throw llmAttempt.error;
+            if (llmAttempt.error || !llmAttempt.result) {
+              throw llmAttempt.error || new Error('LLM parsing returned no result');
             }
-            result = llmAttempt.result!;
+            result = llmAttempt.result;
             method = 'llm';
             confidence = llmAttempt.confidence;
             fallbackUsed = true;
@@ -553,7 +582,15 @@ export async function parseIntentHybrid(
             throw rustAttempt.error;
           }
         } else {
-          result = rustAttempt.result!;
+          result = rustAttempt.result ?? {
+            actors: [],
+            features: [],
+            data_flows: [],
+            tech_stack_hints: [],
+            constraints: {},
+            raw,
+            enriched: {},
+          };
           confidence = rustAttempt.confidence;
           method = 'rust';
 
@@ -575,15 +612,15 @@ export async function parseIntentHybrid(
       case 'llm-first': {
         // Try LLM first for unstructured/ambiguous input, validate with Rust
         llmAttempt = await runLLMWithTimeout(raw, constraints, fullConfig.llmTimeout, config);
-        
+
         if (llmAttempt.error) {
           if (fullConfig.fallbackEnabled) {
             logger.debug({ error: llmAttempt.error.message }, 'LLM failed, falling back to Rust');
             rustAttempt = await runRustWithTimeout(raw, constraints, fullConfig.rustTimeout);
-            if (rustAttempt.error) {
-              throw rustAttempt.error;
+            if (rustAttempt.error || !rustAttempt.result) {
+              throw rustAttempt.error || new Error('Rust parsing returned no result');
             }
-            result = rustAttempt.result!;
+            result = rustAttempt.result;
             method = 'rust';
             confidence = rustAttempt.confidence;
             fallbackUsed = true;
@@ -591,7 +628,15 @@ export async function parseIntentHybrid(
             throw llmAttempt.error;
           }
         } else {
-          result = llmAttempt.result!;
+          result = llmAttempt.result ?? {
+            actors: [],
+            features: [],
+            data_flows: [],
+            tech_stack_hints: [],
+            constraints: {},
+            raw,
+            enriched: {},
+          };
           confidence = llmAttempt.confidence;
           method = 'llm';
 
@@ -605,7 +650,7 @@ export async function parseIntentHybrid(
                 method = 'hybrid';
                 confidence = Math.max(confidence, rustAttempt.confidence);
               }
-            } catch (e) {
+            } catch (_e) {
               // Rust validation failed, but we have LLM result
               logger.debug('Rust validation failed, using LLM result only');
             }
@@ -628,32 +673,36 @@ export async function parseIntentHybrid(
           const llmSuccess = !llmAttempt.error && llmAttempt.result;
 
           if (rustSuccess && llmSuccess) {
-            // Both succeeded - merge results
-            result = mergeResults(rustAttempt.result!, llmAttempt.result!);
+            // Both succeeded - merge results (safe to access as we checked above)
+            result = mergeResults(
+              rustAttempt.result as EnrichedIntent,
+              llmAttempt.result as EnrichedIntent
+            );
             method = 'hybrid';
             confidence = (rustAttempt.confidence + llmAttempt.confidence) / 2;
           } else if (llmSuccess) {
-            result = llmAttempt.result!;
+            result = llmAttempt.result as EnrichedIntent;
             method = 'llm';
             confidence = llmAttempt.confidence;
             fallbackUsed = true;
           } else if (rustSuccess) {
-            result = rustAttempt.result!;
+            result = rustAttempt.result as EnrichedIntent;
             method = 'rust';
             confidence = rustAttempt.confidence;
             fallbackUsed = true;
           } else {
             // Both failed
-            const error = rustAttempt.error || llmAttempt.error || new Error('Both parsing methods failed');
+            const error =
+              rustAttempt.error || llmAttempt.error || new Error('Both parsing methods failed');
             throw error;
           }
         } else {
           // Sequential: Try Rust first, then LLM if needed
           rustAttempt = await runRustWithTimeout(raw, constraints, fullConfig.rustTimeout);
-          
+
           if (rustAttempt.error || rustAttempt.confidence < fullConfig.confidenceThreshold) {
             llmAttempt = await runLLMWithTimeout(raw, constraints, fullConfig.llmTimeout, config);
-            
+
             if (!llmAttempt.error && llmAttempt.result) {
               if (rustAttempt.result) {
                 result = mergeResults(rustAttempt.result, llmAttempt.result);
@@ -670,10 +719,21 @@ export async function parseIntentHybrid(
               method = 'rust';
               confidence = rustAttempt.confidence;
             } else {
-              throw llmAttempt.error || rustAttempt.error || new Error('Both parsing methods failed');
+              throw (
+                llmAttempt.error || rustAttempt.error || new Error('Both parsing methods failed')
+              );
             }
           } else {
-            result = rustAttempt.result!;
+            // rustAttempt.result is guaranteed to exist here since we passed the threshold check
+            result = rustAttempt.result ?? {
+              actors: [],
+              features: [],
+              data_flows: [],
+              tech_stack_hints: [],
+              constraints: {},
+              raw,
+              enriched: {},
+            };
             method = 'rust';
             confidence = rustAttempt.confidence;
           }
@@ -684,15 +744,18 @@ export async function parseIntentHybrid(
 
     const processingTimeMs = Date.now() - startTime;
 
-    logger.info({
-      method,
-      confidence,
-      ambiguity: ambiguity.score,
-      processingTimeMs,
-      fallbackUsed,
-      rustTimeMs: rustAttempt?.timeMs,
-      llmTimeMs: llmAttempt?.timeMs,
-    }, 'Intent parsed successfully');
+    logger.info(
+      {
+        method,
+        confidence,
+        ambiguity: ambiguity.score,
+        processingTimeMs,
+        fallbackUsed,
+        rustTimeMs: rustAttempt?.timeMs,
+        llmTimeMs: llmAttempt?.timeMs,
+      },
+      'Intent parsed successfully'
+    );
 
     return {
       intent: result,
@@ -704,10 +767,13 @@ export async function parseIntentHybrid(
       fallbackUsed,
     };
   } catch (error) {
-    logger.error({ 
-      error: (error as Error).message,
-      mode: fullConfig.mode,
-    }, 'Hybrid intent parsing failed');
+    logger.error(
+      {
+        error: (error as Error).message,
+        mode: fullConfig.mode,
+      },
+      'Hybrid intent parsing failed'
+    );
     throw error;
   }
 }
@@ -726,11 +792,11 @@ export async function parseIntentHybridWithCache(
     return parseIntentHybrid(raw, constraints, config);
   }
 
-  const cacheKey = JSON.stringify({ 
-    v: 'hybrid-v1', 
-    raw: raw.trim(), 
+  const cacheKey = JSON.stringify({
+    v: 'hybrid-v1',
+    raw: raw.trim(),
     constraints,
-    mode: fullConfig.mode 
+    mode: fullConfig.mode,
   });
 
   return await withCache(
@@ -749,15 +815,15 @@ export async function parseIntentsBatch(
   config?: Partial<HybridCompilerConfig>
 ): Promise<ParseResult[]> {
   const results: ParseResult[] = [];
-  
+
   // Process in batches to avoid overwhelming the system
   const batchSize = 5;
   for (let i = 0; i < inputs.length; i += batchSize) {
     const batch = inputs.slice(i, i + batchSize);
-    
+
     const batchResults = await Promise.all(
-      batch.map(({ raw, constraints }) => 
-        parseIntentHybridWithCache(raw, constraints, config).catch(error => ({
+      batch.map(({ raw, constraints }) =>
+        parseIntentHybridWithCache(raw, constraints, config).catch((error) => ({
           intent: {
             actors: [],
             features: [],
@@ -777,7 +843,7 @@ export async function parseIntentsBatch(
         }))
       )
     );
-    
+
     results.push(...(batchResults as ParseResult[]));
   }
 

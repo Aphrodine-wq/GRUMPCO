@@ -17,6 +17,7 @@ import type {
 import logger from '../middleware/logger.js';
 import { getDatabase } from '../db/database.js';
 import { getCompletion } from './llmGatewayHelper.js';
+import { getIntentGuidedRagContext } from './ragService.js';
 
 /**
  * Start a new spec session and generate initial questions
@@ -91,7 +92,7 @@ Generate relevant questions to gather all necessary information for creating a c
     }
 
     let jsonText = result.text.trim();
-    
+
     // Extract JSON from markdown code blocks if present
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
@@ -157,7 +158,7 @@ export async function submitAnswer(
     throw new Error(`Cannot submit answers to session ${sessionId} in status ${session.status}`);
   }
 
-  const question = session.questions.find(q => q.id === answerRequest.questionId);
+  const question = session.questions.find((q) => q.id === answerRequest.questionId);
   if (!question) {
     throw new Error(`Question ${answerRequest.questionId} not found`);
   }
@@ -231,10 +232,16 @@ function validateAnswer(question: SpecQuestion, value: unknown): void {
         throw new Error('Answer must be a string');
       }
       if (question.validation) {
-        if (question.validation.minLength !== undefined && value.length < question.validation.minLength) {
+        if (
+          question.validation.minLength !== undefined &&
+          value.length < question.validation.minLength
+        ) {
           throw new Error(`Text must be at least ${question.validation.minLength} characters`);
         }
-        if (question.validation.maxLength !== undefined && value.length > question.validation.maxLength) {
+        if (
+          question.validation.maxLength !== undefined &&
+          value.length > question.validation.maxLength
+        ) {
           throw new Error(`Text must be at most ${question.validation.maxLength} characters`);
         }
         if (question.validation.pattern) {
@@ -258,8 +265,8 @@ export async function isSessionComplete(sessionId: string): Promise<boolean> {
     return false;
   }
 
-  const requiredQuestions = session.questions.filter(q => q.required);
-  return requiredQuestions.every(q => session.answers[q.id] !== undefined);
+  const requiredQuestions = session.questions.filter((q) => q.required);
+  return requiredQuestions.every((q) => session.answers[q.id] !== undefined);
 }
 
 /**
@@ -273,7 +280,7 @@ export async function getNextQuestion(sessionId: string): Promise<SpecQuestion |
   }
 
   const unanswered = session.questions
-    .filter(q => !session.answers[q.id])
+    .filter((q) => !session.answers[q.id])
     .sort((a, b) => a.order - b.order);
 
   return unanswered[0] || null;
@@ -292,7 +299,9 @@ export async function generateSpecification(
   }
 
   if (session.status !== 'collecting') {
-    throw new Error(`Cannot generate spec for session ${request.sessionId} in status ${session.status}`);
+    throw new Error(
+      `Cannot generate spec for session ${request.sessionId} in status ${session.status}`
+    );
   }
 
   const useDesignContext = request.designContext != null;
@@ -304,9 +313,13 @@ export async function generateSpecification(
   session.updatedAt = new Date().toISOString();
   await db.saveSpec(session);
 
-  logger.info({ sessionId: request.sessionId, fromContext: useDesignContext }, 'Generating specification');
+  logger.info(
+    { sessionId: request.sessionId, fromContext: useDesignContext },
+    'Generating specification'
+  );
 
-  const hasCDD = useDesignContext && (request.designContext as SpecDesignContext)?.creativeDesignDoc != null;
+  const hasCDD =
+    useDesignContext && (request.designContext as SpecDesignContext)?.creativeDesignDoc != null;
   const uiComponentsSchema = hasCDD
     ? `"uiComponents": [
       {
@@ -357,9 +370,25 @@ Return a JSON object:
 ${layoutGuidance}
 
 Be thorough and specific. ${useDesignContext ? 'Use all provided design context (project description, PRD overview, Creative Design Document).' : 'Include all relevant details from the answers.'}`;
-  const systemPrompt = request.systemPromptPrefix
+  let systemPrompt = request.systemPromptPrefix
     ? `${request.systemPromptPrefix}\n\n${baseSpecPrompt}`
     : baseSpecPrompt;
+  if (request.namespace) {
+    try {
+      const query =
+        useDesignContext && request.designContext
+          ? request.designContext.projectDescription
+          : session.originalRequest;
+      const ragResult = await getIntentGuidedRagContext(query, {
+        namespace: request.namespace,
+        maxChunks: 6,
+      });
+      if (ragResult?.context)
+        systemPrompt += `\n\nRelevant context from knowledge base:\n\n${ragResult.context}`;
+    } catch {
+      // RAG optional
+    }
+  }
 
   let userPrompt: string;
   if (useDesignContext && request.designContext) {
@@ -369,15 +398,17 @@ Be thorough and specific. ${useDesignContext ? 'Use all provided design context 
       if (ctx.prdOverview.vision) userPrompt += `\n\nPRD vision: ${ctx.prdOverview.vision}`;
       if (ctx.prdOverview.problem) userPrompt += `\nPRD problem: ${ctx.prdOverview.problem}`;
       if (ctx.prdOverview.solution) userPrompt += `\nPRD solution: ${ctx.prdOverview.solution}`;
-      if (ctx.prdOverview.targetMarket) userPrompt += `\nTarget market: ${ctx.prdOverview.targetMarket}`;
+      if (ctx.prdOverview.targetMarket)
+        userPrompt += `\nTarget market: ${ctx.prdOverview.targetMarket}`;
     }
     if (ctx.creativeDesignDoc) {
       userPrompt += `\n\nCreative Design Document (layout, UI/UX, key screens, UX flows):\n${JSON.stringify(ctx.creativeDesignDoc, null, 2)}`;
     }
-    userPrompt += '\n\nGenerate a comprehensive specification from this design context. Align uiComponents with the Creative Design Document when provided.';
+    userPrompt +=
+      '\n\nGenerate a comprehensive specification from this design context. Align uiComponents with the Creative Design Document when provided.';
   } else {
     const qaContext = session.questions
-      .map(q => {
+      .map((q) => {
         const answer = session.answers[q.id];
         return `Q: ${q.question}\nA: ${answer ? JSON.stringify(answer.value) : 'Not answered'}`;
       })
@@ -410,7 +441,7 @@ Generate a comprehensive specification based on these answers.`;
     }
 
     let jsonText = result.text.trim();
-    
+
     // Extract JSON from markdown code blocks if present
     if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);

@@ -6,7 +6,7 @@
     isValid,
     closeModal,
     toggleOption,
-    submitAnswers
+    submitAnswers,
   } from '../stores/clarificationStore';
 
   function isSelected(questionId: string, optionId: string): boolean {
@@ -16,76 +16,70 @@
 </script>
 
 {#if $isOpen}
-    <div class="modal-overlay" on:click|self={closeModal}>
-      <div class="modal-container">
-        <div class="modal-header">
-          <h2 class="modal-title">Help me understand your needs</h2>
-          {#if $currentClarification?.context}
-            <p class="modal-context">
-              {$currentClarification.context}
-            </p>
-          {/if}
-        </div>
+  <div class="modal-overlay" onclick={closeModal} role="presentation">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2 class="modal-title">Help me understand your needs</h2>
+        {#if $currentClarification?.context}
+          <p class="modal-context">
+            {$currentClarification.context}
+          </p>
+        {/if}
+      </div>
 
-        <div class="modal-body">
-          {#if $currentClarification}
-            {#each $currentClarification.questions as question, qIndex (question.id)}
-              <div class="question-section">
-                <h3 class="question-text">
-                  {qIndex + 1}. {question.question}
-                  {#if question.required !== false}
-                    <span class="required-marker">*</span>
-                  {/if}
-                </h3>
-                {#if question.selectionType === 'multiple'}
-                  <p class="selection-hint">
-                    Select all that apply
-                  </p>
+      <div class="modal-body">
+        {#if $currentClarification}
+          {#each $currentClarification.questions as question, qIndex (question.id)}
+            <div class="question-section">
+              <h3 class="question-text">
+                {qIndex + 1}. {question.question}
+                {#if question.required !== false}
+                  <span class="required-marker">*</span>
                 {/if}
+              </h3>
+              {#if question.selectionType === 'multiple'}
+                <p class="selection-hint">Select all that apply</p>
+              {/if}
 
-                <div class="options-grid" class:single-column={question.options.length <= 2}>
-                  {#each question.options as option (option.id)}
-                    <button
-                      on:click={() => toggleOption(question.id, option.id, question.selectionType)}
-                      class="option-card"
-                      class:selected={isSelected(question.id, option.id)}
-                      class:selection-single={question.selectionType === 'single'}
-                      class:selection-multiple={question.selectionType === 'multiple'}
-                    >
-                      {#if option.icon}
-                        <span class="option-icon">{option.icon}</span>
+              <div class="options-grid" class:single-column={question.options.length <= 2}>
+                {#each question.options as option (option.id)}
+                  <button
+                    onclick={() => toggleOption(question.id, option.id, question.selectionType)}
+                    class="option-card"
+                    class:selected={isSelected(question.id, option.id)}
+                    class:selection-single={question.selectionType === 'single'}
+                    class:selection-multiple={question.selectionType === 'multiple'}
+                  >
+                    {#if option.icon}
+                      <span class="option-icon">{option.icon}</span>
+                    {/if}
+                    <span class="option-label">{option.label}</span>
+                    {#if option.description}
+                      <span class="option-desc">{option.description}</span>
+                    {/if}
+                    <span class="selection-indicator">
+                      {#if question.selectionType === 'single'}
+                        <span class="radio-dot"></span>
+                      {:else}
+                        <span class="checkbox-mark">&#10003;</span>
                       {/if}
-                      <span class="option-label">{option.label}</span>
-                      {#if option.description}
-                        <span class="option-desc">{option.description}</span>
-                      {/if}
-                      <span class="selection-indicator">
-                        {#if question.selectionType === 'single'}
-                          <span class="radio-dot"></span>
-                        {:else}
-                          <span class="checkbox-mark">&#10003;</span>
-                        {/if}
-                      </span>
-                    </button>
-                  {/each}
-                </div>
+                    </span>
+                  </button>
+                {/each}
               </div>
-            {/each}
-          {/if}
-        </div>
+            </div>
+          {/each}
+        {/if}
+      </div>
 
-        <div class="modal-footer">
-          <button on:click={closeModal} class="secondary-btn">Cancel</button>
-          <button
-            on:click={submitAnswers}
-            disabled={!$isValid}
-            class="primary-btn"
-          >
-            Generate Diagram
-          </button>
-        </div>
+      <div class="modal-footer">
+        <button onclick={closeModal} class="secondary-btn">Cancel</button>
+        <button onclick={submitAnswers} disabled={!$isValid} class="primary-btn">
+          Generate Diagram
+        </button>
       </div>
     </div>
+  </div>
 {/if}
 
 <style>
@@ -106,8 +100,10 @@
     max-width: 560px;
     max-height: 90vh;
     overflow-y: auto;
-    background: #FFFFFF;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: #ffffff;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      0 2px 8px rgba(0, 0, 0, 0.06);
     border-radius: 8px;
     animation: modal-slide-in 200ms ease-out;
   }
@@ -128,7 +124,7 @@
   .modal-context {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
-    color: #6B7280;
+    color: #6b7280;
     margin: 0;
     text-align: center;
   }
@@ -154,14 +150,14 @@
   }
 
   .required-marker {
-    color: #EF4444;
+    color: #ef4444;
     margin-left: 0.25rem;
   }
 
   .selection-hint {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
-    color: #6B7280;
+    color: #6b7280;
     margin: 0 0 0.75rem 0;
   }
 
@@ -180,7 +176,7 @@
     flex-direction: column;
     align-items: flex-start;
     padding: 1rem;
-    background: #F5F5F5;
+    background: #f5f5f5;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s;
@@ -189,12 +185,12 @@
   }
 
   .option-card:hover {
-    background: #EBEBEB;
+    background: #ebebeb;
   }
 
   .option-card.selected {
     background: var(--color-primary);
-    color: #FFFFFF;
+    color: #ffffff;
   }
 
   .option-icon {
@@ -212,7 +208,7 @@
   .option-desc {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
-    color: #6B7280;
+    color: #6b7280;
     line-height: 1.4;
   }
 
@@ -269,19 +265,19 @@
     font-weight: 600;
     padding: 0.75rem 1.5rem;
     background: var(--color-primary);
-    color: #FFFFFF;
+    color: #ffffff;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s;
   }
 
   .primary-btn:hover:not(:disabled) {
-    background: #0052CC;
+    background: #0052cc;
   }
 
   .primary-btn:disabled {
-    background: #E5E5E5;
-    color: #9CA3AF;
+    background: #e5e5e5;
+    color: #9ca3af;
     cursor: not-allowed;
   }
 
@@ -289,7 +285,7 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
     padding: 0.75rem 1.5rem;
-    background: #EBEBEB;
+    background: #ebebeb;
     color: #000000;
     border-radius: 6px;
     cursor: pointer;
@@ -298,7 +294,7 @@
 
   .secondary-btn:hover {
     background: #000000;
-    color: #FFFFFF;
+    color: #ffffff;
   }
 
   @keyframes modal-fade-in {

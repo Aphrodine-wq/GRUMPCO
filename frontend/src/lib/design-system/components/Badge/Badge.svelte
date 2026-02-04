@@ -13,16 +13,11 @@
     children: Snippet;
   }
 
-  let {
-    variant = 'default',
-    size = 'md',
-    dot = false,
-    children,
-  }: Props = $props();
+  let { variant = 'default', size = 'md', dot = false, children }: Props = $props();
 </script>
 
-<span 
-  class="badge badge-{variant} badge-{size}" 
+<span
+  class="badge badge-{variant} badge-{size}"
   class:badge-dot={dot}
   style:--bg-default={colors.background.tertiary}
   style:--text-default={colors.text.secondary}

@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
@@ -55,83 +58,55 @@ const browserGlobals = {
 };
 
 
-export default [
-  js.configs.recommended,
-  {
-    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.ts', 'src/**/__tests__/**'],
-  },
-  // TypeScript files
-  {
-    files: ['src/**/*.ts', 'src/**/*.tsx'],
-    ignores: ['src/**/__tests__/**'],
-    languageOptions: {
-      parser: tsparser,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-      },
-      globals: browserGlobals,
-    },
-    plugins: {
-      '@typescript-eslint': tseslint,
-    },
-    rules: {
-      ...tseslint.configs.recommended.rules,
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/no-empty-object-type': 'off',
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
-    },
-  },
-  // Svelte files
-  {
-    files: ['src/**/*.svelte'],
-    languageOptions: {
-      parser: tsparser,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-      },
-      globals: browserGlobals,
-    },
-    plugins: {
-      '@typescript-eslint': tseslint,
-    },
-    rules: {
-      ...tseslint.configs.recommended.rules,
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
-      '@typescript-eslint/no-empty-object-type': 'off',
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
-    },
-  },
-  // JavaScript files
-  {
-    files: ['src/**/*.js'],
-    languageOptions: {
+export default [js.configs.recommended, {
+  ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.ts', 'src/**/__tests__/**', 'src/**/*.svelte'],
+}, // TypeScript files
+{
+  files: ['src/**/*.ts', 'src/**/*.tsx'],
+  ignores: ['src/**/__tests__/**'],
+  languageOptions: {
+    parser: tsparser,
+    parserOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
-      globals: browserGlobals,
     },
-    rules: {
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
-    },
+    globals: browserGlobals,
   },
-  // .d.ts files - relaxed rules
-  {
-    files: ['src/**/*.d.ts'],
-    languageOptions: {
-      parser: tsparser,
-    },
-    plugins: {
-      '@typescript-eslint': tseslint,
-    },
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-empty-object-type': 'off',
-    },
+  plugins: {
+    '@typescript-eslint': tseslint,
   },
-];
+  rules: {
+    ...tseslint.configs.recommended.rules,
+    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    '@typescript-eslint/explicit-function-return-type': 'off',
+    '@typescript-eslint/no-non-null-assertion': 'warn',
+    '@typescript-eslint/no-empty-object-type': 'off',
+    'no-console': ['warn', { allow: ['warn', 'error'] }],
+  },
+}, // JavaScript files
+{
+  files: ['src/**/*.js'],
+  languageOptions: {
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+    globals: browserGlobals,
+  },
+  rules: {
+    'no-console': ['warn', { allow: ['warn', 'error'] }],
+    'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+  },
+}, // .d.ts files - relaxed rules
+{
+  files: ['src/**/*.d.ts'],
+  languageOptions: {
+    parser: tsparser,
+  },
+  plugins: {
+    '@typescript-eslint': tseslint,
+  },
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/no-empty-object-type': 'off',
+  },
+}, ...storybook.configs["flat/recommended"]];

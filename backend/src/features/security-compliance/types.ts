@@ -4,9 +4,20 @@
 
 export interface SecurityVulnerability {
   id: string;
-  type: 'sql-injection' | 'xss' | 'csrf' | 'auth-bypass' | 'path-traversal' | 'command-injection' |
-        'sensitive-data-exposure' | 'insecure-deserialization' | 'broken-access-control' |
-        'security-misconfiguration' | 'dependency-vulnerability' | 'secret-exposure' | 'other';
+  type:
+    | 'sql-injection'
+    | 'xss'
+    | 'csrf'
+    | 'auth-bypass'
+    | 'path-traversal'
+    | 'command-injection'
+    | 'sensitive-data-exposure'
+    | 'insecure-deserialization'
+    | 'broken-access-control'
+    | 'security-misconfiguration'
+    | 'dependency-vulnerability'
+    | 'secret-exposure'
+    | 'other';
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
   title: string;
   description: string;
@@ -113,7 +124,14 @@ export interface ComplianceReport {
 }
 
 export interface SecretFinding {
-  type: 'api-key' | 'password' | 'private-key' | 'token' | 'credential' | 'connection-string' | 'other';
+  type:
+    | 'api-key'
+    | 'password'
+    | 'private-key'
+    | 'token'
+    | 'credential'
+    | 'connection-string'
+    | 'other';
   severity: 'critical' | 'high' | 'medium' | 'low';
   file: string;
   line: number;
@@ -156,7 +174,4 @@ export interface SecretsAuditRequest {
 }
 
 /** Result of workspace path validation */
-export type PathValidationResult = 
-  | { ok: true; resolved: string }
-  | { ok: false; reason: string };
-
+export type PathValidationResult = { ok: true; resolved: string } | { ok: false; reason: string };

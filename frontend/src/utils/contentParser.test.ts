@@ -7,6 +7,7 @@ import {
   extractMermaidBlocks,
   extractTextBlocks,
   flattenTextContent,
+  isContentBlockType,
 } from './contentParser';
 import type { ContentBlock } from '../types';
 
@@ -50,13 +51,24 @@ describe('contentParser', () => {
 
     it('should return an empty array for empty or invalid content', () => {
       expect(parseMessageContent('')).toEqual([]);
-      expect(parseMessageContent(null as any)).toEqual([]);
-      expect(parseMessageContent(undefined as any)).toEqual([]);
+      expect(parseMessageContent(null as unknown as string)).toEqual([]);
+      expect(parseMessageContent(undefined as unknown as string)).toEqual([]);
     });
 
     it('should return content as-is if already an array', () => {
       const content: ContentBlock[] = [{ type: 'text', content: 'already parsed' }];
       expect(parseMessageContent(content)).toBe(content);
+    });
+
+    it('should create single text block for content without code blocks', () => {
+      const content = 'Just some plain text without any code blocks';
+      const result = parseMessageContent(content);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('text');
+      expect((result[0] as { type: 'text'; content: string }).content).toBe(
+        'Just some plain text without any code blocks'
+      );
     });
   });
 
@@ -69,6 +81,17 @@ describe('contentParser', () => {
       expect(hasCodeBlocks(textAndCode)).toBe(true);
       expect(hasCodeBlocks(textAndMermaid)).toBe(true); // Mermaid is also a code block
       expect(hasCodeBlocks(onlyText)).toBe(false);
+    });
+
+    it('hasCodeBlocks should detect code blocks in ContentBlock array', () => {
+      const blocksWithCode: ContentBlock[] = [
+        { type: 'text', content: 'Some text' },
+        { type: 'code', language: 'javascript', code: 'const x = 1;' },
+      ];
+      const blocksWithoutCode: ContentBlock[] = [{ type: 'text', content: 'Some text' }];
+
+      expect(hasCodeBlocks(blocksWithCode)).toBe(true);
+      expect(hasCodeBlocks(blocksWithoutCode)).toBe(false);
     });
 
     it('hasMermaidBlocks should detect mermaid blocks', () => {
@@ -100,6 +123,49 @@ describe('contentParser', () => {
       const content = 'First line.\n```js\n// code\n```\nSecond line.';
       const flattened = flattenTextContent(content);
       expect(flattened).toBe('First line.\n\nSecond line.');
+    });
+
+    it('hasMermaidBlocks should detect mermaid blocks in ContentBlock array', () => {
+      const blocksWithMermaid: ContentBlock[] = [
+        { type: 'text', content: 'Some text' },
+        { type: 'mermaid', content: 'graph TD; A-->B;' },
+      ];
+      const blocksWithoutMermaid: ContentBlock[] = [
+        { type: 'text', content: 'Some text' },
+        { type: 'code', language: 'javascript', code: 'const x = 1;' },
+      ];
+
+      expect(hasMermaidBlocks(blocksWithMermaid)).toBe(true);
+      expect(hasMermaidBlocks(blocksWithoutMermaid)).toBe(false);
+    });
+  });
+
+  describe('isContentBlockType', () => {
+    it('should return true when block type matches', () => {
+      const textBlock: ContentBlock = { type: 'text', content: 'Hello' };
+      const codeBlock: ContentBlock = {
+        type: 'code',
+        language: 'javascript',
+        code: 'const x = 1;',
+      };
+      const mermaidBlock: ContentBlock = { type: 'mermaid', content: 'graph TD;' };
+
+      expect(isContentBlockType(textBlock, 'text')).toBe(true);
+      expect(isContentBlockType(codeBlock, 'code')).toBe(true);
+      expect(isContentBlockType(mermaidBlock, 'mermaid')).toBe(true);
+    });
+
+    it('should return false when block type does not match', () => {
+      const textBlock: ContentBlock = { type: 'text', content: 'Hello' };
+      const codeBlock: ContentBlock = {
+        type: 'code',
+        language: 'javascript',
+        code: 'const x = 1;',
+      };
+
+      expect(isContentBlockType(textBlock, 'code')).toBe(false);
+      expect(isContentBlockType(textBlock, 'mermaid')).toBe(false);
+      expect(isContentBlockType(codeBlock, 'text')).toBe(false);
     });
   });
 });

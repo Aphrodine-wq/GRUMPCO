@@ -23,13 +23,18 @@
   let { toolResult }: Props = $props();
 
   const isFileOperation = (toolName: string): boolean => {
-    return toolName === 'file_write' || toolName === 'file_edit' || toolName === 'write_file' || toolName === 'edit_file';
+    return (
+      toolName === 'file_write' ||
+      toolName === 'file_edit' ||
+      toolName === 'write_file' ||
+      toolName === 'edit_file'
+    );
   };
 </script>
 
 {#if toolResult}
-  <div 
-    class="tool-result-card" 
+  <div
+    class="tool-result-card"
     class:is-error={!toolResult.success}
     style:--border-color={colors.border.default}
     style:--bg-header={colors.background.tertiary}
@@ -42,9 +47,31 @@
     <div class="tool-result-header">
       <div class="tool-info">
         {#if toolResult.success}
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-check"><path d="M20 6 9 17l-5-5" /></svg
+          >
         {:else}
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-x"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg
+          >
         {/if}
         <span class="tool-name">{toolResult.toolName}</span>
       </div>
@@ -98,15 +125,6 @@
     gap: 8px;
   }
 
-  .result-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .tool-result-card:not(.is-error) .result-icon { color: var(--success-color); }
-  .tool-result-card.is-error .result-icon { color: var(--error-color); }
-
   .tool-name {
     font-size: 13px;
     font-weight: 600;
@@ -132,7 +150,7 @@
 
   .output-wrapper {
     padding: 12px 14px;
-    background-color: #F8F8F8;
+    background-color: #f8f8f8;
   }
 
   .tool-output {

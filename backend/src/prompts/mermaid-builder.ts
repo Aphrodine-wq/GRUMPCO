@@ -172,7 +172,9 @@ Optional: Key insights, iteration suggestions, or related diagram recommendation
 ${C4_SYNTAX_GUIDE}
 
 ### C4 Level Selection
-${Object.entries(C4_LEVEL_DESCRIPTIONS).map(([level, desc]) => `- **${level}**: ${desc}`).join('\n')}
+${Object.entries(C4_LEVEL_DESCRIPTIONS)
+  .map(([level, desc]) => `- **${level}**: ${desc}`)
+  .join('\n')}
 
 ### C4 Best Practices
 1. Start broad (Context), then drill down on request
@@ -273,80 +275,80 @@ If request is unclear or impossible after asking allowed questions:
 
 export function getMermaidBuilderPrompt(preferences?: BuilderPreferences): string {
   let prompt = MERMAID_BUILDER_PROMPT;
-  
+
   // Add domain specialization if specified
   if (preferences?.domain && preferences.domain !== 'general') {
     const domainDescriptions: Record<string, string> = {
-      'devops': `\n\n## Active Mode: DevOps & Infrastructure
+      devops: `\n\n## Active Mode: DevOps & Infrastructure
 You are currently in **DevOps mode**. Prioritize:
 - CI/CD pipeline visualizations with clear stages and gates
 - Infrastructure diagrams using appropriate abstractions
 - Deployment flow patterns (GitOps, blue-green, canary)
 - Kubernetes and cloud service topologies
 - Monitoring, alerting, and incident response flows`,
-      'data': `\n\n## Active Mode: Data Engineering
+      data: `\n\n## Active Mode: Data Engineering
 You are currently in **Data Engineering mode**. Prioritize:
 - Data pipeline and ETL/ELT flow diagrams
 - Schema designs with proper relationships and cardinality
 - Data lineage and transformation tracking
 - Warehouse modeling patterns (star, snowflake, data vault)
 - Stream vs batch processing architecture`,
-      'business': `\n\n## Active Mode: Business Process
+      business: `\n\n## Active Mode: Business Process
 You are currently in **Business Process mode**. Prioritize:
 - Clear process flows with decision points and swim lanes
 - Stakeholder interaction and handoff diagrams
 - Approval workflows and escalation paths
 - Customer journey and experience mapping
-- Value stream and efficiency visualization`
+- Value stream and efficiency visualization`,
     };
     prompt += domainDescriptions[preferences.domain] || '';
   }
-  
+
   // Add C4 level context if specified
   if (preferences?.c4Level) {
     const levelDesc = C4_LEVEL_DESCRIPTIONS[preferences.c4Level];
     prompt += `\n\n## User's C4 Level Preference\nUser has indicated they want a **${preferences.c4Level}** level diagram. ${levelDesc}`;
   }
-  
+
   // Add diagram type preference
   if (preferences?.diagramType) {
     const typeMap: Record<string, string> = {
-      'flowchart': 'flowchart',
-      'sequence': 'sequence diagram',
-      'erd': 'ER diagram (erDiagram)',
-      'class': 'class diagram',
+      flowchart: 'flowchart',
+      sequence: 'sequence diagram',
+      erd: 'ER diagram (erDiagram)',
+      class: 'class diagram',
       'c4-context': 'C4 System Context diagram',
       'c4-container': 'C4 Container diagram',
       'c4-component': 'C4 Component diagram',
       'c4-dynamic': 'C4 Dynamic diagram',
-      'state': 'state diagram',
-      'gantt': 'Gantt chart',
-      'timeline': 'timeline diagram',
-      'mindmap': 'mindmap',
-      'quadrant': 'quadrant chart',
-      'sankey': 'Sankey diagram',
-      'pie': 'pie chart',
-      'git': 'Git graph',
-      'journey': 'user journey diagram',
-      'xychart': 'XY chart',
-      'block': 'block diagram'
+      state: 'state diagram',
+      gantt: 'Gantt chart',
+      timeline: 'timeline diagram',
+      mindmap: 'mindmap',
+      quadrant: 'quadrant chart',
+      sankey: 'Sankey diagram',
+      pie: 'pie chart',
+      git: 'Git graph',
+      journey: 'user journey diagram',
+      xychart: 'XY chart',
+      block: 'block diagram',
     };
     const typeName = typeMap[preferences.diagramType] || preferences.diagramType;
     prompt += `\n\n## User's Diagram Type Preference\nUser prefers **${typeName}** unless another type is clearly more appropriate.`;
   }
-  
+
   // Add complexity preference
   if (preferences?.complexity === 'simple') {
     prompt += `\n\n## Complexity Preference\nKeep diagrams **minimal and focused** - include only essential elements and relationships. Aim for clarity over comprehensiveness.`;
   } else if (preferences?.complexity === 'detailed') {
     prompt += `\n\n## Complexity Preference\nProvide **comprehensive diagrams** with detailed labels, annotations, and thorough relationships. Include edge cases and secondary flows where relevant.`;
   }
-  
+
   // Add focus areas if specified
   if (preferences?.focusAreas && preferences.focusAreas.length > 0) {
     prompt += `\n\n## Focus Areas\nPay special attention to these aspects: ${preferences.focusAreas.join(', ')}. Ensure these elements are prominently featured and well-detailed in the diagram.`;
   }
-  
+
   return prompt;
 }
 

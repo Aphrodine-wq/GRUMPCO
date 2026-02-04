@@ -45,6 +45,9 @@ export enum ErrorCode {
   RATE_LIMIT = 'rate_limit',
   QUOTA_EXCEEDED = 'quota_exceeded',
 
+  // Payload Errors (413)
+  PAYLOAD_TOO_LARGE = 'payload_too_large',
+
   // Timeout & Availability (408, 503)
   REQUEST_TIMEOUT = 'request_timeout',
   SERVICE_UNAVAILABLE = 'service_unavailable',
@@ -87,6 +90,8 @@ export const ErrorStatusMap: Record<ErrorCode, number> = {
   [ErrorCode.RATE_LIMIT]: 429,
   [ErrorCode.QUOTA_EXCEEDED]: 429,
 
+  [ErrorCode.PAYLOAD_TOO_LARGE]: 413,
+
   [ErrorCode.REQUEST_TIMEOUT]: 408,
   [ErrorCode.SERVICE_UNAVAILABLE]: 503,
   [ErrorCode.DEPENDENCY_FAILURE]: 503,
@@ -122,11 +127,7 @@ export class ApiError extends Error {
   public readonly field?: string;
   public readonly retryAfter?: number;
 
-  constructor(
-    code: ErrorCode,
-    message: string,
-    options?: { field?: string; retryAfter?: number }
-  ) {
+  constructor(code: ErrorCode, message: string, options?: { field?: string; retryAfter?: number }) {
     super(message);
     this.name = 'ApiError';
     this.code = code;
@@ -203,6 +204,14 @@ export function sendErrorResponse(
 }
 
 /**
+ * Extract error message from an unknown thrown value.
+ * For internal use (logging, metrics) - not client-facing.
+ */
+export function getErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/**
  * Get a safe error message for client responses.
  * In production returns generic text; in development returns the actual message.
  */
@@ -226,7 +235,9 @@ export function getClientSSEErrorMessage(err: unknown): string {
 export function sendServerError(res: Response, err: unknown, opts?: { type?: string }): void {
   const type = opts?.type ?? 'internal_error';
   const payload: Record<string, unknown> = {
-    error: isProduction ? GENERIC_ERROR_MESSAGE : (err instanceof Error ? err.message : String(err)) || GENERIC_ERROR_MESSAGE,
+    error: isProduction
+      ? GENERIC_ERROR_MESSAGE
+      : (err instanceof Error ? err.message : String(err)) || GENERIC_ERROR_MESSAGE,
     type,
   };
   if (!isProduction && err instanceof Error) {

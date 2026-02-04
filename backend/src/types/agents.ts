@@ -6,7 +6,16 @@
 import type { PRD } from '../types/prd.js';
 import type { SystemArchitecture } from '../types/architecture.js';
 
-export type AgentType = 'architect' | 'frontend' | 'backend' | 'devops' | 'test' | 'docs' | 'security' | 'i18n' | 'wrunner';
+export type AgentType =
+  | 'architect'
+  | 'frontend'
+  | 'backend'
+  | 'devops'
+  | 'test'
+  | 'docs'
+  | 'security'
+  | 'i18n'
+  | 'wrunner';
 export type AgentStatus = 'pending' | 'running' | 'completed' | 'failed' | 'blocked';
 
 export interface AgentMessage {
@@ -40,6 +49,8 @@ export interface GenerationSession {
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
+  /** Owning user (for usage metering) */
+  userId?: string;
   /** Optional project/workspace id linking chat, ship, and codegen */
   projectId?: string;
   agents: Record<AgentType, AgentTask>;
@@ -80,6 +91,8 @@ export interface CodeGenRequest {
   prdId: string;
   architectureId: string;
   preferences: GenerationPreferences;
+  /** Owning user (internal, set by backend) */
+  userId?: string;
   /** Optional project/workspace id to associate with this session */
   projectId?: string;
 }
@@ -94,6 +107,8 @@ export interface CodeGenRequestMulti {
   prds: Array<{ prd: PRD; componentId?: string; componentLabel?: string }>;
   architecture: SystemArchitecture;
   preferences: GenerationPreferences;
+  /** Owning user (internal, set by backend) */
+  userId?: string;
   /** Map agent type to component ids (or prd ids) it owns */
   componentMapping?: Partial<Record<AgentType, string[]>>;
   /** Optional project/workspace id to associate with this session */
@@ -128,7 +143,11 @@ export interface AgentWorkReport {
     codeQualityMetrics: { coverage?: number; complexity?: number; issues: string[] };
     integrationPoints: Array<{ component: string; dependencies: string[]; contracts: string }>;
     testingStrategy: string;
-    knownIssues: Array<{ issue: string; severity: 'low' | 'medium' | 'high'; suggestedFix: string }>;
+    knownIssues: Array<{
+      issue: string;
+      severity: 'low' | 'medium' | 'high';
+      suggestedFix: string;
+    }>;
     recommendations: string[];
   };
   generatedAt: string;

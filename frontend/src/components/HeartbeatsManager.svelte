@@ -3,7 +3,6 @@
   import {
     listHeartbeats,
     createHeartbeat,
-    updateHeartbeat,
     deleteHeartbeat,
     enableHeartbeat,
     disableHeartbeat,
@@ -13,6 +12,7 @@
     type HeartbeatTemplate,
   } from '../lib/integrationsApi';
   import { showToast } from '../stores/toastStore';
+  import EmptyState from './EmptyState.svelte';
 
   interface Props {
     onBack: () => void;
@@ -164,11 +164,11 @@
   }
 
   function describeCron(cron: string): string {
-    const preset = cronPresets.find(p => p.value === cron);
+    const preset = cronPresets.find((p) => p.value === cron);
     if (preset) return preset.label;
     const parts = cron.split(' ');
     if (parts.length !== 5) return cron;
-    const [min, hour, day, month, dow] = parts;
+    const [, hour, day, , dow] = parts;
     let desc = '';
     if (dow !== '*') desc = 'Weekly';
     else if (day !== '*') desc = 'Monthly';
@@ -181,8 +181,15 @@
 <div class="heartbeats-manager">
   <header class="header">
     <button class="back-btn" onclick={onBack}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M19 12H5M12 19l-7-7 7-7" />
       </svg>
       Back
     </button>
@@ -193,18 +200,32 @@
     <div class="header-actions">
       {#if templates.length > 0}
         <button class="secondary-btn" onclick={() => (showTemplatesModal = true)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"/>
-            <rect x="14" y="3" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
           </svg>
           Templates
         </button>
       {/if}
       <button class="primary-btn" onclick={openAddModal}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M5 12h14"/>
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M12 5v14M5 12h14" />
         </svg>
         New Task
       </button>
@@ -217,17 +238,12 @@
       <p>Loading scheduled tasks...</p>
     </div>
   {:else if heartbeats.length === 0}
-    <div class="empty-state">
-      <div class="empty-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
-        </svg>
-      </div>
-      <h3>No scheduled tasks</h3>
-      <p>Create your first automated task to get started.</p>
+    <EmptyState
+      headline="No scheduled tasks"
+      description="Create your first automated task to get started."
+    >
       <button class="primary-btn" onclick={openAddModal}>Create Task</button>
-    </div>
+    </EmptyState>
   {:else}
     <div class="tasks-list">
       {#each heartbeats as heartbeat}
@@ -238,15 +254,15 @@
               <span class="cron-badge">{describeCron(heartbeat.cronExpression)}</span>
             </div>
             <label class="toggle">
-              <input 
-                type="checkbox" 
-                checked={heartbeat.enabled} 
+              <input
+                type="checkbox"
+                checked={heartbeat.enabled}
                 onchange={() => handleToggle(heartbeat)}
               />
               <span class="slider"></span>
             </label>
           </div>
-          
+
           <div class="task-meta">
             <div class="meta-item">
               <span class="meta-label">Schedule</span>
@@ -266,15 +282,31 @@
 
           <div class="task-actions">
             <button class="icon-btn" title="Edit" disabled>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             </button>
             <button class="icon-btn danger" title="Delete" onclick={() => handleDelete(heartbeat)}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="3 6 5 6 21 6" />
+                <path
+                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                />
               </svg>
             </button>
           </div>
@@ -286,13 +318,25 @@
 
 <!-- Add Task Modal -->
 {#if showAddModal}
-  <div class="modal-overlay" onclick={closeAddModal}>
-    <div class="modal" onclick={(e) => e.stopPropagation()}>
+  <div
+    class="modal-overlay"
+    role="button"
+    tabindex="-1"
+    onclick={closeAddModal}
+    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && closeAddModal()}
+  >
+    <div
+      class="modal"
+      role="dialog"
+      tabindex="-1"
+      onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
+    >
       <h2>New Scheduled Task</h2>
-      
+
       <div class="form-group">
         <label for="name">Task Name</label>
-        <input type="text" id="name" bind:value={name} placeholder="e.g., Daily standup summary"/>
+        <input type="text" id="name" bind:value={name} placeholder="e.g., Daily standup summary" />
       </div>
 
       <div class="form-group">
@@ -302,24 +346,24 @@
             <option value={preset.value}>{preset.label}</option>
           {/each}
         </select>
-        <input 
-          type="text" 
-          bind:value={cronExpression} 
-          placeholder="0 9 * * *"
-          class="cron-input"
-        />
+        <input type="text" bind:value={cronExpression} placeholder="0 9 * * *" class="cron-input" />
         <p class="hint">Cron expression (minute hour day month day-of-week)</p>
       </div>
 
       <div class="form-group">
         <label for="payload">Payload (JSON)</label>
-        <textarea id="payload" bind:value={payload} rows="3" placeholder={'{"action": "summarize", "target": "slack"}'}></textarea>
+        <textarea
+          id="payload"
+          bind:value={payload}
+          rows="3"
+          placeholder={'{"action": "summarize", "target": "slack"}'}
+        ></textarea>
       </div>
 
       <div class="modal-actions">
         <button class="cancel-btn" onclick={closeAddModal}>Cancel</button>
-        <button 
-          class="submit-btn" 
+        <button
+          class="submit-btn"
           onclick={handleCreate}
           disabled={!name.trim() || !cronExpression.trim() || processing}
         >
@@ -332,11 +376,23 @@
 
 <!-- Templates Modal -->
 {#if showTemplatesModal}
-  <div class="modal-overlay" onclick={() => (showTemplatesModal = false)}>
-    <div class="modal templates-modal" onclick={(e) => e.stopPropagation()}>
+  <div
+    class="modal-overlay"
+    role="button"
+    tabindex="-1"
+    onclick={() => (showTemplatesModal = false)}
+    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (showTemplatesModal = false)}
+  >
+    <div
+      class="modal templates-modal"
+      role="dialog"
+      tabindex="-1"
+      onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
+    >
       <h2>Task Templates</h2>
       <p class="modal-desc">Quick-start with pre-configured automated tasks</p>
-      
+
       <div class="templates-list">
         {#each templates as template}
           <div class="template-card">
@@ -345,8 +401,8 @@
             <div class="template-meta">
               <code>{template.cronExpression}</code>
             </div>
-            <button 
-              class="use-template-btn" 
+            <button
+              class="use-template-btn"
               onclick={() => handleUseTemplate(template)}
               disabled={processing}
             >
@@ -418,7 +474,8 @@
     gap: 0.5rem;
   }
 
-  .primary-btn, .secondary-btn {
+  .primary-btn,
+  .secondary-btn {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -450,7 +507,7 @@
     background: #f9fafb;
   }
 
-  .loading-state, .empty-state {
+  .loading-state {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -470,29 +527,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  .empty-icon {
-    width: 80px;
-    height: 80px;
-    background: #f3f4f6;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #9ca3af;
-  }
-
-  .empty-state h3 {
-    margin: 0;
-    font-size: 1.125rem;
-    color: #374151;
-  }
-
-  .empty-state p {
-    margin: 0 0 1rem;
-    color: #6b7280;
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .tasks-list {
@@ -569,7 +606,7 @@
 
   .slider:before {
     position: absolute;
-    content: "";
+    content: '';
     height: 18px;
     width: 18px;
     left: 3px;
@@ -699,7 +736,9 @@
     margin-bottom: 0.5rem;
   }
 
-  .form-group input, .form-group select, .form-group textarea {
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid #e5e7eb;
@@ -708,7 +747,9 @@
     font-family: inherit;
   }
 
-  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
     outline: none;
     border-color: #6366f1;
   }
@@ -730,7 +771,8 @@
     justify-content: flex-end;
   }
 
-  .cancel-btn, .submit-btn {
+  .cancel-btn,
+  .submit-btn {
     padding: 0.625rem 1.25rem;
     font-size: 0.875rem;
     font-weight: 500;

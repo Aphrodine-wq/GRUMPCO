@@ -10,6 +10,42 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+interface FeatureEntry {
+  name: string;
+  action: string;
+  negated: boolean;
+  priority: number;
+  confidence: number;
+}
+
+interface TechHint {
+  canonical: string;
+  matched_as: string;
+  category: string;
+  negated: boolean;
+  confidence: number;
+}
+
+interface ConfidenceReport {
+  overall: number;
+  actors: number;
+  features: number;
+  tech_stack: number;
+}
+
+interface DepEdge {
+  from: string;
+  to: string;
+  reason: string;
+}
+
+interface SentenceInfo {
+  text: string;
+  index: number;
+  features_found: string[];
+  tech_found: string[];
+}
+
 interface IntentOutput {
   actors: string[];
   features: string[];
@@ -17,9 +53,23 @@ interface IntentOutput {
   tech_stack_hints: string[];
   constraints: Record<string, unknown>;
   raw: string;
+  enriched_features: FeatureEntry[];
+  enriched_tech: TechHint[];
+  project_type: string;
+  architecture_pattern: string;
+  complexity_score: number;
+  confidence: ConfidenceReport;
+  dependency_graph: DepEdge[];
+  sentences: SentenceInfo[];
 }
 
-let wasmModule: any = null;
+interface WasmIntentModule {
+  parse_intent_wasm: (text: string, constraints: string) => IntentOutput;
+  extract_actors_wasm: (text: string) => string[];
+  extract_features_wasm: (text: string) => string[];
+}
+
+let wasmModule: WasmIntentModule | null = null;
 let wasmAvailable = false;
 
 /**

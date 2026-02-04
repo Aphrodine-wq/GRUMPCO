@@ -9,18 +9,18 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getStream, type StreamParams } from '../../services/llmGateway.js';
 import {
-  CodebaseAnalysisResult,
-  AnalysisRequest,
-  ArchitectureDiagramRequest,
-  DependencyGraphRequest,
-  MetricsRequest,
-  FileInfo,
-  CodeMetrics,
-  TechStackItem,
-  CodeSmell,
-  DependencyInfo,
-  ArchitectureComponent,
-  ArchitecturePattern,
+  type CodebaseAnalysisResult,
+  type AnalysisRequest,
+  type ArchitectureDiagramRequest,
+  type DependencyGraphRequest,
+  type MetricsRequest,
+  type FileInfo,
+  type CodeMetrics,
+  type TechStackItem,
+  type CodeSmell,
+  type DependencyInfo,
+  type ArchitectureComponent,
+  type ArchitecturePattern,
 } from './types.js';
 import {
   CODEBASE_ANALYSIS_SYSTEM_PROMPT,
@@ -96,12 +96,7 @@ const IGNORE_DIRS = new Set([
 ]);
 
 // Files to ignore
-const IGNORE_FILES = new Set([
-  '.DS_Store',
-  'Thumbs.db',
-  '.gitignore',
-  '.npmignore',
-]);
+const IGNORE_FILES = new Set(['.DS_Store', 'Thumbs.db', '.gitignore', '.npmignore']);
 
 /**
  * Recursively scan directory for files
@@ -203,7 +198,9 @@ function calculateMetrics(files: FileInfo[]): CodeMetrics {
 /**
  * Read package.json if it exists
  */
-function readPackageJson(workspacePath: string): { content: string; parsed: Record<string, unknown> } | null {
+function readPackageJson(
+  workspacePath: string
+): { content: string; parsed: Record<string, unknown> } | null {
   const pkgPath = path.join(workspacePath, 'package.json');
   if (fs.existsSync(pkgPath)) {
     try {
@@ -259,7 +256,10 @@ function findConfigFiles(workspacePath: string): string[] {
 /**
  * Extract dependencies from package.json
  */
-function extractDependencies(pkg: Record<string, unknown>): { production: DependencyInfo[]; development: DependencyInfo[] } {
+function extractDependencies(pkg: Record<string, unknown>): {
+  production: DependencyInfo[];
+  development: DependencyInfo[];
+} {
   const production: DependencyInfo[] = [];
   const development: DependencyInfo[] = [];
 
@@ -335,20 +335,27 @@ export async function analyzeCodebase(request: AnalysisRequest): Promise<Codebas
   }
 
   const techStack = (analysisData.techStack as TechStackItem[] | undefined) ?? [];
-  const archRaw = analysisData.architecture as { pattern?: string; confidence?: number; indicators?: string[] } | undefined;
-  const componentsRaw = (analysisData.components as Array<{ name?: string; type?: string; path?: string; description?: string }> | undefined) ?? [];
+  const archRaw = analysisData.architecture as
+    | { pattern?: string; confidence?: number; indicators?: string[] }
+    | undefined;
+  const componentsRaw =
+    (analysisData.components as
+      | Array<{ name?: string; type?: string; path?: string; description?: string }>
+      | undefined) ?? [];
   const entryPoints = (analysisData.entryPoints as string[] | undefined) ?? [];
   const recommendations = (analysisData.recommendations as string[] | undefined) ?? [];
 
-  const projectName = (pkg?.parsed && typeof pkg.parsed === 'object' && 'name' in pkg.parsed)
-    ? String((pkg.parsed as { name?: unknown }).name || path.basename(workspacePath))
-    : path.basename(workspacePath);
+  const projectName =
+    pkg?.parsed && typeof pkg.parsed === 'object' && 'name' in pkg.parsed
+      ? String((pkg.parsed as { name?: unknown }).name || path.basename(workspacePath))
+      : path.basename(workspacePath);
   const result: CodebaseAnalysisResult = {
     projectName,
     projectPath: workspacePath,
     analyzedAt: new Date().toISOString(),
     summary: typeof analysisData.summary === 'string' ? analysisData.summary : 'Analysis complete',
-    projectType: typeof analysisData.projectType === 'string' ? analysisData.projectType : 'Unknown',
+    projectType:
+      typeof analysisData.projectType === 'string' ? analysisData.projectType : 'Unknown',
     techStack,
     frameworks: techStack.filter((t) => t.category === 'framework').map((t) => t.name),
     languages: Object.keys(metrics.languages),
@@ -432,7 +439,12 @@ export async function generateArchitectureDiagram(
 /**
  * Analyze dependencies
  */
-export async function analyzeDependencies(request: DependencyGraphRequest): Promise<{ error?: string; dependencies?: DependencyInfo[]; raw?: string; [key: string]: unknown }> {
+export async function analyzeDependencies(request: DependencyGraphRequest): Promise<{
+  error?: string;
+  dependencies?: DependencyInfo[];
+  raw?: string;
+  [key: string]: unknown;
+}> {
   const { workspacePath, includeDevDeps = true } = request;
 
   const pkg = readPackageJson(workspacePath);
@@ -441,9 +453,7 @@ export async function analyzeDependencies(request: DependencyGraphRequest): Prom
   }
 
   const deps = extractDependencies(pkg.parsed);
-  const allDeps = includeDevDeps
-    ? [...deps.production, ...deps.development]
-    : deps.production;
+  const allDeps = includeDevDeps ? [...deps.production, ...deps.development] : deps.production;
 
   const depsStr = allDeps.map((d) => `${d.name}@${d.version} (${d.type})`).join('\n');
 

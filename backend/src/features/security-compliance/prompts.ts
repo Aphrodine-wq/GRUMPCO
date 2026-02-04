@@ -23,16 +23,23 @@ When analyzing code:
 
 Always provide specific, actionable recommendations with code examples when possible.`;
 
-export const generateSecurityScanPrompt = (codeSnippets: string, packageJson: string | null): string => {
+export const generateSecurityScanPrompt = (
+  codeSnippets: string,
+  packageJson: string | null
+): string => {
   return `Perform a comprehensive security analysis of this codebase.
 
 ## Code to analyze:
 ${codeSnippets}
 
-${packageJson ? `## Dependencies (package.json):
+${
+  packageJson
+    ? `## Dependencies (package.json):
 \`\`\`json
 ${packageJson}
-\`\`\`` : ''}
+\`\`\``
+    : ''
+}
 
 Analyze for the following security issues:
 
@@ -132,14 +139,14 @@ export const generateCompliancePrompt = (
   codeSnippets: string
 ): string => {
   const standardDetails: Record<string, string> = {
-    'soc2': `SOC 2 Type II compliance requirements:
+    soc2: `SOC 2 Type II compliance requirements:
 - Security: Protection against unauthorized access
 - Availability: System availability as committed
 - Processing Integrity: System processing is complete and accurate
 - Confidentiality: Information designated as confidential is protected
 - Privacy: Personal information is collected and used appropriately`,
 
-    'gdpr': `GDPR compliance requirements:
+    gdpr: `GDPR compliance requirements:
 - Lawfulness, fairness, and transparency
 - Purpose limitation
 - Data minimization
@@ -149,7 +156,7 @@ export const generateCompliancePrompt = (
 - Accountability
 - Data subject rights (access, rectification, erasure, portability)`,
 
-    'hipaa': `HIPAA compliance requirements:
+    hipaa: `HIPAA compliance requirements:
 - Administrative safeguards
 - Physical safeguards
 - Technical safeguards
@@ -165,7 +172,7 @@ export const generateCompliancePrompt = (
 - Monitor and test networks
 - Maintain information security policies`,
 
-    'iso27001': `ISO 27001 compliance requirements:
+    iso27001: `ISO 27001 compliance requirements:
 - Information security policies
 - Organization of information security
 - Human resource security

@@ -7,10 +7,7 @@
 
 <div class="suggestion-chips">
   {#each templates as template (template.id)}
-    <button
-      on:click={() => dispatch('select', template)}
-      class="chip"
-    >
+    <button onclick={() => dispatch('select', template)} class="chip">
       <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d={template.icon} />
       </svg>
@@ -32,7 +29,7 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.375rem 0.75rem;
-    background: #EBEBEB;
+    background: #ebebeb;
     border-radius: 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
@@ -43,7 +40,7 @@
 
   .chip:hover {
     background: #000000;
-    color: #FFFFFF;
+    color: #ffffff;
   }
 
   .chip-icon {

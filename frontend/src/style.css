@@ -10,32 +10,32 @@
   /* G-Rump Purple Theme */
 
   /* Backgrounds */
-  --color-bg-app: #FFFFFF;
-  --color-bg-subtle: #F5F3FF;
-  --color-bg-card: #FFFFFF;
-  --color-bg-card-hover: #F8F5FF;
-  --color-bg-input: #F3E8FF;
+  --color-bg-app: #ffffff;
+  --color-bg-subtle: #f5f3ff;
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #f8f5ff;
+  --color-bg-input: #f3e8ff;
 
   /* Text - High Contrast */
-  --color-text: #1F1147;
-  --color-text-secondary: #4C1D95;
-  --color-text-muted: #6D28D9;
-  --color-text-inverse: #FFFFFF;
+  --color-text: #1f1147;
+  --color-text-secondary: #4c1d95;
+  --color-text-muted: #6d28d9;
+  --color-text-inverse: #ffffff;
 
   /* Brand / Accents */
-  --color-primary: #7C3AED;
+  --color-primary: #7c3aed;
   --color-primary-glow: rgba(124, 58, 237, 0.32);
-  --color-primary-hover: #6D28D9;
+  --color-primary-hover: #6d28d9;
 
   /* Status */
-  --color-success: #34C759;
-  --color-error: #FF3B30;
-  --color-warning: #FF9500;
+  --color-success: #34c759;
+  --color-error: #ff3b30;
+  --color-warning: #ff9500;
 
   /* Borders */
-  --color-border: #E9D5FF;
-  --color-border-light: #F3E8FF;
-  --color-border-highlight: #D8B4FE;
+  --color-border: #e9d5ff;
+  --color-border-light: #f3e8ff;
+  --color-border-highlight: #d8b4fe;
 
   /* Glassmorphism (Light) - Enhanced */
   --glass-bg: rgba(255, 255, 255, 0.92);
@@ -43,11 +43,11 @@
   --glass-shadow: 0 10px 36px rgba(76, 29, 149, 0.12);
   --glass-backdrop: blur(24px);
 
-  /* Radius - Continuous Curvature */
+  /* Radius - Rounded (8, 12, 16, 24px) */
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 20px;
-  --radius-xl: 32px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
   --radius-full: 9999px;
 
   /* Shadows - Diffuse & Clean - Enhanced */
@@ -57,8 +57,8 @@
   --shadow-glow: 0 6px 26px rgba(124, 58, 237, 0.35);
 
   /* Typography */
-  --font-sans: "Space Grotesk", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Space Mono", "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+  --font-sans: 'Space Grotesk', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Space Mono', 'SF Mono', Menlo, Monaco, monospace;
 }
 
 *,
@@ -74,10 +74,9 @@ body,
   padding: 0;
   height: 100%;
   width: 100%;
-  max-width: 1600px;
-  /* Center layout across the board */
-  margin: 0 auto;
-  /* Center layout across the board */
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 body {
@@ -87,9 +86,7 @@ body {
   /* Slightly larger for readability */
   line-height: 1.5;
   color: var(--color-text);
-  background: radial-gradient(1200px 600px at 10% -10%, #EDE9FE 0%, #FFFFFF 55%),
-              radial-gradient(900px 520px at 90% -20%, #DDD6FE 0%, #FFFFFF 60%),
-              var(--color-bg-app);
+  background: var(--color-bg-app);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -105,17 +102,17 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #C4B5FD;
+  background: #c4b5fd;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #A78BFA;
+  background: #a78bfa;
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
 }
 
 h1,
@@ -133,7 +130,7 @@ select,
   margin: 0;
   font-family: var(--font-sans);
   font-weight: 700;
-  color: #1B0F3A;
+  color: #1b0f3a;
   letter-spacing: 0.01em;
   font-size: 1.05em;
 }
@@ -225,8 +222,12 @@ pre {
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Optimize images with object-fit */
@@ -235,12 +236,12 @@ img {
   height: auto;
 }
 
-img[loading="lazy"] {
+img[loading='lazy'] {
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
-img[loading="lazy"].loaded {
+img[loading='lazy'].loaded {
   opacity: 1;
 }
 
@@ -254,7 +255,7 @@ img[loading="lazy"].loaded {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  
+
   .lazy-placeholder {
     animation: none;
     background: #f0f0f0;

@@ -1,6 +1,6 @@
 /**
  * Advanced AI API Client
- * Handles communication with the holographic memory, context compression, 
+ * Handles communication with the holographic memory, context compression,
  * swarm orchestration, predictive preloading, and recursive distillation APIs
  */
 
@@ -60,9 +60,15 @@ export interface SimilarityResult {
 // Types - Swarm Orchestration
 // ============================================================================
 
-export type AgentRole = 
-  | 'analyst' | 'researcher' | 'coder' | 'reviewer' 
-  | 'synthesizer' | 'validator' | 'creative' | 'optimizer';
+export type AgentRole =
+  | 'analyst'
+  | 'researcher'
+  | 'coder'
+  | 'reviewer'
+  | 'synthesizer'
+  | 'validator'
+  | 'creative'
+  | 'optimizer';
 
 export type AgentStatus = 'idle' | 'thinking' | 'working' | 'waiting' | 'completed' | 'failed';
 
@@ -265,8 +271,8 @@ export async function getSystemOverview(): Promise<{ ok: boolean; systems: Syste
 // ============================================================================
 
 export async function storeInHolographicMemory(
-  key: string, 
-  value: string, 
+  key: string,
+  value: string,
   memoryId?: string
 ): Promise<{ ok: boolean; memoryId: string; entryCount: number; dimension: number }> {
   const res = await fetchApi('/api/advanced-ai/holographic/store', {
@@ -304,7 +310,13 @@ export async function getHolographicStats(): Promise<AllHolographicStats> {
 export async function compressContext(
   text: string,
   source?: string
-): Promise<{ ok: boolean; id: string; originalLength: number; stats: CompressionStats; metadata: Record<string, unknown> }> {
+): Promise<{
+  ok: boolean;
+  id: string;
+  originalLength: number;
+  stats: CompressionStats;
+  metadata: Record<string, unknown>;
+}> {
   const res = await fetchApi('/api/advanced-ai/context/compress', {
     method: 'POST',
     body: JSON.stringify({ text, source }),
@@ -389,7 +401,7 @@ export async function getSwarmTaskStatus(
   taskId: string,
   swarmId?: string
 ): Promise<{ ok: boolean; task: SwarmTask }> {
-  const url = swarmId 
+  const url = swarmId
     ? `/api/advanced-ai/swarm/task/${taskId}?swarmId=${swarmId}`
     : `/api/advanced-ai/swarm/task/${taskId}`;
   const res = await fetchApi(url);
@@ -453,10 +465,7 @@ export async function recordQuery(
   return res.json();
 }
 
-export async function getPredictions(
-  userId?: string,
-  topK?: number
-): Promise<PredictionResult[]> {
+export async function getPredictions(userId?: string, topK?: number): Promise<PredictionResult[]> {
   const params = new URLSearchParams();
   if (userId) params.set('userId', userId);
   if (topK) params.set('topK', topK.toString());
@@ -477,12 +486,10 @@ export async function triggerPreload(
   return res.json();
 }
 
-export async function getPreloaderStats(
-  userId?: string
-): Promise<{ 
-  stats: PreloaderStats; 
-  topicTransitions: TopicTransition[]; 
-  temporalPatterns: TemporalPattern[] 
+export async function getPreloaderStats(userId?: string): Promise<{
+  stats: PreloaderStats;
+  topicTransitions: TopicTransition[];
+  temporalPatterns: TemporalPattern[];
 }> {
   const params = userId ? `?userId=${userId}` : '';
   const res = await fetchApi(`/api/advanced-ai/preloader/stats${params}`);
@@ -519,9 +526,7 @@ export async function runDistillation(
   return res.json();
 }
 
-export async function getUserModel(
-  userId?: string
-): Promise<UserModel | null> {
+export async function getUserModel(userId?: string): Promise<UserModel | null> {
   const res = await fetchApi(`/api/advanced-ai/distill/model/${userId || 'default'}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Failed to get model: ${res.status}`);
@@ -547,13 +552,13 @@ export async function getDistillationStats(): Promise<DistillationStats> {
 // Types - Supervised Swarm (Kimi Oversight)
 // ============================================================================
 
-export type SupervisedAgentStatus = 
+export type SupervisedAgentStatus =
   | 'idle'
-  | 'assigned'     // Has a task assigned
-  | 'working'      // Actively processing
-  | 'submitted'    // Submitted work for review
-  | 'approved'     // Work approved by supervisor
-  | 'rejected'     // Work rejected, needs revision
+  | 'assigned' // Has a task assigned
+  | 'working' // Actively processing
+  | 'submitted' // Submitted work for review
+  | 'approved' // Work approved by supervisor
+  | 'rejected' // Work rejected, needs revision
   | 'completed';
 
 export type ReviewDecision = 'approve' | 'reject' | 'revise';
@@ -624,9 +629,16 @@ export interface TaskPlan {
 
 export interface TaskEvent {
   timestamp: number;
-  type: 'plan_created' | 'subtask_assigned' | 'subtask_submitted' | 
-        'subtask_approved' | 'subtask_rejected' | 'synthesis_started' |
-        'task_completed' | 'task_failed' | 'supervisor_intervention';
+  type:
+    | 'plan_created'
+    | 'subtask_assigned'
+    | 'subtask_submitted'
+    | 'subtask_approved'
+    | 'subtask_rejected'
+    | 'synthesis_started'
+    | 'task_completed'
+    | 'task_failed'
+    | 'supervisor_intervention';
   actorId: string;
   details: string;
   metadata?: Record<string, unknown>;
@@ -680,7 +692,12 @@ export interface SupervisedSwarmTopology {
 export async function createSupervisedSwarm(
   swarmId?: string,
   config?: Partial<SupervisedSwarmConfig>
-): Promise<{ ok: boolean; swarmId: string; stats: SupervisedSwarmStats; topology: SupervisedSwarmTopology }> {
+): Promise<{
+  ok: boolean;
+  swarmId: string;
+  stats: SupervisedSwarmStats;
+  topology: SupervisedSwarmTopology;
+}> {
   const res = await fetchApi('/api/advanced-ai/supervised/create', {
     method: 'POST',
     body: JSON.stringify({ swarmId, config }),
@@ -705,9 +722,9 @@ export async function submitSupervisedTask(
 export async function getSupervisedTaskStatus(
   taskId: string,
   swarmId?: string
-): Promise<{ 
-  ok: boolean; 
-  task: SupervisedTask; 
+): Promise<{
+  ok: boolean;
+  task: SupervisedTask;
   subtaskDetails: AgentSubtask[];
   reviews: SupervisorReview[];
 }> {
@@ -717,12 +734,10 @@ export async function getSupervisedTaskStatus(
   return res.json();
 }
 
-export async function getSupervisedSwarmStatus(
-  swarmId?: string
-): Promise<{ 
-  ok: boolean; 
-  swarmId: string; 
-  stats: SupervisedSwarmStats; 
+export async function getSupervisedSwarmStatus(swarmId?: string): Promise<{
+  ok: boolean;
+  swarmId: string;
+  stats: SupervisedSwarmStats;
   topology: SupervisedSwarmTopology;
   config: SupervisedSwarmConfig;
 }> {
@@ -731,11 +746,13 @@ export async function getSupervisedSwarmStatus(
   return res.json();
 }
 
-export async function listSupervisedSwarms(): Promise<Array<{ 
-  name: string; 
-  stats: SupervisedSwarmStats;
-  config: SupervisedSwarmConfig;
-}>> {
+export async function listSupervisedSwarms(): Promise<
+  Array<{
+    name: string;
+    stats: SupervisedSwarmStats;
+    config: SupervisedSwarmConfig;
+  }>
+> {
   const res = await fetchApi('/api/advanced-ai/supervised/list');
   if (!res.ok) throw new Error(`Failed to list supervised swarms: ${res.status}`);
   const data = await res.json();

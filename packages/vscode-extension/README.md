@@ -1,5 +1,7 @@
 # G-Rump AI for Visual Studio Code
 
+> **Version 2.1.0** | Updated January 31, 2026
+
 AI-powered development assistant with architecture diagrams, PRDs, and code generation - right inside VS Code.
 
 ## Features

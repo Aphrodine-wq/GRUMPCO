@@ -1,0 +1,28 @@
+echo "🔍 Running pre-commit checks..."
+
+# Run lint-staged (configured in package.json)
+npx lint-staged
+
+# Run type-check on changed packages
+if git diff --cached --name-only | grep -q "backend/"; then
+  echo "📦 Checking backend types..."
+  cd backend && npm run type-check || exit 1
+fi
+
+if git diff --cached --name-only | grep -q "frontend/"; then
+  echo "🎨 Checking frontend types..."
+  cd frontend && npm run type-check || exit 1
+fi
+
+# Run tests on changed files only
+if git diff --cached --name-only | grep -q "backend/src/"; then
+  echo "🧪 Running backend tests..."
+  cd backend && npm test -- --changed || true
+fi
+
+if git diff --cached --name-only | grep -q "frontend/src/"; then
+  echo "🧪 Running frontend unit tests..."
+  cd frontend && npm run test:run -- --changed || true
+fi
+
+echo "✅ Pre-commit checks complete!"

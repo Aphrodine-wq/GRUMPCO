@@ -3,9 +3,8 @@
  * Generates layout, UI/UX, key screens, and UX flows from project description and architecture
  */
 
-import { getRequestLogger } from '../middleware/logger.js';
+import { getRequestLogger, default as _logger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
-import logger from '../middleware/logger.js';
 import {
   getCreativeDesignDocPrompt,
   getCreativeDesignDocUserPrompt,
@@ -17,7 +16,12 @@ import { getCompletion } from './llmGatewayHelper.js';
 
 // Create resilient wrapper for LLM gateway calls
 const resilientLlmCall = withResilience(
-  async (params: { model: string; max_tokens: number; system: string; messages: Array<{ role: 'user' | 'assistant'; content: string }> }) => {
+  async (params: {
+    model: string;
+    max_tokens: number;
+    system: string;
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  }) => {
     return await getCompletion(params);
   },
   'llm-cdd'
@@ -79,7 +83,9 @@ export async function generateCreativeDesignDoc(
           ? data.uiPrinciples.visualHierarchy
           : [],
         spacing: Array.isArray(data.uiPrinciples?.spacing) ? data.uiPrinciples.spacing : [],
-        typography: Array.isArray(data.uiPrinciples?.typography) ? data.uiPrinciples.typography : [],
+        typography: Array.isArray(data.uiPrinciples?.typography)
+          ? data.uiPrinciples.typography
+          : [],
         keyInteractions: Array.isArray(data.uiPrinciples?.keyInteractions)
           ? data.uiPrinciples.keyInteractions
           : [],
@@ -87,9 +93,7 @@ export async function generateCreativeDesignDoc(
       keyScreens: Array.isArray(data.keyScreens) ? data.keyScreens : [],
       uxFlows: Array.isArray(data.uxFlows) ? data.uxFlows : [],
       accessibilityNotes: Array.isArray(data.accessibilityNotes) ? data.accessibilityNotes : [],
-      responsivenessNotes: Array.isArray(data.responsivenessNotes)
-        ? data.responsivenessNotes
-        : [],
+      responsivenessNotes: Array.isArray(data.responsivenessNotes) ? data.responsivenessNotes : [],
       metadata: {
         createdAt: data.metadata?.createdAt || new Date().toISOString(),
         projectName: data.metadata?.projectName || architecture.projectName,

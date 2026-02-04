@@ -1,5 +1,17 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import {
+    AlertTriangle,
+    Rocket,
+    Code,
+    FileCode,
+    Hash,
+    Braces,
+    Server,
+    Zap,
+    Triangle,
+  } from 'lucide-svelte';
+  import type { ComponentType } from 'svelte';
   import { chatModeStore } from '../stores/chatModeStore';
   import { workspaceStore } from '../stores/workspaceStore';
   import { get } from 'svelte/store';
@@ -34,29 +46,29 @@
     if (lastLanguage) language = lastLanguage;
   }
 
-  const frameworks = [
-    { value: 'react', label: 'React', icon: '⚛️' },
-    { value: 'vue', label: 'Vue', icon: '💚' },
-    { value: 'svelte', label: 'Svelte', icon: '🧡' },
-    { value: 'nextjs', label: 'Next.js', icon: '▲' },
-    { value: 'express', label: 'Express.js', icon: '🚂' },
-    { value: 'fastapi', label: 'FastAPI', icon: '⚡' },
+  const frameworks: Array<{ value: string; label: string; icon: ComponentType }> = [
+    { value: 'react', label: 'React', icon: Code },
+    { value: 'vue', label: 'Vue', icon: Braces },
+    { value: 'svelte', label: 'Svelte', icon: Zap },
+    { value: 'nextjs', label: 'Next.js', icon: Triangle },
+    { value: 'express', label: 'Express.js', icon: Server },
+    { value: 'fastapi', label: 'FastAPI', icon: Zap },
   ];
 
-  const languages = [
-    { value: 'typescript', label: 'TypeScript', icon: '📘' },
-    { value: 'javascript', label: 'JavaScript', icon: '📗' },
-    { value: 'python', label: 'Python', icon: '🐍' },
-    { value: 'java', label: 'Java', icon: '☕' },
-    { value: 'go', label: 'Go', icon: '🐹' },
+  const languages: Array<{ value: string; label: string; icon: ComponentType }> = [
+    { value: 'typescript', label: 'TypeScript', icon: FileCode },
+    { value: 'javascript', label: 'JavaScript', icon: FileCode },
+    { value: 'python', label: 'Python', icon: Code },
+    { value: 'java', label: 'Java', icon: Hash },
+    { value: 'go', label: 'Go', icon: Code },
   ];
 
-  function getFrameworkIcon(value: string): string {
-    return frameworks.find((f) => f.value === value)?.icon || '📦';
+  function getFrameworkIcon(value: string): ComponentType {
+    return frameworks.find((f) => f.value === value)?.icon || Code;
   }
 
-  function getLanguageIcon(value: string): string {
-    return languages.find((l) => l.value === value)?.icon || '📄';
+  function getLanguageIcon(value: string): ComponentType {
+    return languages.find((l) => l.value === value)?.icon || FileCode;
   }
 
   function estimateGenerationTime(): number {
@@ -167,27 +179,48 @@
     <p class="panel-description">Transform your Mermaid diagram into working code</p>
   </div>
 
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="panel-content" onkeydown={handleKeydown}>
     <div class="form-group">
-      <label class="form-label">
-        <span class="label-icon">{getFrameworkIcon(framework)}</span>
+      <label class="form-label" for="framework-select">
+        <span class="label-icon">
+          {#if getFrameworkIcon(framework)}
+            {@const FwIcon = getFrameworkIcon(framework)}
+            <FwIcon size={14} />
+          {/if}
+        </span>
         Framework
       </label>
-      <select class="form-select" bind:value={framework} disabled={isGenerating}>
+      <select
+        id="framework-select"
+        class="form-select"
+        bind:value={framework}
+        disabled={isGenerating}
+      >
         {#each frameworks as fw}
-          <option value={fw.value}>{fw.icon} {fw.label}</option>
+          <option value={fw.value}>{fw.label}</option>
         {/each}
       </select>
     </div>
 
     <div class="form-group">
-      <label class="form-label">
-        <span class="label-icon">{getLanguageIcon(language)}</span>
+      <label class="form-label" for="language-select">
+        <span class="label-icon">
+          {#if getLanguageIcon(language)}
+            {@const LangIcon = getLanguageIcon(language)}
+            <LangIcon size={14} />
+          {/if}
+        </span>
         Language
       </label>
-      <select class="form-select" bind:value={language} disabled={isGenerating}>
+      <select
+        id="language-select"
+        class="form-select"
+        bind:value={language}
+        disabled={isGenerating}
+      >
         {#each languages as lang}
-          <option value={lang.value}>{lang.icon} {lang.label}</option>
+          <option value={lang.value}>{lang.label}</option>
         {/each}
       </select>
     </div>
@@ -232,7 +265,9 @@
     {/if}
 
     {#if !isValidMermaid && mermaidCode}
-      <div class="validation-warning">⚠️ Invalid Mermaid syntax detected</div>
+      <div class="validation-warning">
+        <AlertTriangle size={16} /> Invalid Mermaid syntax detected
+      </div>
     {/if}
 
     <button
@@ -245,7 +280,7 @@
         <span class="spinner"></span>
         Generating...
       {:else}
-        <span>🚀</span>
+        <Rocket size={16} />
         Generate Code
       {/if}
     </button>
@@ -393,4 +428,3 @@
     margin-bottom: 0.5rem;
   }
 </style>
-

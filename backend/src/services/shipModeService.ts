@@ -3,8 +3,7 @@
  * Orchestrates sequential Design → Spec → Plan → Code workflow
  */
 
-import { getRequestLogger } from '../middleware/logger.js';
-import logger from '../middleware/logger.js';
+import logger, { getRequestLogger } from '../middleware/logger.js';
 import { getDatabase } from '../db/database.js';
 import { generateArchitecture } from './architectureService.js';
 import { generatePRD } from './prdGeneratorService.js';
@@ -13,6 +12,7 @@ import { startSpecSession, generateSpecification } from './specService.js';
 import { generatePlan, approvePlan } from './planService.js';
 import { initializeSession, executeCodeGeneration } from './agentOrchestrator.js';
 import { dispatchWebhook } from './webhookService.js';
+import { getIntentGuidedRagContext } from './ragService.js';
 import { getHeadSystemPrompt } from '../prompts/head.js';
 import { getChatModePrompt } from '../prompts/chat/index.js';
 import type {
@@ -29,7 +29,12 @@ import type { SystemArchitecture } from '../types/architecture.js';
 import type { PRD } from '../types/prd.js';
 import type { Plan } from '../types/plan.js';
 import type { Specification } from '../types/spec.js';
-import type { GenerationSession, AgentType, AgentTask, GenerationPreferences } from '../types/agents.js';
+import type {
+  GenerationSession,
+  AgentType,
+  AgentTask,
+  GenerationPreferences,
+} from '../types/agents.js';
 
 const ISO_NOW = (): string => new Date().toISOString();
 
@@ -43,7 +48,13 @@ function minimalPlaceholderArchitecture(): SystemArchitecture {
     complexity: 'mvp',
     techStack: [],
     c4Diagrams: { context: '', container: '', component: '' },
-    metadata: { components: [], integrations: [], dataModels: [], apiEndpoints: [], technologies: {} },
+    metadata: {
+      components: [],
+      integrations: [],
+      dataModels: [],
+      apiEndpoints: [],
+      technologies: {},
+    },
     createdAt: ISO_NOW(),
     updatedAt: ISO_NOW(),
   };
@@ -95,7 +106,17 @@ function minimalPlaceholderPlan(): Plan {
 }
 
 function emptyGenerationSession(): GenerationSession {
-  const agentTypes: AgentType[] = ['architect', 'frontend', 'backend', 'devops', 'test', 'docs', 'security', 'i18n', 'wrunner'];
+  const agentTypes: AgentType[] = [
+    'architect',
+    'frontend',
+    'backend',
+    'devops',
+    'test',
+    'docs',
+    'security',
+    'i18n',
+    'wrunner',
+  ];
   const agents = Object.fromEntries(
     agentTypes.map((t): [AgentType, AgentTask] => [
       t,
@@ -120,7 +141,7 @@ function emptyGenerationSession(): GenerationSession {
 export async function startShipMode(request: ShipStartRequest): Promise<ShipSession> {
   const db = getDatabase();
   const sessionId = `ship_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+
   const session: ShipSession = {
     id: sessionId,
     projectDescription: request.projectDescription,
@@ -128,13 +149,14 @@ export async function startShipMode(request: ShipStartRequest): Promise<ShipSess
     status: 'initializing',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    userId: request.userId,
     preferences: request.preferences,
     projectId: request.projectId,
   };
-  
+
   await db.saveShipSession(session);
   logger.info({ sessionId }, 'SHIP mode session started');
-  
+
   return session;
 }
 
@@ -153,34 +175,48 @@ export async function executeDesignPhase(session: ShipSession): Promise<DesignPh
   const log = getRequestLogger();
   const db = getDatabase();
   log.info({ sessionId: session.id }, 'Starting Design phase');
-  
+
   session.phase = 'design';
   session.status = 'running';
   session.updatedAt = new Date().toISOString();
   await db.saveShipSession(session);
-  
+
   try {
     const headPrompt = getHeadSystemPrompt();
     const designModePrompt = getChatModePrompt('design');
-    const systemPromptPrefix = `${headPrompt}\n\n${designModePrompt}`;
+    let systemPromptPrefix = `${headPrompt}\n\n${designModePrompt}`;
+    const namespace = session.preferences?.workspaceRoot ?? session.id;
+    try {
+      const ragResult = await getIntentGuidedRagContext(session.projectDescription, {
+        namespace,
+        maxChunks: 6,
+      });
+      if (ragResult?.context)
+        systemPromptPrefix += `\n\nRelevant context from knowledge base:\n\n${ragResult.context}`;
+    } catch {
+      // RAG optional
+    }
 
     // Generate architecture
     log.info({ sessionId: session.id }, 'Generating architecture');
     const archResponse = await generateArchitecture({
       projectDescription: session.projectDescription,
       projectType: 'general',
-      techStack: session.preferences?.backendRuntime 
-        ? [session.preferences.backendRuntime, session.preferences.frontendFramework || 'vue'].filter(Boolean) as string[]
+      techStack: session.preferences?.backendRuntime
+        ? ([
+            session.preferences.backendRuntime,
+            session.preferences.frontendFramework || 'vue',
+          ].filter(Boolean) as string[])
         : undefined,
       systemPromptPrefix,
     });
-    
+
     if (archResponse.status === 'error' || !archResponse.architecture) {
       throw new Error(archResponse.error || 'Architecture generation failed');
     }
-    
+
     const architecture = archResponse.architecture;
-    
+
     // Generate PRD
     log.info({ sessionId: session.id }, 'Generating PRD');
     const prdResponse = await generatePRD(
@@ -191,11 +227,11 @@ export async function executeDesignPhase(session: ShipSession): Promise<DesignPh
       },
       architecture
     );
-    
+
     if (prdResponse.status === 'error' || !prdResponse.prd) {
       throw new Error(prdResponse.error || 'PRD generation failed');
     }
-    
+
     const prd = prdResponse.prd;
 
     // Generate Creative Design Document (layout, UI/UX, key screens, UX flows)
@@ -220,13 +256,13 @@ export async function executeDesignPhase(session: ShipSession): Promise<DesignPh
     session.status = 'running';
     session.updatedAt = new Date().toISOString();
     await db.saveShipSession(session);
-    
+
     log.info({ sessionId: session.id }, 'Design phase completed');
     return result;
   } catch (error) {
     const err = error as Error;
     log.error({ sessionId: session.id, error: err.message }, 'Design phase failed');
-    
+
     const result: DesignPhaseResult = {
       phase: 'design',
       status: 'failed',
@@ -235,13 +271,13 @@ export async function executeDesignPhase(session: ShipSession): Promise<DesignPh
       completedAt: new Date().toISOString(),
       error: err.message,
     };
-    
+
     session.designResult = result;
     session.status = 'failed';
     session.error = err.message;
     session.updatedAt = new Date().toISOString();
     await db.saveShipSession(session);
-    
+
     return result;
   }
 }
@@ -256,25 +292,39 @@ export async function executeSpecPhase(
   const log = getRequestLogger();
   const db = getDatabase();
   log.info({ sessionId: session.id }, 'Starting Spec phase');
-  
+
   session.phase = 'spec';
   session.status = 'running';
   session.updatedAt = new Date().toISOString();
   await db.saveShipSession(session);
-  
+
   try {
     // Start spec session
     const specSession = await startSpecSession({
       userRequest: session.projectDescription,
       workspaceRoot: session.preferences?.workspaceRoot,
     });
-    
+
     const headPrompt = getHeadSystemPrompt();
     const specModePrompt = getChatModePrompt('spec');
-    const systemPromptPrefix = `${headPrompt}\n\n${specModePrompt}`;
+    let systemPromptPrefix = `${headPrompt}\n\n${specModePrompt}`;
+    const namespace = session.preferences?.workspaceRoot ?? session.id;
+    try {
+      const ragResult = await getIntentGuidedRagContext(
+        session.projectDescription + '\n' + (designResult.prd.sections?.overview ?? ''),
+        { namespace, maxChunks: 6 }
+      );
+      if (ragResult?.context)
+        systemPromptPrefix += `\n\nRelevant context from knowledge base:\n\n${ragResult.context}`;
+    } catch {
+      // RAG optional
+    }
 
     // For automated flow, generate spec from design context (PRD + CDD) without Q&A
-    log.info({ sessionId: session.id, specSessionId: specSession.id }, 'Generating specification from design context');
+    log.info(
+      { sessionId: session.id, specSessionId: specSession.id },
+      'Generating specification from design context'
+    );
     const specResponse = await generateSpecification({
       sessionId: specSession.id,
       designContext: {
@@ -284,30 +334,30 @@ export async function executeSpecPhase(
       },
       systemPromptPrefix,
     });
-    
+
     if (!specResponse.specification) {
       throw new Error('Specification generation failed');
     }
-    
+
     const result: SpecPhaseResult = {
       phase: 'spec',
       status: 'completed',
       specification: specResponse.specification,
       completedAt: new Date().toISOString(),
     };
-    
+
     session.specResult = result;
     session.phase = 'plan';
     session.status = 'running';
     session.updatedAt = new Date().toISOString();
     await db.saveShipSession(session);
-    
+
     log.info({ sessionId: session.id }, 'Spec phase completed');
     return result;
   } catch (error) {
     const err = error as Error;
     log.error({ sessionId: session.id, error: err.message }, 'Spec phase failed');
-    
+
     const result: SpecPhaseResult = {
       phase: 'spec',
       status: 'failed',
@@ -315,13 +365,13 @@ export async function executeSpecPhase(
       completedAt: new Date().toISOString(),
       error: err.message,
     };
-    
+
     session.specResult = result;
     session.status = 'failed';
     session.error = err.message;
     session.updatedAt = new Date().toISOString();
     await db.saveShipSession(session);
-    
+
     return result;
   }
 }
@@ -336,12 +386,12 @@ export async function executePlanPhase(
   const log = getRequestLogger();
   const db = getDatabase();
   log.info({ sessionId: session.id }, 'Starting Plan phase');
-  
+
   session.phase = 'plan';
   session.status = 'running';
   session.updatedAt = new Date().toISOString();
   await db.saveShipSession(session);
-  
+
   try {
     const headPrompt = getHeadSystemPrompt();
     const planModePrompt = getChatModePrompt('plan');
@@ -349,34 +399,34 @@ export async function executePlanPhase(
 
     // Generate plan from specification
     const plan = await generatePlan({
-      userRequest: `Implement: ${specResult.specification.title}\n\n${specResult.specification.description}\n\nRequirements:\n${specResult.specification.sections.requirements?.map(r => `- ${r.title}: ${r.description}`).join('\n') || 'None'}`,
+      userRequest: `Implement: ${specResult.specification.title}\n\n${specResult.specification.description}\n\nRequirements:\n${specResult.specification.sections.requirements?.map((r) => `- ${r.title}: ${r.description}`).join('\n') || 'None'}`,
       workspaceRoot: session.preferences?.workspaceRoot,
       agentProfile: 'router',
       systemPromptPrefix,
     });
-    
+
     // Auto-approve plan for automated flow
     await approvePlan(plan.id);
-    
+
     const result: PlanPhaseResult = {
       phase: 'plan',
       status: 'completed',
       plan,
       completedAt: new Date().toISOString(),
     };
-    
+
     session.planResult = result;
     session.phase = 'code';
     session.status = 'running';
     session.updatedAt = new Date().toISOString();
     await db.saveShipSession(session);
-    
+
     log.info({ sessionId: session.id, planId: plan.id }, 'Plan phase completed');
     return result;
   } catch (error) {
     const err = error as Error;
     log.error({ sessionId: session.id, error: err.message }, 'Plan phase failed');
-    
+
     const result: PlanPhaseResult = {
       phase: 'plan',
       status: 'failed',
@@ -384,13 +434,13 @@ export async function executePlanPhase(
       completedAt: new Date().toISOString(),
       error: err.message,
     };
-    
+
     session.planResult = result;
     session.status = 'failed';
     session.error = err.message;
     session.updatedAt = new Date().toISOString();
     await db.saveShipSession(session);
-    
+
     return result;
   }
 }
@@ -406,12 +456,12 @@ export async function executeCodePhase(
   const log = getRequestLogger();
   const db = getDatabase();
   log.info({ sessionId: session.id }, 'Starting Code phase');
-  
+
   session.phase = 'code';
   session.status = 'running';
   session.updatedAt = new Date().toISOString();
   await db.saveShipSession(session);
-  
+
   try {
     // Initialize code generation session
     const genSession = await initializeSession({
@@ -424,11 +474,23 @@ export async function executeCodePhase(
         includeTests: session.preferences?.includeTests !== false,
         includeDocs: session.preferences?.includeDocs !== false,
       },
+      userId: session.userId,
     });
-    
+
     const headPrompt = getHeadSystemPrompt();
     const codeModePrompt = getChatModePrompt('normal');
-    const systemPromptPrefix = `${headPrompt}\n\n${codeModePrompt}`;
+    let systemPromptPrefix = `${headPrompt}\n\n${codeModePrompt}`;
+    const namespace = session.preferences?.workspaceRoot ?? session.id;
+    try {
+      const ragResult = await getIntentGuidedRagContext(
+        designResult.prd.projectDescription ?? session.projectDescription,
+        { namespace, maxChunks: 6 }
+      );
+      if (ragResult?.context)
+        systemPromptPrefix += `\n\nRelevant context from knowledge base:\n\n${ragResult.context}`;
+    } catch {
+      // RAG optional
+    }
 
     // Execute code generation with CDD and spec for layout/UI guidance
     await executeCodeGeneration(genSession, designResult.prd, designResult.architecture, {
@@ -436,26 +498,26 @@ export async function executeCodePhase(
       specification: session.specResult?.specification,
       systemPromptPrefix,
     });
-    
+
     const result: CodePhaseResult = {
       phase: 'code',
       status: 'completed',
       session: genSession,
       completedAt: new Date().toISOString(),
     };
-    
+
     session.codeResult = result;
     session.phase = 'completed';
     session.status = 'completed';
     session.updatedAt = new Date().toISOString();
     await db.saveShipSession(session);
-    
+
     log.info({ sessionId: session.id, genSessionId: genSession.sessionId }, 'Code phase completed');
     return result;
   } catch (error) {
     const err = error as Error;
     log.error({ sessionId: session.id, error: err.message }, 'Code phase failed');
-    
+
     const result: CodePhaseResult = {
       phase: 'code',
       status: 'failed',
@@ -463,13 +525,13 @@ export async function executeCodePhase(
       completedAt: new Date().toISOString(),
       error: err.message,
     };
-    
+
     session.codeResult = result;
     session.status = 'failed';
     session.error = err.message;
     session.updatedAt = new Date().toISOString();
     await db.saveShipSession(session);
-    
+
     return result;
   }
 }
@@ -481,11 +543,11 @@ export async function executeShipMode(sessionId: string): Promise<ShipPhaseRespo
   const log = getRequestLogger();
   const db = getDatabase();
   const session = await getShipSession(sessionId);
-  
+
   if (!session) {
     throw new Error(`SHIP session ${sessionId} not found`);
   }
-  
+
   try {
     // Phase 1: Design
     if (!session.designResult) {
@@ -501,7 +563,7 @@ export async function executeShipMode(sessionId: string): Promise<ShipPhaseRespo
         };
       }
     }
-    
+
     // Phase 2: Spec
     if (!session.specResult && session.designResult?.status === 'completed') {
       log.info({ sessionId }, 'Executing Spec phase');
@@ -516,7 +578,7 @@ export async function executeShipMode(sessionId: string): Promise<ShipPhaseRespo
         };
       }
     }
-    
+
     // Phase 3: Plan
     if (!session.planResult && session.specResult?.status === 'completed') {
       log.info({ sessionId }, 'Executing Plan phase');
@@ -531,9 +593,13 @@ export async function executeShipMode(sessionId: string): Promise<ShipPhaseRespo
         };
       }
     }
-    
+
     // Phase 4: Code
-    if (!session.codeResult && session.planResult?.status === 'completed' && session.designResult?.status === 'completed') {
+    if (
+      !session.codeResult &&
+      session.planResult?.status === 'completed' &&
+      session.designResult?.status === 'completed'
+    ) {
       log.info({ sessionId }, 'Executing Code phase');
       const codeResult = await executeCodePhase(session, session.planResult, session.designResult);
       if (codeResult.status === 'failed') {
@@ -545,7 +611,7 @@ export async function executeShipMode(sessionId: string): Promise<ShipPhaseRespo
           error: codeResult.error,
         };
       }
-      
+
       dispatchWebhook('ship.completed', { sessionId, phase: 'code', result: codeResult });
       return {
         sessionId,
@@ -554,7 +620,7 @@ export async function executeShipMode(sessionId: string): Promise<ShipPhaseRespo
         result: codeResult,
       };
     }
-    
+
     // Return current phase status
     const currentPhase = session.phase;
     let result: DesignPhaseResult | SpecPhaseResult | PlanPhaseResult | CodePhaseResult | undefined;
@@ -562,7 +628,7 @@ export async function executeShipMode(sessionId: string): Promise<ShipPhaseRespo
     else if (currentPhase === 'spec' && session.specResult) result = session.specResult;
     else if (currentPhase === 'plan' && session.planResult) result = session.planResult;
     else if (currentPhase === 'code' && session.codeResult) result = session.codeResult;
-    
+
     return {
       sessionId,
       phase: currentPhase,

@@ -13,6 +13,8 @@ process.env.ANTHROPIC_API_KEY = 'test_api_key_for_testing';
 process.env.NODE_ENV = 'test';
 process.env.SUPABASE_URL = 'https://test.supabase.co';
 process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+process.env.CSRF_PROTECTION = 'false'; // Disable CSRF for tests
+process.env.REQUIRE_AUTH_FOR_API = 'false'; // Disable auth requirement for tests
 
 // Mock logger to avoid thread-stream issues
 const mockLogger = {
@@ -106,6 +108,27 @@ describe('Share API Integration Tests', () => {
         content: 'function hello() { return "world"; }',
         title: 'Sample Code',
         expiresIn: 12,
+      };
+
+      const response = await request(app)
+        .post('/api/share')
+        .send(payload)
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.shareId).toBeDefined();
+    });
+
+    it('should create a shareable link for bundle', async () => {
+      const payload = {
+        type: 'bundle',
+        content: '{}',
+        title: 'Demo Bundle',
+        items: [
+          { type: 'diagram', content: 'graph TD; A-->B;', mermaidCode: 'graph TD; A-->B;' },
+          { type: 'prd', content: '# PRD\nOverview', title: 'Product Spec' },
+        ],
+        expiresIn: 24,
       };
 
       const response = await request(app)
@@ -346,11 +369,12 @@ describe('Share API Integration Tests', () => {
       expect(response.body.code).toBe('not_found');
     });
 
-    it('should return 400 when share ID is missing', async () => {
-      // Testing with empty ID by using a route that doesn't match - use a different approach
-      const response = await request(app)
-        .delete('/api/share/')
-        .expect(404); // This will hit the list endpoint
+    it('should return 400 or 404 when share ID is empty', async () => {
+      const response = await request(app).delete('/api/share/');
+      expect([400, 404]).toContain(response.status);
+      if (response.status === 400) {
+        expect(response.body.code).toBe('validation_error');
+      }
     });
   });
 

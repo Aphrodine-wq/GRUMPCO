@@ -1,0 +1,361 @@
+
+> grump-backend@2.0.0 lint
+> eslint src
+
+
+C:\Users\Walt\Desktop\milesproject\backend\src\features\integrations\service.ts
+  16:7  warning  'CONFIG_KEY' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\features\intent-optimizer\intentOptimizer.test.ts
+   12:8   warning  'OptimizedIntent' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+   16:31  warning  'OptimizationResponse' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  280:7   warning  'mockReq' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+  281:7   warning  'mockRes' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\features\intent-optimizer\intentOptimizer.ts
+  11:45  warning  'StreamEvent' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\integrations\obsidian\index.ts
+  134:44  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\mcp\client.ts
+   93:24  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  163:24  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\middleware\edgeCache.ts
+   49:11  warning  'cacheKeyParts' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  197:3   warning  'ttl' is defined but never used. Allowed unused args must match /^_/u                     @typescript-eslint/no-unused-vars
+  198:3   warning  'staleTtl' is defined but never used. Allowed unused args must match /^_/u                @typescript-eslint/no-unused-vars
+  200:9   warning  'cacheKey' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  202:22  error    Promise executor functions should not be async                                            no-async-promise-executor
+
+C:\Users\Walt\Desktop\milesproject\backend\src\middleware\kimiMiddleware.ts
+  14:3   warning  'containsNonEnglish' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  16:3   warning  'shouldRouteToKimi' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  22:10  warning  'selectModelEnhanced' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  22:36  warning  'EnhancedRouterContext' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\routes\advanced-ai.ts
+  480:22  warning  'agentsPerRole' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\routes\billing.ts
+  9:10  warning  'getTierForUser' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\routes\demo.ts
+  18:164  warning  Unnecessary escape character: \"  no-useless-escape
+  18:168  warning  Unnecessary escape character: \"  no-useless-escape
+
+C:\Users\Walt\Desktop\milesproject\backend\src\routes\docker.ts
+   10:16  warning  'spawn' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  348:64  warning  'next' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  443:67  warning  'next' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  461:12  warning  'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\routes\index.ts
+  13:8  warning  'architectureRoutes' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\routes\slack.ts
+  93:20  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  94:24  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\routes\swagger.ts
+  11:24  warning  'Request' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  11:33  warning  'Response' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\routes\voice.ts
+  7:22  warning  'synthesize' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\schemas\index.ts
+  10:3  warning  'MAX_MESSAGE_LENGTH' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  11:3  warning  'MAX_CHAT_MESSAGE_LENGTH' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  12:3  warning  'MAX_CHAT_MESSAGE_LENGTH_LARGE' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\anticipatoryService.ts
+   13:10  warning  'getDatabase' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  264:3   warning  'currentContext' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  353:3   warning  'userId' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  354:3   warning  'techStack' is defined but never used. Allowed unused args must match /^_/u       @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\architectureService.ts
+  16:26  warning  'StreamEvent' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\auditLog.ts
+  138:23  error    Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+  139:26  error    Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+  147:28  error    Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+  305:15  warning  'startKey' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  306:15  warning  'endKey' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  328:41  warning  Forbidden non-null assertion                                                         @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\baasService.ts
+  297:65  warning  'Blob' is not defined         no-undef
+  518:44  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  595:64  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\batchProcessor.ts
+   84:21  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  166:14  warning  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\chromeCdpservice.ts
+  102:24  warning  'document' is not defined  no-undef
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\circuitBreaker.ts
+  285:10  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\claudeService.ts
+   4:8  warning  'logger' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  11:7  warning  'isTestEnv' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\claudeServiceWithTools.ts
+    88:10  warning  'withRetry' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+    88:21  warning  'isRetryableError' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+    88:44  warning  'ErrorWithStatus' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+    89:10  warning  'checkRateLimit' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+    89:26  warning  'getCircuitBreaker' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1453:38  warning  'input' is defined but never used. Allowed unused args must match /^_/u              @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\cloudProvisioningService.ts
+  893:13  warning  'config' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\connectionPool.ts
+   79:7   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  165:17  warning  'provider' is assigned a value but never used. Allowed unused vars must match /^_/u                                  @typescript-eslint/no-unused-vars
+  184:16  warning  'error' is defined but never used. Allowed unused caught errors must match /^_/u                                     @typescript-eslint/no-unused-vars
+  251:7   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\contextService.ts
+  8:8  warning  'logger' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\costEstimator.ts
+  6:31  warning  'ModelConfig' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\creativeDesignDocService.ts
+  8:8  warning  'logger' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\freeAgentToolHandlers.ts
+   49:11  warning  'db' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  387:3   warning  'ctx' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  449:33  warning  'ctx' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  608:3   warning  'ctx' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  750:3   warning  'ctx' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  883:3   warning  'ctx' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+  907:3   warning  'ctx' is defined but never used. Allowed unused args must match /^_/u          @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\githubIntegration.ts
+  7:8  warning  'logger' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\grumpParser.ts
+  38:35  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  39:48  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\guardrailsService.ts
+  360:3  warning  'direction' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\holographicMemory.ts
+  18:11  warning  'Complex' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\hybridIntentCompiler.ts
+   18:25  warning  'parseIntentRust' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  514:11  warning  'cached' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  548:22  warning  Forbidden non-null assertion                                                       @typescript-eslint/no-non-null-assertion
+  556:20  warning  Forbidden non-null assertion                                                       @typescript-eslint/no-non-null-assertion
+  586:22  warning  Forbidden non-null assertion                                                       @typescript-eslint/no-non-null-assertion
+  594:20  warning  Forbidden non-null assertion                                                       @typescript-eslint/no-non-null-assertion
+  608:22  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u       @typescript-eslint/no-unused-vars
+  632:35  warning  Forbidden non-null assertion                                                       @typescript-eslint/no-non-null-assertion
+  632:56  warning  Forbidden non-null assertion                                                       @typescript-eslint/no-non-null-assertion
+  636:22  warning  Forbidden non-null assertion                                                       @typescript-eslint/no-non-null-assertion
+  641:22  warning  Forbidden non-null assertion                                                       @typescript-eslint/no-non-null-assertion
+  676:22  warning  Forbidden non-null assertion                                                       @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\intentCompilerService.ts
+  18:45  warning  'StreamEvent' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\kimiOptimizerAdvanced.ts
+   14:8   warning  'logger' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+  244:26  warning  Unnecessary escape character: \/                                                             no-useless-escape
+  244:28  warning  Unnecessary escape character: \(                                                             no-useless-escape
+  244:30  warning  Unnecessary escape character: \)                                                             no-useless-escape
+  480:11  warning  'preserveSystem' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  480:59  warning  'summaryThreshold' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\llmGateway.ts
+  392:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  399:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  748:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  756:25  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\messagingService.ts
+  17:3  warning  'requiresConfirmation' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  18:3  warning  'createConfirmationRequest' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  22:8  warning  'PlatformPermissions' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\modelRouterEnhanced.ts
+   17:3   warning  'getKimiRoutingDecision' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   18:3   warning  'optimizePromptForKimi' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+   20:3   warning  'estimateKimiSavings' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   22:8   warning  'KimiRoutingInput' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  161:23  warning  Forbidden non-null assertion                                                              @typescript-eslint/no-non-null-assertion
+  211:25  warning  Forbidden non-null assertion                                                              @typescript-eslint/no-non-null-assertion
+  290:27  warning  Forbidden non-null assertion                                                              @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\nimAccelerator.ts
+   74:32  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+   75:29  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  114:27  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  125:14  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  130:14  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  137:28  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  139:14  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  141:39  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  149:40  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  150:14  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  154:19  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  157:25  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  167:17  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  167:58  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  276:23  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  337:27  warning  Forbidden non-null assertion                                                      @typescript-eslint/no-non-null-assertion
+  387:14  warning  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\notionIntegration.ts
+  19:16  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\nvidia-registry\mistral-models.ts
+  3:3  warning  'COST_TIER_LOW' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\performanceMonitor.ts
+  9:10  warning  'updateWorkerPoolMetrics' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\persistentAgentService.ts
+   13:10  warning  'getTier' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  120:17  warning  Forbidden non-null assertion                                                   @typescript-eslint/no-non-null-assertion
+  369:31  warning  'userId' is defined but never used. Allowed unused args must match /^_/u       @typescript-eslint/no-unused-vars
+  381:38  warning  'userId' is defined but never used. Allowed unused args must match /^_/u       @typescript-eslint/no-unused-vars
+  391:36  warning  'userId' is defined but never used. Allowed unused args must match /^_/u       @typescript-eslint/no-unused-vars
+  400:33  warning  'userId' is defined but never used. Allowed unused args must match /^_/u       @typescript-eslint/no-unused-vars
+  474:11  warning  'db' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\predictivePreloader.ts
+   105:27  warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+   117:28  warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+   210:21  warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+   222:5   warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+   318:22  warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+   324:21  warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+   734:28  warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+   820:11  warning  'temporalTopics' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1054:7   warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+  1109:12  warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\providerRacing.ts
+  12:10  warning  'connectionPool' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  52:11  warning  'startTime' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\ragService.ts
+  171:12   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  171:20   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  172:14   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  172:22   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  173:14   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  173:22   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  229:93   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  229:93   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  229:112  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  229:112  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  231:67   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  293:5    warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  473:18   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  474:20   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  475:17   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  476:15   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\recursiveDistillation.ts
+  168:13  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  308:26  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  346:26  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  664:24  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\scalableSessionService.ts
+  12:44  warning  'createRedisClient' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\smartRetry.ts
+  101:13  warning  'hasYielded' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\speculativeExecution.ts
+  45:5  warning  'context' is defined but never used. Allowed unused args must match /^_/u         @typescript-eslint/no-unused-vars
+  46:5  warning  'cursorPosition' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\supervisedSwarm.ts
+   47:10  warning  'CompressedContext' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  330:47  warning  'context' is defined but never used. Allowed unused args must match /^_/u            @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\swarmOrchestrator.ts
+   38:10  warning  'HRRVector' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  235:21  warning  Forbidden non-null assertion                                                 @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\swarmService.ts
+  162:29  warning  Forbidden non-null assertion                                                        @typescript-eslint/no-non-null-assertion
+  162:47  warning  Forbidden non-null assertion                                                        @typescript-eslint/no-non-null-assertion
+  201:9   warning  'waiting' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\tieredCache.ts
+  437:14  warning  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  544:14  warning  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  706:20  warning  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\toolExecutionService.ts
+  653:46  warning  'list' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\userSkillsService.ts
+  221:3  warning  'userId' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\vectorStoreAdapter.ts
+  48:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  48:20  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  49:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  49:19  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  50:11  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  50:19  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\workerPool.ts
+  296:11  warning  'state' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\wrunnerService.ts
+   8:8   warning  'logger' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  14:10  warning  'withResilience' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\wsStreaming.ts
+  16:15  warning  'StreamEvent' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  64:48  error    Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+
+C:\Users\Walt\Desktop\milesproject\backend\src\services\zeroConfigService.ts
+  155:9  warning  'providers' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\skills\base\SkillContext.ts
+  11:26  warning  'StreamEvent' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\skills\frontend-designer\index.ts
+  31:8  warning  'logger' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\skills\lint\index.ts
+  7:23  warning  'handlers' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\skills\types.ts
+  7:15  warning  'StreamParams' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\Walt\Desktop\milesproject\backend\src\utils\memoryMonitor.ts
+  124:9  warning  'global' is not defined  no-undef
+  126:7  warning  'global' is not defined  no-undef
+
+C:\Users\Walt\Desktop\milesproject\backend\src\utils\objectPool.ts
+   24:14  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   89:14  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  124:14  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+C:\Users\Walt\Desktop\milesproject\backend\src\workers\cpuBoundWorker.ts
+  10:7  warning  'workerIndex' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  91:5  warning  Forbidden non-null assertion                                                            @typescript-eslint/no-non-null-assertion
+
+✖ 212 problems (7 errors, 205 warnings)
+

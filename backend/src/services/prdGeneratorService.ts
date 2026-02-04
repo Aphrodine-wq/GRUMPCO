@@ -3,9 +3,8 @@
  * Generates Product Requirements Documents from system architecture
  */
 
-import { getRequestLogger } from '../middleware/logger.js';
+import { getRequestLogger, default as logger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
-import logger from '../middleware/logger.js';
 import { getPRDStructurePrompt } from '../prompts/prd-writer.js';
 import type { PRDRequest, PRD, PRDResponse } from '../types/prd.js';
 import type { SystemArchitecture } from '../types/architecture.js';
@@ -17,7 +16,12 @@ import { getStream, type LLMProvider } from './llmGateway.js';
 
 // Create resilient wrapper for LLM gateway non-streaming calls
 const resilientLlmCall = withResilience(
-  async (params: { model: string; max_tokens: number; system: string; messages: Array<{ role: 'user' | 'assistant'; content: string }> }) => {
+  async (params: {
+    model: string;
+    max_tokens: number;
+    system: string;
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  }) => {
     return await getCompletion(params);
   },
   'llm-prd'
@@ -25,7 +29,13 @@ const resilientLlmCall = withResilience(
 
 // Create resilient wrapper for LLM gateway streaming calls
 const resilientLlmStream = withResilience(
-  async (params: { model: string; max_tokens: number; system: string; messages: Array<{ role: 'user' | 'assistant'; content: string }>; provider?: LLMProvider }) => {
+  async (params: {
+    model: string;
+    max_tokens: number;
+    system: string;
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+    provider?: LLMProvider;
+  }) => {
     return getStream(
       {
         model: params.model,
@@ -113,7 +123,10 @@ async function _generatePRD(
     try {
       prdData = JSON.parse(jsonText);
     } catch (e) {
-      log.error({ error: String(e), jsonText: jsonText.substring(0, 200) }, 'Failed to parse PRD JSON');
+      log.error(
+        { error: String(e), jsonText: jsonText.substring(0, 200) },
+        'Failed to parse PRD JSON'
+      );
       throw new Error('Failed to parse PRD from Claude response');
     }
 
@@ -179,13 +192,9 @@ export async function generatePRD(
       refinements: request.refinements,
     });
 
-    const prd = await withCache(
-      'prd',
-      cacheKey,
-      async () => {
-        return await _generatePRD(request, architecture, conversationHistory);
-      }
-    );
+    const prd = await withCache('prd', cacheKey, async () => {
+      return await _generatePRD(request, architecture, conversationHistory);
+    });
 
     return {
       id: prd.id,
@@ -328,7 +337,9 @@ export async function suggestComponentsFromArchitecture(
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
       system: COMPONENTS_PROMPT,
-      messages: [{ role: 'user', content: `Architecture metadata:\n${meta}\n\nSuggest major components.` }],
+      messages: [
+        { role: 'user', content: `Architecture metadata:\n${meta}\n\nSuggest major components.` },
+      ],
     });
     if (result.error) throw new Error(result.error);
     let raw = result.text.trim();

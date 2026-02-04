@@ -12,6 +12,7 @@ import { runIndexer, type DocType } from '../src/services/ragService.js';
 dotenv.config({ path: resolve(process.cwd(), '.env') });
 dotenv.config({ path: resolve(process.cwd(), 'backend/.env') });
 
+const GRUMP_EXT = '.grump';
 const DOC_EXTS = new Set(['.md', '.mdx', '.mdoc']);
 const CODE_EXTS = new Set([
   '.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs', '.cjs', '.svelte', '.vue',
@@ -57,7 +58,7 @@ async function main(): Promise<void> {
   const repoRoot = resolve(base, '..');
 
   const files: { path: string; type: DocType }[] = [];
-  const docDirs = ['docs', 'docs-site'];
+  const docDirs = ['docs'];
   const codeDirs = ['backend/src', 'frontend/src', 'packages'];
 
   for (const d of docDirs) {
@@ -91,8 +92,15 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  console.log(`Indexing ${docs.length} documents...`);
-  const { chunks } = await runIndexer(docs);
+  const namespace = process.env.RAG_NAMESPACE ?? (() => {
+    const idx = process.argv.indexOf('--namespace');
+    if (idx >= 0 && process.argv[idx + 1]) return process.argv[idx + 1];
+    const eq = process.argv.find((a) => a.startsWith('--namespace='));
+    return eq ? eq.slice('--namespace='.length) : undefined;
+  })();
+
+  console.log(`Indexing ${docs.length} documents...${namespace ? ` (namespace: ${namespace})` : ''}`);
+  const { chunks } = await runIndexer(docs, namespace ? { namespace } : undefined);
   console.log(`Indexed ${chunks} chunks.`);
 }
 

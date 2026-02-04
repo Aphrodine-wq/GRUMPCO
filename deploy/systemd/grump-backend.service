@@ -1,0 +1,22 @@
+[Unit]
+Description=G-Rump Backend
+After=network.target redis.service
+
+[Service]
+Type=simple
+User=grump
+WorkingDirectory=/opt/grump/backend
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=grump-backend
+
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

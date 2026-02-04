@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import express, { Request, Response, Router } from 'express';
+import express, { type Request, type Response, type Router } from 'express';
 import { generateDiagram, generateDiagramStream } from '../services/claudeService.js';
 import { generateProjectZip } from '../services/codeGeneratorService.js';
 import { getTieredCache } from '../services/tieredCache.js';
@@ -7,7 +7,13 @@ import { getRequestLogger } from '../middleware/logger.js';
 import { validateDiagramRequest, handleDiagramValidationErrors } from '../middleware/validator.js';
 import { activeSseConnections } from '../middleware/metrics.js';
 import { sendServerError } from '../utils/errorResponse.js';
-import type { ConversationMessage, RefinementContext, DiagramType, TechStack, ClarificationResponse } from '../types/index.js';
+import type {
+  ConversationMessage,
+  RefinementContext,
+  DiagramType,
+  TechStack,
+  ClarificationResponse,
+} from '../types/index.js';
 import type { UserPreferences } from '../prompts/index.js';
 
 const router: Router = express.Router();
@@ -243,13 +249,14 @@ router.post(
   handleDiagramValidationErrors,
   async (req: DiagramRequestBody, res: Response) => {
     const log = getRequestLogger();
-    const { message, preferences, conversationHistory, refinementContext, clarificationAnswers } = req.body;
+    const { message, preferences, conversationHistory, refinementContext, clarificationAnswers } =
+      req.body;
 
     // Format message with clarification answers if present
     let finalMessage = message;
     if (clarificationAnswers?.answers?.length) {
       const formattedAnswers = clarificationAnswers.answers
-        .map(a => `- ${a.questionId}: ${a.selectedOptionIds.join(', ')}`)
+        .map((a) => `- ${a.questionId}: ${a.selectedOptionIds.join(', ')}`)
         .join('\n');
       finalMessage = `Based on my clarifying questions, here are the user's answers:\n${formattedAnswers}\n\nOriginal request: ${message}\n\nNow generate the diagram based on these preferences. Do not ask any more questions.`;
       log.info({ answers: clarificationAnswers.answers }, 'Processing clarification answers');

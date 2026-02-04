@@ -3,7 +3,14 @@
  * Structured planning with approval workflow and multi-phase execution
  */
 
-export type PlanStatus = 'draft' | 'pending_approval' | 'approved' | 'executing' | 'completed' | 'rejected' | 'cancelled';
+export type PlanStatus =
+  | 'draft'
+  | 'pending_approval'
+  | 'approved'
+  | 'executing'
+  | 'completed'
+  | 'rejected'
+  | 'cancelled';
 
 export type PlanPhase = 'exploration' | 'preparation' | 'implementation' | 'validation';
 
@@ -69,6 +76,8 @@ export interface PlanGenerationRequest {
   includePhases?: boolean;
   /** Optional head + mode prompt prepended for SHIP/chat consistency */
   systemPromptPrefix?: string;
+  /** Optional namespace for RAG context (workspace/project id) */
+  namespace?: string;
 }
 
 export interface PlanGenerationResponse {

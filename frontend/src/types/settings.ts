@@ -10,9 +10,21 @@ export interface UserSettings {
 
 export type ModelPreset = 'fast' | 'quality' | 'balanced';
 
+export interface CustomModelConfig {
+  id: string;
+  modelId: string;
+  apiEndpoint: string;
+  apiKey?: string;
+  contextLength?: number;
+}
+
 export interface ModelsSettings {
   defaultProvider?: 'nim' | 'zhipu' | 'copilot' | 'openrouter';
   defaultModelId?: string;
+  /** Embedding model ID (e.g. BAAI/bge-small-en-v1.5, nvidia/nv-embed-v2) */
+  embeddingModelId?: string;
+  /** Custom / fine-tuned models (user-defined) */
+  customModels?: CustomModelConfig[];
   /** Quality vs speed: fast = NIM/Kimi, quality = Claude, balanced = router default */
   modelPreset?: ModelPreset;
 }

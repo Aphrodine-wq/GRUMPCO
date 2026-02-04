@@ -3,7 +3,7 @@
  * Comprehensive cost tracking and analytics for LLM API usage
  */
 
-import { getDatabase, DatabaseService } from '../db/database.js';
+import { getDatabase, type DatabaseService } from '../db/database.js';
 import logger from '../middleware/logger.js';
 import { MODEL_REGISTRY } from '@grump/ai-core';
 import { getAlertingService } from './alerting.js';
@@ -106,13 +106,9 @@ export class CostAnalytics {
   /**
    * Calculate cost for a request
    */
-  public calculateCost(
-    model: string,
-    inputTokens: number,
-    outputTokens: number
-  ): number {
+  public calculateCost(model: string, inputTokens: number, outputTokens: number): number {
     const modelConfig = MODEL_REGISTRY.find((m) => m.id === model);
-    
+
     if (!modelConfig) {
       logger.warn({ model }, 'Model not found in registry, using default cost');
       return 0.001; // Default small cost
@@ -152,8 +148,14 @@ export class CostAnalytics {
       const totalRequests = records.length;
       const cacheHits = records.filter((r: CostRecord) => r.cacheHit).length;
       const cacheHitRate = totalRequests > 0 ? cacheHits / totalRequests : 0;
-      const cacheSavings = records.reduce((sum: number, r: CostRecord) => sum + r.cacheSavingsUsd, 0);
-      const modelRoutingSavings = records.reduce((sum: number, r: CostRecord) => sum + r.modelRoutingSavingsUsd, 0);
+      const cacheSavings = records.reduce(
+        (sum: number, r: CostRecord) => sum + r.cacheSavingsUsd,
+        0
+      );
+      const modelRoutingSavings = records.reduce(
+        (sum: number, r: CostRecord) => sum + r.modelRoutingSavingsUsd,
+        0
+      );
 
       // Cost by model
       const costByModel: Record<string, number> = {};
@@ -224,7 +226,7 @@ export class CostAnalytics {
     alertTriggered: boolean;
   }> {
     const budget = this.budgets.get(userId);
-    
+
     if (!budget) {
       return {
         withinBudget: true,
@@ -252,7 +254,9 @@ export class CostAnalytics {
 
     // Check alert threshold
     const dailyPercent = budget.dailyLimitUsd ? (dailyUsed / budget.dailyLimitUsd) * 100 : 0;
-    const monthlyPercent = budget.monthlyLimitUsd ? (monthlyUsed / budget.monthlyLimitUsd) * 100 : 0;
+    const monthlyPercent = budget.monthlyLimitUsd
+      ? (monthlyUsed / budget.monthlyLimitUsd) * 100
+      : 0;
     const alertTriggered =
       dailyPercent >= budget.alertThresholdPercent ||
       monthlyPercent >= budget.alertThresholdPercent;
@@ -285,7 +289,7 @@ export class CostAnalytics {
         },
         'Budget alert triggered'
       );
-      
+
       // Send warning alert via alerting service
       await alertService.sendAlert({
         severity: 'warning',
@@ -323,7 +327,7 @@ export class CostAnalytics {
         },
         'Budget exceeded'
       );
-      
+
       // Send critical alert via alerting service
       await alertService.sendAlert({
         severity: 'critical',
@@ -393,7 +397,7 @@ export class CostAnalytics {
     const highVolumeOps = Object.entries(summary.costByOperation)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3);
-    
+
     if (highVolumeOps.length > 0) {
       recommendations.push(
         `Top cost operations: ${highVolumeOps.map(([op, cost]) => `${op} ($${cost.toFixed(2)})`).join(', ')}. Focus optimization efforts here.`
@@ -454,7 +458,7 @@ export async function initializeCostTracking(): Promise<void> {
   const db = getDatabase();
   const dbService = db as DatabaseService;
   const rawDb = dbService.getDb();
-  
+
   rawDb.exec(`
     CREATE TABLE IF NOT EXISTS cost_records (
       id TEXT PRIMARY KEY,

@@ -35,11 +35,14 @@ export async function designToCode(input: DesignToCodeInput): Promise<DesignToCo
   const apiKey = getApiKey();
   if (!apiKey) throw new Error('NVIDIA_NIM_API_KEY is not set');
 
-  const imageUrl = input.figmaUrl
-    ?? (input.image == null
+  const imageUrl =
+    input.figmaUrl ??
+    (input.image == null
       ? null
       : typeof input.image === 'string'
-        ? (input.image.startsWith('data:') ? input.image : `data:image/png;base64,${input.image}`)
+        ? input.image.startsWith('data:')
+          ? input.image
+          : `data:image/png;base64,${input.image}`
         : `data:image/png;base64,${(input.image as Buffer).toString('base64')}`);
   if (!imageUrl) throw new Error('Either image or figmaUrl is required');
 
@@ -82,6 +85,9 @@ Framework: ${input.targetFramework}. Follow best practices for that framework.`;
   const raw = data.choices?.[0]?.message?.content?.trim() ?? '';
   const codeMatch = raw.match(/```(?:[\w]*)\n?([\s\S]*?)```/);
   const code = codeMatch ? codeMatch[1].trim() : raw;
-  const explanation = codeMatch && raw.slice(0, raw.indexOf('```')).trim() ? raw.slice(0, raw.indexOf('```')).trim() : undefined;
+  const explanation =
+    codeMatch && raw.slice(0, raw.indexOf('```')).trim()
+      ? raw.slice(0, raw.indexOf('```')).trim()
+      : undefined;
   return { code, explanation };
 }

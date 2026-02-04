@@ -6,7 +6,6 @@
 import { cpus, freemem, totalmem } from 'os';
 import { performance } from 'perf_hooks';
 import logger from '../middleware/logger.js';
-import { updateWorkerPoolMetrics } from '../middleware/metrics.js';
 
 export interface PerformanceSnapshot {
   timestamp: number;
@@ -154,9 +153,7 @@ export class PerformanceMonitor {
   public isHighLoad(): boolean {
     const snapshot = this.getSnapshot();
     return (
-      snapshot.cpu.usage > 80 ||
-      snapshot.memory.usagePercent > 85 ||
-      snapshot.eventLoop.lag > 100
+      snapshot.cpu.usage > 80 || snapshot.memory.usagePercent > 85 || snapshot.eventLoop.lag > 100
     );
   }
 

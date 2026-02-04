@@ -109,7 +109,14 @@
     <div class="header-left">
       {#if onBack}
         <Button variant="ghost" size="sm" onclick={onBack}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
@@ -122,7 +129,10 @@
 
   <div class="swarm-container">
     <Card title="Prompt" padding="md">
-      <p class="section-desc">Describe what you want. Kimi will decompose it into subtasks and run specialist agents (arch, frontend, backend, test, docs, etc.) in parallel.</p>
+      <p class="section-desc">
+        Describe what you want. Kimi will decompose it into subtasks and run specialist agents
+        (arch, frontend, backend, test, docs, etc.) in parallel.
+      </p>
       <textarea
         class="prompt-input"
         bind:value={prompt}
@@ -138,6 +148,16 @@
             Run swarm
           {/if}
         </Button>
+        {#if (summary !== null || error) && !loading}
+          <Button
+            variant="secondary"
+            size="md"
+            onclick={runSwarm}
+            title="Run again with same prompt"
+          >
+            Run again
+          </Button>
+        {/if}
       </div>
     </Card>
 
@@ -145,6 +165,10 @@
       <div class="result-card error">
         <p class="result-label">Error</p>
         <p class="result-text">{error}</p>
+        <p class="error-hint">
+          Check your prompt and try again. Ensure the backend is running and API keys are
+          configured.
+        </p>
       </div>
     {/if}
 
@@ -152,7 +176,11 @@
       <Card title="Tasks" padding="md">
         <ul class="task-list">
           {#each tasks as t}
-            <li class="task-item" class:done={agentStatus[t.agentId] === 'done'} class:running={agentStatus[t.agentId] === 'running'}>
+            <li
+              class="task-item"
+              class:done={agentStatus[t.agentId] === 'done'}
+              class:running={agentStatus[t.agentId] === 'running'}
+            >
               <span class="agent-id">{t.agentId}</span>
               <span class="task-desc">{t.task}</span>
               {#if agentStatus[t.agentId] === 'running'}
@@ -253,6 +281,12 @@
     color: #71717a;
     margin: 0 0 8px;
     text-transform: uppercase;
+  }
+
+  .error-hint {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 12px;
   }
 
   .result-text {

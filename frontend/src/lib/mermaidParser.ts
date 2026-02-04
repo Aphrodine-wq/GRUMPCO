@@ -18,24 +18,22 @@ export interface NodeMap {
  */
 export function parseMermaidNodes(code: string): NodeMap {
   const nodes: NodeMap = {};
-  
+
   if (!code || !code.trim()) {
     return nodes;
   }
 
   // Remove diagram type declaration
-  const content = code
-    .replace(/^(flowchart|graph)\s+(?:TD|TB|BT|LR|RL|[\s\S]*?)\n/i, '')
-    .trim();
+  const content = code.replace(/^(flowchart|graph)\s+(?:TD|TB|BT|LR|RL|[\s\S]*?)\n/i, '').trim();
 
   // Pattern 1: Node definitions with labels: A[Label] or A("Label") or A{Label}
   const nodeDefPattern = /(\w+)(?:\[([^\]]+)\]|\(([^)]+)\)|\{([^}]+)\})?/g;
   let match;
-  
+
   while ((match = nodeDefPattern.exec(content)) !== null) {
     const nodeId = match[1];
     const label = match[2] || match[3] || match[4] || nodeId;
-    
+
     if (!nodes[nodeId]) {
       nodes[nodeId] = {
         id: nodeId,
@@ -50,11 +48,12 @@ export function parseMermaidNodes(code: string): NodeMap {
   // Pattern 2: C4 diagram syntax
   // C4Context, C4Container, C4Component, etc.
   if (/C4/i.test(code)) {
-    const c4Pattern = /(?:C4Context|C4Container|C4Component|C4Deployment|C4Dynamic)\s*\(\s*(\w+)\s*,\s*"([^"]+)"[^)]*\)/gi;
+    const c4Pattern =
+      /(?:C4Context|C4Container|C4Component|C4Deployment|C4Dynamic)\s*\(\s*(\w+)\s*,\s*"([^"]+)"[^)]*\)/gi;
     while ((match = c4Pattern.exec(code)) !== null) {
       const nodeId = match[1];
       const label = match[2];
-      
+
       if (!nodes[nodeId]) {
         nodes[nodeId] = {
           id: nodeId,
@@ -70,14 +69,14 @@ export function parseMermaidNodes(code: string): NodeMap {
   while ((match = edgePattern.exec(content)) !== null) {
     const fromId = match[1];
     const toId = match[2];
-    
+
     if (!nodes[fromId]) {
       nodes[fromId] = {
         id: fromId,
         label: fromId,
       };
     }
-    
+
     if (!nodes[toId]) {
       nodes[toId] = {
         id: toId,
@@ -102,9 +101,7 @@ export function findComponentByNodeId(
   }
 
   // Exact ID match (case-insensitive)
-  const exactMatch = components.find(
-    (c) => c.id.toLowerCase() === nodeId.toLowerCase()
-  );
+  const exactMatch = components.find((c) => c.id.toLowerCase() === nodeId.toLowerCase());
   if (exactMatch) {
     return exactMatch;
   }
@@ -114,9 +111,7 @@ export function findComponentByNodeId(
     const nameLower = c.name.toLowerCase();
     const labelLower = nodeLabel.toLowerCase();
     return (
-      nameLower === labelLower ||
-      nameLower.includes(labelLower) ||
-      labelLower.includes(nameLower)
+      nameLower === labelLower || nameLower.includes(labelLower) || labelLower.includes(nameLower)
     );
   });
   if (labelMatch) {

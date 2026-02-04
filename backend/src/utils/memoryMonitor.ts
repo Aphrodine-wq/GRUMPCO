@@ -84,14 +84,17 @@ export class MemoryMonitor {
     const growth = ((last.heapUsed - first.heapUsed) / first.heapUsed) * 100;
 
     if (growth > this.config.growthThresholdPercent) {
-      logger.warn({
-        growth: `${growth.toFixed(2)}%`,
-        snapshots: recent.length,
-        duration: `${((last.timestamp - first.timestamp) / 1000).toFixed(0)}s`,
-      }, 'Potential memory leak detected');
+      logger.warn(
+        {
+          growth: `${growth.toFixed(2)}%`,
+          snapshots: recent.length,
+          duration: `${((last.timestamp - first.timestamp) / 1000).toFixed(0)}s`,
+        },
+        'Potential memory leak detected'
+      );
 
       // Trigger alerts
-      this.alertCallbacks.forEach(cb => cb({ growth, snapshots: recent }));
+      this.alertCallbacks.forEach((cb) => cb({ growth, snapshots: recent }));
     }
   }
 
@@ -112,7 +115,7 @@ export class MemoryMonitor {
     if (this.snapshots.length >= 2) {
       const prev = this.snapshots[this.snapshots.length - 2];
       growthRate = ((current.heapUsed - prev.heapUsed) / prev.heapUsed) * 100;
-      
+
       if (growthRate > 5) trend = 'growing';
       else if (growthRate < -5) trend = 'shrinking';
     }
@@ -121,9 +124,9 @@ export class MemoryMonitor {
   }
 
   forceGC(): void {
-    if (global.gc) {
+    if (globalThis.gc) {
       logger.info('Forcing garbage collection');
-      global.gc();
+      globalThis.gc();
       this.takeSnapshot();
     } else {
       logger.warn('Garbage collection not exposed. Run with --expose-gc flag');
@@ -143,7 +146,7 @@ export class StreamCleaner {
 
   track<T extends { destroy: () => void }>(stream: T): T {
     this.activeStreams.add(stream);
-    
+
     stream.destroy = new Proxy(stream.destroy, {
       apply: (target, thisArg, args) => {
         this.activeStreams.delete(stream);
@@ -181,7 +184,7 @@ export class ResourceTracker {
   track(id: string, cleanup: () => void): void {
     // Clean up existing resource with same id
     this.release(id);
-    
+
     this.resources.set(id, {
       cleanup,
       createdAt: Date.now(),

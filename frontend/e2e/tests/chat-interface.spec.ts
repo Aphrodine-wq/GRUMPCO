@@ -151,14 +151,14 @@ test.describe('Chat Interface', () => {
   });
 });
 
-test.describe('G-Rump Blob', () => {
+test.describe('Frowny Face', () => {
   test('should show G-Rump avatar', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle').catch(() => {});
     
-    const blob = page.locator('[class*="grump-blob"], [class*="blob"], svg[class*="grump"]').first();
-    if (await blob.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await expect(blob).toBeVisible();
+    const frownyFace = page.locator('[class*="frowny-face"], [class*="frowny"], svg.frowny-svg').first();
+    if (await frownyFace.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await expect(frownyFace).toBeVisible();
     }
   });
 });

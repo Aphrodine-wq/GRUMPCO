@@ -1,6 +1,6 @@
 /**
  * Enhanced Model Router with Kimi K2.5 Optimizations
- * 
+ *
  * This router extends the base model router with intelligent
  * Kimi K2.5 routing based on content analysis, cost optimization,
  * and context window utilization.
@@ -14,12 +14,9 @@ import {
 } from '../config/modelRegistry.js';
 import {
   shouldRouteToKimi,
-  getKimiRoutingDecision,
-  optimizePromptForKimi,
   calculateKimiContextRetention,
-  estimateKimiSavings,
+  estimateKimiSavings as _estimateKimiSavings,
   KIMI_K25_CONFIG,
-  type KimiRoutingInput,
 } from './kimiOptimizer.js';
 import logger from '../middleware/logger.js';
 
@@ -132,17 +129,17 @@ function calculateComplexity(context: EnhancedRouterContext): number {
   }
 
   const finalScore = Math.min(score, 100);
-  
+
   logger.debug(
-    { 
-      score: finalScore, 
+    {
+      score: finalScore,
       factors,
       context: {
         chars,
         msgCount,
         mode: context.mode,
         tools: context.toolsRequested,
-      }
+      },
     },
     'Task complexity calculated'
   );
@@ -156,11 +153,15 @@ function calculateComplexity(context: EnhancedRouterContext): number {
 export function selectModelEnhanced(context: EnhancedRouterContext): RoutingDecision {
   const complexity = calculateComplexity(context);
   const reasoning: string[] = [];
-  
+
   // Default to Claude for high complexity or tools
-  let selectedModel = getModelById('claude-sonnet-4-20250514')!;
+  const claudeModel = getModelById('claude-sonnet-4-20250514');
+  if (!claudeModel) {
+    throw new Error('Claude model not found in registry');
+  }
+  let selectedModel = claudeModel;
   let confidence = 0.7;
-  
+
   // Check if Kimi is appropriate
   const kimiDecision = shouldRouteToKimi({
     content: 'x'.repeat(context.messageChars || 1000),
@@ -176,7 +177,7 @@ export function selectModelEnhanced(context: EnhancedRouterContext): RoutingDeci
     if (kimiModel) {
       // Check capabilities match
       const canUseKimi = !context.toolsRequested || complexity < 60;
-      
+
       if (canUseKimi) {
         selectedModel = kimiModel;
         confidence = kimiDecision.confidence;
@@ -200,22 +201,26 @@ export function selectModelEnhanced(context: EnhancedRouterContext): RoutingDeci
   }
 
   // Calculate cost estimate
-  const inputTokens = context.estimatedInputTokens || Math.ceil((context.messageChars || 1000) * 0.25);
+  const inputTokens =
+    context.estimatedInputTokens || Math.ceil((context.messageChars || 1000) * 0.25);
   const outputTokens = context.estimatedOutputTokens || Math.ceil(inputTokens * 0.5);
-  
+
   const costEstimate = estimateCost(selectedModel, inputTokens, outputTokens);
   let vsClaudeSavings: number | undefined;
   let savingsPercent: number | undefined;
-  
+
   if (selectedModel.id.includes('kimi')) {
-    const claudeModel = getModelById('claude-sonnet-4-20250514')!;
-    const claudeCost = estimateCost(claudeModel, inputTokens, outputTokens);
+    const claudeModelForCost = getModelById('claude-sonnet-4-20250514');
+    if (!claudeModelForCost) {
+      throw new Error('Claude model not found in registry');
+    }
+    const claudeCost = estimateCost(claudeModelForCost, inputTokens, outputTokens);
     vsClaudeSavings = claudeCost.usd - costEstimate.usd;
     savingsPercent = (vsClaudeSavings / claudeCost.usd) * 100;
   }
 
   // Calculate optimizations
-  const contextRetention = context.contextTokenCount 
+  const contextRetention = context.contextTokenCount
     ? calculateKimiContextRetention(context.contextTokenCount)
     : undefined;
 
@@ -232,8 +237,8 @@ export function selectModelEnhanced(context: EnhancedRouterContext): RoutingDeci
     optimizations: {
       contextRetention: contextRetention?.retainTokens,
       promptOptimized: selectedModel.id.includes('kimi'),
-      temperature: selectedModel.id.includes('kimi') 
-        ? KIMI_K25_CONFIG.temperature.default 
+      temperature: selectedModel.id.includes('kimi')
+        ? KIMI_K25_CONFIG.temperature.default
         : undefined,
     },
   };
@@ -250,7 +255,7 @@ function estimateCost(
   const inputCost = (inputTokens / 1_000_000) * (model.costPerMillionInput || 0);
   const outputCost = (outputTokens / 1_000_000) * (model.costPerMillionOutput || 0);
   const total = inputCost + outputCost;
-  
+
   return {
     usd: total,
     breakdown: `${model.id}: ${inputTokens} input + ${outputTokens} output tokens`,
@@ -265,15 +270,15 @@ export function getBestModelForCapabilityEnhanced(
   context: EnhancedRouterContext
 ): RoutingDecision {
   // Filter models by capability
-  const candidates = MODEL_REGISTRY.filter(m => m.capabilities.includes(capability));
-  
+  const candidates = MODEL_REGISTRY.filter((m) => m.capabilities.includes(capability));
+
   if (candidates.length === 0) {
     throw new Error(`No models found with capability: ${capability}`);
   }
 
   // If Kimi supports this capability and it's a good fit, prefer it
-  const kimiModel = candidates.find(m => m.id === KIMI_K25_CONFIG.modelId);
-  
+  const kimiModel = candidates.find((m) => m.id === KIMI_K25_CONFIG.modelId);
+
   if (kimiModel) {
     const kimiDecision = shouldRouteToKimi({
       content: 'x'.repeat(context.messageChars || 1000),
@@ -284,12 +289,16 @@ export function getBestModelForCapabilityEnhanced(
     });
 
     if (kimiDecision.useKimi) {
-      const inputTokens = context.estimatedInputTokens || Math.ceil((context.messageChars || 1000) * 0.25);
+      const inputTokens =
+        context.estimatedInputTokens || Math.ceil((context.messageChars || 1000) * 0.25);
       const outputTokens = context.estimatedOutputTokens || Math.ceil(inputTokens * 0.5);
       const costEstimate = estimateCost(kimiModel, inputTokens, outputTokens);
-      const claudeModel = getModelById('claude-sonnet-4-20250514')!;
-      const claudeCost = estimateCost(claudeModel, inputTokens, outputTokens);
-      
+      const claudeModelForCost = getModelById('claude-sonnet-4-20250514');
+      if (!claudeModelForCost) {
+        throw new Error('Claude model not found in registry');
+      }
+      const claudeCost = estimateCost(claudeModelForCost, inputTokens, outputTokens);
+
       return {
         modelId: kimiModel.id,
         provider: kimiModel.provider,
@@ -316,21 +325,22 @@ export function getBestModelForCapabilityEnhanced(
  * Batch routing for multiple requests
  * Optimizes cost across the batch
  */
-export function batchRoute(
-  requests: EnhancedRouterContext[]
-): {
+export function batchRoute(requests: EnhancedRouterContext[]): {
   decisions: RoutingDecision[];
   totalCost: number;
   totalSavings: number;
   kimiUsagePercent: number;
 } {
-  const decisions = requests.map(ctx => selectModelEnhanced(ctx));
-  
+  const decisions = requests.map((ctx) => selectModelEnhanced(ctx));
+
   const totalCost = decisions.reduce((sum, d) => sum + d.estimatedCost.usd, 0);
-  const totalSavings = decisions.reduce((sum, d) => sum + (d.estimatedCost.vsClaudeSavings || 0), 0);
-  const kimiUsage = decisions.filter(d => d.modelId.includes('kimi')).length;
+  const totalSavings = decisions.reduce(
+    (sum, d) => sum + (d.estimatedCost.vsClaudeSavings || 0),
+    0
+  );
+  const kimiUsage = decisions.filter((d) => d.modelId.includes('kimi')).length;
   const kimiUsagePercent = (kimiUsage / decisions.length) * 100;
-  
+
   logger.info(
     {
       totalRequests: requests.length,
@@ -340,7 +350,7 @@ export function batchRoute(
     },
     'Batch routing completed'
   );
-  
+
   return {
     decisions,
     totalCost,

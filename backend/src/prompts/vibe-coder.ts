@@ -169,7 +169,9 @@ For complex enterprise systems, use C4 diagrams:
 ${C4_SYNTAX_GUIDE}
 
 ### C4 Levels
-${Object.entries(C4_LEVEL_DESCRIPTIONS).map(([level, desc]) => `- **${level}**: ${desc}`).join('\n')}
+${Object.entries(C4_LEVEL_DESCRIPTIONS)
+  .map(([level, desc]) => `- **${level}**: ${desc}`)
+  .join('\n')}
 
 ## Current Session
 
@@ -187,15 +189,15 @@ export function getVibeCoderPrompt(preferences?: VibeCoderPreferences): string {
   // Add project type context
   if (preferences?.projectType) {
     const projectDescriptions: Record<string, string> = {
-      'web': `\n\n## Active Project Type: Web Application
+      web: `\n\n## Active Project Type: Web Application
 Focus on responsive UI, API integration, and browser-based features.`,
-      'mobile': `\n\n## Active Project Type: Mobile Application
+      mobile: `\n\n## Active Project Type: Mobile Application
 Focus on mobile-first design, native features, and offline capabilities.`,
-      'api': `\n\n## Active Project Type: API Service
+      api: `\n\n## Active Project Type: API Service
 Focus on RESTful/GraphQL design, documentation, and performance.`,
-      'fullstack': `\n\n## Active Project Type: Full-Stack Application
+      fullstack: `\n\n## Active Project Type: Full-Stack Application
 Balance frontend UX with robust backend architecture.`,
-      'general': ''
+      general: '',
     };
     prompt += projectDescriptions[preferences.projectType] || '';
   }
@@ -208,12 +210,12 @@ Balance frontend UX with robust backend architecture.`,
   // Add complexity context
   if (preferences?.complexity) {
     const complexityDescriptions: Record<string, string> = {
-      'mvp': `\n\n## Complexity Level: MVP
+      mvp: `\n\n## Complexity Level: MVP
 Focus on core features only. Skip nice-to-haves. Prioritize speed to launch.`,
-      'standard': `\n\n## Complexity Level: Standard
+      standard: `\n\n## Complexity Level: Standard
 Balance features with maintainability. Include proper error handling and testing.`,
-      'enterprise': `\n\n## Complexity Level: Enterprise
-Include comprehensive error handling, logging, monitoring, security hardening, and scalability considerations.`
+      enterprise: `\n\n## Complexity Level: Enterprise
+Include comprehensive error handling, logging, monitoring, security hardening, and scalability considerations.`,
     };
     prompt += complexityDescriptions[preferences.complexity] || '';
   }
@@ -221,12 +223,12 @@ Include comprehensive error handling, logging, monitoring, security hardening, a
   // Add current phase context
   if (preferences?.currentPhase) {
     const phaseInstructions: Record<string, string> = {
-      'intent': `\n\n## Current Phase: Intent Gathering
+      intent: `\n\n## Current Phase: Intent Gathering
 Focus on understanding what the user wants to build. Ask clarifying questions.`,
-      'architecture': `\n\n## Current Phase: Architecture Design
+      architecture: `\n\n## Current Phase: Architecture Design
 Create a comprehensive Mermaid diagram showing the system architecture.`,
-      'coding': `\n\n## Current Phase: Coding
-Generate complete, working code for the requested section.`
+      coding: `\n\n## Current Phase: Coding
+Generate complete, working code for the requested section.`,
     };
     prompt += phaseInstructions[preferences.currentPhase] || '';
   }

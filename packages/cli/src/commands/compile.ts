@@ -44,7 +44,7 @@ interface CompileOptions {
  */
 export async function execute(entryPoints: string[], options: CompileOptions): Promise<void> {
   // Load compiler dynamically
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import type (intentional)
   const { createCompiler, loadConfig } = await import('@grump/compiler-enhanced' as any) as {
     createCompiler: (config: CompilerConfig) => { 
       compile: (entries?: string[]) => Promise<{ success: boolean; errors?: string[]; warnings?: string[]; files?: string[] }>; 

@@ -17,7 +17,8 @@ export interface LintTool {
 
 export const lintFileTool: LintTool = {
   name: 'lint_file',
-  description: 'Lint a file to identify and fix issues. Analyzes code and provides actionable feedback.',
+  description:
+    'Lint a file to identify and fix issues. Analyzes code and provides actionable feedback.',
   input_schema: {
     type: 'object',
     properties: {
@@ -35,9 +36,7 @@ export const lintFileTool: LintTool = {
   },
 };
 
-export const definitions: LintTool[] = [
-  lintFileTool,
-];
+export const definitions: LintTool[] = [lintFileTool];
 
 // Tool handlers will be implemented in the skill's index.ts
 export const handlers: Record<

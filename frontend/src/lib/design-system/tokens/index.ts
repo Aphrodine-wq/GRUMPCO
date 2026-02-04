@@ -12,7 +12,7 @@ export {
   animationPresets,
   type Animations,
   type Keyframes,
-  type AnimationPresets
+  type AnimationPresets,
 } from './animations';
 
 // CSS Custom Properties generator

@@ -25,8 +25,6 @@
     type SupervisedSwarmStats,
     type SupervisedSwarmTopology,
     type SupervisedTask,
-    type AgentSubtask,
-    type SupervisorReview
   } from '../lib/advancedAiApi';
 
   // Props
@@ -36,7 +34,9 @@
   let { onBack }: Props = $props();
 
   // State
-  let activeTab = $state<'overview' | 'holographic' | 'swarm' | 'supervised' | 'preloader' | 'distill'>('overview');
+  let activeTab = $state<
+    'overview' | 'holographic' | 'swarm' | 'supervised' | 'preloader' | 'distill'
+  >('overview');
   let loading = $state(true);
   let error = $state<string | null>(null);
 
@@ -130,19 +130,19 @@
   // Submit task to swarm
   async function handleSubmitTask() {
     if (!swarmQuery.trim()) return;
-    
+
     try {
       swarmTaskResult = null;
       swarmTaskStatus = 'processing';
       const result = await submitSwarmTask(swarmQuery, undefined, 'interactive');
       swarmTaskId = result.taskId;
-      
+
       // Poll for completion
       pollInterval = setInterval(async () => {
         if (!swarmTaskId) return;
         const status = await getSwarmTaskStatus(swarmTaskId, 'interactive');
         swarmTaskStatus = status.task.status;
-        
+
         if (status.task.status === 'completed' || status.task.status === 'failed') {
           swarmTaskResult = status.task.synthesizedResult || 'No result';
           if (pollInterval) {
@@ -171,20 +171,24 @@
   // Submit task to supervised swarm
   async function handleSubmitSupervisedTask() {
     if (!supervisedQuery.trim()) return;
-    
+
     try {
       supervisedTask = null;
       supervisedPolling = true;
-      const result = await submitSupervisedTask(supervisedQuery, undefined, 'supervised-interactive');
+      const result = await submitSupervisedTask(
+        supervisedQuery,
+        undefined,
+        'supervised-interactive'
+      );
       supervisedTask = result.task;
-      
+
       // Poll for completion
       supervisedPollInterval = setInterval(async () => {
         if (!supervisedTask?.id) return;
         try {
           const status = await getSupervisedTaskStatus(supervisedTask.id, 'supervised-interactive');
           supervisedTask = status.task;
-          
+
           if (status.task.status === 'completed' || status.task.status === 'failed') {
             supervisedPolling = false;
             if (supervisedPollInterval) {
@@ -205,21 +209,30 @@
   // Get status color for supervised task
   function getSubtaskStatusColor(status: string): string {
     switch (status) {
-      case 'approved': return '#10b981';
-      case 'rejected': return '#ef4444';
-      case 'submitted': return '#f59e0b';
-      case 'working': return '#3b82f6';
-      default: return '#6b7280';
+      case 'approved':
+        return '#10b981';
+      case 'rejected':
+        return '#ef4444';
+      case 'submitted':
+        return '#f59e0b';
+      case 'working':
+        return '#3b82f6';
+      default:
+        return '#6b7280';
     }
   }
 
   // Get decision color
   function getDecisionColor(decision: string): string {
     switch (decision) {
-      case 'approve': return '#10b981';
-      case 'reject': return '#ef4444';
-      case 'revise': return '#f59e0b';
-      default: return '#6b7280';
+      case 'approve':
+        return '#10b981';
+      case 'reject':
+        return '#ef4444';
+      case 'revise':
+        return '#f59e0b';
+      default:
+        return '#6b7280';
     }
   }
 
@@ -258,7 +271,7 @@
       synthesizer: '#8b5cf6',
       validator: '#ec4899',
       creative: '#06b6d4',
-      optimizer: '#84cc16'
+      optimizer: '#84cc16',
     };
     return colors[role] || '#6b7280';
   }
@@ -267,34 +280,46 @@
 <div class="advanced-ai-dashboard">
   <header class="dashboard-header">
     <button class="back-btn" onclick={onBack} aria-label="Go back">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M19 12H5M12 19l-7-7 7-7" />
       </svg>
       Back
     </button>
     <div class="header-content">
       <h1>Advanced AI Systems</h1>
-      <p class="subtitle">Holographic Memory | Swarm Intelligence | Predictive AI | User Distillation</p>
+      <p class="subtitle">
+        Holographic Memory | Swarm Intelligence | Predictive AI | User Distillation
+      </p>
     </div>
   </header>
 
   <nav class="tab-nav">
-    <button class:active={activeTab === 'overview'} onclick={() => activeTab = 'overview'}>
+    <button class:active={activeTab === 'overview'} onclick={() => (activeTab = 'overview')}>
       Overview
     </button>
-    <button class:active={activeTab === 'holographic'} onclick={() => activeTab = 'holographic'}>
+    <button class:active={activeTab === 'holographic'} onclick={() => (activeTab = 'holographic')}>
       Holographic Memory
     </button>
-    <button class:active={activeTab === 'swarm'} onclick={() => activeTab = 'swarm'}>
+    <button class:active={activeTab === 'swarm'} onclick={() => (activeTab = 'swarm')}>
       Swarm (Legacy)
     </button>
-    <button class:active={activeTab === 'supervised'} onclick={() => activeTab = 'supervised'}>
+    <button class:active={activeTab === 'supervised'} onclick={() => (activeTab = 'supervised')}>
       Kimi Supervised
     </button>
-    <button class:active={activeTab === 'preloader'} onclick={() => activeTab = 'preloader'}>
+    <button class:active={activeTab === 'preloader'} onclick={() => (activeTab = 'preloader')}>
       Predictive Preloader
     </button>
-    <button class:active={activeTab === 'distill'} onclick={() => activeTab = 'distill'}>
+    <button class:active={activeTab === 'distill'} onclick={() => (activeTab = 'distill')}>
       User Distillation
     </button>
   </nav>
@@ -302,7 +327,7 @@
   {#if error}
     <div class="error-banner">
       <span>{error}</span>
-      <button onclick={() => error = null}>Dismiss</button>
+      <button onclick={() => (error = null)}>Dismiss</button>
     </div>
   {/if}
 
@@ -326,7 +351,10 @@
               <span class="value">{holographicStats?.kvCaches.length || 0}</span>
             </div>
           </div>
-          <p class="description">Fixed-size vector memory using FFT-based holographic encoding. O(1) memory for unlimited key-value pairs.</p>
+          <p class="description">
+            Fixed-size vector memory using FFT-based holographic encoding. O(1) memory for unlimited
+            key-value pairs.
+          </p>
         </div>
 
         <div class="card">
@@ -341,7 +369,10 @@
               <span class="value">{swarmStats?.completedTasks || 0}</span>
             </div>
           </div>
-          <p class="description">Distributed micro-agents with gossip protocol and stigmergy for emergent problem-solving.</p>
+          <p class="description">
+            Distributed micro-agents with gossip protocol and stigmergy for emergent
+            problem-solving.
+          </p>
         </div>
 
         <div class="card">
@@ -356,7 +387,9 @@
               <span class="value">{preloaderStats?.cacheHits || 0}</span>
             </div>
           </div>
-          <p class="description">N-gram and Markov chain prediction to anticipate user queries and pre-warm context.</p>
+          <p class="description">
+            N-gram and Markov chain prediction to anticipate user queries and pre-warm context.
+          </p>
         </div>
 
         <div class="card">
@@ -371,18 +404,19 @@
               <span class="value">{distillationStats?.totalPreferences || 0}</span>
             </div>
           </div>
-          <p class="description">Extract and compress conversation patterns into personalized user models.</p>
+          <p class="description">
+            Extract and compress conversation patterns into personalized user models.
+          </p>
         </div>
       </div>
-
     {:else if activeTab === 'holographic'}
       <div class="section">
         <h2>Holographic Memory - HoloKV</h2>
         <p class="section-desc">
-          Traditional KV cache: O(sequence_length). HoloKV: O(1) fixed memory regardless of context length.
-          Uses FFT-based circular convolution for binding and correlation for retrieval.
+          Traditional KV cache: O(sequence_length). HoloKV: O(1) fixed memory regardless of context
+          length. Uses FFT-based circular convolution for binding and correlation for retrieval.
         </p>
-        
+
         {#if holographicStats}
           <div class="memory-list">
             <h3>Active Memories</h3>
@@ -412,20 +446,23 @@
                   <span class="stat">Layers: {cache.stats.numLayers}</span>
                   <span class="stat">Tokens: {cache.stats.tokenCount}</span>
                   <span class="stat">HoloKV Size: {formatBytes(cache.stats.totalMemoryBytes)}</span>
-                  <span class="stat">Traditional: {formatBytes(cache.stats.traditionalKVCacheBytes)}</span>
-                  <span class="stat highlight">Compression: {cache.stats.compressionRatio.toFixed(1)}x</span>
+                  <span class="stat"
+                    >Traditional: {formatBytes(cache.stats.traditionalKVCacheBytes)}</span
+                  >
+                  <span class="stat highlight"
+                    >Compression: {cache.stats.compressionRatio.toFixed(1)}x</span
+                  >
                 </div>
               {/each}
             {/if}
           </div>
         {/if}
       </div>
-
     {:else if activeTab === 'swarm'}
       <div class="section">
         <h2>Swarm Intelligence</h2>
         <p class="section-desc">
-          Distributed micro-agents communicate via gossip protocol. Pheromone trails (stigmergy) 
+          Distributed micro-agents communicate via gossip protocol. Pheromone trails (stigmergy)
           guide future agents. A meta-synthesizer aggregates swarm insights.
         </p>
 
@@ -468,19 +505,19 @@
         <div class="swarm-task">
           <h3>Submit Task to Swarm</h3>
           <div class="task-input">
-            <input 
-              type="text" 
-              bind:value={swarmQuery} 
+            <input
+              type="text"
+              bind:value={swarmQuery}
               placeholder="Enter a question or task for the swarm..."
             />
-            <button onclick={handleSubmitTask} disabled={!swarmQuery.trim()}>
-              Submit
-            </button>
+            <button onclick={handleSubmitTask} disabled={!swarmQuery.trim()}> Submit </button>
           </div>
-          
+
           {#if swarmTaskStatus}
             <div class="task-result">
-              <div class="status">Status: <span class="status-{swarmTaskStatus}">{swarmTaskStatus}</span></div>
+              <div class="status">
+                Status: <span class="status-{swarmTaskStatus}">{swarmTaskStatus}</span>
+              </div>
               {#if swarmTaskResult}
                 <div class="result">
                   <pre>{swarmTaskResult}</pre>
@@ -495,8 +532,8 @@
             <h3>Swarm Topology</h3>
             <div class="topology-grid">
               {#each swarmTopology.nodes as node}
-                <div 
-                  class="agent-node" 
+                <div
+                  class="agent-node"
                   class:active={node.status !== 'idle'}
                   style="border-color: {getRoleColor(node.role)}"
                   title="{node.role} - {node.status}"
@@ -509,13 +546,13 @@
           </div>
         {/if}
       </div>
-
     {:else if activeTab === 'supervised'}
       <div class="section">
         <h2>Kimi Supervised Swarm</h2>
         <p class="section-desc">
-          Hierarchical swarm where Kimi acts as the central supervisor. All agents report to Kimi, 
-          who reviews, approves, or rejects their work. No chaotic gossip - full oversight and control.
+          Hierarchical swarm where Kimi acts as the central supervisor. All agents report to Kimi,
+          who reviews, approves, or rejects their work. No chaotic gossip - full oversight and
+          control.
         </p>
 
         <div class="swarm-controls">
@@ -542,7 +579,9 @@
                 <span class="label">Rejected</span>
               </div>
               <div class="stat-card">
-                <span class="value">{((supervisedStats.reviewStats?.avgScore || 0) * 100).toFixed(0)}%</span>
+                <span class="value"
+                  >{((supervisedStats.reviewStats?.avgScore || 0) * 100).toFixed(0)}%</span
+                >
                 <span class="label">Avg Score</span>
               </div>
             </div>
@@ -555,19 +594,23 @@
             <h3>Kimi Supervised Topology</h3>
             <div class="hub-spoke-viz">
               <!-- Kimi in the center -->
-              <div class="kimi-supervisor" class:active={supervisedTopology.supervisor.status === 'active'}>
+              <div
+                class="kimi-supervisor"
+                class:active={supervisedTopology.supervisor.status === 'active'}
+              >
                 <div class="kimi-icon">K</div>
                 <span class="kimi-label">KIMI</span>
                 <span class="kimi-role">Supervisor</span>
               </div>
-              
+
               <!-- Agents around Kimi -->
               <div class="agents-ring">
                 {#each supervisedTopology.agents as agent, i}
-                  {@const angle = (i / supervisedTopology.agents.length) * 2 * Math.PI - Math.PI / 2}
+                  {@const angle =
+                    (i / supervisedTopology.agents.length) * 2 * Math.PI - Math.PI / 2}
                   {@const x = 50 + 35 * Math.cos(angle)}
                   {@const y = 50 + 35 * Math.sin(angle)}
-                  <div 
+                  <div
                     class="supervised-agent"
                     class:working={agent.status === 'working'}
                     class:approved={agent.status === 'approved'}
@@ -576,11 +619,14 @@
                     title="{agent.role} - {agent.status}"
                   >
                     <span class="agent-role">{agent.role.slice(0, 3)}</span>
-                    <div class="agent-line" style="
+                    <div
+                      class="agent-line"
+                      style="
                       width: 35%;
-                      transform: rotate({angle * 180 / Math.PI + 180}deg);
+                      transform: rotate({(angle * 180) / Math.PI + 180}deg);
                       transform-origin: 0 50%;
-                    "></div>
+                    "
+                    ></div>
                   </div>
                 {/each}
               </div>
@@ -591,28 +637,37 @@
         <div class="supervised-task">
           <h3>Submit Task (Kimi Oversees)</h3>
           <div class="task-input">
-            <input 
-              type="text" 
-              bind:value={supervisedQuery} 
+            <input
+              type="text"
+              bind:value={supervisedQuery}
               placeholder="Enter a task for the supervised swarm..."
             />
-            <button onclick={handleSubmitSupervisedTask} disabled={!supervisedQuery.trim() || supervisedPolling}>
+            <button
+              onclick={handleSubmitSupervisedTask}
+              disabled={!supervisedQuery.trim() || supervisedPolling}
+            >
               {supervisedPolling ? 'Processing...' : 'Submit'}
             </button>
           </div>
-          
+
           {#if supervisedTask}
             <div class="task-progress">
               <div class="task-header">
                 <span class="task-id">Task: {supervisedTask.id.slice(0, 16)}...</span>
-                <span class="task-status" style="color: {getSubtaskStatusColor(supervisedTask.status)}">{supervisedTask.status}</span>
+                <span
+                  class="task-status"
+                  style="color: {getSubtaskStatusColor(supervisedTask.status)}"
+                  >{supervisedTask.status}</span
+                >
               </div>
 
               {#if supervisedTask.plan}
                 <div class="task-plan">
                   <h4>Kimi's Plan</h4>
                   <p class="plan-summary">{supervisedTask.plan.summary}</p>
-                  <span class="complexity">Complexity: {supervisedTask.plan.estimatedComplexity}</span>
+                  <span class="complexity"
+                    >Complexity: {supervisedTask.plan.estimatedComplexity}</span
+                  >
                 </div>
               {/if}
 
@@ -622,19 +677,36 @@
                   {#each supervisedTask.subtasks as subtask}
                     <div class="subtask-item">
                       <div class="subtask-header">
-                        <span class="subtask-role" style="background: {getRoleColor(subtask.role)}">{subtask.role}</span>
-                        <span class="subtask-status" style="color: {getSubtaskStatusColor(subtask.status)}">{subtask.status}</span>
-                        <span class="subtask-attempts">Attempt {subtask.attempts}/{subtask.maxAttempts}</span>
+                        <span class="subtask-role" style="background: {getRoleColor(subtask.role)}"
+                          >{subtask.role}</span
+                        >
+                        <span
+                          class="subtask-status"
+                          style="color: {getSubtaskStatusColor(subtask.status)}"
+                          >{subtask.status}</span
+                        >
+                        <span class="subtask-attempts"
+                          >Attempt {subtask.attempts}/{subtask.maxAttempts}</span
+                        >
                       </div>
                       <p class="subtask-instruction">{subtask.instruction}</p>
-                      
+
                       {#if subtask.review}
-                        <div class="review-box" class:approved={subtask.review.decision === 'approve'} class:rejected={subtask.review.decision === 'reject'}>
+                        <div
+                          class="review-box"
+                          class:approved={subtask.review.decision === 'approve'}
+                          class:rejected={subtask.review.decision === 'reject'}
+                        >
                           <div class="review-header">
-                            <span class="review-decision" style="color: {getDecisionColor(subtask.review.decision)}">
+                            <span
+                              class="review-decision"
+                              style="color: {getDecisionColor(subtask.review.decision)}"
+                            >
                               {subtask.review.decision.toUpperCase()}
                             </span>
-                            <span class="review-score">Score: {(subtask.review.score * 100).toFixed(0)}%</span>
+                            <span class="review-score"
+                              >Score: {(subtask.review.score * 100).toFixed(0)}%</span
+                            >
                           </div>
                           <p class="review-feedback">{subtask.review.feedback}</p>
                           {#if subtask.review.issues && subtask.review.issues.length > 0}
@@ -667,7 +739,9 @@
                   <div class="events-list">
                     {#each supervisedTask.events.slice(-10) as event}
                       <div class="event-item">
-                        <span class="event-time">{new Date(event.timestamp).toLocaleTimeString()}</span>
+                        <span class="event-time"
+                          >{new Date(event.timestamp).toLocaleTimeString()}</span
+                        >
                         <span class="event-type">{event.type}</span>
                         <span class="event-actor">{event.actorId}</span>
                         <span class="event-details">{event.details}</span>
@@ -680,13 +754,12 @@
           {/if}
         </div>
       </div>
-
     {:else if activeTab === 'preloader'}
       <div class="section">
         <h2>Predictive Preloader</h2>
         <p class="section-desc">
-          Learns from query patterns to anticipate what you'll ask next.
-          Uses N-grams, Markov chains, and temporal patterns for prediction.
+          Learns from query patterns to anticipate what you'll ask next. Uses N-grams, Markov
+          chains, and temporal patterns for prediction.
         </p>
 
         {#if preloaderStats}
@@ -705,7 +778,9 @@
                 <span class="label">Accurate Predictions</span>
               </div>
               <div class="stat-card">
-                <span class="value">{(preloaderStats.avgPredictionConfidence * 100).toFixed(1)}%</span>
+                <span class="value"
+                  >{(preloaderStats.avgPredictionConfidence * 100).toFixed(1)}%</span
+                >
                 <span class="label">Avg Confidence</span>
               </div>
             </div>
@@ -732,13 +807,12 @@
           </div>
         {/if}
       </div>
-
     {:else if activeTab === 'distill'}
       <div class="section">
         <h2>Recursive Distillation</h2>
         <p class="section-desc">
-          Extracts patterns, preferences, and constraints from conversations 
-          to build a personalized user model that improves over time.
+          Extracts patterns, preferences, and constraints from conversations to build a personalized
+          user model that improves over time.
         </p>
 
         {#if distillationStats}
@@ -782,28 +856,42 @@
                 <div class="style-bar">
                   <span class="label">Formality</span>
                   <div class="bar">
-                    <div class="fill" style="width: {userModel.styleProfile.formality * 100}%"></div>
+                    <div
+                      class="fill"
+                      style="width: {userModel.styleProfile.formality * 100}%"
+                    ></div>
                   </div>
                   <span class="value">{(userModel.styleProfile.formality * 100).toFixed(0)}%</span>
                 </div>
                 <div class="style-bar">
                   <span class="label">Verbosity</span>
                   <div class="bar">
-                    <div class="fill" style="width: {userModel.styleProfile.verbosity * 100}%"></div>
+                    <div
+                      class="fill"
+                      style="width: {userModel.styleProfile.verbosity * 100}%"
+                    ></div>
                   </div>
                   <span class="value">{(userModel.styleProfile.verbosity * 100).toFixed(0)}%</span>
                 </div>
                 <div class="style-bar">
                   <span class="label">Technicality</span>
                   <div class="bar">
-                    <div class="fill" style="width: {userModel.styleProfile.technicality * 100}%"></div>
+                    <div
+                      class="fill"
+                      style="width: {userModel.styleProfile.technicality * 100}%"
+                    ></div>
                   </div>
-                  <span class="value">{(userModel.styleProfile.technicality * 100).toFixed(0)}%</span>
+                  <span class="value"
+                    >{(userModel.styleProfile.technicality * 100).toFixed(0)}%</span
+                  >
                 </div>
                 <div class="style-bar">
                   <span class="label">Directness</span>
                   <div class="bar">
-                    <div class="fill" style="width: {userModel.styleProfile.directness * 100}%"></div>
+                    <div
+                      class="fill"
+                      style="width: {userModel.styleProfile.directness * 100}%"
+                    ></div>
                   </div>
                   <span class="value">{(userModel.styleProfile.directness * 100).toFixed(0)}%</span>
                 </div>
@@ -943,7 +1031,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .overview-grid {
@@ -1067,7 +1157,8 @@
     font-size: 0.875rem;
   }
 
-  .swarm-stats, .stat-row {
+  .swarm-stats,
+  .stat-row {
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
@@ -1098,7 +1189,9 @@
     margin-top: 0.25rem;
   }
 
-  .role-breakdown h3, .swarm-task h3, .topology-viz h3 {
+  .role-breakdown h3,
+  .swarm-task h3,
+  .topology-viz h3 {
     font-size: 0.9rem;
     margin: 0 0 0.75rem;
     color: var(--text-primary, #fff);
@@ -1165,9 +1258,15 @@
     margin-bottom: 0.5rem;
   }
 
-  .status-processing { color: #f59e0b; }
-  .status-completed { color: #10b981; }
-  .status-failed { color: #ef4444; }
+  .status-processing {
+    color: #f59e0b;
+  }
+  .status-completed {
+    color: #10b981;
+  }
+  .status-failed {
+    color: #ef4444;
+  }
 
   .task-result pre {
     font-size: 0.8rem;
@@ -1222,15 +1321,22 @@
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 
-  .cache-stats, .top-topics {
+  .cache-stats,
+  .top-topics {
     margin-top: 1.5rem;
   }
 
-  .cache-stats h3, .top-topics h3 {
+  .cache-stats h3,
+  .top-topics h3 {
     font-size: 0.9rem;
     margin-bottom: 0.75rem;
     color: var(--text-primary, #fff);
@@ -1275,11 +1381,15 @@
     color: var(--text-secondary, #888);
   }
 
-  .summary, .style-profile, .patterns {
+  .summary,
+  .style-profile,
+  .patterns {
     margin-top: 1rem;
   }
 
-  .summary h4, .style-profile h4, .patterns h4 {
+  .summary h4,
+  .style-profile h4,
+  .patterns h4 {
     font-size: 0.85rem;
     margin-bottom: 0.5rem;
     color: var(--text-secondary, #888);
@@ -1365,7 +1475,7 @@
   }
 
   /* ========== Supervised Swarm Styles ========== */
-  
+
   .supervised-stats {
     margin-bottom: 1.5rem;
   }
@@ -1416,8 +1526,13 @@
   }
 
   @keyframes kimiBreathe {
-    0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); }
-    50% { box-shadow: 0 0 35px rgba(139, 92, 246, 0.6); }
+    0%,
+    100% {
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 35px rgba(139, 92, 246, 0.6);
+    }
   }
 
   .kimi-icon {
@@ -1474,8 +1589,13 @@
   }
 
   @keyframes agentWorking {
-    0%, 100% { transform: translate(-50%, -50%) scale(1); }
-    50% { transform: translate(-50%, -50%) scale(1.1); }
+    0%,
+    100% {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+      transform: translate(-50%, -50%) scale(1.1);
+    }
   }
 
   .supervised-agent .agent-role {

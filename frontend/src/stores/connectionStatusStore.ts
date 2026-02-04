@@ -25,11 +25,11 @@ async function performHealthCheck(): Promise<boolean> {
       method: 'GET',
       timeout: REQUEST_TIMEOUT,
     });
-    
+
     if (!response.ok) {
       return false;
     }
-    
+
     const data: HealthResponse = await response.json();
     return data.status === 'healthy';
   } catch {
@@ -47,12 +47,12 @@ let isPolling = false;
 
 export async function checkConnection(): Promise<void> {
   connectionStatus.set('checking');
-  
+
   const isHealthy = await performHealthCheck();
-  
+
   connectionStatus.set(isHealthy ? 'connected' : 'disconnected');
   lastChecked.set(new Date());
-  
+
   // Adjust polling interval based on result
   if (isHealthy) {
     currentInterval = DEFAULT_INTERVAL;
@@ -63,7 +63,7 @@ export async function checkConnection(): Promise<void> {
 
 function scheduleNextCheck(): void {
   if (!isPolling) return;
-  
+
   pollingTimer = setTimeout(async () => {
     await checkConnection();
     scheduleNextCheck();
@@ -72,27 +72,27 @@ function scheduleNextCheck(): void {
 
 export function startPolling(): void {
   if (isPolling) return;
-  
+
   isPolling = true;
   currentInterval = DEFAULT_INTERVAL;
-  
+
   // Do an immediate check
   checkConnection().then(() => {
     scheduleNextCheck();
   });
-  
+
   // Listen for visibility changes
   document.addEventListener('visibilitychange', handleVisibilityChange);
 }
 
 export function stopPolling(): void {
   isPolling = false;
-  
+
   if (pollingTimer) {
     clearTimeout(pollingTimer);
     pollingTimer = null;
   }
-  
+
   document.removeEventListener('visibilitychange', handleVisibilityChange);
 }
 

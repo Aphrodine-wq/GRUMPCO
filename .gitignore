@@ -1,212 +1,37 @@
 # Dependencies
 node_modules/
 
-# Python caches and virtualenvs
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage*
-htmlcov/
-.venv/
-venv/
-env/
-
-# Python packaging
-*.egg-info/
-.eggs/
-
-# Environment files (NEVER commit these)
+# Environment
 .env
 .env.local
 .env.*.local
-backend/.env
-frontend/.env
-.github-token
-*.pem
-*.key
 
 # Build outputs
 dist/
-dist-bundle/
-*.js.map
-.tsbuildinfo
-.swcinfo
+build/
 *.tsbuildinfo
-.swc/
-frontend/.svelte-kit/
-frontend/.vite/
-frontend/.turbo/
-backend/.turbo/
-frontend/electron-dist/
 
-# Test and coverage artifacts
-.nyc_output/
-coverage/
-
-# Package manager debug logs
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# Rust build artifacts
-intent-compiler/target/
-target/
-
-# Temp files
-.tmp.driveupload/
-nul
-*.tmp
-*.swp
-*.swo
-*.orig
-*.rej
-*.tgz
-
-# Claude Code
-.claude/
-
-# IDE
-.vscode/
-.idea/
-
-# JetBrains project shelf
-.fleet/
+# Logs and cache
+*.log
+.cache/
+.npm/
+.pnpm-store/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# SQLite WAL mode
-*.db-shm
-*.db-wal
+# Windows reserved names
+nul
+con
+prn
+aux
 
-# Logs
-*.log
+# IDE / Editor
+.idea/
+*.swp
+*.swo
 
-# Playwright
-frontend/playwright-report/
-playwright-report/
-frontend/test-results/
-
-# Archived/deprecated code
-archive/
-
-# Untracked feature folders
-infrastructure/
-integrations/
-
-# IDE-generated task tracking
-.trae/
-
-# Vercel
-.vercel/
-.vercel
-.env*.local
-
-# Build artifacts / installers
-*.exe
-*.zip
-*.msi
-*.dmg
-*.pkg
-*.deb
-*.rpm
-*.AppImage
-G-Rump-dist/
-dist-output/
-
-# Archives
-*.tar
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.7z
-*.rar
-*.gz
-*.bz2
-
-# Backup files
-*.bak
-*.backup
-*~
-
-# Cache directories
-.cache/
-.parcel-cache/
-.turbo/
-.eslintcache
-.stylelintcache
-
-# Test artifacts
-test-results/
-*.snap
-__snapshots__/
-
-# IDE workspace files
-*.code-workspace
-*.sublime-workspace
-*.sublime-project
-
-# Windows specific
-Desktop.ini
-ehthumbs.db
-
-# macOS specific
-._*
-.Spotlight-V100
-.Trashes
-
-# Large media files (should use Git LFS)
-*.mp4
-*.mov
-*.avi
-*.mkv
-*.mp3
-*.wav
-*.flac
-
-# Compiled binaries (except intentional releases)
-*.dll
-*.so
-*.dylib
-*.a
-*.lib
-*.o
-*.obj
-
-# Installer scripts output
-installer-output/
-*.nsh
-
-# Documentation build output
-docs-site/.vitepress/dist/
-docs-site/.vitepress/cache/
-
-# Python bytecode (additional patterns)
-*.pyc
-.Python
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Virtual environments (additional patterns)
-.virtualenv/
-.conda/
-conda-env/
-
-# Jupyter notebooks checkpoints
-.ipynb_checkpoints/
-
-# Data files
-*.sqlite
-*.db
-
-# Secrets (additional patterns)
-secrets/
-*.secret
-.secrets
-private/
-credentials/
+# Optional: uncomment if you don't want to track these
+# data/
+# backend/data/

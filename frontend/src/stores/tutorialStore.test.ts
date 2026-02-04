@@ -1,29 +1,50 @@
 /**
  * Tutorial Store Tests
- * 
+ *
  * Comprehensive tests for tutorial state management
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { get } from 'svelte/store';
 import { resetMocks } from '../test/setup';
+
+type TutorialState = {
+  activeTutorial: string | null;
+  showQuickStart: boolean;
+  completedTutorials: string[];
+};
+
+function getState(store: {
+  subscribe: (fn: (s: TutorialState) => void) => () => void;
+}): TutorialState {
+  let state: TutorialState = { activeTutorial: null, showQuickStart: true, completedTutorials: [] };
+  store.subscribe((s) => {
+    state = s;
+  })();
+  return state;
+}
 
 // Mock localStorage
 const mockStorage: Record<string, string> = {};
 const localStorageMock = {
   getItem: vi.fn((key: string) => mockStorage[key] || null),
-  setItem: vi.fn((key: string, value: string) => { mockStorage[key] = value; }),
-  removeItem: vi.fn((key: string) => { delete mockStorage[key]; }),
-  clear: vi.fn(() => { Object.keys(mockStorage).forEach(k => delete mockStorage[k]); }),
+  setItem: vi.fn((key: string, value: string) => {
+    mockStorage[key] = value;
+  }),
+  removeItem: vi.fn((key: string) => {
+    delete mockStorage[key];
+  }),
+  clear: vi.fn(() => {
+    Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
+  }),
 };
-Object.defineProperty(global, 'localStorage', { value: localStorageMock });
+Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock });
 
 describe('tutorialStore', () => {
   beforeEach(async () => {
     resetMocks();
     vi.resetModules();
     localStorageMock.clear();
-    Object.keys(mockStorage).forEach(k => delete mockStorage[k]);
+    Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
   });
 
   describe('TUTORIALS config', () => {
@@ -47,7 +68,7 @@ describe('tutorialStore', () => {
   describe('QUICK_START_TEMPLATES', () => {
     it('should have todo-app template', async () => {
       const { QUICK_START_TEMPLATES } = await import('./tutorialStore');
-      const todoApp = QUICK_START_TEMPLATES.find(t => t.id === 'todo-app');
+      const todoApp = QUICK_START_TEMPLATES.find((t) => t.id === 'todo-app');
       expect(todoApp).toBeDefined();
       expect(todoApp?.mode).toBe('ship');
     });
@@ -61,22 +82,19 @@ describe('tutorialStore', () => {
   describe('initial state', () => {
     it('should have no active tutorial', async () => {
       const { tutorialStore } = await import('./tutorialStore');
-      let state: any;
-      tutorialStore.subscribe(s => { state = s; })();
+      const state = getState(tutorialStore);
       expect(state.activeTutorial).toBeNull();
     });
 
     it('should show quick start by default', async () => {
       const { tutorialStore } = await import('./tutorialStore');
-      let state: any;
-      tutorialStore.subscribe(s => { state = s; })();
+      const state = getState(tutorialStore);
       expect(state.showQuickStart).toBe(true);
     });
 
     it('should have no completed tutorials', async () => {
       const { tutorialStore } = await import('./tutorialStore');
-      let state: any;
-      tutorialStore.subscribe(s => { state = s; })();
+      const state = getState(tutorialStore);
       expect(state.completedTutorials).toEqual([]);
     });
   });
@@ -87,8 +105,7 @@ describe('tutorialStore', () => {
 
       tutorialStore.startTutorial('first-time');
 
-      let state: any;
-      tutorialStore.subscribe(s => { state = s; })();
+      const state = getState(tutorialStore);
       expect(state.activeTutorial).toBe('first-time');
     });
   });
@@ -100,8 +117,7 @@ describe('tutorialStore', () => {
       tutorialStore.startTutorial('first-time');
       tutorialStore.completeTutorial('first-time');
 
-      let state: any;
-      tutorialStore.subscribe(s => { state = s; })();
+      const state = getState(tutorialStore);
       expect(state.activeTutorial).toBeNull();
       expect(state.completedTutorials).toContain('first-time');
     });
@@ -112,8 +128,7 @@ describe('tutorialStore', () => {
       tutorialStore.completeTutorial('first-time');
       tutorialStore.completeTutorial('first-time');
 
-      let state: any;
-      tutorialStore.subscribe(s => { state = s; })();
+      const state = getState(tutorialStore);
       expect(state.completedTutorials.filter((t: string) => t === 'first-time')).toHaveLength(1);
     });
   });
@@ -125,8 +140,7 @@ describe('tutorialStore', () => {
       tutorialStore.startTutorial('first-time');
       tutorialStore.skipTutorial();
 
-      let state: any;
-      tutorialStore.subscribe(s => { state = s; })();
+      const state = getState(tutorialStore);
       expect(state.activeTutorial).toBeNull();
       expect(state.completedTutorials).not.toContain('first-time');
     });
@@ -138,8 +152,7 @@ describe('tutorialStore', () => {
 
       tutorialStore.hideQuickStart();
 
-      let state: any;
-      tutorialStore.subscribe(s => { state = s; })();
+      const state = getState(tutorialStore);
       expect(state.showQuickStart).toBe(false);
     });
   });
@@ -151,8 +164,7 @@ describe('tutorialStore', () => {
       tutorialStore.hideQuickStart();
       tutorialStore.showQuickStart();
 
-      let state: any;
-      tutorialStore.subscribe(s => { state = s; })();
+      const state = getState(tutorialStore);
       expect(state.showQuickStart).toBe(true);
     });
   });
@@ -182,8 +194,7 @@ describe('tutorialStore', () => {
 
       tutorialStore.reset();
 
-      let state: any;
-      tutorialStore.subscribe(s => { state = s; })();
+      const state = getState(tutorialStore);
       expect(state.activeTutorial).toBeNull();
       expect(state.completedTutorials).toEqual([]);
       expect(state.showQuickStart).toBe(true);

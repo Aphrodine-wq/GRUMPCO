@@ -43,8 +43,14 @@
   }
 </script>
 
-<div class="modal-backdrop" onclick={onClose}>
-  <div class="modal-container" onclick={(e) => e.stopPropagation()}>
+<div
+  class="modal-backdrop"
+  onclick={onClose}
+  role="button"
+  tabindex="0"
+  onkeydown={(e) => e.key === 'Escape' && onClose()}
+>
+  <div class="modal-container" onclick={(e) => e.stopPropagation()} role="presentation">
     <Card title="Connect GitHub Repository">
       <div class="modal-content">
         <p class="description">

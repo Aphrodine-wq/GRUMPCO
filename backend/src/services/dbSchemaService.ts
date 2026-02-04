@@ -32,9 +32,9 @@ export async function generateSchemaFromDescription(
 ): Promise<GenerateSchemaResult> {
   const targetDb = options.targetDb ?? 'sqlite';
   const format = options.format ?? 'sql';
-  
+
   const userMsg = `Target DB: ${targetDb}. Format: ${format}. Generate schema for:\n\n${description}\n\nRespond with a \`\`\`sql code block for DDL.${format === 'drizzle' ? ' Then a ```ts block for Drizzle schema.' : ''}\`\`\``;
-  
+
   try {
     const result = await getCompletion({
       model: 'claude-sonnet-4-20250514',
@@ -42,22 +42,27 @@ export async function generateSchemaFromDescription(
       system: SCHEMA_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMsg }],
     });
-    
+
     if (result.error) {
       logger.warn({ err: result.error }, 'dbSchemaService: generateSchemaFromDescription failed');
       return { ddl: `-- Error: ${result.error}`, tables: [] };
     }
-    
+
     let ddl = '';
     let drizzle: string | undefined;
     const sqlMatch = result.text.match(/```sql\n?([\s\S]*?)\n?```/);
     if (sqlMatch) ddl = sqlMatch[1].trim();
     const tsMatch = result.text.match(/```(?:ts|typescript)\n?([\s\S]*?)\n?```/);
     if (tsMatch) drizzle = tsMatch[1].trim();
-    const tables = [...ddl.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?\s*["']?(\w+)["']?/gi)].map((m) => m[1]);
+    const tables = [...ddl.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?\s*["']?(\w+)["']?/gi)].map(
+      (m) => m[1]
+    );
     return { ddl, drizzle, tables };
   } catch (e) {
-    logger.warn({ err: (e as Error).message }, 'dbSchemaService: generateSchemaFromDescription failed');
+    logger.warn(
+      { err: (e as Error).message },
+      'dbSchemaService: generateSchemaFromDescription failed'
+    );
     return { ddl: `-- Error: ${(e as Error).message}`, tables: [] };
   }
 }
@@ -87,7 +92,9 @@ export async function generateSchemaFromArchitecture(
     .map(
       (m: DataModel) =>
         `Table ${m.name}: ${m.fields.map((f) => `${f.name} ${f.type}${f.required ? ' NOT NULL' : ''}`).join(', ')}` +
-        (m.relationships?.length ? `; Relations: ${m.relationships.map((r) => `${r.field} -> ${r.references} (${r.type})`).join('; ')}` : '')
+        (m.relationships?.length
+          ? `; Relations: ${m.relationships.map((r) => `${r.field} -> ${r.references} (${r.type})`).join('; ')}`
+          : '')
     )
     .join('\n');
   return generateSchemaFromDescription(description, { targetDb: 'sqlite', format: 'sql' });

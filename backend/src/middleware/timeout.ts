@@ -80,9 +80,7 @@ function getTimeoutForPath(path: string): number {
   }
 
   // Check for prefix matches (e.g., /api/chat matches /api/chat/stream)
-  const sortedRoutes = Object.keys(TIMEOUT_CONFIG.routes).sort(
-    (a, b) => b.length - a.length
-  );
+  const sortedRoutes = Object.keys(TIMEOUT_CONFIG.routes).sort((a, b) => b.length - a.length);
 
   for (const route of sortedRoutes) {
     if (path.startsWith(route)) {
@@ -139,10 +137,7 @@ export function createTimeoutMiddleware(timeoutMs: number): RequestHandler {
     const timer = setTimeout(() => {
       if (responded) return;
 
-      log.warn(
-        { path: req.path, method: req.method, timeout: timeoutMs },
-        'Request timed out'
-      );
+      log.warn({ path: req.path, method: req.method, timeout: timeoutMs }, 'Request timed out');
 
       // Abort any ongoing operations
       if (req.socket && !req.socket.destroyed) {
@@ -177,11 +172,7 @@ export function createTimeoutMiddleware(timeoutMs: number): RequestHandler {
  * app.use(requestTimeout);
  * ```
  */
-export function requestTimeout(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function requestTimeout(req: Request, res: Response, next: NextFunction): void {
   const timeout = getTimeoutForPath(req.path);
   const middleware = createTimeoutMiddleware(timeout);
   middleware(req, res, next);

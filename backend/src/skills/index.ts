@@ -5,7 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import type { Express } from 'express';
 import logger from '../middleware/logger.js';
 import type {
@@ -55,10 +55,7 @@ class SkillRegistry {
         await this.loadSkill(skillPath);
       }
 
-      logger.info(
-        { skillCount: this.skills.size },
-        'Skills discovery complete'
-      );
+      logger.info({ skillCount: this.skills.size }, 'Skills discovery complete');
     } catch (error) {
       logger.error({ error }, 'Failed to discover skills');
       throw error;
@@ -90,10 +87,7 @@ class SkillRegistry {
 
       // Check for duplicate
       if (this.skills.has(manifest.id)) {
-        logger.warn(
-          { skillId: manifest.id },
-          'Skill already registered, skipping duplicate'
-        );
+        logger.warn({ skillId: manifest.id }, 'Skill already registered, skipping duplicate');
         return;
       }
 
@@ -108,7 +102,7 @@ class SkillRegistry {
         }
       }
 
-      const skillModule = await import(indexPath);
+      const skillModule = await import(pathToFileURL(indexPath).href);
       const skillExport = skillModule.default || skillModule;
 
       // Construct skill object
@@ -182,9 +176,7 @@ class SkillRegistry {
    * Get skills by category
    */
   getSkillsByCategory(category: string): Skill[] {
-    return this.getAllSkills().filter(
-      (s) => s.manifest.category === category
-    );
+    return this.getAllSkills().filter((s) => s.manifest.category === category);
   }
 
   /**
@@ -264,9 +256,15 @@ class SkillRegistry {
   /**
    * Get tool handler for a specific tool name
    */
-  getToolHandler(
-    toolName: string
-  ): { skill: Skill; handler: (input: Record<string, unknown>, context: SkillContext) => Promise<ToolExecutionResult> } | undefined {
+  getToolHandler(toolName: string):
+    | {
+        skill: Skill;
+        handler: (
+          input: Record<string, unknown>,
+          context: SkillContext
+        ) => Promise<ToolExecutionResult>;
+      }
+    | undefined {
     // Parse skill_<skillId>_<toolName> format
     const match = toolName.match(/^skill_([^_]+)_(.+)$/);
     if (!match) return undefined;

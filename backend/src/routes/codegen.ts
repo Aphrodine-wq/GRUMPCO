@@ -3,7 +3,7 @@
  * Endpoints for multi-agent code generation
  */
 
-import express, { Request, Response, Router } from 'express';
+import express, { type Request, type Response, type Router } from 'express';
 import {
   initializeSession,
   initializeSessionMulti,
@@ -16,6 +16,7 @@ import { isServerlessRuntime } from '../config/runtime.js';
 import { getDatabase } from '../db/database.js';
 import { createCodegenZip } from '../services/zipService.js';
 import { getRequestLogger } from '../middleware/logger.js';
+import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { sendServerError } from '../utils/errorResponse.js';
 import { validateCodegenRequest, handleCodegenValidationErrors } from '../middleware/validator.js';
 import type { CodeGenRequest, CodeGenRequestMulti } from '../types/agents.js';
@@ -70,12 +71,17 @@ router.post(
   async (req: Request, res: Response) => {
     const log = getRequestLogger();
     const body = req.body as CodeGenRequestBody | CodeGenRequestBodyMulti;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
 
     try {
-      const isMulti = Array.isArray((body as CodeGenRequestBodyMulti).prds) && (body as CodeGenRequestBodyMulti).architecture;
+      const isMulti =
+        Array.isArray((body as CodeGenRequestBodyMulti).prds) &&
+        (body as CodeGenRequestBodyMulti).architecture;
 
       if (isMulti) {
-        const { prds, architecture, preferences, componentMapping } = body as CodeGenRequestBodyMulti;
+        const { prds, architecture, preferences, componentMapping } =
+          body as CodeGenRequestBodyMulti;
         if (!prds?.length || !architecture?.metadata) {
           res.status(400).json({
             error: 'Multi-PRD requires prds array and architecture',
@@ -92,6 +98,7 @@ router.post(
           architecture,
           preferences: preferences ?? DEFAULT_PREFERENCES,
           componentMapping,
+          userId,
           projectId: (body as CodeGenRequestBodyMulti).projectId,
         });
         let jobId: string | null = null;
@@ -100,7 +107,10 @@ router.post(
         } else {
           setImmediate(() => {
             executeCodeGenerationMulti(session).catch((error) => {
-              log.error({ sessionId: session.sessionId, error: error.message }, 'Multi-PRD codegen failed');
+              log.error(
+                { sessionId: session.sessionId, error: error.message },
+                'Multi-PRD codegen failed'
+              );
             });
           });
         }
@@ -136,7 +146,12 @@ router.post(
       }
 
       log.info(
-        { prdId, architectureId, frontendFramework: preferences?.frontendFramework, backendRuntime: preferences?.backendRuntime },
+        {
+          prdId,
+          architectureId,
+          frontendFramework: preferences?.frontendFramework,
+          backendRuntime: preferences?.backendRuntime,
+        },
         'Code generation start requested'
       );
 
@@ -145,6 +160,7 @@ router.post(
         architectureId,
         projectId: (body as CodeGenRequestBody).projectId,
         preferences: preferences ?? DEFAULT_PREFERENCES,
+        userId,
       });
 
       // Store PRD + architecture in session for serverless workers
@@ -158,7 +174,10 @@ router.post(
       } else {
         setImmediate(() => {
           executeCodeGeneration(session, prd, architecture).catch((error) => {
-            log.error({ sessionId: session.sessionId, error: error.message }, 'Background code generation failed');
+            log.error(
+              { sessionId: session.sessionId, error: error.message },
+              'Background code generation failed'
+            );
           });
         });
       }
@@ -175,7 +194,7 @@ router.post(
             };
             return acc;
           },
-            Object.create(null) as Record<string, AgentStatusEntry>
+          Object.create(null) as Record<string, AgentStatusEntry>
         ),
         jobQueued: isServerlessRuntime,
         jobId,
@@ -219,23 +238,27 @@ router.get('/status/:sessionId', async (req: Request<{ sessionId: string }>, res
       sessionId,
       status: session.status,
       progress: Math.round(progress),
-      agents: Object.entries(session.agents).reduce<Record<string, AgentStatusEntry>>((acc, [type, task]) => {
-        acc[type] = {
-          taskId: task.taskId,
-          status: task.status,
-          description: task.description,
-          startedAt: task.startedAt,
-          completedAt: task.completedAt,
-          duration: task.duration,
-          error: task.error,
-        };
-        return acc;
-      }, Object.create(null) as Record<string, AgentStatusEntry>),
+      agents: Object.entries(session.agents).reduce<Record<string, AgentStatusEntry>>(
+        (acc, [type, task]) => {
+          acc[type] = {
+            taskId: task.taskId,
+            status: task.status,
+            description: task.description,
+            startedAt: task.startedAt,
+            completedAt: task.completedAt,
+            duration: task.duration,
+            error: task.error,
+          };
+          return acc;
+        },
+        Object.create(null) as Record<string, AgentStatusEntry>
+      ),
       generatedFileCount: session.generatedFiles?.length || 0,
       error: session.error,
       timestamp: new Date().toISOString(),
     };
-    if (session.subTasksByPrdId) (payload as Record<string, unknown>).subTasksByPrdId = session.subTasksByPrdId;
+    if (session.subTasksByPrdId)
+      (payload as Record<string, unknown>).subTasksByPrdId = session.subTasksByPrdId;
     res.json(payload);
   } catch (error) {
     const err = error as Error;
@@ -279,8 +302,7 @@ router.get('/download/:sessionId', async (req: Request<{ sessionId: string }>, r
       return;
     }
 
-    const projectName =
-      session.architecture?.projectName ?? session.prdId ?? 'generated-project';
+    const projectName = session.architecture?.projectName ?? session.prdId ?? 'generated-project';
     const zip = createCodegenZip(session.generatedFiles, projectName);
 
     log.info({ sessionId, fileCount: session.generatedFiles.length }, 'Download requested');
@@ -302,53 +324,56 @@ router.get('/download/:sessionId', async (req: Request<{ sessionId: string }>, r
  * POST /api/codegen/preview/:sessionId
  * Get preview of generated files
  */
-router.post('/preview/:sessionId', async (req: Request<{ sessionId: string }, object, { filePath: string }>, res: Response) => {
-  const log = getRequestLogger();
+router.post(
+  '/preview/:sessionId',
+  async (req: Request<{ sessionId: string }, object, { filePath: string }>, res: Response) => {
+    const log = getRequestLogger();
 
-  try {
-    const { sessionId } = req.params;
-    const { filePath } = req.body;
+    try {
+      const { sessionId } = req.params;
+      const { filePath } = req.body;
 
-    const session = await getSession(sessionId);
-    if (!session) {
-      res.status(404).json({
-        error: 'Session not found',
-        type: 'not_found',
+      const session = await getSession(sessionId);
+      if (!session) {
+        res.status(404).json({
+          error: 'Session not found',
+          type: 'not_found',
+        });
+        return;
+      }
+
+      if (!filePath) {
+        res.status(400).json({
+          error: 'Missing filePath',
+          type: 'validation_error',
+        });
+        return;
+      }
+
+      const file = session.generatedFiles?.find((f) => f.path === filePath);
+      if (!file) {
+        res.status(404).json({
+          error: 'File not found in generated project',
+          type: 'not_found',
+        });
+        return;
+      }
+
+      res.json({
+        path: file.path,
+        language: file.language,
+        type: file.type,
+        size: file.size,
+        content: file.content.substring(0, 5000), // Preview first 5000 chars
+        isTruncated: file.content.length > 5000,
+        fullSize: file.content.length,
       });
-      return;
+    } catch (error) {
+      const err = error as Error;
+      log.error({ error: err.message }, 'Preview error');
+      sendServerError(res, error);
     }
-
-    if (!filePath) {
-      res.status(400).json({
-        error: 'Missing filePath',
-        type: 'validation_error',
-      });
-      return;
-    }
-
-    const file = session.generatedFiles?.find((f) => f.path === filePath);
-    if (!file) {
-      res.status(404).json({
-        error: 'File not found in generated project',
-        type: 'not_found',
-      });
-      return;
-    }
-
-    res.json({
-      path: file.path,
-      language: file.language,
-      type: file.type,
-      size: file.size,
-      content: file.content.substring(0, 5000), // Preview first 5000 chars
-      isTruncated: file.content.length > 5000,
-      fullSize: file.content.length,
-    });
-  } catch (error) {
-    const err = error as Error;
-    log.error({ error: err.message }, 'Preview error');
-    sendServerError(res, error);
   }
-});
+);
 
 export default router;

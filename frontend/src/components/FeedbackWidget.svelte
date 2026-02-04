@@ -1,5 +1,6 @@
 <script lang="ts">
   import { trackFeedback } from '$lib/analytics';
+  import { X, Check, MessageCircle } from 'lucide-svelte';
 
   interface Props {
     diagramId?: string;
@@ -87,15 +88,15 @@
       class="bg-white rounded-lg shadow-lg border border-gray-200 w-80 overflow-hidden animate-slideUp"
     >
       <!-- Header -->
-      <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3 flex justify-between items-center">
+      <div class="bg-blue-600 px-4 py-3 flex justify-between items-center">
         <h3 class="text-white font-semibold text-sm">Feedback</h3>
         <button
           type="button"
-          on:click={close}
+          onclick={close}
           class="text-white hover:bg-white/20 rounded p-1 transition-colors"
           aria-label="Close feedback"
         >
-          ✕
+          <X class="w-4 h-4" strokeWidth={2} />
         </button>
       </div>
 
@@ -104,7 +105,9 @@
         {#if isSubmitted}
           <!-- Success state -->
           <div class="text-center py-6">
-            <div class="text-3xl mb-2">✓</div>
+            <div class="flex justify-center mb-2">
+              <Check class="w-10 h-10 text-green-600" strokeWidth={2} />
+            </div>
             <p class="text-gray-700 font-medium">Thank you for your feedback!</p>
           </div>
         {:else if errorMessage}
@@ -114,7 +117,7 @@
           </div>
           <button
             type="button"
-            on:click={() => (errorMessage = '')}
+            onclick={() => (errorMessage = '')}
             class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm font-medium"
           >
             Try Again
@@ -135,7 +138,7 @@
             <div class="flex gap-2 mt-3">
               <button
                 type="button"
-                on:click={() => {
+                onclick={() => {
                   helpful = null;
                   comment = '';
                 }}
@@ -146,7 +149,7 @@
               </button>
               <button
                 type="button"
-                on:click={handleSubmit}
+                onclick={handleSubmit}
                 disabled={isSubmitting}
                 class="flex-1 px-3 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors"
               >
@@ -156,13 +159,11 @@
           </div>
         {:else}
           <!-- Rating state -->
-          <p class="text-gray-700 text-sm mb-4 font-medium">
-            Was this helpful?
-          </p>
+          <p class="text-gray-700 text-sm mb-4 font-medium">Was this helpful?</p>
           <div class="flex gap-3">
             <button
               type="button"
-              on:click={handleHelpfulYes}
+              onclick={handleHelpfulYes}
               disabled={isSubmitting}
               class="flex-1 px-4 py-3 bg-green-50 hover:bg-green-100 border-2 border-green-200 text-green-700 font-semibold rounded-lg transition-colors disabled:opacity-50"
               aria-label="Yes, this was helpful"
@@ -171,7 +172,7 @@
             </button>
             <button
               type="button"
-              on:click={handleHelpfulNo}
+              onclick={handleHelpfulNo}
               disabled={isSubmitting}
               class="flex-1 px-4 py-3 bg-red-50 hover:bg-red-100 border-2 border-red-200 text-red-700 font-semibold rounded-lg transition-colors disabled:opacity-50"
               aria-label="No, this was not helpful"
@@ -186,11 +187,11 @@
     <!-- Collapsed button -->
     <button
       type="button"
-      on:click={toggleExpanded}
+      onclick={toggleExpanded}
       class="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-4 py-3 shadow-lg hover:shadow-xl transition-all font-medium text-sm flex items-center gap-2 active:scale-95"
       aria-label="Give feedback"
     >
-      <span>💬</span>
+      <MessageCircle size={16} />
       <span>Feedback?</span>
     </button>
   {/if}

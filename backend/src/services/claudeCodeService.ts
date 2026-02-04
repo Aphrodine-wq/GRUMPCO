@@ -4,9 +4,8 @@
  * Uses LLM Gateway with Kimi K2.5 for all operations
  */
 
-import { getRequestLogger } from '../middleware/logger.js';
+import { getRequestLogger, default as logger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
-import logger from '../middleware/logger.js';
 import { withResilience } from './resilience.js';
 import { getCompletion, type CompletionResult } from './llmGatewayHelper.js';
 import type {
@@ -20,8 +19,8 @@ import type {
   PerformanceMetrics,
 } from '../types/claudeCode.js';
 
-if (!process.env.NVIDIA_NIM_API_KEY) {
-  logger.error('NVIDIA_NIM_API_KEY is not set');
+if (!process.env.MOCK_AI_MODE && !process.env.NVIDIA_NIM_API_KEY) {
+  logger.error('NVIDIA_NIM_API_KEY is not set (set MOCK_AI_MODE=true for zero-config testing)');
   process.exit(1);
 }
 
@@ -274,7 +273,10 @@ export async function optimizePerformance(
     jsonText = extractJSON(jsonText);
 
     const optimizations = JSON.parse(jsonText) as PerformanceOptimization[];
-    log.info({ language, optimizations: optimizations.length }, 'Performance optimizations generated');
+    log.info(
+      { language, optimizations: optimizations.length },
+      'Performance optimizations generated'
+    );
     timer.success();
 
     return optimizations;
@@ -329,10 +331,7 @@ Return a JSON array:
 /**
  * Scan code for security vulnerabilities
  */
-export async function scanSecurity(
-  code: string,
-  language: string
-): Promise<SecurityIssue[]> {
+export async function scanSecurity(code: string, language: string): Promise<SecurityIssue[]> {
   const log = getRequestLogger();
   const timer = createApiTimer('llm_code_security');
 
@@ -617,7 +616,10 @@ export async function generateCodeFromDiagram(
     }
 
     const jsonText = extractJSON(response.text);
-    const parsed = JSON.parse(jsonText) as { files?: { path: string; content: string }[]; warnings?: string[] };
+    const parsed = JSON.parse(jsonText) as {
+      files?: { path: string; content: string }[];
+      warnings?: string[];
+    };
     const files = Array.isArray(parsed.files) ? parsed.files : [];
     const warnings = Array.isArray(parsed.warnings) ? parsed.warnings : [];
 

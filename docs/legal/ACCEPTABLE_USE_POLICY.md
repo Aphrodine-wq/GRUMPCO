@@ -1,6 +1,6 @@
 # Acceptable Use Policy
 
-**Last updated:** [Date]
+**Last updated:** January 31, 2026
 
 This Acceptable Use Policy ("AUP") applies to your use of G-Rump ("Service"). Violation may result in suspension or termination of access.
 

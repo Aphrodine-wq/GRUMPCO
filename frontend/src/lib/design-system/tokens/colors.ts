@@ -6,12 +6,12 @@
 export const colors = {
   // Background colors
   background: {
-    primary: 'var(--color-bg-app)',      // Pure White
+    primary: 'var(--color-bg-app)', // Pure White
     secondary: 'var(--color-bg-subtle)', // iOS Grouped Background
     tertiary: 'var(--color-bg-card-hover)',
-    code: 'var(--color-bg-input)',       // Light Gray
+    code: 'var(--color-bg-input)', // Light Gray
     input: 'var(--color-bg-input)',
-    sidebar: 'var(--color-bg-subtle)',   // Distinct sidebar
+    sidebar: 'var(--color-bg-subtle)', // Distinct sidebar
   },
 
   // Border colors
@@ -23,30 +23,30 @@ export const colors = {
 
   // Text colors
   text: {
-    primary: 'var(--color-text)',           // Pure Black
+    primary: 'var(--color-text)', // Pure Black
     secondary: 'var(--color-text-secondary)', // Gray
-    muted: 'var(--color-text-muted)',       // Light Gray
-    inverse: 'var(--color-text-inverse)',   // White
+    muted: 'var(--color-text-muted)', // Light Gray
+    inverse: 'var(--color-text-inverse)', // White
     code: '#1D1D1F',
   },
 
   // Accent colors
   accent: {
-    primary: 'var(--color-primary)',        // iOS Blue
+    primary: 'var(--color-primary)',
     primaryHover: 'var(--color-primary-hover)',
-    primaryLight: 'rgba(0, 122, 255, 0.1)', // Light blue tint
+    primaryLight: 'var(--color-primary-subtle)',
   },
 
-  // Status colors
+  // Status colors (empathetic, purple-aligned)
   status: {
     success: 'var(--color-success)',
-    successLight: 'rgba(52, 199, 89, 0.15)',
+    successLight: 'var(--color-success-subtle)',
     error: 'var(--color-error)',
-    errorLight: 'rgba(255, 59, 48, 0.15)',
+    errorLight: 'var(--color-error-subtle)',
     warning: 'var(--color-warning)',
-    warningLight: 'rgba(255, 149, 0, 0.15)',
+    warningLight: 'var(--color-warning-subtle)',
     info: 'var(--color-primary)',
-    infoLight: 'rgba(0, 122, 255, 0.15)',
+    infoLight: 'var(--color-primary-subtle)',
   },
 
   // Code diff colors (Light Theme Optimized)
@@ -74,22 +74,22 @@ export const colors = {
 
   // Syntax highlighting (GitHub Light / Vercel Light inspired)
   syntax: {
-    keyword: '#D73A49',      // Red
-    string: '#032F62',       // Dark Blue
-    number: '#005CC5',       // Blue
-    comment: '#6A737D',      // Gray
-    function: '#6F42C1',     // Purple
-    variable: '#24292E',     // Dark Gray
-    operator: '#D73A49',     // Red
-    type: '#005CC5',         // Blue
+    keyword: '#D73A49', // Red
+    string: '#032F62', // Dark Blue
+    number: '#005CC5', // Blue
+    comment: '#6A737D', // Gray
+    function: '#6F42C1', // Purple
+    variable: '#24292E', // Dark Gray
+    operator: '#D73A49', // Red
+    type: '#005CC5', // Blue
     punctuation: '#24292E',
   },
 
-  // Interactive states
+  // Interactive states (purple accent)
   interactive: {
     hover: 'var(--color-bg-card-hover)',
-    active: 'rgba(0, 122, 255, 0.1)',
-    selected: 'rgba(0, 122, 255, 0.12)',
+    active: 'var(--color-primary-subtle)',
+    selected: 'var(--color-primary-subtle)',
     disabled: 'rgba(0, 0, 0, 0.05)',
   },
 

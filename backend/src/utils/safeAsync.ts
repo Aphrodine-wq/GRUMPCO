@@ -28,10 +28,7 @@ export function logOnError<T>(
 ): Promise<T | undefined> {
   return promise.catch((err: unknown) => {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    logger.warn(
-      { ...metadata, error: errorMessage, context },
-      `${context} failed`
-    );
+    logger.warn({ ...metadata, error: errorMessage, context }, `${context} failed`);
     return undefined;
   });
 }
@@ -157,10 +154,7 @@ export async function parallelLimit<T, R>(
     }
   }
 
-  const workers = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    () => worker()
-  );
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
 
   await Promise.all(workers);
   return results;
@@ -180,10 +174,7 @@ export async function parallelLimit<T, R>(
  *   await safeCleanup(() => connection.close(), 'Close connection');
  * }
  */
-export async function safeCleanup(
-  fn: () => Promise<void> | void,
-  context: string
-): Promise<void> {
+export async function safeCleanup(fn: () => Promise<void> | void, context: string): Promise<void> {
   try {
     await fn();
   } catch (err) {

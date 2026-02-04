@@ -20,15 +20,19 @@ export function fastStringify(obj: unknown, space?: string | number): string {
 
   // Safe stringify with circular reference detection
   const seen = new WeakSet();
-  return JSON.stringify(obj, (key, value) => {
-    if (typeof value === 'object' && value !== null) {
-      if (seen.has(value)) {
-        return '[Circular]';
+  return JSON.stringify(
+    obj,
+    (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) {
+          return '[Circular]';
+        }
+        seen.add(value);
       }
-      seen.add(value);
-    }
-    return value;
-  }, space);
+      return value;
+    },
+    space
+  );
 }
 
 // Fast JSON parse with error handling

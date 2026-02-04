@@ -1,19 +1,43 @@
+/**
+ * @fileoverview LLM-powered diagram generation service.
+ *
+ * Provides functions for generating Mermaid diagrams from natural language
+ * descriptions using LLM providers. Supports:
+ * - Intent analysis for better diagram type detection
+ * - Conversation context for multi-turn interactions
+ * - Diagram refinement based on existing diagrams
+ * - Both streaming and non-streaming generation
+ * - Resilient operation with circuit breaker and retry logic
+ *
+ * @module services/claudeService
+ */
+
 import { withResilience } from './resilience.js';
 import { getRequestLogger } from '../middleware/logger.js';
 import { createApiTimer } from '../middleware/metrics.js';
-import logger from '../middleware/logger.js';
 import { extractMermaidCode, validateMermaidCode } from './mermaidUtils.js';
 import { getSystemPrompt, type UserPreferences } from '../prompts/index.js';
 import { analyzeIntent, getIntentAugmentation } from './intentParser.js';
 import type { ServiceError, ConversationMessage, RefinementContext } from '../types/index.js';
 import { getStream, type StreamParams, type StreamEvent } from './llmGateway.js';
+import { createHash } from 'crypto';
+import { requestDeduper } from './requestDeduper.js';
 
-const isTestEnv = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
-
-// Default model for diagram generation
+/** Default LLM model for diagram generation (Kimi K2.5 via NVIDIA NIM) */
 const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
 
-// Helper to collect stream events into a complete response
+/**
+ * Collects all text chunks from a streaming LLM response into a single string.
+ *
+ * @param stream - Async iterable of stream events from the LLM
+ * @returns Complete response text
+ *
+ * @example
+ * ```typescript
+ * const stream = getStream(params, config);
+ * const fullResponse = await collectStreamResponse(stream);
+ * ```
+ */
 async function collectStreamResponse(stream: AsyncIterable<StreamEvent>): Promise<string> {
   let fullText = '';
   for await (const event of stream) {
@@ -24,20 +48,69 @@ async function collectStreamResponse(stream: AsyncIterable<StreamEvent>): Promis
   return fullText;
 }
 
-// Helper for non-streaming calls
+function hashStreamParams(params: StreamParams): string {
+  const payload = JSON.stringify({
+    model: params.model,
+    max_tokens: params.max_tokens,
+    system: params.system,
+    messages: params.messages,
+    tools: params.tools?.map((t) => ({
+      name: t.name,
+      description: t.description,
+      input_schema: t.input_schema,
+    })),
+  });
+  return createHash('sha256').update(payload).digest('hex');
+}
+
+/**
+ * Makes a non-streaming LLM call and returns the complete response.
+ * Internally uses streaming but collects all chunks before returning.
+ *
+ * @param params - Stream parameters including model, messages, and settings
+ * @returns Complete LLM response text
+ */
 async function callLLMNonStreaming(params: StreamParams): Promise<string> {
-  const stream = getStream(params, { provider: 'nim', modelId: params.model });
-  return collectStreamResponse(stream);
+  const dedupeKey = `diagram:${hashStreamParams(params)}`;
+  return requestDeduper.dedupe(dedupeKey, async () => {
+    const stream = getStream(params, { provider: 'nim', modelId: params.model });
+    return collectStreamResponse(stream);
+  });
 }
 
 // Re-export UserPreferences type for external use
 export type { UserPreferences } from '../prompts/index.js';
 export type { ConversationMessage, RefinementContext } from '../types/index.js';
 
-// Context window configuration
-const CONTEXT_WINDOW_SIZE = 5; // Number of previous messages to include
+/** Maximum number of message pairs to include from conversation history */
+const CONTEXT_WINDOW_SIZE = 5;
 
-// Build conversation history for Claude API
+/**
+ * Builds an array of messages for the LLM API from conversation history.
+ *
+ * Handles three scenarios:
+ * 1. Fresh conversation - just the user message
+ * 2. Continued conversation - includes recent history + current message
+ * 3. Diagram refinement - wraps message with existing diagram context
+ *
+ * @param userMessage - The current user message to process
+ * @param conversationHistory - Optional array of previous messages in the conversation
+ * @param refinementContext - Optional context containing a base diagram to refine
+ * @returns Array of messages formatted for the LLM API
+ *
+ * @example
+ * ```typescript
+ * // Simple message
+ * const messages = buildConversationMessages("Create a flowchart");
+ * // => [{ role: 'user', content: 'Create a flowchart' }]
+ *
+ * // With refinement context
+ * const messages = buildConversationMessages("Add error handling", undefined, {
+ *   baseDiagram: 'flowchart TD...',
+ *   instruction: 'Modify the existing diagram'
+ * });
+ * ```
+ */
 function buildConversationMessages(
   userMessage: string,
   conversationHistory?: ConversationMessage[],
@@ -70,7 +143,24 @@ function buildConversationMessages(
   return messages;
 }
 
-// Base diagram generation function with intent analysis and conversation context
+/**
+ * Core diagram generation function with intent analysis and conversation context.
+ *
+ * This is the internal implementation that:
+ * 1. Analyzes user intent to detect diagram type and requirements
+ * 2. Enriches preferences with detected constraints
+ * 3. Optionally adds clarification guidance for ambiguous requests
+ * 4. Makes the LLM call and extracts/validates the Mermaid code
+ *
+ * @param userMessage - Natural language description of the desired diagram
+ * @param preferences - Optional user preferences (complexity, C4 level, etc.)
+ * @param conversationHistory - Optional conversation context for multi-turn interactions
+ * @param refinementContext - Optional existing diagram to refine
+ * @returns Generated Mermaid diagram code, or clarification text if needed
+ * @throws {ServiceError} When diagram extraction fails (code: 'EXTRACTION_FAILED')
+ *
+ * @internal Use the exported `generateDiagram` function which wraps this with resilience
+ */
 async function _generateDiagram(
   userMessage: string,
   preferences?: UserPreferences,
@@ -83,15 +173,18 @@ async function _generateDiagram(
   try {
     // Analyze user intent
     const intent = analyzeIntent(userMessage);
-    log.info({
-      messageLength: userMessage.length,
-      intentConfidence: intent.confidence,
-      suggestedType: intent.suggestedType,
-      c4Level: intent.c4Level,
-      requiresClarification: intent.requiresClarification,
-      hasConversationHistory: !!conversationHistory?.length,
-      hasRefinementContext: !!refinementContext?.baseDiagram,
-    }, 'Generating diagram with intent analysis');
+    log.info(
+      {
+        messageLength: userMessage.length,
+        intentConfidence: intent.confidence,
+        suggestedType: intent.suggestedType,
+        c4Level: intent.c4Level,
+        requiresClarification: intent.requiresClarification,
+        hasConversationHistory: !!conversationHistory?.length,
+        hasRefinementContext: !!refinementContext?.baseDiagram,
+      },
+      'Generating diagram with intent analysis'
+    );
 
     // Enrich preferences with intent analysis
     const enrichedPreferences: UserPreferences = {
@@ -132,7 +225,8 @@ async function _generateDiagram(
     if (!result.extracted || !result.code) {
       // Check if this looks like a clarification question
       const lowerText = response.toLowerCase();
-      const isClarification = lowerText.includes('would you') ||
+      const isClarification =
+        lowerText.includes('would you') ||
         lowerText.includes('could you') ||
         lowerText.includes('which') ||
         lowerText.includes('prefer') ||
@@ -162,10 +256,45 @@ async function _generateDiagram(
   }
 }
 
-// Create resilient version with circuit breaker + retry
+/**
+ * Resilient version of _generateDiagram with circuit breaker and retry logic.
+ * Uses exponential backoff for transient failures and circuit breaker for persistent failures.
+ */
 const resilientGenerateDiagram = withResilience(_generateDiagram, 'claude-diagram');
 
-// Export wrapped function with conversation context support
+/**
+ * Generates a Mermaid diagram from a natural language description.
+ *
+ * This is the main entry point for diagram generation. It wraps the core
+ * generation logic with resilience features (circuit breaker, retries).
+ *
+ * @param userMessage - Natural language description of the desired diagram
+ * @param preferences - Optional user preferences for diagram generation
+ * @param preferences.c4Level - C4 abstraction level ('context' | 'container' | 'component' | 'code')
+ * @param preferences.complexity - Diagram complexity ('simple' | 'detailed' | 'mvp' | 'enterprise')
+ * @param preferences.focusAreas - Specific areas to emphasize
+ * @param conversationHistory - Optional previous messages for context
+ * @param refinementContext - Optional existing diagram to modify
+ * @returns Generated Mermaid diagram code
+ *
+ * @example
+ * ```typescript
+ * // Simple generation
+ * const diagram = await generateDiagram("Create a login flow");
+ *
+ * // With preferences
+ * const diagram = await generateDiagram("Design a microservices system", {
+ *   c4Level: 'container',
+ *   complexity: 'detailed'
+ * });
+ *
+ * // Refining an existing diagram
+ * const refined = await generateDiagram("Add caching layer", undefined, history, {
+ *   baseDiagram: existingDiagram,
+ *   instruction: "Enhance the architecture"
+ * });
+ * ```
+ */
 export async function generateDiagram(
   userMessage: string,
   preferences?: UserPreferences,
@@ -175,7 +304,39 @@ export async function generateDiagram(
   return resilientGenerateDiagram(userMessage, preferences, conversationHistory, refinementContext);
 }
 
-// Streaming generator with abort signal support, intent analysis, and conversation context
+/**
+ * Generates a Mermaid diagram with real-time streaming output.
+ *
+ * Unlike `generateDiagram`, this function yields text chunks as they arrive,
+ * enabling progressive rendering in the UI. Supports abort signals for cancellation.
+ *
+ * @param userMessage - Natural language description of the desired diagram
+ * @param preferences - Optional user preferences for diagram generation
+ * @param abortSignal - Optional AbortSignal to cancel the stream
+ * @param conversationHistory - Optional previous messages for context
+ * @param refinementContext - Optional existing diagram to modify
+ * @yields Text chunks of the response as they arrive from the LLM
+ *
+ * @example
+ * ```typescript
+ * const controller = new AbortController();
+ *
+ * const stream = generateDiagramStream(
+ *   "Create a state machine for order processing",
+ *   { complexity: 'detailed' },
+ *   controller.signal
+ * );
+ *
+ * let fullResponse = '';
+ * for await (const chunk of stream) {
+ *   fullResponse += chunk;
+ *   updateUI(fullResponse); // Progressive rendering
+ * }
+ *
+ * // Cancel if needed
+ * controller.abort();
+ * ```
+ */
 export async function* generateDiagramStream(
   userMessage: string,
   preferences?: UserPreferences,
@@ -189,14 +350,17 @@ export async function* generateDiagramStream(
   try {
     // Analyze user intent
     const intent = analyzeIntent(userMessage);
-    log.info({
-      messageLength: userMessage.length,
-      intentConfidence: intent.confidence,
-      suggestedType: intent.suggestedType,
-      c4Level: intent.c4Level,
-      hasConversationHistory: !!conversationHistory?.length,
-      hasRefinementContext: !!refinementContext?.baseDiagram,
-    }, 'Starting diagram stream with intent analysis');
+    log.info(
+      {
+        messageLength: userMessage.length,
+        intentConfidence: intent.confidence,
+        suggestedType: intent.suggestedType,
+        c4Level: intent.c4Level,
+        hasConversationHistory: !!conversationHistory?.length,
+        hasRefinementContext: !!refinementContext?.baseDiagram,
+      },
+      'Starting diagram stream with intent analysis'
+    );
 
     // Enrich preferences with intent analysis
     const enrichedPreferences: UserPreferences = {
@@ -220,12 +384,15 @@ export async function* generateDiagramStream(
       refinementContext
     );
 
-    const stream = getStream({
-      model: DEFAULT_MODEL,
-      max_tokens: 1024,
-      system: getSystemPrompt(enrichedPreferences),
-      messages,
-    }, { provider: 'nim', modelId: DEFAULT_MODEL });
+    const stream = getStream(
+      {
+        model: DEFAULT_MODEL,
+        max_tokens: 1024,
+        system: getSystemPrompt(enrichedPreferences),
+        messages,
+      },
+      { provider: 'nim', modelId: DEFAULT_MODEL }
+    );
 
     for await (const event of stream) {
       // Check abort between chunks
@@ -235,8 +402,7 @@ export async function* generateDiagramStream(
         return;
       }
 
-      if (event.type === 'content_block_delta' &&
-        event.delta?.type === 'text_delta') {
+      if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
         yield event.delta.text;
       }
     }

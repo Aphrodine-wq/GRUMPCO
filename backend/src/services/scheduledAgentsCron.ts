@@ -3,7 +3,11 @@
  */
 
 import cron from 'node-cron';
-import { runScheduledAgent, type ScheduledAction, type ScheduledAgentParams } from './scheduledAgentsService.js';
+import {
+  runScheduledAgent,
+  type ScheduledAction,
+  type ScheduledAgentParams,
+} from './scheduledAgentsService.js';
 import logger from '../middleware/logger.js';
 
 const tasks = new Map<string, cron.ScheduledTask>();
@@ -21,7 +25,10 @@ export function scheduleWithNodeCron(
     try {
       await runScheduledAgent(scheduleId, action, params);
     } catch (err) {
-      logger.error({ scheduleId, err: (err as Error).message }, 'Scheduled agent (node-cron) failed');
+      logger.error(
+        { scheduleId, err: (err as Error).message },
+        'Scheduled agent (node-cron) failed'
+      );
     }
   });
   tasks.set(scheduleId, task);
@@ -40,15 +47,20 @@ export function unscheduleNodeCron(scheduleId: string): void {
 export async function loadAllFromDbAndSchedule(): Promise<void> {
   const { getDatabase } = await import('../db/database.js');
   const db = getDatabase().getDb();
-  const rows = db.prepare(
-    `SELECT id, cron_expression AS cronExpression, action, params_json AS paramsJson FROM scheduled_agents WHERE enabled = 1`
-  ).all() as { id: string; cronExpression: string; action: string; paramsJson: string }[];
+  const rows = db
+    .prepare(
+      `SELECT id, cron_expression AS cronExpression, action, params_json AS paramsJson FROM scheduled_agents WHERE enabled = 1`
+    )
+    .all() as { id: string; cronExpression: string; action: string; paramsJson: string }[];
   for (const r of rows) {
     try {
       const params = (r.paramsJson ? JSON.parse(r.paramsJson) : {}) as ScheduledAgentParams;
       scheduleWithNodeCron(r.id, r.cronExpression, r.action as ScheduledAction, params);
     } catch (err) {
-      logger.warn({ scheduleId: r.id, err: (err as Error).message }, 'Failed to schedule agent on startup');
+      logger.warn(
+        { scheduleId: r.id, err: (err as Error).message },
+        'Failed to schedule agent on startup'
+      );
     }
   }
 }

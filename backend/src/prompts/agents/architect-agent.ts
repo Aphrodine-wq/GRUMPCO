@@ -121,7 +121,7 @@ export function getArchitectAgentPromptWithContext(
   creativeDesignDoc?: CreativeDesignDoc
 ): string {
   let prompt = `${getArchitectAgentPrompt()}`;
-  
+
   if (contextSummary) {
     prompt += `\n\n${contextSummary}\n\n`;
   }
@@ -136,7 +136,7 @@ A Creative Design Document exists for this project. Your plan MUST align with it
 Do not contradict the CDD; frontend and layout tasks must reflect it.
 `;
   }
-  
+
   prompt += `
 ## PRD to Validate and Plan For:
 \`\`\`json
@@ -151,6 +151,6 @@ After completing your analysis, you will be required to generate a detailed work
 - Code quality requirements
 - Risk assessment and mitigations
 - Recommendations for implementation`;
-  
+
   return prompt;
 }

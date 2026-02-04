@@ -1,12 +1,13 @@
 /**
  * Vector store adapter – abstract index/query/upsert for RAG.
- * Implementations: file (default), optional Pinecone/Chroma when configured.
+ * Implementations: file (default), Pinecone when RAG_VECTOR_STORE=pinecone and PINECONE_* set.
  */
 
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname } from 'path';
 import { existsSync } from 'fs';
 import type { DocType } from './ragService.js';
+import { PineconeVectorStore } from './pineconeVectorStore.js';
 
 export interface VectorChunk {
   id: string;
@@ -28,10 +29,14 @@ export interface ChunkWithScore {
   score: number;
 }
 
+export interface VectorUpsertOptions {
+  namespace?: string;
+}
+
 export interface IVectorStore {
   query(embedding: number[], options?: VectorQueryOptions): Promise<ChunkWithScore[]>;
-  upsert(chunks: VectorChunk[]): Promise<void>;
-  clear?(): Promise<void>;
+  upsert(chunks: VectorChunk[], options?: VectorUpsertOptions): Promise<void>;
+  clear?(options?: { namespace?: string }): Promise<void>;
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {
@@ -40,9 +45,11 @@ function cosineSimilarity(a: number[], b: number[]): number {
   let na = 0;
   let nb = 0;
   for (let i = 0; i < a.length; i++) {
-    dot += a[i]! * b[i]!;
-    na += a[i]! * a[i]!;
-    nb += b[i]! * b[i]!;
+    const ai = a[i] ?? 0;
+    const bi = b[i] ?? 0;
+    dot += ai * bi;
+    na += ai * ai;
+    nb += bi * bi;
   }
   const den = Math.sqrt(na) * Math.sqrt(nb);
   return den === 0 ? 0 : dot / den;
@@ -78,7 +85,11 @@ export class FileVectorStore implements IVectorStore {
   async save(): Promise<void> {
     const dir = dirname(this.path);
     if (!existsSync(dir)) await mkdir(dir, { recursive: true });
-    await writeFile(this.path, JSON.stringify({ chunks: this.chunks, savedAt: new Date().toISOString() }), 'utf8');
+    await writeFile(
+      this.path,
+      JSON.stringify({ chunks: this.chunks, savedAt: new Date().toISOString() }),
+      'utf8'
+    );
   }
 
   async query(embedding: number[], options?: VectorQueryOptions): Promise<ChunkWithScore[]> {
@@ -93,7 +104,7 @@ export class FileVectorStore implements IVectorStore {
     return withScores.slice(0, topK);
   }
 
-  async upsert(chunks: VectorChunk[]): Promise<void> {
+  async upsert(chunks: VectorChunk[], _options?: { namespace?: string }): Promise<void> {
     await this.load();
     const ids = new Set(chunks.map((c) => c.id));
     this.chunks = this.chunks.filter((c) => !ids.has(c.id));
@@ -101,7 +112,7 @@ export class FileVectorStore implements IVectorStore {
     await this.save();
   }
 
-  async clear(): Promise<void> {
+  async clear(_options?: { namespace?: string }): Promise<void> {
     this.chunks = [];
     await this.save();
   }
@@ -115,11 +126,24 @@ let memoryStore: IVectorStore | null = null;
 
 /**
  * Get the configured vector store. Default: file-based at RAG_INDEX_PATH.
- * Set RAG_VECTOR_STORE=pinecone and PINECONE_* env for Pinecone (adapter can be added).
+ * Set RAG_VECTOR_STORE=pinecone, PINECONE_API_KEY, and PINECONE_INDEX for Pinecone.
+ * Optional: PINECONE_NAMESPACE (default namespace), PINECONE_HOST (custom endpoint).
  */
 export function getVectorStore(): IVectorStore {
   if (defaultStore) return defaultStore;
-  defaultStore = new FileVectorStore(DEFAULT_INDEX_PATH);
+  const kind = process.env.RAG_VECTOR_STORE;
+  const apiKey = process.env.PINECONE_API_KEY;
+  const indexName = process.env.PINECONE_INDEX;
+  if (kind === 'pinecone' && apiKey && indexName) {
+    defaultStore = new PineconeVectorStore({
+      apiKey,
+      indexName,
+      defaultNamespace: process.env.PINECONE_NAMESPACE ?? 'default',
+      host: process.env.PINECONE_HOST,
+    });
+  } else {
+    defaultStore = new FileVectorStore(DEFAULT_INDEX_PATH);
+  }
   return defaultStore;
 }
 

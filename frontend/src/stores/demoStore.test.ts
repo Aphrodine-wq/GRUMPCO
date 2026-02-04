@@ -1,16 +1,15 @@
 /**
  * Demo Store Tests
- * 
+ *
  * Comprehensive tests for demo mode state management
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { get } from 'svelte/store';
 import { resetMocks } from '../test/setup';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+globalThis.fetch = mockFetch as typeof fetch;
 
 // Mock the API module
 vi.mock('../lib/api.js', () => ({
@@ -34,22 +33,28 @@ describe('demoStore', () => {
   describe('initial state', () => {
     it('should not be active initially', async () => {
       const { demoStore } = await import('./demoStore');
-      let state: any;
-      demoStore.subscribe(s => { state = s; })();
+      let state: Record<string, unknown> = {};
+      demoStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
       expect(state.active).toBe(false);
     });
 
     it('should have null workspace path', async () => {
       const { demoStore } = await import('./demoStore');
-      let state: any;
-      demoStore.subscribe(s => { state = s; })();
+      let state: Record<string, unknown> = {};
+      demoStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
       expect(state.workspacePath).toBeNull();
     });
 
     it('should have empty steps', async () => {
       const { demoStore } = await import('./demoStore');
-      let state: any;
-      demoStore.subscribe(s => { state = s; })();
+      let state: Record<string, unknown> = {};
+      demoStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
       expect(state.steps).toEqual([]);
     });
   });
@@ -59,11 +64,13 @@ describe('demoStore', () => {
       const { demoStore } = await import('./demoStore');
 
       demoStore.setActive(true, '/demo/workspace', [
-        { target: '.chat', title: 'Welcome', content: 'Start here' }
+        { target: '.chat', title: 'Welcome', content: 'Start here' },
       ]);
 
-      let state: any;
-      demoStore.subscribe(s => { state = s; })();
+      let state: Record<string, unknown> = {};
+      demoStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
 
       expect(state.active).toBe(true);
       expect(state.workspacePath).toBe('/demo/workspace');
@@ -76,8 +83,10 @@ describe('demoStore', () => {
       demoStore.setActive(true, '/demo', []);
       demoStore.setActive(false);
 
-      let state: any;
-      demoStore.subscribe(s => { state = s; })();
+      let state: Record<string, unknown> = {};
+      demoStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
 
       expect(state.active).toBe(false);
     });
@@ -90,12 +99,11 @@ describe('demoStore', () => {
 
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          workspacePath: '/demo/project',
-          steps: [
-            { target: '.input', title: 'Step 1', content: 'Do this' }
-          ]
-        }),
+        json: () =>
+          Promise.resolve({
+            workspacePath: '/demo/project',
+            steps: [{ target: '.input', title: 'Step 1', content: 'Do this' }],
+          }),
       });
 
       const result = await demoStore.startDemo();
@@ -103,8 +111,10 @@ describe('demoStore', () => {
       expect(result.ok).toBe(true);
       expect(workspaceStore.setWorkspace).toHaveBeenCalledWith('/demo/project', null);
 
-      let state: any;
-      demoStore.subscribe(s => { state = s; })();
+      let state: Record<string, unknown> = {};
+      demoStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
 
       expect(state.active).toBe(true);
       expect(state.workspacePath).toBe('/demo/project');
@@ -154,8 +164,10 @@ describe('demoStore', () => {
       demoStore.setActive(true, '/demo', [{ target: '.x', title: 'T', content: 'C' }]);
       demoStore.reset();
 
-      let state: any;
-      demoStore.subscribe(s => { state = s; })();
+      let state: Record<string, unknown> = {};
+      demoStore.subscribe((s) => {
+        state = s as unknown as Record<string, unknown>;
+      })();
 
       expect(state.active).toBe(false);
       expect(state.workspacePath).toBeNull();

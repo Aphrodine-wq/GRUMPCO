@@ -406,10 +406,7 @@ export type ChaosScenarioName = keyof typeof ChaosScenarios;
 /**
  * Apply a pre-defined chaos scenario.
  */
-export function applyChaosScenario(
-  chaos: ChaosMonkey,
-  scenario: ChaosScenarioName
-): void {
+export function applyChaosScenario(chaos: ChaosMonkey, scenario: ChaosScenarioName): void {
   const config = ChaosScenarios[scenario];
   // Deep clone to convert readonly arrays to mutable
   chaos.configure({

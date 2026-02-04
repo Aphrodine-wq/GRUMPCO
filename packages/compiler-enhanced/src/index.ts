@@ -473,3 +473,6 @@ export * from './parallel.js';
 export * from './transforms.js';
 export * from './sourcemaps.js';
 export * from './hotreload.js';
+
+// HyperCompiler - 40x+ performance enhancement subsystem
+export * from './hyper/index.js';

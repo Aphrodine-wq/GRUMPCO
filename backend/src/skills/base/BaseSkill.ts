@@ -87,10 +87,7 @@ export abstract class BaseSkill implements Skill {
    * Quick execution (non-streaming)
    * Override this for simple skills
    */
-  async run(
-    input: SkillExecutionInput,
-    context: SkillContext
-  ): Promise<SkillExecutionResult> {
+  async run(input: SkillExecutionInput, context: SkillContext): Promise<SkillExecutionResult> {
     const startTime = Date.now();
 
     try {
@@ -116,10 +113,7 @@ export abstract class BaseSkill implements Skill {
   /**
    * Override this method for simple processing
    */
-  protected async process(
-    _input: SkillExecutionInput,
-    _context: SkillContext
-  ): Promise<string> {
+  protected async process(_input: SkillExecutionInput, _context: SkillContext): Promise<string> {
     throw new Error('Skill must implement process() or execute()');
   }
 
@@ -217,11 +211,7 @@ export abstract class BaseSkill implements Skill {
   /**
    * Emit a progress event
    */
-  protected emitProgress(
-    context: SkillContext,
-    percent: number,
-    message?: string
-  ): void {
+  protected emitProgress(context: SkillContext, percent: number, message?: string): void {
     context.emit({
       type: 'progress',
       percent,
@@ -252,10 +242,7 @@ export abstract class BaseSkill implements Skill {
   /**
    * Read a file safely within workspace
    */
-  protected async readFile(
-    context: SkillContext,
-    filePath: string
-  ): Promise<string | null> {
+  protected async readFile(context: SkillContext, filePath: string): Promise<string | null> {
     try {
       if (!context.services.fileSystem.isWithinWorkspace(filePath)) {
         context.services.logger.warn('Path outside workspace', { filePath });

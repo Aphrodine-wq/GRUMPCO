@@ -30,10 +30,7 @@ export class BatchProcessor<T = unknown, R = unknown> {
   private deduplicateRequests: boolean;
   private processor: (requests: T[]) => Promise<R[]>;
 
-  constructor(
-    processor: (requests: T[]) => Promise<R[]>,
-    options: BatchProcessorOptions = {}
-  ) {
+  constructor(processor: (requests: T[]) => Promise<R[]>, options: BatchProcessorOptions = {}) {
     this.processor = processor;
     this.maxBatchSize = options.maxBatchSize || 10;
     this.maxWaitTime = options.maxWaitTime || 100; // 100ms default
@@ -46,7 +43,7 @@ export class BatchProcessor<T = unknown, R = unknown> {
   public async add(batchKey: string, data: T): Promise<R> {
     return new Promise<R>((resolve, reject) => {
       const hash = this.deduplicateRequests ? this.hashRequest(data) : '';
-      
+
       // Check for duplicate in-flight request
       if (this.deduplicateRequests && hash) {
         const existingRequest = this.pendingRequests.get(hash);
@@ -80,20 +77,22 @@ export class BatchProcessor<T = unknown, R = unknown> {
       if (!this.batches.has(batchKey)) {
         this.batches.set(batchKey, []);
       }
-      
-      const batch = this.batches.get(batchKey)!;
-      batch.push(request);
 
-      // Process immediately if batch is full
-      if (batch.length >= this.maxBatchSize) {
-        this.processBatch(batchKey);
-      } else {
-        // Set timer to process batch after maxWaitTime
-        if (!this.timers.has(batchKey)) {
-          const timer = setTimeout(() => {
-            this.processBatch(batchKey);
-          }, this.maxWaitTime);
-          this.timers.set(batchKey, timer);
+      const batch = this.batches.get(batchKey);
+      if (batch) {
+        batch.push(request);
+
+        // Process immediately if batch is full
+        if (batch.length >= this.maxBatchSize) {
+          this.processBatch(batchKey);
+        } else {
+          // Set timer to process batch after maxWaitTime
+          if (!this.timers.has(batchKey)) {
+            const timer = setTimeout(() => {
+              this.processBatch(batchKey);
+            }, this.maxWaitTime);
+            this.timers.set(batchKey, timer);
+          }
         }
       }
     });
@@ -134,7 +133,7 @@ export class BatchProcessor<T = unknown, R = unknown> {
 
       batch.forEach((request, index) => {
         request.resolve(results[index]);
-        
+
         // Remove from pending
         if (this.deduplicateRequests && request.hash) {
           this.pendingRequests.delete(request.hash);
@@ -143,11 +142,14 @@ export class BatchProcessor<T = unknown, R = unknown> {
     } catch (error) {
       // Reject all requests in batch
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error({ error: errorMessage, batchKey, size: batch.length }, 'Batch processing failed');
+      logger.error(
+        { error: errorMessage, batchKey, size: batch.length },
+        'Batch processing failed'
+      );
 
       batch.forEach((request) => {
         request.reject(new Error(`Batch processing failed: ${errorMessage}`));
-        
+
         // Remove from pending
         if (this.deduplicateRequests && request.hash) {
           this.pendingRequests.delete(request.hash);
@@ -163,7 +165,7 @@ export class BatchProcessor<T = unknown, R = unknown> {
     try {
       const json = JSON.stringify(data);
       return createHash('sha256').update(json).digest('hex').substring(0, 16);
-    } catch (error) {
+    } catch (_error) {
       return '';
     }
   }
@@ -226,8 +228,18 @@ export function createEmbeddingBatchProcessor(
   embeddingFn: (texts: string[]) => Promise<number[][]>,
   options?: EmbeddingBatchOptions
 ): BatchProcessor<string, number[]> {
-  const maxBatchSize = options?.maxBatchSize ?? (process.env.NIM_EMBED_BATCH_SIZE ? parseInt(process.env.NIM_EMBED_BATCH_SIZE, 10) : undefined) ?? 256;
-  const maxWaitTime = options?.maxWaitTime ?? (process.env.NIM_EMBED_MAX_WAIT_MS ? parseInt(process.env.NIM_EMBED_MAX_WAIT_MS, 10) : undefined) ?? 50;
+  const maxBatchSize =
+    options?.maxBatchSize ??
+    (process.env.NIM_EMBED_BATCH_SIZE
+      ? parseInt(process.env.NIM_EMBED_BATCH_SIZE, 10)
+      : undefined) ??
+    256;
+  const maxWaitTime =
+    options?.maxWaitTime ??
+    (process.env.NIM_EMBED_MAX_WAIT_MS
+      ? parseInt(process.env.NIM_EMBED_MAX_WAIT_MS, 10)
+      : undefined) ??
+    50;
   return new BatchProcessor<string, number[]>(
     async (texts: string[]) => {
       return await embeddingFn(texts);

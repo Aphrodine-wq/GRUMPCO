@@ -3,7 +3,12 @@
  * Intelligent model routing based on task complexity and cost
  */
 
-import { MODEL_REGISTRY, type ModelConfig, type LLMProvider } from '@grump/ai-core';
+import {
+  MODEL_REGISTRY,
+  type ModelConfig,
+  type ModelCapability,
+  type LLMProvider,
+} from '@grump/ai-core';
 import logger from '../middleware/logger.js';
 
 export interface TaskComplexity {
@@ -29,7 +34,7 @@ export interface ModelSelection {
 export interface CostOptimizationOptions {
   maxCostPerRequest?: number;
   preferCheaper?: boolean;
-  requireCapability?: string[];
+  requireCapability?: ModelCapability[];
   allowedProviders?: LLMProvider[];
 }
 
@@ -54,27 +59,27 @@ export class CostOptimizer {
     // Detect complexity indicators
     const requiresReasoning =
       /\b(analyze|evaluate|compare|explain why|reasoning|logic|deduce)\b/i.test(fullText);
-    
-    const requiresCreativity =
-      /\b(creative|innovative|unique|original|brainstorm|imagine)\b/i.test(fullText);
-    
+
+    const requiresCreativity = /\b(creative|innovative|unique|original|brainstorm|imagine)\b/i.test(
+      fullText
+    );
+
     const requiresAccuracy =
       /\b(precise|exact|accurate|correct|verify|validate)\b/i.test(fullText) ||
       mode === 'spec' ||
       mode === 'architecture';
-    
+
     const hasCodeGeneration =
       /\b(code|function|class|implement|build|develop|program)\b/i.test(fullText) ||
       mode === 'ship' ||
       mode === 'codegen';
-    
+
     const hasMultiStep =
-      /\b(first|then|next|finally|step|phase|stage)\b/i.test(fullText) ||
-      contextSize > 5;
+      /\b(first|then|next|finally|step|phase|stage)\b/i.test(fullText) || contextSize > 5;
 
     // Calculate complexity score (0-100)
     let score = 0;
-    
+
     // Base score from message length
     if (messageLength < 500) score += 10;
     else if (messageLength < 2000) score += 30;
@@ -124,7 +129,7 @@ export class CostOptimizer {
       // Filter by required capabilities
       if (options.requireCapability) {
         const hasAllCapabilities = options.requireCapability.every((cap) =>
-          model.capabilities.includes(cap as any)
+          model.capabilities.includes(cap)
         );
         if (!hasAllCapabilities) return false;
       }
@@ -158,10 +163,10 @@ export class CostOptimizer {
         const cost = (m.costPerMillionInput || 0) + (m.costPerMillionOutput || 0);
         return cost > 1 && cost < 10;
       });
-      
+
       selectedModel = midTierModels.length > 0 ? midTierModels[0] : sortedModels[0];
       reasoning = 'Medium complexity, using balanced model';
-      
+
       if (selectedModel === sortedModels[0]) {
         this.costSavings.cheapModelUsed++;
       }
@@ -229,7 +234,7 @@ export class CostOptimizer {
     // Rough estimation: 1 char ≈ 0.25 tokens
     const estimatedTokens = Math.ceil(messageLength / 4);
     const inputCost = ((model.costPerMillionInput || 0) * estimatedTokens) / 1_000_000;
-    
+
     // Assume output is 50% of input length
     const outputTokens = Math.ceil(estimatedTokens * 0.5);
     const outputCost = ((model.costPerMillionOutput || 0) * outputTokens) / 1_000_000;

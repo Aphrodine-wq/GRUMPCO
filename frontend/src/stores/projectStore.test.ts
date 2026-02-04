@@ -1,6 +1,6 @@
 /**
  * Project Store Tests
- * 
+ *
  * Comprehensive tests for project identity management
  */
 
@@ -85,14 +85,14 @@ describe('projectStore', () => {
   describe('reactivity', () => {
     it('should notify subscribers on change', () => {
       const values: (string | null)[] = [];
-      const unsubscribe = currentProjectId.subscribe(v => values.push(v));
-      
+      const unsubscribe = currentProjectId.subscribe((v) => values.push(v));
+
       setCurrentProjectId('project-1');
       setCurrentProjectId('project-2');
       setCurrentProjectId(null);
-      
+
       unsubscribe();
-      
+
       // Initial null + 3 updates
       expect(values).toEqual([null, 'project-1', 'project-2', null]);
     });

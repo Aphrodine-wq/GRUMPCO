@@ -4,7 +4,7 @@
  * API endpoints for analyzing existing codebases.
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import logger from '../../middleware/logger.js';
 import {
   analyzeCodebase,
@@ -13,7 +13,12 @@ import {
   getCodeMetrics,
   detectCodeSmells,
 } from './service.js';
-import { AnalysisRequest, ArchitectureDiagramRequest, DependencyGraphRequest, MetricsRequest } from './types.js';
+import {
+  type AnalysisRequest,
+  type ArchitectureDiagramRequest,
+  type DependencyGraphRequest,
+  type MetricsRequest,
+} from './types.js';
 
 const router = Router();
 
@@ -65,7 +70,11 @@ router.post('/architecture', async (req: Request, res: Response) => {
       return;
     }
 
-    const { mermaidDiagram, summary, diagramType: resolvedDiagramType } = await generateArchitectureDiagram({
+    const {
+      mermaidDiagram,
+      summary,
+      diagramType: resolvedDiagramType,
+    } = await generateArchitectureDiagram({
       workspacePath,
       diagramType,
       focusOn,
@@ -187,14 +196,20 @@ router.post('/code-smells', async (req: Request, res: Response) => {
       data: {
         codeSmells: smells,
         total: smells.length,
-        byType: smells.reduce((acc, s) => {
-          acc[s.type] = (acc[s.type] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
-        bySeverity: smells.reduce((acc, s) => {
-          acc[s.severity] = (acc[s.severity] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
+        byType: smells.reduce(
+          (acc, s) => {
+            acc[s.type] = (acc[s.type] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>
+        ),
+        bySeverity: smells.reduce(
+          (acc, s) => {
+            acc[s.severity] = (acc[s.severity] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>
+        ),
       },
     });
   } catch (error) {

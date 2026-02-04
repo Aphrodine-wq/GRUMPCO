@@ -35,9 +35,21 @@ export const DEMO_ARCHITECTURE: SystemArchitecture = {
   },
   metadata: {
     components: [
-      { id: 'c1', name: 'Web App', description: 'React SPA', type: 'frontend', technology: ['React'] },
+      {
+        id: 'c1',
+        name: 'Web App',
+        description: 'React SPA',
+        type: 'frontend',
+        technology: ['React'],
+      },
       { id: 'c2', name: 'API', description: 'REST API', type: 'backend', technology: ['Node.js'] },
-      { id: 'c3', name: 'Database', description: 'PostgreSQL', type: 'database', technology: ['PostgreSQL'] },
+      {
+        id: 'c3',
+        name: 'Database',
+        description: 'PostgreSQL',
+        type: 'database',
+        technology: ['PostgreSQL'],
+      },
     ],
     integrations: [],
     dataModels: [],
@@ -95,10 +107,29 @@ export const DEMO_PRD: PRD = {
     ],
     nonFunctionalRequirements: [],
     apis: [
-      { method: 'GET', path: '/api/tasks', description: 'List tasks', responses: [{ status: 200, description: 'OK' }] },
-      { method: 'POST', path: '/api/tasks', description: 'Create task', responses: [{ status: 201, description: 'Created' }] },
+      {
+        method: 'GET',
+        path: '/api/tasks',
+        description: 'List tasks',
+        responses: [{ status: 200, description: 'OK' }],
+      },
+      {
+        method: 'POST',
+        path: '/api/tasks',
+        description: 'Create task',
+        responses: [{ status: 201, description: 'Created' }],
+      },
     ],
-    dataModels: [{ name: 'Task', fields: [{ name: 'id', type: 'string', required: true }, { name: 'title', type: 'string', required: true }, { name: 'done', type: 'boolean', required: true }] }],
+    dataModels: [
+      {
+        name: 'Task',
+        fields: [
+          { name: 'id', type: 'string', required: true },
+          { name: 'title', type: 'string', required: true },
+          { name: 'done', type: 'boolean', required: true },
+        ],
+      },
+    ],
     successMetrics: [],
   },
 };

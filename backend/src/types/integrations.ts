@@ -80,7 +80,16 @@ export interface IntegrationSecretRecord {
 
 // ========== Audit Logs ==========
 
-export type AuditCategory = 'integration' | 'system' | 'security' | 'automation' | 'billing' | 'agent';
+export type AuditCategory =
+  | 'integration'
+  | 'system'
+  | 'security'
+  | 'automation'
+  | 'billing'
+  | 'agent'
+  | 'ai'
+  | 'tool'
+  | 'skill';
 
 export interface AuditLogRecord {
   id: string;
@@ -167,6 +176,52 @@ export interface SkillRecord {
   approved_by?: string | null;
 }
 
+// ========== Conversation Memories (Messaging) ==========
+
+export interface ConversationMemoryRecord {
+  id: string;
+  platform: string;
+  platform_user_id: string;
+  user_id: string | null;
+  messages: string; // JSON array of {role, content}
+  summary: string | null;
+  updated_at: string;
+  created_at: string;
+}
+
+// ========== Messaging Subscriptions (Proactive Push) ==========
+
+export interface MessagingSubscriptionRecord {
+  id: string;
+  user_id: string;
+  platform: string;
+  platform_user_id: string;
+  created_at: string;
+}
+
+// ========== Reminders (Life Automation) ==========
+
+export interface ReminderRecord {
+  id: string;
+  user_id: string;
+  content: string;
+  due_at: string;
+  platform: string | null;
+  platform_user_id: string | null;
+  notified: number; // 0 or 1
+  created_at: string;
+  updated_at: string;
+}
+
+// ========== Slack User Pairings ==========
+
+export interface SlackUserPairingRecord {
+  slack_user_id: string;
+  workspace_id: string;
+  grump_user_id: string;
+  created_at: string;
+}
+
 // ========== Memory Records ==========
 
 export type MemoryType = 'conversation' | 'preference' | 'task' | 'fact' | 'context';
@@ -214,6 +269,20 @@ export interface RateLimitRecord {
   current_count: number;
   window_start: string;
   created_at: string;
+}
+
+// ========== Slack Tokens ==========
+
+export interface SlackTokenRecord {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  workspace_name?: string | null;
+  access_token_enc: string; // JSON EncryptedPayload
+  bot_user_id?: string | null;
+  scope?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // ========== Browser Allowlist ==========
@@ -303,4 +372,13 @@ export interface CreateMemoryInput {
   importance?: number;
   metadata?: Record<string, unknown>;
   expiresAt?: string;
+}
+
+export interface CreateSlackTokenInput {
+  userId: string;
+  workspaceId: string;
+  workspaceName?: string;
+  accessTokenEnc: string;
+  botUserId?: string;
+  scope?: string;
 }

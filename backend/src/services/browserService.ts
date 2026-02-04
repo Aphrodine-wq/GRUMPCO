@@ -56,7 +56,7 @@ export async function screenshotUrl(url: string): Promise<ScreenshotResult> {
       const buf = await page.screenshot({ type: 'png', fullPage: false });
       return { ok: true, imageBase64: Buffer.from(buf).toString('base64') };
     } finally {
-      await browser.close().catch(() => { });
+      await browser.close().catch(() => {});
     }
   } catch (e) {
     logger.warn({ url, err: (e as Error).message }, 'screenshot_url failed');
@@ -89,7 +89,7 @@ async function runWithPage<T>(
       const result = await action(page);
       return { ok: true, result };
     } finally {
-      await browser.close().catch(() => { });
+      await browser.close().catch(() => {});
     }
   } catch (e) {
     return { ok: false, error: (e as Error).message };
@@ -97,31 +97,52 @@ async function runWithPage<T>(
 }
 
 export async function browserNavigate(url: string, timeout?: number) {
-  return runWithPage(async (page) => {
-    const p = page as { url(): string; title(): Promise<string> };
-    return { url: p.url(), title: await p.title() };
-  }, url, timeout);
+  return runWithPage(
+    async (page) => {
+      const p = page as { url(): string; title(): Promise<string> };
+      return { url: p.url(), title: await p.title() };
+    },
+    url,
+    timeout
+  );
 }
 
 export async function browserClick(selector: string, url?: string, timeout?: number) {
-  return runWithPage(async (page) => {
-    const p = page as { locator(sel: string): { click(opts?: { timeout?: number }): Promise<void> } };
-    await p.locator(selector).click({ timeout: timeout ?? 10000 });
-    return { clicked: selector };
-  }, url, timeout);
+  return runWithPage(
+    async (page) => {
+      const p = page as {
+        locator(sel: string): { click(opts?: { timeout?: number }): Promise<void> };
+      };
+      await p.locator(selector).click({ timeout: timeout ?? 10000 });
+      return { clicked: selector };
+    },
+    url,
+    timeout
+  );
 }
 
 export async function browserType(selector: string, text: string, url?: string, timeout?: number) {
-  return runWithPage(async (page) => {
-    const p = page as { fill(sel: string, text: string, opts?: { timeout?: number }): Promise<void> };
-    await p.fill(selector, text, { timeout: timeout ?? 10000 });
-    return { typed: selector, text };
-  }, url, timeout);
+  return runWithPage(
+    async (page) => {
+      const p = page as {
+        fill(sel: string, text: string, opts?: { timeout?: number }): Promise<void>;
+      };
+      await p.fill(selector, text, { timeout: timeout ?? 10000 });
+      return { typed: selector, text };
+    },
+    url,
+    timeout
+  );
 }
 
-export async function browserScreenshot(url?: string, fullPage: boolean = false): Promise<ScreenshotResult> {
+export async function browserScreenshot(
+  url?: string,
+  fullPage: boolean = false
+): Promise<ScreenshotResult> {
   const res = await runWithPage(async (page) => {
-    const p = page as { screenshot(opts: { type: string; fullPage?: boolean }): Promise<Buffer | string> };
+    const p = page as {
+      screenshot(opts: { type: string; fullPage?: boolean }): Promise<Buffer | string>;
+    };
     const buf = await p.screenshot({ type: 'png', fullPage });
     return Buffer.from(buf as Buffer).toString('base64');
   }, url);
@@ -130,9 +151,14 @@ export async function browserScreenshot(url?: string, fullPage: boolean = false)
   return { ok: true, imageBase64: res.result };
 }
 
-export async function browserGetContent(url?: string): Promise<{ ok: boolean; error?: string; html?: string; text?: string }> {
+export async function browserGetContent(
+  url?: string
+): Promise<{ ok: boolean; error?: string; html?: string; text?: string }> {
   const res = await runWithPage(async (page) => {
-    const p = page as unknown as { content(): Promise<string>; evaluate(expr: string): Promise<string> };
+    const p = page as unknown as {
+      content(): Promise<string>;
+      evaluate(expr: string): Promise<string>;
+    };
     const html = await p.content();
     const text = await p.evaluate('document.body?.innerText ?? ""');
     return { html, text };
@@ -178,15 +204,22 @@ export async function browserRunScript(steps: BrowserStep[]): Promise<BrowserRun
           screenshotBase64 = Buffer.from(buf).toString('base64');
           logs.push('Screenshot captured');
         } else if (step.action === 'wait') {
-          await page.waitForTimeout(Math.min(to, step.value ? parseInt(step.value, 10) || 1000 : 1000));
+          await page.waitForTimeout(
+            Math.min(to, step.value ? parseInt(step.value, 10) || 1000 : 1000)
+          );
           logs.push('Waited');
         }
       } catch (stepErr) {
-        await browser.close().catch(() => { });
-        return { ok: false, error: (stepErr as Error).message, logs, lastUrl: lastUrl || undefined };
+        await browser.close().catch(() => {});
+        return {
+          ok: false,
+          error: (stepErr as Error).message,
+          logs,
+          lastUrl: lastUrl || undefined,
+        };
       }
     }
-    await browser.close().catch(() => { });
+    await browser.close().catch(() => {});
     return { ok: true, logs, lastUrl: lastUrl || undefined, screenshotBase64 };
   } catch (e) {
     return { ok: false, error: (e as Error).message, logs };

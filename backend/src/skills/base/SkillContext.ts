@@ -8,7 +8,7 @@ import fs from 'fs/promises';
 import { existsSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../../middleware/logger.js';
-import { getStream, type StreamEvent, type StreamParams } from '../../services/llmGateway.js';
+import { getStream, type StreamParams } from '../../services/llmGateway.js';
 import type {
   SkillContext,
   SkillEvent,
@@ -32,12 +32,12 @@ export function createSkillContext(options: {
   sessionId?: string;
   workspacePath?: string;
   config?: Record<string, unknown>;
-  source?: 'chat' | 'api' | 'command';
+  source?: 'chat' | 'api' | 'command' | 'skill_test';
   onEvent?: (event: SkillEvent) => void;
 }): SkillContext {
   const sessionId = options.sessionId || uuidv4();
   const workspacePath = options.workspacePath;
-  let cancelled = false;
+  const cancelled = false;
 
   // Create services
   const llmService = createLLMService();
@@ -79,7 +79,7 @@ function createLLMService(): LLMService {
         model: 'moonshotai/kimi-k2.5',
         max_tokens: params.maxTokens || 4096,
         system: params.system || '',
-        messages: params.messages.map(m => ({
+        messages: params.messages.map((m) => ({
           role: m.role,
           content: m.content,
         })),
@@ -107,7 +107,7 @@ function createLLMService(): LLMService {
         model: 'moonshotai/kimi-k2.5',
         max_tokens: params.maxTokens || 4096,
         system: params.system || '',
-        messages: params.messages.map(m => ({
+        messages: params.messages.map((m) => ({
           role: m.role,
           content: m.content,
         })),
@@ -174,9 +174,7 @@ function createFileSystemService(workspacePath?: string): FileSystemService {
       const resolved = resolvePath(dirPath);
       const entries = await fs.readdir(resolved, { withFileTypes: true });
 
-      return entries.map((entry) =>
-        entry.isDirectory() ? `${entry.name}/` : entry.name
-      );
+      return entries.map((entry) => (entry.isDirectory() ? `${entry.name}/` : entry.name));
     },
 
     async deleteFile(filePath: string): Promise<void> {
@@ -248,15 +246,18 @@ function createGitService(workspacePath: string): GitService {
       const format = '%H|%s|%an|%aI';
       const output = await runGit(`log -${count} --format="${format}"`);
 
-      return output.split('\n').filter(Boolean).map((line) => {
-        const [hash, message, author, date] = line.split('|');
-        return {
-          hash,
-          message,
-          author,
-          date: new Date(date),
-        };
-      });
+      return output
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => {
+          const [hash, message, author, date] = line.split('|');
+          return {
+            hash,
+            message,
+            author,
+            date: new Date(date),
+          };
+        });
     },
 
     async branch(): Promise<string> {
@@ -302,9 +303,10 @@ function createLoggerService(sessionId: string): LoggerService {
 /**
  * Create a cancellable context
  */
-export function createCancellableContext(
-  baseContext: SkillContext
-): { context: SkillContext; cancel: () => void } {
+export function createCancellableContext(baseContext: SkillContext): {
+  context: SkillContext;
+  cancel: () => void;
+} {
   let cancelled = false;
 
   const context: SkillContext = {

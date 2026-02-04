@@ -68,21 +68,23 @@
   const isPolling = writable(false);
 
   // Derived
-  const runningContainers = derived(containers, $c => $c.filter(c => c.status === 'running'));
-  const stoppedContainers = derived(containers, $c => $c.filter(c => c.status !== 'running'));
+  const runningContainers = derived(containers, ($c) => $c.filter((c) => c.status === 'running'));
+  const stoppedContainers = derived(containers, ($c) => $c.filter((c) => c.status !== 'running'));
 
   // IPC functions (will call Electron or Backend API)
   async function invokeDocker(method: string, args: unknown = {}): Promise<unknown> {
     // Priority 1: Electron IPC
     if (typeof window !== 'undefined' && 'electronAPI' in window) {
       try {
-        return await (window as { electronAPI: { docker: (method: string, args: unknown) => Promise<unknown> } }).electronAPI.docker(method, args);
+        return await (
+          window as { electronAPI: { docker: (method: string, args: unknown) => Promise<unknown> } }
+        ).electronAPI.docker(method, args);
       } catch (err) {
         console.error('Docker IPC error:', err);
         throw err;
       }
     }
-    
+
     // Priority 2: Backend API (for browser-based access)
     try {
       return await invokeDockerViaApi(method, args);
@@ -91,11 +93,11 @@
       return mockDockerCall(method, args);
     }
   }
-  
+
   // Call Docker operations via backend API
   async function invokeDockerViaApi(method: string, args: unknown = {}): Promise<unknown> {
     const baseUrl = '/api/docker';
-    
+
     switch (method) {
       case 'listContainers': {
         const res = await fetch(`${baseUrl}/containers`);
@@ -164,7 +166,7 @@
         const res = await fetch(`${baseUrl}/compose/up`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(args)
+          body: JSON.stringify(args),
         });
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         return res.json();
@@ -173,7 +175,7 @@
         const res = await fetch(`${baseUrl}/compose/down`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(args)
+          body: JSON.stringify(args),
         });
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         return res.json();
@@ -194,7 +196,13 @@
           ports: [{ host: 3000, container: 3000, protocol: 'tcp' }],
           created: new Date().toISOString(),
           state: { running: true, paused: false, restarting: false, health: 'healthy' },
-          stats: { cpuPercent: 2.5, memoryUsage: 128 * 1024 * 1024, memoryLimit: 512 * 1024 * 1024, networkRx: 1024, networkTx: 512 }
+          stats: {
+            cpuPercent: 2.5,
+            memoryUsage: 128 * 1024 * 1024,
+            memoryLimit: 512 * 1024 * 1024,
+            networkRx: 1024,
+            networkTx: 512,
+          },
         },
         {
           id: 'def456',
@@ -204,7 +212,13 @@
           ports: [{ host: 5432, container: 5432, protocol: 'tcp' }],
           created: new Date().toISOString(),
           state: { running: true, paused: false, restarting: false, health: 'healthy' },
-          stats: { cpuPercent: 0.8, memoryUsage: 64 * 1024 * 1024, memoryLimit: 256 * 1024 * 1024, networkRx: 2048, networkTx: 1024 }
+          stats: {
+            cpuPercent: 0.8,
+            memoryUsage: 64 * 1024 * 1024,
+            memoryLimit: 256 * 1024 * 1024,
+            networkRx: 2048,
+            networkTx: 1024,
+          },
         },
         {
           id: 'ghi789',
@@ -214,26 +228,57 @@
           ports: [],
           created: new Date().toISOString(),
           state: { running: false, paused: false, restarting: false },
-        }
+        },
       ];
     }
     if (method === 'listImages') {
       return [
-        { id: 'sha256:abc', tags: ['node:20-alpine'], size: 150 * 1024 * 1024, created: new Date().toISOString() },
-        { id: 'sha256:def', tags: ['postgres:15'], size: 350 * 1024 * 1024, created: new Date().toISOString() },
-        { id: 'sha256:ghi', tags: ['redis:7-alpine'], size: 30 * 1024 * 1024, created: new Date().toISOString() },
+        {
+          id: 'sha256:abc',
+          tags: ['node:20-alpine'],
+          size: 150 * 1024 * 1024,
+          created: new Date().toISOString(),
+        },
+        {
+          id: 'sha256:def',
+          tags: ['postgres:15'],
+          size: 350 * 1024 * 1024,
+          created: new Date().toISOString(),
+        },
+        {
+          id: 'sha256:ghi',
+          tags: ['redis:7-alpine'],
+          size: 30 * 1024 * 1024,
+          created: new Date().toISOString(),
+        },
       ];
     }
     if (method === 'listVolumes') {
       return [
-        { name: 'postgres_data', driver: 'local', mountpoint: '/var/lib/docker/volumes/postgres_data/_data', created: new Date().toISOString() },
-        { name: 'redis_data', driver: 'local', mountpoint: '/var/lib/docker/volumes/redis_data/_data', created: new Date().toISOString() },
+        {
+          name: 'postgres_data',
+          driver: 'local',
+          mountpoint: '/var/lib/docker/volumes/postgres_data/_data',
+          created: new Date().toISOString(),
+        },
+        {
+          name: 'redis_data',
+          driver: 'local',
+          mountpoint: '/var/lib/docker/volumes/redis_data/_data',
+          created: new Date().toISOString(),
+        },
       ];
     }
     if (method === 'listNetworks') {
       return [
         { id: 'net1', name: 'bridge', driver: 'bridge', scope: 'local', containers: [] },
-        { id: 'net2', name: 'my-app-network', driver: 'bridge', scope: 'local', containers: ['abc123', 'def456'] },
+        {
+          id: 'net2',
+          name: 'my-app-network',
+          driver: 'bridge',
+          scope: 'local',
+          containers: ['abc123', 'def456'],
+        },
       ];
     }
     return null;
@@ -313,16 +358,6 @@
     }
   }
 
-  // Image actions
-  async function pullImage(name: string) {
-    try {
-      await invokeDocker('pullImage', { name });
-      await loadData();
-    } catch (err) {
-      error.set(`Failed to pull image: ${(err as Error).message}`);
-    }
-  }
-
   async function removeImage(id: string) {
     try {
       await invokeDocker('removeImage', { id });
@@ -376,20 +411,28 @@
 
   function getStatusColor(status: string): string {
     switch (status) {
-      case 'running': return 'text-green-400';
-      case 'paused': return 'text-yellow-400';
+      case 'running':
+        return 'text-green-400';
+      case 'paused':
+        return 'text-yellow-400';
       case 'stopped':
-      case 'exited': return 'text-red-400';
-      default: return 'text-gray-400';
+      case 'exited':
+        return 'text-red-400';
+      default:
+        return 'text-gray-400';
     }
   }
 
   function getHealthColor(health?: string): string {
     switch (health) {
-      case 'healthy': return 'bg-green-500';
-      case 'unhealthy': return 'bg-red-500';
-      case 'starting': return 'bg-yellow-500';
-      default: return 'bg-gray-500';
+      case 'healthy':
+        return 'bg-green-500';
+      case 'unhealthy':
+        return 'bg-red-500';
+      case 'starting':
+        return 'bg-yellow-500';
+      default:
+        return 'bg-gray-500';
     }
   }
 
@@ -415,18 +458,26 @@
   <header class="panel-header">
     <div class="header-left">
       {#if onBack}
-        <button class="back-btn" on:click={onBack}>
+        <button class="back-btn" onclick={onBack} aria-label="Back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
+            <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
       {/if}
-      <svg class="docker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M22 12.5c-.5-1.5-2-2-3.5-2h-1c-.4-1.5-1.5-2.5-3-3V5h-3v2.5H9V5H6v2.5H4.5c-1 0-2 .5-2.5 1.5-1 2 0 4.5 2 6h.5c1.5 2.5 4.5 4 8 4 5 0 9-3.5 9.5-6.5z"/>
-        <rect x="6" y="9" width="2" height="2"/>
-        <rect x="9" y="9" width="2" height="2"/>
-        <rect x="12" y="9" width="2" height="2"/>
-        <rect x="9" y="6" width="2" height="2"/>
+      <svg
+        class="docker-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path
+          d="M22 12.5c-.5-1.5-2-2-3.5-2h-1c-.4-1.5-1.5-2.5-3-3V5h-3v2.5H9V5H6v2.5H4.5c-1 0-2 .5-2.5 1.5-1 2 0 4.5 2 6h.5c1.5 2.5 4.5 4 8 4 5 0 9-3.5 9.5-6.5z"
+        />
+        <rect x="6" y="9" width="2" height="2" />
+        <rect x="9" y="9" width="2" height="2" />
+        <rect x="12" y="9" width="2" height="2" />
+        <rect x="9" y="6" width="2" height="2" />
       </svg>
       <h2>Docker Control Panel</h2>
       {#if $dockerAvailable}
@@ -440,9 +491,18 @@
         <input type="checkbox" bind:checked={$isPolling} />
         <span>Auto-refresh</span>
       </label>
-      <button class="refresh-btn" on:click={loadData} disabled={$isLoading}>
-        <svg class="icon" class:spinning={$isLoading} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      <button class="refresh-btn" onclick={loadData} disabled={$isLoading} aria-label="Refresh">
+        <svg
+          class="icon"
+          class:spinning={$isLoading}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+          />
         </svg>
       </button>
     </div>
@@ -450,16 +510,16 @@
 
   <!-- Quick Actions -->
   <div class="quick-actions">
-    <button class="action-btn compose-up" on:click={composeUp}>
+    <button class="action-btn compose-up" onclick={composeUp}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polygon points="5 3 19 12 5 21 5 3"/>
+        <polygon points="5 3 19 12 5 21 5 3" />
       </svg>
       Compose Up
     </button>
-    <button class="action-btn compose-down" on:click={composeDown}>
+    <button class="action-btn compose-down" onclick={composeDown}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="6" y="4" width="4" height="16"/>
-        <rect x="14" y="4" width="4" height="16"/>
+        <rect x="6" y="4" width="4" height="16" />
+        <rect x="14" y="4" width="4" height="16" />
       </svg>
       Compose Down
     </button>
@@ -483,42 +543,42 @@
   {#if $error}
     <div class="error-banner" transition:slide>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
       </svg>
       <span>{$error}</span>
-      <button on:click={() => error.set(null)}>×</button>
+      <button onclick={() => error.set(null)}>×</button>
     </div>
   {/if}
 
   <!-- Tabs -->
   <nav class="tabs">
-    <button 
-      class="tab" 
-      class:active={$selectedTab === 'containers'} 
-      on:click={() => selectedTab.set('containers')}
+    <button
+      class="tab"
+      class:active={$selectedTab === 'containers'}
+      onclick={() => selectedTab.set('containers')}
     >
       Containers ({$containers.length})
     </button>
-    <button 
-      class="tab" 
-      class:active={$selectedTab === 'images'} 
-      on:click={() => selectedTab.set('images')}
+    <button
+      class="tab"
+      class:active={$selectedTab === 'images'}
+      onclick={() => selectedTab.set('images')}
     >
       Images ({$images.length})
     </button>
-    <button 
-      class="tab" 
-      class:active={$selectedTab === 'volumes'} 
-      on:click={() => selectedTab.set('volumes')}
+    <button
+      class="tab"
+      class:active={$selectedTab === 'volumes'}
+      onclick={() => selectedTab.set('volumes')}
     >
       Volumes ({$volumes.length})
     </button>
-    <button 
-      class="tab" 
-      class:active={$selectedTab === 'networks'} 
-      on:click={() => selectedTab.set('networks')}
+    <button
+      class="tab"
+      class:active={$selectedTab === 'networks'}
+      onclick={() => selectedTab.set('networks')}
     >
       Networks ({$networks.length})
     </button>
@@ -534,7 +594,11 @@
     {:else if $selectedTab === 'containers'}
       <div class="container-list">
         {#each $containers as container (container.id)}
-          <div class="container-card" class:running={container.status === 'running'} transition:fly={{ y: 20, duration: 200 }}>
+          <div
+            class="container-card"
+            class:running={container.status === 'running'}
+            transition:fly={{ y: 20, duration: 200 }}
+          >
             <div class="container-header">
               <div class="container-info">
                 <div class="container-name">
@@ -563,14 +627,21 @@
                 <div class="stat-bar">
                   <span class="stat-label">CPU</span>
                   <div class="progress-bar">
-                    <div class="progress-fill cpu" style="width: {Math.min(container.stats.cpuPercent, 100)}%"></div>
+                    <div
+                      class="progress-fill cpu"
+                      style="width: {Math.min(container.stats.cpuPercent, 100)}%"
+                    ></div>
                   </div>
                   <span class="stat-value">{formatPercent(container.stats.cpuPercent)}</span>
                 </div>
                 <div class="stat-bar">
                   <span class="stat-label">MEM</span>
                   <div class="progress-bar">
-                    <div class="progress-fill mem" style="width: {(container.stats.memoryUsage / container.stats.memoryLimit) * 100}%"></div>
+                    <div
+                      class="progress-fill mem"
+                      style="width: {(container.stats.memoryUsage / container.stats.memoryLimit) *
+                        100}%"
+                    ></div>
                   </div>
                   <span class="stat-value">{formatBytes(container.stats.memoryUsage)}</span>
                 </div>
@@ -579,35 +650,59 @@
 
             <div class="container-actions">
               {#if container.status === 'running'}
-                <button class="action-btn-sm stop" on:click={() => stopContainer(container.id)} title="Stop">
+                <button
+                  class="action-btn-sm stop"
+                  onclick={() => stopContainer(container.id)}
+                  title="Stop"
+                >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="6" y="6" width="12" height="12"/>
+                    <rect x="6" y="6" width="12" height="12" />
                   </svg>
                 </button>
-                <button class="action-btn-sm restart" on:click={() => restartContainer(container.id)} title="Restart">
+                <button
+                  class="action-btn-sm restart"
+                  onclick={() => restartContainer(container.id)}
+                  title="Restart"
+                >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                    <path
+                      d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+                    />
                   </svg>
                 </button>
               {:else}
-                <button class="action-btn-sm start" on:click={() => startContainer(container.id)} title="Start">
+                <button
+                  class="action-btn-sm start"
+                  onclick={() => startContainer(container.id)}
+                  title="Start"
+                >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
+                    <polygon points="5 3 19 12 5 21 5 3" />
                   </svg>
                 </button>
               {/if}
-              <button class="action-btn-sm logs" on:click={() => viewLogs(container.id)} title="Logs">
+              <button
+                class="action-btn-sm logs"
+                onclick={() => viewLogs(container.id)}
+                title="Logs"
+              >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                  <line x1="16" y1="13" x2="8" y2="13"/>
-                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
                 </svg>
               </button>
-              <button class="action-btn-sm remove" on:click={() => removeContainer(container.id)} title="Remove">
+              <button
+                class="action-btn-sm remove"
+                onclick={() => removeContainer(container.id)}
+                title="Remove"
+              >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <polyline points="3 6 5 6 21 6" />
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  />
                 </svg>
               </button>
             </div>
@@ -615,16 +710,15 @@
         {:else}
           <div class="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              <line x1="9" y1="9" x2="15" y2="15"/>
-              <line x1="15" y1="9" x2="9" y2="15"/>
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+              <line x1="15" y1="9" x2="9" y2="15" />
             </svg>
             <p>No containers found</p>
-            <button class="action-btn" on:click={composeUp}>Run Docker Compose</button>
+            <button class="action-btn" onclick={composeUp}>Run Docker Compose</button>
           </div>
         {/each}
       </div>
-
     {:else if $selectedTab === 'images'}
       <div class="image-list">
         {#each $images as image (image.id)}
@@ -641,10 +735,16 @@
               </div>
             </div>
             <div class="image-actions">
-              <button class="action-btn-sm remove" on:click={() => removeImage(image.id)} title="Remove">
+              <button
+                class="action-btn-sm remove"
+                onclick={() => removeImage(image.id)}
+                title="Remove"
+              >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <polyline points="3 6 5 6 21 6" />
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  />
                 </svg>
               </button>
             </div>
@@ -655,7 +755,6 @@
           </div>
         {/each}
       </div>
-
     {:else if $selectedTab === 'volumes'}
       <div class="volume-list">
         {#each $volumes as volume (volume.name)}
@@ -667,10 +766,16 @@
               </div>
             </div>
             <div class="volume-actions">
-              <button class="action-btn-sm remove" on:click={() => removeVolume(volume.name)} title="Remove">
+              <button
+                class="action-btn-sm remove"
+                onclick={() => removeVolume(volume.name)}
+                title="Remove"
+              >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <polyline points="3 6 5 6 21 6" />
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  />
                 </svg>
               </button>
             </div>
@@ -681,7 +786,6 @@
           </div>
         {/each}
       </div>
-
     {:else if $selectedTab === 'networks'}
       <div class="network-list">
         {#each $networks as network (network.id)}
@@ -710,7 +814,7 @@
       <div class="logs-content">
         <header class="logs-header">
           <h3>Container Logs</h3>
-          <button on:click={() => selectedContainer.set(null)}>×</button>
+          <button onclick={() => selectedContainer.set(null)}>×[5~</button>
         </header>
         <pre class="logs-output">{$logs.join('\n')}</pre>
       </div>
@@ -725,7 +829,10 @@
     height: 100%;
     background: var(--bg-primary, #1a1a2e);
     color: var(--text-primary, #e8e8e8);
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
   }
 
   .panel-header {
@@ -834,8 +941,12 @@
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .quick-actions {

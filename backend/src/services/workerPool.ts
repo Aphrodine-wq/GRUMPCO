@@ -1,6 +1,6 @@
 /**
  * Worker Thread Pool with Dynamic Scaling
- * 
+ *
  * Features:
  * - Dynamic worker scaling based on queue depth and CPU usage
  * - Priority lanes (high/normal/low) with separate queues
@@ -46,17 +46,17 @@ export interface WorkerPoolOptions {
   /** Auto-scaling configuration */
   autoScaling?: {
     enabled?: boolean;
-    scaleUpThreshold?: number;    // Queue depth per worker to trigger scale up
-    scaleDownThreshold?: number;  // Queue depth per worker to trigger scale down
-    scaleUpCooldown?: number;     // Minimum time between scale ups (ms)
-    scaleDownCooldown?: number;   // Minimum time between scale downs (ms)
-    cpuThreshold?: number;        // CPU load average threshold (0-1) to prevent over-scaling
+    scaleUpThreshold?: number; // Queue depth per worker to trigger scale up
+    scaleDownThreshold?: number; // Queue depth per worker to trigger scale down
+    scaleUpCooldown?: number; // Minimum time between scale ups (ms)
+    scaleDownCooldown?: number; // Minimum time between scale downs (ms)
+    cpuThreshold?: number; // CPU load average threshold (0-1) to prevent over-scaling
   };
   /** Health check configuration */
   healthCheck?: {
     enabled?: boolean;
-    interval?: number;            // Health check interval (ms)
-    timeout?: number;             // Health check timeout (ms)
+    interval?: number; // Health check interval (ms)
+    timeout?: number; // Health check timeout (ms)
   };
 }
 
@@ -106,14 +106,14 @@ interface WorkerState {
 export class WorkerPool {
   private workers = new Map<Worker, WorkerState>();
   private availableWorkers: Worker[] = [];
-  
+
   // Priority queues
   private highPriorityQueue: WorkerTask[] = [];
   private normalPriorityQueue: WorkerTask[] = [];
   private lowPriorityQueue: WorkerTask[] = [];
-  
+
   private activeTasks = new Map<string, WorkerTask>();
-  
+
   // Configuration
   private minWorkers: number;
   private maxWorkers: number;
@@ -122,17 +122,17 @@ export class WorkerPool {
   private workerScript: string;
   private threadAffinity: boolean;
   private isShuttingDown = false;
-  
+
   // Auto-scaling
   private autoScaling: Required<NonNullable<WorkerPoolOptions['autoScaling']>>;
   private lastScaleUp = 0;
   private lastScaleDown = 0;
   private scalingInterval: NodeJS.Timeout | null = null;
-  
+
   // Health check
   private healthCheckConfig: Required<NonNullable<WorkerPoolOptions['healthCheck']>>;
   private healthCheckInterval: NodeJS.Timeout | null = null;
-  
+
   // Metrics
   private metrics = {
     totalTasksProcessed: 0,
@@ -145,14 +145,14 @@ export class WorkerPool {
 
   constructor(options: WorkerPoolOptions = {}) {
     const cpuCount = cpus().length;
-    
+
     this.minWorkers = options.minWorkers ?? Math.max(2, Math.floor(cpuCount / 2));
     this.maxWorkers = options.maxWorkers ?? cpuCount * 2;
     this.maxQueueSize = options.maxQueueSize ?? 1000;
     this.taskTimeout = options.taskTimeout ?? 30000;
     this.workerScript = options.workerScript ?? join(__dirname, '../workers/cpuBoundWorker.js');
     this.threadAffinity = options.threadAffinity ?? false;
-    
+
     this.autoScaling = {
       enabled: options.autoScaling?.enabled ?? true,
       scaleUpThreshold: options.autoScaling?.scaleUpThreshold ?? 5,
@@ -161,7 +161,7 @@ export class WorkerPool {
       scaleDownCooldown: options.autoScaling?.scaleDownCooldown ?? 30000,
       cpuThreshold: options.autoScaling?.cpuThreshold ?? 0.8,
     };
-    
+
     this.healthCheckConfig = {
       enabled: options.healthCheck?.enabled ?? true,
       interval: options.healthCheck?.interval ?? 30000,
@@ -172,23 +172,26 @@ export class WorkerPool {
     for (let i = 0; i < this.minWorkers; i++) {
       this.createWorker(i);
     }
-    
+
     // Start auto-scaling monitor
     if (this.autoScaling.enabled) {
       this.startAutoScaling();
     }
-    
+
     // Start health checks
     if (this.healthCheckConfig.enabled) {
       this.startHealthChecks();
     }
-    
-    logger.info({
-      minWorkers: this.minWorkers,
-      maxWorkers: this.maxWorkers,
-      autoScaling: this.autoScaling.enabled,
-      healthChecks: this.healthCheckConfig.enabled,
-    }, 'Worker pool initialized with dynamic scaling');
+
+    logger.info(
+      {
+        minWorkers: this.minWorkers,
+        maxWorkers: this.maxWorkers,
+        autoScaling: this.autoScaling.enabled,
+        healthChecks: this.healthCheckConfig.enabled,
+      },
+      'Worker pool initialized with dynamic scaling'
+    );
   }
 
   private createWorker(workerIndex: number): Worker | null {
@@ -196,12 +199,12 @@ export class WorkerPool {
       logger.debug({ maxWorkers: this.maxWorkers }, 'Max workers reached');
       return null;
     }
-    
+
     try {
       const worker = new Worker(this.workerScript, {
         workerData: this.threadAffinity ? { workerIndex, cpuCount: cpus().length } : undefined,
       });
-      
+
       const state: WorkerState = {
         worker,
         index: workerIndex,
@@ -210,7 +213,7 @@ export class WorkerPool {
         healthy: true,
         tasksProcessed: 0,
       };
-      
+
       this.workers.set(worker, state);
 
       worker.on('message', (response: WorkerResponse) => {
@@ -244,7 +247,7 @@ export class WorkerPool {
   private removeWorker(worker: Worker): void {
     const state = this.workers.get(worker);
     this.workers.delete(worker);
-    
+
     const availableIndex = this.availableWorkers.indexOf(worker);
     if (availableIndex > -1) {
       this.availableWorkers.splice(availableIndex, 1);
@@ -253,9 +256,12 @@ export class WorkerPool {
     worker.terminate().catch((error) => {
       logger.error({ error: error.message }, 'Error terminating worker');
     });
-    
+
     if (state) {
-      logger.debug({ workerIndex: state.index, tasksProcessed: state.tasksProcessed }, 'Worker removed');
+      logger.debug(
+        { workerIndex: state.index, tasksProcessed: state.tasksProcessed },
+        'Worker removed'
+      );
     }
   }
 
@@ -269,7 +275,7 @@ export class WorkerPool {
     }
 
     this.activeTasks.delete(response.taskId);
-    
+
     // Update metrics
     const latency = Date.now() - (task.startedAt ?? task.createdAt);
     this.metrics.totalLatencyMs += latency;
@@ -281,7 +287,7 @@ export class WorkerPool {
       this.metrics.totalTasksFailed++;
       task.reject(new Error(response.error || 'Task failed'));
     }
-    
+
     if (state) {
       state.busy = false;
       state.tasksProcessed++;
@@ -293,8 +299,8 @@ export class WorkerPool {
   }
 
   private handleWorkerError(worker: Worker, error: Error): void {
-    const state = this.workers.get(worker);
-    
+    const _state = this.workers.get(worker);
+
     // Reject all tasks assigned to this worker
     for (const [taskId, task] of this.activeTasks.entries()) {
       task.reject(new Error(`Worker error: ${error.message}`));
@@ -321,14 +327,16 @@ export class WorkerPool {
   }
 
   private getTotalQueueLength(): number {
-    return this.highPriorityQueue.length + this.normalPriorityQueue.length + this.lowPriorityQueue.length;
+    return (
+      this.highPriorityQueue.length + this.normalPriorityQueue.length + this.lowPriorityQueue.length
+    );
   }
 
   private processQueue(): void {
     while (this.availableWorkers.length > 0) {
       const task = this.getNextTask();
       if (!task) break;
-      
+
       const worker = this.availableWorkers.shift();
       if (!worker) break;
 
@@ -341,7 +349,7 @@ export class WorkerPool {
     if (state) {
       state.busy = true;
     }
-    
+
     task.startedAt = Date.now();
     this.activeTasks.set(task.id, task);
 
@@ -358,11 +366,11 @@ export class WorkerPool {
         this.activeTasks.delete(task.id);
         this.metrics.totalTasksFailed++;
         activeTask.reject(new Error('Task timeout'));
-        
+
         if (state) {
           state.busy = false;
         }
-        
+
         this.availableWorkers.push(worker);
         this.processQueue();
       }
@@ -396,48 +404,56 @@ export class WorkerPool {
 
   private evaluateScaling(): void {
     if (this.isShuttingDown) return;
-    
+
     const now = Date.now();
     const workerCount = this.workers.size;
     const queueDepth = this.getTotalQueueLength();
     const queuePerWorker = workerCount > 0 ? queueDepth / workerCount : queueDepth;
-    
+
     // Check CPU load (1-minute average)
     const cpuLoad = loadavg()[0] / cpus().length;
-    
+
     // Scale up: high queue depth and CPU is not overloaded
-    if (queuePerWorker > this.autoScaling.scaleUpThreshold &&
-        cpuLoad < this.autoScaling.cpuThreshold &&
-        workerCount < this.maxWorkers &&
-        now - this.lastScaleUp > this.autoScaling.scaleUpCooldown) {
-      
+    if (
+      queuePerWorker > this.autoScaling.scaleUpThreshold &&
+      cpuLoad < this.autoScaling.cpuThreshold &&
+      workerCount < this.maxWorkers &&
+      now - this.lastScaleUp > this.autoScaling.scaleUpCooldown
+    ) {
       const newWorker = this.createWorker(workerCount);
       if (newWorker) {
         this.lastScaleUp = now;
         this.metrics.scaleUpEvents++;
-        logger.info({
-          workers: workerCount + 1,
-          queueDepth,
-          cpuLoad: cpuLoad.toFixed(2),
-        }, 'Scaled up worker pool');
+        logger.info(
+          {
+            workers: workerCount + 1,
+            queueDepth,
+            cpuLoad: cpuLoad.toFixed(2),
+          },
+          'Scaled up worker pool'
+        );
       }
     }
-    
+
     // Scale down: low queue depth and above minimum workers
-    if (queuePerWorker < this.autoScaling.scaleDownThreshold &&
-        workerCount > this.minWorkers &&
-        now - this.lastScaleDown > this.autoScaling.scaleDownCooldown) {
-      
+    if (
+      queuePerWorker < this.autoScaling.scaleDownThreshold &&
+      workerCount > this.minWorkers &&
+      now - this.lastScaleDown > this.autoScaling.scaleDownCooldown
+    ) {
       // Remove an idle worker
       const idleWorker = this.availableWorkers.pop();
       if (idleWorker) {
         this.removeWorker(idleWorker);
         this.lastScaleDown = now;
         this.metrics.scaleDownEvents++;
-        logger.info({
-          workers: workerCount - 1,
-          queueDepth,
-        }, 'Scaled down worker pool');
+        logger.info(
+          {
+            workers: workerCount - 1,
+            queueDepth,
+          },
+          'Scaled down worker pool'
+        );
       }
     }
   }
@@ -454,10 +470,10 @@ export class WorkerPool {
 
   private async performHealthChecks(): Promise<void> {
     if (this.isShuttingDown) return;
-    
+
     const now = Date.now();
     const unhealthyWorkers: Worker[] = [];
-    
+
     for (const [worker, state] of this.workers.entries()) {
       // Consider worker unhealthy if it's been busy for too long
       if (state.busy && now - state.lastHealthCheck > this.healthCheckConfig.timeout * 2) {
@@ -469,7 +485,7 @@ export class WorkerPool {
         state.healthy = true;
       }
     }
-    
+
     // Replace unhealthy workers
     for (const worker of unhealthyWorkers) {
       logger.info('Replacing unhealthy worker');
@@ -533,14 +549,14 @@ export class WorkerPool {
   public getAffinityHints(): WorkerAffinityHint[] {
     const cpuCount = cpus().length;
     const hints: WorkerAffinityHint[] = [];
-    
+
     for (const state of this.workers.values()) {
       hints.push({
         workerIndex: state.index,
         suggestedCpuId: state.index % cpuCount,
       });
     }
-    
+
     return hints;
   }
 
@@ -550,8 +566,8 @@ export class WorkerPool {
   public getStats(): WorkerPoolStats {
     const totalTasks = this.metrics.totalTasksProcessed + this.metrics.totalTasksFailed;
     const elapsedSeconds = (Date.now() - this.metrics.startTime) / 1000;
-    const busyWorkers = Array.from(this.workers.values()).filter(s => s.busy).length;
-    
+    const busyWorkers = Array.from(this.workers.values()).filter((s) => s.busy).length;
+
     return {
       totalWorkers: this.workers.size,
       availableWorkers: this.availableWorkers.length,
@@ -583,7 +599,7 @@ export class WorkerPool {
   public scale(targetWorkers: number): void {
     const target = Math.max(this.minWorkers, Math.min(this.maxWorkers, targetWorkers));
     const current = this.workers.size;
-    
+
     if (target > current) {
       for (let i = current; i < target; i++) {
         this.createWorker(i);
@@ -606,7 +622,7 @@ export class WorkerPool {
    */
   public async shutdown(): Promise<void> {
     this.isShuttingDown = true;
-    
+
     // Stop intervals
     if (this.scalingInterval) {
       clearInterval(this.scalingInterval);
@@ -618,7 +634,11 @@ export class WorkerPool {
     }
 
     // Reject all queued tasks
-    const allQueued = [...this.highPriorityQueue, ...this.normalPriorityQueue, ...this.lowPriorityQueue];
+    const allQueued = [
+      ...this.highPriorityQueue,
+      ...this.normalPriorityQueue,
+      ...this.lowPriorityQueue,
+    ];
     for (const task of allQueued) {
       task.reject(new Error('Worker pool shutting down'));
     }
@@ -645,11 +665,14 @@ export class WorkerPool {
     this.workers.clear();
     this.availableWorkers = [];
 
-    logger.info({
-      totalProcessed: this.metrics.totalTasksProcessed,
-      totalFailed: this.metrics.totalTasksFailed,
-      scaleEvents: { up: this.metrics.scaleUpEvents, down: this.metrics.scaleDownEvents },
-    }, 'Worker pool shut down');
+    logger.info(
+      {
+        totalProcessed: this.metrics.totalTasksProcessed,
+        totalFailed: this.metrics.totalTasksFailed,
+        scaleEvents: { up: this.metrics.scaleUpEvents, down: this.metrics.scaleDownEvents },
+      },
+      'Worker pool shut down'
+    );
   }
 }
 

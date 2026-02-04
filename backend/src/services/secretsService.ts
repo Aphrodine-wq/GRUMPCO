@@ -19,10 +19,10 @@ import type {
 export async function storeSecret(input: CreateSecretInput): Promise<void> {
   const db = getDatabase();
   const now = new Date().toISOString();
-  
+
   // Encrypt the secret
   const encrypted = encryptValue(input.secretEnc);
-  
+
   const record: IntegrationSecretRecord = {
     id: `secret_${input.provider}_${input.name}_${Date.now()}`,
     user_id: input.userId,
@@ -32,16 +32,16 @@ export async function storeSecret(input: CreateSecretInput): Promise<void> {
     created_at: now,
     updated_at: now,
   };
-  
+
   await db.saveIntegrationSecret(record);
-  
+
   await writeAuditLog({
     userId: input.userId,
     action: 'secret.stored',
     category: 'security',
     target: `${input.provider}:${input.name}`,
   });
-  
+
   logger.info({ provider: input.provider, name: input.name }, 'Secret stored');
 }
 
@@ -56,15 +56,12 @@ export async function getSecret(
   const db = getDatabase();
   const record = await db.getIntegrationSecret(userId, provider, name);
   if (!record) return null;
-  
+
   try {
     const payload = JSON.parse(record.secret_enc) as EncryptedPayload;
     return decryptValue(payload);
   } catch (err) {
-    logger.error(
-      { provider, name, error: (err as Error).message },
-      'Failed to decrypt secret'
-    );
+    logger.error({ provider, name, error: (err as Error).message }, 'Failed to decrypt secret');
     return null;
   }
 }
@@ -79,14 +76,14 @@ export async function deleteSecret(
 ): Promise<void> {
   const db = getDatabase();
   await db.deleteIntegrationSecret(userId, provider, name);
-  
+
   await writeAuditLog({
     userId,
     action: 'secret.deleted',
     category: 'security',
     target: `${provider}:${name}`,
   });
-  
+
   logger.info({ provider, name }, 'Secret deleted');
 }
 
@@ -114,7 +111,7 @@ export async function getOrCreateSecret(
 ): Promise<string | null> {
   const existing = await getSecret(userId, provider, name);
   if (existing) return existing;
-  
+
   if (defaultValue) {
     await storeSecret({
       userId,
@@ -124,7 +121,7 @@ export async function getOrCreateSecret(
     });
     return defaultValue;
   }
-  
+
   return null;
 }
 

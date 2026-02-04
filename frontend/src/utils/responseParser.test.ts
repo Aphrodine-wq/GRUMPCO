@@ -16,7 +16,7 @@ describe('responseParser', () => {
     });
 
     it('should parse a response with a mermaid diagram', () => {
-      const mermaidCode = 'graph TD;\nA-->B;';
+      const _mermaidCode = 'graph TD;\nA-->B;';
       const content = 'Here is your diagram:\n```mermaid\ngraph TD;\nA-->B;\n```';
       const result = parseAssistantResponse(content);
       expect(result.type).toBe('mixed');
@@ -25,7 +25,7 @@ describe('responseParser', () => {
     });
 
     it('should parse a response with only a mermaid diagram', () => {
-      const mermaidCode = 'graph TD;\nA-->B;';
+      const _mermaidCode = 'graph TD;\nA-->B;';
       const content = '```mermaid\ngraph TD;\nA-->B;\n```';
       const result = parseAssistantResponse(content);
       expect(result.type).toBe('diagram');
@@ -35,11 +35,17 @@ describe('responseParser', () => {
 
     it('should parse a response with a clarification request', () => {
       const clarification: ClarificationPayload = {
-        questions: [{ id: 'q1', category: 'custom', question: 'What is the primary goal?', selectionType: 'single', options: [] }],
+        questions: [
+          {
+            id: 'q1',
+            category: 'custom',
+            question: 'What is the primary goal?',
+            selectionType: 'single',
+            options: [],
+          },
+        ],
       };
-      const content = `<!--CLARIFICATION_START-->\n${JSON.stringify(
-        clarification
-      )}
+      const content = `<!--CLARIFICATION_START-->\n${JSON.stringify(clarification)}
 <!--CLARIFICATION_END-->`;
       const result = parseAssistantResponse(content);
       expect(result.type).toBe('clarification');

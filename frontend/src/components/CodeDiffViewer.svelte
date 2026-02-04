@@ -1,6 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { computeLineDiff, formatDiffSummary, detectLanguage, type FileDiff } from '../utils/diffUtils';
+  import {
+    computeLineDiff,
+    formatDiffSummary,
+    detectLanguage,
+    type FileDiff,
+  } from '../utils/diffUtils';
   import { highlightCode } from '../utils/highlighter';
   import { showToast } from '../stores/toastStore';
 
@@ -15,7 +20,9 @@
   let isCollapsed = $state(false);
   let language = $derived(detectLanguage(diff.filePath));
   let summary = $derived(formatDiffSummary(diff));
-  let changeLocations = $state<Array<{ index: number; lineNumber: number; type: 'added' | 'removed' }>>([]);
+  let changeLocations = $state<
+    Array<{ index: number; lineNumber: number; type: 'added' | 'removed' }>
+  >([]);
   let currentChangeIndex = $state(0);
   let lineRefs: Record<number, HTMLElement> = $state({});
   let jumpNavVisible = $state(false);
@@ -74,8 +81,8 @@
     let patch = `--- a/${diff.filePath}\n+++ b/${diff.filePath}\n`;
     let oldLine = 1;
     let newLine = 1;
-    
-    diffLines.forEach(line => {
+
+    diffLines.forEach((line) => {
       if (line.type === 'removed') {
         patch += `-${line.content}\n`;
         oldLine++;
@@ -88,7 +95,7 @@
         newLine++;
       }
     });
-    
+
     return patch;
   }
 
@@ -170,7 +177,7 @@
   function handleKeydown(event: KeyboardEvent) {
     // Only handle if diff viewer is focused or visible
     if (isCollapsed) return;
-    
+
     // J/K for navigation (when not typing in input)
     if (event.target === document.body || (event.target as HTMLElement).closest('.diff-viewer')) {
       if (event.key === 'j' && !event.ctrlKey && !event.metaKey) {
@@ -194,7 +201,7 @@
     return {
       update(newIndex: number) {
         setLineRef(el, newIndex);
-      }
+      },
     };
   }
 
@@ -202,7 +209,7 @@
     loadHighlights();
     findChangeLocations();
     document.addEventListener('keydown', handleKeydown);
-    
+
     return () => {
       document.removeEventListener('keydown', handleKeydown);
     };
@@ -213,23 +220,28 @@
   <div class="diff-header">
     <div class="diff-header-left">
       <span class="file-path">{diff.filePath}</span>
-      <span class="change-badge" class:created={diff.changeType === 'created'} class:modified={diff.changeType === 'modified'} class:deleted={diff.changeType === 'deleted'}>
+      <span
+        class="change-badge"
+        class:created={diff.changeType === 'created'}
+        class:modified={diff.changeType === 'modified'}
+        class:deleted={diff.changeType === 'deleted'}
+      >
         {diff.changeType}
       </span>
       <span class="diff-summary">{summary}</span>
     </div>
     <div class="diff-header-right">
       <div class="quick-actions">
-        <button class="action-btn" on:click={acceptAllChanges} title="Accept all changes">
+        <button class="action-btn" onclick={acceptAllChanges} title="Accept all changes">
           ✓ Accept All
         </button>
-        <button class="action-btn" on:click={rejectAllChanges} title="Reject all changes">
+        <button class="action-btn" onclick={rejectAllChanges} title="Reject all changes">
           ✗ Reject All
         </button>
-        <button class="action-btn" on:click={copyPatch} title="Copy as patch">
+        <button class="action-btn" onclick={copyPatch} title="Copy as patch">
           📋 Copy Patch
         </button>
-        <button class="action-btn" on:click={exportUnifiedDiff} title="Export unified diff">
+        <button class="action-btn" onclick={exportUnifiedDiff} title="Export unified diff">
           💾 Export
         </button>
       </div>
@@ -237,19 +249,19 @@
         <button
           class="toggle-btn"
           class:active={viewMode === 'side-by-side'}
-          on:click={() => (viewMode = 'side-by-side')}
+          onclick={() => (viewMode = 'side-by-side')}
         >
           Side-by-side
         </button>
         <button
           class="toggle-btn"
           class:active={viewMode === 'unified'}
-          on:click={() => (viewMode = 'unified')}
+          onclick={() => (viewMode = 'unified')}
         >
           Unified
         </button>
       </div>
-      <button class="collapse-btn" on:click={toggleCollapse}>
+      <button class="collapse-btn" onclick={toggleCollapse}>
         {isCollapsed ? '▶' : '▼'}
       </button>
     </div>
@@ -266,10 +278,14 @@
           <button
             class="jump-nav-item"
             class:active={idx === currentChangeIndex}
-            on:click={() => jumpToChange(idx)}
+            onclick={() => jumpToChange(idx)}
             title="Line {change.lineNumber}"
           >
-            <span class="jump-nav-type" class:added={change.type === 'added'} class:removed={change.type === 'removed'}>
+            <span
+              class="jump-nav-type"
+              class:added={change.type === 'added'}
+              class:removed={change.type === 'removed'}
+            >
               {change.type === 'added' ? '+' : '-'}
             </span>
             <span class="jump-nav-line">Line {change.lineNumber}</span>
@@ -285,9 +301,7 @@
         <div class="diff-pane before-pane">
           <div class="pane-header">
             <span class="pane-label">Before</span>
-            <button class="copy-btn" on:click={copyBefore} title="Copy before content">
-              📋
-            </button>
+            <button class="copy-btn" onclick={copyBefore} title="Copy before content"> 📋 </button>
           </div>
           <div class="code-container">
             <div class="line-numbers">
@@ -304,12 +318,14 @@
             <div class="code-content before-content">
               {#each diffLines as line, idx (idx)}
                 {#if line.type === 'removed' || line.type === 'unchanged'}
-                  <div 
+                  <div
                     use:setupLineRef={idx}
-                    class="code-line" 
-                    class:removed={line.type === 'removed'} 
+                    class="code-line"
+                    class:removed={line.type === 'removed'}
                     class:unchanged={line.type === 'unchanged'}
-                    class:highlight-change={changeLocations.find(c => c.index === idx && idx === currentChangeIndex)}
+                    class:highlight-change={changeLocations.find(
+                      (c) => c.index === idx && idx === currentChangeIndex
+                    )}
                   >
                     {line.content}
                   </div>
@@ -323,9 +339,7 @@
         <div class="diff-pane after-pane">
           <div class="pane-header">
             <span class="pane-label">After</span>
-            <button class="copy-btn" on:click={copyAfter} title="Copy after content">
-              📋
-            </button>
+            <button class="copy-btn" onclick={copyAfter} title="Copy after content"> 📋 </button>
           </div>
           <div class="code-container">
             <div class="line-numbers">
@@ -342,12 +356,14 @@
             <div class="code-content after-content">
               {#each diffLines as line, idx (idx)}
                 {#if line.type === 'added' || line.type === 'unchanged'}
-                  <div 
+                  <div
                     use:setupLineRef={idx}
-                    class="code-line" 
-                    class:added={line.type === 'added'} 
+                    class="code-line"
+                    class:added={line.type === 'added'}
                     class:unchanged={line.type === 'unchanged'}
-                    class:highlight-change={changeLocations.find(c => c.index === idx && idx === currentChangeIndex)}
+                    class:highlight-change={changeLocations.find(
+                      (c) => c.index === idx && idx === currentChangeIndex
+                    )}
                   >
                     {line.content}
                   </div>
@@ -363,9 +379,7 @@
       <div class="diff-content unified">
         <div class="pane-header">
           <span class="pane-label">Unified Diff</span>
-          <button class="copy-btn" on:click={copyAfter} title="Copy after content">
-            📋
-          </button>
+          <button class="copy-btn" onclick={copyAfter} title="Copy after content"> 📋 </button>
         </div>
         <div class="code-container">
           <div class="line-numbers">
@@ -393,7 +407,9 @@
                 class:added={line.type === 'added'}
                 class:removed={line.type === 'removed'}
                 class:unchanged={line.type === 'unchanged'}
-                class:highlight-change={changeLocations.find(c => c.index === idx && idx === currentChangeIndex)}
+                class:highlight-change={changeLocations.find(
+                  (c) => c.index === idx && idx === currentChangeIndex
+                )}
               >
                 {line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' '}
                 {line.content}
@@ -426,7 +442,7 @@
     align-items: center;
     padding: 12px 16px;
     background: white;
-    border-bottom: 1px solid #F0F0F0;
+    border-bottom: 1px solid #f0f0f0;
   }
 
   .diff-header-left {
@@ -456,21 +472,21 @@
 
   .change-badge.created {
     background: var(--color-status-success, #059669);
-    color: var(--color-text-inverse, #FFFFFF);
+    color: var(--color-text-inverse, #ffffff);
   }
 
   .change-badge.modified {
-    background: var(--color-status-warning, #F59E0B);
-    color: var(--color-text-inverse, #FFFFFF);
+    background: var(--color-status-warning, #f59e0b);
+    color: var(--color-text-inverse, #ffffff);
   }
 
   .change-badge.deleted {
-    background: var(--color-status-error, #DC2626);
-    color: var(--color-text-inverse, #FFFFFF);
+    background: var(--color-status-error, #dc2626);
+    color: var(--color-text-inverse, #ffffff);
   }
 
   .diff-summary {
-    color: var(--color-text-muted, #9CA3AF);
+    color: var(--color-text-muted, #9ca3af);
     font-size: var(--font-size-xs, 0.7rem);
   }
 
@@ -483,7 +499,7 @@
   .view-toggle {
     display: flex;
     gap: 0.25rem;
-    background: #F5F5F5;
+    background: #f5f5f5;
     border-radius: 6px;
     padding: 0.25rem;
   }
@@ -501,7 +517,7 @@
   }
 
   .toggle-btn:hover {
-    background: #EBEBEB;
+    background: #ebebeb;
     color: #18181b;
   }
 
@@ -514,7 +530,7 @@
     padding: 0.35rem 0.5rem;
     border: none;
     background: transparent;
-    color: var(--color-text-muted, #9CA3AF);
+    color: var(--color-text-muted, #9ca3af);
     cursor: pointer;
     font-size: var(--font-size-xs, 0.7rem);
     border-radius: var(--radius-sm, 0.25rem);
@@ -522,7 +538,7 @@
   }
 
   .collapse-btn:hover {
-    background: var(--color-bg-tertiary, #EBEBEB);
+    background: var(--color-bg-tertiary, #ebebeb);
     color: var(--color-text-primary, #000000);
   }
 
@@ -543,7 +559,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid #F0F0F0;
+    border-right: 1px solid #f0f0f0;
   }
 
   .diff-pane:last-child {
@@ -555,12 +571,12 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
-    background: #F9F9F9;
-    border-bottom: 1px solid #F0F0F0;
+    background: #f9f9f9;
+    border-bottom: 1px solid #f0f0f0;
   }
 
   .pane-label {
-    color: var(--color-text-secondary, #4B5563);
+    color: var(--color-text-secondary, #4b5563);
     font-size: var(--font-size-xs, 0.7rem);
     font-weight: 600;
     text-transform: uppercase;
@@ -570,7 +586,7 @@
   .copy-btn {
     background: transparent;
     border: none;
-    color: var(--color-text-muted, #9CA3AF);
+    color: var(--color-text-muted, #9ca3af);
     cursor: pointer;
     padding: 0.25rem 0.5rem;
     border-radius: var(--radius-sm, 0.25rem);
@@ -579,21 +595,21 @@
   }
 
   .copy-btn:hover {
-    background: var(--color-bg-tertiary, #EBEBEB);
+    background: var(--color-bg-tertiary, #ebebeb);
     color: var(--color-text-primary, #000000);
   }
 
   .code-container {
     display: flex;
     overflow-x: auto;
-    background: var(--color-bg-secondary, #FFFFFF);
+    background: var(--color-bg-secondary, #ffffff);
   }
 
   .line-numbers {
-    background: #F9F9F9;
-    border-right: 1px solid #F0F0F0;
+    background: #f9f9f9;
+    border-right: 1px solid #f0f0f0;
     padding: 0.5rem 0.75rem;
-    color: #A1A1AA;
+    color: #a1a1aa;
     font-size: var(--font-size-xs, 0.7rem);
     text-align: right;
     user-select: none;
@@ -608,13 +624,13 @@
   }
 
   .line-number.added {
-    background: var(--color-diff-added-bg, #DCFCE7);
+    background: var(--color-diff-added-bg, #dcfce7);
     color: var(--color-diff-added-text, #166534);
   }
 
   .line-number.removed {
-    background: var(--color-diff-removed-bg, #FEE2E2);
-    color: var(--color-diff-removed-text, #991B1B);
+    background: var(--color-diff-removed-bg, #fee2e2);
+    color: var(--color-diff-removed-text, #991b1b);
   }
 
   .line-number.empty {
@@ -625,7 +641,7 @@
     flex: 1;
     padding: 0.5rem 0.75rem;
     overflow-x: auto;
-    color: var(--color-text-code, #1F2937);
+    color: var(--color-text-code, #1f2937);
   }
 
   .code-line {
@@ -637,17 +653,17 @@
   }
 
   .code-line.added {
-    background: var(--color-diff-added-bg, #DCFCE7);
-    border-left: 2px solid var(--color-diff-added-border, #86EFAC);
+    background: var(--color-diff-added-bg, #dcfce7);
+    border-left: 2px solid var(--color-diff-added-border, #86efac);
     padding-left: calc(0.5rem - 2px);
     color: var(--color-diff-added-text, #166534);
   }
 
   .code-line.removed {
-    background: var(--color-diff-removed-bg, #FEE2E2);
-    border-left: 2px solid var(--color-diff-removed-border, #FCA5A5);
+    background: var(--color-diff-removed-bg, #fee2e2);
+    border-left: 2px solid var(--color-diff-removed-border, #fca5a5);
     padding-left: calc(0.5rem - 2px);
-    color: var(--color-diff-removed-text, #991B1B);
+    color: var(--color-diff-removed-text, #991b1b);
   }
 
   .code-line.unchanged {
@@ -684,14 +700,14 @@
   }
 
   .action-btn:hover {
-    background: #F5F5F5;
+    background: #f5f5f5;
     color: var(--color-primary);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   }
 
   .jump-nav {
-    background: #F9F9F9;
-    border-bottom: 1px solid #F0F0F0;
+    background: #f9f9f9;
+    border-bottom: 1px solid #f0f0f0;
     max-height: 200px;
     overflow-y: auto;
   }
@@ -701,7 +717,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 16px;
-    border-bottom: 1px solid #F0F0F0;
+    border-bottom: 1px solid #f0f0f0;
   }
 
   .jump-nav-title {
@@ -711,7 +727,7 @@
   }
 
   .jump-nav-hint {
-    color: var(--color-text-muted, #9CA3AF);
+    color: var(--color-text-muted, #9ca3af);
     font-size: var(--font-size-xs, 0.7rem);
   }
 
@@ -738,11 +754,11 @@
   }
 
   .jump-nav-item:hover {
-    background: #F0F0F0;
+    background: #f0f0f0;
   }
 
   .jump-nav-item.active {
-    background: #E0F2FE;
+    background: #e0f2fe;
     border: 0;
   }
 
@@ -757,7 +773,7 @@
   }
 
   .jump-nav-type.removed {
-    color: var(--color-status-error, #DC2626);
+    color: var(--color-status-error, #dc2626);
   }
 
   .jump-nav-line {
@@ -797,7 +813,7 @@
       box-shadow: 0 0 0 4px rgba(5, 150, 105, 0);
     }
     100% {
-      background: var(--color-diff-added-bg, #DCFCE7);
+      background: var(--color-diff-added-bg, #dcfce7);
       box-shadow: 0 0 0 0 rgba(5, 150, 105, 0);
     }
   }
@@ -816,9 +832,8 @@
       box-shadow: 0 0 0 4px rgba(220, 38, 38, 0);
     }
     100% {
-      background: var(--color-diff-removed-bg, #FEE2E2);
+      background: var(--color-diff-removed-bg, #fee2e2);
       box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
     }
   }
 </style>
-

@@ -119,5 +119,4 @@ An issue is auto-fixable if:
 - Provide clear, actionable recommendations
 - Consider the full system context
 - Think about maintainability and scalability`;
-
 }

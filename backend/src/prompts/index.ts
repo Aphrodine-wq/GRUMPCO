@@ -49,24 +49,24 @@ flowchart TD
 
 function getStandardPrompt(preferences?: UserPreferences): string {
   let prompt = STANDARD_SYSTEM_PROMPT;
-  
+
   if (preferences?.diagramType) {
     const typeMap: Record<string, string> = {
-      'flowchart': 'flowchart',
-      'sequence': 'sequence diagram',
-      'erd': 'entity-relationship diagram',
-      'class': 'class diagram'
+      flowchart: 'flowchart',
+      sequence: 'sequence diagram',
+      erd: 'entity-relationship diagram',
+      class: 'class diagram',
     };
     const typeName = typeMap[preferences.diagramType] || preferences.diagramType;
     prompt += `\n\nUser preference: Default to ${typeName} diagrams unless another type is clearly more appropriate for the request.`;
   }
-  
+
   if (preferences?.complexity === 'simple') {
     prompt += `\nKeep diagrams minimal and focused - use only essential nodes and relationships.`;
   } else if (preferences?.complexity === 'detailed') {
     prompt += `\nProvide comprehensive diagrams with detailed labels, notes, and thorough node relationships.`;
   }
-  
+
   return prompt;
 }
 

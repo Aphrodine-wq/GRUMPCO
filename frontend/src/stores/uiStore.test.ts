@@ -1,12 +1,13 @@
 /**
  * UI Store Tests
- * 
+ *
  * Comprehensive tests for UI state management stores
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import {
+  currentView,
   showSettings,
   showAskDocs,
   showVoiceCode,
@@ -24,11 +25,12 @@ import {
   showCloudDashboard,
   sidebarCollapsed,
   focusChatTrigger,
+  setCurrentView,
 } from './uiStore';
 
 describe('uiStore', () => {
   beforeEach(() => {
-    // Reset all stores to defaults
+    currentView.set('chat');
     showSettings.set(false);
     showAskDocs.set(false);
     showVoiceCode.set(false);
@@ -234,32 +236,90 @@ describe('uiStore', () => {
     });
 
     it('should increment to trigger focus', () => {
-      focusChatTrigger.update(n => n + 1);
+      focusChatTrigger.update((n) => n + 1);
       expect(get(focusChatTrigger)).toBe(1);
-      focusChatTrigger.update(n => n + 1);
+      focusChatTrigger.update((n) => n + 1);
       expect(get(focusChatTrigger)).toBe(2);
     });
   });
 
-  describe('multiple screens', () => {
-    it('should allow multiple screens to be open simultaneously', () => {
+  describe('currentView (single active view)', () => {
+    it('should have only one view active at a time', () => {
       showSettings.set(true);
-      showCostDashboard.set(true);
-      showIntegrations.set(true);
-      
       expect(get(showSettings)).toBe(true);
+      expect(get(currentView)).toBe('settings');
+
+      showCostDashboard.set(true);
       expect(get(showCostDashboard)).toBe(true);
+      expect(get(showSettings)).toBe(false);
+      expect(get(currentView)).toBe('cost');
+
+      showIntegrations.set(true);
       expect(get(showIntegrations)).toBe(true);
+      expect(get(showCostDashboard)).toBe(false);
+      expect(get(currentView)).toBe('integrations');
     });
 
-    it('should close all screens independently', () => {
+    it('should close a view by setting it false and return to chat', () => {
       showSettings.set(true);
-      showCostDashboard.set(true);
-      
+      expect(get(currentView)).toBe('settings');
       showSettings.set(false);
-      
       expect(get(showSettings)).toBe(false);
+      expect(get(currentView)).toBe('chat');
+
+      showCostDashboard.set(true);
+      showSettings.set(false); // no-op when current view is cost
       expect(get(showCostDashboard)).toBe(true);
+      expect(get(currentView)).toBe('cost');
+    });
+  });
+
+  describe('setCurrentView', () => {
+    it('should set current view directly', () => {
+      setCurrentView('settings');
+      expect(get(currentView)).toBe('settings');
+      expect(get(showSettings)).toBe(true);
+    });
+
+    it('should return to chat view', () => {
+      setCurrentView('settings');
+      setCurrentView('chat');
+      expect(get(currentView)).toBe('chat');
+      expect(get(showSettings)).toBe(false);
+    });
+  });
+
+  describe('view store update method', () => {
+    it('should update via callback returning true', () => {
+      showSettings.update(() => true);
+      expect(get(showSettings)).toBe(true);
+      expect(get(currentView)).toBe('settings');
+    });
+
+    it('should update via callback returning false when view is active', () => {
+      showSettings.set(true);
+      expect(get(currentView)).toBe('settings');
+
+      showSettings.update(() => false);
+      expect(get(showSettings)).toBe(false);
+      expect(get(currentView)).toBe('chat');
+    });
+
+    it('should not change view when callback returns false on inactive view', () => {
+      showCostDashboard.set(true);
+      expect(get(currentView)).toBe('cost');
+
+      showSettings.update(() => false);
+      expect(get(currentView)).toBe('cost');
+      expect(get(showSettings)).toBe(false);
+    });
+
+    it('should handle update with current value', () => {
+      showSettings.update((current) => !current);
+      expect(get(showSettings)).toBe(true);
+
+      showSettings.update((current) => !current);
+      expect(get(showSettings)).toBe(false);
     });
   });
 });

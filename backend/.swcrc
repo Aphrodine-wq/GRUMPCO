@@ -9,12 +9,8 @@
     },
     "target": "es2022",
     "loose": false,
-    "externalHelpers": false,
     "keepClassNames": true,
-    "baseUrl": "./src",
-    "paths": {
-      "@/*": ["*"]
-    }
+    "externalHelpers": false
   },
   "module": {
     "type": "es6",

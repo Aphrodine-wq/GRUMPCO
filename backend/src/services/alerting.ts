@@ -130,9 +130,7 @@ class AlertingService {
 
     try {
       const metrics = (await register.getMetricsAsJSON()) as unknown as MetricObject[];
-      const httpRequestsMetric = metrics.find(
-        (m) => m.name === 'http_requests_total'
-      );
+      const httpRequestsMetric = metrics.find((m) => m.name === 'http_requests_total');
 
       if (!httpRequestsMetric || !httpRequestsMetric.values) {
         return;
@@ -140,10 +138,7 @@ class AlertingService {
 
       // Calculate error rate from metrics
       // This is a simplified version - in production, you'd query Prometheus
-      const totalRequests = httpRequestsMetric.values.reduce(
-        (sum, v) => sum + (v.value || 0),
-        0
-      );
+      const totalRequests = httpRequestsMetric.values.reduce((sum, v) => sum + (v.value || 0), 0);
 
       const errorRequests = httpRequestsMetric.values
         .filter((v) => {
@@ -185,9 +180,7 @@ class AlertingService {
 
     try {
       const metrics = (await register.getMetricsAsJSON()) as unknown as MetricObject[];
-      const httpDurationMetric = metrics.find(
-        (m) => m.name === 'http_request_duration_seconds'
-      );
+      const httpDurationMetric = metrics.find((m) => m.name === 'http_request_duration_seconds');
 
       if (!httpDurationMetric || !httpDurationMetric.values) {
         return;
@@ -230,7 +223,7 @@ class AlertingService {
     try {
       const db = getDatabase();
       const dbInstance = db.getDb();
-      
+
       // Simple query to test connectivity
       dbInstance.prepare('SELECT 1').get();
     } catch (error) {

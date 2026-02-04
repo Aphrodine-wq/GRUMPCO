@@ -8,7 +8,7 @@
   let {
     variant = $bindable('text'),
     count = $bindable(3),
-    animated = $bindable(true)
+    animated = $bindable(true),
   }: Props = $props();
 
   function getLineWidth(index: number): string {
@@ -86,12 +86,7 @@
   }
 
   .skeleton {
-    background: linear-gradient(
-      90deg,
-      #2a2a2a 0%,
-      #3a3a3a 50%,
-      #2a2a2a 100%
-    );
+    background: linear-gradient(90deg, #2a2a2a 0%, #3a3a3a 50%, #2a2a2a 100%);
     background-size: 200% 100%;
     border-radius: 4px;
   }

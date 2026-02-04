@@ -1,4 +1,3 @@
-
 /**
  * Diff Utilities
  */
@@ -24,18 +23,20 @@ export interface FileDiff {
 }
 
 export function computeLineDiff(before: string, after: string): DiffLine[] {
-  const changes = Diff.diffLines(before, after);
+  // Use diffArrays on split lines for newline-insensitive line comparison.
+  // diffLines includes newlines in tokens, causing line2 vs line2\n to differ.
+  const oldLines = before.split(/\r?\n/);
+  const newLines = after.split(/\r?\n/);
+  const changes = (
+    Diff as unknown as { diffArrays: (a: string[], b: string[]) => Diff.Change[] }
+  ).diffArrays(oldLines, newLines);
 
   const result: DiffLine[] = [];
   let oldLineNum = 1;
   let newLineNum = 1;
 
   for (const change of changes) {
-    const lines = change.value.split('\n');
-    // Remove the last empty line if it exists (from split)
-    if (lines.length > 0 && lines[lines.length - 1] === '') {
-      lines.pop();
-    }
+    const lines = change.value as unknown as string[];
 
     if (change.added) {
       // Added lines
@@ -127,7 +128,7 @@ export function detectLanguage(filePath: string): string {
     sh: 'bash',
     md: 'markdown',
     yml: 'yaml',
-    yaml: 'yaml'
+    yaml: 'yaml',
   };
   return map[ext] || 'plaintext';
 }

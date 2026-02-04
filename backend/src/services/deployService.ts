@@ -233,7 +233,10 @@ export async function getVercelProjects(userId: string): Promise<DeployProject[]
   }));
 }
 
-export async function getVercelProject(userId: string, projectId: string): Promise<DeployProject | null> {
+export async function getVercelProject(
+  userId: string,
+  projectId: string
+): Promise<DeployProject | null> {
   interface VercelProject {
     id: string;
     name: string;
@@ -403,10 +406,7 @@ export async function getVercelEnvVars(userId: string, projectId: string): Promi
     type: string;
   }
 
-  const result = await vercelFetch<{ envs: VercelEnv[] }>(
-    userId,
-    `/v9/projects/${projectId}/env`
-  );
+  const result = await vercelFetch<{ envs: VercelEnv[] }>(userId, `/v9/projects/${projectId}/env`);
   if (!result) return [];
 
   return result.envs.map((e) => ({
@@ -545,7 +545,10 @@ export async function getNetlifySites(userId: string): Promise<DeployProject[]> 
   });
 }
 
-export async function getNetlifySite(userId: string, siteId: string): Promise<DeployProject | null> {
+export async function getNetlifySite(
+  userId: string,
+  siteId: string
+): Promise<DeployProject | null> {
   interface NetlifySite {
     id: string;
     name: string;
@@ -861,6 +864,83 @@ export async function createNetlifyDeployHook(
   }
 
   return null;
+}
+
+// ========== Vercel Presets (One-Click Deploy) ==========
+
+export type VercelPresetStack = 'react' | 'vue' | 'svelte' | 'nextjs' | 'vite' | 'express';
+
+/**
+ * Get opinionated CreateProjectInput for common stacks (one-click deploy preset).
+ * Use when project is generated and user clicks "Deploy to Vercel".
+ */
+export function getVercelPresetForStack(
+  stack: VercelPresetStack,
+  projectName: string,
+  gitRepo?: { owner: string; repo: string; branch?: string }
+): CreateProjectInput {
+  const common = {
+    name: projectName,
+    gitRepository: gitRepo
+      ? {
+          provider: 'github' as const,
+          repo: `${gitRepo.owner}/${gitRepo.repo}`,
+          branch: gitRepo.branch ?? 'main',
+        }
+      : undefined,
+  };
+
+  switch (stack) {
+    case 'react':
+    case 'vite':
+      return {
+        ...common,
+        framework: 'create-react-app',
+        buildCommand: 'npm run build',
+        outputDirectory: 'dist',
+        installCommand: 'npm install',
+      };
+    case 'vue':
+      return {
+        ...common,
+        framework: 'vue',
+        buildCommand: 'npm run build',
+        outputDirectory: 'dist',
+        installCommand: 'npm install',
+      };
+    case 'svelte':
+      return {
+        ...common,
+        framework: 'sveltekit',
+        buildCommand: 'npm run build',
+        outputDirectory: 'build',
+        installCommand: 'npm install',
+      };
+    case 'nextjs':
+      return {
+        ...common,
+        framework: 'nextjs',
+        buildCommand: 'npm run build',
+        installCommand: 'npm install',
+      };
+    case 'express':
+      return {
+        ...common,
+        framework: 'other',
+        buildCommand: 'npm run build',
+        outputDirectory: 'dist',
+        installCommand: 'npm install',
+        rootDirectory: '.',
+      };
+    default:
+      return {
+        ...common,
+        framework: 'other',
+        buildCommand: 'npm run build',
+        outputDirectory: 'dist',
+        installCommand: 'npm install',
+      };
+  }
 }
 
 // ========== Unified Functions ==========

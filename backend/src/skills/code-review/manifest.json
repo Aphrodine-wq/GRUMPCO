@@ -17,7 +17,14 @@
   },
   "permissions": ["file_read"],
   "triggers": {
-    "keywords": ["review", "code review", "check code", "analyze code", "review this", "look at this code"],
+    "keywords": [
+      "review",
+      "code review",
+      "check code",
+      "analyze code",
+      "review this",
+      "look at this code"
+    ],
     "patterns": ["review\\s+(my|this|the)?\\s*code", "code\\s+quality"],
     "commands": ["/review", "/code-review"],
     "fileExtensions": [".ts", ".js", ".tsx", ".jsx", ".py", ".go", ".rs", ".java", ".cpp", ".c"]

@@ -72,7 +72,13 @@ export interface Constraint {
 
 export interface NonFunctionalRequirement {
   /** NFR category */
-  category: 'performance' | 'security' | 'scalability' | 'reliability' | 'usability' | 'maintainability';
+  category:
+    | 'performance'
+    | 'security'
+    | 'scalability'
+    | 'reliability'
+    | 'usability'
+    | 'maintainability';
   /** Specific requirement */
   requirement: string;
   /** Target metric if applicable */

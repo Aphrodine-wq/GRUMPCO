@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>G-Rump Unified Architecture</title>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'base', securityLevel: 'loose' });
+  </script>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; background: #1e1e2e; color: #cdd6f4; }
+    h1 { color: #89b4fa; }
+    .mermaid { background: #313244; padding: 2rem; border-radius: 8px; margin: 2rem 0; }
+  </style>
+</head>
+<body>
+  <h1>G-Rump Unified Architecture</h1>
+  <p>A single, connected view of the complete system.</p>
+
+  <div class="mermaid">
+flowchart TB
+    subgraph Clients["Client Layer"]
+        Desktop[Desktop App<br/>Electron + Svelte]
+                VSCode[VS Code Extension]
+        CLI[CLI<br/>grump ship / chat]
+        Moltbot[Moltbot / Clawdbot]
+    end
+
+    subgraph Backend["grump-backend (Express)"]
+        direction TB
+
+        subgraph Routes["API Routes"]
+            ChatRoute["/api/chat/stream"]
+            ShipRoute["/api/ship"]
+            DiagramRoute["/api/diagram"]
+            CodegenRoute["/api/codegen"]
+            PlanRoute["/api/plan"]
+            SpecRoute["/api/spec"]
+            ArchRoute["/api/architecture"]
+            PRDRoute["/api/prd"]
+        end
+
+        subgraph Services["Core Services"]
+            Intent[Intent Compiler<br/>Rust CLI / WASM]
+            ClaudeTools[Claude + Tools<br/>bash, file_read, etc.]
+            ArchSvc[Architecture Service]
+            PRDSvc[PRD Generator]
+            CodegenSvc[Code Generator]
+            Orchestrator[Agent Orchestrator]
+        end
+
+        subgraph Agents["Specialized Agents"]
+            A1[Architect]
+            A2[Frontend]
+            A3[Backend]
+            A4[DevOps]
+            A5[Test]
+            A6[Docs]
+        end
+
+        subgraph Infra["Performance & Cache"]
+            Cache[Tiered Cache<br/>L1 → L2 → L3]
+            Router[Model Router<br/>Cost-aware]
+            Workers[Worker Pool]
+        end
+
+        subgraph Tools["Supporting"]
+            ToolExec[Tool Execution<br/>workspace-scoped]
+            WRunner[WRunner<br/>QA & fixes]
+        end
+    end
+
+    subgraph Data["Data Layer"]
+        SQLite[(SQLite)]
+        Redis[(Redis)]
+    end
+
+    subgraph External["External Services"]
+        LLM[LLM Gateway]
+        Supabase[(Supabase<br/>Auth)]
+        Stripe[Stripe]
+        GitHub[GitHub]
+    end
+
+    subgraph Providers["LLM Providers"]
+        NIM[NVIDIA NIM<br/>Kimi K2.5]
+        OpenRouter[OpenRouter]
+        Zhipu[Zhipu]
+    end
+
+    Desktop --> ChatRoute
+    Desktop --> ShipRoute
+    Desktop --> DiagramRoute
+    Web --> ChatRoute
+    Web --> ShipRoute
+    VSCode --> ChatRoute
+    CLI --> ShipRoute
+    CLI --> PlanRoute
+    Moltbot --> ChatRoute
+
+    ChatRoute --> ClaudeTools
+    ChatRoute --> ToolExec
+    DiagramRoute --> Intent
+    DiagramRoute --> ArchSvc
+    ShipRoute --> Intent
+    ShipRoute --> ArchSvc
+    ArchRoute --> ArchSvc
+    PRDRoute --> PRDSvc
+    CodegenRoute --> CodegenSvc
+    PlanRoute --> ClaudeTools
+    SpecRoute --> ClaudeTools
+
+    Intent --> ArchSvc
+    ArchSvc --> PRDSvc
+    PRDSvc --> Orchestrator
+    CodegenSvc --> Orchestrator
+    Orchestrator --> A1
+    A1 --> A2
+    A1 --> A3
+    A2 --> A4
+    A3 --> A4
+    A4 --> A5
+    A5 --> A6
+    A6 --> WRunner
+
+    ClaudeTools --> Cache
+    ArchSvc --> Cache
+    PRDSvc --> Cache
+    Orchestrator --> Cache
+    Cache --> Router
+    Router --> LLM
+    LLM --> NIM
+    LLM --> OpenRouter
+    LLM --> Zhipu
+
+    Backend --> SQLite
+    Backend --> Redis
+    Backend --> Supabase
+    Backend --> Stripe
+    Backend --> GitHub
+  </div>
+</body>
+</html>

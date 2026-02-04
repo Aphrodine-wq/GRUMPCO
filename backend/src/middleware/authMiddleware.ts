@@ -9,6 +9,7 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email?: string;
     user_metadata?: Record<string, unknown>;
+    app_metadata?: Record<string, unknown>;
     created_at?: string;
   };
   token?: string;
@@ -102,9 +103,10 @@ export async function optionalAuth(
  * Check if a user has admin privileges.
  *
  * Admin access is determined by:
- * 1. user_metadata.role === 'admin' (set via Supabase dashboard or service key)
- * 2. app_metadata.role === 'admin' (more secure, can't be self-modified)
- * 3. In development only: email ending with '@admin.local' for testing
+ * 1. app_metadata.role === 'admin' (most secure, can't be self-modified)
+ * 2. user_metadata.app_metadata.role === 'admin' (nested in user_metadata)
+ * 3. user_metadata.role === 'admin' (set via Supabase dashboard or service key)
+ * 4. In development only: email ending with '@admin.local' for testing
  *
  * @param user - The authenticated user object
  * @returns true if user has admin privileges
@@ -113,8 +115,16 @@ function checkAdminRole(user: AuthenticatedRequest['user']): boolean {
   if (!user) return false;
 
   // Check app_metadata first (most secure - user can't modify)
-  const appMetadata = user.user_metadata?.app_metadata as Record<string, unknown> | undefined;
+  const appMetadata = user.app_metadata as Record<string, unknown> | undefined;
   if (appMetadata?.role === 'admin') {
+    return true;
+  }
+
+  // Check user_metadata.app_metadata.role (nested structure from Supabase)
+  const userMetadataAppMetadata = user.user_metadata?.app_metadata as
+    | Record<string, unknown>
+    | undefined;
+  if (userMetadataAppMetadata?.role === 'admin') {
     return true;
   }
 
@@ -184,7 +194,9 @@ export async function apiAuthMiddleware(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  if (env.REQUIRE_AUTH_FOR_API && isProtectedApiPath(req.path)) {
+  // Use full path including baseUrl if available, otherwise just path
+  const fullPath = req.baseUrl ? `${req.baseUrl}${req.path}` : req.path;
+  if (env.REQUIRE_AUTH_FOR_API && isProtectedApiPath(fullPath)) {
     await requireAuth(req, res, next);
     return;
   }

@@ -1,8 +1,16 @@
-# Agent System Documentation
+# G-Agent System Documentation
 
 ## Overview
 
-The G-Rump agent system is a multi-agent code generation pipeline that uses specialized AI agents to generate complete, production-ready applications from Product Requirements Documents (PRDs). The system includes design mode documentation generation and automatic quality assurance through the WRunner agent.
+G-Rump features **G-Agent**, an autonomous AI agent that handles comprehensive code generation through specialized capabilities. G-Agent uses **NVIDIA NIM (Nemotron)** for inference; see [NVIDIA_GOLDEN_DEVELOPER.md](./NVIDIA_GOLDEN_DEVELOPER.md) for the full NVIDIA stack.
+
+**G-Agent orchestration** ([agentOrchestrator](../backend/src/services/agentOrchestrator.ts)) — PRD + architecture → G-Agent code generation with capabilities for architecture, frontend, backend, DevOps, testing, and documentation. Used by Ship and Codegen flows. See [backend/src/routes/codegen.ts](../backend/src/routes/codegen.ts) and [shipModeService](../backend/src/services/shipModeService.ts).
+
+**G-Agent Quality Assurance** — G-Agent includes built-in quality analysis and auto-fix capabilities to ensure generated code meets standards.
+
+Evals: run `npm run evals` in the backend (requires a running backend at `EVAL_BASE_URL`); results in `frontend/test-results/g-agent-evals.json`. CI runs G-Agent evals on PRs and main; see [PRODUCTION.md](./PRODUCTION.md) for operations.
+
+The G-Agent codegen pipeline includes design mode documentation generation and automatic quality assurance.
 
 ## System Architecture
 
@@ -25,13 +33,13 @@ flowchart TB
         WR[Work Report Generator]
     end
 
-    subgraph Agents["Specialized Agents"]
-        A1[Architect Agent<br/>Validation & Planning]
-        A2[Frontend Agent<br/>UI Components]
-        A3[Backend Agent<br/>APIs & Services]
-        A4[DevOps Agent<br/>Docker & CI/CD]
-        A5[Test Agent<br/>Test Suites]
-        A6[Docs Agent<br/>Documentation]
+    subgraph GAgent["G-Agent Capabilities"]
+        A1[Architecture<br/>Validation & Planning]
+        A2[Frontend<br/>UI Components]
+        A3[Backend<br/>APIs & Services]
+        A4[DevOps<br/>Docker & CI/CD]
+        A5[Testing<br/>Test Suites]
+        A6[Documentation<br/>Docs & Guides]
     end
 
     subgraph Design["Design Mode"]
@@ -86,9 +94,9 @@ flowchart TB
     FIX --> Output
 ```
 
-## Agent Types
+## G-Agent Capabilities
 
-### 1. Architect Agent
+### 1. Architecture Capability
 **Role**: Validates PRD and creates detailed code generation plan
 
 **Responsibilities**:
@@ -101,7 +109,7 @@ flowchart TB
 
 **Output**: Generation plan with task breakdown, tech stack validation, risk assessment, and architecture patterns
 
-### 2. Frontend Agent
+### 2. Frontend Capability
 **Role**: Generates production-ready frontend code (Vue/React)
 
 **Responsibilities**:
@@ -121,7 +129,7 @@ flowchart TB
 - Vite as build tool
 - Pinia/Zustand for state management
 
-### 3. Backend Agent
+### 3. Backend Capability
 **Role**: Generates production-ready backend code (Node/Python/Go)
 
 **Responsibilities**:
@@ -141,7 +149,7 @@ flowchart TB
 - Go 1.21+ with Gin/Echo
 - PostgreSQL or MongoDB
 
-### 4. DevOps Agent
+### 4. DevOps Capability
 **Role**: Generates Docker, CI/CD, and deployment configurations
 
 **Responsibilities**:
@@ -153,7 +161,7 @@ flowchart TB
 - Adds health checks and monitoring setup
 - Implements logging configuration
 
-### 5. Test Agent
+### 5. Testing Capability
 **Role**: Generates comprehensive test suites
 
 **Responsibilities**:
@@ -170,7 +178,7 @@ flowchart TB
 - Frontend: Vitest with Vue Test Utils / React Testing Library
 - E2E: Playwright
 
-### 6. Docs Agent
+### 6. Documentation Capability
 **Role**: Generates comprehensive documentation
 
 **Responsibilities**:
@@ -184,7 +192,13 @@ flowchart TB
 
 ## Intent Compiler
 
-The Intent Compiler is a two-stage system that parses natural language and enriches it with code-specific insights.
+The Intent Compiler is a two-stage system that parses natural language and enriches it with code-specific insights. It supports three modes (env `INTENT_COMPILER_MODE` or `mode` in `POST /api/intent/parse`):
+
+- **rust-first** (default): Parse via Rust CLI (or WASM), fallback to LLM on failure, then enrich via LLM Gateway.
+- **hybrid**: Same as rust-first, but when `ambiguity_analysis.score` exceeds `INTENT_AMBIGUITY_THRESHOLD` (default 0.6), an extra LLM step resolves the ambiguity.
+- **llm-first**: Extract structured intent via LLM first (no Rust parse), then enrich. Use for very unstructured prompts.
+
+Intent is also used to guide RAG retrieval (query expansion from features, tech stack, and data flows) when fetching document context for architecture, spec, plan, and chat; and RAG can augment intent enrichment by injecting knowledge-base excerpts into the enrichment prompt. See [INTENT_RAG_FUSION.md](./INTENT_RAG_FUSION.md).
 
 ### Stage 1: Rust Parser
 - Parses raw natural language input
@@ -206,7 +220,7 @@ The Intent Compiler is a two-stage system that parses natural language and enric
 
 ## Design Mode: Work Reports
 
-After each agent completes code generation, it automatically generates a comprehensive work report documenting:
+After G-Agent completes code generation, it automatically generates a comprehensive work report documenting:
 
 1. **Summary**: Brief overview of work completed
 2. **Files Generated**: List of all files with purposes and key decisions
@@ -219,9 +233,9 @@ After each agent completes code generation, it automatically generates a compreh
 
 These reports are stored in the session and used by WRunner for analysis.
 
-## WRunner: Quality Assurance Agent
+## G-Agent Quality Assurance
 
-WRunner is a specialized quality assurance agent that analyzes all agent work reports and identifies issues.
+G-Agent includes quality assurance capabilities that analyze work reports and identify issues.
 
 ### Analysis Categories
 
@@ -241,9 +255,9 @@ WRunner generates a comprehensive analysis with:
 - **Recommendations**: Actionable recommendations
 - **Auto-Fixable Flag**: Indicates if issues can be automatically fixed
 
-## Auto-Fix System
+## G-Agent Auto-Fix System
 
-The auto-fix system automatically applies fixes for issues identified by WRunner.
+G-Agent automatically applies fixes for identified issues.
 
 ### Auto-Fixable Criteria
 
@@ -332,10 +346,10 @@ sequenceDiagram
 
 1. **Create PRD**: Generate or provide a Product Requirements Document
 2. **Generate Architecture**: Create system architecture
-3. **Start Code Generation**: Initiate the agent orchestration
-4. **Review Work Reports**: Check agent work reports in the session
-5. **Review WRunner Analysis**: Check quality assurance analysis
-6. **Review Applied Fixes**: Check automatically applied fixes
+3. **Start Code Generation**: Initiate G-Agent orchestration
+4. **Review Work Reports**: Check G-Agent work reports in the session
+5. **Review Quality Analysis**: Check G-Agent quality assurance analysis
+6. **Review Applied Fixes**: Check G-Agent automatically applied fixes
 7. **Download Project**: Download the complete generated project
 
 ### API Usage
@@ -372,12 +386,12 @@ interface GenerationSession {
   status: 'initializing' | 'running' | 'completed' | 'failed';
   prdId: string;
   architectureId: string;
-  agents: Record<AgentType, AgentTask>;
+  gAgentTasks: Record<CapabilityType, GAgentTask>;
   generatedFiles?: GeneratedFile[];
   
   // Design Mode
-  workReports?: Record<AgentType, AgentWorkReport>;
-  wrunnerAnalysis?: WRunnerAnalysis;
+  workReports?: Record<CapabilityType, GAgentWorkReport>;
+  qualityAnalysis?: QualityAnalysis;
   autoFixesApplied?: Array<{
     issueId: string;
     fix: string;
@@ -396,7 +410,7 @@ interface GenerationSession {
 
 ## Configuration
 
-### Agent Preferences
+### G-Agent Preferences
 
 ```typescript
 interface GenerationPreferences {

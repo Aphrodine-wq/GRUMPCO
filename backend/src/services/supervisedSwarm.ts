@@ -1,14 +1,14 @@
 /**
  * Supervised Swarm Orchestrator
- * 
+ *
  * Replaces the chaotic gossip protocol with a hierarchical command structure
  * where Kimi (the main AI) acts as the Supervisor that:
- * 
+ *
  * 1. ASSIGNS tasks to specialist agents based on their roles
  * 2. REVIEWS all agent outputs before accepting them
  * 3. CAN REJECT bad work and request retries
  * 4. SYNTHESIZES the final answer with full visibility
- * 
+ *
  * Architecture:
  * ┌─────────────────────────────────────────────────────────────────────────────┐
  * │                     KIMI SUPERVISED SWARM                                   │
@@ -44,26 +44,26 @@
  */
 
 import { EventEmitter } from 'events';
-import { CompressedContext } from './contextCompressor.js';
+import type { CompressedContext as _CompressedContext } from './contextCompressor.js';
 
 // Agent roles (same as before)
-export type AgentRole = 
-  | 'analyst'      // Breaks down problems, identifies requirements
-  | 'researcher'   // Gathers information, finds relevant context
-  | 'coder'        // Writes and fixes code
-  | 'reviewer'     // Reviews code and logic for issues
-  | 'synthesizer'  // Combines multiple outputs into coherent whole
-  | 'validator'    // Tests and validates solutions
-  | 'creative'     // Generates alternative approaches
-  | 'optimizer';   // Improves performance and efficiency
+export type AgentRole =
+  | 'analyst' // Breaks down problems, identifies requirements
+  | 'researcher' // Gathers information, finds relevant context
+  | 'coder' // Writes and fixes code
+  | 'reviewer' // Reviews code and logic for issues
+  | 'synthesizer' // Combines multiple outputs into coherent whole
+  | 'validator' // Tests and validates solutions
+  | 'creative' // Generates alternative approaches
+  | 'optimizer'; // Improves performance and efficiency
 
-export type AgentStatus = 
+export type AgentStatus =
   | 'idle'
-  | 'assigned'     // Has a task assigned
-  | 'working'      // Actively processing
-  | 'submitted'    // Submitted work for review
-  | 'approved'     // Work approved by supervisor
-  | 'rejected'     // Work rejected, needs revision
+  | 'assigned' // Has a task assigned
+  | 'working' // Actively processing
+  | 'submitted' // Submitted work for review
+  | 'approved' // Work approved by supervisor
+  | 'rejected' // Work rejected, needs revision
   | 'completed';
 
 // Review decision by Kimi
@@ -77,13 +77,13 @@ export interface AgentSubtask {
   parentTaskId: string;
   agentId: string;
   role: AgentRole;
-  instruction: string;           // What Kimi wants the agent to do
-  context?: string;              // Relevant context for the subtask
+  instruction: string; // What Kimi wants the agent to do
+  context?: string; // Relevant context for the subtask
   status: 'pending' | 'working' | 'submitted' | 'approved' | 'rejected';
-  attempts: number;              // How many times agent has tried
-  maxAttempts: number;           // Max retries before escalation
-  result?: AgentResult;          // Agent's submitted work
-  review?: SupervisorReview;     // Kimi's review
+  attempts: number; // How many times agent has tried
+  maxAttempts: number; // Max retries before escalation
+  result?: AgentResult; // Agent's submitted work
+  review?: SupervisorReview; // Kimi's review
   createdAt: number;
   updatedAt: number;
 }
@@ -93,9 +93,10 @@ export interface AgentSubtask {
  */
 export interface AgentResult {
   content: string;
-  confidence: number;            // 0-1, how confident the agent is
-  reasoning?: string;            // Agent's reasoning/explanation
-  artifacts?: {                  // Optional structured outputs
+  confidence: number; // 0-1, how confident the agent is
+  reasoning?: string; // Agent's reasoning/explanation
+  artifacts?: {
+    // Optional structured outputs
     type: 'code' | 'analysis' | 'list' | 'data';
     content: string;
     metadata?: Record<string, unknown>;
@@ -108,10 +109,10 @@ export interface AgentResult {
  */
 export interface SupervisorReview {
   decision: ReviewDecision;
-  feedback: string;              // Explanation for the agent
-  score: number;                 // 0-1 quality score
-  issues?: string[];             // Specific issues found
-  suggestions?: string[];        // How to improve
+  feedback: string; // Explanation for the agent
+  score: number; // 0-1 quality score
+  issues?: string[]; // Specific issues found
+  suggestions?: string[]; // How to improve
   reviewedAt: number;
 }
 
@@ -122,7 +123,7 @@ export interface SpecialistAgent {
   id: string;
   role: AgentRole;
   status: AgentStatus;
-  currentTask?: string;          // Current subtask ID
+  currentTask?: string; // Current subtask ID
   stats: {
     tasksCompleted: number;
     tasksRejected: number;
@@ -141,19 +142,19 @@ export interface SupervisedTask {
   query: string;
   context?: string;
   status: 'planning' | 'executing' | 'reviewing' | 'synthesizing' | 'completed' | 'failed';
-  
+
   // Kimi's task decomposition
   plan?: TaskPlan;
-  
+
   // Subtasks assigned to agents
   subtasks: AgentSubtask[];
-  
+
   // Final synthesized result
   synthesizedResult?: string;
-  
+
   // Audit trail
   events: TaskEvent[];
-  
+
   createdAt: number;
   completedAt?: number;
 }
@@ -162,15 +163,15 @@ export interface SupervisedTask {
  * Kimi's plan for how to tackle the task
  */
 export interface TaskPlan {
-  summary: string;               // High-level approach
+  summary: string; // High-level approach
   subtasks: {
     role: AgentRole;
     instruction: string;
     priority: 'high' | 'medium' | 'low';
-    dependsOn?: string[];        // IDs of subtasks that must complete first
+    dependsOn?: string[]; // IDs of subtasks that must complete first
   }[];
   estimatedComplexity: 'simple' | 'moderate' | 'complex';
-  reasoning: string;             // Why this plan
+  reasoning: string; // Why this plan
 }
 
 /**
@@ -178,10 +179,17 @@ export interface TaskPlan {
  */
 export interface TaskEvent {
   timestamp: number;
-  type: 'plan_created' | 'subtask_assigned' | 'subtask_submitted' | 
-        'subtask_approved' | 'subtask_rejected' | 'synthesis_started' |
-        'task_completed' | 'task_failed' | 'supervisor_intervention';
-  actorId: string;               // 'kimi' or agent ID
+  type:
+    | 'plan_created'
+    | 'subtask_assigned'
+    | 'subtask_submitted'
+    | 'subtask_approved'
+    | 'subtask_rejected'
+    | 'synthesis_started'
+    | 'task_completed'
+    | 'task_failed'
+    | 'supervisor_intervention';
+  actorId: string; // 'kimi' or agent ID
   details: string;
   metadata?: Record<string, unknown>;
 }
@@ -193,21 +201,21 @@ export interface SupervisedSwarmConfig {
   maxAgentsPerRole: number;
   maxRetries: number;
   reviewStrictness: 'lenient' | 'moderate' | 'strict';
-  autoApproveThreshold: number;  // Confidence above this auto-approves (0-1)
-  timeoutMs: number;             // Max time for a subtask
+  autoApproveThreshold: number; // Confidence above this auto-approves (0-1)
+  timeoutMs: number; // Max time for a subtask
 }
 
 const DEFAULT_CONFIG: SupervisedSwarmConfig = {
   maxAgentsPerRole: 2,
   maxRetries: 3,
   reviewStrictness: 'moderate',
-  autoApproveThreshold: 0.95,    // Very high confidence can auto-approve
+  autoApproveThreshold: 0.95, // Very high confidence can auto-approve
   timeoutMs: 30000,
 };
 
 /**
  * Kimi Supervised Swarm Orchestrator
- * 
+ *
  * Unlike the gossip-based swarm, this is a hierarchical system where
  * Kimi maintains full oversight and control over all agents.
  */
@@ -215,7 +223,7 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
   private agents: Map<string, SpecialistAgent> = new Map();
   private tasks: Map<string, SupervisedTask> = new Map();
   private config: SupervisedSwarmConfig;
-  
+
   // Simulation mode (in production, these would call actual LLMs)
   private simulationMode: boolean = true;
 
@@ -229,8 +237,14 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
    */
   initialize(agentsPerRole: number = 1): void {
     const roles: AgentRole[] = [
-      'analyst', 'researcher', 'coder', 'reviewer',
-      'synthesizer', 'validator', 'creative', 'optimizer'
+      'analyst',
+      'researcher',
+      'coder',
+      'reviewer',
+      'synthesizer',
+      'validator',
+      'creative',
+      'optimizer',
     ];
 
     for (const role of roles) {
@@ -247,7 +261,7 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
    */
   spawnAgent(role: AgentRole): SpecialistAgent {
     const id = `${role}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`;
-    
+
     const agent: SpecialistAgent = {
       id,
       role,
@@ -264,13 +278,13 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
 
     this.agents.set(id, agent);
     this.emit('agentSpawned', { agent });
-    
+
     return agent;
   }
 
   /**
    * Submit a task to the supervised swarm
-   * 
+   *
    * Flow:
    * 1. Kimi analyzes the query and creates a plan
    * 2. Subtasks are assigned to specialist agents
@@ -280,7 +294,7 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
    */
   async submitTask(query: string, context?: string): Promise<SupervisedTask> {
     const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    
+
     const task: SupervisedTask = {
       id: taskId,
       query,
@@ -299,7 +313,12 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
     const plan = await this.kimiCreatePlan(query, context);
     task.plan = plan;
     task.status = 'executing';
-    this.addEvent(task, 'plan_created', 'kimi', `Plan created with ${plan.subtasks.length} subtasks`);
+    this.addEvent(
+      task,
+      'plan_created',
+      'kimi',
+      `Plan created with ${plan.subtasks.length} subtasks`
+    );
 
     // Step 2: Assign subtasks to agents
     await this.assignSubtasks(task);
@@ -317,7 +336,7 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
     task.synthesizedResult = finalResult;
     task.status = 'completed';
     task.completedAt = Date.now();
-    
+
     this.addEvent(task, 'task_completed', 'kimi', 'Task completed successfully');
     this.emit('taskCompleted', { task });
 
@@ -327,13 +346,13 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
   /**
    * Kimi creates a task plan by decomposing the query
    */
-  private async kimiCreatePlan(query: string, context?: string): Promise<TaskPlan> {
+  private async kimiCreatePlan(query: string, _context?: string): Promise<TaskPlan> {
     // In production, this would call the actual Kimi/Claude model
     // For now, we use heuristics to create a reasonable plan
-    
+
     const queryLower = query.toLowerCase();
     const subtasks: TaskPlan['subtasks'] = [];
-    
+
     // Always start with analysis
     subtasks.push({
       role: 'analyst',
@@ -342,15 +361,19 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
     });
 
     // Add role-specific subtasks based on query content
-    if (queryLower.includes('code') || queryLower.includes('implement') || 
-        queryLower.includes('function') || queryLower.includes('fix')) {
+    if (
+      queryLower.includes('code') ||
+      queryLower.includes('implement') ||
+      queryLower.includes('function') ||
+      queryLower.includes('fix')
+    ) {
       subtasks.push({
         role: 'coder',
         instruction: `Write or fix code to address: "${query}". Ensure code is clean, documented, and follows best practices.`,
         priority: 'high',
         dependsOn: [subtasks[0].role + '_0'],
       });
-      
+
       subtasks.push({
         role: 'reviewer',
         instruction: `Review the code solution for bugs, security issues, and best practices violations.`,
@@ -359,8 +382,12 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
       });
     }
 
-    if (queryLower.includes('research') || queryLower.includes('find') || 
-        queryLower.includes('information') || queryLower.includes('learn')) {
+    if (
+      queryLower.includes('research') ||
+      queryLower.includes('find') ||
+      queryLower.includes('information') ||
+      queryLower.includes('learn')
+    ) {
       subtasks.push({
         role: 'researcher',
         instruction: `Research and gather relevant information about: "${query}". Cite sources where possible.`,
@@ -369,8 +396,12 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
       });
     }
 
-    if (queryLower.includes('idea') || queryLower.includes('alternative') || 
-        queryLower.includes('creative') || queryLower.includes('brainstorm')) {
+    if (
+      queryLower.includes('idea') ||
+      queryLower.includes('alternative') ||
+      queryLower.includes('creative') ||
+      queryLower.includes('brainstorm')
+    ) {
       subtasks.push({
         role: 'creative',
         instruction: `Generate creative alternatives and novel approaches for: "${query}"`,
@@ -379,8 +410,12 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
       });
     }
 
-    if (queryLower.includes('optimize') || queryLower.includes('improve') || 
-        queryLower.includes('performance') || queryLower.includes('faster')) {
+    if (
+      queryLower.includes('optimize') ||
+      queryLower.includes('improve') ||
+      queryLower.includes('performance') ||
+      queryLower.includes('faster')
+    ) {
       subtasks.push({
         role: 'optimizer',
         instruction: `Identify optimization opportunities and performance improvements for: "${query}"`,
@@ -388,8 +423,12 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
       });
     }
 
-    if (queryLower.includes('test') || queryLower.includes('verify') || 
-        queryLower.includes('validate') || queryLower.includes('check')) {
+    if (
+      queryLower.includes('test') ||
+      queryLower.includes('verify') ||
+      queryLower.includes('validate') ||
+      queryLower.includes('check')
+    ) {
       subtasks.push({
         role: 'validator',
         instruction: `Create validation criteria and test cases for: "${query}"`,
@@ -414,7 +453,7 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
       summary: `Breaking down "${query.slice(0, 50)}..." into ${subtasks.length} specialized subtasks`,
       subtasks,
       estimatedComplexity: complexity,
-      reasoning: `Based on query analysis, identified need for: ${subtasks.map(s => s.role).join(', ')}`,
+      reasoning: `Based on query analysis, identified need for: ${subtasks.map((s) => s.role).join(', ')}`,
     };
   }
 
@@ -426,10 +465,10 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
 
     for (let i = 0; i < task.plan.subtasks.length; i++) {
       const planned = task.plan.subtasks[i];
-      
+
       // Find an available agent with the required role
       const agent = this.findAvailableAgent(planned.role);
-      
+
       if (!agent) {
         // Spawn a new agent if needed
         const newAgent = this.spawnAgent(planned.role);
@@ -456,13 +495,13 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
    * Assign a subtask to a specific agent
    */
   private async assignToAgent(
-    task: SupervisedTask, 
-    planned: TaskPlan['subtasks'][0], 
+    task: SupervisedTask,
+    planned: TaskPlan['subtasks'][0],
     agent: SpecialistAgent,
     index: number
   ): Promise<void> {
     const subtaskId = `${task.id}_${planned.role}_${index}`;
-    
+
     const subtask: AgentSubtask = {
       id: subtaskId,
       parentTaskId: task.id,
@@ -482,7 +521,10 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
     agent.currentTask = subtaskId;
     agent.lastActiveAt = Date.now();
 
-    this.addEvent(task, 'subtask_assigned', 'kimi', 
+    this.addEvent(
+      task,
+      'subtask_assigned',
+      'kimi',
       `Assigned subtask to ${agent.role} agent: ${planned.instruction.slice(0, 50)}...`,
       { subtaskId, agentId: agent.id }
     );
@@ -494,9 +536,9 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
   private async executeSubtasks(task: SupervisedTask): Promise<void> {
     // In real implementation, this would orchestrate actual LLM calls
     // For simulation, we process all subtasks with simulated agent responses
-    
-    const pendingSubtasks = task.subtasks.filter(st => st.status === 'pending');
-    
+
+    const pendingSubtasks = task.subtasks.filter((st) => st.status === 'pending');
+
     // Process subtasks (respecting dependencies in production)
     for (const subtask of pendingSubtasks) {
       await this.agentWork(subtask);
@@ -517,7 +559,7 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
 
     // Simulate work delay
     if (this.simulationMode) {
-      await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+      await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 200));
     }
 
     // Generate result based on role
@@ -526,7 +568,7 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
     subtask.status = 'submitted';
     agent.status = 'submitted';
     agent.stats.totalAttempts++;
-    
+
     this.emit('subtaskSubmitted', { subtask, agent });
   }
 
@@ -535,13 +577,14 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
    */
   private generateAgentResult(subtask: AgentSubtask): AgentResult {
     const baseConfidence = 0.7 + Math.random() * 0.25;
-    
+
     let content = '';
     let reasoning = '';
-    
+
     switch (subtask.role) {
       case 'analyst':
-        content = `**Analysis of Request**\n\n` +
+        content =
+          `**Analysis of Request**\n\n` +
           `Key Requirements:\n` +
           `- Primary goal: ${subtask.instruction.slice(0, 100)}\n` +
           `- Identified constraints: Standard best practices\n` +
@@ -549,9 +592,10 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
           `Recommendation: Proceed with structured approach.`;
         reasoning = 'Decomposed the request into actionable components.';
         break;
-        
+
       case 'coder':
-        content = `**Code Solution**\n\n` +
+        content =
+          `**Code Solution**\n\n` +
           `\`\`\`typescript\n` +
           `// Implementation for: ${subtask.instruction.slice(0, 50)}\n` +
           `function solution() {\n` +
@@ -562,9 +606,10 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
           `This implementation follows best practices and handles edge cases.`;
         reasoning = 'Created clean, maintainable code with proper error handling.';
         break;
-        
+
       case 'reviewer':
-        content = `**Code Review**\n\n` +
+        content =
+          `**Code Review**\n\n` +
           `Findings:\n` +
           `- Code structure: Good\n` +
           `- Error handling: Adequate\n` +
@@ -573,9 +618,10 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
           `Suggestions: Consider adding more comments.`;
         reasoning = 'Performed thorough review checking for common issues.';
         break;
-        
+
       case 'researcher':
-        content = `**Research Findings**\n\n` +
+        content =
+          `**Research Findings**\n\n` +
           `Relevant Information:\n` +
           `1. Key concept A: Important for the solution\n` +
           `2. Best practice B: Industry standard approach\n` +
@@ -583,18 +629,20 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
           `Sources: Internal knowledge base, best practices documentation.`;
         reasoning = 'Gathered relevant information from available sources.';
         break;
-        
+
       case 'creative':
-        content = `**Creative Alternatives**\n\n` +
+        content =
+          `**Creative Alternatives**\n\n` +
           `Option 1: Traditional approach - reliable but conventional\n` +
           `Option 2: Innovative approach - novel but requires validation\n` +
           `Option 3: Hybrid approach - combines best of both\n\n` +
           `Recommendation: Option 3 offers best balance.`;
         reasoning = 'Explored multiple angles to find creative solutions.';
         break;
-        
+
       case 'optimizer':
-        content = `**Optimization Opportunities**\n\n` +
+        content =
+          `**Optimization Opportunities**\n\n` +
           `Performance Improvements:\n` +
           `- Caching: Can reduce redundant computations\n` +
           `- Lazy loading: Defer non-critical operations\n` +
@@ -602,9 +650,10 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
           `Estimated improvement: 20-40% performance gain.`;
         reasoning = 'Identified bottlenecks and proposed optimizations.';
         break;
-        
+
       case 'validator':
-        content = `**Validation Report**\n\n` +
+        content =
+          `**Validation Report**\n\n` +
           `Test Cases:\n` +
           `- Happy path: PASS\n` +
           `- Edge cases: PASS\n` +
@@ -612,9 +661,10 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
           `Overall: Solution meets requirements.`;
         reasoning = 'Created comprehensive test suite covering key scenarios.';
         break;
-        
+
       case 'synthesizer':
-        content = `**Synthesized Response**\n\n` +
+        content =
+          `**Synthesized Response**\n\n` +
           `Combining insights from all agents:\n\n` +
           `The analysis identified key requirements. ` +
           `The proposed solution addresses these effectively. ` +
@@ -623,7 +673,7 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
           `Final recommendation: Proceed with implementation.`;
         reasoning = 'Aggregated all agent outputs into coherent response.';
         break;
-        
+
       default:
         content = `Processed: ${subtask.instruction}`;
         reasoning = 'Standard processing completed.';
@@ -645,17 +695,22 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
       if (subtask.status === 'submitted' && subtask.result) {
         const review = await this.kimiReview(subtask);
         subtask.review = review;
-        
+
         const agent = this.agents.get(subtask.agentId);
-        
+
         if (review.decision === 'approve') {
           subtask.status = 'approved';
           if (agent) {
             agent.status = 'approved';
             agent.stats.tasksCompleted++;
-            agent.stats.avgScore = (agent.stats.avgScore * (agent.stats.tasksCompleted - 1) + review.score) / agent.stats.tasksCompleted;
+            agent.stats.avgScore =
+              (agent.stats.avgScore * (agent.stats.tasksCompleted - 1) + review.score) /
+              agent.stats.tasksCompleted;
           }
-          this.addEvent(task, 'subtask_approved', 'kimi', 
+          this.addEvent(
+            task,
+            'subtask_approved',
+            'kimi',
             `Approved ${subtask.role}'s work (score: ${(review.score * 100).toFixed(0)}%)`,
             { subtaskId: subtask.id, score: review.score }
           );
@@ -665,11 +720,14 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
             agent.status = 'rejected';
             agent.stats.tasksRejected++;
           }
-          this.addEvent(task, 'subtask_rejected', 'kimi',
+          this.addEvent(
+            task,
+            'subtask_rejected',
+            'kimi',
             `Rejected ${subtask.role}'s work: ${review.feedback}`,
             { subtaskId: subtask.id, issues: review.issues }
           );
-          
+
           // Retry if attempts remaining
           if (subtask.attempts < subtask.maxAttempts) {
             subtask.status = 'pending';
@@ -699,32 +757,32 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
 
     // In production, this would be an actual LLM call to evaluate the result
     // For simulation, we use heuristics
-    
+
     const result = subtask.result;
     let score = result.confidence;
     const issues: string[] = [];
     const suggestions: string[] = [];
-    
+
     // Check content quality
     if (result.content.length < 50) {
       score -= 0.2;
       issues.push('Response too brief');
       suggestions.push('Provide more detailed explanation');
     }
-    
+
     if (!result.content.includes('\n')) {
       score -= 0.1;
       issues.push('Poor formatting');
       suggestions.push('Use proper formatting with sections');
     }
-    
+
     // Role-specific checks
     if (subtask.role === 'coder' && !result.content.includes('```')) {
       score -= 0.15;
       issues.push('No code blocks found');
       suggestions.push('Include properly formatted code');
     }
-    
+
     if (subtask.role === 'reviewer' && !result.content.toLowerCase().includes('finding')) {
       score -= 0.1;
       issues.push('Review lacks specific findings');
@@ -737,9 +795,9 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
       moderate: 0.65,
       strict: 0.8,
     };
-    
+
     const threshold = thresholds[this.config.reviewStrictness];
-    
+
     // Determine decision
     let decision: ReviewDecision;
     if (score >= this.config.autoApproveThreshold) {
@@ -755,8 +813,11 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
     // Generate feedback
     let feedback = '';
     if (decision === 'approve') {
-      feedback = `Good work! Score: ${(score * 100).toFixed(0)}%. ` +
-        (suggestions.length > 0 ? `Minor suggestions: ${suggestions.join('; ')}` : 'No issues found.');
+      feedback =
+        `Good work! Score: ${(score * 100).toFixed(0)}%. ` +
+        (suggestions.length > 0
+          ? `Minor suggestions: ${suggestions.join('; ')}`
+          : 'No issues found.');
     } else if (decision === 'revise') {
       feedback = `Needs improvement. Issues: ${issues.join('; ')}. Please revise and resubmit.`;
     } else {
@@ -777,8 +838,8 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
    * Kimi synthesizes all approved results into final response
    */
   private async kimiSynthesize(task: SupervisedTask): Promise<string> {
-    const approvedSubtasks = task.subtasks.filter(st => st.status === 'approved');
-    
+    const approvedSubtasks = task.subtasks.filter((st) => st.status === 'approved');
+
     if (approvedSubtasks.length === 0) {
       return 'Unable to complete task: No subtasks were approved.';
     }
@@ -811,12 +872,17 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
 
     // Add quality metrics
     parts.push('## Quality Metrics');
-    const avgScore = approvedSubtasks.reduce((sum, st) => sum + (st.review?.score || 0), 0) / approvedSubtasks.length;
+    const avgScore =
+      approvedSubtasks.reduce((sum, st) => sum + (st.review?.score || 0), 0) /
+      approvedSubtasks.length;
     parts.push(`- Average quality score: ${(avgScore * 100).toFixed(1)}%`);
     parts.push(`- Agents involved: ${approvedSubtasks.length}`);
     parts.push(`- Complexity: ${task.plan?.estimatedComplexity || 'unknown'}`);
 
-    this.addEvent(task, 'synthesis_started', 'kimi', 
+    this.addEvent(
+      task,
+      'synthesis_started',
+      'kimi',
       `Synthesized ${approvedSubtasks.length} approved results`
     );
 
@@ -827,9 +893,9 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
    * Add an event to the task audit trail
    */
   private addEvent(
-    task: SupervisedTask, 
-    type: TaskEvent['type'], 
-    actorId: string, 
+    task: SupervisedTask,
+    type: TaskEvent['type'],
+    actorId: string,
     details: string,
     metadata?: Record<string, unknown>
   ): void {
@@ -862,13 +928,24 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
     avgQualityScore: number;
   } {
     const roleCount: Record<AgentRole, number> = {
-      analyst: 0, researcher: 0, coder: 0, reviewer: 0,
-      synthesizer: 0, validator: 0, creative: 0, optimizer: 0,
+      analyst: 0,
+      researcher: 0,
+      coder: 0,
+      reviewer: 0,
+      synthesizer: 0,
+      validator: 0,
+      creative: 0,
+      optimizer: 0,
     };
-    
+
     const statusCount: Record<AgentStatus, number> = {
-      idle: 0, assigned: 0, working: 0, submitted: 0,
-      approved: 0, rejected: 0, completed: 0,
+      idle: 0,
+      assigned: 0,
+      working: 0,
+      submitted: 0,
+      approved: 0,
+      rejected: 0,
+      completed: 0,
     };
 
     let totalCompleted = 0;
@@ -893,8 +970,8 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
       totalAgents: this.agents.size,
       agentsByRole: roleCount,
       agentsByStatus: statusCount,
-      pendingTasks: tasks.filter(t => t.status !== 'completed' && t.status !== 'failed').length,
-      completedTasks: tasks.filter(t => t.status === 'completed').length,
+      pendingTasks: tasks.filter((t) => t.status !== 'completed' && t.status !== 'failed').length,
+      completedTasks: tasks.filter((t) => t.status === 'completed').length,
       avgApprovalRate: totalCompleted / Math.max(1, totalCompleted + totalRejected),
       avgQualityScore: scoreCount > 0 ? totalScore / scoreCount : 0,
     };
@@ -908,7 +985,7 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
     agents: { id: string; role: AgentRole; status: AgentStatus; currentTask?: string }[];
     connections: { from: string; to: string; type: 'command' | 'report' }[];
   } {
-    const agents = Array.from(this.agents.values()).map(a => ({
+    const agents = Array.from(this.agents.values()).map((a) => ({
       id: a.id,
       role: a.role,
       status: a.status,
@@ -916,11 +993,13 @@ export class SupervisedSwarmOrchestrator extends EventEmitter {
     }));
 
     // All agents connect to Kimi (hub-and-spoke)
-    const connections: { from: string; to: string; type: 'command' | 'report' }[] = agents.map(a => ({
-      from: 'kimi_supervisor',
-      to: a.id,
-      type: 'command' as const,
-    }));
+    const connections: { from: string; to: string; type: 'command' | 'report' }[] = agents.map(
+      (a) => ({
+        from: 'kimi_supervisor',
+        to: a.id,
+        type: 'command' as const,
+      })
+    );
 
     // Add report connections (agents back to Kimi)
     for (const agent of agents) {

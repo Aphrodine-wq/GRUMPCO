@@ -3,7 +3,7 @@
  * Pre-flight cost estimation for LLM requests
  */
 
-import { MODEL_REGISTRY, type ModelConfig } from '@grump/ai-core';
+import { MODEL_REGISTRY } from '@grump/ai-core';
 import logger from '../middleware/logger.js';
 
 export interface CostEstimate {
@@ -165,15 +165,17 @@ export class CostEstimator {
     messages: Array<{ role: string; content: string }>,
     models: string[]
   ): Array<CostEstimate & { modelName: string }> {
-    return models.map((modelId) => {
-      const estimate = this.estimateChatCost(messages, { model: modelId });
-      const modelConfig = MODEL_REGISTRY.find((m) => m.id === modelId);
-      
-      return {
-        ...estimate,
-        modelName: modelConfig?.id || modelId,
-      };
-    }).sort((a, b) => a.estimatedCost - b.estimatedCost);
+    return models
+      .map((modelId) => {
+        const estimate = this.estimateChatCost(messages, { model: modelId });
+        const modelConfig = MODEL_REGISTRY.find((m) => m.id === modelId);
+
+        return {
+          ...estimate,
+          modelName: modelConfig?.id || modelId,
+        };
+      })
+      .sort((a, b) => a.estimatedCost - b.estimatedCost);
   }
 
   /**

@@ -18,13 +18,13 @@ export interface SessionStorage {
   getSession(sessionId: string): Promise<GenerationSession | null>;
   deleteSession(sessionId: string): Promise<void>;
   listSessions(limit?: number): Promise<string[]>;
-  
+
   saveShipSession(session: ShipSession): Promise<void>;
   getShipSession(sessionId: string): Promise<ShipSession | null>;
-  
+
   savePlan(plan: Plan): Promise<void>;
   getPlan(planId: string): Promise<Plan | null>;
-  
+
   saveSpecSession(session: SpecSession): Promise<void>;
   getSpecSession(sessionId: string): Promise<SpecSession | null>;
 }
@@ -133,7 +133,7 @@ class RedisSessionStorage implements SessionStorage {
 
   async listSessions(limit = 100): Promise<string[]> {
     const keys = await this.redis.keys(`${this.SESSION_PREFIX}*`);
-    return keys.slice(0, limit).map(key => key.replace(this.SESSION_PREFIX, ''));
+    return keys.slice(0, limit).map((key) => key.replace(this.SESSION_PREFIX, ''));
   }
 
   async saveShipSession(session: ShipSession): Promise<void> {
@@ -191,24 +191,27 @@ export function getSessionStorage(type: StorageType = 'auto'): SessionStorage {
 
   // Auto-detect storage type
   if (type === 'auto') {
-    const useRedis = process.env.SESSION_STORAGE === 'redis' || 
-                     (process.env.REDIS_HOST && process.env.NODE_ENV === 'production');
-    
+    const useRedis =
+      process.env.SESSION_STORAGE === 'redis' ||
+      (process.env.REDIS_HOST && process.env.NODE_ENV === 'production');
+
     if (useRedis) {
       // Check if Redis is available
-      isRedisConnected().then(connected => {
-        if (connected) {
-          logger.info('Using Redis for session storage');
-          storageInstance = new RedisSessionStorage();
-        } else {
-          logger.warn('Redis not available, falling back to SQLite');
+      isRedisConnected()
+        .then((connected) => {
+          if (connected) {
+            logger.info('Using Redis for session storage');
+            storageInstance = new RedisSessionStorage();
+          } else {
+            logger.warn('Redis not available, falling back to SQLite');
+            storageInstance = new SQLiteSessionStorage();
+          }
+        })
+        .catch(() => {
+          logger.warn('Redis check failed, falling back to SQLite');
           storageInstance = new SQLiteSessionStorage();
-        }
-      }).catch(() => {
-        logger.warn('Redis check failed, falling back to SQLite');
-        storageInstance = new SQLiteSessionStorage();
-      });
-      
+        });
+
       // Default to SQLite if Redis check is pending
       storageInstance = new SQLiteSessionStorage();
     } else {
@@ -226,9 +229,11 @@ export function getSessionStorage(type: StorageType = 'auto'): SessionStorage {
 /**
  * Initialize session storage
  */
-export async function initializeSessionStorage(type: StorageType = 'auto'): Promise<SessionStorage> {
+export async function initializeSessionStorage(
+  type: StorageType = 'auto'
+): Promise<SessionStorage> {
   const storage = getSessionStorage(type);
-  
+
   // If using Redis, verify connection
   if (type === 'redis' || (type === 'auto' && process.env.SESSION_STORAGE === 'redis')) {
     const connected = await isRedisConnected();
@@ -236,6 +241,6 @@ export async function initializeSessionStorage(type: StorageType = 'auto'): Prom
       logger.warn('Redis not connected, session storage may not work correctly');
     }
   }
-  
+
   return storage;
 }

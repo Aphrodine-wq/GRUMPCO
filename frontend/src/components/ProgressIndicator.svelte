@@ -24,7 +24,7 @@
   onMount(() => {
     // Update elapsed time every second
     intervalId = setInterval(() => {
-      const activeStage = stages.find(s => s.status === 'active');
+      const activeStage = stages.find((s) => s.status === 'active');
       if (activeStage?.startTime) {
         elapsedSeconds = Math.floor((Date.now() - activeStage.startTime) / 1000);
       }
@@ -35,12 +35,8 @@
     };
   });
 
-  function getStageIndex(id: string): number {
-    return stages.findIndex(s => s.id === id);
-  }
-
   function getCompletedCount(): number {
-    return stages.filter(s => s.status === 'completed').length;
+    return stages.filter((s) => s.status === 'completed').length;
   }
 
   function getProgressPercentage(): number {
@@ -49,7 +45,7 @@
   }
 
   function hasError(): boolean {
-    return stages.some(s => s.status === 'error');
+    return stages.some((s) => s.status === 'error');
   }
 
   function getTotalEstimatedTime(): number {
@@ -58,7 +54,7 @@
 
   function getRemainingTime(): number {
     const remaining = stages
-      .filter(s => s.status === 'pending' || s.status === 'active')
+      .filter((s) => s.status === 'pending' || s.status === 'active')
       .reduce((sum, stage) => sum + (stage.timeEstimate || 0), 0);
     return Math.max(0, remaining - elapsedSeconds);
   }
@@ -98,7 +94,7 @@
 
   <div class="progress-bar-container">
     <div class="progress-bar">
-      <div 
+      <div
         class="progress-fill"
         class:error={hasError()}
         style="width: {getProgressPercentage()}%"
@@ -114,7 +110,7 @@
 
   <div class="stages-list">
     {#each stages as stage, index (stage.id)}
-      <div 
+      <div
         class="stage-item"
         class:pending={stage.status === 'pending'}
         class:active={stage.status === 'active'}
@@ -179,7 +175,7 @@
   .progress-title {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #E5E5E5;
+    color: #e5e5e5;
   }
 
   .progress-header-right {
@@ -196,7 +192,7 @@
 
   .progress-error-badge {
     padding: 0.25rem 0.5rem;
-    background: #DC2626;
+    background: #dc2626;
     color: #fff;
     border-radius: 3px;
     font-size: 0.75rem;
@@ -223,7 +219,7 @@
   }
 
   .progress-fill.error {
-    background: #DC2626;
+    background: #dc2626;
   }
 
   .stages-list {
@@ -259,7 +255,7 @@
   }
 
   .stage-item.error {
-    border-color: #DC2626;
+    border-color: #dc2626;
     background: rgba(220, 38, 38, 0.1);
   }
 
@@ -290,14 +286,14 @@
   }
 
   .stage-item.error .stage-indicator {
-    background: #DC2626;
-    border-color: #DC2626;
+    background: #dc2626;
+    border-color: #dc2626;
   }
 
   .stage-icon {
     font-size: 0.75rem;
     font-weight: 600;
-    color: #E5E5E5;
+    color: #e5e5e5;
   }
 
   .stage-item.completed .stage-icon,
@@ -330,11 +326,11 @@
 
   .stage-label {
     font-size: 0.875rem;
-    color: #E5E5E5;
+    color: #e5e5e5;
   }
 
   .stage-item.pending .stage-label {
-    color: #6B7280;
+    color: #6b7280;
   }
 
   .stage-meta {
@@ -345,7 +341,7 @@
 
   .stage-time {
     font-size: 0.75rem;
-    color: #6B7280;
+    color: #6b7280;
     white-space: nowrap;
   }
 
@@ -355,7 +351,7 @@
   }
 
   .stage-time.completed {
-    color: #10B981;
+    color: #10b981;
   }
 
   .progress-bar-labels {
@@ -366,7 +362,7 @@
 
   .progress-bar-label {
     font-size: 0.625rem;
-    color: #6B7280;
+    color: #6b7280;
   }
 
   .stage-pulse {
@@ -382,7 +378,8 @@
   }
 
   @keyframes pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 0.5;
     }
     50% {
@@ -390,4 +387,3 @@
     }
   }
 </style>
-

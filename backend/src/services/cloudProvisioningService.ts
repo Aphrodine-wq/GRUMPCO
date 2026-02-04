@@ -25,7 +25,13 @@ export interface CloudResource {
   type: ResourceType;
   name: string;
   provider: CloudProvider;
-  config: DatabaseConfig | ComputeConfig | StorageConfig | ServerlessConfig | ContainerConfig | Record<string, unknown>;
+  config:
+    | DatabaseConfig
+    | ComputeConfig
+    | StorageConfig
+    | ServerlessConfig
+    | ContainerConfig
+    | Record<string, unknown>;
 }
 
 export interface DatabaseConfig {
@@ -504,7 +510,9 @@ function generateTerraformGCP(spec: InfrastructureSpec): string {
     `    project     = "${spec.name.toLowerCase().replace(/[^a-z0-9-]/g, '-')}"`,
     '    managed_by  = "terraform"',
     '    environment = var.environment',
-    ...Object.entries(spec.tags ?? {}).map(([k, v]) => `    ${k.toLowerCase().replace(/[^a-z0-9-]/g, '-')} = "${v.toLowerCase()}"`),
+    ...Object.entries(spec.tags ?? {}).map(
+      ([k, v]) => `    ${k.toLowerCase().replace(/[^a-z0-9-]/g, '-')} = "${v.toLowerCase()}"`
+    ),
     '  }',
     '}',
     '',
@@ -592,8 +600,12 @@ function generateGCPResource(resource: CloudResource, projectName: string): stri
     }
     case 'storage': {
       const config = resource.config as unknown as StorageConfig;
-      const storageClass = config.replication === 'global' ? 'MULTI_REGIONAL' : 
-                          config.replication === 'regional' ? 'REGIONAL' : 'STANDARD';
+      const storageClass =
+        config.replication === 'global'
+          ? 'MULTI_REGIONAL'
+          : config.replication === 'regional'
+            ? 'REGIONAL'
+            : 'STANDARD';
       lines.push(
         `# Cloud Storage: ${resource.name}`,
         `resource "google_storage_bucket" "${name}" {`,
@@ -872,8 +884,8 @@ function generateAzureResource(resource: CloudResource, projectName: string): st
     }
     case 'storage': {
       const config = resource.config as unknown as StorageConfig;
-      const replication = config.replication === 'global' ? 'GRS' : 
-                         config.replication === 'regional' ? 'ZRS' : 'LRS';
+      const replication =
+        config.replication === 'global' ? 'GRS' : config.replication === 'regional' ? 'ZRS' : 'LRS';
       lines.push(
         `# Storage Account: ${resource.name}`,
         `resource "azurerm_storage_account" "${name}" {`,
@@ -890,7 +902,7 @@ function generateAzureResource(resource: CloudResource, projectName: string): st
       break;
     }
     case 'serverless': {
-      const config = resource.config as unknown as ServerlessConfig;
+      const _config = resource.config as unknown as ServerlessConfig;
       lines.push(
         `# Function App: ${resource.name}`,
         `resource "azurerm_linux_function_app" "${name}" {`,
@@ -1049,7 +1061,11 @@ function generatePulumiResource(resource: CloudResource, spec: InfrastructureSpe
   return lines.join('\n');
 }
 
-function generatePulumiAWSResource(resource: CloudResource, projectName: string, varName: string): string[] {
+function generatePulumiAWSResource(
+  resource: CloudResource,
+  projectName: string,
+  varName: string
+): string[] {
   const lines: string[] = [];
 
   switch (resource.type) {
@@ -1111,7 +1127,11 @@ function generatePulumiAWSResource(resource: CloudResource, projectName: string,
   return lines;
 }
 
-function generatePulumiGCPResource(resource: CloudResource, projectName: string, varName: string): string[] {
+function generatePulumiGCPResource(
+  resource: CloudResource,
+  projectName: string,
+  varName: string
+): string[] {
   const lines: string[] = [];
 
   switch (resource.type) {
@@ -1160,7 +1180,11 @@ function generatePulumiGCPResource(resource: CloudResource, projectName: string,
   return lines;
 }
 
-function generatePulumiAzureResource(resource: CloudResource, projectName: string, varName: string): string[] {
+function generatePulumiAzureResource(
+  resource: CloudResource,
+  projectName: string,
+  varName: string
+): string[] {
   const lines: string[] = [];
 
   switch (resource.type) {
@@ -1224,18 +1248,15 @@ export function generateIaC(spec: InfrastructureSpec, tool: IaCTool = 'terraform
     );
   }
 
-  const commands = tool === 'terraform'
-    ? [
-        'terraform init',
-        'terraform plan',
-        'terraform apply',
-      ]
-    : [
-        'npm install',
-        'pulumi up',
-      ];
+  const commands =
+    tool === 'terraform'
+      ? ['terraform init', 'terraform plan', 'terraform apply']
+      : ['npm install', 'pulumi up'];
 
-  logger.info({ provider: spec.provider, tool, resourceCount: spec.resources.length }, 'IaC generated');
+  logger.info(
+    { provider: spec.provider, tool, resourceCount: spec.resources.length },
+    'IaC generated'
+  );
 
   return {
     tool,
@@ -1247,10 +1268,7 @@ export function generateIaC(spec: InfrastructureSpec, tool: IaCTool = 'terraform
 }
 
 function generateTerraformOutputs(spec: InfrastructureSpec): string {
-  const lines: string[] = [
-    '# Terraform Outputs',
-    '',
-  ];
+  const lines: string[] = ['# Terraform Outputs', ''];
 
   for (const resource of spec.resources) {
     const name = resource.name.replace(/[^a-zA-Z0-9]/g, '_');
@@ -1259,9 +1277,11 @@ function generateTerraformOutputs(spec: InfrastructureSpec): string {
         lines.push(
           `output "${name}_bucket" {`,
           `  description = "Storage bucket for ${resource.name}"`,
-          spec.provider === 'aws' ? `  value       = aws_s3_bucket.${name}.bucket` :
-          spec.provider === 'gcp' ? `  value       = google_storage_bucket.${name}.name` :
-          `  value       = azurerm_storage_account.${name}.primary_blob_endpoint`,
+          spec.provider === 'aws'
+            ? `  value       = aws_s3_bucket.${name}.bucket`
+            : spec.provider === 'gcp'
+              ? `  value       = google_storage_bucket.${name}.name`
+              : `  value       = azurerm_storage_account.${name}.primary_blob_endpoint`,
           '}',
           ''
         );
@@ -1270,9 +1290,11 @@ function generateTerraformOutputs(spec: InfrastructureSpec): string {
         lines.push(
           `output "${name}_endpoint" {`,
           `  description = "Database endpoint for ${resource.name}"`,
-          spec.provider === 'aws' ? `  value       = aws_db_instance.${name}.endpoint` :
-          spec.provider === 'gcp' ? `  value       = google_sql_database_instance.${name}.connection_name` :
-          `  value       = azurerm_mssql_server.${name}.fully_qualified_domain_name`,
+          spec.provider === 'aws'
+            ? `  value       = aws_db_instance.${name}.endpoint`
+            : spec.provider === 'gcp'
+              ? `  value       = google_sql_database_instance.${name}.connection_name`
+              : `  value       = azurerm_mssql_server.${name}.fully_qualified_domain_name`,
           '  sensitive   = true',
           '}',
           ''
@@ -1351,20 +1373,16 @@ function generatePulumiStackConfig(spec: InfrastructureSpec): string {
     config['gcp:project'] = 'your-project-id';
   }
 
-  return [
-    'config:',
-    ...Object.entries(config).map(([k, v]) => `  ${k}: ${v}`),
-    '',
-  ].join('\n');
+  return ['config:', ...Object.entries(config).map(([k, v]) => `  ${k}: ${v}`), ''].join('\n');
 }
 
 function estimateMonthlyCost(spec: InfrastructureSpec): number {
   let total = 0;
 
   for (const resource of spec.resources) {
-  switch (resource.type) {
-    case 'compute': {
-      const config = resource.config as unknown as ComputeConfig;
+    switch (resource.type) {
+      case 'compute': {
+        const config = resource.config as unknown as ComputeConfig;
         const baseCosts: Record<string, number> = { small: 15, medium: 30, large: 60, xlarge: 120 };
         total += (baseCosts[config.size] ?? 30) * (config.count ?? 1);
         break;

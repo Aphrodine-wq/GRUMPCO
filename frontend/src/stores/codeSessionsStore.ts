@@ -68,7 +68,9 @@ export const codeSessionsStore = {
   },
   list(): CodeSession[] {
     let out: CodeSession[] = [];
-    const unsub = subscribe((v) => { out = v; });
+    const unsub = subscribe((v) => {
+      out = v;
+    });
     unsub();
     return out;
   },

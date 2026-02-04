@@ -1,5 +1,5 @@
 {
-  "name": "grump-vscode",
+  "name": "@grump/vscode",
   "displayName": "G-Rump AI",
   "description": "AI-powered development assistant with architecture diagrams, PRDs, and code generation",
   "version": "0.1.0",
@@ -215,6 +215,7 @@
     "vsce": "^2.15.0"
   },
   "dependencies": {
+    "@grump/shared-types": "workspace:*",
     "axios": "^1.6.2",
     "ws": "^8.14.2"
   }

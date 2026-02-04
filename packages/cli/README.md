@@ -1,24 +1,25 @@
 # G-Rump CLI
 
-**The grumpiest AI-powered CLI you'll ever love to hate.** ☹️
+**The grumpiest AI-powered CLI you'll ever love to hate.**
 
 A comprehensive command-line interface for G-Rump with frowny face branding, colorful output, and powerful AI-assisted workflows.
 
-![Version](https://img.shields.io/badge/version-3.0.0-red)
+![Version](https://img.shields.io/badge/version-2.1.0-red)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-red)
 
 ---
 
-## ☹️ Features
+## Features
 
 - **Frowny Face Branding** - Every command starts with a delightfully grumpy ASCII face
-- **8 Core Commands** - Ship, codegen, architecture, PRD, status, list, chat, and init
+- **40+ Commands** - Ship, codegen, architecture, PRD, status, list, chat, init, and many more
 - **Beautiful CLI** - Chalk colors, ora spinners, and interactive prompts
 - **Configuration Support** - `.grumprc` or `grump.config.js` support
 - **Progress Indicators** - Know exactly what's happening with visual feedback
 - **Error Handling** - Helpful error messages (with extra frowns)
 - **API Key Management** - Built-in commands for managing credentials
+- **Multi-Provider Support** - NVIDIA NIM, OpenRouter, Groq, Together AI, Ollama
 
 ---
 
@@ -325,7 +326,7 @@ export GRUMP_THEME=grumpy
 G-Rump shows beautiful progress indicators for long-running operations:
 
 ```
-☹️  G-Rump CLI v3.0.0
+☹️  G-Rump CLI v2.1.0
 
 ⠼ Analyzing your request... (35%)
 ✓ Architecture generated

@@ -1,9 +1,8 @@
-import express, { Request, Response, Router } from 'express';
-import { body, validationResult, ValidationChain } from 'express-validator';
+import express, { type Request, type Response, type Router } from 'express';
+import { body, validationResult, type ValidationChain } from 'express-validator';
 import { auth, isMockMode } from '../services/supabaseClient.js';
-import { requireAuth } from '../middleware/authMiddleware.js';
+import { requireAuth, type AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { getRequestLogger } from '../middleware/logger.js';
-import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 
 const router: Router = express.Router();
 
@@ -197,7 +196,23 @@ router.get('/status', (_req: Request, res: Response) => {
   res.json({
     configured: true,
     mock: isMockMode,
-    providers: ['email', 'google', 'github'],
+    providers: ['email', 'google', 'github', 'discord'],
+  });
+});
+
+// POST /auth/verify - Verify an API key/token (used by CLI)
+router.post('/verify', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  const log = getRequestLogger();
+
+  log.info({ userId: req.user?.id }, 'Token verified via /auth/verify');
+
+  res.json({
+    valid: true,
+    user: {
+      id: req.user?.id || '',
+      email: req.user?.email,
+      name: req.user?.user_metadata?.name as string | undefined,
+    },
   });
 });
 

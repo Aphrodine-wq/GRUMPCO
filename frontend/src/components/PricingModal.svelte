@@ -1,13 +1,14 @@
 <script lang="ts">
   import { Button } from '../lib/design-system';
-  
+  import { X, Check } from 'lucide-svelte';
+
   interface Props {
     onClose: () => void;
     onSelectPlan?: (planId: string) => void;
   }
-  
+
   let { onClose, onSelectPlan }: Props = $props();
-  
+
   const plans = [
     {
       id: 'free',
@@ -53,53 +54,61 @@
       recommended: false,
     },
   ];
-  
+
   function handleSelectPlan(planId: string) {
     onSelectPlan?.(planId);
     onClose();
   }
 </script>
 
-<div class="modal-overlay" onclick={onClose} role="presentation">
-  <div class="modal-content" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+<div
+  class="modal-overlay"
+  onclick={onClose}
+  role="button"
+  tabindex="0"
+  onkeydown={(e) => e.key === 'Escape' && onClose()}
+>
+  <div
+    class="modal-content"
+    onclick={(e) => e.stopPropagation()}
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <button class="close-btn" onclick={onClose} aria-label="Close pricing modal">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
+      <X class="w-5 h-5" strokeWidth={2} />
     </button>
-    
+
     <div class="modal-header">
       <h2>Choose Your Plan</h2>
       <p>Build faster with AI-powered development tools</p>
     </div>
-    
+
     <div class="plans-grid">
       {#each plans as plan}
         <div class="plan-card" class:recommended={plan.recommended}>
           {#if plan.recommended}
             <div class="recommended-badge">Most Popular</div>
           {/if}
-          
+
           <h3 class="plan-name">{plan.name}</h3>
           <div class="plan-price">
             <span class="price">{plan.price}</span>
             <span class="period">{plan.period}</span>
           </div>
-          
+
           <ul class="features-list">
             {#each plan.features as feature}
               <li>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
+                <Check class="w-4 h-4 shrink-0" strokeWidth={2.5} />
                 {feature}
               </li>
             {/each}
           </ul>
-          
-          <Button 
-            variant={plan.recommended ? 'primary' : 'secondary'} 
+
+          <Button
+            variant={plan.recommended ? 'primary' : 'secondary'}
             onclick={() => handleSelectPlan(plan.id)}
             class="select-btn"
           >
@@ -108,7 +117,7 @@
         </div>
       {/each}
     </div>
-    
+
     <div class="modal-footer">
       <p>All plans include a 14-day free trial. No credit card required.</p>
     </div>
@@ -128,7 +137,7 @@
     padding: 20px;
     animation: fadeIn 0.2s ease-out;
   }
-  
+
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -137,7 +146,7 @@
       opacity: 1;
     }
   }
-  
+
   .modal-content {
     background: white;
     border-radius: 24px;
@@ -149,7 +158,7 @@
     padding: 48px;
     animation: slideUp 0.3s ease-out;
   }
-  
+
   @keyframes slideUp {
     from {
       transform: translateY(20px);
@@ -160,7 +169,7 @@
       opacity: 1;
     }
   }
-  
+
   .close-btn {
     position: absolute;
     top: 20px;
@@ -177,17 +186,17 @@
     justify-content: center;
     transition: all 0.2s;
   }
-  
+
   .close-btn:hover {
     background: #e4e4e7;
     color: #18181b;
   }
-  
+
   .modal-header {
     text-align: center;
     margin-bottom: 48px;
   }
-  
+
   .modal-header h2 {
     font-size: 32px;
     font-weight: 800;
@@ -195,19 +204,19 @@
     margin-bottom: 12px;
     letter-spacing: -0.02em;
   }
-  
+
   .modal-header p {
     font-size: 16px;
     color: #71717a;
   }
-  
+
   .plans-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 24px;
     margin-bottom: 32px;
   }
-  
+
   .plan-card {
     background: white;
     border: 2px solid #e4e4e7;
@@ -218,28 +227,28 @@
     position: relative;
     transition: all 0.3s;
   }
-  
+
   .plan-card:hover {
     border-color: #18181b;
     transform: translateY(-4px);
     box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.15);
   }
-  
+
   .plan-card.recommended {
     border-color: var(--color-primary);
     box-shadow: 0 10px 30px -10px rgba(14, 165, 233, 0.2);
   }
-  
+
   .plan-card.recommended:hover {
     box-shadow: 0 20px 40px -20px rgba(14, 165, 233, 0.3);
   }
-  
+
   .recommended-badge {
     position: absolute;
     top: -12px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+    background: var(--color-primary);
     color: white;
     font-size: 11px;
     font-weight: 700;
@@ -248,38 +257,38 @@
     padding: 6px 16px;
     border-radius: 20px;
   }
-  
+
   .plan-name {
     font-size: 20px;
     font-weight: 700;
     color: #18181b;
     margin-bottom: 12px;
   }
-  
+
   .plan-price {
     margin-bottom: 24px;
   }
-  
+
   .price {
     font-size: 40px;
     font-weight: 800;
     color: #18181b;
     letter-spacing: -0.02em;
   }
-  
+
   .period {
     font-size: 14px;
     color: #71717a;
     margin-left: 4px;
   }
-  
+
   .features-list {
     list-style: none;
     padding: 0;
     margin: 0 0 32px 0;
     flex: 1;
   }
-  
+
   .features-list li {
     display: flex;
     align-items: center;
@@ -289,58 +298,57 @@
     margin-bottom: 12px;
     line-height: 1.5;
   }
-  
-  .features-list svg {
+
+  .features-list li :global(svg) {
     flex-shrink: 0;
     color: #10b981;
   }
-  
-  .plan-card.recommended .features-list svg {
+
+  .plan-card.recommended .features-list li :global(svg) {
     color: var(--color-primary);
   }
-  
+
   .modal-footer {
     text-align: center;
     padding-top: 24px;
     border-top: 1px solid #e4e4e7;
   }
-  
+
   .modal-footer p {
     font-size: 14px;
     color: #71717a;
   }
-  
+
   /* Mobile responsive */
   @media (max-width: 768px) {
     .modal-content {
       padding: 32px 24px;
       border-radius: 16px;
     }
-    
+
     .modal-header {
       margin-bottom: 32px;
     }
-    
+
     .modal-header h2 {
       font-size: 24px;
     }
-    
+
     .modal-header p {
       font-size: 14px;
     }
-    
+
     .plans-grid {
       grid-template-columns: 1fr;
       gap: 20px;
     }
-    
+
     .plan-card {
       padding: 24px 20px;
     }
-    
+
     .price {
       font-size: 32px;
     }
   }
 </style>
-

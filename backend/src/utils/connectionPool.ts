@@ -78,7 +78,7 @@ export class ConnectionPool<T> {
 
   async acquire(): Promise<T> {
     // Try to get an available connection
-    const available = this.pool.find(c => c.isHealthy);
+    const available = this.pool.find((c) => c.isHealthy);
     if (available) {
       available.lastUsed = Date.now();
       available.useCount++;
@@ -111,7 +111,7 @@ export class ConnectionPool<T> {
   }
 
   release(connection: T): void {
-    const pooled = this.pool.find(c => c.connection === connection);
+    const pooled = this.pool.find((c) => c.connection === connection);
     if (pooled) {
       pooled.lastUsed = Date.now();
       pooled.isHealthy = true;
@@ -128,7 +128,7 @@ export class ConnectionPool<T> {
   }
 
   async destroy(connection: T): Promise<void> {
-    const index = this.pool.findIndex(c => c.connection === connection);
+    const index = this.pool.findIndex((c) => c.connection === connection);
     if (index > -1) {
       const pooled = this.pool.splice(index, 1)[0];
       await this.destroyer(pooled.connection);
@@ -189,7 +189,7 @@ export class ConnectionPool<T> {
     return {
       total: this.pool.length,
       active: this.activeConnections,
-      available: this.pool.filter(c => c.isHealthy).length,
+      available: this.pool.filter((c) => c.isHealthy).length,
       waiting: this.waiting.length,
     };
   }
@@ -200,7 +200,7 @@ export class ConnectionPool<T> {
     }
 
     // Destroy all connections
-    await Promise.all(this.pool.map(c => this.destroyer(c.connection)));
+    await Promise.all(this.pool.map((c) => this.destroyer(c.connection)));
     this.pool.length = 0;
     this.activeConnections = 0;
   }
@@ -262,7 +262,7 @@ export class RequestBatcher<T, R> {
         }
       });
     } catch (error) {
-      promises.forEach(p => p.reject(error));
+      promises.forEach((p) => p.reject(error));
     }
   }
 
@@ -288,12 +288,12 @@ export class SmartCache<K extends string | number | symbol, V> {
   get(key: K): V | undefined {
     const entry = this.cache.get(key);
     if (!entry) return undefined;
-    
+
     if (Date.now() > entry.expires) {
       this.cache.delete(key);
       return undefined;
     }
-    
+
     return entry.value;
   }
 

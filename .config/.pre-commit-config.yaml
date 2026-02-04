@@ -1,0 +1,126 @@
+repos:
+  # General hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+      - id: check-executables-have-shebangs
+
+  # Secrets scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+
+  # TypeScript/JavaScript linting
+  - repo: local
+    hooks:
+      - id: eslint-frontend
+        name: ESLint Frontend
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        files: ^frontend/.*\.(ts|js|svelte)$
+        pass_filenames: false
+
+      - id: eslint-backend
+        name: ESLint Backend
+        entry: bash -c 'cd backend && npm run lint'
+        language: system
+        files: ^backend/.*\.(ts|js)$
+        pass_filenames: false
+
+      - id: typecheck-frontend
+        name: Type Check Frontend
+        entry: bash -c 'cd frontend && npm run type-check'
+        language: system
+        files: ^frontend/.*\.ts$
+        pass_filenames: false
+
+      - id: typecheck-backend
+        name: Type Check Backend
+        entry: bash -c 'cd backend && npm run type-check'
+        language: system
+        files: ^backend/.*\.ts$
+        pass_filenames: false
+
+      - id: format-frontend
+        name: Prettier Frontend
+        entry: bash -c 'cd frontend && npm run format'
+        language: system
+        files: ^frontend/.*\.(ts|js|svelte|json|css|html)$
+        pass_filenames: false
+
+      - id: format-backend
+        name: Prettier Backend
+        entry: bash -c 'cd backend && npm run format'
+        language: system
+        files: ^backend/.*\.(ts|js|json)$
+        pass_filenames: false
+
+  # Rust formatting and linting
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+        name: Rust fmt
+        entry: bash -c 'cd intent-compiler && cargo fmt -- --check'
+        language: system
+        files: ^intent-compiler/.*\.rs$
+        pass_filenames: false
+
+      - id: cargo-check
+        name: Rust check
+        entry: bash -c 'cd intent-compiler && cargo check'
+        language: system
+        files: ^intent-compiler/.*\.rs$
+        pass_filenames: false
+
+      - id: clippy
+        name: Rust clippy
+        entry: bash -c 'cd intent-compiler && cargo clippy -- -D warnings'
+        language: system
+        files: ^intent-compiler/.*\.rs$
+        pass_filenames: false
+
+  # Test execution
+  - repo: local
+    hooks:
+      - id: test-backend
+        name: Backend Unit Tests
+        entry: bash -c 'cd backend && npm run test:run'
+        language: system
+        files: ^backend/.*\.test\.ts$
+        pass_filenames: false
+        stages: [push]
+
+  # Commit message validation
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.13.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  # Security scanning
+  - repo: https://github.com/semgrep/pre-commit
+    rev: v1.57.0
+    hooks:
+      - id: semgrep
+        args: ['--config', '.semgrep.yml', '--error']
+        stages: [push]
+
+  # Gitleaks
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.1
+    hooks:
+      - id: gitleaks
+        stages: [commit-msg, push]

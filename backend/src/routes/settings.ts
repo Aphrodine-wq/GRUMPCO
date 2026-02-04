@@ -2,13 +2,23 @@
  * Settings API Routes
  * GET /api/settings – load settings (optional ?user= or X-User-Id)
  * PUT /api/settings – save settings (body: partial Settings)
+ * POST /api/settings/zero-config – auto-detect and apply zero-config
+ * GET /api/settings/templates – list quick-start templates
+ * POST /api/settings/templates/:id – apply a template
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { getDatabase } from '../db/database.js';
 import type { Settings } from '../types/settings.js';
-import { logger } from '../utils/logger.js';
+import logger from '../middleware/logger.js';
 import { sendServerError } from '../utils/errorResponse.js';
+import {
+  performZeroConfig,
+  getZeroConfigHealth,
+  QUICK_START_TEMPLATES,
+  applyQuickStartTemplate,
+  getProgressiveConfig,
+} from '../services/zeroConfigService.js';
 
 const router = Router();
 const DEFAULT_USER_KEY = 'default';
@@ -78,6 +88,9 @@ router.put('/', async (req: Request, res: Response): Promise<void> => {
       ...(body.guardRails !== undefined && {
         guardRails: { ...existing?.guardRails, ...body.guardRails },
       }),
+      ...(body.preferences !== undefined && {
+        preferences: { ...existing?.preferences, ...body.preferences },
+      }),
       ...(body.tier !== undefined && { tier: body.tier }),
     };
 
@@ -87,6 +100,100 @@ router.put('/', async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     const err = error as Error;
     logger.error({ error: err.message }, 'Settings PUT failed');
+    sendServerError(res, err, { type: 'settings_error' });
+  }
+});
+
+// ========== Zero-Config Routes ==========
+
+/**
+ * POST /api/settings/zero-config
+ * Perform zero-config detection and setup
+ */
+router.post('/zero-config', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userKey = getUserKey(req);
+    const result = await performZeroConfig(userKey);
+    res.json(result);
+  } catch (error) {
+    const err = error as Error;
+    logger.error({ error: err.message }, 'Zero-config failed');
+    sendServerError(res, err, { type: 'settings_error' });
+  }
+});
+
+/**
+ * GET /api/settings/zero-config/health
+ * Get zero-config health status
+ */
+router.get('/zero-config/health', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const health = await getZeroConfigHealth();
+    res.json(health);
+  } catch (error) {
+    const err = error as Error;
+    logger.error({ error: err.message }, 'Zero-config health check failed');
+    sendServerError(res, err, { type: 'settings_error' });
+  }
+});
+
+// ========== Template Routes ==========
+
+/**
+ * GET /api/settings/templates
+ * List available quick-start templates
+ */
+router.get('/templates', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    res.json({ templates: QUICK_START_TEMPLATES });
+  } catch (error) {
+    const err = error as Error;
+    logger.error({ error: err.message }, 'Templates list failed');
+    sendServerError(res, err, { type: 'settings_error' });
+  }
+});
+
+/**
+ * POST /api/settings/templates/:id
+ * Apply a quick-start template
+ */
+router.post('/templates/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userKey = getUserKey(req);
+    const templateId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id ?? '');
+
+    const success = await applyQuickStartTemplate(userKey, templateId);
+
+    if (!success) {
+      res.status(404).json({
+        error: 'Template not found',
+        message: `Template "${templateId}" does not exist`,
+      });
+      return;
+    }
+
+    res.json({ success: true, templateId });
+  } catch (error) {
+    const err = error as Error;
+    logger.error({ error: err.message }, 'Template apply failed');
+    sendServerError(res, err, { type: 'settings_error' });
+  }
+});
+
+// ========== Progressive Disclosure Routes ==========
+
+/**
+ * GET /api/settings/progressive
+ * Get progressive disclosure config for user
+ */
+router.get('/progressive', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userKey = getUserKey(req);
+    const config = await getProgressiveConfig(userKey);
+    res.json(config);
+  } catch (error) {
+    const err = error as Error;
+    logger.error({ error: err.message }, 'Progressive config failed');
     sendServerError(res, err, { type: 'settings_error' });
   }
 });

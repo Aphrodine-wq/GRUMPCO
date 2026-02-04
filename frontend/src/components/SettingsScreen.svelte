@@ -10,16 +10,27 @@
     Settings,
     ModelsSettings,
     ModelPreset,
+    CustomModelConfig,
     AccessibilitySettings,
     GuardRailsSettings,
   } from '../types/settings';
   import RecommendedExtensions from './RecommendedExtensions.svelte';
   import ScheduledAgents from './ScheduledAgents.svelte';
+  import ModelPicker from './ModelPicker.svelte';
   import { Button, Card, Badge } from '../lib/design-system';
   import { colors } from '../lib/design-system/tokens/colors';
   import { workspaceStore } from '../stores/workspaceStore';
   import { analyzeArchitecture } from '../stores/featuresStore';
-  import { showSettings, showCostDashboard } from '../stores/uiStore';
+  import { setCurrentView, showPricing } from '../stores/uiStore';
+  import { onboardingStore } from '../stores/onboardingStore';
+  import { authGateStore } from '../stores/authGateStore';
+  import { preferencesStore, density, includeRagContext } from '../stores/preferencesStore';
+  import {
+    wakeWordEnabled,
+    setWakeWordEnabled,
+    loadWakeWordEnabled,
+  } from '../stores/wakeWordStore';
+  import { getDockerInfo, isDockerSetupAvailable } from '../lib/dockerSetup';
 
   interface Tier {
     id: string;
@@ -27,6 +38,9 @@
     priceMonthlyCents: number;
     priceYearlyCents?: number;
     apiCallsPerMonth: number;
+    seats?: number;
+    includedStorageGb?: number;
+    includedComputeMinutes?: number;
     features: string[];
   }
 
@@ -34,6 +48,15 @@
     tier: string | null;
     usage: number | null;
     limit: number | null;
+    computeMinutesUsed?: number;
+    computeMinutesLimit?: number;
+    storageGbUsed?: number;
+    storageGbLimit?: number;
+    overageRates?: {
+      storageGbMonthlyCents: number;
+      computeMinuteCents: number;
+      extraConcurrentAgentMonthlyCents: number;
+    };
     message?: string;
   }
 
@@ -53,20 +76,18 @@
   let analyzingArchitecture = $state(false);
   let architectureSummary = $state<string | null>(null);
   let architectureDiagram = $state<string | null>(null);
-
-  const modelOptions = [
-    { provider: 'nim' as const, modelId: 'moonshotai/kimi-k2.5', label: 'Kimi K2.5 (Primary)' },
-    { provider: 'nim' as const, modelId: 'moonshotai/kimi-k2.6', label: 'Kimi K2.6' },
-    { provider: 'zhipu' as const, modelId: 'glm-4', label: 'GLM 4.7' },
-    { provider: 'copilot' as const, modelId: 'copilot-codex', label: 'Copilot Codex' },
-    { provider: 'copilot' as const, modelId: 'copilot-codebase', label: 'Copilot Codebase' },
-    { provider: 'openrouter' as const, modelId: 'openai/gpt-4o', label: 'OpenRouter GPT-4o' },
-    { provider: 'nim' as const, modelId: 'nvidia/nemotron-3-nano-30b-a3b', label: 'Nemotron 3 Nano 30B' },
-    { provider: 'nim' as const, modelId: 'nvidia/nemotron-3-giant-150b-a3b', label: 'Nemotron 3 Giant 150B' },
-    { provider: 'nim' as const, modelId: 'nvidia/nemotron-3-super-49b-a3b', label: 'Nemotron 3 Super 49B' },
-  ];
+  let dockerStatus = $state<'running' | 'stopped' | 'error' | null>(null);
+  let dockerLoading = $state(false);
+  let dockerStartStopLoading = $state(false);
+  let showCustomModelForm = $state(false);
+  let customModelDraft = $state<Partial<CustomModelConfig>>({
+    modelId: '',
+    apiEndpoint: '',
+    contextLength: 4096,
+  });
 
   onMount(() => {
+    wakeWordEnabled.set(loadWakeWordEnabled());
     const unsubWorkspace = workspaceStore.subscribe((state) => {
       workspaceRoot = state?.root ?? null;
     });
@@ -96,11 +117,84 @@
       if (v?.guardRails?.allowedDirs) allowedDirsText = v.guardRails.allowedDirs.join('\n');
     });
 
+    if (isDockerSetupAvailable()) {
+      dockerLoading = true;
+      getDockerInfo()
+        .then((info) => {
+          dockerStatus = info.running ? 'running' : info.error ? 'error' : 'stopped';
+        })
+        .catch(() => {
+          dockerStatus = 'error';
+        })
+        .finally(() => {
+          dockerLoading = false;
+        });
+    }
+
     return () => {
       unsubWorkspace();
       unsubSettings();
     };
   });
+
+  async function dockerComposeUp() {
+    dockerStartStopLoading = true;
+    try {
+      const res = await fetchApi('/api/docker/compose/up', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      if (res.ok) dockerStatus = 'running';
+      else dockerStatus = 'error';
+    } catch {
+      dockerStatus = 'error';
+    } finally {
+      dockerStartStopLoading = false;
+    }
+  }
+
+  async function dockerComposeDown() {
+    dockerStartStopLoading = true;
+    try {
+      const res = await fetchApi('/api/docker/compose/down', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      if (res.ok) dockerStatus = 'stopped';
+      else dockerStatus = 'error';
+    } catch {
+      dockerStatus = 'error';
+    } finally {
+      dockerStartStopLoading = false;
+    }
+  }
+
+  function addCustomModel() {
+    showCustomModelForm = true;
+    customModelDraft = { modelId: '', apiEndpoint: '', contextLength: 4096 };
+  }
+
+  function saveCustomModel() {
+    if (!customModelDraft.modelId?.trim() || !customModelDraft.apiEndpoint?.trim()) return;
+    const list = settings?.models?.customModels ?? [];
+    const newModel: CustomModelConfig = {
+      id: `custom-${Date.now()}`,
+      modelId: customModelDraft.modelId.trim(),
+      apiEndpoint: customModelDraft.apiEndpoint.trim(),
+      apiKey: customModelDraft.apiKey?.trim() || undefined,
+      contextLength: customModelDraft.contextLength ?? 4096,
+    };
+    saveModels({ ...settings?.models, customModels: [...list, newModel] });
+    showCustomModelForm = false;
+    customModelDraft = {};
+    showToast('Custom model added. Test connection from backend.', 'success');
+  }
+
+  function removeCustomModel(id: string) {
+    const list = (settings?.models?.customModels ?? []).filter((m) => m.id !== id);
+    saveModels({ ...settings?.models, customModels: list.length ? list : undefined });
+    showToast('Custom model removed.', 'success');
+  }
 
   async function saveModels(next: ModelsSettings) {
     saving = true;
@@ -135,18 +229,8 @@
 
   function modelValue(): string {
     const m = settings?.models;
-    if (!m?.defaultModelId) return 'nim:moonshotai/kimi-k2.5';
+    if (!m?.defaultModelId) return 'auto';
     return `${m.defaultProvider ?? 'nim'}:${m.defaultModelId}`;
-  }
-
-  function handleModelChange(e: Event) {
-    const v = (e.target as HTMLSelectElement).value;
-    const [provider, modelId] = v.includes(':') ? v.split(':') : ['nim', v];
-    saveModels({
-      ...settings?.models,
-      defaultProvider: provider as any,
-      defaultModelId: modelId,
-    });
   }
 
   async function handleAnalyzeArchitectureClick() {
@@ -214,21 +298,115 @@
             <option value="fast">Fast (NIM / Kimi)</option>
             <option value="quality">Quality (Kimi K2.6)</option>
           </select>
-          <p class="field-hint">Fast = cheaper and lower latency; Quality = best capability; Balanced = auto by task.</p>
+          <p class="field-hint">
+            Fast = cheaper and lower latency; Quality = best capability; Balanced = auto by task.
+          </p>
         </div>
         <div class="field-group">
-          <label class="field-label" for="model-select">AI Model (override)</label>
-          <select
-            id="model-select"
-            class="custom-select"
+          <span class="field-label">AI Model (override)</span>
+          <ModelPicker
             value={modelValue()}
-            onchange={handleModelChange}
+            compact={false}
+            showAuto={true}
+            onSelect={(provider, modelId) => {
+              saveModels({
+                ...settings?.models,
+                defaultProvider: provider as 'nim',
+                defaultModelId: modelId ?? undefined,
+              });
+            }}
+          />
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="embedding-model">Embedding model</label>
+          <select
+            id="embedding-model"
+            class="custom-select"
+            value={settings?.models?.embeddingModelId ?? 'BAAI/bge-small-en-v1.5'}
+            onchange={(e) => {
+              const v = (e.target as HTMLSelectElement).value;
+              saveModels({ ...settings?.models, embeddingModelId: v || undefined });
+            }}
             disabled={saving}
           >
-            {#each modelOptions as opt}
-              <option value="{opt.provider}:{opt.modelId}">{opt.label}</option>
-            {/each}
+            <option value="BAAI/bge-small-en-v1.5">BAAI/bge-small-en-v1.5</option>
+            <option value="nvidia/nv-embed-v2">nvidia/nv-embed-v2</option>
+            <option value="">Default (backend)</option>
           </select>
+          <p class="field-hint">Used for RAG and semantic search. Test connection in backend.</p>
+        </div>
+        <div class="field-group">
+          <Button variant="ghost" size="sm" onclick={() => setCurrentView('model-benchmark')}>
+            Model Benchmark (compare models)
+          </Button>
+        </div>
+        <div class="field-group">
+          <span class="field-label">Custom / fine-tuned models</span>
+          <p class="field-hint">
+            Add a model by ID, API endpoint, and optional API key. Backend must support custom model
+            routing.
+          </p>
+          <Button variant="secondary" size="sm" onclick={() => addCustomModel()} disabled={saving}>
+            Add Custom Model
+          </Button>
+          {#if showCustomModelForm}
+            <div class="custom-model-form">
+              <input
+                type="text"
+                class="custom-input"
+                placeholder="Model ID"
+                bind:value={customModelDraft.modelId}
+              />
+              <input
+                type="text"
+                class="custom-input"
+                placeholder="API endpoint (e.g. https://api.example.com/v1)"
+                bind:value={customModelDraft.apiEndpoint}
+              />
+              <input
+                type="password"
+                class="custom-input"
+                placeholder="API key (optional)"
+                bind:value={customModelDraft.apiKey}
+              />
+              <input
+                type="number"
+                class="custom-input"
+                placeholder="Context length"
+                bind:value={customModelDraft.contextLength}
+              />
+              <div class="custom-model-form-actions">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onclick={saveCustomModel}
+                  disabled={!customModelDraft.modelId?.trim() ||
+                    !customModelDraft.apiEndpoint?.trim()}>Save</Button
+                >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onclick={() => {
+                    showCustomModelForm = false;
+                    customModelDraft = {};
+                  }}>Cancel</Button
+                >
+              </div>
+            </div>
+          {/if}
+          {#if (settings?.models?.customModels ?? []).length > 0}
+            <ul class="custom-models-list">
+              {#each settings?.models?.customModels ?? [] as model (model.id)}
+                <li class="custom-model-item">
+                  <span class="custom-model-id">{model.modelId}</span>
+                  <span class="custom-model-endpoint">{model.apiEndpoint}</span>
+                  <Button variant="ghost" size="sm" onclick={() => removeCustomModel(model.id)}
+                    >Remove</Button
+                  >
+                </li>
+              {/each}
+            </ul>
+          {/if}
         </div>
       </Card>
 
@@ -301,6 +479,73 @@
             Allow longer messages for chat when using models that support large context.
           </p>
         </div>
+        <div class="field-group">
+          <label class="checkbox-field">
+            <input
+              type="checkbox"
+              checked={$includeRagContext}
+              onchange={(e) =>
+                preferencesStore.setIncludeRagContext((e.target as HTMLInputElement).checked)}
+            />
+            <span class="checkbox-label-text">RAG context in chat</span>
+          </label>
+          <p class="field-hint">
+            Inject indexed docs into chat for more tailored answers. Requires RAG index (Ask docs or
+            npm run rag:index).
+          </p>
+        </div>
+      </Card>
+
+      <!-- Docker: basic container start/stop and setup -->
+      <Card title="Docker" padding="md">
+        <p class="section-desc">
+          Start or stop the G-Rump Docker stack. Use Setup Wizard for one-click NVIDIA or AMD GPU
+          setup.
+        </p>
+        {#if dockerLoading}
+          <p class="status-text">Checking Docker status…</p>
+        {:else if dockerStatus}
+          <div class="status-row">
+            <span class="status-label">Status</span>
+            <Badge
+              variant={dockerStatus === 'running'
+                ? 'success'
+                : dockerStatus === 'error'
+                  ? 'error'
+                  : 'default'}
+            >
+              {dockerStatus === 'running'
+                ? 'Running'
+                : dockerStatus === 'error'
+                  ? 'Error'
+                  : 'Stopped'}
+            </Badge>
+          </div>
+        {/if}
+        <div class="docker-actions">
+          <Button
+            variant="primary"
+            size="sm"
+            onclick={dockerComposeUp}
+            disabled={dockerStartStopLoading}
+          >
+            Start Stack
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onclick={dockerComposeDown}
+            disabled={dockerStartStopLoading}
+          >
+            Stop Stack
+          </Button>
+          <Button variant="ghost" size="sm" onclick={() => setCurrentView('docker')}>
+            Open Docker Panel
+          </Button>
+          <Button variant="ghost" size="sm" onclick={() => setCurrentView('docker-setup')}>
+            Docker Setup Wizard
+          </Button>
+        </div>
       </Card>
 
       <!-- Scheduled agents (24/7) -->
@@ -320,12 +565,33 @@
                 >{billingMe.usage ?? 0} / {billingMe.limit ?? '∞'} calls</span
               >
             </div>
+            {#if billingMe.computeMinutesLimit != null}
+              <div class="status-row">
+                <span class="status-label">Compute</span>
+                <span class="status-value"
+                  >{(billingMe.computeMinutesUsed ?? 0).toFixed(1)} / {billingMe.computeMinutesLimit}
+                  min</span
+                >
+              </div>
+            {/if}
+            {#if billingMe.storageGbLimit != null}
+              <div class="status-row">
+                <span class="status-label">Storage</span>
+                <span class="status-value"
+                  >{(billingMe.storageGbUsed ?? 0).toFixed(2)} / {billingMe.storageGbLimit} GB</span
+                >
+              </div>
+            {/if}
             <div class="billing-actions">
+              <Button variant="primary" size="sm" onclick={() => showPricing.set(true)}
+                >Upgrade</Button
+              >
               <Button
                 variant="secondary"
                 size="sm"
-                onclick={() => { showSettings.set(false); showCostDashboard.set(true); }}
-                >Cost dashboard</Button
+                onclick={() => {
+                  setCurrentView('cost');
+                }}>Cost dashboard</Button
               >
               <Button
                 variant="secondary"
@@ -339,17 +605,140 @@
                 <span class="status-value">{tiers.length}</span>
               </div>
             {/if}
+            {#if billingMe.overageRates}
+              <div class="status-row">
+                <span class="status-label">Overages</span>
+                <span class="status-value">
+                  ${(billingMe.overageRates.storageGbMonthlyCents / 100).toFixed(2)}/GB • ${(
+                    billingMe.overageRates.computeMinuteCents / 100
+                  ).toFixed(2)}/min • ${(
+                    billingMe.overageRates.extraConcurrentAgentMonthlyCents / 100
+                  ).toFixed(2)}/slot
+                </span>
+              </div>
+            {/if}
           {:else}
             <p class="billing-empty">Sign in to view your subscription details.</p>
             <div class="billing-actions">
-              <Button variant="secondary" size="sm" onclick={() => { showSettings.set(false); showCostDashboard.set(true); }}
-                >Cost dashboard</Button
+              <Button variant="primary" size="sm" onclick={() => showPricing.set(true)}
+                >Upgrade</Button
               >
-              <Button variant="primary" size="sm" onclick={() => window.open(billingUrl, '_blank')}
-                >View Pricing</Button
+              <Button
+                variant="secondary"
+                size="sm"
+                onclick={() => {
+                  setCurrentView('cost');
+                }}>Cost dashboard</Button
+              >
+              <Button
+                variant="secondary"
+                size="sm"
+                onclick={() => window.open(billingUrl, '_blank')}>Manage Billing</Button
               >
             </div>
           {/if}
+        </div>
+      </Card>
+
+      <!-- Onboarding & Help -->
+      <Card title="Onboarding & Help" padding="md">
+        <p class="section-desc">
+          Show the welcome and setup carousel again, run troubleshooting, or factory reset.
+        </p>
+        <div class="field-group docker-actions">
+          <Button
+            variant="secondary"
+            size="sm"
+            onclick={() => {
+              onboardingStore.resetOnboarding();
+              window.location.reload();
+            }}
+          >
+            Show onboarding again
+          </Button>
+          {#if typeof window !== 'undefined' && (window as { grump?: { isElectron?: boolean } }).grump?.isElectron}
+            <Button
+              variant="secondary"
+              size="sm"
+              onclick={() => {
+                authGateStore.resetAuthSkipped();
+                window.location.reload();
+              }}
+            >
+              Re-prompt for sign-in
+            </Button>
+          {/if}
+          <Button variant="ghost" size="sm" onclick={() => setCurrentView('troubleshooting')}>
+            Troubleshooting
+          </Button>
+          <Button variant="ghost" size="sm" onclick={() => setCurrentView('reset')}>
+            Factory reset
+          </Button>
+        </div>
+      </Card>
+
+      <!-- Voice & Wake Word (Electron) -->
+      {#if typeof window !== 'undefined' && (window as { grump?: { wakeWord?: { isSupported?: () => boolean } } }).grump?.wakeWord?.isSupported?.()}
+        <Card title="Voice & Wake Word" padding="md">
+          <p class="section-desc">
+            When enabled, say the wake word to activate Talk Mode. Requires microphone access. Uses
+            Picovoice (add PICOVOICE_ACCESS_KEY for detection).
+          </p>
+          <div class="field-group">
+            <label class="checkbox-field">
+              <input
+                type="checkbox"
+                checked={$wakeWordEnabled}
+                onchange={(e) => {
+                  setWakeWordEnabled((e.target as HTMLInputElement).checked);
+                  if ((e.target as HTMLInputElement).checked) {
+                    (
+                      window as {
+                        grump?: { wakeWord?: { start?: (key?: string) => Promise<unknown> } };
+                      }
+                    ).grump?.wakeWord?.start?.();
+                  } else {
+                    (
+                      window as { grump?: { wakeWord?: { stop?: () => Promise<unknown> } } }
+                    ).grump?.wakeWord?.stop?.();
+                  }
+                }}
+              />
+              <span>Enable wake word (e.g. "Hey G-Rump")</span>
+            </label>
+          </div>
+        </Card>
+      {/if}
+
+      <!-- Appearance: Density -->
+      <Card title="Appearance" padding="md">
+        <p class="section-desc">
+          Layout density for lists and padding. Compact uses about 20% less space.
+        </p>
+        <div class="field-group" role="group" aria-labelledby="density-label">
+          <span id="density-label" class="radio-label">Density</span>
+          <div class="radio-row">
+            <label class="radio-option">
+              <input
+                type="radio"
+                name="density"
+                value="comfortable"
+                checked={$density !== 'compact'}
+                onchange={() => preferencesStore.setDensity('comfortable')}
+              />
+              <span>Comfortable</span>
+            </label>
+            <label class="radio-option">
+              <input
+                type="radio"
+                name="density"
+                value="compact"
+                checked={$density === 'compact'}
+                onchange={() => preferencesStore.setDensity('compact')}
+              />
+              <span>Compact</span>
+            </label>
+          </div>
         </div>
       </Card>
 
@@ -430,6 +819,48 @@
           {/if}
         {/if}
       </Card>
+
+      <!-- Keyboard shortcuts -->
+      <Card title="Keyboard shortcuts" padding="md">
+        <p class="section-desc">Use these shortcuts to navigate and focus quickly.</p>
+        <ul class="shortcuts-list">
+          <li><kbd>Ctrl</kbd> + <kbd>B</kbd> — Toggle sidebar</li>
+          <li>
+            <kbd>/</kbd> or <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd> — Focus chat input
+          </li>
+          <li><kbd>Ctrl</kbd> + <kbd>K</kbd> — Open command palette</li>
+        </ul>
+      </Card>
+
+      <!-- Legal -->
+      <Card title="Legal" padding="md">
+        <p class="section-desc">
+          Terms of Service, Privacy Policy, and Acceptable Use Policy (open in browser).
+        </p>
+        <div class="legal-links">
+          <Button
+            variant="ghost"
+            size="sm"
+            onclick={() => window.open('https://docs.g-rump.com/legal/terms', '_blank')}
+          >
+            Terms of Service
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onclick={() => window.open('https://docs.g-rump.com/legal/privacy', '_blank')}
+          >
+            Privacy Policy
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onclick={() => window.open('https://docs.g-rump.com/legal/acceptable-use', '_blank')}
+          >
+            Acceptable Use
+          </Button>
+        </div>
+      </Card>
     </div>
   </div>
 </div>
@@ -501,6 +932,30 @@
     font-size: 12px;
     color: #a1a1aa;
     margin-top: 6px;
+  }
+
+  .radio-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #3f3f46;
+    margin-bottom: 8px;
+  }
+  .radio-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .radio-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #3f3f46;
+    cursor: pointer;
+  }
+  .radio-option input {
+    cursor: pointer;
   }
 
   .custom-select {
@@ -581,9 +1036,103 @@
     font-style: italic;
   }
 
+  .docker-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .status-text {
+    margin: 0.5rem 0;
+    color: var(--text-secondary, #888);
+    font-size: 0.875rem;
+  }
+
+  .custom-model-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: var(--bg-secondary, #f9fafb);
+    border-radius: 0.5rem;
+  }
+
+  .custom-model-form .custom-input {
+    padding: 0.5rem;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  .custom-model-form-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .custom-models-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0;
+  }
+
+  .custom-model-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 0.25rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .custom-model-id {
+    font-family: monospace;
+    font-weight: 600;
+  }
+
+  .custom-model-endpoint {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #6b7280);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .billing-actions {
     display: flex;
     justify-content: flex-end;
   }
-</style>
 
+  .shortcuts-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 14px;
+    color: #3f3f46;
+  }
+
+  .shortcuts-list li {
+    padding: 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .shortcuts-list kbd {
+    padding: 2px 6px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    border-radius: 4px;
+  }
+
+  .legal-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+</style>

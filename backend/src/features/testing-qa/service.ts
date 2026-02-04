@@ -8,17 +8,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getStream, type StreamParams } from '../../services/llmGateway.js';
 import {
-  TestGenerationRequest,
-  TestGenerationResult,
-  GeneratedTest,
-  LoadTestPlanRequest,
-  LoadTestPlanResult,
-  LoadTestScenario,
-  CoverageAnalysisRequest,
-  CoverageAnalysisResult,
-  CoverageGap,
-  MockGenerationRequest,
-  MockGenerationResult,
+  type TestGenerationRequest,
+  type TestGenerationResult,
+  type GeneratedTest,
+  type LoadTestPlanRequest,
+  type LoadTestPlanResult,
+  type LoadTestScenario,
+  type CoverageAnalysisRequest,
+  type CoverageAnalysisResult,
+  type CoverageGap,
+  type MockGenerationRequest,
+  type MockGenerationResult,
 } from './types.js';
 
 const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
@@ -69,7 +69,8 @@ export async function generateTests(request: TestGenerationRequest): Promise<Tes
   } = request;
 
   const ext = path.extname(filePath);
-  const language = ext === '.py' ? 'python' : ext === '.go' ? 'go' : ext === '.java' ? 'java' : 'typescript';
+  const language =
+    ext === '.py' ? 'python' : ext === '.go' ? 'go' : ext === '.java' ? 'java' : 'typescript';
 
   const frameworkDocs: Record<string, string> = {
     vitest: 'Vitest with TypeScript. Use describe/it/expect. Import from "vitest".',
@@ -122,7 +123,9 @@ Also provide a summary:
   });
 
   // Extract test code
-  const codeMatch = responseText.match(/```(?:typescript|javascript|python|go|java)\n?([\s\S]*?)\n?```/);
+  const codeMatch = responseText.match(
+    /```(?:typescript|javascript|python|go|java)\n?([\s\S]*?)\n?```/
+  );
   const testContent = codeMatch ? codeMatch[1].trim() : '';
 
   // Extract summary
@@ -138,21 +141,26 @@ Also provide a summary:
 
   const testFileName = filePath.replace(/\.(ts|js|py|go|java)$/, `.test.$1`);
 
-  const tests: GeneratedTest[] = [{
-    testFile: testFileName,
-    testContent,
-    testCount: summary.testCount || testContent.split(/it\(|test\(|def test_|func Test/).length - 1,
-    coverageEstimate: summary.coverageEstimate || coverageGoal,
-    framework: testFramework,
-    imports: summary.imports || [],
-  }];
+  const tests: GeneratedTest[] = [
+    {
+      testFile: testFileName,
+      testContent,
+      testCount:
+        summary.testCount || testContent.split(/it\(|test\(|def test_|func Test/).length - 1,
+      coverageEstimate: summary.coverageEstimate || coverageGoal,
+      framework: testFramework,
+      imports: summary.imports || [],
+    },
+  ];
 
   return {
     tests,
     summary: {
       totalTests: tests.reduce((sum, t) => sum + t.testCount, 0),
       unitTests: testTypes.includes('unit') ? tests[0].testCount : 0,
-      integrationTests: testTypes.includes('integration') ? Math.floor(tests[0].testCount * 0.2) : 0,
+      integrationTests: testTypes.includes('integration')
+        ? Math.floor(tests[0].testCount * 0.2)
+        : 0,
       estimatedCoverage: summary.coverageEstimate || coverageGoal,
     },
     recommendations: summary.recommendations || [],
@@ -162,13 +170,10 @@ Also provide a summary:
 /**
  * Generate load test plan
  */
-export async function generateLoadTestPlan(request: LoadTestPlanRequest): Promise<LoadTestPlanResult> {
-  const {
-    projectName,
-    endpoints,
-    tool = 'k6',
-    baseUrl = 'http://localhost:3000',
-  } = request;
+export async function generateLoadTestPlan(
+  request: LoadTestPlanRequest
+): Promise<LoadTestPlanResult> {
+  const { projectName, endpoints, tool = 'k6', baseUrl = 'http://localhost:3000' } = request;
 
   const toolDocs: Record<string, string> = {
     k6: 'k6 JavaScript-based load testing. Use export default function, http module, check(), sleep().',
@@ -183,7 +188,7 @@ export async function generateLoadTestPlan(request: LoadTestPlanRequest): Promis
 ## Tool: ${tool} (${toolDocs[tool]})
 
 ## Endpoints to test:
-${endpoints.map(e => `- ${e.method} ${e.path} (expected ${e.expectedRps || 100} RPS)${e.payload ? ` payload: ${JSON.stringify(e.payload)}` : ''}`).join('\n')}
+${endpoints.map((e) => `- ${e.method} ${e.path} (expected ${e.expectedRps || 100} RPS)${e.payload ? ` payload: ${JSON.stringify(e.payload)}` : ''}`).join('\n')}
 
 Generate:
 1. A complete ${tool} script with:
@@ -249,14 +254,18 @@ Respond with:
     tool,
     script,
     scenarios,
-    readme: readme || `# Load Test Plan for ${projectName}\n\nRun with: ${tool === 'k6' ? 'k6 run script.js' : tool === 'locust' ? 'locust -f script.py' : 'artillery run config.yml'}`,
+    readme:
+      readme ||
+      `# Load Test Plan for ${projectName}\n\nRun with: ${tool === 'k6' ? 'k6 run script.js' : tool === 'locust' ? 'locust -f script.py' : 'artillery run config.yml'}`,
   };
 }
 
 /**
  * Analyze code coverage
  */
-export async function analyzeCoverage(request: CoverageAnalysisRequest): Promise<CoverageAnalysisResult> {
+export async function analyzeCoverage(
+  request: CoverageAnalysisRequest
+): Promise<CoverageAnalysisResult> {
   const { workspacePath, language = 'typescript' } = request;
 
   // Scan for source files
@@ -267,11 +276,16 @@ export async function analyzeCoverage(request: CoverageAnalysisRequest): Promise
     try {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
-        if (['node_modules', '.git', 'dist', 'coverage', '__pycache__'].includes(entry.name)) continue;
+        if (['node_modules', '.git', 'dist', 'coverage', '__pycache__'].includes(entry.name))
+          continue;
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
           scanDir(fullPath);
-        } else if (extensions.some(ext => entry.name.endsWith(ext)) && !entry.name.includes('.test.') && !entry.name.includes('.spec.')) {
+        } else if (
+          extensions.some((ext) => entry.name.endsWith(ext)) &&
+          !entry.name.includes('.test.') &&
+          !entry.name.includes('.spec.')
+        ) {
           sourceFiles.push(fullPath);
         }
       }
@@ -314,19 +328,19 @@ export async function analyzeCoverage(request: CoverageAnalysisRequest): Promise
     }
   }
 
-  const overallCoverage = sourceFiles.length > 0
-    ? Math.round((testedFiles.size / sourceFiles.length) * 100)
-    : 0;
+  const overallCoverage =
+    sourceFiles.length > 0 ? Math.round((testedFiles.size / sourceFiles.length) * 100) : 0;
 
   const gaps: CoverageGap[] = sourceFiles
-    .filter(f => !testedFiles.has(f))
+    .filter((f) => !testedFiles.has(f))
     .slice(0, 10)
-    .map(f => ({
+    .map((f) => ({
       file: f.replace(workspacePath, ''),
       uncoveredLines: [],
       uncoveredFunctions: [],
       currentCoverage: 0,
-      priority: f.includes('service') || f.includes('util') ? 'high' as const : 'medium' as const,
+      priority:
+        f.includes('service') || f.includes('util') ? ('high' as const) : ('medium' as const),
     }));
 
   const fileCoverage: Record<string, number> = {};
@@ -344,7 +358,7 @@ export async function analyzeCoverage(request: CoverageAnalysisRequest): Promise
       'Aim for 80% coverage on critical paths',
       'Consider adding integration tests for API endpoints',
     ],
-    suggestedTests: gaps.slice(0, 5).map(g => ({
+    suggestedTests: gaps.slice(0, 5).map((g) => ({
       file: g.file,
       testDescription: `Add unit tests for ${path.basename(g.file)}`,
       priority: g.priority,
@@ -366,7 +380,7 @@ ${fileContent}
 \`\`\`
 
 ## Dependencies to mock:
-${dependencies.map(d => `- ${d}`).join('\n')}
+${dependencies.map((d) => `- ${d}`).join('\n')}
 
 ## Framework: ${framework}
 
@@ -407,7 +421,9 @@ Respond with:
     const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/);
     if (jsonMatch) {
       const data = JSON.parse(jsonMatch[1]);
-      mocks = ((data.mocks as Array<{ name?: string; description?: string }> | undefined) || []).map((m) => ({
+      mocks = (
+        (data.mocks as Array<{ name?: string; description?: string }> | undefined) || []
+      ).map((m) => ({
         name: m.name ?? 'mock',
         code: mockCode,
         description: m.description ?? '',
@@ -419,7 +435,10 @@ Respond with:
   }
 
   return {
-    mocks: mocks.length > 0 ? mocks : [{ name: 'generatedMocks', code: mockCode, description: 'Generated mocks' }],
+    mocks:
+      mocks.length > 0
+        ? mocks
+        : [{ name: 'generatedMocks', code: mockCode, description: 'Generated mocks' }],
     setupCode,
   };
 }

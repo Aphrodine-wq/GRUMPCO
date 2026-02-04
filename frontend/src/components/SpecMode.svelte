@@ -1,12 +1,11 @@
 <script lang="ts">
-  import type { SpecSession, SpecQuestion } from '../types/spec';
-  import { 
-    currentSession, 
-    isSpecLoading, 
-    specError, 
-    submitAnswer, 
+  import {
+    currentSession,
+    isSpecLoading,
+    specError,
+    submitAnswer,
     generateSpecification,
-    getNextQuestion 
+    getNextQuestion,
   } from '../stores/specStore';
 
   let session = $derived($currentSession);
@@ -64,7 +63,8 @@
         <h2>Specification Gathering</h2>
         <p class="session-description">{session.originalRequest}</p>
         <div class="progress">
-          {session.questions.filter(q => isAnswered(q.id)).length} / {session.questions.length} questions answered
+          {session.questions.filter((q) => isAnswered(q.id)).length} / {session.questions.length} questions
+          answered
         </div>
       </div>
 
@@ -85,7 +85,8 @@
 
             {#if isAnswered(question.id)}
               <div class="answer-display">
-                <strong>Your answer:</strong> {JSON.stringify(getAnswerValue(question.id))}
+                <strong>Your answer:</strong>
+                {JSON.stringify(getAnswerValue(question.id))}
               </div>
             {:else}
               <div class="answer-input">
@@ -93,12 +94,14 @@
                   <textarea
                     placeholder={question.placeholder}
                     value={answerValues[question.id] || ''}
-                    oninput={(e) => handleAnswer(question.id, (e.target as HTMLTextAreaElement).value)}
+                    oninput={(e) =>
+                      handleAnswer(question.id, (e.target as HTMLTextAreaElement).value)}
                   ></textarea>
                 {:else if question.type === 'choice'}
                   <select
                     value={answerValues[question.id] || ''}
-                    onchange={(e) => handleAnswer(question.id, (e.target as HTMLSelectElement).value)}
+                    onchange={(e) =>
+                      handleAnswer(question.id, (e.target as HTMLSelectElement).value)}
                   >
                     <option value="">Select an option</option>
                     {#each question.options || [] as option}
@@ -117,7 +120,10 @@
                             if ((e.target as HTMLInputElement).checked) {
                               handleAnswer(question.id, [...current, option]);
                             } else {
-                              handleAnswer(question.id, current.filter((v: string) => v !== option));
+                              handleAnswer(
+                                question.id,
+                                current.filter((v: string) => v !== option)
+                              );
                             }
                           }}
                         />
@@ -130,7 +136,8 @@
                     type="number"
                     placeholder={question.placeholder}
                     value={answerValues[question.id] || ''}
-                    oninput={(e) => handleAnswer(question.id, Number((e.target as HTMLInputElement).value))}
+                    oninput={(e) =>
+                      handleAnswer(question.id, Number((e.target as HTMLInputElement).value))}
                   />
                 {:else if question.type === 'boolean'}
                   <div class="boolean-group">
@@ -199,19 +206,20 @@
     padding: 1.5rem;
   }
 
-  .loading, .error {
+  .loading,
+  .error {
     padding: 2rem;
     text-align: center;
   }
 
   .error {
-    color: #DC2626;
+    color: #dc2626;
   }
 
   .session-header {
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #E5E5E5;
+    border-bottom: 1px solid #e5e5e5;
   }
 
   .session-header h2 {
@@ -220,13 +228,13 @@
   }
 
   .session-description {
-    color: #6B7280;
+    color: #6b7280;
     margin: 0 0 1rem 0;
   }
 
   .progress {
     font-size: 0.875rem;
-    color: #6B7280;
+    color: #6b7280;
   }
 
   .questions {
@@ -236,15 +244,15 @@
   }
 
   .question-card {
-    border: 1px solid #E5E5E5;
+    border: 1px solid #e5e5e5;
     border-radius: 8px;
     padding: 1.5rem;
-    background: #FFFFFF;
+    background: #ffffff;
   }
 
   .question-card.answered {
-    background: #F9FAFB;
-    border-color: #10B981;
+    background: #f9fafb;
+    border-color: #10b981;
   }
 
   .question-header {
@@ -259,7 +267,7 @@
     height: 32px;
     border-radius: 50%;
     background: var(--color-primary);
-    color: #FFFFFF;
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -275,15 +283,15 @@
 
   .required-badge {
     padding: 0.25rem 0.5rem;
-    background: #FEE2E2;
-    color: #991B1B;
+    background: #fee2e2;
+    color: #991b1b;
     border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 600;
   }
 
   .help-text {
-    color: #6B7280;
+    color: #6b7280;
     font-size: 0.875rem;
     margin: 0 0 1rem 0;
   }
@@ -294,9 +302,11 @@
     gap: 0.75rem;
   }
 
-  textarea, input[type="text"], input[type="number"], select {
+  textarea,
+  input[type='number'],
+  select {
     padding: 0.75rem;
-    border: 1px solid #E5E5E5;
+    border: 1px solid #e5e5e5;
     border-radius: 4px;
     font-family: inherit;
     width: 100%;
@@ -307,7 +317,8 @@
     resize: vertical;
   }
 
-  .checkbox-group, .boolean-group {
+  .checkbox-group,
+  .boolean-group {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -315,9 +326,9 @@
 
   .answer-display {
     padding: 0.75rem;
-    background: #D1FAE5;
+    background: #d1fae5;
     border-radius: 4px;
-    color: #065F46;
+    color: #065f46;
   }
 
   .btn {
@@ -332,11 +343,11 @@
 
   .btn-primary {
     background: var(--color-primary);
-    color: #FFFFFF;
+    color: #ffffff;
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #0052CC;
+    background: #0052cc;
   }
 
   .btn-primary:disabled {
@@ -357,13 +368,12 @@
   .specification-display {
     margin-top: 2rem;
     padding: 1.5rem;
-    background: #F9FAFB;
+    background: #f9fafb;
     border-radius: 8px;
-    border: 1px solid #E5E5E5;
+    border: 1px solid #e5e5e5;
   }
 
   .spec-content h4 {
     margin: 0 0 0.5rem 0;
   }
 </style>
-

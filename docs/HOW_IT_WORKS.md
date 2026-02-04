@@ -1,8 +1,147 @@
-# How It Works: Complete System Guide
+# How It Works
 
-## System Overview
+> **Version:** 2.1.0 | **Last Updated:** February 2026
 
-G-Rump is an AI-powered development assistant that transforms natural language descriptions into complete, production-ready applications. The system uses a multi-agent architecture with specialized AI agents, each optimized for Claude Code best practices.
+This guide explains how G-Rump processes requests, from user input to generated code. For system architecture details, see [ARCHITECTURE.md](./ARCHITECTURE.md). For the agent system, see [AGENT_SYSTEM.md](./AGENT_SYSTEM.md). For the NVIDIA ecosystem (Nemotron, NIM, NGC, NeMo), see [NVIDIA_GOLDEN_DEVELOPER.md](./NVIDIA_GOLDEN_DEVELOPER.md).
+
+## The Big Picture
+
+**What G-Rump does:** You describe an app in natural language. G-Rump produces architecture diagrams, specs, PRDs, and code. You can also chat with an AI assistant that can read/write files, run commands, and use git.
+
+**Three main flows:**
+
+1. **Chat** — Conversational AI with tools (file read/write, bash, git). Design mode for diagrams; Code mode for coding assistance.
+2. **Ship** — One-shot workflow: describe a project → design → spec → plan → generated code. Runs as a background job.
+3. **Codegen** — Feed in PRD + architecture → multi-agent pipeline produces code. Can run as a job or inline.
+
+**Architecture (one sentence):** A Svelte frontend (desktop or web) talks to a single Express backend. The backend calls LLMs (NVIDIA NIM/Nemotron, OpenRouter) and executes tools in the workspace. Ship and Codegen use a job queue (SQLite or Redis); the frontend polls status or uses SSE. **NVIDIA Golden Developer**: Full Nemotron + NIM stack, NGC-ready deployment, NeMo Curator synthetic data, NeMo Framework fine-tuning, and NIM-aligned observability.
+
+**Key entry points:**
+- `backend/src/index.ts` — API server bootstrap
+- `frontend/src/App.svelte` — UI root
+- `backend/src/routes/chat.ts` — Chat API
+- `backend/src/routes/ship.ts` — Ship API
+
+---
+
+## Multi-Agent Orchestration
+
+G-Rump is **multi-agent–first**. Two complementary orchestration paths run specialized AI agents:
+
+### 1. Codegen Pipeline
+
+The [agentOrchestrator](../backend/src/services/agentOrchestrator.ts) takes PRD + architecture and coordinates:
+- Architect, Frontend, Backend, DevOps, Test, Docs agents
+- Wired via [codegen routes](../backend/src/routes/codegen.ts) and [shipModeService](../backend/src/services/shipModeService.ts)
+
+### 2. Kimi Swarm
+
+The [swarmService](../backend/src/services/swarmService.ts) (`POST /api/agents/swarm`) provides:
+- Kimi decomposes prompts into subtasks
+- Specialist agents (arch, frontend, backend, devops, test, docs, ux, security, perf, a11y, data, review)
+- Dependency ordering and concurrency
+- Final summary streamed via SSE
+
+### Agent Quality
+
+Agent quality is measured via offline evals:
+
+```bash
+cd backend
+npm run evals  # Requires running backend at EVAL_BASE_URL
+```
+
+Results are written to `frontend/test-results/agent-evals.json`. CI runs evals on PRs and main.
+
+---
+
+## Request Pipeline (Middleware Order)
+
+Every API request passes through this stack (see [backend/src/index.ts](../backend/src/index.ts)):
+
+1. **CORS** – Allowed origins from `CORS_ORIGINS`
+2. **Helmet** – Security headers (CSP in production)
+3. **Compression** – Response compression
+4. **express.json** – JSON body parsing
+5. **requestTimeout** – Route-level timeouts (streaming responses skip where applicable)
+6. **Rate limiting** – On `/api` and `/auth`; per-endpoint limits (e.g. chat 10/min, codegen 5/min, ship 5/min) and global fallback; Redis-backed when `REDIS_HOST` set
+7. **Agent governance** – On `/api`; blocks or governs Moltbot/OpenClaw-style agents (see [agentGovernance.ts](../backend/src/middleware/agentGovernance.ts))
+8. **API auth** – On `/api`; when `REQUIRE_AUTH_FOR_API=true`, chat/ship/codegen require auth; else optional
+9. **Kimi optimization** – On `/api/chat`, `/api/ship`, `/api/codegen`, `/api/plan`; auto-routing and cost tracking
+10. **Route handlers** – Each route may add its own validation (e.g. validateShipRequest, validateCodegenRequest, suspicious-pattern check for chat)
+
+**Timeouts** (from [timeout.ts](../backend/src/middleware/timeout.ts)): chat/stream 10 min, codegen 5 min, ship 5 min; streaming responses skip timeout where applicable.
+
+---
+
+## Route Checklist (Chat, Codegen, Ship)
+
+| Route | Method | Validation | Flow |
+|-------|--------|------------|------|
+| **POST /api/chat/stream** | POST | Message count/length/format; suspicious-pattern check on `messages[].content` (when `BLOCK_SUSPICIOUS_PROMPTS=true`) | chatRoutes → claudeServiceWithTools → llmGateway + toolExecutionService |
+| **POST /api/codegen/start** | POST | validateCodegenRequest, handleCodegenValidationErrors (no user free-text for suspicious check) | codegenRoutes → agentOrchestrator (initializeSession, executeCodeGeneration); serverless: jobQueue enqueue |
+| **POST /api/ship/start** | POST | validateShipRequest, handleShipValidationErrors (projectDescription length + suspicious patterns) | shipRoutes → shipModeService.startShipMode; then POST /api/ship/:id/execute enqueues job → worker runs design→spec→plan→code |
+
+---
+
+## How Chat, Codegen, and Ship Work
+
+### Chat (tool-enabled streaming)
+
+- **Flow**: `POST /api/chat/stream` → [chatRoutes](../backend/src/routes/chat.ts) → [claudeServiceWithTools](../backend/src/services/claudeServiceWithTools.ts) → [llmGateway](../backend/src/services/llmGateway.ts) (streaming) and tool execution (bash, file_read, file_write, etc.) via [toolExecutionService](../backend/src/services/toolExecutionService.ts). Response is SSE.
+- **Body**: `messages`, optional `workspaceRoot`, `mode`, `provider`/`modelId`, etc. Validation: message count/length/format; suspicious-pattern check on message content (when `BLOCK_SUSPICIOUS_PROMPTS=true`).
+
+### Codegen (multi-agent code generation)
+
+- **Flow**: `POST /api/codegen/start` → [validateCodegenRequest](../backend/src/middleware/validator.ts) + [codegenRoutes](../backend/src/routes/codegen.ts) → [agentOrchestrator](../backend/src/services/agentOrchestrator.ts) (`initializeSession` / `initializeSessionMulti`, then `executeCodeGeneration` or `executeCodeGenerationMulti`). Serverless: [jobQueue](../backend/src/services/jobQueue.ts) enqueues; worker runs codegen. Response: sessionId, agent status; client polls status or uses events.
+- **Body**: `prd`, `architecture`, optional `preferences`; or multi-PRD `prds`, `architecture`, etc. Validation: validateCodegenRequest.
+
+### Ship (design → spec → plan → code)
+
+- **Flow**: `POST /api/ship/start` → [validateShipRequest](../backend/src/middleware/validator.ts) + [shipRoutes](../backend/src/routes/ship.ts) → [shipModeService](../backend/src/services/shipModeService.ts) `startShipMode`. Then `POST /api/ship/:sessionId/execute` enqueues a job ([jobQueue](../backend/src/services/jobQueue.ts)); worker runs design → spec → plan → code phases. Session status via `GET /api/ship/:sessionId`.
+- **Body for start**: `projectDescription`, optional `preferences`. Validation: projectDescription length and suspicious patterns.
+
+### Intent-RAG Fusion
+
+When RAG context is used (architecture, spec, plan, chat with `RAG_CONTEXT_ENABLED`, ship), the backend uses [Intent-RAG Fusion (IRF)](./INTENT_RAG_FUSION.md): it parses the user query or project description with the Intent Compiler (Rust or fallback), expands the search query with features, tech stack, and data flows, then retrieves and optionally reranks chunks. When enriching intent via LLM, the service injects RAG-retrieved excerpts into the enrichment prompt so extracted intent aligns with the knowledge base. See [INTENT_RAG_FUSION.md](./INTENT_RAG_FUSION.md) for configuration (`RAG_INTENT_GUIDED`, `INTENT_RAG_AUGMENT_ENRICH`) and how to disable.
+
+### Request path diagram
+
+```mermaid
+flowchart LR
+  subgraph middleware [Middleware]
+    CORS[CORS]
+    Helmet[Helmet]
+    RateLimit[Rate limit]
+    AgentGov[Agent governance]
+    Auth[API auth]
+    Kimi[Kimi optimization]
+  end
+  subgraph routes [Routes]
+    ChatRoute["POST /api/chat/stream"]
+    CodegenRoute["POST /api/codegen/start"]
+    ShipRoute["POST /api/ship/start"]
+  end
+  subgraph services [Services]
+    ClaudeTools[claudeServiceWithTools]
+    AgentOrch[agentOrchestrator]
+    ShipMode[shipModeService]
+  end
+  User[User] --> CORS --> Helmet --> RateLimit --> AgentGov --> Auth --> Kimi
+  Kimi --> ChatRoute --> ClaudeTools
+  Kimi --> CodegenRoute --> AgentOrch
+  Kimi --> ShipRoute --> ShipMode
+```
+
+---
+
+## Error handling and recovery
+
+- **Backend:** Unhandled errors are caught by the global error handler ([backend/src/index.ts](../backend/src/index.ts)). It logs the error with `correlationId` and `requestId`, then returns 500 with a generic message (and details in development). Routes use try/catch and validation (e.g. [validator.ts](../backend/src/middleware/validator.ts)); failed validation returns 400 with a structured message. Circuit breakers and retries are used for external calls (e.g. LLM gateway, resilience layer).
+- **Frontend:** API errors are surfaced via toasts and the [ErrorRecovery](../frontend/src/components/ErrorRecovery.svelte) component where applicable. User-facing messages should be clear and, where possible, suggest recovery (e.g. "Check your API key" or "Retry in a few seconds").
+- **Recovery:** For transient failures (e.g. network, rate limit), the client can retry. For auth errors (401), the user should re-authenticate. For validation errors (400), the user should correct input. Server errors (500) are logged with correlation ID for support; the user sees a generic message and can retry or contact support.
+
+---
 
 ## High-Level Architecture
 
@@ -459,6 +598,7 @@ WRunner provides automatic quality assurance:
 
 ## Next Steps
 
-- Read [AGENT_SYSTEM.md](AGENT_SYSTEM.md) for detailed agent documentation
-- Read [INTENT_COMPILER.md](INTENT_COMPILER.md) for intent compiler details
-- Read [AI_WORKFLOWS.md](AI_WORKFLOWS.md) for workflow patterns
+- **[AGENT_SYSTEM.md](./AGENT_SYSTEM.md)** — Detailed agent documentation
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** — System architecture and intent compiler details
+- **[API.md](./API.md)** — Complete API reference
+- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** — Common issues and solutions

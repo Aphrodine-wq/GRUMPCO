@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production'
 
   return {
-    base: './',
+    base: isProduction ? './' : '/',
     plugins: [
       svelte(),
       // Bundle visualizer for production builds
@@ -122,16 +122,14 @@ export default defineConfig(({ mode }) => {
         'svelte/store',
         'svelte/transition',
         '@supabase/supabase-js',
+        'mermaid',
       ],
       // Exclude heavy dependencies from pre-bundling (loaded on demand)
       exclude: [
         'jspdf',
         'shiki',
-        'mermaid',
         'diff',
       ],
-      // Force optimize on cold start
-      force: true,
     },
 
     test: {

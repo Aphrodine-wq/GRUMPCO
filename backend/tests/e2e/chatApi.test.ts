@@ -21,6 +21,14 @@ vi.mock('../../src/middleware/rateLimiter.js', () => ({
   createRateLimiter: () => (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
+// Mock database service
+vi.mock('../../src/db/database.js', () => ({
+  db: {
+    isInitialized: () => true,
+    getSettings: vi.fn().mockReturnValue({ model: 'test-model', provider: 'test' }),
+  },
+}));
+
 describe('Chat API E2E', () => {
   let app: express.Express;
 

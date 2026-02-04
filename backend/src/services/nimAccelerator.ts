@@ -55,7 +55,10 @@ export class NIMAccelerator {
   private activeRequests = 0;
   private maxParallelRequests: number;
   private currentBatchSize: number;
-  private gpuMetricsCache: Map<number, { utilization: number; memoryUsed: number; memoryTotal: number; timestamp: number }> = new Map();
+  private gpuMetricsCache: Map<
+    number,
+    { utilization: number; memoryUsed: number; memoryTotal: number; timestamp: number }
+  > = new Map();
   private gpuRoundRobin = 0;
 
   constructor(config: NIMConfig) {
@@ -71,8 +74,8 @@ export class NIMAccelerator {
       ...config,
     };
 
-    this.maxParallelRequests = this.config.maxParallelRequests!;
-    this.currentBatchSize = this.config.maxBatchSize!;
+    this.maxParallelRequests = this.config.maxParallelRequests ?? 32;
+    this.currentBatchSize = this.config.maxBatchSize ?? 256;
 
     // Initialize batch processor for embeddings (env: NIM_EMBED_BATCH_SIZE, NIM_EMBED_MAX_WAIT_MS)
     this.embeddingBatchProcessor = createEmbeddingBatchProcessor(
@@ -111,7 +114,11 @@ export class NIMAccelerator {
 
     // Use batch processor for automatic batching
     const embeddings = await Promise.all(
-      texts.map((text) => this.embeddingBatchProcessor!.add('embeddings', text))
+      texts.map(
+        (text) =>
+          this.embeddingBatchProcessor?.add('embeddings', text) ??
+          Promise.reject(new Error('Batch processor not available'))
+      )
     );
 
     return embeddings;
@@ -121,24 +128,25 @@ export class NIMAccelerator {
    * Get optimal batch size based on GPU memory
    */
   private async getOptimalBatchSize(): Promise<number> {
+    const maxBatchSize = this.config.maxBatchSize ?? 256;
     if (!this.config.enableDynamicBatching) {
-      return this.config.maxBatchSize!;
+      return maxBatchSize;
     }
 
     const gpuMetrics = await this.getAverageGPUMetrics();
     if (!gpuMetrics) {
-      return this.config.maxBatchSize!;
+      return maxBatchSize;
     }
 
     const memoryUsedRatio = gpuMetrics.memoryUsed / gpuMetrics.memoryTotal;
 
     // Dynamic batch sizing based on available GPU memory
     if (memoryUsedRatio < 0.5) {
-      return Math.min(512, this.config.maxBatchSize! * 2); // 50% free - increase batch size
+      return Math.min(512, maxBatchSize * 2); // 50% free - increase batch size
     } else if (memoryUsedRatio < 0.7) {
-      return this.config.maxBatchSize!; // 30% free - use default
+      return maxBatchSize; // 30% free - use default
     } else {
-      return Math.max(128, Math.floor(this.config.maxBatchSize! / 2)); // Conservative
+      return Math.max(128, Math.floor(maxBatchSize / 2)); // Conservative
     }
   }
 
@@ -146,15 +154,16 @@ export class NIMAccelerator {
    * Select best GPU for next request (load balancing)
    */
   private selectGPU(): number {
-    if (!this.config.enableMultiGPU || this.config.gpuIds!.length === 1) {
-      return this.config.gpuIds![0];
+    const gpuIds = this.config.gpuIds ?? [0];
+    if (!this.config.enableMultiGPU || gpuIds.length === 1) {
+      return gpuIds[0];
     }
 
     // Find GPU with lowest utilization
-    let bestGPU = this.config.gpuIds![0];
+    let bestGPU = gpuIds[0];
     let lowestUtilization = 100;
 
-    for (const gpuId of this.config.gpuIds!) {
+    for (const gpuId of gpuIds) {
       const metrics = this.gpuMetricsCache.get(gpuId);
       if (metrics && metrics.utilization < lowestUtilization) {
         lowestUtilization = metrics.utilization;
@@ -164,7 +173,7 @@ export class NIMAccelerator {
 
     // Fallback to round-robin if no metrics available
     if (lowestUtilization === 100) {
-      bestGPU = this.config.gpuIds![this.gpuRoundRobin % this.config.gpuIds!.length];
+      bestGPU = gpuIds[this.gpuRoundRobin % gpuIds.length];
       this.gpuRoundRobin++;
     }
 
@@ -227,9 +236,7 @@ export class NIMAccelerator {
       );
 
       // Return embeddings in correct order
-      return data.data
-        .sort((a, b) => a.index - b.index)
-        .map((item) => item.embedding);
+      return data.data.sort((a, b) => a.index - b.index).map((item) => item.embedding);
     } catch (error) {
       logger.error(
         {
@@ -273,7 +280,7 @@ export class NIMAccelerator {
 
     return {
       completions: allCompletions,
-      model: model || this.config.inferenceModel!,
+      model: model || this.config.inferenceModel || 'moonshotai/kimi-k2.5',
       usage: {
         inputTokens: totalInputTokens,
         outputTokens: totalOutputTokens,
@@ -334,7 +341,7 @@ export class NIMAccelerator {
    */
   private startGPUMonitoring(): void {
     setInterval(async () => {
-      for (const gpuId of this.config.gpuIds!) {
+      for (const gpuId of this.config.gpuIds ?? [0]) {
         const metrics = await this.getGpuMetrics(gpuId);
         if (metrics) {
           this.gpuMetricsCache.set(gpuId, {
@@ -384,7 +391,7 @@ export class NIMAccelerator {
       }
 
       return null;
-    } catch (error) {
+    } catch (_error) {
       logger.debug({ gpuId }, 'GPU metrics not available');
       return null;
     }
@@ -399,13 +406,13 @@ export class NIMAccelerator {
     memoryTotal: number;
   } | null> {
     const allMetrics = Array.from(this.gpuMetricsCache.values());
-    
+
     if (allMetrics.length === 0) {
       return null;
     }
 
     const now = Date.now();
-    const recentMetrics = allMetrics.filter(m => now - m.timestamp < 10000); // Last 10 seconds
+    const recentMetrics = allMetrics.filter((m) => now - m.timestamp < 10000); // Last 10 seconds
 
     if (recentMetrics.length === 0) {
       return null;
@@ -421,7 +428,10 @@ export class NIMAccelerator {
   /**
    * Get metrics for all GPUs
    */
-  public getAllGPUMetrics(): Map<number, { utilization: number; memoryUsed: number; memoryTotal: number; timestamp: number }> {
+  public getAllGPUMetrics(): Map<
+    number,
+    { utilization: number; memoryUsed: number; memoryTotal: number; timestamp: number }
+  > {
     return new Map(this.gpuMetricsCache);
   }
 
@@ -458,7 +468,7 @@ let nimAccelerator: NIMAccelerator | null = null;
  */
 export function getNIMAccelerator(): NIMAccelerator | null {
   const apiKey = process.env.NVIDIA_NIM_API_KEY;
-  
+
   if (!apiKey) {
     logger.debug('NVIDIA_NIM_API_KEY not set, NIM accelerator disabled');
     return null;

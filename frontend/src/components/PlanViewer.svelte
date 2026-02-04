@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Plan, PlanStep, Phase } from '../types/plan';
+  import type { Plan, PlanStep } from '../types/plan';
   import { approvePlan, startPlanExecution } from '../stores/planStore';
 
   interface Props {
@@ -31,10 +31,14 @@
 
   function getRiskColor(risk: string): string {
     switch (risk) {
-      case 'low': return '#10B981';
-      case 'medium': return '#F59E0B';
-      case 'high': return '#DC2626';
-      default: return '#6B7280';
+      case 'low':
+        return '#10B981';
+      case 'medium':
+        return '#F59E0B';
+      case 'high':
+        return '#DC2626';
+      default:
+        return '#6B7280';
     }
   }
 
@@ -104,7 +108,11 @@
       <span class="meta-item">
         <strong>{formatTime(plan.totalEstimatedTime)}</strong> estimated
       </span>
-      <span class="meta-item status" class:approved={plan.status === 'approved'} class:executing={plan.status === 'executing'}>
+      <span
+        class="meta-item status"
+        class:approved={plan.status === 'approved'}
+        class:executing={plan.status === 'executing'}
+      >
         {plan.status}
       </span>
     </div>
@@ -114,40 +122,49 @@
     <button type="button" class="btn btn-secondary" onclick={exportAsMarkdown}>
       Export (Markdown)
     </button>
-  {#if plan.status === 'draft' || plan.status === 'pending_approval'}
-    <button type="button" class="btn btn-primary" onclick={handleApprove}>
-      Approve Plan
-    </button>
-    <button type="button" class="btn btn-secondary">
-      Edit Plan
-    </button>
-  {/if}
-  {#if plan.status === 'approved'}
-    <button type="button" class="btn btn-primary" onclick={handleExecute}>
-      Execute Plan
-    </button>
-  {/if}
+    {#if plan.status === 'draft' || plan.status === 'pending_approval'}
+      <button type="button" class="btn btn-primary" onclick={handleApprove}> Approve Plan </button>
+      <button type="button" class="btn btn-secondary"> Edit Plan </button>
+    {/if}
+    {#if plan.status === 'approved'}
+      <button type="button" class="btn btn-primary" onclick={handleExecute}> Execute Plan </button>
+    {/if}
   </div>
 
   <div class="phases">
     {#each plan.phases as phase (phase.id)}
       <div class="phase">
-        <div class="phase-header" onclick={() => togglePhase(phase.id)}>
+        <div
+          class="phase-header"
+          role="button"
+          tabindex="0"
+          onclick={() => togglePhase(phase.id)}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              togglePhase(phase.id);
+            }
+          }}
+        >
           <div class="phase-info">
             <span class="phase-name">{phase.name}</span>
-            <span class="phase-status" class:in-progress={phase.status === 'in_progress'} class:completed={phase.status === 'completed'}>
+            <span
+              class="phase-status"
+              class:in-progress={phase.status === 'in_progress'}
+              class:completed={phase.status === 'completed'}
+            >
               {phase.status}
             </span>
           </div>
-          <svg 
-            class="expand-icon" 
+          <svg
+            class="expand-icon"
             class:expanded={expandedPhases.has(phase.id)}
-            xmlns="http://www.w3.org/2000/svg" 
-            width="16" 
-            height="16" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             stroke-width="2"
           >
             <polyline points="6 9 12 15 18 9"></polyline>
@@ -156,26 +173,44 @@
 
         {#if expandedPhases.has(phase.id)}
           <div class="phase-steps">
-            {#each phase.steps.map(id => plan.steps.find(s => s.id === id)).filter((s): s is PlanStep => s != null) as step (step.id)}
+            {#each phase.steps
+              .map((id) => plan.steps.find((s) => s.id === id))
+              .filter((s): s is PlanStep => s != null) as step (step.id)}
               <div class="step" class:expanded={expandedSteps.has(step.id)}>
-                <div class="step-header" onclick={() => toggleStep(step.id)}>
+                <div
+                  class="step-header"
+                  role="button"
+                  tabindex="0"
+                  onclick={() => toggleStep(step.id)}
+                  onkeydown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleStep(step.id);
+                    }
+                  }}
+                >
                   <div class="step-info">
                     <span class="step-number">{step.order}</span>
                     <span class="step-title">{step.title}</span>
                     <span class="step-time">{formatTime(step.estimatedTime)}</span>
-                    <span class="step-risk" style="background-color: {getRiskColor(step.risk)}20; color: {getRiskColor(step.risk)}">
+                    <span
+                      class="step-risk"
+                      style="background-color: {getRiskColor(step.risk)}20; color: {getRiskColor(
+                        step.risk
+                      )}"
+                    >
                       {step.risk}
                     </span>
                   </div>
-                  <svg 
-                    class="expand-icon" 
+                  <svg
+                    class="expand-icon"
                     class:expanded={expandedSteps.has(step.id)}
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="16" 
-                    height="16" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
                     stroke-width="2"
                   >
                     <polyline points="6 9 12 15 18 9"></polyline>
@@ -185,14 +220,19 @@
                 {#if expandedSteps.has(step.id)}
                   <div class="step-content">
                     <p class="step-description">{step.description}</p>
-                    
+
                     {#if step.fileChanges.length > 0}
                       <div class="file-changes">
                         <strong>File Changes:</strong>
                         <ul>
                           {#each step.fileChanges as change (change.path)}
                             <li>
-                              <span class="change-type" class:create={change.type === 'create'} class:modify={change.type === 'modify'} class:delete={change.type === 'delete'}>
+                              <span
+                                class="change-type"
+                                class:create={change.type === 'create'}
+                                class:modify={change.type === 'modify'}
+                                class:delete={change.type === 'delete'}
+                              >
                                 {change.type}
                               </span>
                               <code>{change.path}</code>
@@ -207,7 +247,8 @@
 
                     {#if step.dependencies.length > 0}
                       <div class="dependencies">
-                        <strong>Depends on:</strong> {step.dependencies.join(', ')}
+                        <strong>Depends on:</strong>
+                        {step.dependencies.join(', ')}
                       </div>
                     {/if}
                   </div>
@@ -223,7 +264,7 @@
 
 <style>
   .plan-viewer {
-    background: #FFFFFF;
+    background: #ffffff;
     border-radius: 8px;
     padding: 1.5rem;
     max-width: 900px;
@@ -233,7 +274,7 @@
   .plan-header {
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #E5E5E5;
+    border-bottom: 1px solid #e5e5e5;
   }
 
   .plan-title {
@@ -244,7 +285,7 @@
   }
 
   .plan-description {
-    color: #6B7280;
+    color: #6b7280;
     margin: 0 0 1rem 0;
   }
 
@@ -252,7 +293,7 @@
     display: flex;
     gap: 1rem;
     font-size: 0.875rem;
-    color: #6B7280;
+    color: #6b7280;
   }
 
   .meta-item {
@@ -269,18 +310,18 @@
   .status {
     padding: 0.25rem 0.75rem;
     border-radius: 4px;
-    background: #F5F5F5;
+    background: #f5f5f5;
     text-transform: capitalize;
   }
 
   .status.approved {
-    background: #D1FAE5;
-    color: #065F46;
+    background: #d1fae5;
+    color: #065f46;
   }
 
   .status.executing {
-    background: #E0F2FE;
-    color: #0C4A6E;
+    background: #e0f2fe;
+    color: #0c4a6e;
   }
 
   .plan-actions {
@@ -301,20 +342,20 @@
 
   .btn-primary {
     background: var(--color-primary);
-    color: #FFFFFF;
+    color: #ffffff;
   }
 
   .btn-primary:hover {
-    background: #0052CC;
+    background: #0052cc;
   }
 
   .btn-secondary {
-    background: #F5F5F5;
+    background: #f5f5f5;
     color: #000000;
   }
 
   .btn-secondary:hover {
-    background: #E5E5E5;
+    background: #e5e5e5;
   }
 
   .phases {
@@ -324,7 +365,7 @@
   }
 
   .phase {
-    border: 1px solid #E5E5E5;
+    border: 1px solid #e5e5e5;
     border-radius: 6px;
     overflow: hidden;
   }
@@ -334,13 +375,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    background: #F9FAFB;
+    background: #f9fafb;
     cursor: pointer;
     transition: background 0.2s;
   }
 
   .phase-header:hover {
-    background: #F3F4F6;
+    background: #f3f4f6;
   }
 
   .phase-info {
@@ -357,24 +398,24 @@
   .phase-status {
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
-    background: #F5F5F5;
+    background: #f5f5f5;
     font-size: 0.75rem;
     text-transform: capitalize;
   }
 
   .phase-status.in-progress {
-    background: #E0F2FE;
-    color: #0C4A6E;
+    background: #e0f2fe;
+    color: #0c4a6e;
   }
 
   .phase-status.completed {
-    background: #D1FAE5;
-    color: #065F46;
+    background: #d1fae5;
+    color: #065f46;
   }
 
   .expand-icon {
     transition: transform 0.2s;
-    color: #6B7280;
+    color: #6b7280;
   }
 
   .expand-icon.expanded {
@@ -389,7 +430,7 @@
   }
 
   .step {
-    border: 1px solid #E5E5E5;
+    border: 1px solid #e5e5e5;
     border-radius: 4px;
     overflow: hidden;
   }
@@ -399,13 +440,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
-    background: #FFFFFF;
+    background: #ffffff;
     cursor: pointer;
     transition: background 0.2s;
   }
 
   .step-header:hover {
-    background: #F9FAFB;
+    background: #f9fafb;
   }
 
   .step-info {
@@ -419,13 +460,13 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: #E5E5E5;
+    background: #e5e5e5;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #6B7280;
+    color: #6b7280;
   }
 
   .step-title {
@@ -436,7 +477,7 @@
 
   .step-time {
     font-size: 0.75rem;
-    color: #6B7280;
+    color: #6b7280;
     font-family: 'JetBrains Mono', monospace;
   }
 
@@ -450,8 +491,8 @@
 
   .step-content {
     padding: 1rem;
-    background: #F9FAFB;
-    border-top: 1px solid #E5E5E5;
+    background: #f9fafb;
+    border-top: 1px solid #e5e5e5;
   }
 
   .step-description {
@@ -483,43 +524,42 @@
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
-    background: #F5F5F5;
-    color: #6B7280;
+    background: #f5f5f5;
+    color: #6b7280;
   }
 
   .change-type.create {
-    background: #D1FAE5;
-    color: #065F46;
+    background: #d1fae5;
+    color: #065f46;
   }
 
   .change-type.modify {
-    background: #E0F2FE;
-    color: #0C4A6E;
+    background: #e0f2fe;
+    color: #0c4a6e;
   }
 
   .change-type.delete {
-    background: #FEE2E2;
-    color: #991B1B;
+    background: #fee2e2;
+    color: #991b1b;
   }
 
   code {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
-    background: #F5F5F5;
+    background: #f5f5f5;
     padding: 0.125rem 0.375rem;
     border-radius: 3px;
     color: #000000;
   }
 
   .change-desc {
-    color: #6B7280;
+    color: #6b7280;
     font-style: italic;
   }
 
   .dependencies {
     margin-top: 0.75rem;
     font-size: 0.875rem;
-    color: #6B7280;
+    color: #6b7280;
   }
 </style>
-

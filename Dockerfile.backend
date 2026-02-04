@@ -1,0 +1,135 @@
+# syntax=docker/dockerfile:1.4
+# =============================================================================
+# G-Rump Backend Dockerfile - Multi-Stage Build
+# Includes Rust Intent Compiler + Node.js Backend
+# =============================================================================
+
+# =============================================================================
+# STAGE 1: Build Rust Intent Compiler
+# =============================================================================
+FROM rust:1.75-alpine AS rust-builder
+
+LABEL stage="rust-builder"
+
+# Install build dependencies for Rust
+RUN apk add --no-cache musl-dev
+
+WORKDIR /build
+
+# Copy Rust source code
+COPY intent-compiler/Cargo.toml intent-compiler/Cargo.lock ./
+COPY intent-compiler/src ./src
+
+# Build optimized release binary with all optimizations
+# Using mold linker and LTO for smallest binary
+ENV RUSTFLAGS="-C target-cpu=sandybridge -C link-arg=-s"
+RUN cargo build --release --target x86_64-unknown-linux-musl && \
+    strip target/x86_64-unknown-linux-musl/release/grump-intent
+
+# =============================================================================
+# STAGE 2: Build Node.js Backend
+# =============================================================================
+FROM node:20-alpine AS node-builder
+
+LABEL stage="node-builder"
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
+# Copy backend package files
+COPY backend/package*.json ./
+
+# Install dependencies with cache mount for faster rebuilds
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
+
+# Copy backend source code and build configuration
+COPY backend/tsconfig.json backend/.swcrc ./
+COPY backend/src ./src
+COPY backend/scripts ./scripts
+
+# Build with SWC (much faster than tsc)
+RUN --mount=type=cache,target=/app/.swc \
+    npm run build
+
+# =============================================================================
+# STAGE 3: Production Image
+# =============================================================================
+FROM node:20-alpine AS production
+
+# OCI/Docker labels for metadata
+LABEL org.opencontainers.image.title="G-Rump Backend" \
+      org.opencontainers.image.description="AI-powered development platform backend with Intent Compiler" \
+      org.opencontainers.image.version="2.1.0" \
+      org.opencontainers.image.vendor="G-Rump" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.source="https://github.com/Aphrodine-wq/G-rump.com" \
+      org.opencontainers.image.documentation="https://docs.g-rump.com"
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    tini \
+    curl \
+    dumb-init \
+    ca-certificates \
+    && rm -rf /var/cache/apk/*
+
+# Security: Create non-root user
+RUN addgroup -g 1001 -S grump && \
+    adduser -S grump -u 1001 -G grump
+
+WORKDIR /app
+
+# Copy package files
+COPY backend/package*.json ./
+
+# Install production dependencies only with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production --prefer-offline --no-audit && \
+    npm cache clean --force
+
+# Copy built backend application from node-builder
+COPY --from=node-builder --chown=grump:grump /app/dist ./dist
+
+# Copy Rust intent compiler binary from rust-builder
+COPY --from=rust-builder --chown=grump:grump \
+    /build/target/x86_64-unknown-linux-musl/release/grump-intent \
+    /usr/local/bin/grump-intent
+
+# Make the compiler executable
+RUN chmod +x /usr/local/bin/grump-intent
+
+# Create data directory for SQLite and logs with correct permissions
+RUN mkdir -p /app/data /app/logs /app/.cache && \
+    chown -R grump:grump /app/data /app/logs /app/.cache
+
+# Security: Set restrictive permissions
+RUN chmod -R 755 /app && \
+    chmod -R 700 /app/data && \
+    chmod 755 /usr/local/bin/grump-intent
+
+# Set environment
+ENV NODE_ENV=production \
+    PORT=3000 \
+    NODE_OPTIONS="--max-old-space-size=2048 --enable-source-maps" \
+    GRUMP_INTENT_PATH=/usr/local/bin/grump-intent \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    UV_THREADPOOL_SIZE=16
+
+# Switch to non-root user
+USER grump
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3000/health/live || exit 1
+
+# Use tini for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start the application
+CMD ["node", "dist/index.js"]

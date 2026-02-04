@@ -6,7 +6,9 @@
  */
 
 // Note: Install these packages: npm install swagger-jsdoc swagger-ui-express @types/swagger-jsdoc @types/swagger-ui-express
-import type { Express, Request, Response } from 'express';
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+import type { Express } from 'express';
 import { env } from '../config/env.js';
 
 const isProduction = env.NODE_ENV === 'production';
@@ -19,12 +21,19 @@ const swaggerDefinition = {
   openapi: '3.0.3',
   info: {
     title: 'G-Rump API',
-    version: '1.0.0',
+    version: '2.1.0',
     description: `
 G-Rump Enterprise AI Development Platform API.
 
 ## Overview
 G-Rump provides AI-powered code generation, architecture design, and development workflow automation.
+
+## Supported AI Providers
+- **NVIDIA NIM** (Recommended) - Kimi K2.5, DeepSeek, Mistral
+- **OpenRouter** - Claude, GPT-4, Llama, and more
+- **Groq** - Ultra-fast Llama 3, Mixtral inference
+- **Together AI** - Open-source models at scale
+- **Ollama** - Local model deployment
 
 ## Authentication
 Most endpoints require authentication via Bearer token:
@@ -60,7 +69,7 @@ All errors follow a consistent format:
   },
   servers: [
     {
-      url: isProduction ? 'https://api.g-rump.com' : 'http://localhost:3000',
+      url: isProduction ? env.PUBLIC_BASE_URL || 'https://api.g-rump.com' : 'http://localhost:3000',
       description: isProduction ? 'Production' : 'Development',
     },
   ],
@@ -74,9 +83,7 @@ All errors follow a consistent format:
     { name: 'Codegen', description: 'Code generation' },
     { name: 'RAG', description: 'Retrieval Augmented Generation' },
     { name: 'Agents', description: 'AI agent management' },
-    { name: 'Voice', description: 'Voice transcription and synthesis' },
     { name: 'Memory', description: 'Long-term memory management' },
-    { name: 'Billing', description: 'Subscription and billing' },
     { name: 'Settings', description: 'User settings' },
   ],
   components: {
@@ -356,7 +363,8 @@ All errors follow a consistent format:
                   },
                   provider: {
                     type: 'string',
-                    enum: ['nim', 'zhipu', 'copilot', 'openrouter'],
+                    enum: ['nim', 'mock'],
+                    description: 'AI provider - NVIDIA NIM (powered by NVIDIA)',
                   },
                   modelId: { type: 'string' },
                   autonomous: { type: 'boolean' },
@@ -536,7 +544,14 @@ All errors follow a consistent format:
                 properties: {
                   type: {
                     type: 'string',
-                    enum: ['interaction', 'correction', 'preference', 'fact', 'context', 'feedback'],
+                    enum: [
+                      'interaction',
+                      'correction',
+                      'preference',
+                      'fact',
+                      'context',
+                      'feedback',
+                    ],
                   },
                   content: { type: 'string' },
                   priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },

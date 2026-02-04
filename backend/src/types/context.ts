@@ -3,11 +3,15 @@
  * Types for master context and agent context management
  */
 
-import type { EnrichedIntent } from '../services/intentCompilerService.js';
+import type {
+  EnrichedIntent,
+  CodePattern,
+  OptimizationOpportunity,
+  CodeQualityRequirements,
+} from '../services/intentCompilerService.js';
 import type { SystemArchitecture } from './architecture.js';
 import type { PRD } from './prd.js';
 import type { AgentType } from './agents.js';
-import type { CodePattern, OptimizationOpportunity, CodeQualityRequirements } from '../services/intentCompilerService.js';
 
 export interface ArchitectureHint {
   pattern: string;

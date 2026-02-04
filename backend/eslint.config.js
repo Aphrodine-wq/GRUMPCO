@@ -1,13 +1,24 @@
+/**
+ * Backend ESLint Configuration
+ * 
+ * This configuration extends the root ESLint config with backend-specific rules.
+ * The goal is to maintain consistency across the monorepo while allowing
+ * necessary backend-specific overrides.
+ */
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
+import globals from 'globals';
 
 export default [
   js.configs.recommended,
+  
+  // Ignores
   {
-    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.ts', 'tests/**'],
+    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.ts'],
   },
-  // TypeScript files
+  
+  // TypeScript source files
   {
     files: ['src/**/*.ts'],
     languageOptions: {
@@ -17,77 +28,89 @@ export default [
         sourceType: 'module',
       },
       globals: {
-        console: 'readonly',
-        process: 'readonly',
-        Buffer: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        setTimeout: 'readonly',
-        clearTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearInterval: 'readonly',
-        setImmediate: 'readonly',
-        URL: 'readonly',
-        AbortController: 'readonly',
-        AbortSignal: 'readonly',
-        crypto: 'readonly',
-        fetch: 'readonly',
-        Request: 'readonly',
-        RequestInit: 'readonly',
-        Response: 'readonly',
-        URLSearchParams: 'readonly',
-        TextDecoder: 'readonly',
-        NodeJS: 'readonly',
+        ...globals.node,
+        ...globals.es2022,
       },
     },
     plugins: {
       '@typescript-eslint': tseslint,
     },
     rules: {
+      // Inherit recommended rules
       ...tseslint.configs.recommended.rules,
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      
+      // TypeScript strict rules - aligned with root config
+      '@typescript-eslint/no-explicit-any': 'warn', // Changed from 'error' to 'warn' for consistency
+      '@typescript-eslint/no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+      }],
       '@typescript-eslint/no-empty-object-type': 'warn',
-      'no-useless-catch': 'warn',
-      'no-useless-escape': 'warn',
-      'no-undef': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-require-imports': 'off',
+      
+      // Consistent type imports
+      '@typescript-eslint/consistent-type-imports': ['warn', {
+        prefer: 'type-imports',
+        fixStyle: 'inline-type-imports',
+      }],
+      
+      // General rules
+      'no-useless-catch': 'warn',
+      'no-useless-escape': 'warn',
+      'no-undef': 'off', // TypeScript handles this
       'no-console': 'off', // Backend needs console for logging
+      
+      // Best practices
+      'eqeqeq': ['error', 'always', { null: 'ignore' }],
+      'no-var': 'error',
+      'prefer-const': 'warn',
+      'no-duplicate-imports': 'warn',
+      'no-case-declarations': 'warn',
+      'no-control-regex': 'warn',
+      
+      // Security
+      'no-eval': 'error',
+      'no-implied-eval': 'error',
+      'no-new-func': 'error',
     },
   },
+  
+  // Test files - more relaxed rules
+  {
+    files: ['tests/**/*.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      'no-console': 'off',
+    },
+  },
+  
+  // Scripts - allow console
+  {
+    files: ['scripts/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  
   // JavaScript files
   {
-    files: ['src/**/*.js'],
+    files: ['src/**/*.js', 'api/**/*.js'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
       globals: {
-        console: 'readonly',
-        process: 'readonly',
-        Buffer: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        setTimeout: 'readonly',
-        clearTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearInterval: 'readonly',
-        setImmediate: 'readonly',
-        URL: 'readonly',
-        AbortController: 'readonly',
-        AbortSignal: 'readonly',
-        crypto: 'readonly',
-        require: 'readonly',
-        module: 'readonly',
-        exports: 'readonly',
-        global: 'readonly',
+        ...globals.node,
+        ...globals.es2022,
       },
     },
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'no-console': 'off',
-      'no-control-regex': 'off', // Allow control characters in regex for input validation
+      'no-control-regex': 'off',
     },
   },
 ];

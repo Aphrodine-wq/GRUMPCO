@@ -103,7 +103,16 @@ export interface FirestoreCollection {
 
 export interface FirestoreField {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'timestamp' | 'geopoint' | 'reference' | 'array' | 'map' | 'null';
+  type:
+    | 'string'
+    | 'number'
+    | 'boolean'
+    | 'timestamp'
+    | 'geopoint'
+    | 'reference'
+    | 'array'
+    | 'map'
+    | 'null';
 }
 
 export interface FirebaseFunction {
@@ -138,7 +147,17 @@ export interface TableDefinition {
 
 export interface ColumnDefinition {
   name: string;
-  type: 'text' | 'int' | 'bigint' | 'boolean' | 'timestamp' | 'uuid' | 'json' | 'jsonb' | 'float' | 'decimal';
+  type:
+    | 'text'
+    | 'int'
+    | 'bigint'
+    | 'boolean'
+    | 'timestamp'
+    | 'uuid'
+    | 'json'
+    | 'jsonb'
+    | 'float'
+    | 'decimal';
   nullable?: boolean;
   defaultValue?: string;
   unique?: boolean;
@@ -207,13 +226,16 @@ class SupabaseClient {
   }
 
   // Database operations
-  async select<T>(table: string, options: {
-    columns?: string;
-    filter?: Record<string, unknown>;
-    order?: { column: string; ascending?: boolean };
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<T[] | null> {
+  async select<T>(
+    table: string,
+    options: {
+      columns?: string;
+      filter?: Record<string, unknown>;
+      order?: { column: string; ascending?: boolean };
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<T[] | null> {
     const params = new URLSearchParams();
     if (options.columns) {
       params.set('select', options.columns);
@@ -238,10 +260,14 @@ class SupabaseClient {
     return this.fetch<T[]>(`/rest/v1/${table}?${params.toString()}`);
   }
 
-  async insert<T>(table: string, data: Record<string, unknown> | Record<string, unknown>[], options: {
-    returning?: boolean;
-    onConflict?: string;
-  } = {}): Promise<T[] | null> {
+  async insert<T>(
+    table: string,
+    data: Record<string, unknown> | Record<string, unknown>[],
+    options: {
+      returning?: boolean;
+      onConflict?: string;
+    } = {}
+  ): Promise<T[] | null> {
     const params = new URLSearchParams();
     if (options.onConflict) {
       params.set('on_conflict', options.onConflict);
@@ -252,24 +278,36 @@ class SupabaseClient {
       headers['Prefer'] = 'return=representation';
     }
 
-    return this.fetch<T[]>(`/rest/v1/${table}?${params.toString()}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-      headers,
-    }, true);
+    return this.fetch<T[]>(
+      `/rest/v1/${table}?${params.toString()}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers,
+      },
+      true
+    );
   }
 
-  async update<T>(table: string, data: Record<string, unknown>, filter: Record<string, unknown>): Promise<T[] | null> {
+  async update<T>(
+    table: string,
+    data: Record<string, unknown>,
+    filter: Record<string, unknown>
+  ): Promise<T[] | null> {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(filter)) {
       params.set(key, `eq.${value}`);
     }
 
-    return this.fetch<T[]>(`/rest/v1/${table}?${params.toString()}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-      headers: { Prefer: 'return=representation' },
-    }, true);
+    return this.fetch<T[]>(
+      `/rest/v1/${table}?${params.toString()}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: { Prefer: 'return=representation' },
+      },
+      true
+    );
   }
 
   async delete(table: string, filter: Record<string, unknown>): Promise<boolean> {
@@ -278,9 +316,13 @@ class SupabaseClient {
       params.set(key, `eq.${value}`);
     }
 
-    const result = await this.fetch<unknown>(`/rest/v1/${table}?${params.toString()}`, {
-      method: 'DELETE',
-    }, true);
+    const result = await this.fetch<unknown>(
+      `/rest/v1/${table}?${params.toString()}`,
+      {
+        method: 'DELETE',
+      },
+      true
+    );
 
     return result !== null;
   }
@@ -294,7 +336,12 @@ class SupabaseClient {
   }
 
   // Storage operations
-  async uploadFile(bucket: string, path: string, file: Buffer | Blob, contentType: string): Promise<{ path: string } | null> {
+  async uploadFile(
+    bucket: string,
+    path: string,
+    file: Buffer | globalThis.Blob,
+    contentType: string
+  ): Promise<{ path: string } | null> {
     const url = `${this.projectUrl}/storage/v1/object/${bucket}/${path}`;
     const apiKey = this.serviceRoleKey ?? this.anonKey;
 
@@ -306,7 +353,7 @@ class SupabaseClient {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': contentType,
         },
-        body: file,
+        body: file as BodyInit,
       });
 
       if (!res.ok) {
@@ -323,10 +370,16 @@ class SupabaseClient {
   }
 
   async deleteFile(bucket: string, paths: string[]): Promise<boolean> {
-    return (await this.fetch(`/storage/v1/object/${bucket}`, {
-      method: 'DELETE',
-      body: JSON.stringify({ prefixes: paths }),
-    }, true)) !== null;
+    return (
+      (await this.fetch(
+        `/storage/v1/object/${bucket}`,
+        {
+          method: 'DELETE',
+          body: JSON.stringify({ prefixes: paths }),
+        },
+        true
+      )) !== null
+    );
   }
 
   async listFiles(bucket: string, prefix?: string): Promise<StorageFile[]> {
@@ -335,16 +388,22 @@ class SupabaseClient {
       body.prefix = prefix;
     }
 
-    const result = await this.fetch<Array<{
-      name: string;
-      id: string;
-      metadata: { size: number; mimetype: string };
-      created_at: string;
-      updated_at: string;
-    }>>(`/storage/v1/object/list/${bucket}`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }, true);
+    const result = await this.fetch<
+      Array<{
+        name: string;
+        id: string;
+        metadata: { size: number; mimetype: string };
+        created_at: string;
+        updated_at: string;
+      }>
+    >(
+      `/storage/v1/object/list/${bucket}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+      true
+    );
 
     if (!result) return [];
 
@@ -363,25 +422,42 @@ class SupabaseClient {
   }
 
   // Auth operations (admin)
-  async createUser(email: string, password: string, metadata?: Record<string, unknown>): Promise<{ id: string; email: string } | null> {
-    return this.fetch('/auth/v1/admin/users', {
-      method: 'POST',
-      body: JSON.stringify({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: metadata,
-      }),
-    }, true);
+  async createUser(
+    email: string,
+    password: string,
+    metadata?: Record<string, unknown>
+  ): Promise<{ id: string; email: string } | null> {
+    return this.fetch(
+      '/auth/v1/admin/users',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: metadata,
+        }),
+      },
+      true
+    );
   }
 
   async deleteUser(userId: string): Promise<boolean> {
-    return (await this.fetch(`/auth/v1/admin/users/${userId}`, {
-      method: 'DELETE',
-    }, true)) !== null;
+    return (
+      (await this.fetch(
+        `/auth/v1/admin/users/${userId}`,
+        {
+          method: 'DELETE',
+        },
+        true
+      )) !== null
+    );
   }
 
-  async listUsers(page = 1, perPage = 50): Promise<Array<{ id: string; email: string; created_at: string }>> {
+  async listUsers(
+    page = 1,
+    perPage = 50
+  ): Promise<Array<{ id: string; email: string; created_at: string }>> {
     const result = await this.fetch<{
       users: Array<{ id: string; email: string; created_at: string }>;
     }>(`/auth/v1/admin/users?page=${page}&per_page=${perPage}`, {}, true);
@@ -432,11 +508,19 @@ class FirebaseAdminClient {
   // Firestore operations
   async getDocument<T>(collection: string, documentId: string): Promise<T | null> {
     const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/${collection}/${documentId}`;
-    
+
     interface FirestoreDoc {
-      fields: Record<string, { stringValue?: string; integerValue?: string; booleanValue?: boolean; mapValue?: { fields: Record<string, unknown> } }>;
+      fields: Record<
+        string,
+        {
+          stringValue?: string;
+          integerValue?: string;
+          booleanValue?: boolean;
+          mapValue?: { fields: Record<string, unknown> };
+        }
+      >;
     }
-    
+
     const result = await this.fetch<FirestoreDoc>(url);
     if (!result) return null;
 
@@ -444,11 +528,18 @@ class FirebaseAdminClient {
     return this.convertFirestoreDoc(result.fields) as T;
   }
 
-  async queryCollection<T>(collection: string, options: {
-    where?: Array<{ field: string; op: '==' | '<' | '>' | '<=' | '>=' | '!=' | 'in' | 'array-contains'; value: unknown }>;
-    orderBy?: { field: string; direction?: 'asc' | 'desc' };
-    limit?: number;
-  } = {}): Promise<T[]> {
+  async queryCollection<T>(
+    collection: string,
+    options: {
+      where?: Array<{
+        field: string;
+        op: '==' | '<' | '>' | '<=' | '>=' | '!=' | 'in' | 'array-contains';
+        value: unknown;
+      }>;
+      orderBy?: { field: string; direction?: 'asc' | 'desc' };
+      limit?: number;
+    } = {}
+  ): Promise<T[]> {
     const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents:runQuery`;
 
     interface StructuredQuery {
@@ -489,10 +580,12 @@ class FirebaseAdminClient {
     }
 
     if (options.orderBy) {
-      structuredQuery.orderBy = [{
-        field: { fieldPath: options.orderBy.field },
-        direction: options.orderBy.direction === 'desc' ? 'DESCENDING' : 'ASCENDING',
-      }];
+      structuredQuery.orderBy = [
+        {
+          field: { fieldPath: options.orderBy.field },
+          direction: options.orderBy.direction === 'desc' ? 'DESCENDING' : 'ASCENDING',
+        },
+      ];
     }
 
     if (options.limit) {
@@ -502,7 +595,15 @@ class FirebaseAdminClient {
     interface QueryResult {
       document?: {
         name: string;
-        fields: Record<string, { stringValue?: string; integerValue?: string; booleanValue?: boolean; mapValue?: { fields: Record<string, unknown> } }>;
+        fields: Record<
+          string,
+          {
+            stringValue?: string;
+            integerValue?: string;
+            booleanValue?: boolean;
+            mapValue?: { fields: Record<string, unknown> };
+          }
+        >;
       };
     }
 
@@ -514,11 +615,18 @@ class FirebaseAdminClient {
     if (!results) return [];
 
     return results
-      .filter((r) => r.document)
-      .map((r) => this.convertFirestoreDoc(r.document!.fields) as T);
+      .filter(
+        (r): r is QueryResult & { document: NonNullable<QueryResult['document']> } =>
+          r.document !== undefined
+      )
+      .map((r) => this.convertFirestoreDoc(r.document.fields) as T);
   }
 
-  async createDocument<T>(collection: string, data: Record<string, unknown>, documentId?: string): Promise<T | null> {
+  async createDocument<T>(
+    collection: string,
+    data: Record<string, unknown>,
+    documentId?: string
+  ): Promise<T | null> {
     const url = documentId
       ? `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/${collection}?documentId=${documentId}`
       : `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/${collection}`;
@@ -532,23 +640,52 @@ class FirebaseAdminClient {
 
     if (!result) return null;
 
-    return this.convertFirestoreDoc(result.fields as Record<string, { stringValue?: string; integerValue?: string; booleanValue?: boolean; mapValue?: { fields: Record<string, unknown> } }>) as T;
+    return this.convertFirestoreDoc(
+      result.fields as Record<
+        string,
+        {
+          stringValue?: string;
+          integerValue?: string;
+          booleanValue?: boolean;
+          mapValue?: { fields: Record<string, unknown> };
+        }
+      >
+    ) as T;
   }
 
-  async updateDocument<T>(collection: string, documentId: string, data: Record<string, unknown>): Promise<T | null> {
+  async updateDocument<T>(
+    collection: string,
+    documentId: string,
+    data: Record<string, unknown>
+  ): Promise<T | null> {
     const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/${collection}/${documentId}`;
 
     const fields = this.toFirestoreFields(data);
-    const updateMask = Object.keys(data).map((f) => `updateMask.fieldPaths=${f}`).join('&');
+    const updateMask = Object.keys(data)
+      .map((f) => `updateMask.fieldPaths=${f}`)
+      .join('&');
 
-    const result = await this.fetch<{ name: string; fields: Record<string, unknown> }>(`${url}?${updateMask}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ fields }),
-    });
+    const result = await this.fetch<{ name: string; fields: Record<string, unknown> }>(
+      `${url}?${updateMask}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ fields }),
+      }
+    );
 
     if (!result) return null;
 
-    return this.convertFirestoreDoc(result.fields as Record<string, { stringValue?: string; integerValue?: string; booleanValue?: boolean; mapValue?: { fields: Record<string, unknown> } }>) as T;
+    return this.convertFirestoreDoc(
+      result.fields as Record<
+        string,
+        {
+          stringValue?: string;
+          integerValue?: string;
+          booleanValue?: boolean;
+          mapValue?: { fields: Record<string, unknown> };
+        }
+      >
+    ) as T;
   }
 
   async deleteDocument(collection: string, documentId: string): Promise<boolean> {
@@ -565,13 +702,18 @@ class FirebaseAdminClient {
       '<=': 'LESS_THAN_OR_EQUAL',
       '>=': 'GREATER_THAN_OR_EQUAL',
       '!=': 'NOT_EQUAL',
-      'in': 'IN',
+      in: 'IN',
       'array-contains': 'ARRAY_CONTAINS',
     };
     return opMap[op] ?? 'EQUAL';
   }
 
-  private toFirestoreValue(value: unknown): { stringValue?: string; integerValue?: number; booleanValue?: boolean; doubleValue?: number } {
+  private toFirestoreValue(value: unknown): {
+    stringValue?: string;
+    integerValue?: number;
+    booleanValue?: boolean;
+    doubleValue?: number;
+  } {
     if (typeof value === 'string') return { stringValue: value };
     if (typeof value === 'number') {
       return Number.isInteger(value) ? { integerValue: value } : { doubleValue: value };
@@ -588,21 +730,47 @@ class FirebaseAdminClient {
     return fields;
   }
 
-  private convertFirestoreDoc(fields: Record<string, { stringValue?: string; integerValue?: string; booleanValue?: boolean; mapValue?: { fields: Record<string, unknown> } }>): Record<string, unknown> {
+  private convertFirestoreDoc(
+    fields: Record<
+      string,
+      {
+        stringValue?: string;
+        integerValue?: string;
+        booleanValue?: boolean;
+        mapValue?: { fields: Record<string, unknown> };
+      }
+    >
+  ): Record<string, unknown> {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(fields)) {
       if ('stringValue' in value) result[key] = value.stringValue;
-      else if ('integerValue' in value) result[key] = parseInt(value.integerValue!, 10);
+      else if ('integerValue' in value && value.integerValue !== undefined)
+        result[key] = parseInt(value.integerValue, 10);
       else if ('booleanValue' in value) result[key] = value.booleanValue;
       else if ('mapValue' in value && value.mapValue?.fields) {
-        result[key] = this.convertFirestoreDoc(value.mapValue.fields as Record<string, { stringValue?: string; integerValue?: string; booleanValue?: boolean; mapValue?: { fields: Record<string, unknown> } }>);
+        result[key] = this.convertFirestoreDoc(
+          value.mapValue.fields as Record<
+            string,
+            {
+              stringValue?: string;
+              integerValue?: string;
+              booleanValue?: boolean;
+              mapValue?: { fields: Record<string, unknown> };
+            }
+          >
+        );
       }
     }
     return result;
   }
 
   // Storage operations
-  async uploadFile(bucket: string, path: string, file: Buffer, contentType: string): Promise<{ name: string; mediaLink: string } | null> {
+  async uploadFile(
+    bucket: string,
+    path: string,
+    file: Buffer,
+    contentType: string
+  ): Promise<{ name: string; mediaLink: string } | null> {
     const url = `https://storage.googleapis.com/upload/storage/v1/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(path)}`;
 
     try {
@@ -612,7 +780,7 @@ class FirebaseAdminClient {
           Authorization: `Bearer ${this.accessToken}`,
           'Content-Type': contentType,
         },
-        body: file,
+        body: file as BodyInit,
       });
 
       if (!res.ok) {
@@ -723,7 +891,9 @@ export function generateSupabaseSchema(tables: TableDefinition[]): string {
     if (table.indexes) {
       for (const idx of table.indexes) {
         const unique = idx.unique ? 'UNIQUE ' : '';
-        lines.push(`CREATE ${unique}INDEX IF NOT EXISTS ${idx.name} ON ${table.name} (${idx.columns.join(', ')});`);
+        lines.push(
+          `CREATE ${unique}INDEX IF NOT EXISTS ${idx.name} ON ${table.name} (${idx.columns.join(', ')});`
+        );
       }
       lines.push('');
     }
@@ -739,19 +909,21 @@ export function generateSupabaseSchema(tables: TableDefinition[]): string {
 /**
  * Generate Firestore security rules
  */
-export function generateFirestoreRules(collections: Array<{
-  name: string;
-  rules: {
-    read?: 'auth' | 'owner' | 'public' | 'admin';
-    write?: 'auth' | 'owner' | 'admin';
-    create?: 'auth' | 'owner' | 'admin';
-    update?: 'auth' | 'owner' | 'admin';
-    delete?: 'auth' | 'owner' | 'admin';
-  };
-}>): string {
+export function generateFirestoreRules(
+  collections: Array<{
+    name: string;
+    rules: {
+      read?: 'auth' | 'owner' | 'public' | 'admin';
+      write?: 'auth' | 'owner' | 'admin';
+      create?: 'auth' | 'owner' | 'admin';
+      update?: 'auth' | 'owner' | 'admin';
+      delete?: 'auth' | 'owner' | 'admin';
+    };
+  }>
+): string {
   const lines: string[] = [
     '// Generated by G-Rump for Firebase',
-    'rules_version = \'2\';',
+    "rules_version = '2';",
     'service cloud.firestore {',
     '  match /databases/{database}/documents {',
     '',
@@ -827,12 +999,15 @@ function mapFirestoreRule(rule: string): string {
 /**
  * Generate RLS policies for Supabase
  */
-export function generateRLSPolicies(table: string, policies: Array<{
-  name: string;
-  operation: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'ALL';
-  using?: string;
-  withCheck?: string;
-}>): string {
+export function generateRLSPolicies(
+  table: string,
+  policies: Array<{
+    name: string;
+    operation: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'ALL';
+    using?: string;
+    withCheck?: string;
+  }>
+): string {
   const lines: string[] = [
     `-- RLS Policies for ${table}`,
     `ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY;`,
@@ -878,9 +1053,7 @@ export function generateUserSchema(): TableDefinition[] {
         { name: 'updated_at', type: 'timestamp', nullable: false },
       ],
       primaryKey: ['id'],
-      indexes: [
-        { name: 'profiles_email_idx', columns: ['email'], unique: true },
-      ],
+      indexes: [{ name: 'profiles_email_idx', columns: ['email'], unique: true }],
     },
     {
       name: 'user_settings',
@@ -894,7 +1067,12 @@ export function generateUserSchema(): TableDefinition[] {
       ],
       primaryKey: ['id'],
       foreignKeys: [
-        { column: 'user_id', referencesTable: 'profiles', referencesColumn: 'id', onDelete: 'cascade' },
+        {
+          column: 'user_id',
+          referencesTable: 'profiles',
+          referencesColumn: 'id',
+          onDelete: 'cascade',
+        },
       ],
     },
   ];
@@ -921,7 +1099,12 @@ export function generateBlogSchema(): TableDefinition[] {
       ],
       primaryKey: ['id'],
       foreignKeys: [
-        { column: 'author_id', referencesTable: 'profiles', referencesColumn: 'id', onDelete: 'cascade' },
+        {
+          column: 'author_id',
+          referencesTable: 'profiles',
+          referencesColumn: 'id',
+          onDelete: 'cascade',
+        },
       ],
       indexes: [
         { name: 'posts_slug_idx', columns: ['slug'], unique: true },
@@ -947,8 +1130,18 @@ export function generateBlogSchema(): TableDefinition[] {
       ],
       primaryKey: ['post_id', 'category_id'],
       foreignKeys: [
-        { column: 'post_id', referencesTable: 'posts', referencesColumn: 'id', onDelete: 'cascade' },
-        { column: 'category_id', referencesTable: 'categories', referencesColumn: 'id', onDelete: 'cascade' },
+        {
+          column: 'post_id',
+          referencesTable: 'posts',
+          referencesColumn: 'id',
+          onDelete: 'cascade',
+        },
+        {
+          column: 'category_id',
+          referencesTable: 'categories',
+          referencesColumn: 'id',
+          onDelete: 'cascade',
+        },
       ],
     },
     {
@@ -964,9 +1157,24 @@ export function generateBlogSchema(): TableDefinition[] {
       ],
       primaryKey: ['id'],
       foreignKeys: [
-        { column: 'post_id', referencesTable: 'posts', referencesColumn: 'id', onDelete: 'cascade' },
-        { column: 'author_id', referencesTable: 'profiles', referencesColumn: 'id', onDelete: 'cascade' },
-        { column: 'parent_id', referencesTable: 'comments', referencesColumn: 'id', onDelete: 'cascade' },
+        {
+          column: 'post_id',
+          referencesTable: 'posts',
+          referencesColumn: 'id',
+          onDelete: 'cascade',
+        },
+        {
+          column: 'author_id',
+          referencesTable: 'profiles',
+          referencesColumn: 'id',
+          onDelete: 'cascade',
+        },
+        {
+          column: 'parent_id',
+          referencesTable: 'comments',
+          referencesColumn: 'id',
+          onDelete: 'cascade',
+        },
       ],
     },
   ];
@@ -1016,9 +1224,7 @@ export function generateEcommerceSchema(): TableDefinition[] {
         { name: 'updated_at', type: 'timestamp', nullable: false },
       ],
       primaryKey: ['id'],
-      foreignKeys: [
-        { column: 'user_id', referencesTable: 'profiles', referencesColumn: 'id' },
-      ],
+      foreignKeys: [{ column: 'user_id', referencesTable: 'profiles', referencesColumn: 'id' }],
       indexes: [
         { name: 'orders_user_idx', columns: ['user_id'] },
         { name: 'orders_status_idx', columns: ['status'] },
@@ -1036,7 +1242,12 @@ export function generateEcommerceSchema(): TableDefinition[] {
       ],
       primaryKey: ['id'],
       foreignKeys: [
-        { column: 'order_id', referencesTable: 'orders', referencesColumn: 'id', onDelete: 'cascade' },
+        {
+          column: 'order_id',
+          referencesTable: 'orders',
+          referencesColumn: 'id',
+          onDelete: 'cascade',
+        },
         { column: 'product_id', referencesTable: 'products', referencesColumn: 'id' },
       ],
     },

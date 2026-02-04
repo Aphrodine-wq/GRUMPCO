@@ -13,10 +13,10 @@ interface CreditsOptions {
 }
 
 const creditPackages = [
-  { id: 'starter', name: 'Starter', credits: 100, price: 5, description: 'Perfect for trying out' },
-  { id: 'pro', name: 'Pro', credits: 500, price: 20, description: 'Most popular choice' },
-  { id: 'team', name: 'Team', credits: 2000, price: 75, description: 'Great for small teams' },
-  { id: 'enterprise', name: 'Enterprise', credits: 10000, price: 350, description: 'Unlimited power' }
+  { id: 'starter', name: 'Starter', credits: 200, price: 6, description: 'Light hosted usage' },
+  { id: 'pro', name: 'Pro', credits: 1000, price: 30, description: 'Most popular choice' },
+  { id: 'team', name: 'Team', credits: 5000, price: 150, description: 'Great for small teams' },
+  { id: 'enterprise', name: 'Enterprise', credits: 20000, price: 600, description: 'High-volume usage' }
 ];
 
 /**

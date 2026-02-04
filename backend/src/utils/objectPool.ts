@@ -21,7 +21,10 @@ export class ObjectPool<T extends Poolable> {
   acquire(): T {
     if (this.pool.length > 0) {
       this.activeCount++;
-      return this.pool.pop()!;
+      const item = this.pool.pop();
+      if (item !== undefined) {
+        return item;
+      }
     }
     this.activeCount++;
     return this.factory();
@@ -86,7 +89,10 @@ export class BufferPool {
   acquire(size: number): Buffer {
     const pool = this.pools.get(size);
     if (pool && pool.length > 0) {
-      return pool.pop()!;
+      const buf = pool.pop();
+      if (buf !== undefined) {
+        return buf;
+      }
     }
     return Buffer.alloc(size);
   }
@@ -121,7 +127,10 @@ export class ArrayPool<T> {
   acquire(initialSize = 16): T[] {
     const pool = this.pools.get(initialSize);
     if (pool && pool.length > 0) {
-      return pool.pop()!;
+      const arr = pool.pop();
+      if (arr !== undefined) {
+        return arr;
+      }
     }
     return new Array(initialSize);
   }

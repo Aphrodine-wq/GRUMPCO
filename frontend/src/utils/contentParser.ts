@@ -186,9 +186,6 @@ export function flattenTextContent(content: string | ContentBlock[]): string {
 /**
  * Check if block is a specific type
  */
-export function isContentBlockType(
-  block: ContentBlock,
-  type: ContentBlock['type']
-): boolean {
+export function isContentBlockType(block: ContentBlock, type: ContentBlock['type']): boolean {
   return block.type === type;
 }

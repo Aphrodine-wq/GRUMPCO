@@ -24,10 +24,7 @@ function getDefaultModel(): string {
  * Generate embeddings for one or more texts. Uses NIM accelerator when available and no model override;
  * otherwise calls NIM API directly with the requested model (e.g. for RAG_EMBED_MODEL).
  */
-export async function embed(
-  texts: string[],
-  options?: EmbedOptions
-): Promise<number[][]> {
+export async function embed(texts: string[], options?: EmbedOptions): Promise<number[][]> {
   const model = options?.model ?? getDefaultModel();
   const nim = getNIMAccelerator();
 

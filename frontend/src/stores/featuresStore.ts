@@ -12,7 +12,13 @@ import { fetchApi } from '../lib/api.js';
 export type FeatureCategory = 'analyze' | 'security' | 'infra' | 'testing';
 
 /** Result can be any of the feature-specific result types */
-export type FeatureResult = AnalysisResult | SecurityScanResult | SBOMResult | InfraResult | TestGenerationResult | unknown;
+export type FeatureResult =
+  | AnalysisResult
+  | SecurityScanResult
+  | SBOMResult
+  | InfraResult
+  | TestGenerationResult
+  | unknown;
 
 export interface FeatureState {
   loading: boolean;
@@ -113,7 +119,7 @@ const state = writable<FeaturesState>(initialState);
 
 // Helper to update a specific feature's state
 function updateFeature(category: FeatureCategory, update: Partial<FeatureState>) {
-  state.update(s => ({
+  state.update((s) => ({
     ...s,
     [category]: { ...s[category], ...update },
   }));
@@ -121,7 +127,11 @@ function updateFeature(category: FeatureCategory, update: Partial<FeatureState>)
 
 // ============ API Functions ============
 
-async function apiCall<T>(endpoint: string, method: 'GET' | 'POST' = 'POST', body?: unknown): Promise<T> {
+async function apiCall<T>(
+  endpoint: string,
+  method: 'GET' | 'POST' = 'POST',
+  body?: unknown
+): Promise<T> {
   const response = await fetchApi(endpoint, {
     method,
     body: body ? JSON.stringify(body) : undefined,
@@ -140,7 +150,7 @@ async function apiCall<T>(endpoint: string, method: 'GET' | 'POST' = 'POST', bod
 
 export async function analyzeProject(workspacePath: string): Promise<AnalysisResult> {
   updateFeature('analyze', { loading: true, error: null });
-  state.update(s => ({ ...s, activeFeature: 'analyze' }));
+  state.update((s) => ({ ...s, activeFeature: 'analyze' }));
 
   try {
     const result = await apiCall<AnalysisResult>('/api/analyze/project', 'POST', { workspacePath });
@@ -153,12 +163,18 @@ export async function analyzeProject(workspacePath: string): Promise<AnalysisRes
   }
 }
 
-export async function analyzeArchitecture(workspacePath: string): Promise<{ mermaidDiagram: string; summary: string }> {
+export async function analyzeArchitecture(
+  workspacePath: string
+): Promise<{ mermaidDiagram: string; summary: string }> {
   updateFeature('analyze', { loading: true, error: null });
-  state.update(s => ({ ...s, activeFeature: 'analyze' }));
+  state.update((s) => ({ ...s, activeFeature: 'analyze' }));
 
   try {
-    const result = await apiCall<{ mermaidDiagram: string; summary: string }>('/api/analyze/architecture', 'POST', { workspacePath });
+    const result = await apiCall<{ mermaidDiagram: string; summary: string }>(
+      '/api/analyze/architecture',
+      'POST',
+      { workspacePath }
+    );
     updateFeature('analyze', { loading: false, result });
     return result;
   } catch (err) {
@@ -184,12 +200,18 @@ export async function analyzeDependencies(workspacePath: string): Promise<unknow
 
 // ============ Security & Compliance ============
 
-export async function securityScan(workspacePath: string, scanTypes?: string[]): Promise<SecurityScanResult> {
+export async function securityScan(
+  workspacePath: string,
+  scanTypes?: string[]
+): Promise<SecurityScanResult> {
   updateFeature('security', { loading: true, error: null });
-  state.update(s => ({ ...s, activeFeature: 'security' }));
+  state.update((s) => ({ ...s, activeFeature: 'security' }));
 
   try {
-    const result = await apiCall<SecurityScanResult>('/api/security/scan', 'POST', { workspacePath, scanTypes });
+    const result = await apiCall<SecurityScanResult>('/api/security/scan', 'POST', {
+      workspacePath,
+      scanTypes,
+    });
     updateFeature('security', { loading: false, result });
     return result;
   } catch (err) {
@@ -199,12 +221,18 @@ export async function securityScan(workspacePath: string, scanTypes?: string[]):
   }
 }
 
-export async function generateSBOM(workspacePath: string, format: 'cyclonedx' | 'spdx' = 'cyclonedx'): Promise<SBOMResult> {
+export async function generateSBOM(
+  workspacePath: string,
+  format: 'cyclonedx' | 'spdx' = 'cyclonedx'
+): Promise<SBOMResult> {
   updateFeature('security', { loading: true, error: null });
-  state.update(s => ({ ...s, activeFeature: 'security' }));
+  state.update((s) => ({ ...s, activeFeature: 'security' }));
 
   try {
-    const result = await apiCall<SBOMResult>('/api/security/sbom', 'POST', { workspacePath, format });
+    const result = await apiCall<SBOMResult>('/api/security/sbom', 'POST', {
+      workspacePath,
+      format,
+    });
     updateFeature('security', { loading: false, result });
     return result;
   } catch (err) {
@@ -258,7 +286,7 @@ export interface K8sRequest {
 
 export async function generateK8s(request: K8sRequest): Promise<InfraResult> {
   updateFeature('infra', { loading: true, error: null });
-  state.update(s => ({ ...s, activeFeature: 'infra' }));
+  state.update((s) => ({ ...s, activeFeature: 'infra' }));
 
   try {
     const result = await apiCall<InfraResult>('/api/infra/kubernetes', 'POST', request);
@@ -285,7 +313,7 @@ export interface TerraformRequest {
 
 export async function generateTerraform(request: TerraformRequest): Promise<InfraResult> {
   updateFeature('infra', { loading: true, error: null });
-  state.update(s => ({ ...s, activeFeature: 'infra' }));
+  state.update((s) => ({ ...s, activeFeature: 'infra' }));
 
   try {
     const result = await apiCall<InfraResult>('/api/infra/terraform', 'POST', request);
@@ -307,7 +335,7 @@ export interface DockerRequest {
 
 export async function generateDocker(request: DockerRequest): Promise<InfraResult> {
   updateFeature('infra', { loading: true, error: null });
-  state.update(s => ({ ...s, activeFeature: 'infra' }));
+  state.update((s) => ({ ...s, activeFeature: 'infra' }));
 
   try {
     const result = await apiCall<InfraResult>('/api/infra/docker', 'POST', request);
@@ -329,7 +357,7 @@ export interface CICDRequest {
 
 export async function generateCICD(request: CICDRequest): Promise<InfraResult> {
   updateFeature('infra', { loading: true, error: null });
-  state.update(s => ({ ...s, activeFeature: 'infra' }));
+  state.update((s) => ({ ...s, activeFeature: 'infra' }));
 
   try {
     const result = await apiCall<InfraResult>('/api/infra/cicd', 'POST', request);
@@ -365,7 +393,13 @@ export interface OptimizedIntent {
     impact: string;
   }>;
   nonFunctionalRequirements: Array<{
-    category: 'performance' | 'security' | 'scalability' | 'reliability' | 'usability' | 'maintainability';
+    category:
+      | 'performance'
+      | 'security'
+      | 'scalability'
+      | 'reliability'
+      | 'usability'
+      | 'maintainability';
     requirement: string;
     metric?: string;
     priority: 'critical' | 'high' | 'medium' | 'low';
@@ -438,7 +472,7 @@ export interface OptimizeIntentRequest {
 
 export async function generateTests(request: TestGenRequest): Promise<TestGenerationResult> {
   updateFeature('testing', { loading: true, error: null });
-  state.update(s => ({ ...s, activeFeature: 'testing' }));
+  state.update((s) => ({ ...s, activeFeature: 'testing' }));
 
   try {
     const result = await apiCall<TestGenerationResult>('/api/testing/generate', 'POST', request);
@@ -465,7 +499,7 @@ export interface LoadTestRequest {
 
 export async function generateLoadTestPlan(request: LoadTestRequest): Promise<unknown> {
   updateFeature('testing', { loading: true, error: null });
-  state.update(s => ({ ...s, activeFeature: 'testing' }));
+  state.update((s) => ({ ...s, activeFeature: 'testing' }));
 
   try {
     const result = await apiCall('/api/testing/load-plan', 'POST', request);
@@ -525,7 +559,7 @@ export const featuresStore = {
   subscribe: state.subscribe,
 
   setActiveFeature(feature: FeatureCategory | null) {
-    state.update(s => ({ ...s, activeFeature: feature }));
+    state.update((s) => ({ ...s, activeFeature: feature }));
   },
 
   clearResult(category: FeatureCategory) {
@@ -538,13 +572,14 @@ export const featuresStore = {
 };
 
 // Derived stores for convenience
-export const isLoading = derived(state, $s =>
-  $s.analyze.loading || $s.security.loading || $s.infra.loading || $s.testing.loading
+export const isLoading = derived(
+  state,
+  ($s) => $s.analyze.loading || $s.security.loading || $s.infra.loading || $s.testing.loading
 );
 
-export const activeFeature = derived(state, $s => $s.activeFeature);
+export const activeFeature = derived(state, ($s) => $s.activeFeature);
 
-export const analyzeState = derived(state, $s => $s.analyze);
-export const securityState = derived(state, $s => $s.security);
-export const infraState = derived(state, $s => $s.infra);
-export const testingState = derived(state, $s => $s.testing);
+export const analyzeState = derived(state, ($s) => $s.analyze);
+export const securityState = derived(state, ($s) => $s.security);
+export const infraState = derived(state, ($s) => $s.infra);
+export const testingState = derived(state, ($s) => $s.testing);

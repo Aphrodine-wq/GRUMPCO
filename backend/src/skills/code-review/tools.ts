@@ -6,7 +6,8 @@ import type { ToolDefinition } from '../types.js';
 
 export const reviewCodeTool: ToolDefinition = {
   name: 'review_code',
-  description: 'Review code for quality, patterns, security, and improvements. Analyzes code and provides actionable feedback.',
+  description:
+    'Review code for quality, patterns, security, and improvements. Analyzes code and provides actionable feedback.',
   input_schema: {
     type: 'object',
     properties: {
@@ -21,7 +22,8 @@ export const reviewCodeTool: ToolDefinition = {
       reviewType: {
         type: 'string',
         enum: ['quick', 'deep', 'security', 'performance'],
-        description: 'Type of review to perform. quick=fast overview, deep=thorough analysis, security=security focused, performance=performance focused',
+        description:
+          'Type of review to perform. quick=fast overview, deep=thorough analysis, security=security focused, performance=performance focused',
         default: 'quick',
       },
       context: {
@@ -88,5 +90,8 @@ export const definitions: ToolDefinition[] = [
 // Tool handlers will be implemented in the skill's index.ts
 export const handlers: Record<
   string,
-  (input: Record<string, unknown>, context: import('../types.js').SkillContext) => Promise<import('../types.js').ToolExecutionResult>
+  (
+    input: Record<string, unknown>,
+    context: import('../types.js').SkillContext
+  ) => Promise<import('../types.js').ToolExecutionResult>
 > = {};

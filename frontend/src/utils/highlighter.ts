@@ -1,4 +1,3 @@
-
 /**
  * Syntax Highlighting Utility
  */
@@ -25,7 +24,7 @@ export async function initHighlighter(): Promise<Highlighter> {
       'sql',
       'markdown',
       'yaml',
-      'svelte'
+      'svelte',
     ],
   });
 
@@ -36,7 +35,10 @@ export function getHighlighterInstance(): Highlighter | null {
   return highlighter;
 }
 
-export async function highlightCode(code: string, language: string = 'javascript'): Promise<string> {
+export async function highlightCode(
+  code: string,
+  language: string = 'javascript'
+): Promise<string> {
   const h = await initHighlighter();
   // Safe check if lang is loaded, else fallback to text/plain or just use it (shiki throws usually)
   const isLoaded = h.getLoadedLanguages().includes(language);
@@ -64,6 +66,6 @@ export function getSupportedLanguages(): string[] {
     'sql',
     'markdown',
     'yaml',
-    'svelte'
+    'svelte',
   ];
 }

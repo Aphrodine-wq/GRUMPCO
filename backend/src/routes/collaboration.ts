@@ -2,7 +2,7 @@
  * Collaboration routes – project members, sharing, comments, and version history.
  */
 
-import { Response, Router } from 'express';
+import { type Response, Router } from 'express';
 import { requireAuth, type AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import {
   addMember,
@@ -24,41 +24,52 @@ const router = Router();
 const COMMENT_ENTITY_TYPES: EntityType[] = ['diagram', 'spec', 'plan', 'code', 'session'];
 const VERSION_ENTITY_TYPES: ('spec' | 'plan' | 'diagram')[] = ['spec', 'plan', 'diagram'];
 
-router.get('/projects/:projectId/members', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const { projectId } = req.params;
-  const userId = req.user?.id;
-  if (!userId) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
+router.get(
+  '/projects/:projectId/members',
+  requireAuth,
+  (req: AuthenticatedRequest, res: Response) => {
+    const { projectId } = req.params as { projectId: string };
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    if (!canAccess(userId, projectId, 'viewer')) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+    res.json({ members: getMembers(projectId) });
   }
-  if (!canAccess(userId, projectId, 'viewer')) {
-    res.status(403).json({ error: 'Forbidden' });
-    return;
-  }
-  res.json({ members: getMembers(projectId) });
-});
+);
 
-router.post('/projects/:projectId/members', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const { projectId } = req.params;
-  const { userId: targetUserId, role } = (req.body ?? {}) as { userId?: string; role?: ProjectRole };
-  const userId = req.user?.id;
-  if (!userId || !targetUserId || !role) {
-    res.status(400).json({ error: 'userId and role required' });
-    return;
+router.post(
+  '/projects/:projectId/members',
+  requireAuth,
+  (req: AuthenticatedRequest, res: Response) => {
+    const { projectId } = req.params as { projectId: string };
+    const { userId: targetUserId, role } = (req.body ?? {}) as {
+      userId?: string;
+      role?: ProjectRole;
+    };
+    const userId = req.user?.id;
+    if (!userId || !targetUserId || !role) {
+      res.status(400).json({ error: 'userId and role required' });
+      return;
+    }
+    if (!canAccess(userId, projectId, 'owner')) {
+      res.status(403).json({ error: 'Only owners can add members' });
+      return;
+    }
+    addMember(projectId, targetUserId, role);
+    res.status(201).json({ success: true });
   }
-  if (!canAccess(userId, projectId, 'owner')) {
-    res.status(403).json({ error: 'Only owners can add members' });
-    return;
-  }
-  addMember(projectId, targetUserId, role);
-  res.status(201).json({ success: true });
-});
+);
 
 router.delete(
   '/projects/:projectId/members/:userId',
   requireAuth,
   (req: AuthenticatedRequest, res: Response) => {
-    const { projectId, userId: targetUserId } = req.params;
+    const { projectId, userId: targetUserId } = req.params as { projectId: string; userId: string };
     const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -78,7 +89,11 @@ router.get(
   '/projects/:projectId/entities/:entityType/:entityId/comments',
   requireAuth,
   (req: AuthenticatedRequest, res: Response) => {
-    const { projectId, entityType, entityId } = req.params;
+    const { projectId, entityType, entityId } = req.params as {
+      projectId: string;
+      entityType: string;
+      entityId: string;
+    };
     const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -101,7 +116,11 @@ router.post(
   '/projects/:projectId/entities/:entityType/:entityId/comments',
   requireAuth,
   (req: AuthenticatedRequest, res: Response) => {
-    const { projectId, entityType, entityId } = req.params;
+    const { projectId, entityType, entityId } = req.params as {
+      projectId: string;
+      entityType: string;
+      entityId: string;
+    };
     const userId = req.user?.id;
     const body = (req.body ?? {}).body as string | undefined;
     if (!userId) {
@@ -112,7 +131,11 @@ router.post(
       res.status(403).json({ error: 'Forbidden' });
       return;
     }
-    if (!COMMENT_ENTITY_TYPES.includes(entityType as EntityType) || typeof body !== 'string' || !body.trim()) {
+    if (
+      !COMMENT_ENTITY_TYPES.includes(entityType as EntityType) ||
+      typeof body !== 'string' ||
+      !body.trim()
+    ) {
       res.status(400).json({ error: 'Invalid entityType or body required' });
       return;
     }
@@ -134,7 +157,11 @@ router.get(
   '/projects/:projectId/entities/:entityType/:entityId/versions',
   requireAuth,
   (req: AuthenticatedRequest, res: Response) => {
-    const { projectId, entityType, entityId } = req.params;
+    const { projectId, entityType, entityId } = req.params as {
+      projectId: string;
+      entityType: string;
+      entityId: string;
+    };
     const userId = req.user?.id;
     const limit = Math.min(parseInt(req.query.limit as string, 10) || 50, 100);
     if (!userId) {
@@ -158,9 +185,16 @@ router.post(
   '/projects/:projectId/entities/:entityType/:entityId/versions',
   requireAuth,
   (req: AuthenticatedRequest, res: Response) => {
-    const { projectId, entityType, entityId } = req.params;
+    const { projectId, entityType, entityId } = req.params as {
+      projectId: string;
+      entityType: string;
+      entityId: string;
+    };
     const userId = req.user?.id;
-    const data = typeof (req.body ?? {}).data === 'string' ? (req.body as { data: string }).data : JSON.stringify(req.body ?? {});
+    const data =
+      typeof (req.body ?? {}).data === 'string'
+        ? (req.body as { data: string }).data
+        : JSON.stringify(req.body ?? {});
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
       return;

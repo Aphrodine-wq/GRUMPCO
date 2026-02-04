@@ -1,7 +1,7 @@
 <script lang="ts">
   import { sortedSessions, sessionsStore } from '../stores/sessionsStore';
   import { Button } from '../lib/design-system';
-  import GRumpBlob from './GRumpBlob.svelte';
+  import FrownyFace from './FrownyFace.svelte';
 
   let { onSelectProject, onNewProject, onUpgrade } = $props<{
     onSelectProject: (id: string) => void;
@@ -29,7 +29,7 @@
   <header class="header">
     <div class="header-content">
       <div class="logo-area">
-        <GRumpBlob size="md" state="idle" animated={true} />
+        <FrownyFace size="md" state="idle" animated={true} />
         <h1>G-Rump</h1>
       </div>
       <div style="display: flex; gap: 12px;">
@@ -63,7 +63,7 @@
 
     {#if $sortedSessions.length === 0}
       <div class="empty-state">
-        <GRumpBlob size="lg" state="idle" animated={true} />
+        <FrownyFace size="lg" state="idle" animated={true} />
         <h3>What are we building?</h3>
         <p>Tell me your idea and I'll help design and build it.</p>
         <Button onclick={onNewProject} variant="secondary">Create your first project</Button>
@@ -74,6 +74,12 @@
           <div
             class="project-card"
             onclick={() => onSelectProject(session.id)}
+            onkeydown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelectProject(session.id);
+              }
+            }}
             role="button"
             tabindex="0"
           >
@@ -260,6 +266,7 @@
     margin: 4px 0;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -302,7 +309,8 @@
     gap: 16px;
   }
 
-  .empty-icon {
+  /* empty-icon is used dynamically, preserve for future use */
+  :global(.empty-icon) {
     width: 64px;
     height: 64px;
     background: #f4f4f5;

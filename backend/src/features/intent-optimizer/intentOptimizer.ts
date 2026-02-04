@@ -8,20 +8,20 @@
 import logger from '../../middleware/logger.js';
 import { withResilience } from '../../services/resilience.js';
 import { withCache } from '../../services/cacheService.js';
-import { getStream, type StreamParams, type StreamEvent } from '../../services/llmGateway.js';
+import { getStream, type StreamParams } from '../../services/llmGateway.js';
 import {
-  OptimizationMode,
-  OptimizationOptions,
-  OptimizedIntent,
-  OptimizationRequest,
-  OptimizationResponse,
-  Constraint,
-  NonFunctionalRequirement,
-  TechStackHint,
-  ActorDefinition,
-  DataFlowSummary,
-  AmbiguityAnalysis,
-  ClarificationQuestion,
+  type OptimizationMode,
+  type OptimizationOptions,
+  type OptimizedIntent,
+  type OptimizationRequest,
+  type OptimizationResponse,
+  type Constraint,
+  type NonFunctionalRequirement,
+  type TechStackHint,
+  type ActorDefinition,
+  type DataFlowSummary,
+  type AmbiguityAnalysis,
+  type ClarificationQuestion,
 } from './types.js';
 
 const DEFAULT_INTENT_MODEL = 'moonshotai/kimi-k2.5';
@@ -36,7 +36,7 @@ async function getCompletion(
 ): Promise<string> {
   const modelId = options?.model ?? DEFAULT_INTENT_MODEL;
   const stream = getStream(params, { provider: 'nim', modelId });
-  
+
   let fullText = '';
   for await (const event of stream) {
     if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
@@ -45,7 +45,7 @@ async function getCompletion(
       throw new Error(`LLM Gateway error: ${JSON.stringify(event.error)}`);
     }
   }
-  
+
   return fullText;
 }
 
@@ -158,32 +158,33 @@ function buildUserMessage(
 ): string {
   let message = `Please optimize the following intent for ${mode} mode:\n\n`;
   message += `RAW INTENT:\n${rawIntent}\n\n`;
-  
+
   if (options?.projectContext) {
     const ctx = options.projectContext;
     message += `PROJECT CONTEXT:\n`;
     if (ctx.name) message += `- Project Name: ${ctx.name}\n`;
-    if (ctx.existingTechStack?.length) message += `- Existing Tech Stack: ${ctx.existingTechStack.join(', ')}\n`;
+    if (ctx.existingTechStack?.length)
+      message += `- Existing Tech Stack: ${ctx.existingTechStack.join(', ')}\n`;
     if (ctx.phase) message += `- Project Phase: ${ctx.phase}\n`;
     if (ctx.teamSize) message += `- Team Size: ${ctx.teamSize}\n`;
     if (ctx.timeline) message += `- Timeline: ${ctx.timeline}\n`;
     if (ctx.budget) message += `- Budget: ${ctx.budget}\n`;
     message += `\n`;
   }
-  
+
   if (options?.maxFeatures) {
     message += `CONSTRAINT: Limit to top ${options.maxFeatures} most important features.\n\n`;
   }
-  
+
   if (options?.includeNFRs === false) {
     message += `CONSTRAINT: Do not include non-functional requirements.\n\n`;
   }
-  
+
   const numQuestions = Math.min(Math.max(options?.clarificationQuestionsCount ?? 3, 1), 5);
   message += `CONSTRAINT: Generate ${numQuestions} high-impact clarification questions.\n\n`;
-  
+
   message += `Return the optimized intent as JSON matching the schema exactly.`;
-  
+
   return message;
 }
 
@@ -192,7 +193,7 @@ function buildUserMessage(
  */
 function parseOptimizationResponse(raw: string): OptimizedIntent {
   let text = raw.trim();
-  
+
   // Extract JSON from markdown code blocks
   if (text.includes('```json')) {
     const match = text.match(/```json\n?([\s\S]*?)\n?```/);
@@ -205,15 +206,17 @@ function parseOptimizationResponse(raw: string): OptimizedIntent {
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) text = jsonMatch[0];
   }
-  
+
   try {
     const parsed = JSON.parse(text) as Partial<OptimizedIntent>;
-    
+
     // Validate and set defaults
     return {
       features: Array.isArray(parsed.features) ? parsed.features : [],
       constraints: Array.isArray(parsed.constraints) ? parsed.constraints : [],
-      nonFunctionalRequirements: Array.isArray(parsed.nonFunctionalRequirements) ? parsed.nonFunctionalRequirements : [],
+      nonFunctionalRequirements: Array.isArray(parsed.nonFunctionalRequirements)
+        ? parsed.nonFunctionalRequirements
+        : [],
       techStack: Array.isArray(parsed.techStack) ? parsed.techStack : [],
       actors: Array.isArray(parsed.actors) ? parsed.actors : [],
       dataFlows: Array.isArray(parsed.dataFlows) ? parsed.dataFlows : [],
@@ -227,7 +230,10 @@ function parseOptimizationResponse(raw: string): OptimizedIntent {
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
     };
   } catch (e) {
-    logger.error({ error: (e as Error).message, raw: text.substring(0, 200) }, 'Failed to parse optimization response');
+    logger.error(
+      { error: (e as Error).message, raw: text.substring(0, 200) },
+      'Failed to parse optimization response'
+    );
     throw new Error(`Failed to parse optimization response: ${(e as Error).message}`);
   }
 }
@@ -245,25 +251,22 @@ async function optimizeIntentWithLLM(
     logger.warn({}, 'NIM not configured for intent optimization');
     throw new Error('Intent optimization requires NVIDIA NIM API key to be configured');
   }
-  
+
   const systemPrompt = getOptimizationPrompt(mode, options);
   const userMessage = buildUserMessage(rawIntent, mode, options);
-  
+
   // Create resilient wrapper
-  const resilientCall = withResilience(
-    async (params: StreamParams): Promise<string> => {
-      return await getCompletion(params, { model: DEFAULT_INTENT_MODEL });
-    },
-    'intent-optimization'
-  );
-  
+  const resilientCall = withResilience(async (params: StreamParams): Promise<string> => {
+    return await getCompletion(params, { model: DEFAULT_INTENT_MODEL });
+  }, 'intent-optimization');
+
   const response = await resilientCall({
     model: DEFAULT_INTENT_MODEL,
     max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: userMessage }],
   });
-  
+
   return parseOptimizationResponse(response);
 }
 
@@ -272,24 +275,26 @@ async function optimizeIntentWithLLM(
  */
 function calculateConfidence(optimized: OptimizedIntent, mode: OptimizationMode): number {
   let score = optimized.confidence || 0.5;
-  
+
   // Adjust based on completeness
   if (optimized.features.length > 0) score += 0.1;
   if (optimized.constraints.length > 0) score += 0.1;
   if (optimized.actors.length > 0) score += 0.05;
   if (optimized.techStack.length > 0) score += 0.05;
-  
+
   // Adjust based on ambiguity
   score -= optimized.ambiguity.score * 0.2;
-  
+
   // Mode-specific adjustments
   if (mode === 'codegen') {
-    if (optimized.nonFunctionalRequirements.some(nfr => nfr.category === 'maintainability')) score += 0.05;
+    if (optimized.nonFunctionalRequirements.some((nfr) => nfr.category === 'maintainability'))
+      score += 0.05;
   } else {
     if (optimized.dataFlows.length > 0) score += 0.05;
-    if (optimized.nonFunctionalRequirements.some(nfr => nfr.category === 'scalability')) score += 0.05;
+    if (optimized.nonFunctionalRequirements.some((nfr) => nfr.category === 'scalability'))
+      score += 0.05;
   }
-  
+
   // Clamp to 0-1 range
   return Math.max(0, Math.min(1, score));
 }
@@ -304,13 +309,16 @@ export async function optimizeIntent(
   options?: OptimizationOptions
 ): Promise<OptimizedIntent> {
   const startTime = Date.now();
-  
-  logger.info({ 
-    rawLength: rawIntent.length, 
-    mode, 
-    hasContext: !!options?.projectContext 
-  }, 'Intent optimization requested');
-  
+
+  logger.info(
+    {
+      rawLength: rawIntent.length,
+      mode,
+      hasContext: !!options?.projectContext,
+    },
+    'Intent optimization requested'
+  );
+
   // Create cache key
   const cacheKey = JSON.stringify({
     v: CACHE_VERSION,
@@ -318,29 +326,28 @@ export async function optimizeIntent(
     mode,
     options,
   });
-  
-  const result = await withCache(
-    'intent-optimization',
-    cacheKey,
-    async () => {
-      const optimized = await optimizeIntentWithLLM(rawIntent, mode, options);
-      const confidence = calculateConfidence(optimized, mode);
-      
-      return {
-        ...optimized,
-        confidence,
-      };
-    }
-  );
-  
+
+  const result = await withCache('intent-optimization', cacheKey, async () => {
+    const optimized = await optimizeIntentWithLLM(rawIntent, mode, options);
+    const confidence = calculateConfidence(optimized, mode);
+
+    return {
+      ...optimized,
+      confidence,
+    };
+  });
+
   const processingTime = Date.now() - startTime;
-  logger.info({ 
-    processingTime,
-    mode,
-    confidence: result.confidence,
-    featuresCount: result.features.length,
-  }, 'Intent optimization completed');
-  
+  logger.info(
+    {
+      processingTime,
+      mode,
+      confidence: result.confidence,
+      featuresCount: result.features.length,
+    },
+    'Intent optimization completed'
+  );
+
   return result;
 }
 
@@ -352,15 +359,11 @@ export async function optimizeIntentWithMetadata(
   request: OptimizationRequest
 ): Promise<OptimizationResponse> {
   const startTime = Date.now();
-  
-  const optimized = await optimizeIntent(
-    request.intent,
-    request.mode,
-    request.options
-  );
-  
+
+  const optimized = await optimizeIntent(request.intent, request.mode, request.options);
+
   const processingTime = Date.now() - startTime;
-  
+
   return {
     optimized,
     original: request.intent,

@@ -289,7 +289,10 @@ async function jiraAgileFetch<T>(
  * Get all projects the user has access to
  */
 export async function getProjects(userId: string): Promise<JiraProject[]> {
-  const result = await jiraFetch<{ values: JiraProject[] }>(userId, '/project/search?expand=description');
+  const result = await jiraFetch<{ values: JiraProject[] }>(
+    userId,
+    '/project/search?expand=description'
+  );
   return result?.values ?? [];
 }
 
@@ -331,7 +334,10 @@ export async function getIssue(userId: string, issueKey: string): Promise<JiraIs
 /**
  * Create a new issue
  */
-export async function createIssue(userId: string, input: CreateIssueInput): Promise<JiraIssue | null> {
+export async function createIssue(
+  userId: string,
+  input: CreateIssueInput
+): Promise<JiraIssue | null> {
   const fields: Record<string, unknown> = {
     project: { key: input.projectKey },
     summary: input.summary,
@@ -572,7 +578,10 @@ export async function searchUsers(
     query,
     maxResults: '20',
   });
-  const result = await jiraFetch<JiraUser[]>(userId, `/user/assignable/search?${params.toString()}`);
+  const result = await jiraFetch<JiraUser[]>(
+    userId,
+    `/user/assignable/search?${params.toString()}`
+  );
   return result ?? [];
 }
 
@@ -641,10 +650,7 @@ export async function getSprintIssues(
     startAt: String(options.startAt ?? 0),
     maxResults: String(options.maxResults ?? 50),
   });
-  return jiraAgileFetch<JiraSearchResult>(
-    userId,
-    `/sprint/${sprintId}/issue?${params.toString()}`
-  );
+  return jiraAgileFetch<JiraSearchResult>(userId, `/sprint/${sprintId}/issue?${params.toString()}`);
 }
 
 /**
@@ -682,10 +688,7 @@ export async function getBacklogIssues(
     startAt: String(options.startAt ?? 0),
     maxResults: String(options.maxResults ?? 50),
   });
-  return jiraAgileFetch<JiraSearchResult>(
-    userId,
-    `/board/${boardId}/backlog?${params.toString()}`
-  );
+  return jiraAgileFetch<JiraSearchResult>(userId, `/board/${boardId}/backlog?${params.toString()}`);
 }
 
 /**
@@ -736,14 +739,20 @@ export async function bulkCreateIssues(
  * Get my open issues across all projects
  */
 export async function getMyOpenIssues(userId: string): Promise<JiraIssue[]> {
-  const result = await searchIssues(userId, 'assignee = currentUser() AND resolution = Unresolved ORDER BY updated DESC');
+  const result = await searchIssues(
+    userId,
+    'assignee = currentUser() AND resolution = Unresolved ORDER BY updated DESC'
+  );
   return result?.issues ?? [];
 }
 
 /**
  * Get issues updated in the last N days
  */
-export async function getRecentlyUpdatedIssues(userId: string, days: number = 7): Promise<JiraIssue[]> {
+export async function getRecentlyUpdatedIssues(
+  userId: string,
+  days: number = 7
+): Promise<JiraIssue[]> {
   const result = await searchIssues(userId, `updated >= -${days}d ORDER BY updated DESC`);
   return result?.issues ?? [];
 }

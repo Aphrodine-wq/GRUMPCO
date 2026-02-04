@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
+  import { X, Zap } from 'lucide-svelte';
 
   interface QuickAction {
     id: string;
@@ -46,7 +47,7 @@
   onMount(() => {
     document.addEventListener('click', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
-    
+
     return () => {
       document.removeEventListener('click', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
@@ -54,14 +55,20 @@
   });
 </script>
 
-<div class="quick-actions" class:position-bottom-right={position === 'bottom-right'} class:position-bottom-left={position === 'bottom-left'} class:position-top-right={position === 'top-right'} class:position-top-left={position === 'top-left'}>
+<div
+  class="quick-actions"
+  class:position-bottom-right={position === 'bottom-right'}
+  class:position-bottom-left={position === 'bottom-left'}
+  class:position-top-right={position === 'top-right'}
+  class:position-top-left={position === 'top-left'}
+>
   {#if isExpanded}
     <div class="quick-actions-list" role="menu">
       {#each actions as action (action.id)}
         <button
           class="quick-action-item"
           class:primary={action.primary}
-          on:click={() => handleAction(action)}
+          onclick={() => handleAction(action)}
           role="menuitem"
           aria-label={action.label}
         >
@@ -75,11 +82,17 @@
     bind:this={mainButton}
     class="quick-actions-main"
     class:expanded={isExpanded}
-    on:click={toggleExpanded}
+    onclick={toggleExpanded}
     aria-label={isExpanded ? 'Close actions' : 'Open actions'}
     aria-expanded={isExpanded}
   >
-    <span class="quick-actions-icon">{isExpanded ? '✕' : '⚡'}</span>
+    <span class="quick-actions-icon">
+      {#if isExpanded}
+        <X class="w-6 h-6" strokeWidth={2} />
+      {:else}
+        <Zap class="w-6 h-6" strokeWidth={2} />
+      {/if}
+    </span>
   </button>
 </div>
 
@@ -154,7 +167,7 @@
     background: transparent;
     border: 1px solid transparent;
     border-radius: 4px;
-    color: #E5E5E5;
+    color: #e5e5e5;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
     cursor: pointer;
@@ -204,7 +217,7 @@
   }
 
   .quick-actions-main:hover {
-    background: #0052CC;
+    background: #0052cc;
     box-shadow: 0 6px 16px rgba(0, 102, 255, 0.5);
     transform: scale(1.05);
   }
@@ -214,12 +227,12 @@
   }
 
   .quick-actions-main.expanded {
-    background: #DC2626;
+    background: #dc2626;
     box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
   }
 
   .quick-actions-main.expanded:hover {
-    background: #B91C1C;
+    background: #b91c1c;
     box-shadow: 0 6px 16px rgba(220, 38, 38, 0.5);
   }
 
@@ -249,4 +262,3 @@
     }
   }
 </style>
-

@@ -10,14 +10,15 @@ export function getFrontendAgentPrompt(
   contextSummary?: string,
   hasCreativeDesignDoc?: boolean
 ): string {
-  const frameworkGuide = framework === 'vue'
-    ? `- Vue 3 with Composition API
+  const frameworkGuide =
+    framework === 'vue'
+      ? `- Vue 3 with Composition API
      - TypeScript for type safety
      - TailwindCSS for styling
      - Vite as build tool
      - Pinia for state management
      - Vue Router for routing`
-    : `- React 18+
+      : `- React 18+
      - TypeScript for type safety
      - TailwindCSS for styling
      - Vite as build tool
@@ -149,7 +150,9 @@ Return a JSON object:
 }
 \`\`\`
 
-${hasCreativeDesignDoc ? `
+${
+  hasCreativeDesignDoc
+    ? `
 ## When a Creative Design Document is provided (mandatory):
 - **Layout**: Implement layout regions and breakpoints exactly as described (header, sidebar, main, footer, etc.). Use the grid and breakpoints from the CDD.
 - **UI principles**: Follow the stated visual hierarchy, spacing, typography, and key interactions. Do not deviate.
@@ -157,7 +160,9 @@ ${hasCreativeDesignDoc ? `
 - **UX flows**: Implement the user journeys and critical interaction steps in order.
 - **Accessibility**: Apply all accessibility notes from the CDD (focus order, contrast, labels).
 - **Responsiveness**: Apply responsiveness notes and ensure layout adapts per breakpoint as specified.
-` : ''}
+`
+    : ''
+}
 ${CLAUDE_CODE_QUALITY_BLOCK}
 
 ## Quality Standards:
@@ -189,6 +194,6 @@ ${contextSummary}
 
 Use the context above to guide your code generation. Ensure your implementation aligns with the project's architecture, patterns, and quality requirements.`;
   }
-  
+
   return basePrompt;
 }

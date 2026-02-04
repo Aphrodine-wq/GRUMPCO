@@ -1,15 +1,30 @@
 # G-Rump Roadmap
 
-> **Last Updated:** January 2026
+> **Version:** 2.1.0 | **Last Updated:** February 2026
+
+## Current Focus: NVIDIA Golden Developer Award
+
+G-Rump is pivoting to full NVIDIA Golden Developer Award compliance. All six checklist requirements are now addressed:
+
+| Requirement | Implementation | Location |
+|-------------|----------------|----------|
+| **Cloud** | NGC-ready deployment on GCP/AWS | [deploy/ngc/](../deploy/ngc/) |
+| **Data** | NeMo Curator synthetic data pipeline | [services/nemo-curator/](../services/nemo-curator/) |
+| **Framework** | NVIDIA NIM for LLMs and RAG | Built-in |
+| **Training** | NeMo Framework fine-tuning example | [services/nemo-training/](../services/nemo-training/) |
+| **Inference** | NVIDIA NIM (Nemotron) | Built-in |
+| **Observability** | NIM-aligned metrics, OTEL | [NVIDIA_OBSERVABILITY.md](NVIDIA_OBSERVABILITY.md) |
 
 ## Version Milestones
 
 | Version | Target | Focus | Status |
 |---------|--------|-------|--------|
-| **v1.0** | Q1 2026 | Core SHIP workflow, Electron app, basic codegen | Current |
-| **v1.1** | Q2 2026 | More AI models, Intent Optimizer, Agent evals | Planned |
-| **v1.2** | Q3 2026 | IDE integrations, Codebase scanner, Webhooks | Planned |
-| **v2.0** | Q4 2026 | Multi-agent orchestration, "Wow" features | Future |
+| **v1.0** | Q1 2026 | Core SHIP workflow, Electron app, basic codegen | Shipped |
+| **v2.0** | Q1 2026 | G-Agent orchestration, Express 5, enhanced caching | Shipped |
+| **v2.1** | Q1 2026 | RAG, agent evals, VS Code extension | Shipped |
+| **v2.1+** | Q1 2026 | NVIDIA Golden Developer pivot (NGC, NeMo, observability) | **Current** |
+| **v2.2** | Q2 2026 | More IDE integrations, Intent Optimizer, codebase scanner | Planned |
+| **v3.0** | Q3 2026 | Enhanced G-Agent, "Wow" features, offline support | Planned |
 
 ## Priority Legend
 
@@ -20,120 +35,208 @@
 
 ---
 
-## 1. More AI models (P1 - v1.1)
+## Completed (v2.1)
 
-G-Rump already supports multiple providers via the LLM gateway (`anthropic`, `zhipu`, `copilot`, `openrouter`) in `backend/src/services/llmGateway.ts`. Next steps:
+### RAG Integration (Shipped)
+- RAG screen (Ask docs): types filter, hybrid search, workspace namespace, document upload/reindex
+- Chat RAG context toggle: optional RAG context injection in main chat
+- RAG onboarding slide and discoverability improvements
+- Pinecone vector database integration
 
-- Add additional providers (e.g. Groq, Together, local Ollama).
-- Expose a richer model picker in Desktop and Web (per-mode defaults, “fast” vs “quality” presets).
-- Document model-specific limits (context window, tool support, streaming behaviour).
+### Intent-RAG Fusion (Shipped)
+- Intent-guided retrieval: parse intent from query, expand query with features/tech/data flows, then retrieve and rerank for architecture, spec, plan, chat, and ship
+- RAG-augmented intent enrichment: inject knowledge-base excerpts into the intent enrichment prompt for consistency with existing docs/specs
+- Optional `intentGuided: true` on `POST /api/rag/query`; env toggles `RAG_INTENT_GUIDED` and `INTENT_RAG_AUGMENT_ENRICH`
 
-## 2. More IDE integrations (P1 - v1.2)
+### G-Agent Evals (Shipped)
+- Golden-task definitions in `backend/tests/evals/*Tasks.ts`
+- LLM-as-judge via `backend/tests/evals/judge.ts`
+- CI integration on PRs and main
+- Results output to `frontend/test-results/g-agent-evals.json`
+
+### VS Code Extension (Shipped)
+- Chat interface in VS Code
+- SHIP workflow integration
+- Code intelligence features
+
+---
+
+## Completed (NVIDIA Golden Developer Pivot)
+
+### NGC-Ready Cloud Deployment (Shipped)
+- GCP and AWS provision scripts for NGC-certified VMs
+- CPU-only and GPU (T4) options
+- Docker Compose deploy scripts; documented in [deploy/ngc/](../deploy/ngc/)
+
+### NeMo Curator Synthetic Data (Shipped)
+- Python pipeline using Nemotron over NIM for Q&A generation
+- Output JSONL for RAG indexing; `npm run data:synth`
+- See [services/nemo-curator/](../services/nemo-curator/)
+
+### NeMo Framework Fine-Tuning (Shipped)
+- Example SFT/LoRA script for NGC GPU
+- README with NGC run instructions
+- See [services/nemo-training/](../services/nemo-training/)
+
+### NVIDIA Observability (Shipped)
+- NIM-aligned metrics: TTFB, tokens/sec, model labels
+- OpenTelemetry with `nvidia.nim.*` span attributes
+- [NVIDIA_OBSERVABILITY.md](NVIDIA_OBSERVABILITY.md)
+
+---
+
+## In Progress (v2.2)
+
+### 0. TODOs triage (recommended before award)
+
+Triage the ~41 TODO/FIXME matches across the repo (e.g. `RefactoredChatInterface.svelte`, backend services, CLI commands) into: **fix before award**, **fix in v2.2**, and **defer**. Fix or document high-impact ones (e.g. RefactoredChatInterface, agents routes) before the award deadline. See `npm run check-all` and test runs for regressions.
+
+### 1. Intent Optimizer (P0)
+
+Today, G-Rump uses the Rust Intent Compiler (`grump-intent`) plus LLM enrichment in `backend/src/services/intentCompilerService.ts` to extract actors, features, data flows, and tech stack hints.
+
+Planned "Intent Optimizer" capabilities:
+- A dedicated endpoint that takes raw or parsed intent and returns a cleaned-up, design-ready version: clearer feature list, explicit constraints, and non-functional requirements.
+- Optional "optimize for codegen" vs "optimize for architecture review" modes.
+- UI hook in Architecture mode to review and tweak the optimized intent before diagram/spec generation.
+
+### 2. More IDE Integrations (P1)
 
 Current integrations:
-
-- VS Code extension: `integrations/vscode-extension`
+- VS Code extension: `packages/vscode-extension`
 - Cursor and Claude Code via the REST API and MCP server
 
 Planned:
-
 - JetBrains plugins (IntelliJ/WebStorm) that reuse the same webview UI and backend.
 - A generic LSP-style or CLI-based interface so any editor can trigger SHIP, architecture, and codegen.
 - Deeper Cursor integration (beyond REST/MCP) with ready-made rules/skills.
 
-## 3. Scan entire codebase → Mermaid chart (P1 - v1.2)
+### 3. Scan Entire Codebase → Mermaid Chart (P1)
 
 Backend support exists today:
-
-- `POST /api/analyze/architecture` in `backend/src/features/codebase-analysis/routes.ts` accepts a `workspacePath`
-  and returns a Mermaid diagram plus summary from the existing codebase.
+- `POST /api/analyze/architecture` accepts a `workspacePath` and returns a Mermaid diagram plus summary.
 
 Frontend support:
-
 - `analyzeArchitecture(workspacePath)` in `frontend/src/stores/featuresStore.ts`.
-- A Settings screen entry point in `frontend/src/components/SettingsScreen.svelte` (“Codebase Architecture (Mermaid)”)
-  that uses the workspace root from Code mode and shows the generated summary + Mermaid diagram.
+- Settings screen entry point ("Codebase Architecture (Mermaid)").
 
 Future enhancements:
-
 - Diagram type switch (C4 context, C4 container, component, flow).
 - Optional focus filters (per package, feature, or service).
 - Tight integration with the main Architecture mode viewer.
 
-## 4. Intent Optimizer (P0 - v1.1)
+---
 
-Today, G-Rump uses the Rust Intent Compiler (`grump-intent`) plus LLM enrichment in
-`backend/src/services/intentCompilerService.ts` to extract actors, features, data flows, and tech stack hints.
+## Planned (v3.0)
 
-Planned “Intent Optimizer” capabilities:
-
-- A dedicated endpoint that takes raw or parsed intent and returns a cleaned-up, design-ready version:
-  clearer feature list, explicit constraints, and non-functional requirements.
-- Optional “optimize for codegen” vs “optimize for architecture review” modes.
-- UI hook in Architecture mode to review and tweak the optimized intent before diagram/spec generation.
-
-## 5. AI integrated within the compiler (P2 - v2.0)
+### 4. AI Integrated Within the Compiler (P2)
 
 Current state:
-
 - Intent parsing is handled by the Rust CLI (`grump-intent`), which the backend calls and then enriches with the LLM.
 
 Directions to explore:
-
-- Hybrid parsing: keep Rust for structural extraction but allow the LLM (or another model) to resolve ambiguity,
-  infer missing business rules, and propose alternative formulations.
-- Optional “LLM-first” parsing for very unstructured prompts, with Rust validating and normalizing the result.
+- Hybrid parsing: keep Rust for structural extraction but allow the LLM (or another model) to resolve ambiguity, infer missing business rules, and propose alternative formulations.
+- Optional "LLM-first" parsing for very unstructured prompts, with Rust validating and normalizing the result.
 - Long term: a small local model for fast, offline-ish intent compilation, with cloud models used for deeper reasoning.
 
-## 6. “Wow” factor in the product
+### 5. "Wow" Factor Features (P2)
 
-Ideas to make the experience feel more impressive, especially for demos and first impressions:
+Ideas to make the experience feel more impressive:
+- Polished UI details: motion that respects "Reduced Motion", subtle transitions, keyboard shortcuts, rich empty states.
+- One-click "demo mode" that spins up a sample project and walks through Architecture → Spec → Plan → Code.
+- Shareable artifacts: exportable links or bundles for diagrams, PRDs, plans, and G-Agent work reports.
+- A short, scripted end-to-end demo (recorded or live) that shows SHIP, G-Agent reports, quality analysis, and scheduled tasks.
 
-- Polished UI details: motion that respects “Reduced Motion”, subtle transitions, keyboard shortcuts, rich empty states.
-- One-click “demo mode” that spins up a sample project and walks through Architecture → Spec → Plan → Code.
-- Shareable artifacts: exportable links or bundles for diagrams, PRDs, plans, and agent work reports.
-- One-click deploy for generated apps (e.g. opinionated Vercel presets for common stacks).
-- A short, scripted end-to-end demo (recorded or live) that shows SHIP, agent reports, WRunner, and scheduled agents.
-
-## 7. Webhooks for speed (P1 - v1.2)
+### 6. Enhanced Webhooks (P1)
 
 Current capabilities:
-
 - SSE event stream: `GET /api/events/stream` emits `ship.completed`, `codegen.ready`, `ship.failed`, `codegen.failed`
-  with `{ event, payload, timestamp }` (see `backend/src/routes/events.ts` and `backend/src/services/webhookService.ts`).
-- Inbound trigger: `POST /api/webhooks/trigger` can start SHIP or chat jobs and returns `202` with a `jobId`.
-- Outbound registration: `POST /api/webhooks/outbound` and the `GRUMP_WEBHOOK_URLS` environment variable configure
-  one or more webhook targets for events.
-
-Design principles for “fast” workflows:
-
-- Keep heavy work asynchronous: endpoints that start SHIP/codegen should return quickly (often `202`) while progress
-  and results are delivered via SSE or webhooks.
-- Use multiple outbound URLs for fan-out (CI, Slack, bots) without extra polling.
+- Inbound trigger: `POST /api/webhooks/trigger` can start SHIP or chat jobs
+- Outbound registration: `POST /api/webhooks/outbound` and `GRUMP_WEBHOOK_URLS` environment variable
 
 Future enhancements:
-
-- Additional outbound events: `architecture.generated` and `prd.generated` are now emitted (payload: architectureId, projectName, hasDiagram/hasPrd) so external systems can chain pipelines on milestones. SSE `GET /api/events/stream` and `GRUMP_WEBHOOK_URLS` receive these events.
+- Additional outbound events: `architecture.generated` and `prd.generated`
 - Optional webhook signing and retry policies for production-grade consumers.
-- Higher-level docs and examples for building webhook-driven flows (e.g. “when SHIP completes, auto-deploy and post to Slack”).
+- Higher-level docs and examples for building webhook-driven flows.
 
-## 8. Agent evals (P0 - v1.1)
+### 7. Offline Mode (P2)
 
-We are adding offline evaluation suites for the main agents so changes can be measured over time:
+- Full offline support with local LLMs (Ollama)
+- Local-first architecture with sync when online
+- Desktop app works completely standalone
 
-- Golden-task definitions in `backend/tests/evals/*Tasks.ts` for:
-  - Architecture (`/api/architecture`)
-  - PRD/spec (`/api/prd`)
-  - SHIP (`/api/ship/start`)
-  - Codegen (`/api/codegen/start`)
-- An eval harness in `backend/tests/evals/runEvals.ts` that:
-  - Calls the running backend at `EVAL_BASE_URL` (default `http://localhost:3000`).
-  - Uses an LLM-as-judge (via OpenRouter or configured provider) via `backend/tests/evals/judge.ts`.
-  - Writes aggregated results to `frontend/test-results/agent-evals.json`.
-- A new script in `backend/package.json`:
-  - `npm run evals` – run all eval suites against a local or remote backend.
+---
 
-Next steps:
+## Desktop Features (Windows) - Shipped
 
-- Wire `npm run evals` into CI as a separate workflow that runs on PRs and publishes score summaries.
-- Expand safety/jailbreak prompts and scheduled-agent scenarios once the core eval path is stable.
+The Electron desktop app (Windows) includes:
+- **OS notifications**: Ship/codegen complete and error toasts (click to focus app)
+- **System tray**: Icon with Show, New chat, Settings, Open workspace folder, Quit
+- **Global shortcut**: `Ctrl+Shift+G` to show G-Rump from anywhere
+- **Open in Explorer**: Tray "Open workspace folder" and `grump.openPath(path)`
+- **Always-on-top**: Toggle in the title bar (pin icon); preference persisted
+- **Protocol**: `grump://` URLs for deep linking
+
+---
+
+## G-Agent System Enhancements
+
+### Quality Assurance (Shipped)
+- G-Agent Quality Analysis: Analyzes work reports, identifies issues
+- Auto-Fix Engine: Automatically applies fixes for auto-fixable issues
+- Work Reports: G-Agent generates detailed work reports
+
+### Planned Enhancements
+- Expand safety/jailbreak prompts in eval suite
+- Scheduled G-Agent scenarios
+- G-Agent performance benchmarking dashboard
+- Custom capability creation UI
+
+---
+
+## Infrastructure
+
+### Completed
+- Docker support with GPU acceleration
+- **NGC-ready cloud deployment** (GCP, AWS) for NVIDIA Golden Developer compliance
+- Kubernetes manifests for production-scale deployments
+- Prometheus + Grafana observability stack (NIM-aligned metrics)
+- HAProxy configuration for load balancing
+- ROCm Docker compose for AMD GPU support
+- k6 load testing integration in CI
+
+### Planned
+- Terraform modules for major cloud providers
+- Multi-region deployment support
+- Auto-scaling based on queue depth
+
+---
+
+## Documentation
+
+### Completed
+- Streamlined documentation structure
+- Comprehensive API reference
+- Production checklist
+- Security baseline
+- G-Agent system documentation
+
+### Planned
+- Interactive API explorer
+- Video tutorials
+- Example project gallery
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for how to contribute to the roadmap.
+
+For feature requests and discussions:
+1. Open a GitHub issue with the `enhancement` label
+2. Include use case and proposed implementation
+3. Link to relevant roadmap items
+
+---
+
+**Last roadmap review:** January 2026

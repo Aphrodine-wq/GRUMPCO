@@ -3,7 +3,11 @@ import { PassThrough } from 'stream';
 import type { FileDefinition, TechStack } from '../types/index.js';
 import type { GeneratedFile } from '../types/agents.js';
 
-function generateReadme(files: FileDefinition[], projectName: string, techStack: TechStack): string {
+function generateReadme(
+  files: FileDefinition[],
+  projectName: string,
+  techStack: TechStack
+): string {
   const stackInstructions: Record<TechStack, string> = {
     'react-express-prisma': `## Setup
 
@@ -93,10 +97,10 @@ npx prisma migrate dev
 4. Start development server:
 \`\`\`bash
 npm run dev
-\`\`\``
+\`\`\``,
   };
 
-  const fileList = files.map(f => `- \`${f.path}\``).join('\n');
+  const fileList = files.map((f) => `- \`${f.path}\``).join('\n');
 
   return `# ${projectName}
 
@@ -113,7 +117,7 @@ ${fileList}
 This is a starter scaffold generated from a Mermaid diagram. Key points:
 
 - Contains basic structure and placeholder implementations
-- Look for \`TODO:\` comments for areas needing implementation
+- See codebase TODOs for implementation gaps
 - Review and customize according to your specific requirements
 - Add proper error handling and validation as needed
 
@@ -124,28 +128,28 @@ ${files.length} files generated for ${techStack} stack.
 }
 
 export function createProjectZip(
-  files: FileDefinition[], 
+  files: FileDefinition[],
   projectName: string,
   techStack: TechStack
 ): PassThrough {
-  const archive = archiver('zip', { 
-    zlib: { level: 9 } 
+  const archive = archiver('zip', {
+    zlib: { level: 9 },
   });
-  
+
   const passThrough = new PassThrough();
   archive.pipe(passThrough);
 
   // Add each generated file
-  files.forEach(file => {
-    archive.append(file.content, { 
-      name: `${projectName}/${file.path}` 
+  files.forEach((file) => {
+    archive.append(file.content, {
+      name: `${projectName}/${file.path}`,
     });
   });
 
   // Add auto-generated README
   const readme = generateReadme(files, projectName, techStack);
-  archive.append(readme, { 
-    name: `${projectName}/README.md` 
+  archive.append(readme, {
+    name: `${projectName}/README.md`,
   });
 
   // Finalize the archive

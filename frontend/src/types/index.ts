@@ -52,7 +52,32 @@ export interface ToolResultBlock {
   diff?: FileDiff;
 }
 
-export type ContentBlock = TextBlock | CodeBlockType | MermaidBlock | ToolCallBlock | ToolResultBlock;
+export interface IntentBlock {
+  type: 'intent';
+  content: Record<string, unknown>;
+}
+
+export interface ContextBlock {
+  type: 'context';
+  content: { mode: string; capabilities?: string[]; toolCount?: number };
+}
+
+export type ContentBlock =
+  | TextBlock
+  | CodeBlockType
+  | MermaidBlock
+  | ToolCallBlock
+  | ToolResultBlock
+  | IntentBlock
+  | ContextBlock;
+
+// Routing decision (transparent model selection)
+export interface RoutingDecision {
+  complexity?: number;
+  reason?: string;
+  alternatives?: string[];
+  estimatedCost?: number;
+}
 
 // Message types
 export interface Message {
@@ -60,6 +85,10 @@ export interface Message {
   content: string | ContentBlock[];
   diagramCode?: string;
   timestamp?: number;
+  /** Model used for this message (transparent routing) */
+  model?: string;
+  /** Why this model was chosen (when available) */
+  routingDecision?: RoutingDecision;
 }
 
 // Diagram version for tracking refinement history
@@ -79,6 +108,8 @@ export interface RefinementContext {
 }
 
 // Session types
+export type SessionType = 'chat' | 'gAgent' | 'freeAgent';
+
 export interface Session {
   id: string;
   name: string;
@@ -89,6 +120,8 @@ export interface Session {
   currentDiagramId?: string; // Current active diagram version
   /** Optional project id; when present, include in backend calls (e.g. ship/codegen from chat). */
   projectId?: string | null;
+  /** Optional session type; when 'gAgent' or 'freeAgent', session uses G-Agent capabilities and is shown with a badge. */
+  sessionType?: SessionType;
 }
 
 // Legacy session type for migration

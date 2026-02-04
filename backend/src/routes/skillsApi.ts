@@ -4,7 +4,7 @@
  * Mounted at /api/skills-api to avoid clashing with /api/skills (skill registry).
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { sendServerError } from '../utils/errorResponse.js';
 
 const router = Router();

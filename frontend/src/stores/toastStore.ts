@@ -39,7 +39,7 @@ export function showToast(
   }
 ): string {
   const id = generateId();
-  
+
   const toast: Toast = {
     id,
     message,
@@ -49,31 +49,31 @@ export function showToast(
     actions: options?.actions,
     onDismiss: options?.onDismiss,
   };
-  
-  toasts.update(t => {
+
+  toasts.update((t) => {
     const updated = [toast, ...t];
     // Limit visible toasts (but keep persistent ones)
-    const nonPersistent = updated.filter(t => !t.persistent);
+    const nonPersistent = updated.filter((t) => !t.persistent);
     if (nonPersistent.length > MAX_TOASTS) {
-      const persistent = updated.filter(t => t.persistent);
+      const persistent = updated.filter((t) => t.persistent);
       const limited = nonPersistent.slice(0, MAX_TOASTS);
       return [...persistent, ...limited];
     }
     return updated;
   });
-  
+
   // Auto-dismiss after duration (unless persistent)
   if (duration > 0 && !options?.persistent) {
     setTimeout(() => {
       dismissToast(id);
     }, duration);
   }
-  
+
   return id;
 }
 
 export function dismissToast(id: string): void {
-  toasts.update(t => t.filter(toast => toast.id !== id));
+  toasts.update((t) => t.filter((toast) => toast.id !== id));
 }
 
 export function clearAllToasts(): void {

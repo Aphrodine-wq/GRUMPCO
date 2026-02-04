@@ -3,7 +3,7 @@
  * GET /api/events/stream?sessionId=... – optional sessionId filters events to that session.
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { subscribeToEvents } from '../services/eventsStreamService.js';
 import { db as supabaseDb, isMockMode } from '../services/supabaseClient.js';
 import { isServerlessRuntime } from '../config/runtime.js';
@@ -47,7 +47,10 @@ router.get('/poll', async (req: Request, res: Response) => {
 
   try {
     const table = supabaseDb.from('events');
-    let query = table.select('*').order('created_at', { ascending: true }).limit(limit || 100);
+    let query = table
+      .select('*')
+      .order('created_at', { ascending: true })
+      .limit(limit || 100);
     if (sessionId) query = query.eq('session_id', sessionId);
     if (since) query = query.gt('created_at', since);
     const { data, error } = await query;

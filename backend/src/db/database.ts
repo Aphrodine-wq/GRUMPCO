@@ -1,7 +1,7 @@
 /**
  * Database Service Layer
  * Provides database abstraction with SQLite (desktop) and PostgreSQL (scale) support
- * 
+ *
  * Optimizations:
  * - Prepared statement caching (statements compiled once, reused)
  * - Query result caching for frequently accessed data
@@ -14,14 +14,19 @@ import path from 'path';
 // This avoids loading native modules in serverless environments
 import type DatabaseType from 'better-sqlite3';
 import { SupabaseDatabaseService } from './supabase-db.js';
-import { type SessionRow, type PlanRow, type SpecRow, type ShipSessionRow, type WorkReportRow } from './schema.js';
+import {
+  type SessionRow,
+  type PlanRow,
+  type SpecRow,
+  type ShipSessionRow,
+  type WorkReportRow,
+} from './schema.js';
 import logger from '../middleware/logger.js';
 import { recordDbOperation } from '../middleware/metrics.js';
-import type { GenerationSession } from '../types/agents.js';
+import type { GenerationSession, AgentWorkReport } from '../types/agents.js';
 import type { ShipSession } from '../types/ship.js';
 import type { Plan } from '../types/plan.js';
 import type { SpecSession } from '../types/spec.js';
-import type { AgentWorkReport } from '../types/agents.js';
 import type { Settings } from '../types/settings.js';
 import type {
   IntegrationRecord,
@@ -37,6 +42,11 @@ import type {
   RateLimitRecord,
   BrowserAllowlistRecord,
   IntegrationProviderId,
+  SlackTokenRecord,
+  ConversationMemoryRecord,
+  MessagingSubscriptionRecord,
+  SlackUserPairingRecord,
+  ReminderRecord,
 } from '../types/integrations.js';
 
 type DbType = 'sqlite' | 'postgresql' | 'supabase';
@@ -49,9 +59,9 @@ interface CacheEntry<T> {
 
 // Cache TTL configuration (in milliseconds)
 const CACHE_TTL = {
-  settings: 5 * 60 * 1000,      // 5 minutes for settings
-  session: 30 * 1000,           // 30 seconds for sessions
-  usage: 60 * 1000,             // 1 minute for usage stats
+  settings: 5 * 60 * 1000, // 5 minutes for settings
+  session: 30 * 1000, // 30 seconds for sessions
+  usage: 60 * 1000, // 1 minute for usage stats
 };
 
 interface DatabaseConfig {
@@ -85,13 +95,13 @@ class DatabaseService {
   private db: DatabaseType.Database | null = null;
   private config: DatabaseConfig;
   private initialized = false;
-  
+
   // Prepared statement cache (compiled once, reused)
   private statementCache = new Map<string, DatabaseType.Statement>();
-  
+
   // Query result cache for frequently accessed data
   private resultCache = new Map<string, CacheEntry<unknown>>();
-  
+
   // Cache statistics
   private cacheStats = {
     hits: 0,
@@ -109,7 +119,7 @@ class DatabaseService {
    */
   private getStatement(sql: string): DatabaseType.Statement {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     let stmt = this.statementCache.get(sql);
     if (!stmt) {
       stmt = this.db.prepare(sql);
@@ -123,26 +133,22 @@ class DatabaseService {
   /**
    * Get cached result or execute query
    */
-  private getCachedOrFetch<T>(
-    cacheKey: string,
-    ttl: number,
-    fetchFn: () => T
-  ): T {
+  private getCachedOrFetch<T>(cacheKey: string, ttl: number, fetchFn: () => T): T {
     const cached = this.resultCache.get(cacheKey) as CacheEntry<T> | undefined;
     const now = Date.now();
-    
+
     if (cached && cached.expiresAt > now) {
       this.cacheStats.hits++;
       return cached.data;
     }
-    
+
     this.cacheStats.misses++;
     const data = fetchFn();
     this.resultCache.set(cacheKey, {
       data,
       expiresAt: now + ttl,
     });
-    
+
     return data;
   }
 
@@ -205,32 +211,34 @@ class DatabaseService {
         const dir = path.dirname(path.resolve(dbPath));
         fs.mkdirSync(dir, { recursive: true });
         this.db = new Database(dbPath);
-        
+
         // Performance pragmas
-        this.db.pragma('journal_mode = WAL');           // Better concurrency
-        this.db.pragma('synchronous = NORMAL');         // Balance safety/speed
-        this.db.pragma('cache_size = -64000');          // 64MB cache
-        this.db.pragma('temp_store = MEMORY');          // Temp tables in memory
-        this.db.pragma('mmap_size = 268435456');        // 256MB memory-mapped I/O
-        this.db.pragma('foreign_keys = ON');            // Enable foreign keys
-        this.db.pragma('busy_timeout = 5000');          // 5s timeout for locks
-        
+        this.db.pragma('journal_mode = WAL'); // Better concurrency
+        this.db.pragma('synchronous = NORMAL'); // Balance safety/speed
+        this.db.pragma('cache_size = -64000'); // 64MB cache
+        this.db.pragma('temp_store = MEMORY'); // Temp tables in memory
+        this.db.pragma('mmap_size = 268435456'); // 256MB memory-mapped I/O
+        this.db.pragma('foreign_keys = ON'); // Enable foreign keys
+        this.db.pragma('busy_timeout = 5000'); // 5s timeout for locks
+
         // Verify WAL mode
         const journalMode = this.db.pragma('journal_mode');
         logger.debug({ journalMode }, 'SQLite journal mode');
 
         runMigrations(this.db);
-        logger.info({ 
-          path: dbPath,
-          pragmas: {
-            journalMode: 'WAL',
-            cacheSize: '64MB',
-            mmapSize: '256MB',
-          }
-        }, 'SQLite database initialized with optimizations');
+        logger.info(
+          {
+            path: dbPath,
+            pragmas: {
+              journalMode: 'WAL',
+              cacheSize: '64MB',
+              mmapSize: '256MB',
+            },
+          },
+          'SQLite database initialized with optimizations'
+        );
       } else if (this.config.type === 'postgresql') {
-        // PostgreSQL would use pg library
-        // For now, we'll implement SQLite as primary
+        // PostgreSQL planned; production uses SQLite + Redis today (see docs/SCALING.md).
         throw new Error('PostgreSQL support not yet implemented');
       }
 
@@ -250,13 +258,16 @@ class DatabaseService {
       // Clear caches before closing
       this.resultCache.clear();
       this.statementCache.clear();
-      
+
       this.db.close();
       this.db = null;
       this.initialized = false;
-      logger.info({
-        cacheStats: this.getCacheStats(),
-      }, 'Database connection closed');
+      logger.info(
+        {
+          cacheStats: this.getCacheStats(),
+        },
+        'Database connection closed'
+      );
     }
   }
 
@@ -280,7 +291,7 @@ class DatabaseService {
 
     const start = process.hrtime.bigint();
     try {
-      const stmt = this.db.prepare(`
+      const stmt = this.getStatement(`
         INSERT INTO sessions (id, type, status, data, created_at, updated_at, started_at, completed_at, project_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
@@ -319,7 +330,7 @@ class DatabaseService {
   async getSession(sessionId: string): Promise<GenerationSession | null> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare('SELECT * FROM sessions WHERE id = ? AND type = ?');
+    const stmt = this.getStatement('SELECT * FROM sessions WHERE id = ? AND type = ?');
     const row = stmt.get(sessionId, 'generation') as SessionRow | undefined;
 
     if (!row) {
@@ -332,12 +343,14 @@ class DatabaseService {
   /**
    * List sessions with optional filters
    */
-  async listSessions(options: {
-    type?: 'generation' | 'ship' | 'spec' | 'plan';
-    status?: string;
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<GenerationSession[]> {
+  async listSessions(
+    options: {
+      type?: 'generation' | 'ship' | 'spec' | 'plan';
+      status?: string;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<GenerationSession[]> {
     if (!this.db) throw new Error('Database not initialized');
 
     let query = 'SELECT * FROM sessions WHERE 1=1';
@@ -368,7 +381,7 @@ class DatabaseService {
     const stmt = this.db.prepare(query);
     const rows = stmt.all(...params) as SessionRow[];
 
-    return rows.map(row => JSON.parse(row.data) as GenerationSession);
+    return rows.map((row) => JSON.parse(row.data) as GenerationSession);
   }
 
   /**
@@ -377,7 +390,7 @@ class DatabaseService {
   async deleteSession(sessionId: string): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare('DELETE FROM sessions WHERE id = ?');
+    const stmt = this.getStatement('DELETE FROM sessions WHERE id = ?');
     stmt.run(sessionId);
   }
 
@@ -389,7 +402,7 @@ class DatabaseService {
   async saveShipSession(session: ShipSession): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare(`
+    const stmt = this.getStatement(`
       INSERT INTO ship_sessions (id, phase, status, data, created_at, updated_at, project_id)
       VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -417,7 +430,7 @@ class DatabaseService {
   async getShipSession(sessionId: string): Promise<ShipSession | null> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare('SELECT * FROM ship_sessions WHERE id = ?');
+    const stmt = this.getStatement('SELECT * FROM ship_sessions WHERE id = ?');
     const row = stmt.get(sessionId) as ShipSessionRow | undefined;
 
     if (!row) {
@@ -430,12 +443,14 @@ class DatabaseService {
   /**
    * List ship sessions
    */
-  async listShipSessions(options: {
-    phase?: string;
-    status?: string;
-    projectId?: string;
-    limit?: number;
-  } = {}): Promise<ShipSession[]> {
+  async listShipSessions(
+    options: {
+      phase?: string;
+      status?: string;
+      projectId?: string;
+      limit?: number;
+    } = {}
+  ): Promise<ShipSession[]> {
     if (!this.db) throw new Error('Database not initialized');
 
     let query = 'SELECT * FROM ship_sessions WHERE 1=1';
@@ -466,7 +481,7 @@ class DatabaseService {
     const stmt = this.db.prepare(query);
     const rows = stmt.all(...params) as ShipSessionRow[];
 
-    return rows.map(row => JSON.parse(row.data) as ShipSession);
+    return rows.map((row) => JSON.parse(row.data) as ShipSession);
   }
 
   // ========== Plans ==========
@@ -477,7 +492,7 @@ class DatabaseService {
   async savePlan(plan: Plan): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare(`
+    const stmt = this.getStatement(`
       INSERT INTO plans (id, session_id, data, created_at, updated_at, approved_at, approved_by, started_at, completed_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -508,7 +523,7 @@ class DatabaseService {
   async getPlan(planId: string): Promise<Plan | null> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare('SELECT * FROM plans WHERE id = ?');
+    const stmt = this.getStatement('SELECT * FROM plans WHERE id = ?');
     const row = stmt.get(planId) as PlanRow | undefined;
 
     if (!row) {
@@ -521,10 +536,12 @@ class DatabaseService {
   /**
    * List plans
    */
-  async listPlans(options: {
-    status?: string;
-    limit?: number;
-  } = {}): Promise<Plan[]> {
+  async listPlans(
+    options: {
+      status?: string;
+      limit?: number;
+    } = {}
+  ): Promise<Plan[]> {
     if (!this.db) throw new Error('Database not initialized');
 
     let query = 'SELECT * FROM plans WHERE 1=1';
@@ -545,7 +562,7 @@ class DatabaseService {
     const stmt = this.db.prepare(query);
     const rows = stmt.all(...params) as PlanRow[];
 
-    return rows.map(row => JSON.parse(row.data) as Plan);
+    return rows.map((row) => JSON.parse(row.data) as Plan);
   }
 
   // ========== Specs ==========
@@ -556,7 +573,7 @@ class DatabaseService {
   async saveSpec(spec: SpecSession): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare(`
+    const stmt = this.getStatement(`
       INSERT INTO specs (id, session_id, data, created_at, updated_at, completed_at)
       VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -581,7 +598,7 @@ class DatabaseService {
   async getSpec(specId: string): Promise<SpecSession | null> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare('SELECT * FROM specs WHERE id = ?');
+    const stmt = this.getStatement('SELECT * FROM specs WHERE id = ?');
     const row = stmt.get(specId) as SpecRow | undefined;
 
     if (!row) {
@@ -613,7 +630,7 @@ class DatabaseService {
   async saveWorkReport(report: AgentWorkReport): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare(`
+    const stmt = this.getStatement(`
       INSERT INTO work_reports (id, session_id, agent_type, report, created_at)
       VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -636,10 +653,12 @@ class DatabaseService {
   async getWorkReports(sessionId: string): Promise<AgentWorkReport[]> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare('SELECT * FROM work_reports WHERE session_id = ? ORDER BY created_at');
+    const stmt = this.getStatement(
+      'SELECT * FROM work_reports WHERE session_id = ? ORDER BY created_at'
+    );
     const rows = stmt.all(sessionId) as WorkReportRow[];
 
-    return rows.map(row => JSON.parse(row.report) as AgentWorkReport);
+    return rows.map((row) => JSON.parse(row.report) as AgentWorkReport);
   }
 
   // ========== Settings ==========
@@ -652,17 +671,13 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     const cacheKey = `settings:${userKey}`;
-    
-    return this.getCachedOrFetch<Settings | null>(
-      cacheKey,
-      CACHE_TTL.settings,
-      () => {
-        const stmt = this.getStatement('SELECT data FROM settings WHERE id = ?');
-        const row = stmt.get(userKey) as { data: string } | undefined;
-        if (!row) return null;
-        return JSON.parse(row.data) as Settings;
-      }
-    );
+
+    return this.getCachedOrFetch<Settings | null>(cacheKey, CACHE_TTL.settings, () => {
+      const stmt = this.getStatement('SELECT data FROM settings WHERE id = ?');
+      const row = stmt.get(userKey) as { data: string } | undefined;
+      if (!row) return null;
+      return JSON.parse(row.data) as Settings;
+    });
   }
 
   /**
@@ -678,7 +693,7 @@ class DatabaseService {
       ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
     `);
     stmt.run(userKey, JSON.stringify(payload), updatedAt);
-    
+
     // Invalidate cache
     this.invalidateCache(`settings:${userKey}`);
   }
@@ -697,16 +712,17 @@ class DatabaseService {
     inputTokens?: number;
     outputTokens?: number;
     latencyMs?: number;
+    storageBytes?: number;
     success: boolean;
   }): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
     const start = process.hrtime.bigint();
     try {
-      const stmt = this.db.prepare(`
+      const stmt = this.getStatement(`
         INSERT INTO usage_records
-        (id, user_id, endpoint, method, model, input_tokens, output_tokens, latency_ms, success, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        (id, user_id, endpoint, method, model, input_tokens, output_tokens, latency_ms, storage_bytes, success, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
       `);
 
       stmt.run(
@@ -718,6 +734,7 @@ class DatabaseService {
         record.inputTokens || null,
         record.outputTokens || null,
         record.latencyMs || null,
+        record.storageBytes || null,
         record.success ? 1 : 0
       );
 
@@ -733,14 +750,10 @@ class DatabaseService {
   /**
    * Get usage records for a user within a date range
    */
-  async getUsageForUser(
-    userId: string,
-    fromDate: Date,
-    toDate: Date
-  ): Promise<UsageRecordRow[]> {
+  async getUsageForUser(userId: string, fromDate: Date, toDate: Date): Promise<UsageRecordRow[]> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare(`
+    const stmt = this.getStatement(`
       SELECT * FROM usage_records
       WHERE user_id = ? AND created_at >= ? AND created_at <= ?
       ORDER BY created_at DESC
@@ -758,7 +771,7 @@ class DatabaseService {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const stmt = this.db.prepare(`
+    const stmt = this.getStatement(`
       SELECT
         COALESCE(SUM(input_tokens), 0) as input,
         COALESCE(SUM(output_tokens), 0) as output
@@ -766,7 +779,9 @@ class DatabaseService {
       WHERE user_id = ? AND created_at >= ?
     `);
 
-    const result = stmt.get(userId, startOfMonth.toISOString()) as { input?: number; output?: number } | undefined;
+    const result = stmt.get(userId, startOfMonth.toISOString()) as
+      | { input?: number; output?: number }
+      | undefined;
     return {
       input: result?.input ?? 0,
       output: result?.output ?? 0,
@@ -790,11 +805,8 @@ class DatabaseService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const cacheKey = `usage:summary:${userId}:${startOfMonth.toISOString().slice(0, 7)}`;
 
-    return this.getCachedOrFetch(
-      cacheKey,
-      CACHE_TTL.usage,
-      () => {
-        const stmt = this.getStatement(`
+    return this.getCachedOrFetch(cacheKey, CACHE_TTL.usage, () => {
+      const stmt = this.getStatement(`
           SELECT
             COUNT(*) as total,
             SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful,
@@ -806,21 +818,26 @@ class DatabaseService {
           WHERE user_id = ? AND created_at >= ?
         `);
 
-        const result = stmt.get(userId, startOfMonth.toISOString()) as {
-          total?: number; successful?: number; failed?: number;
-          input_tokens?: number; output_tokens?: number; avg_latency?: number;
-        } | undefined;
-        
-        return {
-          totalRequests: result?.total ?? 0,
-          successfulRequests: result?.successful ?? 0,
-          failedRequests: result?.failed ?? 0,
-          monthlyInputTokens: result?.input_tokens ?? 0,
-          monthlyOutputTokens: result?.output_tokens ?? 0,
-          avgLatencyMs: result?.avg_latency ?? 0,
-        };
-      }
-    );
+      const result = stmt.get(userId, startOfMonth.toISOString()) as
+        | {
+            total?: number;
+            successful?: number;
+            failed?: number;
+            input_tokens?: number;
+            output_tokens?: number;
+            avg_latency?: number;
+          }
+        | undefined;
+
+      return {
+        totalRequests: result?.total ?? 0,
+        successfulRequests: result?.successful ?? 0,
+        failedRequests: result?.failed ?? 0,
+        monthlyInputTokens: result?.input_tokens ?? 0,
+        monthlyOutputTokens: result?.output_tokens ?? 0,
+        avgLatencyMs: result?.avg_latency ?? 0,
+      };
+    });
   }
 
   // ========== Comments & Version History ==========
@@ -836,19 +853,52 @@ class DatabaseService {
     body: string;
   }): void {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.db.prepare(`
+    const stmt = this.getStatement(`
       INSERT INTO comments (id, project_id, entity_type, entity_id, user_id, parent_id, body, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `);
-    stmt.run(p.id, p.project_id, p.entity_type, p.entity_id, p.user_id, p.parent_id ?? null, p.body);
+    stmt.run(
+      p.id,
+      p.project_id,
+      p.entity_type,
+      p.entity_id,
+      p.user_id,
+      p.parent_id ?? null,
+      p.body
+    );
   }
 
   /** List comments for an entity (requires migration 010). */
-  listComments(entity_type: string, entity_id: string): { id: string; project_id: string; entity_type: string; entity_id: string; user_id: string; parent_id: string | null; body: string; created_at: string; updated_at: string }[] {
+  listComments(
+    entity_type: string,
+    entity_id: string
+  ): {
+    id: string;
+    project_id: string;
+    entity_type: string;
+    entity_id: string;
+    user_id: string;
+    parent_id: string | null;
+    body: string;
+    created_at: string;
+    updated_at: string;
+  }[] {
     if (!this.db) throw new Error('Database not initialized');
     try {
-      const stmt = this.db.prepare('SELECT * FROM comments WHERE entity_type = ? AND entity_id = ? ORDER BY created_at');
-      return stmt.all(entity_type, entity_id) as { id: string; project_id: string; entity_type: string; entity_id: string; user_id: string; parent_id: string | null; body: string; created_at: string; updated_at: string }[];
+      const stmt = this.getStatement(
+        'SELECT * FROM comments WHERE entity_type = ? AND entity_id = ? ORDER BY created_at'
+      );
+      return stmt.all(entity_type, entity_id) as {
+        id: string;
+        project_id: string;
+        entity_type: string;
+        entity_id: string;
+        user_id: string;
+        parent_id: string | null;
+        body: string;
+        created_at: string;
+        updated_at: string;
+      }[];
     } catch {
       return [];
     }
@@ -865,15 +915,33 @@ class DatabaseService {
     created_by?: string | null;
   }): void {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.db.prepare(`
+    const stmt = this.getStatement(`
       INSERT INTO version_history (id, project_id, entity_type, entity_id, version, data, created_at, created_by)
       VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)
     `);
-    stmt.run(p.id, p.project_id, p.entity_type, p.entity_id, p.version, p.data, p.created_by ?? null);
+    stmt.run(
+      p.id,
+      p.project_id,
+      p.entity_type,
+      p.entity_id,
+      p.version,
+      p.data,
+      p.created_by ?? null
+    );
   }
 
   /** List version history for an entity (requires migration 010). */
-  listVersions(entity_type: string, entity_id: string, limit?: number): { id: string; version: number; data: string; created_at: string; created_by: string | null }[] {
+  listVersions(
+    entity_type: string,
+    entity_id: string,
+    limit?: number
+  ): {
+    id: string;
+    version: number;
+    data: string;
+    created_at: string;
+    created_by: string | null;
+  }[] {
     if (!this.db) throw new Error('Database not initialized');
     try {
       const sql = limit
@@ -881,7 +949,13 @@ class DatabaseService {
         : 'SELECT id, version, data, created_at, created_by FROM version_history WHERE entity_type = ? AND entity_id = ? ORDER BY version DESC';
       const stmt = this.db.prepare(sql);
       const args = limit ? [entity_type, entity_id, limit] : [entity_type, entity_id];
-      return stmt.all(...args) as { id: string; version: number; data: string; created_at: string; created_by: string | null }[];
+      return stmt.all(...args) as {
+        id: string;
+        version: number;
+        data: string;
+        created_at: string;
+        created_by: string | null;
+      }[];
     } catch {
       return [];
     }
@@ -891,7 +965,9 @@ class DatabaseService {
   getNextVersionNumber(entity_type: string, entity_id: string): number {
     if (!this.db) throw new Error('Database not initialized');
     try {
-      const stmt = this.db.prepare('SELECT COALESCE(MAX(version), 0) + 1 AS next FROM version_history WHERE entity_type = ? AND entity_id = ?');
+      const stmt = this.getStatement(
+        'SELECT COALESCE(MAX(version), 0) + 1 AS next FROM version_history WHERE entity_type = ? AND entity_id = ?'
+      );
       const row = stmt.get(entity_type, entity_id) as { next: number } | undefined;
       return row?.next ?? 1;
     } catch {
@@ -931,20 +1007,34 @@ class DatabaseService {
   }
 
   /** Get audit logs with filters */
-  async getAuditLogs(options: {
-    userId?: string;
-    category?: string;
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<AuditLogRecord[]> {
+  async getAuditLogs(
+    options: {
+      userId?: string;
+      category?: string;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<AuditLogRecord[]> {
     if (!this.db) throw new Error('Database not initialized');
     let sql = 'SELECT * FROM audit_logs WHERE 1=1';
     const params: (string | number)[] = [];
-    if (options.userId) { sql += ' AND user_id = ?'; params.push(options.userId); }
-    if (options.category) { sql += ' AND category = ?'; params.push(options.category); }
+    if (options.userId) {
+      sql += ' AND user_id = ?';
+      params.push(options.userId);
+    }
+    if (options.category) {
+      sql += ' AND category = ?';
+      params.push(options.category);
+    }
     sql += ' ORDER BY created_at DESC';
-    if (options.limit) { sql += ' LIMIT ?'; params.push(options.limit); }
-    if (options.offset) { sql += ' OFFSET ?'; params.push(options.offset); }
+    if (options.limit) {
+      sql += ' LIMIT ?';
+      params.push(options.limit);
+    }
+    if (options.offset) {
+      sql += ' OFFSET ?';
+      params.push(options.offset);
+    }
     const stmt = this.db.prepare(sql);
     return stmt.all(...params) as AuditLogRecord[];
   }
@@ -983,12 +1073,17 @@ class DatabaseService {
   /** Get integrations for user */
   async getIntegrationsForUser(userId: string): Promise<IntegrationRecord[]> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('SELECT * FROM integrations WHERE user_id = ? ORDER BY created_at DESC');
+    const stmt = this.getStatement(
+      'SELECT * FROM integrations WHERE user_id = ? ORDER BY created_at DESC'
+    );
     return stmt.all(userId) as IntegrationRecord[];
   }
 
   /** Get integration by user and provider */
-  async getIntegrationByProvider(userId: string, provider: IntegrationProviderId): Promise<IntegrationRecord | null> {
+  async getIntegrationByProvider(
+    userId: string,
+    provider: IntegrationProviderId
+  ): Promise<IntegrationRecord | null> {
     if (!this.db) throw new Error('Database not initialized');
     const stmt = this.getStatement('SELECT * FROM integrations WHERE user_id = ? AND provider = ?');
     return (stmt.get(userId, provider) as IntegrationRecord | undefined) ?? null;
@@ -1030,7 +1125,10 @@ class DatabaseService {
   }
 
   /** Get OAuth token by user and provider */
-  async getOAuthToken(userId: string, provider: IntegrationProviderId): Promise<OAuthTokenRecord | null> {
+  async getOAuthToken(
+    userId: string,
+    provider: IntegrationProviderId
+  ): Promise<OAuthTokenRecord | null> {
     if (!this.db) throw new Error('Database not initialized');
     const stmt = this.getStatement('SELECT * FROM oauth_tokens WHERE user_id = ? AND provider = ?');
     return (stmt.get(userId, provider) as OAuthTokenRecord | undefined) ?? null;
@@ -1065,16 +1163,28 @@ class DatabaseService {
   }
 
   /** Get integration secret */
-  async getIntegrationSecret(userId: string, provider: IntegrationProviderId, name: string): Promise<IntegrationSecretRecord | null> {
+  async getIntegrationSecret(
+    userId: string,
+    provider: IntegrationProviderId,
+    name: string
+  ): Promise<IntegrationSecretRecord | null> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('SELECT * FROM integration_secrets WHERE user_id = ? AND provider = ? AND name = ?');
+    const stmt = this.getStatement(
+      'SELECT * FROM integration_secrets WHERE user_id = ? AND provider = ? AND name = ?'
+    );
     return (stmt.get(userId, provider, name) as IntegrationSecretRecord | undefined) ?? null;
   }
 
   /** Delete integration secret */
-  async deleteIntegrationSecret(userId: string, provider: IntegrationProviderId, name: string): Promise<void> {
+  async deleteIntegrationSecret(
+    userId: string,
+    provider: IntegrationProviderId,
+    name: string
+  ): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('DELETE FROM integration_secrets WHERE user_id = ? AND provider = ? AND name = ?');
+    const stmt = this.getStatement(
+      'DELETE FROM integration_secrets WHERE user_id = ? AND provider = ? AND name = ?'
+    );
     stmt.run(userId, provider, name);
   }
 
@@ -1119,17 +1229,21 @@ class DatabaseService {
   /** Get enabled heartbeats */
   async getEnabledHeartbeats(): Promise<HeartbeatRecord[]> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('SELECT * FROM heartbeats WHERE enabled = 1 ORDER BY next_run_at ASC');
+    const stmt = this.getStatement(
+      'SELECT * FROM heartbeats WHERE enabled = 1 ORDER BY next_run_at ASC'
+    );
     const rows = stmt.all() as HeartbeatRecord[];
-    return rows.map(r => ({ ...r, enabled: Boolean(r.enabled) }));
+    return rows.map((r) => ({ ...r, enabled: Boolean(r.enabled) }));
   }
 
   /** Get heartbeats for user */
   async getHeartbeatsForUser(userId: string): Promise<HeartbeatRecord[]> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('SELECT * FROM heartbeats WHERE user_id = ? ORDER BY created_at DESC');
+    const stmt = this.getStatement(
+      'SELECT * FROM heartbeats WHERE user_id = ? ORDER BY created_at DESC'
+    );
     const rows = stmt.all(userId) as HeartbeatRecord[];
-    return rows.map(r => ({ ...r, enabled: Boolean(r.enabled) }));
+    return rows.map((r) => ({ ...r, enabled: Boolean(r.enabled) }));
   }
 
   /** Delete heartbeat */
@@ -1175,7 +1289,9 @@ class DatabaseService {
   /** Get pending approvals for user */
   async getPendingApprovals(userId: string): Promise<ApprovalRequestRecord[]> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('SELECT * FROM approval_requests WHERE user_id = ? AND status = ? ORDER BY created_at DESC');
+    const stmt = this.getStatement(
+      'SELECT * FROM approval_requests WHERE user_id = ? AND status = ? ORDER BY created_at DESC'
+    );
     return stmt.all(userId, 'pending') as ApprovalRequestRecord[];
   }
 
@@ -1216,14 +1332,18 @@ class DatabaseService {
   /** Get swarm agents for parent */
   async getSwarmChildren(parentId: string): Promise<SwarmAgentRecord[]> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('SELECT * FROM agent_swarm WHERE parent_id = ? ORDER BY created_at ASC');
+    const stmt = this.getStatement(
+      'SELECT * FROM agent_swarm WHERE parent_id = ? ORDER BY created_at ASC'
+    );
     return stmt.all(parentId) as SwarmAgentRecord[];
   }
 
   /** Get running swarm agents */
   async getRunningSwarmAgents(): Promise<SwarmAgentRecord[]> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('SELECT * FROM agent_swarm WHERE status = ? ORDER BY created_at ASC');
+    const stmt = this.getStatement(
+      'SELECT * FROM agent_swarm WHERE status = ? ORDER BY created_at ASC'
+    );
     return stmt.all('running') as SwarmAgentRecord[];
   }
 
@@ -1323,14 +1443,18 @@ class DatabaseService {
   /** Search memory records by type */
   async getMemoryRecordsByType(userId: string, type: string, limit = 50): Promise<MemoryRecord[]> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('SELECT * FROM memory_records WHERE user_id = ? AND type = ? ORDER BY importance DESC, last_accessed_at DESC LIMIT ?');
+    const stmt = this.getStatement(
+      'SELECT * FROM memory_records WHERE user_id = ? AND type = ? ORDER BY importance DESC, last_accessed_at DESC LIMIT ?'
+    );
     return stmt.all(userId, type, limit) as MemoryRecord[];
   }
 
   /** Get recent memories */
   async getRecentMemories(userId: string, limit = 20): Promise<MemoryRecord[]> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('SELECT * FROM memory_records WHERE user_id = ? ORDER BY created_at DESC LIMIT ?');
+    const stmt = this.getStatement(
+      'SELECT * FROM memory_records WHERE user_id = ? ORDER BY created_at DESC LIMIT ?'
+    );
     return stmt.all(userId, limit) as MemoryRecord[];
   }
 
@@ -1373,7 +1497,9 @@ class DatabaseService {
   async getCurrentBudget(userId: string): Promise<CostBudgetRecord | null> {
     if (!this.db) throw new Error('Database not initialized');
     const now = new Date().toISOString();
-    const stmt = this.getStatement('SELECT * FROM cost_budgets WHERE user_id = ? AND period_start <= ? AND period_end >= ?');
+    const stmt = this.getStatement(
+      'SELECT * FROM cost_budgets WHERE user_id = ? AND period_start <= ? AND period_end >= ?'
+    );
     return (stmt.get(userId, now, now) as CostBudgetRecord | undefined) ?? null;
   }
 
@@ -1409,27 +1535,34 @@ class DatabaseService {
   }
 
   /** Increment rate limit counter */
-  async incrementRateLimit(userId: string, resource: string): Promise<{ allowed: boolean; remaining: number }> {
+  async incrementRateLimit(
+    userId: string,
+    resource: string
+  ): Promise<{ allowed: boolean; remaining: number }> {
     if (!this.db) throw new Error('Database not initialized');
     const limit = await this.getRateLimit(userId, resource);
     if (!limit) return { allowed: true, remaining: 999 };
-    
+
     const now = new Date();
     const windowStart = new Date(limit.window_start);
     const windowEnd = new Date(windowStart.getTime() + limit.window_seconds * 1000);
-    
+
     if (now > windowEnd) {
       // Reset window
-      const stmt = this.getStatement('UPDATE rate_limits SET current_count = 1, window_start = ? WHERE user_id = ? AND resource = ?');
+      const stmt = this.getStatement(
+        'UPDATE rate_limits SET current_count = 1, window_start = ? WHERE user_id = ? AND resource = ?'
+      );
       stmt.run(now.toISOString(), userId, resource);
       return { allowed: true, remaining: limit.max_requests - 1 };
     }
-    
+
     if (limit.current_count >= limit.max_requests) {
       return { allowed: false, remaining: 0 };
     }
-    
-    const stmt = this.getStatement('UPDATE rate_limits SET current_count = current_count + 1 WHERE user_id = ? AND resource = ?');
+
+    const stmt = this.getStatement(
+      'UPDATE rate_limits SET current_count = current_count + 1 WHERE user_id = ? AND resource = ?'
+    );
     stmt.run(userId, resource);
     return { allowed: true, remaining: limit.max_requests - limit.current_count - 1 };
   }
@@ -1449,22 +1582,246 @@ class DatabaseService {
   /** Get browser allowlist for user */
   async getBrowserAllowlist(userId: string): Promise<BrowserAllowlistRecord[]> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('SELECT * FROM browser_allowlist WHERE user_id = ? ORDER BY domain ASC');
+    const stmt = this.getStatement(
+      'SELECT * FROM browser_allowlist WHERE user_id = ? ORDER BY domain ASC'
+    );
     return stmt.all(userId) as BrowserAllowlistRecord[];
   }
 
   /** Check if domain is allowed */
   async isDomainAllowed(userId: string, domain: string): Promise<BrowserAllowlistRecord | null> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('SELECT * FROM browser_allowlist WHERE user_id = ? AND domain = ?');
+    const stmt = this.getStatement(
+      'SELECT * FROM browser_allowlist WHERE user_id = ? AND domain = ?'
+    );
     return (stmt.get(userId, domain) as BrowserAllowlistRecord | undefined) ?? null;
   }
 
   /** Delete browser allowlist entry */
   async deleteBrowserAllowlist(userId: string, domain: string): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
-    const stmt = this.getStatement('DELETE FROM browser_allowlist WHERE user_id = ? AND domain = ?');
+    const stmt = this.getStatement(
+      'DELETE FROM browser_allowlist WHERE user_id = ? AND domain = ?'
+    );
     stmt.run(userId, domain);
+  }
+
+  // ========== Slack Tokens ==========
+
+  /** Save or update Slack token */
+  async saveSlackToken(record: SlackTokenRecord): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(`
+      INSERT INTO slack_tokens (id, user_id, workspace_id, workspace_name, access_token_enc, bot_user_id, scope, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id, workspace_id) DO UPDATE SET
+        workspace_name = excluded.workspace_name,
+        access_token_enc = excluded.access_token_enc,
+        bot_user_id = excluded.bot_user_id,
+        scope = excluded.scope,
+        updated_at = excluded.updated_at
+    `);
+    stmt.run(
+      record.id,
+      record.user_id,
+      record.workspace_id,
+      record.workspace_name ?? null,
+      record.access_token_enc,
+      record.bot_user_id ?? null,
+      record.scope ?? null,
+      record.created_at,
+      record.updated_at
+    );
+  }
+
+  /** Get Slack token by user and workspace */
+  async getSlackToken(userId: string, workspaceId: string): Promise<SlackTokenRecord | null> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(
+      'SELECT * FROM slack_tokens WHERE user_id = ? AND workspace_id = ?'
+    );
+    return (stmt.get(userId, workspaceId) as SlackTokenRecord | undefined) ?? null;
+  }
+
+  /** Get any Slack token for a workspace (for replying to messages from any user in the workspace) */
+  async getSlackTokenByWorkspace(workspaceId: string): Promise<SlackTokenRecord | null> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(
+      'SELECT * FROM slack_tokens WHERE workspace_id = ? ORDER BY updated_at DESC LIMIT 1'
+    );
+    return (stmt.get(workspaceId) as SlackTokenRecord | undefined) ?? null;
+  }
+
+  /** Get all Slack tokens for a user */
+  async getSlackTokensForUser(userId: string): Promise<SlackTokenRecord[]> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(
+      'SELECT * FROM slack_tokens WHERE user_id = ? ORDER BY created_at DESC'
+    );
+    return stmt.all(userId) as SlackTokenRecord[];
+  }
+
+  /** Delete Slack token */
+  async deleteSlackToken(userId: string, workspaceId: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(
+      'DELETE FROM slack_tokens WHERE user_id = ? AND workspace_id = ?'
+    );
+    stmt.run(userId, workspaceId);
+  }
+
+  // ========== Conversation Memories ==========
+
+  /** Get or create conversation memory */
+  async getConversationMemory(
+    platform: string,
+    platformUserId: string
+  ): Promise<ConversationMemoryRecord | null> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(
+      'SELECT * FROM conversation_memories WHERE platform = ? AND platform_user_id = ?'
+    );
+    return (stmt.get(platform, platformUserId) as ConversationMemoryRecord | undefined) ?? null;
+  }
+
+  /** Save conversation memory */
+  async saveConversationMemory(record: ConversationMemoryRecord): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(`
+      INSERT INTO conversation_memories (id, platform, platform_user_id, user_id, messages, summary, updated_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(platform, platform_user_id) DO UPDATE SET
+        user_id = excluded.user_id,
+        messages = excluded.messages,
+        summary = excluded.summary,
+        updated_at = excluded.updated_at
+    `);
+    stmt.run(
+      record.id,
+      record.platform,
+      record.platform_user_id,
+      record.user_id ?? null,
+      record.messages,
+      record.summary ?? null,
+      record.updated_at,
+      record.created_at
+    );
+  }
+
+  // ========== Messaging Subscriptions ==========
+
+  /** Get messaging subscriptions for a user */
+  async getMessagingSubscriptions(userId: string): Promise<MessagingSubscriptionRecord[]> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(
+      'SELECT * FROM messaging_subscriptions WHERE user_id = ? ORDER BY created_at DESC'
+    );
+    return stmt.all(userId) as MessagingSubscriptionRecord[];
+  }
+
+  /** Save messaging subscription */
+  async saveMessagingSubscription(record: MessagingSubscriptionRecord): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(`
+      INSERT INTO messaging_subscriptions (id, user_id, platform, platform_user_id, created_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(user_id, platform, platform_user_id) DO NOTHING
+    `);
+    stmt.run(
+      record.id,
+      record.user_id,
+      record.platform,
+      record.platform_user_id,
+      record.created_at
+    );
+  }
+
+  /** Delete messaging subscription */
+  async deleteMessagingSubscription(
+    userId: string,
+    platform: string,
+    platformUserId: string
+  ): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(
+      'DELETE FROM messaging_subscriptions WHERE user_id = ? AND platform = ? AND platform_user_id = ?'
+    );
+    stmt.run(userId, platform, platformUserId);
+  }
+
+  // ========== Slack User Pairings ==========
+
+  /** Save Slack user pairing */
+  async saveSlackUserPairing(record: SlackUserPairingRecord): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(`
+      INSERT INTO slack_user_pairings (slack_user_id, workspace_id, grump_user_id, created_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(slack_user_id, workspace_id) DO UPDATE SET
+        grump_user_id = excluded.grump_user_id,
+        created_at = excluded.created_at
+    `);
+    stmt.run(record.slack_user_id, record.workspace_id, record.grump_user_id, record.created_at);
+  }
+
+  /** Get G-Rump user ID from Slack user and workspace */
+  async getGrumpUserIdFromSlack(slackUserId: string, workspaceId: string): Promise<string | null> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(
+      'SELECT grump_user_id FROM slack_user_pairings WHERE slack_user_id = ? AND workspace_id = ?'
+    );
+    const row = stmt.get(slackUserId, workspaceId) as { grump_user_id: string } | undefined;
+    return row?.grump_user_id ?? null;
+  }
+
+  // ========== Reminders ==========
+
+  async saveReminder(record: ReminderRecord): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(`
+      INSERT INTO reminders (id, user_id, content, due_at, platform, platform_user_id, notified, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        content = excluded.content,
+        due_at = excluded.due_at,
+        notified = excluded.notified,
+        updated_at = excluded.updated_at
+    `);
+    stmt.run(
+      record.id,
+      record.user_id,
+      record.content,
+      record.due_at,
+      record.platform ?? null,
+      record.platform_user_id ?? null,
+      record.notified ?? 0,
+      record.created_at,
+      record.updated_at
+    );
+  }
+
+  async getDueReminders(before: string): Promise<ReminderRecord[]> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(
+      'SELECT * FROM reminders WHERE due_at <= ? AND notified = 0 ORDER BY due_at ASC'
+    );
+    const rows = stmt.all(before) as ReminderRecord[];
+    return rows.map((r) => ({ ...r, notified: r.notified ?? 0 }));
+  }
+
+  async getRemindersForUser(userId: string): Promise<ReminderRecord[]> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement('SELECT * FROM reminders WHERE user_id = ? ORDER BY due_at ASC');
+    const rows = stmt.all(userId) as ReminderRecord[];
+    return rows.map((r) => ({ ...r, notified: r.notified ?? 0 }));
+  }
+
+  async setReminderNotified(id: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const stmt = this.getStatement(
+      'UPDATE reminders SET notified = 1, updated_at = ? WHERE id = ?'
+    );
+    stmt.run(new Date().toISOString(), id);
   }
 }
 
@@ -1500,7 +1857,8 @@ export function getDatabase(): DatabaseInterface {
     if (!supabaseDbInstance) {
       const url = process.env.SUPABASE_URL;
       const key = process.env.SUPABASE_SERVICE_KEY;
-      if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY are required when using Supabase');
+      if (!url || !key)
+        throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY are required when using Supabase');
       supabaseDbInstance = new SupabaseDatabaseService(url, key);
     }
     return supabaseDbInstance;
@@ -1544,4 +1902,3 @@ export async function closeDatabase(): Promise<void> {
 
 export { DatabaseService };
 export { SupabaseDatabaseService } from './supabase-db.js';
-

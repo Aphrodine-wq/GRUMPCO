@@ -62,6 +62,8 @@ function lazyCommand<T extends (...args: unknown[]) => Promise<unknown>>(
   };
 }
 
+
+
 // Fast startup - minimal setup
 program
   .name('grump')
@@ -182,10 +184,26 @@ program
 program
   .command('init')
   .description('Initialize project configuration')
+  .argument('[projectDir]', 'Project directory (for --template)')
   .option('-f, --force', 'Overwrite existing config', false)
   .option('-g, --global', 'Create global config', false)
   .option('-i, --interactive', 'Interactive setup', true)
+  .option('-t, --template <name>', 'Project template (react-app, svelte-app, express-api, cli-tool)')
   .action(lazyCommand('./commands/init.js', 'initCommand'));
+
+program
+  .command('doctor')
+  .description('Run system diagnostic (Docker, GPU, API, integrations)')
+  .option('--fix', 'Attempt automatic fixes', false)
+  .option('--json', 'Output as JSON', false)
+  .action(lazyCommand('./commands/doctor.js', 'doctorCommand'));
+
+program
+  .command('profile')
+  .description('Manage configuration profiles (create, list, use, export, import)')
+  .argument('<action>', 'create | list | use | export | import')
+  .argument('[name]', 'Profile name')
+  .action(lazyCommand('./commands/profile.js', 'profileCommand'));
 
 program
   .command('config')
@@ -202,6 +220,27 @@ program
   .argument('[action]', 'Action: login, logout, status, set-key', 'status')
   .argument('[key]', 'API key (for set-key action)')
   .action(lazyCommand('./commands/auth.js', 'authCommand'));
+
+// Secure command with subcommands - loaded dynamically
+const secureCmd = program
+  .command('secure')
+  .description('Manage API keys securely using OS keychain');
+
+// Hook to dynamically load subcommands
+secureCmd.hook('preSubcommand', async (subcommand) => {
+  try {
+    const secureModule = await import('./commands/secure.js');
+    const createSecureCommand = secureModule.createSecureCommand;
+    if (createSecureCommand) {
+      const fullSecureCmd = createSecureCommand();
+      // Subcommands are already registered via addCommand in createSecureCommand
+    }
+  } catch (error) {
+    const displayError = await getDisplayError();
+    displayError(error as Error);
+    process.exit(1);
+  }
+});
 
 program
   .command('compile')

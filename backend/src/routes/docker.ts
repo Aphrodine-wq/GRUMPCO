@@ -2,12 +2,12 @@
  * Docker API Routes
  * Provides browser-based access to Docker operations via the backend.
  * Used when running in web browser (not Electron).
- * 
+ *
  * Note: Docker must be available on the server running the backend.
  */
 
-import { Router, Request, Response, NextFunction } from 'express';
-import { exec, spawn } from 'child_process';
+import { Router, type Request, type Response, type NextFunction } from 'express';
+import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
@@ -68,22 +68,22 @@ async function isDockerAvailable(): Promise<boolean> {
 router.get('/status', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const available = await isDockerAvailable();
-    
+
     if (!available) {
       res.json({
         available: false,
-        message: 'Docker is not available on the server'
+        message: 'Docker is not available on the server',
       });
       return;
     }
 
     const { stdout } = await execAsync('docker version --format "{{json .}}"');
     const version = JSON.parse(stdout);
-    
+
     res.json({
       available: true,
       version: version.Server?.Version || version.Client?.Version,
-      apiVersion: version.Server?.ApiVersion
+      apiVersion: version.Server?.ApiVersion,
     });
   } catch (err) {
     next(err);
@@ -102,16 +102,14 @@ router.get('/containers', async (req: Request, res: Response, next: NextFunction
       return;
     }
 
-    const { stdout } = await execAsync(
-      'docker ps -a --format "{{json .}}"'
-    );
-    
+    const { stdout } = await execAsync('docker ps -a --format "{{json .}}"');
+
     const lines = stdout.trim().split('\n').filter(Boolean);
-    const containers: DockerContainer[] = lines.map(line => {
+    const containers: DockerContainer[] = lines.map((line) => {
       const c = JSON.parse(line);
       const isRunning = c.State === 'running';
       const ports = parsePorts(c.Ports || '');
-      
+
       return {
         id: c.ID,
         name: c.Names,
@@ -123,8 +121,8 @@ router.get('/containers', async (req: Request, res: Response, next: NextFunction
           running: isRunning,
           paused: c.State === 'paused',
           restarting: c.State === 'restarting',
-          health: undefined // Would need docker inspect for this
-        }
+          health: undefined, // Would need docker inspect for this
+        },
       };
     });
 
@@ -146,18 +144,16 @@ router.get('/images', async (req: Request, res: Response, next: NextFunction) =>
       return;
     }
 
-    const { stdout } = await execAsync(
-      'docker images --format "{{json .}}"'
-    );
-    
+    const { stdout } = await execAsync('docker images --format "{{json .}}"');
+
     const lines = stdout.trim().split('\n').filter(Boolean);
-    const images: DockerImage[] = lines.map(line => {
+    const images: DockerImage[] = lines.map((line) => {
       const img = JSON.parse(line);
       return {
         id: img.ID,
-        tags: [`${img.Repository}:${img.Tag}`].filter(t => !t.includes('<none>')),
+        tags: [`${img.Repository}:${img.Tag}`].filter((t) => !t.includes('<none>')),
         size: parseSize(img.Size),
-        created: img.CreatedAt
+        created: img.CreatedAt,
       };
     });
 
@@ -179,18 +175,16 @@ router.get('/volumes', async (req: Request, res: Response, next: NextFunction) =
       return;
     }
 
-    const { stdout } = await execAsync(
-      'docker volume ls --format "{{json .}}"'
-    );
-    
+    const { stdout } = await execAsync('docker volume ls --format "{{json .}}"');
+
     const lines = stdout.trim().split('\n').filter(Boolean);
-    const volumes: DockerVolume[] = lines.map(line => {
+    const volumes: DockerVolume[] = lines.map((line) => {
       const vol = JSON.parse(line);
       return {
         name: vol.Name,
         driver: vol.Driver,
         mountpoint: vol.Mountpoint || '',
-        created: ''
+        created: '',
       };
     });
 
@@ -212,19 +206,17 @@ router.get('/networks', async (req: Request, res: Response, next: NextFunction) 
       return;
     }
 
-    const { stdout } = await execAsync(
-      'docker network ls --format "{{json .}}"'
-    );
-    
+    const { stdout } = await execAsync('docker network ls --format "{{json .}}"');
+
     const lines = stdout.trim().split('\n').filter(Boolean);
-    const networks: DockerNetwork[] = lines.map(line => {
+    const networks: DockerNetwork[] = lines.map((line) => {
       const net = JSON.parse(line);
       return {
         id: net.ID,
         name: net.Name,
         driver: net.Driver,
         scope: net.Scope,
-        containers: []
+        containers: [],
       };
     });
 
@@ -337,43 +329,144 @@ router.get('/containers/:id/logs', async (req: Request, res: Response, next: Nex
 
 /**
  * POST /api/docker/compose/up
- * Run docker-compose up
+ * Run docker-compose up with overlay and profiles support
+ *
+ * Body:
+ * - overlay?: 'gpu' | 'rocm' - GPU overlay to use
+ * - profiles?: string[] - Docker Compose profiles to enable
+ * - pull?: boolean - Whether to pull images before starting
+ * - path?: string - Path to docker-compose files (defaults to deploy/)
  */
-router.post('/compose/up', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/compose/up', async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { path } = req.body;
-    const cwd = path || process.cwd();
-    
-    await execAsync('docker compose up -d', { cwd });
-    res.json({ success: true, message: 'Docker Compose started' });
+    const { overlay, profiles, pull, path: customPath } = req.body;
+
+    // Use deploy/ directory by default
+    const cwd = customPath || `${process.cwd()}/deploy`;
+
+    // Build compose command
+    const composeFiles: string[] = ['docker-compose.yml'];
+
+    // Add overlay if specified
+    if (overlay === 'gpu') {
+      composeFiles.push('docker-compose.gpu.yml');
+    } else if (overlay === 'rocm') {
+      composeFiles.push('docker-compose.rocm.yml');
+    }
+
+    // Build file arguments
+    const fileArgs = composeFiles.map((f) => `-f ${f}`).join(' ');
+
+    // Build profile arguments
+    let profileArgs = '';
+    if (profiles && Array.isArray(profiles) && profiles.length > 0) {
+      profileArgs = profiles.map((p) => `--profile ${p}`).join(' ');
+    }
+
+    // Build command
+    let command = `docker compose ${fileArgs}`;
+    if (profileArgs) command += ` ${profileArgs}`;
+    if (pull) command += ' pull &&';
+    command += ` docker compose ${fileArgs}`;
+    if (profileArgs) command += ` ${profileArgs}`;
+    command += ' up -d';
+
+    // Execute
+    const { stdout, stderr } = await execAsync(command, { cwd, timeout: 300000 }); // 5 min timeout
+
+    res.json({
+      success: true,
+      message: 'Docker Compose started',
+      overlay: overlay || 'none',
+      profiles: profiles || [],
+      logs: (stdout + stderr).split('\n').filter(Boolean),
+    });
+  } catch (err) {
+    const error = err as Error & { stdout?: string; stderr?: string };
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      logs: ((error.stdout || '') + (error.stderr || '')).split('\n').filter(Boolean),
+    });
+  }
+});
+
+/**
+ * POST /api/docker/compose/down
+ * Run docker-compose down with overlay support
+ */
+router.post('/compose/down', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { overlay, profiles, removeVolumes, path: customPath } = req.body;
+    const cwd = customPath || `${process.cwd()}/deploy`;
+
+    // Build compose command with same files used for up
+    const composeFiles: string[] = ['docker-compose.yml'];
+    if (overlay === 'gpu') composeFiles.push('docker-compose.gpu.yml');
+    else if (overlay === 'rocm') composeFiles.push('docker-compose.rocm.yml');
+
+    const fileArgs = composeFiles.map((f) => `-f ${f}`).join(' ');
+    let profileArgs = '';
+    if (profiles && Array.isArray(profiles) && profiles.length > 0) {
+      profileArgs = profiles.map((p) => `--profile ${p}`).join(' ');
+    }
+
+    let command = `docker compose ${fileArgs}`;
+    if (profileArgs) command += ` ${profileArgs}`;
+    command += ' down';
+    if (removeVolumes) command += ' -v';
+
+    const { stdout, stderr } = await execAsync(command, { cwd });
+
+    res.json({
+      success: true,
+      message: 'Docker Compose stopped',
+      logs: (stdout + stderr).split('\n').filter(Boolean),
+    });
   } catch (err) {
     next(err);
   }
 });
 
 /**
- * POST /api/docker/compose/down
- * Run docker-compose down
+ * GET /api/docker/compose/status
+ * Get status of compose services
  */
-router.post('/compose/down', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/compose/status', async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { path } = req.body;
-    const cwd = path || process.cwd();
-    
-    await execAsync('docker compose down', { cwd });
-    res.json({ success: true, message: 'Docker Compose stopped' });
-  } catch (err) {
-    next(err);
+    const cwd = `${process.cwd()}/deploy`;
+
+    const { stdout } = await execAsync('docker compose ps --format json', { cwd });
+    const lines = stdout.trim().split('\n').filter(Boolean);
+    const services = lines
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    res.json({
+      running: services.length > 0,
+      services,
+    });
+  } catch (_err) {
+    // Compose not running is not an error
+    res.json({ running: false, services: [] });
   }
 });
 
 // Helper: Parse Docker port strings like "0.0.0.0:3000->3000/tcp"
-function parsePorts(portsStr: string): Array<{ host: number; container: number; protocol: string }> {
+function parsePorts(
+  portsStr: string
+): Array<{ host: number; container: number; protocol: string }> {
   if (!portsStr) return [];
-  
+
   const ports: Array<{ host: number; container: number; protocol: string }> = [];
   const portMappings = portsStr.split(', ');
-  
+
   for (const mapping of portMappings) {
     // Format: "0.0.0.0:3000->3000/tcp" or "3000/tcp"
     const match = mapping.match(/(?:[\d.]+:)?(\d+)->(\d+)\/(\w+)/);
@@ -381,11 +474,11 @@ function parsePorts(portsStr: string): Array<{ host: number; container: number; 
       ports.push({
         host: parseInt(match[1], 10),
         container: parseInt(match[2], 10),
-        protocol: match[3]
+        protocol: match[3],
       });
     }
   }
-  
+
   return ports;
 }
 
@@ -393,18 +486,18 @@ function parsePorts(portsStr: string): Array<{ host: number; container: number; 
 function parseSize(sizeStr: string): number {
   const match = sizeStr.match(/([\d.]+)\s*(B|KB|MB|GB|TB)/i);
   if (!match) return 0;
-  
+
   const value = parseFloat(match[1]);
   const unit = match[2].toUpperCase();
-  
+
   const multipliers: Record<string, number> = {
-    'B': 1,
-    'KB': 1024,
-    'MB': 1024 * 1024,
-    'GB': 1024 * 1024 * 1024,
-    'TB': 1024 * 1024 * 1024 * 1024
+    B: 1,
+    KB: 1024,
+    MB: 1024 * 1024,
+    GB: 1024 * 1024 * 1024,
+    TB: 1024 * 1024 * 1024 * 1024,
   };
-  
+
   return value * (multipliers[unit] || 1);
 }
 

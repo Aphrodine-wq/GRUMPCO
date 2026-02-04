@@ -1,5 +1,7 @@
 # @grump/compiler-enhanced
 
+> **Version 2.1.0** | Updated January 31, 2026
+
 Enhanced compiler system for G-Rump with MASSIVE features including incremental compilation, watch mode, bundle analysis, and more.
 
 ## Features

@@ -35,14 +35,14 @@ export function toCreativeDesignDocSummary(doc: CreativeDesignDoc): CreativeDesi
   return {
     layout: {
       gridDescription: doc.layout.gridDescription,
-      regions: doc.layout.regions.map(r => ({ name: r.name, description: r.description })),
+      regions: doc.layout.regions.map((r) => ({ name: r.name, description: r.description })),
     },
     uiPrinciples: {
       visualHierarchy: doc.uiPrinciples.visualHierarchy,
       keyInteractions: doc.uiPrinciples.keyInteractions,
     },
-    keyScreens: doc.keyScreens.map(s => ({ name: s.name, purpose: s.purpose })),
-    uxFlows: doc.uxFlows.map(f => ({ name: f.name, steps: f.steps })),
+    keyScreens: doc.keyScreens.map((s) => ({ name: s.name, purpose: s.purpose })),
+    uxFlows: doc.uxFlows.map((f) => ({ name: f.name, steps: f.steps })),
     accessibilityNotes: doc.accessibilityNotes,
     responsivenessNotes: doc.responsivenessNotes,
   };

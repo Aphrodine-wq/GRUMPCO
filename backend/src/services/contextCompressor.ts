@@ -1,16 +1,16 @@
 /**
  * Context Compressor Service
- * 
+ *
  * Implements "Genomic Prompts" - compress massive contexts (100K+ tokens)
  * into fixed-dimension latent vectors that can be used for retrieval and
  * context injection.
- * 
+ *
  * Key techniques:
  * 1. Hierarchical chunking with overlap
  * 2. Semantic hashing via locality-sensitive hashing (LSH)
  * 3. Weighted superposition based on recency/importance
  * 4. Position-aware encoding for temporal coherence
- * 
+ *
  * The result: A fixed-size "DNA" of your conversation/document that captures
  * semantic content without storing the full text.
  */
@@ -153,7 +153,7 @@ class TextFeatureExtractor {
   extractFeatures(text: string): number[] {
     const features = new Float64Array(this.dimension);
     const words = this.tokenize(text);
-    
+
     // Character trigram features (position 0 to dimension/2)
     const trigrams = this.getCharNgrams(text, 3);
     for (const trigram of trigrams) {
@@ -168,7 +168,7 @@ class TextFeatureExtractor {
     }
 
     for (const [word, count] of wordCounts) {
-      const hash = (this.dimension / 2) + (this.hashString(word) % (this.dimension / 2));
+      const hash = this.dimension / 2 + (this.hashString(word) % (this.dimension / 2));
       // TF component (log-scaled)
       features[hash] += Math.log(1 + count);
     }
@@ -194,7 +194,7 @@ class TextFeatureExtractor {
   extractKeywords(text: string, topK: number = 10): string[] {
     const words = this.tokenize(text);
     const counts = new Map<string, number>();
-    
+
     for (const word of words) {
       if (word.length > 2) {
         counts.set(word, (counts.get(word) || 0) + 1);
@@ -212,7 +212,7 @@ class TextFeatureExtractor {
       .toLowerCase()
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
-      .filter(w => w.length > 0);
+      .filter((w) => w.length > 0);
   }
 
   private getCharNgrams(text: string, n: number): string[] {
@@ -245,11 +245,13 @@ export class ContextCompressor {
   private lshIndex: LSHIndex;
   private holoMemory: HolographicMemory;
 
-  constructor(options: {
-    dimension?: number;
-    chunkSize?: number;
-    chunkOverlap?: number;
-  } = {}) {
+  constructor(
+    options: {
+      dimension?: number;
+      chunkSize?: number;
+      chunkOverlap?: number;
+    } = {}
+  ) {
     this.dimension = options.dimension || 4096;
     this.chunkSize = options.chunkSize || 512; // tokens/words per chunk
     this.chunkOverlap = options.chunkOverlap || 64;
@@ -263,19 +265,19 @@ export class ContextCompressor {
    */
   compress(text: string, source: string = 'unknown'): CompressedContext {
     const startTime = Date.now();
-    
+
     // Chunk the text
     const chunks = this.chunkText(text);
-    
+
     // Process each chunk
     const semanticChunks: SemanticChunk[] = chunks.map((chunk, idx) => {
       const features = this.featureExtractor.extractFeatures(chunk);
       const hash = this.lshIndex.hash(features);
       const keywords = this.featureExtractor.extractKeywords(chunk, 5);
-      
+
       // Compute importance based on keyword density and position
       const importance = this.computeImportance(chunk, idx, chunks.length);
-      
+
       return {
         text: chunk,
         position: idx,
@@ -287,18 +289,18 @@ export class ContextCompressor {
 
     // Create holographic superposition of all chunks
     const resultVector = new HRRVector(this.dimension);
-    
+
     for (const chunk of semanticChunks) {
       // Create position-aware key
       const positionKey = HRRVector.fromText(`chunk_${chunk.position}`, this.dimension);
-      
+
       // Create content vector from chunk
       const features = this.featureExtractor.extractFeatures(chunk.text);
       const contentVector = HRRVector.fromEmbedding(features, this.dimension);
-      
+
       // Bind position and content
       const boundChunk = positionKey.bind(contentVector);
-      
+
       // Weight by importance and add to result
       const weighted = boundChunk.scale(chunk.importance);
       resultVector.addInPlace(weighted);
@@ -323,7 +325,7 @@ export class ContextCompressor {
       metadata: {
         source,
         createdAt: new Date().toISOString(),
-        chunkHashes: semanticChunks.map(c => c.hash),
+        chunkHashes: semanticChunks.map((c) => c.hash),
       },
     };
   }
@@ -351,7 +353,7 @@ export class ContextCompressor {
   merge(contexts: CompressedContext[], weights?: number[]): CompressedContext {
     const startTime = Date.now();
     const w = weights || contexts.map(() => 1 / contexts.length);
-    
+
     const resultVector = new HRRVector(this.dimension);
     const allHashes: string[] = [];
     let totalTokens = 0;
@@ -406,9 +408,7 @@ export class ContextCompressor {
       return { chunk, score, position };
     });
 
-    return scored
-      .sort((a, b) => b.score - a.score)
-      .slice(0, topK);
+    return scored.sort((a, b) => b.score - a.score).slice(0, topK);
   }
 
   /**
@@ -441,27 +441,27 @@ export class ContextCompressor {
   private chunkText(text: string): string[] {
     const words = text.split(/\s+/);
     const chunks: string[] = [];
-    
+
     for (let i = 0; i < words.length; i += this.chunkSize - this.chunkOverlap) {
       const chunk = words.slice(i, i + this.chunkSize).join(' ');
       if (chunk.trim()) {
         chunks.push(chunk);
       }
     }
-    
+
     return chunks;
   }
 
   private computeImportance(chunk: string, position: number, totalChunks: number): number {
     // Factors: position (recent = more important), density, special markers
-    
+
     // Position factor: more recent chunks get higher weight
     const recencyWeight = 0.5 + 0.5 * (position / totalChunks);
-    
+
     // Density factor: chunks with more unique words are more informative
     const words = new Set(chunk.toLowerCase().split(/\s+/));
     const densityWeight = Math.min(1, words.size / 50);
-    
+
     // Special markers: code, questions, imperatives
     let markerWeight = 1.0;
     if (chunk.includes('```') || chunk.includes('function') || chunk.includes('class')) {
@@ -543,9 +543,7 @@ export class ContextCompressorService {
       results.push({ id, similarity });
     }
 
-    return results
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, topK);
+    return results.sort((a, b) => b.similarity - a.similarity).slice(0, topK);
   }
 
   /**
@@ -553,7 +551,7 @@ export class ContextCompressorService {
    */
   merge(contextIds: string[], weights?: number[]): CompressedContext | null {
     const contexts = contextIds
-      .map(id => this.cache.get(id))
+      .map((id) => this.cache.get(id))
       .filter((c): c is CompressedContext => c !== undefined);
 
     if (contexts.length === 0) return null;
@@ -567,7 +565,7 @@ export class ContextCompressorService {
    * Get all cached contexts
    */
   listAll(): { id: string; stats: CompressionStats; source: string }[] {
-    return Array.from(this.cache.values()).map(ctx => ({
+    return Array.from(this.cache.values()).map((ctx) => ({
       id: ctx.id,
       stats: ctx.stats,
       source: ctx.metadata.source,

@@ -1,6 +1,6 @@
 /**
  * Spec Store Tests
- * 
+ *
  * Comprehensive tests for specification session state management
  */
 
@@ -56,17 +56,26 @@ describe('specStore', () => {
       const { fetchApi } = await import('../lib/api.js');
       const { startSpecSession, isSpecLoading, clearSession } = await import('./specStore');
 
-      let resolvePromise: (value: any) => void;
-      const promise = new Promise(resolve => { resolvePromise = resolve; });
-      (fetchApi as any).mockReturnValue(promise);
+      type ResolveType = {
+        ok: boolean;
+        json: () => Promise<{
+          session: { id: string; questions: unknown[]; answers: Record<string, unknown> };
+        }>;
+      };
+      let resolvePromise: ((value: ResolveType) => void) | undefined;
+      const promise = new Promise<ResolveType>((resolve) => {
+        resolvePromise = resolve;
+      });
+      (fetchApi as ReturnType<typeof vi.fn>).mockReturnValue(promise);
 
       const startPromise = startSpecSession({ userRequest: 'Test' });
       expect(get(isSpecLoading)).toBe(true);
 
-      resolvePromise!({
-        ok: true,
-        json: () => Promise.resolve({ session: { id: '1', questions: [], answers: {} } }),
-      });
+      if (resolvePromise)
+        resolvePromise({
+          ok: true,
+          json: () => Promise.resolve({ session: { id: '1', questions: [], answers: {} } }),
+        });
 
       await startPromise;
       expect(get(isSpecLoading)).toBe(false);
@@ -80,16 +89,16 @@ describe('specStore', () => {
       const mockSession = {
         id: 'session-1',
         questions: [{ id: 'q1', question: 'What?', required: true, order: 1 }],
-        answers: {}
+        answers: {},
       };
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ session: mockSession }),
       });
 
       await startSpecSession({ userRequest: 'Build an app' });
-      
+
       expect(get(currentSession)).toEqual(mockSession);
       clearSession();
     });
@@ -98,7 +107,7 @@ describe('specStore', () => {
       const { fetchApi } = await import('../lib/api.js');
       const { startSpecSession, specError, clearSession } = await import('./specStore');
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
         json: () => Promise.resolve({ message: 'Session start failed' }),
       });
@@ -116,13 +125,13 @@ describe('specStore', () => {
 
       const mockSession = { id: 'session-123', questions: [], answers: {} };
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ session: mockSession }),
       });
 
       await loadSpecSession('session-123');
-      
+
       expect(get(currentSession)?.id).toBe('session-123');
       clearSession();
     });
@@ -131,7 +140,7 @@ describe('specStore', () => {
       const { fetchApi } = await import('../lib/api.js');
       const { loadSpecSession, specError, clearSession } = await import('./specStore');
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
         json: () => Promise.resolve({ message: 'Session not found' }),
       });
@@ -150,16 +159,16 @@ describe('specStore', () => {
       const updatedSession = {
         id: 'session-1',
         questions: [{ id: 'q1', question: 'What?', required: true, order: 1 }],
-        answers: { q1: 'My answer' }
+        answers: { q1: 'My answer' },
       };
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ session: updatedSession }),
       });
 
       await submitAnswer('session-1', { questionId: 'q1', value: 'My answer' });
-      
+
       expect(get(currentSession)?.answers.q1).toBe('My answer');
       clearSession();
     });
@@ -168,7 +177,7 @@ describe('specStore', () => {
       const { fetchApi } = await import('../lib/api.js');
       const { submitAnswer, specError, clearSession } = await import('./specStore');
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
         json: () => Promise.resolve({ message: 'Submission failed' }),
       });
@@ -187,13 +196,13 @@ describe('specStore', () => {
       const mockSpec = { id: 'spec-1', title: 'Project Spec' };
       const updatedSession = { id: 'session-1', questions: [], answers: {} };
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ specification: mockSpec, session: updatedSession }),
       });
 
       const result = await generateSpecification('session-1');
-      
+
       expect(result.specification).toEqual(mockSpec);
       clearSession();
     });
@@ -202,7 +211,7 @@ describe('specStore', () => {
       const { fetchApi } = await import('../lib/api.js');
       const { generateSpecification, specError, clearSession } = await import('./specStore');
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
         json: () => Promise.resolve({ message: 'Generation failed' }),
       });
@@ -222,18 +231,18 @@ describe('specStore', () => {
         id: 'session-1',
         questions: [
           { id: 'q1', question: 'Q1?', required: true, order: 1 },
-          { id: 'q2', question: 'Q2?', required: false, order: 2 }
+          { id: 'q2', question: 'Q2?', required: false, order: 2 },
         ],
-        answers: { q1: 'answer1' }
+        answers: { q1: 'answer1' },
       };
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ session: mockSession }),
       });
 
       await startSpecSession({ userRequest: 'Test' });
-      
+
       expect(get(isComplete)).toBe(true);
       clearSession();
     });
@@ -245,16 +254,16 @@ describe('specStore', () => {
       const mockSession = {
         id: 'session-1',
         questions: [{ id: 'q1', question: 'Q1?', required: true, order: 1 }],
-        answers: {}
+        answers: {},
       };
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ session: mockSession }),
       });
 
       await startSpecSession({ userRequest: 'Test' });
-      
+
       expect(get(isComplete)).toBe(false);
       clearSession();
     });
@@ -269,18 +278,18 @@ describe('specStore', () => {
         id: 'session-1',
         questions: [
           { id: 'q1', question: 'Q1?', required: true, order: 1 },
-          { id: 'q2', question: 'Q2?', required: true, order: 2 }
+          { id: 'q2', question: 'Q2?', required: true, order: 2 },
         ],
-        answers: { q1: 'answered' }
+        answers: { q1: 'answered' },
       };
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ session: mockSession }),
       });
 
       await startSpecSession({ userRequest: 'Test' });
-      
+
       const next = getNextQuestion();
       expect(next?.id).toBe('q2');
       clearSession();
@@ -295,9 +304,10 @@ describe('specStore', () => {
   describe('clearSession', () => {
     it('should reset all state', async () => {
       const { fetchApi } = await import('../lib/api.js');
-      const { startSpecSession, clearSession, currentSession, isSpecLoading, specError } = await import('./specStore');
+      const { startSpecSession, clearSession, currentSession, isSpecLoading, specError } =
+        await import('./specStore');
 
-      (fetchApi as any).mockResolvedValue({
+      (fetchApi as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ session: { id: '1', questions: [], answers: {} } }),
       });

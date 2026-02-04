@@ -6,16 +6,19 @@
  */
 
 import { z } from 'zod';
+import type { Request, Response, NextFunction } from 'express';
 import {
-  MAX_MESSAGE_LENGTH,
-  MAX_CHAT_MESSAGE_LENGTH,
-  MAX_CHAT_MESSAGE_LENGTH_LARGE,
+  MAX_MESSAGE_LENGTH as _MAX_MESSAGE_LENGTH,
+  MAX_CHAT_MESSAGE_LENGTH as _MAX_CHAT_MESSAGE_LENGTH,
+  MAX_CHAT_MESSAGE_LENGTH_LARGE as _MAX_CHAT_MESSAGE_LENGTH_LARGE,
   MAX_CHAT_MESSAGES,
   MAX_CHAT_MESSAGES_LARGE,
   MAX_SHIP_PROJECT_DESCRIPTION_LENGTH,
   MAX_PROJECT_NAME_LENGTH,
   MAX_ARCHITECTURE_DESCRIPTION_LENGTH,
+  checkSuspiciousPatterns,
 } from '../middleware/validator.js';
+import { getRequestLogger } from '../middleware/logger.js';
 
 // ============================================================================
 // Common Schemas
@@ -70,13 +73,7 @@ export const chatMessageSchema = z.object({
 });
 
 /** Chat mode */
-export const chatModeSchema = z.enum([
-  'normal',
-  'plan',
-  'spec',
-  'execute',
-  'argument',
-]);
+export const chatModeSchema = z.enum(['normal', 'plan', 'spec', 'execute', 'argument']);
 
 /** Agent profile */
 export const agentProfileSchema = z.enum([
@@ -88,13 +85,8 @@ export const agentProfileSchema = z.enum([
   'test',
 ]);
 
-/** LLM provider */
-export const llmProviderSchema = z.enum([
-  'nim',
-  'zhipu',
-  'copilot',
-  'openrouter',
-]);
+/** LLM provider (NVIDIA NIM exclusive) - Powered by NVIDIA */
+export const llmProviderSchema = z.enum(['nim', 'mock']);
 
 /** Model preset */
 export const modelPresetSchema = z.enum(['fast', 'quality', 'balanced']);
@@ -180,9 +172,7 @@ export const architectureRequestSchema = z.object({
 /** Architecture refine request */
 export const architectureRefineRequestSchema = z.object({
   architectureId: z.string().optional(),
-  refinements: z
-    .array(z.string())
-    .min(1, 'At least one refinement is required'),
+  refinements: z.array(z.string()).min(1, 'At least one refinement is required'),
 });
 
 // ============================================================================
@@ -202,9 +192,7 @@ export const prdRequestSchema = z.object({
 /** PRD refine request */
 export const prdRefineRequestSchema = z.object({
   prdId: z.string().optional(),
-  refinements: z
-    .array(z.string())
-    .min(1, 'At least one refinement is required'),
+  refinements: z.array(z.string()).min(1, 'At least one refinement is required'),
 });
 
 // ============================================================================
@@ -371,7 +359,6 @@ export const updateSettingsRequestSchema = z.object({
   defaultModel: z.string().optional(),
   apiKeys: z
     .object({
-      openrouter: z.string().optional(),
       nvidia: z.string().optional(),
     })
     .optional(),
@@ -385,10 +372,7 @@ export const updateSettingsRequestSchema = z.object({
  * Validates request body against a Zod schema.
  * Returns the parsed data or throws an error with formatted messages.
  */
-export function validateRequest<T extends z.ZodType>(
-  schema: T,
-  data: unknown
-): z.infer<T> {
+export function validateRequest<T extends z.ZodType>(schema: T, data: unknown): z.infer<T> {
   const result = schema.safeParse(data);
 
   if (!result.success) {
@@ -414,7 +398,11 @@ export function validateRequest<T extends z.ZodType>(
  * Creates an Express middleware for Zod validation.
  */
 export function zodValidator<T extends z.ZodType>(schema: T) {
-  return (req: { body: unknown }, res: { status: (code: number) => { json: (data: unknown) => void } }, next: () => void) => {
+  return (
+    req: { body: unknown },
+    res: { status: (code: number) => { json: (data: unknown) => void } },
+    next: () => void
+  ) => {
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
@@ -429,6 +417,69 @@ export function zodValidator<T extends z.ZodType>(schema: T) {
         errors,
       });
       return;
+    }
+
+    req.body = result.data;
+    next();
+  };
+}
+
+/**
+ * Creates an Express middleware for Zod validation with suspicious pattern checking.
+ * This is the recommended validator for user-facing text inputs.
+ *
+ * @param schema - Zod schema to validate against
+ * @param suspiciousFields - Fields to check for prompt injection patterns
+ */
+export function zodValidatorWithSecurity<T extends z.ZodType>(
+  schema: T,
+  suspiciousFields: string[] = []
+) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const logger = getRequestLogger();
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+      const errors = result.error.errors.map((err) => ({
+        path: err.path.join('.'),
+        message: err.message,
+      }));
+
+      logger.warn({ errors }, 'Zod validation failed');
+
+      res.status(400).json({
+        error: 'Validation failed',
+        type: 'validation_error',
+        details: errors,
+      });
+      return;
+    }
+
+    // Check for suspicious patterns in specified fields
+    const body = result.data as Record<string, unknown>;
+    for (const field of suspiciousFields) {
+      const value = body[field];
+      if (typeof value === 'string') {
+        const matches = checkSuspiciousPatterns(value);
+        if (matches.length > 0) {
+          if (process.env.BLOCK_SUSPICIOUS_PROMPTS === 'true') {
+            logger.warn(
+              { patterns: matches, field, preview: value.substring(0, 100) },
+              'Suspicious prompt patterns detected; blocking'
+            );
+            res.status(400).json({
+              error: 'Request blocked: suspicious prompt patterns detected',
+              type: 'validation_error',
+              details: [{ field, message: 'Content matches blocked patterns.' }],
+            });
+            return;
+          }
+          logger.warn(
+            { patterns: matches, field, preview: value.substring(0, 100) },
+            'Suspicious prompt patterns detected'
+          );
+        }
+      }
     }
 
     req.body = result.data;

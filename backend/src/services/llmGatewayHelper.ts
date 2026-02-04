@@ -10,16 +10,24 @@ export interface CompletionResult {
   error?: string;
 }
 
+export interface GetCompletionOptions {
+  provider?: LLMProvider;
+  modelId?: string;
+}
+
 /**
  * Get a non-streaming text completion from the LLM gateway.
  * Accumulates stream events into a single text response.
+ * Pass options.provider and options.modelId to use router-selected model.
  */
 export async function getCompletion(
   params: StreamParams,
-  provider?: LLMProvider
+  options?: LLMProvider | GetCompletionOptions
 ): Promise<CompletionResult> {
+  const opts: GetCompletionOptions =
+    options === undefined ? {} : typeof options === 'string' ? { provider: options } : options;
   try {
-    const stream = getStream(params, { provider });
+    const stream = getStream(params, { provider: opts.provider, modelId: opts.modelId });
     let text = '';
 
     for await (const event of stream) {

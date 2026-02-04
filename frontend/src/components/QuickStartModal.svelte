@@ -1,7 +1,22 @@
 <script lang="ts">
   import Button from '$lib/design-system/components/Button/Button.svelte';
   import Card from '$lib/design-system/components/Card/Card.svelte';
-  import { QUICK_START_TEMPLATES, tutorialStore, type QuickStartTemplate } from '../stores/tutorialStore';
+  import {
+    QUICK_START_TEMPLATES,
+    tutorialStore,
+    type QuickStartTemplate,
+  } from '../stores/tutorialStore';
+  import {
+    Check,
+    Plug,
+    Palette,
+    Building2,
+    ShoppingCart,
+    MessageCircle,
+    BarChart3,
+    Smartphone,
+    X,
+  } from 'lucide-svelte';
 
   interface Props {
     onSelect?: (template: QuickStartTemplate) => void;
@@ -15,7 +30,7 @@
 
   const categories = ['all', 'Full-stack', 'Frontend', 'Backend', 'Architecture'];
 
-  const filteredTemplates = $derived(() => {
+  const filteredTemplates = $derived.by(() => {
     let templates = QUICK_START_TEMPLATES;
 
     if (selectedCategory !== 'all') {
@@ -45,10 +60,37 @@
     tutorialStore.hideQuickStart();
     onClose?.();
   }
+
+  const iconMap: Record<string, typeof Check> = {
+    check: Check,
+    plug: Plug,
+    palette: Palette,
+    building: Building2,
+    'shopping-cart': ShoppingCart,
+    'message-circle': MessageCircle,
+    'bar-chart': BarChart3,
+    smartphone: Smartphone,
+  };
 </script>
 
-<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onclick={handleClose}>
-  <div class="w-full max-w-4xl max-h-[90vh] overflow-hidden" onclick={(e) => e.stopPropagation()}>
+<div
+  class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Quick Start Templates"
+  tabindex="-1"
+  onclick={handleClose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') handleClose();
+  }}
+>
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <div
+    class="w-full max-w-4xl max-h-[90vh] overflow-hidden"
+    role="document"
+    onclick={(e) => e.stopPropagation()}
+  >
     <Card>
       <div class="p-6">
         <!-- Header -->
@@ -62,9 +104,7 @@
             class="text-gray-400 hover:text-gray-600 transition-colors"
             aria-label="Close"
           >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X class="w-6 h-6" strokeWidth={2} />
           </button>
         </div>
 
@@ -95,13 +135,20 @@
 
         <!-- Templates Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2">
-          {#each filteredTemplates() as template}
+          {#each filteredTemplates as template}
             <button
               onclick={() => handleSelect(template)}
               class="text-left p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all group"
             >
               <div class="flex items-start gap-3">
-                <div class="text-3xl">{template.icon}</div>
+                <div class="shrink-0">
+                  {#if iconMap[template.icon]}
+                    {@const Icon = iconMap[template.icon]}
+                    <Icon class="w-8 h-8 text-gray-600" strokeWidth={1.5} />
+                  {:else}
+                    <Check class="w-8 h-8 text-gray-600" strokeWidth={1.5} />
+                  {/if}
+                </div>
                 <div class="flex-1">
                   <h3 class="font-semibold mb-1 group-hover:text-blue-600 transition-colors">
                     {template.name}
@@ -128,11 +175,9 @@
         <div class="mt-6 pt-6 border-t border-gray-200">
           <div class="flex justify-between items-center">
             <p class="text-sm text-gray-500">
-              {filteredTemplates().length} template{filteredTemplates().length !== 1 ? 's' : ''} available
+              {filteredTemplates.length} template{filteredTemplates.length !== 1 ? 's' : ''} available
             </p>
-            <Button variant="ghost" onclick={handleClose}>
-              Close
-            </Button>
+            <Button variant="ghost" onclick={handleClose}>Close</Button>
           </div>
         </div>
       </div>

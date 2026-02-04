@@ -2,7 +2,7 @@
  * Vision API: POST /api/vision/design-to-code – screenshot/image + description → generated code.
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { designToCode } from '../services/kimiVisionService.js';
 import type { DesignToCodeFramework } from '../services/kimiVisionService.js';
 import logger from '../middleware/logger.js';
@@ -26,12 +26,16 @@ router.post('/design-to-code', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'image (base64) or figmaUrl is required' });
     }
     if (typeof description !== 'string' || !description.trim()) {
-      return res.status(400).json({ error: 'description is required and must be a non-empty string' });
+      return res
+        .status(400)
+        .json({ error: 'description is required and must be a non-empty string' });
     }
     const validFrameworks: DesignToCodeFramework[] = ['svelte', 'react', 'vue', 'flutter'];
-    const framework = (validFrameworks.includes(targetFramework as DesignToCodeFramework)
-      ? targetFramework
-      : 'svelte') as DesignToCodeFramework;
+    const framework = (
+      validFrameworks.includes(targetFramework as DesignToCodeFramework)
+        ? targetFramework
+        : 'svelte'
+    ) as DesignToCodeFramework;
 
     const imageData =
       typeof image === 'string' && image.trim().length > 0
@@ -43,7 +47,9 @@ router.post('/design-to-code', async (req: Request, res: Response) => {
       ...(imageData && { image: imageData }),
       ...(typeof figmaUrl === 'string' && figmaUrl.trim() && { figmaUrl: figmaUrl.trim() }),
     };
-    const result = await designToCode(input as import('../services/kimiVisionService.js').DesignToCodeInput);
+    const result = await designToCode(
+      input as import('../services/kimiVisionService.js').DesignToCodeInput
+    );
     return res.json(result);
   } catch (e) {
     logger.warn({ error: (e as Error).message }, 'Vision design-to-code error');

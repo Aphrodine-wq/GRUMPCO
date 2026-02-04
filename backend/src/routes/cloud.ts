@@ -3,7 +3,7 @@
  * API endpoints for infrastructure generation and cloud resource management
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import {
   generateIaC,
   generateWebAppTemplate,
@@ -13,6 +13,7 @@ import {
   type IaCTool,
   type InfrastructureSpec,
 } from '../services/cloudProvisioningService.js';
+import { getVercelPresetForStack, type VercelPresetStack } from '../services/deployService.js';
 import logger from '../middleware/logger.js';
 
 const router = Router();
@@ -39,7 +40,10 @@ router.post('/generate', async (req: Request, res: Response) => {
 
     const result = generateIaC(spec, tool);
 
-    logger.info({ provider: spec.provider, tool, resources: spec.resources.length }, 'IaC generated via API');
+    logger.info(
+      { provider: spec.provider, tool, resources: spec.resources.length },
+      'IaC generated via API'
+    );
 
     return res.json({
       success: true,
@@ -54,6 +58,43 @@ router.post('/generate', async (req: Request, res: Response) => {
   }
 });
 
+// ========== Vercel One-Click Deploy Preset ==========
+
+/**
+ * Get Vercel deploy preset for a generated project stack.
+ * POST /api/cloud/vercel-preset
+ * Body: { stack: 'react'|'vue'|'svelte'|'nextjs'|'vite'|'express', projectName: string, gitRepo?: { owner, repo, branch? } }
+ */
+router.post('/vercel-preset', async (req: Request, res: Response) => {
+  try {
+    const { stack, projectName, gitRepo } = req.body as {
+      stack: VercelPresetStack;
+      projectName: string;
+      gitRepo?: { owner: string; repo: string; branch?: string };
+    };
+
+    if (!stack || !projectName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Required: stack, projectName',
+      });
+    }
+
+    const preset = getVercelPresetForStack(stack, projectName, gitRepo);
+
+    return res.json({
+      success: true,
+      data: preset,
+    });
+  } catch (error) {
+    logger.error({ error }, 'Failed to get Vercel preset');
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get Vercel deploy preset',
+    });
+  }
+});
+
 // ========== Quick Templates ==========
 
 /**
@@ -62,7 +103,12 @@ router.post('/generate', async (req: Request, res: Response) => {
  */
 router.post('/templates/webapp', async (req: Request, res: Response) => {
   try {
-    const { name, provider, region, tool = 'terraform' } = req.body as {
+    const {
+      name,
+      provider,
+      region,
+      tool = 'terraform',
+    } = req.body as {
       name: string;
       provider: CloudProvider;
       region: string;
@@ -101,7 +147,12 @@ router.post('/templates/webapp', async (req: Request, res: Response) => {
  */
 router.post('/templates/serverless', async (req: Request, res: Response) => {
   try {
-    const { name, provider, region, tool = 'terraform' } = req.body as {
+    const {
+      name,
+      provider,
+      region,
+      tool = 'terraform',
+    } = req.body as {
       name: string;
       provider: CloudProvider;
       region: string;
@@ -140,7 +191,13 @@ router.post('/templates/serverless', async (req: Request, res: Response) => {
  */
 router.post('/templates/microservices', async (req: Request, res: Response) => {
   try {
-    const { name, provider, region, services, tool = 'terraform' } = req.body as {
+    const {
+      name,
+      provider,
+      region,
+      services,
+      tool = 'terraform',
+    } = req.body as {
       name: string;
       provider: CloudProvider;
       region: string;
@@ -225,39 +282,173 @@ router.get('/dashboard', async (_req: Request, res: Response) => {
   try {
     // In a real implementation, these would call actual cloud provider APIs
     const integrations: MockIntegration[] = [
-      { id: 'vercel', name: 'Vercel', icon: 'vercel', category: 'deploy', connected: true, lastSync: new Date().toISOString(), status: 'healthy' },
-      { id: 'netlify', name: 'Netlify', icon: 'netlify', category: 'deploy', connected: true, lastSync: new Date().toISOString(), status: 'healthy' },
-      { id: 'aws', name: 'AWS', icon: 'aws', category: 'cloud', connected: true, lastSync: new Date().toISOString(), status: 'healthy' },
+      {
+        id: 'vercel',
+        name: 'Vercel',
+        icon: 'vercel',
+        category: 'deploy',
+        connected: true,
+        lastSync: new Date().toISOString(),
+        status: 'healthy',
+      },
+      {
+        id: 'netlify',
+        name: 'Netlify',
+        icon: 'netlify',
+        category: 'deploy',
+        connected: true,
+        lastSync: new Date().toISOString(),
+        status: 'healthy',
+      },
+      {
+        id: 'aws',
+        name: 'AWS',
+        icon: 'aws',
+        category: 'cloud',
+        connected: true,
+        lastSync: new Date().toISOString(),
+        status: 'healthy',
+      },
       { id: 'gcp', name: 'Google Cloud', icon: 'gcp', category: 'cloud', connected: false },
       { id: 'azure', name: 'Azure', icon: 'azure', category: 'cloud', connected: false },
-      { id: 'supabase', name: 'Supabase', icon: 'supabase', category: 'baas', connected: true, lastSync: new Date().toISOString(), status: 'healthy' },
+      {
+        id: 'supabase',
+        name: 'Supabase',
+        icon: 'supabase',
+        category: 'baas',
+        connected: true,
+        lastSync: new Date().toISOString(),
+        status: 'healthy',
+      },
       { id: 'firebase', name: 'Firebase', icon: 'firebase', category: 'baas', connected: false },
-      { id: 'github', name: 'GitHub', icon: 'github', category: 'vcs', connected: true, lastSync: new Date().toISOString(), status: 'healthy' },
-      { id: 'jira', name: 'Jira', icon: 'jira', category: 'pm', connected: true, lastSync: new Date().toISOString(), status: 'warning' },
+      {
+        id: 'github',
+        name: 'GitHub',
+        icon: 'github',
+        category: 'vcs',
+        connected: true,
+        lastSync: new Date().toISOString(),
+        status: 'healthy',
+      },
+      {
+        id: 'jira',
+        name: 'Jira',
+        icon: 'jira',
+        category: 'pm',
+        connected: true,
+        lastSync: new Date().toISOString(),
+        status: 'warning',
+      },
       { id: 'linear', name: 'Linear', icon: 'linear', category: 'pm', connected: false },
     ];
 
     const deployments: MockDeployment[] = [
-      { id: 'd1', project: 'g-rump-app', provider: 'vercel', status: 'ready', url: 'https://g-rump.vercel.app', branch: 'main', commit: 'abc123', createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(), duration: 45 },
-      { id: 'd2', project: 'g-rump-docs', provider: 'netlify', status: 'building', branch: 'main', commit: 'def456', createdAt: new Date(Date.now() - 1000 * 60 * 2).toISOString() },
-      { id: 'd3', project: 'g-rump-api', provider: 'vercel', status: 'ready', url: 'https://api.g-rump.dev', branch: 'main', commit: 'ghi789', createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), duration: 62 },
-      { id: 'd4', project: 'g-rump-app', provider: 'vercel', status: 'error', branch: 'feature/dark-mode', commit: 'jkl012', createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
-      { id: 'd5', project: 'landing-page', provider: 'netlify', status: 'ready', url: 'https://grump.io', branch: 'main', commit: 'mno345', createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(), duration: 28 },
+      {
+        id: 'd1',
+        project: 'g-rump-app',
+        provider: 'vercel',
+        status: 'ready',
+        url: 'https://g-rump.vercel.app',
+        branch: 'main',
+        commit: 'abc123',
+        createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+        duration: 45,
+      },
+      {
+        id: 'd2',
+        project: 'g-rump-docs',
+        provider: 'netlify',
+        status: 'building',
+        branch: 'main',
+        commit: 'def456',
+        createdAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
+      },
+      {
+        id: 'd3',
+        project: 'g-rump-api',
+        provider: 'vercel',
+        status: 'ready',
+        url: 'https://api.g-rump.dev',
+        branch: 'main',
+        commit: 'ghi789',
+        createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+        duration: 62,
+      },
+      {
+        id: 'd4',
+        project: 'g-rump-app',
+        provider: 'vercel',
+        status: 'error',
+        branch: 'feature/new-ui',
+        commit: 'jkl012',
+        createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+      },
+      {
+        id: 'd5',
+        project: 'landing-page',
+        provider: 'netlify',
+        status: 'ready',
+        url: 'https://grump.io',
+        branch: 'main',
+        commit: 'mno345',
+        createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+        duration: 28,
+      },
     ];
 
     const resources: MockResource[] = [
-      { id: 'r1', name: 'prod-api-cluster', provider: 'aws', type: 'container', status: 'running', region: 'us-east-1', cost: 145.50 },
-      { id: 'r2', name: 'main-db', provider: 'aws', type: 'database', status: 'running', region: 'us-east-1', cost: 89.99 },
-      { id: 'r3', name: 'static-assets', provider: 'aws', type: 'storage', status: 'running', region: 'us-east-1', cost: 12.30 },
-      { id: 'r4', name: 'ai-inference', provider: 'gcp', type: 'compute', status: 'running', region: 'us-central1', cost: 234.00 },
-      { id: 'r5', name: 'edge-functions', provider: 'aws', type: 'serverless', status: 'running', region: 'global', cost: 45.67 },
+      {
+        id: 'r1',
+        name: 'prod-api-cluster',
+        provider: 'aws',
+        type: 'container',
+        status: 'running',
+        region: 'us-east-1',
+        cost: 145.5,
+      },
+      {
+        id: 'r2',
+        name: 'main-db',
+        provider: 'aws',
+        type: 'database',
+        status: 'running',
+        region: 'us-east-1',
+        cost: 89.99,
+      },
+      {
+        id: 'r3',
+        name: 'static-assets',
+        provider: 'aws',
+        type: 'storage',
+        status: 'running',
+        region: 'us-east-1',
+        cost: 12.3,
+      },
+      {
+        id: 'r4',
+        name: 'ai-inference',
+        provider: 'gcp',
+        type: 'compute',
+        status: 'running',
+        region: 'us-central1',
+        cost: 234.0,
+      },
+      {
+        id: 'r5',
+        name: 'edge-functions',
+        provider: 'aws',
+        type: 'serverless',
+        status: 'running',
+        region: 'global',
+        cost: 45.67,
+      },
     ];
 
     const costs: MockCostSummary[] = [
-      { provider: 'AWS', current: 293.46, forecast: 320.00, trend: 'up', trendPercent: 8 },
-      { provider: 'GCP', current: 234.00, forecast: 250.00, trend: 'up', trendPercent: 5 },
-      { provider: 'Vercel', current: 20.00, forecast: 20.00, trend: 'stable', trendPercent: 0 },
-      { provider: 'Supabase', current: 25.00, forecast: 25.00, trend: 'stable', trendPercent: 0 },
+      { provider: 'AWS', current: 293.46, forecast: 320.0, trend: 'up', trendPercent: 8 },
+      { provider: 'GCP', current: 234.0, forecast: 250.0, trend: 'up', trendPercent: 5 },
+      { provider: 'Vercel', current: 20.0, forecast: 20.0, trend: 'stable', trendPercent: 0 },
+      { provider: 'Supabase', current: 25.0, forecast: 25.0, trend: 'stable', trendPercent: 0 },
     ];
 
     return res.json({

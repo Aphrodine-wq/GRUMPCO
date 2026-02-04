@@ -52,13 +52,26 @@ function getDb() {
 
 export function listScheduledAgents(): ScheduledAgent[] {
   if (useSupabase()) {
-    throw new Error('Scheduled agents listing is async in Supabase mode. Use listAllScheduledAgents with await.');
+    throw new Error(
+      'Scheduled agents listing is async in Supabase mode. Use listAllScheduledAgents with await.'
+    );
   }
   const db = getDb();
-  const rows = db.prepare(
-    `SELECT id, name, cron_expression AS cronExpression, action, params_json AS paramsJson, enabled, created_at AS createdAt, updated_at AS updatedAt
+  const rows = db
+    .prepare(
+      `SELECT id, name, cron_expression AS cronExpression, action, params_json AS paramsJson, enabled, created_at AS createdAt, updated_at AS updatedAt
      FROM scheduled_agents WHERE enabled = 1 ORDER BY created_at ASC`
-  ).all() as { id: string; name: string; cronExpression: string; action: string; paramsJson: string; enabled: number; createdAt: string; updatedAt: string }[];
+    )
+    .all() as {
+    id: string;
+    name: string;
+    cronExpression: string;
+    action: string;
+    paramsJson: string;
+    enabled: number;
+    createdAt: string;
+    updatedAt: string;
+  }[];
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -89,10 +102,21 @@ export async function listAllScheduledAgents(): Promise<ScheduledAgent[]> {
     }));
   }
   const db = getDb();
-  const rows = db.prepare(
-    `SELECT id, name, cron_expression AS cronExpression, action, params_json AS paramsJson, enabled, created_at AS createdAt, updated_at AS updatedAt
+  const rows = db
+    .prepare(
+      `SELECT id, name, cron_expression AS cronExpression, action, params_json AS paramsJson, enabled, created_at AS createdAt, updated_at AS updatedAt
      FROM scheduled_agents ORDER BY created_at ASC`
-  ).all() as { id: string; name: string; cronExpression: string; action: string; paramsJson: string; enabled: number; createdAt: string; updatedAt: string }[];
+    )
+    .all() as {
+    id: string;
+    name: string;
+    cronExpression: string;
+    action: string;
+    paramsJson: string;
+    enabled: number;
+    createdAt: string;
+    updatedAt: string;
+  }[];
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -105,7 +129,11 @@ export async function listAllScheduledAgents(): Promise<ScheduledAgent[]> {
   }));
 }
 
-export async function runScheduledAgent(scheduleId: string, action: ScheduledAction, params: ScheduledAgentParams): Promise<void> {
+export async function runScheduledAgent(
+  scheduleId: string,
+  action: ScheduledAction,
+  params: ScheduledAgentParams
+): Promise<void> {
   if (action === 'ship') {
     const projectDescription = params.projectDescription ?? '';
     const session = await startShipMode({
@@ -113,7 +141,10 @@ export async function runScheduledAgent(scheduleId: string, action: ScheduledAct
       preferences: params.preferences as Record<string, unknown> | undefined,
     });
     await enqueueShipJob(session.id);
-    logger.info({ scheduleId, sessionId: session.id }, 'Scheduled agent: SHIP session created and enqueued');
+    logger.info(
+      { scheduleId, sessionId: session.id },
+      'Scheduled agent: SHIP session created and enqueued'
+    );
   } else {
     logger.warn({ scheduleId, action }, 'Scheduled agent: only ship action is implemented');
   }
@@ -182,7 +213,9 @@ export async function cancelScheduledAgent(id: string): Promise<boolean> {
     return true;
   }
   const db = getDb();
-  const result = db.prepare(`UPDATE scheduled_agents SET enabled = 0, updated_at = datetime('now') WHERE id = ?`).run(id);
+  const result = db
+    .prepare(`UPDATE scheduled_agents SET enabled = 0, updated_at = datetime('now') WHERE id = ?`)
+    .run(id);
   if (result.changes === 0) return false;
 
   if (useRedis()) {
@@ -215,10 +248,23 @@ export async function getScheduledAgent(id: string): Promise<ScheduledAgent | nu
     };
   }
   const db = getDb();
-  const row = db.prepare(
-    `SELECT id, name, cron_expression AS cronExpression, action, params_json AS paramsJson, enabled, created_at AS createdAt, updated_at AS updatedAt
+  const row = db
+    .prepare(
+      `SELECT id, name, cron_expression AS cronExpression, action, params_json AS paramsJson, enabled, created_at AS createdAt, updated_at AS updatedAt
      FROM scheduled_agents WHERE id = ?`
-  ).get(id) as { id: string; name: string; cronExpression: string; action: string; paramsJson: string; enabled: number; createdAt: string; updatedAt: string } | undefined;
+    )
+    .get(id) as
+    | {
+        id: string;
+        name: string;
+        cronExpression: string;
+        action: string;
+        paramsJson: string;
+        enabled: number;
+        createdAt: string;
+        updatedAt: string;
+      }
+    | undefined;
   if (!row) return null;
   return {
     id: row.id,

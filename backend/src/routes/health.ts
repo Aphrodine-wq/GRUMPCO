@@ -1,9 +1,11 @@
-import express, { Request, Response, Router } from 'express';
+import express, { type Request, type Response, type Router } from 'express';
 import { getRequestLogger } from '../middleware/logger.js';
 import { getDatabase } from '../db/database.js';
 import { getAllServiceStates } from '../services/bulkheads.js';
 import { getAlertingService } from '../services/alerting.js';
 import { isRedisConnected } from '../services/redis.js';
+import { getConfiguredProviders, getProviderConfig, type LLMProvider } from '../services/llmGateway.js';
+import { env } from '../config/env.js';
 
 const router: Router = express.Router();
 
@@ -14,17 +16,12 @@ router.get('/', (_req: Request, res: Response) => {
 
 // Quick health check for frontend status badge - no API calls, token-free
 router.get('/quick', (_req: Request, res: Response) => {
-  const apiKeyConfigured = !!(
-    process.env.NVIDIA_NIM_API_KEY ||
-    process.env.OPENROUTER_API_KEY
-  );
+  const apiKeyConfigured = !!process.env.NVIDIA_NIM_API_KEY;
 
   const authEnabled =
     !!process.env.SUPABASE_URL &&
     !!process.env.SUPABASE_SERVICE_KEY &&
     process.env.SUPABASE_URL !== 'https://your-project.supabase.co';
-  const billingEnabled =
-    !!process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_');
 
   // Determine overall status
   let status: 'healthy' | 'unhealthy' = 'healthy';
@@ -38,7 +35,6 @@ router.get('/quick', (_req: Request, res: Response) => {
       api_key_configured: apiKeyConfigured,
       server_responsive: true,
       auth_enabled: authEnabled,
-      billing_enabled: billingEnabled,
     },
     timestamp: new Date().toISOString(),
   });
@@ -87,14 +83,14 @@ router.get('/ready', async (_req: Request, res: Response) => {
   };
 
   const redisRequired =
-    process.env.REDIS_HOST != null && process.env.REDIS_HOST !== '' ||
+    (process.env.REDIS_HOST != null && process.env.REDIS_HOST !== '') ||
     process.env.SESSION_STORAGE === 'redis';
   if (redisRequired) {
     checks.redis = false;
   }
 
-  // Check API key is configured (NVIDIA NIM or OpenRouter)
-  if (process.env.NVIDIA_NIM_API_KEY || process.env.OPENROUTER_API_KEY) {
+  // Check API key is configured (NVIDIA NIM)
+  if (process.env.NVIDIA_NIM_API_KEY) {
     checks.api_key = true;
   }
 
@@ -124,50 +120,30 @@ router.get('/ready', async (_req: Request, res: Response) => {
   // Check NVIDIA NIM API connectivity using OpenAI-compatible endpoint
   if (process.env.NVIDIA_NIM_API_KEY) {
     try {
-      const response = await fetch(`${process.env.NVIDIA_NIM_URL || 'https://integrate.api.nvidia.com/v1'}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NVIDIA_NIM_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'moonshotai/kimi-k2.5',
-          max_tokens: 1,
-          messages: [{ role: 'user', content: 'ping' }],
-        }),
-      });
+      const response = await fetch(
+        `${process.env.NVIDIA_NIM_URL || 'https://integrate.api.nvidia.com/v1'}/chat/completions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.NVIDIA_NIM_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'meta/llama-3.1-70b-instruct',
+            max_tokens: 1,
+            messages: [{ role: 'user', content: 'ping' }],
+          }),
+        }
+      );
       checks.nim_api = response.ok;
     } catch (error) {
       const err = error as Error;
       log.warn({ error: err.message }, 'NVIDIA NIM API health check failed');
       checks.nim_api = false;
     }
-  } else if (process.env.OPENROUTER_API_KEY) {
-    // Check OpenRouter as fallback
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
-          'X-Title': 'Opencode Health Check',
-        },
-        body: JSON.stringify({
-          model: 'moonshotai/kimi-k2.5',
-          max_tokens: 1,
-          messages: [{ role: 'user', content: 'ping' }],
-        }),
-      });
-      checks.nim_api = response.ok;
-    } catch (error) {
-      const err = error as Error;
-      log.warn({ error: err.message }, 'OpenRouter API health check failed');
-      checks.nim_api = false;
-    }
   }
 
-  const allHealthy = Object.values(checks).every(v => v);
+  const allHealthy = Object.values(checks).every((v) => v);
 
   res.status(allHealthy ? 200 : 503).json({
     status: allHealthy ? 'ready' : 'not_ready',
@@ -178,7 +154,10 @@ router.get('/ready', async (_req: Request, res: Response) => {
 // Detailed health check with all component statuses
 router.get('/detailed', async (_req: Request, res: Response) => {
   const _log = getRequestLogger();
-  const checks: Record<string, { status: 'healthy' | 'unhealthy' | 'degraded'; details?: unknown }> = {};
+  const checks: Record<
+    string,
+    { status: 'healthy' | 'unhealthy' | 'degraded'; details?: unknown }
+  > = {};
 
   // Database check
   try {
@@ -235,48 +214,36 @@ router.get('/detailed', async (_req: Request, res: Response) => {
     };
   }
 
-  // API endpoint check (NVIDIA NIM with Kimi K2.5)
+  // API endpoint check (NVIDIA NIM - Powered by NVIDIA)
   try {
     const start = Date.now();
     let response;
-    
+
     if (process.env.NVIDIA_NIM_API_KEY) {
-      response = await fetch(`${process.env.NVIDIA_NIM_URL || 'https://integrate.api.nvidia.com/v1'}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NVIDIA_NIM_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'moonshotai/kimi-k2.5',
-          max_tokens: 1,
-          messages: [{ role: 'user', content: 'ping' }],
-        }),
-      });
-    } else if (process.env.OPENROUTER_API_KEY) {
-      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
-          'X-Title': 'Opencode Health Check',
-        },
-        body: JSON.stringify({
-          model: 'moonshotai/kimi-k2.5',
-          max_tokens: 1,
-          messages: [{ role: 'user', content: 'ping' }],
-        }),
-      });
+      response = await fetch(
+        `${process.env.NVIDIA_NIM_URL || 'https://integrate.api.nvidia.com/v1'}/chat/completions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.NVIDIA_NIM_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'meta/llama-3.1-70b-instruct',
+            max_tokens: 1,
+            messages: [{ role: 'user', content: 'ping' }],
+          }),
+        }
+      );
     } else {
-      throw new Error('No AI provider API key configured');
+      throw new Error('NVIDIA NIM API key not configured');
     }
-    
+
     const latency = Date.now() - start;
     if (response.ok) {
       checks.api_endpoint = {
         status: 'healthy',
-        details: { latencyMs: latency },
+        details: { latencyMs: latency, provider: 'nvidia-nim' },
       };
     } else {
       throw new Error(`API returned status ${response.status}`);
@@ -318,7 +285,10 @@ router.get('/detailed', async (_req: Request, res: Response) => {
     } catch (error) {
       checks.redis = {
         status: 'degraded',
-        details: { error: (error as Error).message, impact: 'L2 cache disabled; rate limits in-memory only.' },
+        details: {
+          error: (error as Error).message,
+          impact: 'L2 cache disabled; rate limits in-memory only.',
+        },
       };
     }
   }
@@ -343,7 +313,7 @@ router.get('/detailed', async (_req: Request, res: Response) => {
     const alertingService = getAlertingService();
     const recentAlerts = alertingService.getRecentAlerts(10);
     checks.alerts = {
-      status: recentAlerts.some(a => a.severity === 'critical') ? 'unhealthy' : 'healthy',
+      status: recentAlerts.some((a) => a.severity === 'critical') ? 'unhealthy' : 'healthy',
       details: { recentAlerts: recentAlerts.length, alerts: recentAlerts },
     };
   } catch (error) {
@@ -354,14 +324,122 @@ router.get('/detailed', async (_req: Request, res: Response) => {
   }
 
   // Overall status
-  const allHealthy = Object.values(checks).every(c => c.status === 'healthy');
-  const anyUnhealthy = Object.values(checks).some(c => c.status === 'unhealthy');
+  const allHealthy = Object.values(checks).every((c) => c.status === 'healthy');
+  const anyUnhealthy = Object.values(checks).some((c) => c.status === 'unhealthy');
   const overallStatus = anyUnhealthy ? 'unhealthy' : allHealthy ? 'healthy' : 'degraded';
 
   res.status(overallStatus === 'unhealthy' ? 503 : overallStatus === 'degraded' ? 200 : 200).json({
     status: overallStatus,
     timestamp: new Date().toISOString(),
     checks,
+  });
+});
+
+// AI Providers status endpoint
+router.get('/ai-providers', async (_req: Request, res: Response) => {
+  const log = getRequestLogger();
+  const providers = getConfiguredProviders();
+  
+  const providerStatus: Record<string, { 
+    configured: boolean; 
+    healthy?: boolean; 
+    latencyMs?: number;
+    error?: string;
+    models?: string[];
+  }> = {};
+
+  // Check each configured provider
+  for (const provider of providers) {
+    const config = getProviderConfig(provider);
+    if (!config) continue;
+
+    const start = Date.now();
+    try {
+      // Quick health check - just validate the endpoint is reachable
+      // For most providers, we'll do a lightweight check
+      let healthy = false;
+      
+      switch (provider) {
+        case 'nim':
+          if (env.NVIDIA_NIM_API_KEY) {
+            const response = await fetch(
+              `${env.NVIDIA_NIM_URL || 'https://integrate.api.nvidia.com/v1'}/models`,
+              {
+                headers: { Authorization: `Bearer ${env.NVIDIA_NIM_API_KEY}` },
+              }
+            );
+            healthy = response.ok;
+          }
+          break;
+        case 'groq':
+          if (env.GROQ_API_KEY) {
+            const response = await fetch('https://api.groq.com/openai/v1/models', {
+              headers: { Authorization: `Bearer ${env.GROQ_API_KEY}` },
+            });
+            healthy = response.ok;
+          }
+          break;
+        case 'openrouter':
+          if (env.OPENROUTER_API_KEY) {
+            const response = await fetch('https://openrouter.ai/api/v1/models', {
+              headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },
+            });
+            healthy = response.ok;
+          }
+          break;
+        case 'together':
+          if (env.TOGETHER_API_KEY) {
+            const response = await fetch('https://api.together.xyz/v1/models', {
+              headers: { Authorization: `Bearer ${env.TOGETHER_API_KEY}` },
+            });
+            healthy = response.ok;
+          }
+          break;
+        case 'ollama':
+          if (env.OLLAMA_BASE_URL) {
+            const response = await fetch(`${env.OLLAMA_BASE_URL}/api/tags`);
+            healthy = response.ok;
+          }
+          break;
+      }
+
+      providerStatus[provider] = {
+        configured: true,
+        healthy,
+        latencyMs: Date.now() - start,
+        models: config.models.slice(0, 5), // Show first 5 models
+      };
+    } catch (error) {
+      providerStatus[provider] = {
+        configured: true,
+        healthy: false,
+        latencyMs: Date.now() - start,
+        error: (error as Error).message,
+        models: config.models.slice(0, 5),
+      };
+    }
+  }
+
+  // Add unconfigured providers
+  const allProviders: LLMProvider[] = ['nim', 'groq', 'openrouter', 'together', 'ollama'];
+  for (const provider of allProviders) {
+    if (!providerStatus[provider]) {
+      providerStatus[provider] = { configured: false };
+    }
+  }
+
+  const healthyCount = Object.values(providerStatus).filter(p => p.healthy).length;
+  const configuredCount = Object.values(providerStatus).filter(p => p.configured).length;
+
+  res.json({
+    status: healthyCount > 0 ? 'healthy' : configuredCount > 0 ? 'degraded' : 'unhealthy',
+    summary: {
+      total: allProviders.length,
+      configured: configuredCount,
+      healthy: healthyCount,
+    },
+    providers: providerStatus,
+    timestamp: new Date().toISOString(),
   });
 });
 

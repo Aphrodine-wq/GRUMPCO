@@ -76,8 +76,8 @@ test.describe('Critical User Journeys', () => {
     expect(messageCount).toBeGreaterThan(0);
   });
 
-  test('Error handling: Invalid API key', async ({ page, context }) => {
-    // Intercept API calls to simulate error
+  test('Error handling: Invalid API key (401)', async ({ page, context }) => {
+    // Intercept API calls to simulate 401
     await page.route('**/api/**', (route) => {
       if (route.request().url().includes('/api/intent/parse')) {
         route.fulfill({
@@ -103,6 +103,44 @@ test.describe('Critical User Journeys', () => {
     // Verify error is displayed
     const errorMessage = page.locator('[class*="error"], [class*="toast"]').first();
     await expect(errorMessage).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Error handling: Rate limit (429)', async ({ page }) => {
+    await page.route('**/api/**', (route) =>
+      route.fulfill({
+        status: 429,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Rate limit exceeded', type: 'rate_limit' }),
+      })
+    );
+
+    const chatInput = page.locator('textarea[placeholder*="message"], input[type="text"]').first();
+    await expect(chatInput).toBeVisible({ timeout: 10000 });
+    await chatInput.fill('Test rate limit');
+    await chatInput.press('Enter');
+    await page.waitForTimeout(2000);
+
+    const errorOrToast = page.locator('[class*="error"], [class*="toast"], text=rate limit').first();
+    await expect(errorOrToast).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Error handling: Server error (500)', async ({ page }) => {
+    await page.route('**/api/**', (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Internal server error', type: 'internal_error' }),
+      })
+    );
+
+    const chatInput = page.locator('textarea[placeholder*="message"], input[type="text"]').first();
+    await expect(chatInput).toBeVisible({ timeout: 10000 });
+    await chatInput.fill('Test server error');
+    await chatInput.press('Enter');
+    await page.waitForTimeout(2000);
+
+    const errorOrToast = page.locator('[class*="error"], [class*="toast"]').first();
+    await expect(errorOrToast).toBeVisible({ timeout: 5000 });
   });
 
   test('Session management: Create and persist session', async ({ page }) => {

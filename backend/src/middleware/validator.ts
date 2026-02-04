@@ -1,4 +1,4 @@
-import { body, validationResult, ValidationChain } from 'express-validator';
+import { body, validationResult, type ValidationChain } from 'express-validator';
 import type { Request, Response, NextFunction } from 'express';
 import { getRequestLogger } from './logger.js';
 
@@ -20,7 +20,6 @@ export const MAX_PROJECT_NAME_LENGTH = 2000;
 /** Max length for architecture/PRD projectDescription (chars). */
 export const MAX_ARCHITECTURE_DESCRIPTION_LENGTH = 16000;
 
-
 // Comprehensive prompt injection patterns to detect
 // These patterns catch common jailbreak and prompt injection attempts
 const SUSPICIOUS_PATTERNS: RegExp[] = [
@@ -30,7 +29,7 @@ const SUSPICIOUS_PATTERNS: RegExp[] = [
   /forget\s+(all\s+)?(previous|prior|above|earlier|initial)/i,
   /override\s+(all\s+)?(previous|prior|above|earlier|initial)/i,
   /bypass\s+(all\s+)?(previous|prior|above|earlier|initial)/i,
-  
+
   // New instruction injection
   /new\s+instructions?:/i,
   /system\s*:\s*/i,
@@ -39,7 +38,7 @@ const SUSPICIOUS_PATTERNS: RegExp[] = [
   /<\|im_start\|>/i,
   /<\|system\|>/i,
   /\[system\]/i,
-  
+
   // Role manipulation attempts - more specific patterns to avoid false positives
   /you\s+are\s+now\s+(a\s+)?different/i,
   /pretend\s+(you('re|\s+are)\s+)?(to\s+be\s+)?a\s+different/i,
@@ -47,12 +46,12 @@ const SUSPICIOUS_PATTERNS: RegExp[] = [
   /act\s+as\s+(if\s+you\s+(are|were)\s+)?(a\s+)?different/i,
   /act\s+as\s+(if\s+you\s+(are|were)\s+)?(an?\s+)?(unrestricted|evil|malicious)/i,
   /roleplay\s+as\s+(an?\s+)?(unrestricted|evil|malicious|hacker)/i,
-  
+
   // Mode switching - specific dangerous modes only
   /switch\s+to\s+(developer|god|unrestricted|unfiltered|jailbreak)\s*mode/i,
   /enter\s+(developer|god|unrestricted|unfiltered|jailbreak)\s*mode/i,
   /enable\s+(developer|god|unrestricted|unfiltered|jailbreak)\s*mode/i,
-  
+
   // Jailbreak keywords
   /dan\s*mode/i,
   /developer\s*mode\s*(enabled|on|activated)/i,
@@ -62,7 +61,7 @@ const SUSPICIOUS_PATTERNS: RegExp[] = [
   /unfiltered\s*mode/i,
   /\bjailbreak\b/i,
   /do\s+anything\s+now/i,
-  
+
   // Prompt leaking attempts
   /reveal\s+(your|the)\s+(system|initial)\s+(prompt|instructions)/i,
   /show\s+(me\s+)?(your|the)\s+(system|initial)\s+(prompt|instructions)/i,
@@ -70,12 +69,12 @@ const SUSPICIOUS_PATTERNS: RegExp[] = [
   /print\s+(your|the)\s+(system|initial)\s+(prompt|instructions)/i,
   /output\s+(your|the)\s+(system|initial)\s+(prompt|instructions)/i,
   /repeat\s+(your|the)\s+(system|initial)\s+(prompt|instructions)/i,
-  
+
   // Base64/encoding evasion attempts
   /base64\s*decode/i,
   /atob\s*\(/i,
   /eval\s*\(/i,
-  
+
   // Delimiter injection
   /```system/i,
   /---\s*system/i,
@@ -114,6 +113,55 @@ export function checkSuspiciousInBody(
   return { block: false };
 }
 
+/** Chat messages: get all user-facing text from a message for suspicious-pattern check. */
+function getTextsFromMessage(msg: { content?: unknown }): string[] {
+  const content = msg.content;
+  if (typeof content === 'string') return [content];
+  if (Array.isArray(content)) {
+    const texts: string[] = [];
+    for (const p of content as { type?: string; text?: string }[]) {
+      if (p?.type === 'text' && typeof p.text === 'string') texts.push(p.text);
+    }
+    return texts;
+  }
+  return [];
+}
+
+/**
+ * Run suspicious-pattern check on chat messages array.
+ * When BLOCK_SUSPICIOUS_PROMPTS=true, returns { block: true, key, preview }; otherwise { block: false }.
+ */
+export function checkSuspiciousInMessages(
+  messages: Array<{ content?: unknown }>
+): { block: false } | { block: true; patterns: string[]; key: string; preview: string } {
+  for (let i = 0; i < messages.length; i++) {
+    const texts = getTextsFromMessage(messages[i]);
+    for (const text of texts) {
+      const matches = checkSuspiciousPatterns(text);
+      if (matches.length > 0) {
+        if (process.env.BLOCK_SUSPICIOUS_PROMPTS === 'true') {
+          return {
+            block: true,
+            patterns: matches,
+            key: `messages[${i}].content`,
+            preview: text.substring(0, 100),
+          };
+        }
+        const logger = getRequestLogger();
+        logger.warn(
+          {
+            patterns: matches,
+            key: `messages[${i}].content`,
+            messagePreview: text.substring(0, 100),
+          },
+          'Suspicious prompt patterns detected in chat'
+        );
+      }
+    }
+  }
+  return { block: false };
+}
+
 // Validation rules for diagram generation
 export const validateDiagramRequest: ValidationChain[] = [
   body('message')
@@ -135,7 +183,9 @@ export const validateShipRequest: ValidationChain[] = [
     .isString()
     .withMessage('projectDescription must be a string')
     .isLength({ min: 1, max: MAX_SHIP_PROJECT_DESCRIPTION_LENGTH })
-    .withMessage(`projectDescription must be between 1 and ${MAX_SHIP_PROJECT_DESCRIPTION_LENGTH} characters`)
+    .withMessage(
+      `projectDescription must be between 1 and ${MAX_SHIP_PROJECT_DESCRIPTION_LENGTH} characters`
+    )
     .trim()
     .customSanitizer((value: string) => sanitizeControlChars(value)),
 ];
@@ -150,14 +200,16 @@ export const validateCodegenRequest: ValidationChain[] = [
   body('preferences').optional().isObject(),
   body('componentMapping').optional().isObject(),
   body('projectId').optional().isString().trim(),
-  body()
-    .custom((_val, { req }) => {
-      const b = (req as RequestWithBody).body as Record<string, unknown>;
-      const multi = Array.isArray(b?.prds) && b?.prds.length > 0 && b?.architecture;
-      const legacy = b?.prdId && b?.architectureId && b?.prd && b?.architecture;
-      if (!multi && !legacy) throw new Error('Either (prds array + architecture) or (prdId, architectureId, prd, architecture) is required');
-      return true;
-    }),
+  body().custom((_val, { req }) => {
+    const b = (req as RequestWithBody).body as Record<string, unknown>;
+    const multi = Array.isArray(b?.prds) && b?.prds.length > 0 && b?.architecture;
+    const legacy = b?.prdId && b?.architectureId && b?.prd && b?.architecture;
+    if (!multi && !legacy)
+      throw new Error(
+        'Either (prds array + architecture) or (prdId, architectureId, prd, architecture) is required'
+      );
+    return true;
+  }),
 ];
 
 // Validation rules for PRD generate / generate-stream
@@ -177,10 +229,16 @@ export const validatePrdGenerateRequest: ValidationChain[] = [
     .isString()
     .withMessage('projectDescription must be a string')
     .isLength({ min: 1, max: MAX_ARCHITECTURE_DESCRIPTION_LENGTH })
-    .withMessage(`projectDescription must be between 1 and ${MAX_ARCHITECTURE_DESCRIPTION_LENGTH} characters`)
+    .withMessage(
+      `projectDescription must be between 1 and ${MAX_ARCHITECTURE_DESCRIPTION_LENGTH} characters`
+    )
     .trim()
     .customSanitizer((value: string) => sanitizeControlChars(value)),
-  body('architecture').exists({ checkNull: true }).withMessage('architecture is required').isObject().withMessage('architecture must be an object'),
+  body('architecture')
+    .exists({ checkNull: true })
+    .withMessage('architecture is required')
+    .isObject()
+    .withMessage('architecture must be an object'),
 ];
 
 // Validation rules for architecture generate / generate-stream
@@ -189,27 +247,31 @@ export const validateArchitectureRequest: ValidationChain[] = [
     .optional()
     .isString()
     .trim()
-    .customSanitizer((value: string) => (typeof value === 'string' ? sanitizeControlChars(value) : '')),
-  body('enrichedIntent')
-    .optional()
-    .isObject(),
+    .customSanitizer((value: string) =>
+      typeof value === 'string' ? sanitizeControlChars(value) : ''
+    ),
+  body('enrichedIntent').optional().isObject(),
   body('projectType').optional().isString().trim(),
   body('techStack').optional().isArray(),
   body('complexity').optional().isString().trim(),
   body('refinements').optional().isArray(),
   body('conversationHistory').optional().isArray(),
-  body()
-    .custom((_val, { req }) => {
-      const b = (req as RequestWithBody).body as Record<string, unknown>;
-      const pd = b?.projectDescription;
-      const raw = (b?.enrichedIntent as { raw?: string } | undefined)?.raw;
-      const spd = typeof pd === 'string' ? pd.trim() : '';
-      const sraw = typeof raw === 'string' ? raw.trim() : '';
-      if (!spd.length && !sraw.length) throw new Error('projectDescription or enrichedIntent.raw is required');
-      if (spd.length > MAX_ARCHITECTURE_DESCRIPTION_LENGTH) throw new Error(`projectDescription exceeds ${MAX_ARCHITECTURE_DESCRIPTION_LENGTH} characters`);
-      if (sraw.length > MAX_ARCHITECTURE_DESCRIPTION_LENGTH) throw new Error('enrichedIntent.raw exceeds maximum length');
-      return true;
-    }),
+  body().custom((_val, { req }) => {
+    const b = (req as RequestWithBody).body as Record<string, unknown>;
+    const pd = b?.projectDescription;
+    const raw = (b?.enrichedIntent as { raw?: string } | undefined)?.raw;
+    const spd = typeof pd === 'string' ? pd.trim() : '';
+    const sraw = typeof raw === 'string' ? raw.trim() : '';
+    if (!spd.length && !sraw.length)
+      throw new Error('projectDescription or enrichedIntent.raw is required');
+    if (spd.length > MAX_ARCHITECTURE_DESCRIPTION_LENGTH)
+      throw new Error(
+        `projectDescription exceeds ${MAX_ARCHITECTURE_DESCRIPTION_LENGTH} characters`
+      );
+    if (sraw.length > MAX_ARCHITECTURE_DESCRIPTION_LENGTH)
+      throw new Error('enrichedIntent.raw exceeds maximum length');
+    return true;
+  }),
 ];
 
 interface RequestWithBody extends Request {
@@ -235,7 +297,7 @@ export function handleValidationErrors(
     res.status(400).json({
       error: 'Validation failed',
       type: 'validation_error',
-      details: errors.array().map(e => ({
+      details: errors.array().map((e) => ({
         field: 'path' in e ? e.path : 'unknown',
         message: e.msg,
       })),
@@ -276,29 +338,48 @@ export function handleValidationErrors(
 }
 
 /** Wrapper that binds handleValidationErrors with specific keys for diagram (message). */
-export function handleDiagramValidationErrors(req: RequestWithBody, res: Response, next: NextFunction): void {
+export function handleDiagramValidationErrors(
+  req: RequestWithBody,
+  res: Response,
+  next: NextFunction
+): void {
   handleValidationErrors(req, res, next, ['message']);
 }
 
 /** Wrapper for ship (projectDescription). */
-export function handleShipValidationErrors(req: RequestWithBody, res: Response, next: NextFunction): void {
+export function handleShipValidationErrors(
+  req: RequestWithBody,
+  res: Response,
+  next: NextFunction
+): void {
   handleValidationErrors(req, res, next, ['projectDescription']);
 }
 
 /** Wrapper for PRD generate (projectName, projectDescription). */
-export function handlePrdValidationErrors(req: RequestWithBody, res: Response, next: NextFunction): void {
+export function handlePrdValidationErrors(
+  req: RequestWithBody,
+  res: Response,
+  next: NextFunction
+): void {
   handleValidationErrors(req, res, next, ['projectName', 'projectDescription']);
 }
 
 /** Wrapper for architecture (projectDescription; enrichedIntent.raw checked manually). */
-export function handleArchitectureValidationErrors(req: RequestWithBody, res: Response, next: NextFunction): void {
+export function handleArchitectureValidationErrors(
+  req: RequestWithBody,
+  res: Response,
+  next: NextFunction
+): void {
   const keys = ['projectDescription'];
   const b = req.body as { enrichedIntent?: { raw?: string } };
   if (typeof b?.enrichedIntent?.raw === 'string') {
     const m = checkSuspiciousPatterns(b.enrichedIntent.raw);
     if (m.length > 0 && process.env.BLOCK_SUSPICIOUS_PROMPTS === 'true') {
       const logger = getRequestLogger();
-      logger.warn({ patterns: m, key: 'enrichedIntent.raw' }, 'Suspicious prompt patterns detected; blocking');
+      logger.warn(
+        { patterns: m, key: 'enrichedIntent.raw' },
+        'Suspicious prompt patterns detected; blocking'
+      );
       res.status(400).json({
         error: 'Request blocked: suspicious prompt patterns detected',
         type: 'validation_error',
@@ -308,13 +389,24 @@ export function handleArchitectureValidationErrors(req: RequestWithBody, res: Re
     }
     if (m.length > 0) {
       const logger = getRequestLogger();
-      logger.warn({ patterns: m, key: 'enrichedIntent.raw', messagePreview: b.enrichedIntent.raw.substring(0, 100) }, 'Suspicious prompt patterns detected');
+      logger.warn(
+        {
+          patterns: m,
+          key: 'enrichedIntent.raw',
+          messagePreview: b.enrichedIntent.raw.substring(0, 100),
+        },
+        'Suspicious prompt patterns detected'
+      );
     }
   }
   handleValidationErrors(req, res, next, keys);
 }
 
 /** Wrapper for codegen (no user-facing text to check for suspicious patterns). */
-export function handleCodegenValidationErrors(req: RequestWithBody, res: Response, next: NextFunction): void {
+export function handleCodegenValidationErrors(
+  req: RequestWithBody,
+  res: Response,
+  next: NextFunction
+): void {
   handleValidationErrors(req, res, next, []);
 }

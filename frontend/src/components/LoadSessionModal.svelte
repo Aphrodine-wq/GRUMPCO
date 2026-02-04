@@ -1,5 +1,6 @@
 <script lang="ts">
   import { codeSessionsStore } from '../stores/codeSessionsStore';
+  import { X } from 'lucide-svelte';
 
   interface Props {
     open?: boolean;
@@ -25,6 +26,7 @@
 <svelte:window onkeydown={handleEscape} />
 
 {#if open}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
     class="load-modal-overlay"
     role="dialog"
@@ -33,11 +35,17 @@
     tabindex="-1"
     onclick={(e) => e.target === e.currentTarget && (onClose?.(), (open = false))}
   >
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
     <div class="load-modal" role="document" onclick={(e) => e.stopPropagation()}>
       <div class="load-modal-header">
         <h2 class="load-modal-title">Load session</h2>
-        <button type="button" class="load-modal-close" onclick={() => (onClose?.(), (open = false))} aria-label="Close">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <button
+          type="button"
+          class="load-modal-close"
+          onclick={() => (onClose?.(), (open = false))}
+          aria-label="Close"
+        >
+          <X class="w-[18px] h-[18px]" strokeWidth={2} />
         </button>
       </div>
       <div class="load-modal-list">
@@ -47,7 +55,9 @@
           {#each $codeSessionsStore as session (session.id)}
             <button type="button" class="load-modal-item" onclick={() => handleSelect(session.id)}>
               <span class="load-modal-item-name">{session.name}</span>
-              <span class="load-modal-item-meta">{new Date(session.updatedAt).toLocaleString()}</span>
+              <span class="load-modal-item-meta"
+                >{new Date(session.updatedAt).toLocaleString()}</span
+              >
             </button>
           {/each}
         {/if}
@@ -74,7 +84,9 @@
     max-height: 70vh;
     background: #fff;
     border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      0 2px 8px rgba(0, 0, 0, 0.06);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -96,8 +108,8 @@
   }
 
   .load-modal-close {
-    background: #EBEBEB;
-    color: #6B7280;
+    background: #ebebeb;
+    color: #6b7280;
     border-radius: 6px;
     padding: 0.35rem;
     cursor: pointer;
@@ -107,7 +119,7 @@
   }
 
   .load-modal-close:hover {
-    background: #E0E0E0;
+    background: #e0e0e0;
     color: #000;
   }
 
@@ -122,7 +134,7 @@
   .load-modal-empty {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
-    color: #6B7280;
+    color: #6b7280;
     margin: 0;
     padding: 1.5rem;
     text-align: center;
@@ -134,7 +146,7 @@
     align-items: flex-start;
     gap: 0.2rem;
     padding: 0.75rem 1rem;
-    background: #F5F5F5;
+    background: #f5f5f5;
     border-radius: 6px;
     cursor: pointer;
     font-family: 'JetBrains Mono', monospace;
@@ -143,7 +155,7 @@
   }
 
   .load-modal-item:hover {
-    background: #EBEBEB;
+    background: #ebebeb;
   }
 
   .load-modal-item-name {
@@ -154,6 +166,6 @@
 
   .load-modal-item-meta {
     font-size: 0.75rem;
-    color: #6B7280;
+    color: #6b7280;
   }
 </style>

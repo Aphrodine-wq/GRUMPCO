@@ -4,7 +4,7 @@
  * API endpoints for security scanning, SBOM generation, and compliance assessment.
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import logger from '../../middleware/logger.js';
 import {
   performSecurityScan,
@@ -14,10 +14,10 @@ import {
   validateWorkspacePath,
 } from './service.js';
 import {
-  SecurityScanRequest,
-  SBOMRequest,
-  ComplianceRequest,
-  SecretsAuditRequest,
+  type SecurityScanRequest,
+  type SBOMRequest,
+  type ComplianceRequest,
+  type SecretsAuditRequest,
 } from './types.js';
 
 const router = Router();
@@ -239,10 +239,22 @@ router.get('/standards', (_req: Request, res: Response) => {
       standards: [
         { id: 'soc2', name: 'SOC 2 Type II', description: 'Service Organization Control 2' },
         { id: 'gdpr', name: 'GDPR', description: 'General Data Protection Regulation' },
-        { id: 'hipaa', name: 'HIPAA', description: 'Health Insurance Portability and Accountability Act' },
-        { id: 'pci-dss', name: 'PCI DSS', description: 'Payment Card Industry Data Security Standard' },
+        {
+          id: 'hipaa',
+          name: 'HIPAA',
+          description: 'Health Insurance Portability and Accountability Act',
+        },
+        {
+          id: 'pci-dss',
+          name: 'PCI DSS',
+          description: 'Payment Card Industry Data Security Standard',
+        },
         { id: 'iso27001', name: 'ISO 27001', description: 'Information Security Management' },
-        { id: 'owasp-top10', name: 'OWASP Top 10', description: 'Open Web Application Security Project' },
+        {
+          id: 'owasp-top10',
+          name: 'OWASP Top 10',
+          description: 'Open Web Application Security Project',
+        },
       ],
     },
   });

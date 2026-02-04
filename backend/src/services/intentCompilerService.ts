@@ -1,19 +1,24 @@
 /**
  * Intent Compiler Service
  * Spawns Rust grump-intent CLI, parses output, optionally enriches via LLM Gateway (Kimi K2.5).
+ * Supports modes: rust-first (default), hybrid (LLM resolves ambiguity), llm-first (LLM extracts then validate).
  */
 
 import logger from '../middleware/logger.js';
-import { getIntentCompilerPrompt, getIntentExtractionFallbackPrompt } from '../prompts/intent-compiler.js';
+import { env } from '../config/env.js';
+import {
+  getIntentCompilerPrompt,
+  getIntentExtractionFallbackPrompt,
+} from '../prompts/intent-compiler.js';
 import { withResilience } from './resilience.js';
 import { withCache } from './cacheService.js';
 import { getDatabase } from '../db/database.js';
 import { randomUUID } from 'crypto';
 import { parseIntentWasm } from './intentParserWasm.js';
 import { runIntentCli } from './intentCliRunner.js';
-import { getWorkerPool } from './workerPool.js';
-import { TaskPriority } from './workerPool.js';
-import { getStream, type StreamParams, type StreamEvent } from './llmGateway.js';
+import { getWorkerPool, TaskPriority } from './workerPool.js';
+import { getStream, type StreamParams } from './llmGateway.js';
+import { getRagContextForPrompt } from './ragService.js';
 
 export interface StructuredIntent {
   actors: string[];
@@ -79,12 +84,51 @@ const INTENT_CACHE_VERSION = 'v1';
 // Default model for intent operations via NIM (Kimi K2.5)
 const DEFAULT_INTENT_MODEL = 'moonshotai/kimi-k2.5';
 
+export type IntentCompilerMode = 'hybrid' | 'rust-first' | 'llm-first';
+
 function useWasmIntent(): boolean {
   return process.env.GRUMP_USE_WASM_INTENT === 'true' || process.env.GRUMP_USE_WASM_INTENT === '1';
 }
 
 function useWorkerPoolIntent(): boolean {
-  return process.env.GRUMP_USE_WORKER_POOL_INTENT === 'true' || process.env.GRUMP_USE_WORKER_POOL_INTENT === '1';
+  return (
+    process.env.GRUMP_USE_WORKER_POOL_INTENT === 'true' ||
+    process.env.GRUMP_USE_WORKER_POOL_INTENT === '1'
+  );
+}
+
+// ============================================================================
+// Unified Parser Integration
+// ============================================================================
+
+/**
+ * Parse intent using the unified parser interface (WASM → CLI → LLM fallback)
+ * This is the recommended approach for new code.
+ */
+export async function parseIntentUnified(
+  raw: string,
+  constraints?: Record<string, unknown>,
+  options?: {
+    useCache?: boolean;
+    fallbackToLlm?: boolean;
+    timeoutMs?: number;
+  }
+): Promise<StructuredIntent> {
+  const { HybridIntentParser } = await import('./unifiedIntentParser.js');
+  const parser = new HybridIntentParser();
+
+  const result = await parser.parse(raw.trim(), constraints, {
+    useCache: options?.useCache ?? true,
+    fallbackToLlm: options?.fallbackToLlm ?? true,
+    timeoutMs: options?.timeoutMs ?? 30000,
+  });
+
+  logger.debug(
+    { parser: result.parser, durationMs: result.durationMs, fromCache: result.fromCache },
+    'Intent parsed via unified parser'
+  );
+
+  return result.intent;
 }
 
 /**
@@ -97,7 +141,7 @@ async function getCompletion(
 ): Promise<string> {
   const modelId = options?.model ?? DEFAULT_INTENT_MODEL;
   const stream = getStream(params, { provider: 'nim', modelId });
-  
+
   let fullText = '';
   for await (const event of stream) {
     if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
@@ -106,7 +150,7 @@ async function getCompletion(
       throw new Error(`LLM Gateway error: ${JSON.stringify(event.error)}`);
     }
   }
-  
+
   return fullText;
 }
 
@@ -140,8 +184,12 @@ export async function parseIntent(
  * Enrich structured intent via LLM Gateway (Kimi K2.5) analysis.
  * Extracts features, users, data flows, tech stack, code patterns, architecture hints,
  * optimization opportunities, and code quality requirements.
+ * When INTENT_RAG_AUGMENT_ENRICH is enabled, injects RAG context for consistency with the knowledge base.
  */
-export async function enrichIntentViaLLM(intent: StructuredIntent): Promise<EnrichedIntent> {
+export async function enrichIntentViaLLM(
+  intent: StructuredIntent,
+  rawText?: string
+): Promise<EnrichedIntent> {
   // Check if NIM is available
   if (!process.env.NVIDIA_NIM_API_KEY) {
     logger.debug({}, 'NIM not configured, skipping intent enrichment');
@@ -149,17 +197,28 @@ export async function enrichIntentViaLLM(intent: StructuredIntent): Promise<Enri
   }
 
   // Create resilient wrapper for LLM Gateway calls
-  const resilientLlmCall = withResilience(
-    async (params: StreamParams): Promise<string> => {
-      return await getCompletion(params, { model: DEFAULT_INTENT_MODEL });
-    },
-    'nim-intent-enrichment'
-  );
+  const resilientLlmCall = withResilience(async (params: StreamParams): Promise<string> => {
+    return await getCompletion(params, { model: DEFAULT_INTENT_MODEL });
+  }, 'nim-intent-enrichment');
 
-  const systemPrompt = getIntentCompilerPrompt();
-  // Inject project context if available
-  // In a real implementation, we'd fetch this from ContextService.
-  // For now, we'll suggest to the model to consider typical project structures.
+  let systemPrompt = getIntentCompilerPrompt();
+  if (
+    process.env.INTENT_RAG_AUGMENT_ENRICH !== 'false' &&
+    process.env.INTENT_RAG_AUGMENT_ENRICH !== '0'
+  ) {
+    try {
+      const rawForRag = rawText ?? (intent as { raw?: string }).raw ?? JSON.stringify(intent);
+      const ragResult = await getRagContextForPrompt(rawForRag, { maxChunks: 4 });
+      if (ragResult?.context) {
+        systemPrompt += `\n\nRelevant excerpts from the knowledge base for consistency:\n\n${ragResult.context}`;
+      }
+    } catch (ragErr) {
+      logger.debug(
+        { error: (ragErr as Error).message },
+        'RAG context for intent enrichment failed, continuing without'
+      );
+    }
+  }
   const contextHint = `Consider a modern web application structure (Frontend + Backend + Database).`;
 
   const userMsg = `Structured intent from parser:\n${JSON.stringify(intent, null, 2)}\n\nContext Hint: ${contextHint}\n\nAnalyze and enrich this intent with code-specific insights, patterns, architecture hints, optimization opportunities, and quality requirements. FOLLOW THE JSON SCHEMA EXACTLY.`;
@@ -171,7 +230,7 @@ export async function enrichIntentViaLLM(intent: StructuredIntent): Promise<Enri
       system: systemPrompt,
       messages: [{ role: 'user', content: userMsg }],
     });
-    
+
     let raw = res.trim();
     // Extract JSON from markdown code blocks if present
     if (raw.includes('```json')) {
@@ -205,11 +264,10 @@ export async function parseIntentWithFallback(
     if (useWorkerPoolIntent()) {
       try {
         const pool = getWorkerPool();
-        return await pool.execute<{ text: string; constraints?: Record<string, unknown> }, StructuredIntent>(
-          'parseIntent',
-          { text: raw.trim(), constraints },
-          TaskPriority.NORMAL
-        );
+        return await pool.execute<
+          { text: string; constraints?: Record<string, unknown> },
+          StructuredIntent
+        >('parseIntent', { text: raw.trim(), constraints }, TaskPriority.NORMAL);
       } catch (poolErr) {
         logger.debug(
           { err: poolErr instanceof Error ? poolErr.message : String(poolErr) },
@@ -221,18 +279,27 @@ export async function parseIntentWithFallback(
     return await parseIntent(raw, constraints);
   } catch (rustErr) {
     const err = rustErr as Error;
-    logger.warn({ rustError: err.message, inputLength: raw.length }, 'Intent compiler fallback: Rust failed, using LLM Gateway');
+    logger.warn(
+      { rustError: err.message, inputLength: raw.length },
+      'Intent compiler fallback: Rust failed, using LLM Gateway'
+    );
     let llmIntent: StructuredIntent;
     try {
       llmIntent = await extractIntentViaLLM(raw, err.message);
     } catch (llmErr) {
-      logger.error({ llmError: (llmErr as Error).message }, 'Intent compiler fallback: LLM extraction failed');
+      logger.error(
+        { llmError: (llmErr as Error).message },
+        'Intent compiler fallback: LLM extraction failed'
+      );
       throw rustErr;
     }
     try {
       storeIntentCompilerFailure(raw.trim(), err.message, llmIntent);
     } catch (storeErr) {
-      logger.debug({ storeError: (storeErr as Error).message }, 'Could not store intent compiler failure');
+      logger.debug(
+        { storeError: (storeErr as Error).message },
+        'Could not store intent compiler failure'
+      );
     }
     return llmIntent;
   }
@@ -289,7 +356,10 @@ export function optimizeEnrichedIntent(intent: EnrichedIntent): EnrichedIntent {
 /**
  * Extract StructuredIntent from raw NL using LLM Gateway (Kimi K2.5) when Rust compiler is unavailable or failed.
  */
-export async function extractIntentViaLLM(raw: string, _rustError?: string): Promise<StructuredIntent> {
+export async function extractIntentViaLLM(
+  raw: string,
+  _rustError?: string
+): Promise<StructuredIntent> {
   // Check if NIM is available
   if (!process.env.NVIDIA_NIM_API_KEY) {
     logger.debug({}, 'NIM not configured, returning default intent structure');
@@ -305,10 +375,11 @@ export async function extractIntentViaLLM(raw: string, _rustError?: string): Pro
 
   // Create resilient wrapper for LLM Gateway calls
   const resilient = withResilience(
-    async (params: StreamParams): Promise<string> => getCompletion(params, { model: DEFAULT_INTENT_MODEL }),
+    async (params: StreamParams): Promise<string> =>
+      getCompletion(params, { model: DEFAULT_INTENT_MODEL }),
     'nim-intent-extraction'
   );
-  
+
   const systemPrompt = getIntentExtractionFallbackPrompt();
   const userMsg = `Raw input:\n${raw.trim()}\n\nExtract structured intent as JSON.`;
 
@@ -319,7 +390,7 @@ export async function extractIntentViaLLM(raw: string, _rustError?: string): Pro
       system: systemPrompt,
       messages: [{ role: 'user', content: userMsg }],
     });
-    
+
     let text = res.trim();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) text = jsonMatch[0];
@@ -335,12 +406,20 @@ export async function extractIntentViaLLM(raw: string, _rustError?: string): Pro
       actors: Array.isArray(parsed.actors) ? (parsed.actors as string[]) : ['user'],
       features: Array.isArray(parsed.features) ? (parsed.features as string[]) : [],
       data_flows: Array.isArray(parsed.data_flows) ? (parsed.data_flows as string[]) : [],
-      tech_stack_hints: Array.isArray(parsed.tech_stack_hints) ? (parsed.tech_stack_hints as string[]) : [],
-      constraints: parsed.constraints && typeof parsed.constraints === 'object' ? (parsed.constraints as Record<string, unknown>) : {},
+      tech_stack_hints: Array.isArray(parsed.tech_stack_hints)
+        ? (parsed.tech_stack_hints as string[])
+        : [],
+      constraints:
+        parsed.constraints && typeof parsed.constraints === 'object'
+          ? (parsed.constraints as Record<string, unknown>)
+          : {},
       raw: typeof parsed.raw === 'string' ? parsed.raw : raw.trim(),
     };
   } catch (e) {
-    logger.warn({ err: (e as Error).message }, 'LLM intent extraction failed, returning default structure');
+    logger.warn(
+      { err: (e as Error).message },
+      'LLM intent extraction failed, returning default structure'
+    );
     return {
       actors: ['user'],
       features: [],
@@ -368,22 +447,95 @@ export function storeIntentCompilerFailure(
 }
 
 /**
- * Parse raw NL + constraints via Rust (with LLM Gateway fallback on failure), then enrich via LLM Gateway.
+ * Resolve ambiguity when score exceeds threshold. Uses LLM to refine intent based on clarification questions.
+ */
+async function resolveAmbiguityViaLLM(intent: EnrichedIntent): Promise<EnrichedIntent> {
+  const amb = intent.enriched?.ambiguity_analysis;
+  if (!amb?.clarification_questions?.length || !process.env.NVIDIA_NIM_API_KEY) {
+    return intent;
+  }
+  const resilient = withResilience(
+    async (params: StreamParams): Promise<string> =>
+      getCompletion(params, { model: DEFAULT_INTENT_MODEL }),
+    'nim-ambiguity-resolution'
+  );
+  const prompt = `Given the ambiguous intent and clarification questions, produce a refined structured intent (JSON).
+Intent: ${JSON.stringify(intent, null, 2)}
+Clarification questions to resolve: ${amb.clarification_questions.join('; ')}
+Return JSON with actors, features, data_flows, tech_stack_hints, constraints, raw.`;
+  try {
+    const res = await resilient({
+      model: DEFAULT_INTENT_MODEL,
+      max_tokens: 2048,
+      system: 'You resolve ambiguities in software intent. Return valid JSON only.',
+      messages: [{ role: 'user', content: prompt }],
+    });
+    let text = res.trim();
+    const m = text.match(/\{[\s\S]*\}/);
+    if (m) text = m[0];
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+    const refined: EnrichedIntent = {
+      actors: Array.isArray(parsed.actors) ? (parsed.actors as string[]) : intent.actors,
+      features: Array.isArray(parsed.features) ? (parsed.features as string[]) : intent.features,
+      data_flows: Array.isArray(parsed.data_flows)
+        ? (parsed.data_flows as string[])
+        : intent.data_flows,
+      tech_stack_hints: Array.isArray(parsed.tech_stack_hints)
+        ? (parsed.tech_stack_hints as string[])
+        : intent.tech_stack_hints,
+      constraints:
+        parsed.constraints && typeof parsed.constraints === 'object'
+          ? (parsed.constraints as Record<string, unknown>)
+          : intent.constraints,
+      raw: typeof parsed.raw === 'string' ? parsed.raw : intent.raw,
+      enriched: {
+        ...intent.enriched,
+        ambiguity_analysis: { ...amb, score: 0, reason: 'Resolved', clarification_questions: [] },
+      },
+    };
+    return optimizeEnrichedIntent(refined);
+  } catch (e) {
+    logger.warn(
+      { err: (e as Error).message },
+      'Ambiguity resolution failed, using original intent'
+    );
+    return intent;
+  }
+}
+
+/**
+ * Parse raw NL + constraints, then enrich. Supports modes:
+ * - rust-first: Parse via Rust (with LLM fallback), enrich via LLM.
+ * - hybrid: Same as rust-first, but if ambiguity_analysis.score > threshold, resolve via LLM.
+ * - llm-first: Extract via LLM first, then enrich (no Rust parse).
  */
 export async function parseAndEnrichIntent(
   raw: string,
-  constraints?: Record<string, unknown>
+  constraints?: Record<string, unknown>,
+  options?: { mode?: IntentCompilerMode }
 ): Promise<EnrichedIntent> {
-  // Create cache key from input
-  const cacheKey = JSON.stringify({ v: INTENT_CACHE_VERSION, raw: raw.trim(), constraints });
+  const mode = options?.mode ?? (env.INTENT_COMPILER_MODE as IntentCompilerMode);
+  const threshold = env.INTENT_AMBIGUITY_THRESHOLD ?? 0.6;
+  const cacheKey = JSON.stringify({ v: INTENT_CACHE_VERSION, raw: raw.trim(), constraints, mode });
 
-  return await withCache(
-    'intent',
-    cacheKey,
-    async () => {
+  return await withCache('intent', cacheKey, async () => {
+    let enriched: EnrichedIntent;
+
+    if (mode === 'llm-first') {
+      const structured = await extractIntentViaLLM(raw.trim());
+      enriched = await enrichIntentViaLLM(structured, raw.trim());
+    } else {
       const structured = await parseIntentWithFallback(raw, constraints);
-      const enriched = await enrichIntentViaLLM(structured);
-      return optimizeEnrichedIntent(enriched);
+      enriched = await enrichIntentViaLLM(structured, raw.trim());
     }
-  );
+
+    if (mode === 'hybrid') {
+      const ambScore = enriched.enriched?.ambiguity_analysis?.score ?? 0;
+      if (ambScore > threshold) {
+        enriched = await resolveAmbiguityViaLLM(enriched);
+      }
+    }
+
+    return optimizeEnrichedIntent(enriched);
+  });
 }

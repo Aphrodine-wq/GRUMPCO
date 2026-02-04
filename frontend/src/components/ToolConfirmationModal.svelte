@@ -33,7 +33,9 @@
         <button type="button" class="btn btn-allow" onclick={onAllow}>Allow</button>
         <button type="button" class="btn btn-deny" onclick={onDeny}>Deny</button>
         {#if onAlwaysForSession}
-          <button type="button" class="btn btn-muted" onclick={onAlwaysForSession}>Always for this session</button>
+          <button type="button" class="btn btn-muted" onclick={onAlwaysForSession}
+            >Always for this session</button
+          >
         {/if}
       </div>
     </div>

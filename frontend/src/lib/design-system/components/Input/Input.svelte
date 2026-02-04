@@ -4,6 +4,7 @@
    * Clean, professional light theme
    */
   import { colors } from '../../tokens/colors';
+  import { animations } from '../../tokens/animations';
 
   interface Props {
     value?: string;
@@ -51,9 +52,9 @@
   }
 </script>
 
-<div 
-  class="input-wrapper" 
-  class:input-full-width={fullWidth} 
+<div
+  class="input-wrapper"
+  class:input-full-width={fullWidth}
   class:is-focused={isFocused}
   style:--primary-color={colors.accent.primary}
   style:--text-primary={colors.text.primary}
@@ -62,6 +63,7 @@
   style:--border-default={colors.border.default}
   style:--error-color={colors.status.error}
   style:--bg-input={colors.background.input}
+  style:--transition-micro={animations.transition.fast}
 >
   {#if label}
     <label class="input-label" for={inputId}>
@@ -116,7 +118,7 @@
     border: 0;
     border-radius: 8px;
     padding: 0 12px;
-    transition: all 150ms ease;
+    transition: box-shadow var(--transition-micro);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
@@ -136,6 +138,12 @@
     width: 100%;
     outline: none;
     font-family: inherit;
+    transition: outline-offset var(--transition-micro);
+  }
+
+  .input:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
   }
 
   .input::placeholder {
@@ -171,5 +179,14 @@
   .input-hint {
     font-size: 13px;
     color: var(--text-muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .input-container {
+      transition: none;
+    }
+    .input {
+      transition: none;
+    }
   }
 </style>

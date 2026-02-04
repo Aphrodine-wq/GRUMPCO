@@ -1,24 +1,24 @@
 /**
  * G-Rump Design System - Typography Tokens
- * Elegant serif headings (Merriweather) + clean sans body (Geist)
+ * Space Grotesk (sans) + JetBrains Mono/Fira Code (code). 15-16px base.
  */
 
 export const typography = {
   fontFamily: {
-    sans: "Geist, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-    serif: "Merriweather, Georgia, serif",
-    mono: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
+    sans: '"Space Grotesk", "Segoe UI", Helvetica Neue, Arial, sans-serif',
+    serif: 'Georgia, serif',
+    mono: '"JetBrains Mono", "Fira Code", "Space Mono", SF Mono, Menlo, Consolas, monospace',
   },
 
   fontSize: {
-    xs: '0.75rem',     // 12px
-    sm: '0.8125rem',   // 13px
-    base: '0.875rem',  // 14px
-    md: '0.9375rem',   // 15px
-    lg: '1rem',        // 16px
-    xl: '1.125rem',    // 18px
-    '2xl': '1.25rem',  // 20px
-    '3xl': '1.5rem',   // 24px
+    xs: '0.75rem', // 12px
+    sm: '0.8125rem', // 13px
+    base: '0.9375rem', // 15px
+    md: '1rem', // 16px
+    lg: '1.0625rem', // 17px
+    xl: '1.125rem', // 18px
+    '2xl': '1.25rem', // 20px
+    '3xl': '1.5rem', // 24px
   },
 
   fontWeight: {
@@ -48,21 +48,21 @@ export const typography = {
 
 export const textStyles = {
   h1: {
-    fontFamily: typography.fontFamily.serif,
+    fontFamily: typography.fontFamily.sans,
     fontSize: typography.fontSize['3xl'],
     fontWeight: typography.fontWeight.semibold,
     lineHeight: typography.lineHeight.tight,
     letterSpacing: typography.letterSpacing.tight,
   },
   h2: {
-    fontFamily: typography.fontFamily.serif,
+    fontFamily: typography.fontFamily.sans,
     fontSize: typography.fontSize['2xl'],
     fontWeight: typography.fontWeight.semibold,
     lineHeight: typography.lineHeight.tight,
     letterSpacing: typography.letterSpacing.tight,
   },
   h3: {
-    fontFamily: typography.fontFamily.serif,
+    fontFamily: typography.fontFamily.sans,
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.medium,
     lineHeight: typography.lineHeight.snug,

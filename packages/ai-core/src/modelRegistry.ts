@@ -1,13 +1,53 @@
 /**
- * Model registry – capability and cost metadata for LLM models.
+ * Model Registry – NVIDIA NIM Exclusive
  * 
- * Kimi K2.5 is the primary model, with alternatives available via
- * various providers (NIM, OpenRouter, Zhipu, Copilot).
+ * Powered by NVIDIA NIM - Enterprise AI infrastructure for deploying
+ * state-of-the-art foundation models with optimized inference.
+ * 
+ * Featured Models:
+ * - Llama 3.1 405B Instruct (Flagship)
+ * - Llama 3.1 70B Instruct (Balanced)
+ * - Mistral Large 2 (Multilingual)
+ * - Nemotron Ultra 253B (Scientific Reasoning)
+ * 
+ * @see https://build.nvidia.com - Get your free API key
  */
 
-export type LLMProvider = 'nim' | 'zhipu' | 'copilot' | 'openrouter';
+export type LLMProvider = 'nim' | 'mock';
 
-export type ModelCapability = 'code' | 'vision' | 'voice' | 'agent' | 'long-context' | 'tools' | 'embedding' | 'multilingual' | 'reasoning' | 'multimodal' | 'agentic' | 'function-calling';
+export type ModelCapability =
+  | 'code'
+  | 'vision'
+  | 'voice'
+  | 'agent'
+  | 'long-context'
+  | 'tools'
+  | 'embedding'
+  | 'multilingual'
+  | 'reasoning'
+  | 'multimodal'
+  | 'agentic'
+  | 'function-calling';
+
+/** Provider display metadata for UI (icons, labels) */
+export interface ProviderMetadata {
+  displayName: string;
+  icon: string;
+  description?: string;
+}
+
+export const PROVIDER_METADATA: Record<LLMProvider, ProviderMetadata> = {
+  nim: {
+    displayName: 'NVIDIA NIM',
+    icon: '/icons/providers/nvidia.svg',
+    description: 'Powered by NVIDIA NIM - Enterprise AI inference',
+  },
+  mock: {
+    displayName: 'Demo Mode',
+    icon: '/icons/providers/mock.svg',
+    description: 'Zero-config exploration mode',
+  },
+};
 
 export interface ModelConfig {
   id: string;
@@ -19,349 +59,271 @@ export interface ModelConfig {
   description?: string;
   publisher?: string;
   parameters?: string;
+  featured?: boolean;
 }
 
-export const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
+// Primary model: Nemotron Super 49B - NVIDIA flagship for demos and agentic use
+export const DEFAULT_MODEL = 'nvidia/llama-3.3-nemotron-super-49b-v1.5';
 export const DEFAULT_PROVIDER: LLMProvider = 'nim';
 
 export const MODEL_REGISTRY: ModelConfig[] = [
-  // PRIMARY: Kimi K2.5 (NVIDIA NIM)
+  // =============================================================================
+  // MOCK: Demo/Exploration Mode (zero-config, no API keys)
+  // =============================================================================
   {
-    id: 'moonshotai/kimi-k2.5',
-    provider: 'nim',
-    capabilities: ['code', 'vision', 'agent', 'long-context', 'embedding', 'multilingual', 'reasoning', 'multimodal', 'agentic', 'function-calling'],
-    contextWindow: 256_000,
-    costPerMillionInput: 0.6,
-    costPerMillionOutput: 0.6,
-    description: 'Primary model - 256K context, multilingual, cost-effective',
-    publisher: 'Moonshot AI',
-    parameters: '1T (MoE)',
-  },
-  
-  // ==================== NVIDIA NIM: LLAMA MODELS ====================
-  {
-    id: 'meta/llama-4-maverick-17b-128e-instruct',
-    provider: 'nim',
-    capabilities: ['vision', 'multimodal', 'agentic', 'function-calling', 'long-context'],
-    contextWindow: 256_000,
-    costPerMillionInput: 0.6,
-    costPerMillionOutput: 0.6,
-    description: 'General purpose multimodal, multilingual 128 MoE model with 17B active parameters',
-    publisher: 'Meta',
-    parameters: '17B active (128 experts)',
-  },
-  {
-    id: 'meta/llama-4-scout-17b-16e-instruct',
-    provider: 'nim',
-    capabilities: ['vision', 'multimodal', 'agentic', 'long-context'],
+    id: 'mock-ai',
+    provider: 'mock',
+    capabilities: [
+      'code',
+      'vision',
+      'agent',
+      'long-context',
+      'multilingual',
+      'reasoning',
+      'multimodal',
+      'agentic',
+      'function-calling',
+    ],
     contextWindow: 128_000,
-    costPerMillionInput: 0.1,
-    costPerMillionOutput: 0.1,
-    description: 'Multimodal, multilingual 16 MoE model with 17B parameters',
-    publisher: 'Meta',
-    parameters: '17B (16 experts)',
+    costPerMillionInput: 0,
+    costPerMillionOutput: 0,
+    description: 'Demo mode for zero-config exploration - no API keys required',
+    publisher: 'G-Rump',
+    parameters: 'Demo',
   },
-  {
-    id: 'meta/llama-3.1-8b-instruct',
-    provider: 'nim',
-    capabilities: ['code', 'function-calling'],
-    contextWindow: 128_000,
-    costPerMillionInput: 0.02,
-    costPerMillionOutput: 0.02,
-    description: 'Lightweight, efficient model for edge and mobile deployment',
-    publisher: 'Meta',
-    parameters: '8B',
-  },
-  {
-    id: 'meta/llama-3.1-70b-instruct',
-    provider: 'nim',
-    capabilities: ['code', 'reasoning', 'function-calling', 'long-context'],
-    contextWindow: 128_000,
-    costPerMillionInput: 0.35,
-    costPerMillionOutput: 0.35,
-    description: 'High-performance model for complex tasks and reasoning',
-    publisher: 'Meta',
-    parameters: '70B',
-  },
+
+  // =============================================================================
+  // NVIDIA NIM - Powered by NVIDIA AI Infrastructure
+  // =============================================================================
+
+  // FLAGSHIP: Llama 3.1 405B Instruct
   {
     id: 'meta/llama-3.1-405b-instruct',
     provider: 'nim',
-    capabilities: ['code', 'reasoning', 'function-calling', 'long-context'],
+    capabilities: [
+      'code',
+      'agent',
+      'long-context',
+      'multilingual',
+      'reasoning',
+      'agentic',
+      'function-calling',
+    ],
     contextWindow: 128_000,
-    costPerMillionInput: 3.0,
-    costPerMillionOutput: 3.0,
-    description: 'Flagship Llama model with 405B parameters for maximum performance',
+    costPerMillionInput: 5.0,
+    costPerMillionOutput: 15.0,
+    description: 'Flagship 405B parameter model - Best-in-class reasoning and code generation',
     publisher: 'Meta',
     parameters: '405B',
+    featured: true,
   },
-  
-  // ==================== NVIDIA NIM: CODELLAMA MODELS ====================
+
+  // BALANCED: Llama 3.1 70B Instruct
   {
-    id: 'meta/codellama-7b-instruct',
+    id: 'meta/llama-3.1-70b-instruct',
     provider: 'nim',
-    capabilities: ['code', 'function-calling'],
-    contextWindow: 16_000,
-    costPerMillionInput: 0.02,
-    costPerMillionOutput: 0.02,
-    description: 'Lightweight code generation model for fast inference and edge deployment',
-    publisher: 'Meta',
-    parameters: '7B',
-  },
-  {
-    id: 'meta/codellama-13b-instruct',
-    provider: 'nim',
-    capabilities: ['code', 'function-calling'],
-    contextWindow: 16_000,
-    costPerMillionInput: 0.06,
-    costPerMillionOutput: 0.06,
-    description: 'Balanced code generation model with improved accuracy over 7B',
-    publisher: 'Meta',
-    parameters: '13B',
-  },
-  {
-    id: 'meta/codellama-34b-instruct',
-    provider: 'nim',
-    capabilities: ['code', 'reasoning', 'function-calling'],
-    contextWindow: 16_000,
-    costPerMillionInput: 0.15,
-    costPerMillionOutput: 0.15,
-    description: 'High-performance code model with strong reasoning for complex programming tasks',
-    publisher: 'Meta',
-    parameters: '34B',
-  },
-  {
-    id: 'meta/codellama-70b-instruct',
-    provider: 'nim',
-    capabilities: ['code', 'reasoning', 'function-calling', 'long-context'],
-    contextWindow: 100_000,
+    capabilities: [
+      'code',
+      'agent',
+      'long-context',
+      'multilingual',
+      'reasoning',
+      'agentic',
+      'function-calling',
+    ],
+    contextWindow: 128_000,
     costPerMillionInput: 0.35,
-    costPerMillionOutput: 0.35,
-    description: 'Flagship CodeLlama model with 100K context for large codebase understanding',
+    costPerMillionOutput: 0.40,
+    description: 'Excellent balance of performance and cost - Recommended for most tasks',
     publisher: 'Meta',
     parameters: '70B',
+    featured: true,
   },
-  
-  // ==================== NVIDIA NIM: MISTRAL MODELS ====================
+
+  // MISTRAL: Large 2 (Multilingual Excellence)
   {
-    id: 'mistralai/mistral-large-3-675b-instruct-2512',
+    id: 'mistralai/mistral-large-2-instruct',
     provider: 'nim',
-    capabilities: ['vision', 'multimodal', 'agentic', 'function-calling', 'long-context'],
-    contextWindow: 256_000,
-    costPerMillionInput: 0.6,
-    costPerMillionOutput: 0.6,
-    description: 'State-of-the-art general purpose MoE VLM ideal for chat, agentic and instruction-based use cases',
+    capabilities: [
+      'code',
+      'agent',
+      'long-context',
+      'multilingual',
+      'reasoning',
+      'agentic',
+      'function-calling',
+    ],
+    contextWindow: 128_000,
+    costPerMillionInput: 2.0,
+    costPerMillionOutput: 6.0,
+    description: 'Mistral Large 2 - Superior multilingual and code capabilities',
     publisher: 'Mistral AI',
-    parameters: '675B',
+    parameters: '123B',
+    featured: true,
   },
-  {
-    id: 'mistralai/mixtral-8x7b-instruct-v0.1',
-    provider: 'nim',
-    capabilities: ['code', 'reasoning'],
-    contextWindow: 32_000,
-    costPerMillionInput: 0.15,
-    costPerMillionOutput: 0.15,
-    description: 'Efficient MoE LLM that follows instructions and completes requests',
-    publisher: 'Mistral AI',
-    parameters: '8x7B MoE',
-  },
+
+  // MIXTRAL: 8x22B MoE (Cost-Effective)
   {
     id: 'mistralai/mixtral-8x22b-instruct-v0.1',
     provider: 'nim',
-    capabilities: ['code', 'reasoning', 'long-context'],
-    contextWindow: 65_000,
-    costPerMillionInput: 0.4,
-    costPerMillionOutput: 0.4,
-    description: 'Large MoE LLM with 8x22B experts for complex tasks',
+    capabilities: [
+      'code',
+      'agent',
+      'multilingual',
+      'reasoning',
+      'function-calling',
+    ],
+    contextWindow: 65_536,
+    costPerMillionInput: 0.9,
+    costPerMillionOutput: 0.9,
+    description: 'Mixtral 8x22B MoE - Cost-effective with excellent performance',
     publisher: 'Mistral AI',
-    parameters: '8x22B MoE',
+    parameters: '141B (MoE)',
   },
-  {
-    id: 'mistralai/mistral-small-24b-instruct',
-    provider: 'nim',
-    capabilities: ['code', 'reasoning', 'agentic', 'multilingual'],
-    contextWindow: 128_000,
-    costPerMillionInput: 0.1,
-    costPerMillionOutput: 0.1,
-    description: 'Latency-optimized language model excelling in code, math, general knowledge',
-    publisher: 'Mistral AI',
-    parameters: '24B',
-  },
-  
-  // ==================== NVIDIA NIM: NEMOTRON MODELS ====================
+
+  // NEMOTRON: Ultra 253B (Scientific Reasoning)
   {
     id: 'nvidia/llama-3.1-nemotron-ultra-253b-v1',
     provider: 'nim',
-    capabilities: ['code', 'reasoning', 'function-calling', 'agentic'],
+    capabilities: [
+      'code',
+      'reasoning',
+      'function-calling',
+      'agentic',
+      'long-context',
+    ],
     contextWindow: 128_000,
     costPerMillionInput: 0.6,
     costPerMillionOutput: 0.6,
-    description: 'Superior inference efficiency with highest accuracy for scientific and complex reasoning',
+    description: 'NVIDIA Nemotron Ultra - Superior scientific and complex reasoning',
     publisher: 'NVIDIA',
     parameters: '253B',
+    featured: true,
   },
+
+  // NEMOTRON: 70B (Reasoning Optimized)
   {
-    id: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+    id: 'nvidia/llama-3.1-nemotron-70b-instruct',
     provider: 'nim',
-    capabilities: ['code', 'reasoning', 'function-calling', 'agentic'],
+    capabilities: [
+      'code',
+      'reasoning',
+      'function-calling',
+      'agentic',
+    ],
     contextWindow: 128_000,
-    costPerMillionInput: 0.2,
-    costPerMillionOutput: 0.2,
-    description: 'High efficiency model with leading accuracy for reasoning and tool calling',
+    costPerMillionInput: 0.35,
+    costPerMillionOutput: 0.40,
+    description: 'NVIDIA Nemotron 70B - Optimized for reasoning tasks',
     publisher: 'NVIDIA',
-    parameters: '49B',
+    parameters: '70B',
   },
+
+  // NEMOTRON: 3 Nano 30B A3B (1M context, RAG / long-context)
   {
     id: 'nvidia/nemotron-3-nano-30b-a3b',
     provider: 'nim',
-    capabilities: ['code', 'reasoning', 'function-calling', 'long-context'],
+    capabilities: [
+      'code',
+      'reasoning',
+      'function-calling',
+      'long-context',
+      'agentic',
+    ],
     contextWindow: 1_000_000,
     costPerMillionInput: 0.25,
     costPerMillionOutput: 0.25,
-    description: 'Open, efficient MoE model with 1M context - coding, reasoning, tool calling',
+    description: 'Nemotron 3 Nano - 1M context for RAG and long documents',
     publisher: 'NVIDIA',
     parameters: '30B (A3B active)',
+    featured: true,
   },
-  {
-    id: 'meta/llama-3.1-nemotron-nano-8b-v1',
-    provider: 'nim',
-    capabilities: ['code', 'reasoning', 'agentic', 'function-calling'],
-    contextWindow: 128_000,
-    costPerMillionInput: 0.015,
-    costPerMillionOutput: 0.015,
-    description: 'Leading reasoning and agentic AI model for PC and edge deployment',
-    publisher: 'NVIDIA',
-    parameters: '8B',
-  },
-  
-  // ==================== NVIDIA NIM: DEEPSEEK MODELS ====================
-  {
-    id: 'deepseek-ai/deepseek-v3.2',
-    provider: 'nim',
-    capabilities: ['reasoning', 'long-context', 'function-calling', 'agentic'],
-    contextWindow: 128_000,
-    costPerMillionInput: 0.45,
-    costPerMillionOutput: 0.45,
-    description: '685B reasoning LLM with sparse attention and integrated agentic tools',
-    publisher: 'DeepSeek AI',
-    parameters: '685B',
-  },
-  
-  // ==================== NVIDIA NIM: QWEN MODELS ====================
-  {
-    id: 'qwen/qwen3-coder-480b-a35b-instruct',
-    provider: 'nim',
-    capabilities: ['code', 'agentic', 'long-context'],
-    contextWindow: 256_000,
-    costPerMillionInput: 0.8,
-    costPerMillionOutput: 0.8,
-    description: 'Excels in agentic coding and browser use with 256K context',
-    publisher: 'Qwen',
-    parameters: '480B (35B active)',
-  },
-  {
-    id: 'qwen/qwen2.5-coder-32b-instruct',
-    provider: 'nim',
-    capabilities: ['code'],
-    contextWindow: 128_000,
-    costPerMillionInput: 0.15,
-    costPerMillionOutput: 0.15,
-    description: 'Advanced LLM for code generation and fixing across popular languages',
-    publisher: 'Qwen',
-    parameters: '32B',
-  },
-  
-  // ==================== NVIDIA NIM: KIMI MODELS ====================
-  {
-    id: 'moonshotai/kimi-k2-thinking',
-    provider: 'nim',
-    capabilities: ['reasoning', 'function-calling', 'long-context', 'agentic'],
-    contextWindow: 256_000,
-    costPerMillionInput: 0.6,
-    costPerMillionOutput: 0.6,
-    description: 'Open reasoning model with 256K context and enhanced tool use',
-    publisher: 'Moonshot AI',
-    parameters: '1T (MoE)',
-  },
-  {
-    id: 'moonshotai/kimi-k2-instruct',
-    provider: 'nim',
-    capabilities: ['code', 'reasoning', 'agentic', 'function-calling'],
-    contextWindow: 256_000,
-    costPerMillionInput: 0.6,
-    costPerMillionOutput: 0.6,
-    description: 'State-of-the-art open MoE model with strong reasoning and coding',
-    publisher: 'Moonshot AI',
-    parameters: '1T (MoE)',
-  },
-  {
-    id: 'moonshotai/kimi-k2-instruct-0905',
-    provider: 'nim',
-    capabilities: ['code', 'reasoning', 'agentic', 'long-context', 'function-calling'],
-    contextWindow: 512_000,
-    costPerMillionInput: 0.7,
-    costPerMillionOutput: 0.7,
-    description: 'Enhanced version with longer context and advanced reasoning',
-    publisher: 'Moonshot AI',
-    parameters: '1T (MoE)',
-  },
-  
-  // ALTERNATIVES via OpenRouter
-  {
-    id: 'openrouter/moonshotai/kimi-k2.5',
-    provider: 'openrouter',
-    capabilities: ['code', 'vision', 'agent', 'long-context', 'multilingual'],
-    contextWindow: 256_000,
-    description: 'Kimi K2.5 via OpenRouter',
-  },
-  {
-    id: 'openrouter/google/gemini-2.5-pro',
-    provider: 'openrouter',
-    capabilities: ['code', 'vision', 'agent', 'long-context', 'multilingual'],
-    contextWindow: 1_000_000,
-    description: 'Google Gemini 2.5 Pro - 1M context',
-  },
-  {
-    id: 'openrouter/meta-llama/llama-3.1-405b',
-    provider: 'openrouter',
-    capabilities: ['code', 'agent', 'long-context'],
-    contextWindow: 128_000,
-    description: 'Meta Llama 3.1 405B',
-  },
-  
-  // ALTERNATIVES via Zhipu (GLM)
-  {
-    id: 'glm-4',
-    provider: 'zhipu',
-    capabilities: ['code', 'agent', 'multilingual'],
-    contextWindow: 128_000,
-    description: 'Zhipu GLM-4 - Strong Chinese support',
-  },
-  {
-    id: 'glm-4-plus',
-    provider: 'zhipu',
-    capabilities: ['code', 'agent', 'long-context', 'multilingual'],
-    contextWindow: 128_000,
-    description: 'Zhipu GLM-4 Plus - Enhanced capabilities',
-  },
-  
-  // ALTERNATIVES via Copilot
-  {
-    id: 'copilot-codex',
-    provider: 'copilot',
-    capabilities: ['code'],
-    contextWindow: 32_000,
-    description: 'GitHub Copilot Codex',
-  },
-  
 
+  // NEMOTRON: Super 49B v1.5 (Agentic / default chat)
+  {
+    id: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+    provider: 'nim',
+    capabilities: [
+      'code',
+      'reasoning',
+      'function-calling',
+      'agentic',
+      'long-context',
+    ],
+    contextWindow: 128_000,
+    costPerMillionInput: 0.20,
+    costPerMillionOutput: 0.20,
+    description: 'Nemotron Super 49B - Agentic workflows and balanced performance',
+    publisher: 'NVIDIA',
+    parameters: '49B',
+    featured: true,
+  },
+
+  // NEMOTRON: Nano 12B v2 VL (Vision / diagram / document)
+  {
+    id: 'nvidia/nemotron-nano-12b-v2-vl',
+    provider: 'nim',
+    capabilities: [
+      'vision',
+      'multimodal',
+      'reasoning',
+    ],
+    contextWindow: 128_000,
+    costPerMillionInput: 0.10,
+    costPerMillionOutput: 0.10,
+    description: 'Nemotron Nano VL - Document and diagram understanding',
+    publisher: 'NVIDIA',
+    parameters: '12B',
+  },
+
+  // CODESTRAL: Code Generation Specialist
+  {
+    id: 'mistralai/codestral-22b-instruct-v0.1',
+    provider: 'nim',
+    capabilities: [
+      'code',
+      'function-calling',
+    ],
+    contextWindow: 32_768,
+    costPerMillionInput: 0.2,
+    costPerMillionOutput: 0.6,
+    description: 'Codestral - Specialized for code generation and completion',
+    publisher: 'Mistral AI',
+    parameters: '22B',
+  },
+
+  // LLAMA 3.3 70B (Latest)
+  {
+    id: 'meta/llama-3.3-70b-instruct',
+    provider: 'nim',
+    capabilities: [
+      'code',
+      'agent',
+      'long-context',
+      'multilingual',
+      'reasoning',
+      'agentic',
+      'function-calling',
+    ],
+    contextWindow: 128_000,
+    costPerMillionInput: 0.35,
+    costPerMillionOutput: 0.40,
+    description: 'Latest Llama 3.3 70B - Improved instruction following',
+    publisher: 'Meta',
+    parameters: '70B',
+  },
 ];
+
+// =============================================================================
+// Model Lookup Functions
+// =============================================================================
 
 export function getModelById(id: string): ModelConfig | undefined {
   return MODEL_REGISTRY.find((m) => m.id === id);
 }
 
 export function getDefaultModel(): ModelConfig {
-  return getModelById(DEFAULT_MODEL) || MODEL_REGISTRY[0];
+  return getModelById(DEFAULT_MODEL) || MODEL_REGISTRY[1]; // Fallback to first NIM model
 }
 
 export function getModelsByCapability(cap: ModelCapability): ModelConfig[] {
@@ -372,12 +334,17 @@ export function getModelsByProvider(provider: LLMProvider): ModelConfig[] {
   return MODEL_REGISTRY.filter((m) => m.provider === provider);
 }
 
+export function getFeaturedModels(): ModelConfig[] {
+  return MODEL_REGISTRY.filter((m) => m.featured === true);
+}
+
 export function getMultilingualModels(): ModelConfig[] {
   return MODEL_REGISTRY.filter((m) => m.capabilities.includes('multilingual'));
 }
 
 export function getCheapestModel(): ModelConfig {
-  return MODEL_REGISTRY.reduce((cheapest, model) => {
+  const nimModels = MODEL_REGISTRY.filter((m) => m.provider === 'nim');
+  return nimModels.reduce((cheapest, model) => {
     const modelCost = (model.costPerMillionInput || 0) + (model.costPerMillionOutput || 0);
     const cheapestCost = (cheapest.costPerMillionInput || 0) + (cheapest.costPerMillionOutput || 0);
     return modelCost < cheapestCost ? model : cheapest;
@@ -385,7 +352,7 @@ export function getCheapestModel(): ModelConfig {
 }
 
 export function getLargestContextModel(): ModelConfig {
-  return MODEL_REGISTRY.reduce((largest, model) => 
+  return MODEL_REGISTRY.reduce((largest, model) =>
     model.contextWindow > largest.contextWindow ? model : largest
   );
 }
@@ -407,7 +374,9 @@ export function getAgenticModels(): ModelConfig[] {
 }
 
 export function getVisionModels(): ModelConfig[] {
-  return MODEL_REGISTRY.filter((m) => m.capabilities.includes('vision') || m.capabilities.includes('multimodal'));
+  return MODEL_REGISTRY.filter(
+    (m) => m.capabilities.includes('vision') || m.capabilities.includes('multimodal')
+  );
 }
 
 export function getLongContextModels(minContext: number = 100_000): ModelConfig[] {
@@ -418,18 +387,56 @@ export function getModelsByPublisher(publisher: string): ModelConfig[] {
   return MODEL_REGISTRY.filter((m) => m.publisher?.toLowerCase() === publisher.toLowerCase());
 }
 
-export function estimateCost(modelId: string, inputTokens: number, outputTokens: number): { usd: number; breakdown: string } {
+export function estimateCost(
+  modelId: string,
+  inputTokens: number,
+  outputTokens: number
+): { usd: number; breakdown: string } {
   const model = getModelById(modelId);
   if (!model) {
     throw new Error(`Model ${modelId} not found in registry`);
   }
-  
+
   const inputCost = inputTokens * ((model.costPerMillionInput || 0) / 1_000_000);
   const outputCost = outputTokens * ((model.costPerMillionOutput || 0) / 1_000_000);
   const total = inputCost + outputCost;
-  
+
   return {
     usd: total,
     breakdown: `${model.id}: ${inputTokens} input + ${outputTokens} output tokens`,
   };
+}
+
+// =============================================================================
+// NVIDIA NIM Specific Helpers
+// =============================================================================
+
+/**
+ * Get the recommended model for a specific use case.
+ * All models are powered by NVIDIA NIM.
+ */
+export function getRecommendedModel(
+  useCase: 'general' | 'code' | 'reasoning' | 'cost-optimized' | 'multilingual'
+): ModelConfig {
+  switch (useCase) {
+    case 'general':
+      return getModelById('meta/llama-3.1-405b-instruct') || getDefaultModel();
+    case 'code':
+      return getModelById('mistralai/codestral-22b-instruct-v0.1') || getDefaultModel();
+    case 'reasoning':
+      return getModelById('nvidia/llama-3.1-nemotron-ultra-253b-v1') || getDefaultModel();
+    case 'cost-optimized':
+      return getModelById('meta/llama-3.1-70b-instruct') || getCheapestModel();
+    case 'multilingual':
+      return getModelById('mistralai/mistral-large-2-instruct') || getDefaultModel();
+    default:
+      return getDefaultModel();
+  }
+}
+
+/**
+ * Check if NVIDIA NIM is the only provider (always true now).
+ */
+export function isNvidiaExclusive(): boolean {
+  return true;
 }

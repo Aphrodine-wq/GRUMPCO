@@ -1,15 +1,57 @@
 /**
  * Tool Execution Service
- * Handles execution of all available tools with security validation.
- * Uses pathPolicyService for guard rails (blocklist/allowlist).
+ *
+ * Provides secure, sandboxed execution of file system and shell operations
+ * for AI-assisted development. All operations are validated against security
+ * policies including path traversal prevention, command blocklisting, and
+ * optional strict allowlists.
+ *
+ * @module services/toolExecutionService
+ *
+ * @security
+ * - All file paths are validated against workspace boundaries
+ * - Dangerous commands (rm -rf /, dd, mkfs, etc.) are blocked
+ * - Optional STRICT_COMMAND_ALLOWLIST mode limits commands to npm, git, etc.
+ * - Git push is disabled by default (requires ENABLE_GIT_PUSH=true)
+ * - Integrated with guardrails enforcement for additional security checks
+ *
+ * @example
+ * ```typescript
+ * import { toolExecutionService } from './toolExecutionService.js';
+ *
+ * // Execute a safe command
+ * const result = await toolExecutionService.executeBash('npm test');
+ * if (result.success) {
+ *   console.log(result.output);
+ * }
+ *
+ * // Read a file
+ * const file = await toolExecutionService.readFile('src/index.ts');
+ *
+ * // List directory
+ * const files = await toolExecutionService.listDirectory('.', true);
+ * ```
  */
 
 import path from 'path';
 import fs from 'fs/promises';
 import { execSync } from 'child_process';
-import { ToolExecutionResult } from '../tools/definitions.js';
+import type { ToolExecutionResult } from '../tools/types.js';
 import { logger } from '../utils/logger.js';
 import { resolvePath, type PathOperation } from './pathPolicyService.js';
+import { getGuardrailsConfig, isHighRiskCommand } from '../config/guardrailsConfig.js';
+import {
+  enforceToolGuardrails,
+  type ToolExecutionRequest,
+  type EnforcementResult,
+} from './guardrailsEnforcementService.js';
+import {
+  classifyCommand,
+  classifyFileOperation,
+  classifyGitOperation,
+  checkApprovalGate,
+  type ApprovalContext,
+} from './approvalService.js';
 
 // ============================================================================
 // DANGEROUS COMMANDS - BLOCKED
@@ -40,16 +82,189 @@ const ALLOWED_COMMANDS = new Set(['npm', 'npx', 'node', 'git', 'pnpm', 'yarn', '
 // TOOL EXECUTION SERVICE
 // ============================================================================
 
+/**
+ * Service class for executing file system and shell operations securely.
+ *
+ * Provides methods for:
+ * - Bash/terminal command execution
+ * - File read/write/edit operations
+ * - Directory listing and codebase search
+ * - Git operations (status, diff, log, commit, branch, push)
+ *
+ * All operations are sandboxed to the configured workspace root and
+ * validated against security policies.
+ *
+ * @class ToolExecutionService
+ *
+ * @example
+ * ```typescript
+ * const service = new ToolExecutionService('/path/to/workspace');
+ * const result = await service.readFile('package.json');
+ * ```
+ */
 export class ToolExecutionService {
+  /** Absolute path to the workspace root directory */
   private workspaceRoot: string;
+  /** Additional directories allowed for operations outside workspace */
   private allowedDirs: string[];
+  /** User ID for guardrails context */
+  private userId?: string;
+  /** Session ID for guardrails context */
+  private sessionId?: string;
+  /** Whether guardrails are enabled for this instance */
+  private guardrailsEnabled: boolean;
 
+  /**
+   * Creates a new ToolExecutionService instance.
+   *
+   * @param {string} [workspaceRoot='/tmp/workspace'] - Root directory for all operations
+   * @param {Object} [options] - Configuration options
+   * @param {string[]} [options.allowedDirs] - Additional directories to allow access
+   * @param {string} [options.userId] - User ID for guardrails/audit logging
+   * @param {string} [options.sessionId] - Session ID for guardrails/audit logging
+   * @param {boolean} [options.enableGuardrails] - Enable guardrails enforcement (default: true)
+   *
+   * @example
+   * ```typescript
+   * // Default workspace
+   * const service = new ToolExecutionService();
+   *
+   * // Custom workspace with additional allowed dirs
+   * const service = new ToolExecutionService('/my/project', {
+   *   allowedDirs: ['/shared/libs']
+   * });
+   *
+   * // With guardrails context
+   * const service = new ToolExecutionService('/my/project', {
+   *   userId: 'user-123',
+   *   sessionId: 'session-456',
+   *   enableGuardrails: true
+   * });
+   * ```
+   */
   constructor(
     workspaceRoot: string = process.env.WORKSPACE_ROOT || '/tmp/workspace',
-    options?: { allowedDirs?: string[] }
+    options?: {
+      allowedDirs?: string[];
+      userId?: string;
+      sessionId?: string;
+      enableGuardrails?: boolean;
+    }
   ) {
     this.workspaceRoot = path.resolve(workspaceRoot);
     this.allowedDirs = options?.allowedDirs ?? [];
+    this.userId = options?.userId;
+    this.sessionId = options?.sessionId;
+    this.guardrailsEnabled = options?.enableGuardrails ?? getGuardrailsConfig().enabled;
+  }
+
+  /**
+   * Set the user and session context for guardrails
+   */
+  setContext(userId: string, sessionId?: string): void {
+    this.userId = userId;
+    this.sessionId = sessionId;
+  }
+
+  /**
+   * Check guardrails enforcement for a tool operation.
+   * Returns an error result if the operation is blocked.
+   */
+  private async checkGuardrails(
+    tool: string,
+    parameters: Record<string, unknown>,
+    toolName: string,
+    startTime: number
+  ): Promise<ToolExecutionResult | null> {
+    if (!this.guardrailsEnabled) {
+      return null; // Guardrails disabled, allow operation
+    }
+
+    const request: ToolExecutionRequest = {
+      tool,
+      parameters,
+      context: {
+        userId: this.userId ?? 'anonymous',
+        sessionId: this.sessionId ?? '',
+        workspaceRoot: this.workspaceRoot,
+      },
+    };
+
+    try {
+      const result: EnforcementResult = await enforceToolGuardrails(request);
+
+      if (!result.allowed) {
+        const requiresApproval = result.action === 'require_approval';
+        const approvalId = result.approvalRequired?.approvalId;
+
+        logger.warn(
+          {
+            tool,
+            parameters,
+            reason: result.reason,
+            requiresApproval,
+          },
+          'Guardrails blocked tool execution'
+        );
+
+        return {
+          success: false,
+          error: result.reason ?? 'Operation blocked by guardrails',
+          toolName,
+          executionTime: Date.now() - startTime,
+          metadata: {
+            blockedByGuardrails: true,
+            requiresApproval,
+            approvalId,
+          },
+        };
+      }
+    } catch (err) {
+      logger.error({ err, tool }, 'Guardrails check failed');
+      // In case of guardrails error, we fail closed (block the operation)
+      if (getGuardrailsConfig().strictMode === 'enforce') {
+        return {
+          success: false,
+          error: 'Guardrails check failed - operation blocked for safety',
+          toolName,
+          executionTime: Date.now() - startTime,
+        };
+      }
+    }
+
+    return null; // Guardrails passed, continue with operation
+  }
+
+  /**
+   * Check approval gate for an action.
+   * Returns true if approved or no approval needed.
+   */
+  private checkApprovalRequired(
+    action: string,
+    parameters?: Record<string, unknown>
+  ): { required: boolean; riskLevel: string; reason: string } {
+    if (!this.guardrailsEnabled || !this.userId) {
+      return {
+        required: false,
+        riskLevel: 'low',
+        reason: 'Guardrails disabled or no user context',
+      };
+    }
+
+    const approvalContext: ApprovalContext = {
+      userId: this.userId,
+      sessionId: this.sessionId,
+      action,
+      parameters,
+      workspaceRoot: this.workspaceRoot,
+    };
+
+    const gate = checkApprovalGate(approvalContext);
+    return {
+      required: gate.required && !gate.autoApprove,
+      riskLevel: gate.riskLevel,
+      reason: gate.reason,
+    };
   }
 
   /**
@@ -112,7 +327,30 @@ export class ToolExecutionService {
   }
 
   /**
-   * Execute a bash command with timeout and security checks
+   * Execute a bash command with security validation and timeout.
+   *
+   * Commands are validated against a blocklist of dangerous operations
+   * (rm -rf /, dd, mkfs, etc.). When STRICT_COMMAND_ALLOWLIST is enabled,
+   * only whitelisted commands (npm, git, node, etc.) are permitted.
+   *
+   * @param {string} command - The bash command to execute
+   * @param {string} [workingDirectory] - Working directory (relative to workspace)
+   * @param {number} [timeout=30000] - Timeout in milliseconds
+   * @returns {Promise<ToolExecutionResult>} Execution result with output or error
+   *
+   * @throws Never throws; errors are returned in the result object
+   *
+   * @example
+   * ```typescript
+   * const result = await service.executeBash('npm test', './frontend');
+   * if (result.success) {
+   *   console.log('Tests passed:', result.output);
+   * } else {
+   *   console.error('Tests failed:', result.error);
+   * }
+   * ```
+   *
+   * @security Dangerous commands are blocked; see DANGEROUS_COMMANDS constant
    */
   async executeBash(
     command: string,
@@ -122,6 +360,36 @@ export class ToolExecutionService {
     const startTime = Date.now();
 
     try {
+      // Check guardrails first
+      const guardrailResult = await this.checkGuardrails(
+        'bash',
+        { command, workingDirectory },
+        'bash_execute',
+        startTime
+      );
+      if (guardrailResult) {
+        return guardrailResult;
+      }
+
+      // Check if command is high-risk and requires approval
+      const classification = classifyCommand(command);
+      if (classification.riskLevel === 'high' || isHighRiskCommand(command)) {
+        const approval = this.checkApprovalRequired(classification.action, { command });
+        if (approval.required) {
+          return {
+            success: false,
+            error: `High-risk command requires approval: ${approval.reason}`,
+            toolName: 'bash_execute',
+            executionTime: Date.now() - startTime,
+            metadata: {
+              requiresApproval: true,
+              riskLevel: approval.riskLevel,
+              action: classification.action,
+            },
+          };
+        }
+      }
+
       // Validate command
       const validation = this.validateCommand(command);
       if (!validation.valid) {
@@ -164,7 +432,13 @@ export class ToolExecutionService {
       };
     } catch (error: unknown) {
       logger.error({ error, command }, 'Bash execution failed');
-      const err = error as { code?: string; status?: number; stdout?: unknown; stderr?: unknown; message?: string };
+      const err = error as {
+        code?: string;
+        status?: number;
+        stdout?: unknown;
+        stderr?: unknown;
+        message?: string;
+      };
       // Handle timeout
       if (err.code === 'ETIMEDOUT') {
         return {
@@ -198,7 +472,25 @@ export class ToolExecutionService {
   }
 
   /**
-   * Read a file with optional encoding
+   * Read a file from the workspace with optional encoding.
+   *
+   * The file path is validated against workspace boundaries and
+   * security policies before reading.
+   *
+   * @param {string} filePath - Path to the file (relative or absolute)
+   * @param {'utf8' | 'base64'} [encoding='utf8'] - File encoding
+   * @returns {Promise<ToolExecutionResult>} Result with file content or error
+   *
+   * @throws Never throws; errors are returned in the result object
+   *
+   * @example
+   * ```typescript
+   * // Read as text
+   * const result = await service.readFile('src/index.ts');
+   *
+   * // Read as base64 (for binary files)
+   * const image = await service.readFile('assets/logo.png', 'base64');
+   * ```
    */
   async readFile(
     filePath: string,
@@ -219,7 +511,12 @@ export class ToolExecutionService {
 
       const resolvedPath = validation.resolvedPath;
       if (!resolvedPath) {
-        return { success: false, error: 'Path validation did not return resolved path', toolName: 'file_read', executionTime: Date.now() - startTime };
+        return {
+          success: false,
+          error: 'Path validation did not return resolved path',
+          toolName: 'file_read',
+          executionTime: Date.now() - startTime,
+        };
       }
       const content = await fs.readFile(resolvedPath, encoding);
 
@@ -242,7 +539,25 @@ export class ToolExecutionService {
   }
 
   /**
-   * Write content to a file
+   * Write content to a file in the workspace.
+   *
+   * Creates parent directories if they don't exist (when createDirectories=true).
+   * Returns diff information for version control and undo operations.
+   *
+   * @param {string} filePath - Path to the file (relative or absolute)
+   * @param {string} content - Content to write
+   * @param {boolean} [createDirectories=true] - Create parent directories if missing
+   * @returns {Promise<ToolExecutionResult>} Result with success status and diff
+   *
+   * @throws Never throws; errors are returned in the result object
+   *
+   * @example
+   * ```typescript
+   * const result = await service.writeFile('src/new-file.ts', 'export const x = 1;');
+   * if (result.success) {
+   *   console.log('Created:', result.diff?.changeType); // 'created' or 'modified'
+   * }
+   * ```
    */
   async writeFile(
     filePath: string,
@@ -252,6 +567,36 @@ export class ToolExecutionService {
     const startTime = Date.now();
 
     try {
+      // Check guardrails first
+      const guardrailResult = await this.checkGuardrails(
+        'file_write',
+        { filePath, contentLength: content.length },
+        'file_write',
+        startTime
+      );
+      if (guardrailResult) {
+        return guardrailResult;
+      }
+
+      // Check if writing to sensitive file requires approval
+      const classification = classifyFileOperation('write', filePath);
+      if (classification.riskLevel === 'high' || classification.riskLevel === 'medium') {
+        const approval = this.checkApprovalRequired(classification.action, { filePath });
+        if (approval.required) {
+          return {
+            success: false,
+            error: `Writing to this file requires approval: ${approval.reason}`,
+            toolName: 'file_write',
+            executionTime: Date.now() - startTime,
+            metadata: {
+              requiresApproval: true,
+              riskLevel: approval.riskLevel,
+              action: classification.action,
+            },
+          };
+        }
+      }
+
       const validation = this.validatePath(filePath, 'write');
       if (!validation.valid) {
         return {
@@ -264,7 +609,12 @@ export class ToolExecutionService {
 
       const resolvedPath = validation.resolvedPath;
       if (!resolvedPath) {
-        return { success: false, error: 'Path validation did not return resolved path', toolName: 'file_write', executionTime: Date.now() - startTime };
+        return {
+          success: false,
+          error: 'Path validation did not return resolved path',
+          toolName: 'file_write',
+          executionTime: Date.now() - startTime,
+        };
       }
 
       // Check if file exists to determine change type
@@ -310,7 +660,31 @@ export class ToolExecutionService {
   }
 
   /**
-   * Edit specific lines in a file
+   * Edit specific lines in a file.
+   *
+   * Supports three operation types:
+   * - `insert`: Insert content at a line number
+   * - `replace`: Replace lines between lineStart and lineEnd
+   * - `delete`: Delete lines between lineStart and lineEnd
+   *
+   * Operations are applied in reverse order to avoid line number shifts.
+   *
+   * @param {string} filePath - Path to the file
+   * @param {Array<Object>} operations - Array of edit operations
+   * @param {'insert' | 'replace' | 'delete'} operations[].type - Operation type
+   * @param {number} operations[].lineStart - Starting line (1-indexed)
+   * @param {number} [operations[].lineEnd] - Ending line for replace/delete
+   * @param {string} [operations[].content] - Content for insert/replace
+   * @returns {Promise<ToolExecutionResult>} Result with diff information
+   *
+   * @example
+   * ```typescript
+   * const result = await service.editFile('src/index.ts', [
+   *   { type: 'replace', lineStart: 5, lineEnd: 7, content: 'new code' },
+   *   { type: 'insert', lineStart: 10, content: '// comment' },
+   *   { type: 'delete', lineStart: 15, lineEnd: 20 },
+   * ]);
+   * ```
    */
   async editFile(
     filePath: string,
@@ -336,7 +710,12 @@ export class ToolExecutionService {
 
       const resolvedPath = validation.resolvedPath;
       if (!resolvedPath) {
-        return { success: false, error: 'Path validation did not return resolved path', toolName: 'file_edit', executionTime: Date.now() - startTime };
+        return {
+          success: false,
+          error: 'Path validation did not return resolved path',
+          toolName: 'file_edit',
+          executionTime: Date.now() - startTime,
+        };
       }
 
       // Read file - capture before content
@@ -344,7 +723,7 @@ export class ToolExecutionService {
       const lines = beforeContent.split('\n');
 
       // Store operation details for diff
-      const operationDetails = operations.map(op => ({
+      const operationDetails = operations.map((op) => ({
         type: op.type,
         lineStart: op.lineStart,
         lineEnd: op.lineEnd,
@@ -402,7 +781,24 @@ export class ToolExecutionService {
   }
 
   /**
-   * List files in a directory
+   * List files in a directory.
+   *
+   * Returns a formatted list with emoji indicators for files and directories.
+   * When recursive=true, traverses all subdirectories.
+   *
+   * @param {string} dirPath - Path to the directory
+   * @param {boolean} [recursive=false] - Include subdirectories recursively
+   * @returns {Promise<ToolExecutionResult>} Result with file listing
+   *
+   * @example
+   * ```typescript
+   * const result = await service.listDirectory('src', true);
+   * // Output:
+   * // 📁 /src/
+   * //   📄 /src/index.ts
+   * //   📁 /src/utils/
+   * //     📄 /src/utils/helper.ts
+   * ```
    */
   async listDirectory(dirPath: string, recursive: boolean = false): Promise<ToolExecutionResult> {
     const startTime = Date.now();
@@ -420,7 +816,12 @@ export class ToolExecutionService {
 
       const resolvedPath = validation.resolvedPath;
       if (!resolvedPath) {
-        return { success: false, error: 'Path validation did not return resolved path', toolName: 'list_directory', executionTime: Date.now() - startTime };
+        return {
+          success: false,
+          error: 'Path validation did not return resolved path',
+          toolName: 'list_directory',
+          executionTime: Date.now() - startTime,
+        };
       }
       const files = await this._listDir(resolvedPath, recursive, '');
 
@@ -465,7 +866,12 @@ export class ToolExecutionService {
     try {
       const basePath = validation.resolvedPath;
       if (!basePath) {
-        return { success: false, error: 'Path validation did not return resolved path', toolName: 'codebase_search', executionTime: Date.now() - startTime };
+        return {
+          success: false,
+          error: 'Path validation did not return resolved path',
+          toolName: 'codebase_search',
+          executionTime: Date.now() - startTime,
+        };
       }
       const q = query.toLowerCase().replace(/\*\./g, '.').replace(/\*\*/g, '');
       const collected: string[] = [];
@@ -481,7 +887,8 @@ export class ToolExecutionService {
             }
           } else {
             if (collected.length >= maxResults) return;
-            const match = rel.toLowerCase().includes(q) || e.name.toLowerCase().includes(query.toLowerCase());
+            const match =
+              rel.toLowerCase().includes(q) || e.name.toLowerCase().includes(query.toLowerCase());
             if (match) collected.push(rel);
           }
         }
@@ -531,7 +938,11 @@ export class ToolExecutionService {
   /**
    * Resolve working directory for git (must be under workspace). Returns cwd string.
    */
-  private resolveGitCwd(workingDirectory?: string): { valid: boolean; error?: string; cwd?: string } {
+  private resolveGitCwd(workingDirectory?: string): {
+    valid: boolean;
+    error?: string;
+    cwd?: string;
+  } {
     const dir = workingDirectory ?? '.';
     const validation = this.validatePath(dir, 'list');
     if (!validation.valid) {
@@ -574,6 +985,20 @@ export class ToolExecutionService {
     }
   }
 
+  /**
+   * Get git status for the workspace.
+   *
+   * Returns short-format status with branch information.
+   *
+   * @param {string} [workingDirectory] - Working directory for git command
+   * @returns {Promise<ToolExecutionResult>} Git status output
+   *
+   * @example
+   * ```typescript
+   * const result = await service.gitStatus();
+   * // Output: "## main...origin/main\n M src/index.ts\n?? new-file.ts"
+   * ```
+   */
   async gitStatus(workingDirectory?: string): Promise<ToolExecutionResult> {
     const startTime = Date.now();
     const resolved = this.resolveGitCwd(workingDirectory);
@@ -590,7 +1015,31 @@ export class ToolExecutionService {
     return result;
   }
 
-  async gitDiff(workingDirectory?: string, staged?: boolean, file?: string): Promise<ToolExecutionResult> {
+  /**
+   * Get git diff for staged or unstaged changes.
+   *
+   * @param {string} [workingDirectory] - Working directory for git command
+   * @param {boolean} [staged=false] - Show staged changes only
+   * @param {string} [file] - Limit diff to specific file
+   * @returns {Promise<ToolExecutionResult>} Git diff output
+   *
+   * @example
+   * ```typescript
+   * // All unstaged changes
+   * const diff = await service.gitDiff();
+   *
+   * // Staged changes only
+   * const staged = await service.gitDiff(undefined, true);
+   *
+   * // Specific file
+   * const fileDiff = await service.gitDiff(undefined, false, 'src/index.ts');
+   * ```
+   */
+  async gitDiff(
+    workingDirectory?: string,
+    staged?: boolean,
+    file?: string
+  ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
     const resolved = this.resolveGitCwd(workingDirectory);
     if (!resolved.valid || !resolved.cwd) {
@@ -609,7 +1058,25 @@ export class ToolExecutionService {
     return result;
   }
 
-  async gitLog(workingDirectory?: string, maxCount: number = 20, oneline: boolean = true): Promise<ToolExecutionResult> {
+  /**
+   * Get git log with recent commits.
+   *
+   * @param {string} [workingDirectory] - Working directory for git command
+   * @param {number} [maxCount=20] - Maximum number of commits to show
+   * @param {boolean} [oneline=true] - Use compact one-line format
+   * @returns {Promise<ToolExecutionResult>} Git log output
+   *
+   * @example
+   * ```typescript
+   * const log = await service.gitLog(undefined, 10, true);
+   * // Output: "abc1234 feat: add new feature\ndef5678 fix: bug fix"
+   * ```
+   */
+  async gitLog(
+    workingDirectory?: string,
+    maxCount: number = 20,
+    oneline: boolean = true
+  ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
     const resolved = this.resolveGitCwd(workingDirectory);
     if (!resolved.valid || !resolved.cwd) {
@@ -627,7 +1094,28 @@ export class ToolExecutionService {
     return result;
   }
 
-  async gitCommit(message: string, workingDirectory?: string, addAll: boolean = false): Promise<ToolExecutionResult> {
+  /**
+   * Create a git commit with optional auto-staging.
+   *
+   * @param {string} message - Commit message
+   * @param {string} [workingDirectory] - Working directory for git command
+   * @param {boolean} [addAll=false] - Run `git add -A` before commit
+   * @returns {Promise<ToolExecutionResult>} Git commit result
+   *
+   * @example
+   * ```typescript
+   * // Commit staged changes
+   * const result = await service.gitCommit('feat: add new feature');
+   *
+   * // Stage all and commit
+   * const result = await service.gitCommit('chore: cleanup', undefined, true);
+   * ```
+   */
+  async gitCommit(
+    message: string,
+    workingDirectory?: string,
+    addAll: boolean = false
+  ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
     const resolved = this.resolveGitCwd(workingDirectory);
     if (!resolved.valid || !resolved.cwd) {
@@ -650,7 +1138,28 @@ export class ToolExecutionService {
     return result;
   }
 
-  async gitBranch(workingDirectory?: string, list: boolean = true, create?: string): Promise<ToolExecutionResult> {
+  /**
+   * List branches or create a new branch.
+   *
+   * @param {string} [workingDirectory] - Working directory for git command
+   * @param {boolean} [_list=true] - List branches (ignored if create is provided)
+   * @param {string} [create] - Name of new branch to create and checkout
+   * @returns {Promise<ToolExecutionResult>} Branch list or creation result
+   *
+   * @example
+   * ```typescript
+   * // List all branches
+   * const branches = await service.gitBranch();
+   *
+   * // Create and checkout new branch
+   * const result = await service.gitBranch(undefined, true, 'feature/new-feature');
+   * ```
+   */
+  async gitBranch(
+    workingDirectory?: string,
+    _list: boolean = true,
+    create?: string
+  ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
     const resolved = this.resolveGitCwd(workingDirectory);
     if (!resolved.valid || !resolved.cwd) {
@@ -671,8 +1180,66 @@ export class ToolExecutionService {
     return result;
   }
 
-  async gitPush(workingDirectory?: string, remote: string = 'origin', branch?: string): Promise<ToolExecutionResult> {
+  /**
+   * Push commits to remote repository.
+   *
+   * **Disabled by default for security.** Set ENABLE_GIT_PUSH=true to enable.
+   *
+   * @param {string} [workingDirectory] - Working directory for git command
+   * @param {string} [remote='origin'] - Remote name
+   * @param {string} [branch] - Branch to push (defaults to current)
+   * @returns {Promise<ToolExecutionResult>} Push result
+   *
+   * @security Requires ENABLE_GIT_PUSH=true environment variable
+   *
+   * @example
+   * ```typescript
+   * // Push to origin (current branch)
+   * const result = await service.gitPush();
+   *
+   * // Push specific branch to upstream
+   * const result = await service.gitPush(undefined, 'upstream', 'main');
+   * ```
+   */
+  async gitPush(
+    workingDirectory?: string,
+    remote: string = 'origin',
+    branch?: string,
+    force: boolean = false
+  ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
+
+    // Check guardrails first
+    const guardrailResult = await this.checkGuardrails(
+      'git',
+      { operation: 'push', remote, branch, force },
+      'git_push',
+      startTime
+    );
+    if (guardrailResult) {
+      return guardrailResult;
+    }
+
+    // Check if this requires approval (especially force push)
+    const forceArgs = force ? ['--force'] : [];
+    const classification = classifyGitOperation('push', [remote, branch ?? '', ...forceArgs]);
+    if (classification.riskLevel === 'high') {
+      const approval = this.checkApprovalRequired(classification.action, { remote, branch, force });
+      if (approval.required) {
+        return {
+          success: false,
+          error: `Git push requires approval: ${approval.reason}`,
+          toolName: 'git_push',
+          executionTime: Date.now() - startTime,
+          metadata: {
+            requiresApproval: true,
+            riskLevel: approval.riskLevel,
+            action: classification.action,
+          },
+        };
+      }
+    }
+
     if (process.env.ENABLE_GIT_PUSH !== 'true') {
       return {
         success: false,

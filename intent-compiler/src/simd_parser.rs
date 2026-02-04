@@ -1,7 +1,7 @@
 //! SIMD-optimized text processing
 //! Uses AVX2/AVX-512 for parallel byte comparison and keyword scanning
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
 use std::arch::x86_64::*;
 
 /// SIMD-accelerated keyword scanner
@@ -9,29 +9,29 @@ use std::arch::x86_64::*;
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
 pub fn fast_keyword_scan(text: &[u8], keywords: &[&str]) -> Vec<(usize, String)> {
     let mut matches = Vec::new();
-    
+
     unsafe {
         let len = text.len();
         let chunks = len / 32;
-        
+
         for keyword in keywords {
             let keyword_bytes = keyword.as_bytes();
             if keyword_bytes.is_empty() {
                 continue;
             }
-            
+
             let first_byte = keyword_bytes[0];
             let first_byte_vec = _mm256_set1_epi8(first_byte as i8);
-            
+
             // Scan in 32-byte chunks using AVX2
             for i in 0..chunks {
                 let offset = i * 32;
                 let chunk = _mm256_loadu_si256(text.as_ptr().add(offset) as *const __m256i);
-                
+
                 // Compare all 32 bytes at once
                 let cmp = _mm256_cmpeq_epi8(chunk, first_byte_vec);
                 let mask = _mm256_movemask_epi8(cmp);
-                
+
                 if mask != 0 {
                     // Found potential match, verify full keyword
                     for bit in 0..32 {
@@ -46,7 +46,7 @@ pub fn fast_keyword_scan(text: &[u8], keywords: &[&str]) -> Vec<(usize, String)>
                     }
                 }
             }
-            
+
             // Handle remaining bytes (< 32)
             let remainder_start = chunks * 32;
             for i in remainder_start..len {
@@ -58,7 +58,7 @@ pub fn fast_keyword_scan(text: &[u8], keywords: &[&str]) -> Vec<(usize, String)>
             }
         }
     }
-    
+
     matches
 }
 
@@ -66,23 +66,23 @@ pub fn fast_keyword_scan(text: &[u8], keywords: &[&str]) -> Vec<(usize, String)>
 #[cfg(not(all(target_arch = "x86_64", target_feature = "avx2")))]
 pub fn fast_keyword_scan(text: &[u8], keywords: &[&str]) -> Vec<(usize, String)> {
     let mut matches = Vec::new();
-    
+
     for keyword in keywords {
         let keyword_bytes = keyword.as_bytes();
         let text_len = text.len();
         let keyword_len = keyword_bytes.len();
-        
+
         if keyword_len == 0 || keyword_len > text_len {
             continue;
         }
-        
+
         for i in 0..=(text_len - keyword_len) {
             if &text[i..i + keyword_len] == keyword_bytes {
                 matches.push((i, keyword.to_string()));
             }
         }
     }
-    
+
     matches
 }
 
@@ -90,34 +90,34 @@ pub fn fast_keyword_scan(text: &[u8], keywords: &[&str]) -> Vec<(usize, String)>
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
 pub fn fast_lowercase_scan(text: &[u8]) -> Vec<u8> {
     let mut result = Vec::with_capacity(text.len());
-    
+
     unsafe {
         let len = text.len();
         let chunks = len / 32;
-        
+
         let a_lower = _mm256_set1_epi8(b'A' as i8);
         let z_upper = _mm256_set1_epi8(b'Z' as i8);
         let to_lower = _mm256_set1_epi8(32);
-        
+
         for i in 0..chunks {
             let offset = i * 32;
             let chunk = _mm256_loadu_si256(text.as_ptr().add(offset) as *const __m256i);
-            
+
             // Check if bytes are uppercase (A-Z)
             let ge_a = _mm256_cmpgt_epi8(chunk, _mm256_sub_epi8(a_lower, _mm256_set1_epi8(1)));
             let le_z = _mm256_cmpgt_epi8(_mm256_add_epi8(z_upper, _mm256_set1_epi8(1)), chunk);
             let is_upper = _mm256_and_si256(ge_a, le_z);
-            
+
             // Convert to lowercase by adding 32 to uppercase letters
             let lower_mask = _mm256_and_si256(is_upper, to_lower);
             let lowered = _mm256_add_epi8(chunk, lower_mask);
-            
+
             // Store result
             let mut temp = [0u8; 32];
             _mm256_storeu_si256(temp.as_mut_ptr() as *mut __m256i, lowered);
             result.extend_from_slice(&temp);
         }
-        
+
         // Handle remaining bytes
         for i in (chunks * 32)..len {
             let byte = text[i];
@@ -128,7 +128,7 @@ pub fn fast_lowercase_scan(text: &[u8]) -> Vec<u8> {
             });
         }
     }
-    
+
     result
 }
 
@@ -136,7 +136,7 @@ pub fn fast_lowercase_scan(text: &[u8]) -> Vec<u8> {
 #[cfg(not(all(target_arch = "x86_64", target_feature = "avx2")))]
 pub fn fast_lowercase_scan(text: &[u8]) -> Vec<u8> {
     text.iter()
-        .map(|&b| if b >= b'A' && b <= b'Z' { b + 32 } else { b })
+        .map(|&b| if b.is_ascii_uppercase() { b + 32 } else { b })
         .collect()
 }
 
@@ -175,7 +175,11 @@ pub fn fast_trim(text: &[u8]) -> &[u8] {
 pub fn fast_trim(text: &[u8]) -> &[u8] {
     let is_ws = |b: u8| b == b' ' || b == b'\t' || b == b'\r' || b == b'\n';
     let start = text.iter().position(|&b| !is_ws(b)).unwrap_or(text.len());
-    let end = text.iter().rposition(|&b| !is_ws(b)).map(|i| i + 1).unwrap_or(start);
+    let end = text
+        .iter()
+        .rposition(|&b| !is_ws(b))
+        .map(|i| i + 1)
+        .unwrap_or(start);
     &text[start..end]
 }
 
@@ -243,7 +247,7 @@ pub fn check_simd_support() -> SIMDSupport {
             return SIMDSupport::SSE42;
         }
     }
-    
+
     SIMDSupport::None
 }
 
@@ -275,7 +279,7 @@ mod tests {
         let text = b"Build a React app with Node and Express";
         let keywords = &["React", "Node", "Express", "Python"];
         let matches = fast_keyword_scan(text, keywords);
-        
+
         assert!(matches.iter().any(|(_, k)| k == "React"));
         assert!(matches.iter().any(|(_, k)| k == "Node"));
         assert!(matches.iter().any(|(_, k)| k == "Express"));
