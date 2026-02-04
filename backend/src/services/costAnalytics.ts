@@ -3,7 +3,11 @@
  * Comprehensive cost tracking and analytics for LLM API usage
  */
 
-import { getDatabase, type DatabaseService } from "../db/database.js";
+import {
+  getDatabase,
+  databaseSupportsRawDb,
+  type DatabaseService,
+} from "../db/database.js";
 import logger from "../middleware/logger.js";
 import { MODEL_REGISTRY } from "@grump/ai-core";
 import { getAlertingService } from "./alerting.js";
@@ -479,12 +483,15 @@ export function getCostAnalytics(): CostAnalytics {
 }
 
 /**
- * Initialize cost tracking table
+ * Initialize cost tracking table (SQLite only; no-op in Supabase mode).
  */
 export async function initializeCostTracking(): Promise<void> {
-  const db = getDatabase();
-  const dbService = db as DatabaseService;
-  const rawDb = dbService.getDb();
+  if (!databaseSupportsRawDb()) {
+    logger.debug("Cost tracking skipped (Supabase mode, no raw DB)");
+    return;
+  }
+  const db = getDatabase() as DatabaseService;
+  const rawDb = db.getDb();
 
   rawDb.exec(`
     CREATE TABLE IF NOT EXISTS cost_records (
