@@ -11,7 +11,7 @@ export class StreamBuffer {
 
   constructor(
     private onFlush: (chunk: string) => void,
-    options: { maxDelayMs?: number; maxBufferSize?: number } = {}
+    options: { maxDelayMs?: number; maxBufferSize?: number } = {},
   ) {
     this.maxDelayMs = options.maxDelayMs ?? 50;
     this.maxBufferSize = options.maxBufferSize ?? 10;
@@ -34,7 +34,7 @@ export class StreamBuffer {
   flush(): void {
     if (this.buffer.length === 0) return;
 
-    const combined = this.buffer.join('');
+    const combined = this.buffer.join("");
     this.buffer = [];
 
     if (this.flushTimer) {

@@ -20,6 +20,17 @@
     "keywords": ["lint", "linter", "check my code", "format my code"],
     "patterns": ["lint\\s+(my|this|the)?\\s*code", "fix\\s+my\\s+code"],
     "commands": ["/lint", "/format"],
-    "fileExtensions": [".ts", ".js", ".tsx", ".jsx", ".py", ".go", ".rs", ".java", ".cpp", ".c"]
+    "fileExtensions": [
+      ".ts",
+      ".js",
+      ".tsx",
+      ".jsx",
+      ".py",
+      ".go",
+      ".rs",
+      ".java",
+      ".cpp",
+      ".c"
+    ]
   }
 }

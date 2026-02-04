@@ -64,7 +64,7 @@ export class StringBuilder implements Poolable {
   }
 
   toString(): string {
-    return this.parts.join('');
+    return this.parts.join("");
   }
 
   reset(): void {

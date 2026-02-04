@@ -12,7 +12,7 @@
  * - Temporal pattern recognition (time-of-day, session patterns)
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 
 // ============================================================================
 // Types and Interfaces
@@ -30,7 +30,7 @@ export interface QueryPattern {
 export interface PredictionResult {
   query: string;
   confidence: number;
-  source: 'ngram' | 'markov' | 'temporal' | 'semantic' | 'frequent';
+  source: "ngram" | "markov" | "temporal" | "semantic" | "frequent";
   topics: string[];
   preloadedAt?: number;
 }
@@ -76,7 +76,7 @@ export class NGramPredictor {
   private tokenize(query: string): string[] {
     return query
       .toLowerCase()
-      .replace(/[^\w\s]/g, ' ')
+      .replace(/[^\w\s]/g, " ")
       .split(/\s+/)
       .filter((t) => t.length > 1);
   }
@@ -135,7 +135,10 @@ export class NGramPredictor {
       const key = `${history[history.length - 2]}|||${history[history.length - 1]}`;
       const trigramNext = this.trigrams.get(key);
       if (trigramNext) {
-        const total = Array.from(trigramNext.values()).reduce((a, b) => a + b, 0);
+        const total = Array.from(trigramNext.values()).reduce(
+          (a, b) => a + b,
+          0,
+        );
         for (const [query, count] of trigramNext) {
           const score = (count / total) * 3.0; // Triple weight for trigrams
           predictions.set(query, (predictions.get(query) || 0) + score);
@@ -148,7 +151,10 @@ export class NGramPredictor {
       const prevQuery = history[history.length - 1];
       const bigramNext = this.bigrams.get(prevQuery);
       if (bigramNext) {
-        const total = Array.from(bigramNext.values()).reduce((a, b) => a + b, 0);
+        const total = Array.from(bigramNext.values()).reduce(
+          (a, b) => a + b,
+          0,
+        );
         for (const [query, count] of bigramNext) {
           const score = (count / total) * 2.0; // Double weight for bigrams
           predictions.set(query, (predictions.get(query) || 0) + score);
@@ -163,7 +169,7 @@ export class NGramPredictor {
       .map(([query, score]) => ({
         query,
         confidence: Math.min(score, 1.0),
-        source: 'ngram' as const,
+        source: "ngram" as const,
         topics: this.extractTopics(query),
       }));
   }
@@ -206,7 +212,11 @@ export class TopicMarkovChain {
   /**
    * Record a topic transition
    */
-  recordTransition(fromTopic: string, toTopic: string, timeGap: number = 0): void {
+  recordTransition(
+    fromTopic: string,
+    toTopic: string,
+    timeGap: number = 0,
+  ): void {
     // Update transition counts
     if (!this.transitions.has(fromTopic)) {
       this.transitions.set(fromTopic, new Map());
@@ -247,7 +257,7 @@ export class TopicMarkovChain {
    */
   predictNextTopics(
     currentTopic: string,
-    topK: number = 5
+    topK: number = 5,
   ): Array<{ topic: string; probability: number; avgTimeGap: number }> {
     const fromMap = this.transitions.get(currentTopic);
     if (!fromMap) return [];
@@ -258,7 +268,10 @@ export class TopicMarkovChain {
       .map(([topic, count]) => {
         const key = `${currentTopic}|||${topic}`;
         const times = this.transitionTimes.get(key) || [];
-        const avgTime = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0;
+        const avgTime =
+          times.length > 0
+            ? times.reduce((a, b) => a + b, 0) / times.length
+            : 0;
 
         return {
           topic,
@@ -290,7 +303,10 @@ export class TopicMarkovChain {
       for (const [to, count] of toMap) {
         const key = `${from}|||${to}`;
         const times = this.transitionTimes.get(key) || [];
-        const avgTime = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0;
+        const avgTime =
+          times.length > 0
+            ? times.reduce((a, b) => a + b, 0) / times.length
+            : 0;
 
         result.push({ from, to, count, avgTimeGap: avgTime });
       }
@@ -321,7 +337,11 @@ export class TemporalPatternAnalyzer {
   /**
    * Record a query at a specific time
    */
-  recordQuery(query: string, topics: string[], timestamp: number = Date.now()): void {
+  recordQuery(
+    query: string,
+    topics: string[],
+    timestamp: number = Date.now(),
+  ): void {
     const date = new Date(timestamp);
     const hour = date.getHours();
     const day = date.getDay();
@@ -345,10 +365,15 @@ export class TemporalPatternAnalyzer {
     }
 
     // Update patterns
-    const existingPattern = this.patterns.find((p) => p.hourOfDay === hour && p.dayOfWeek === day);
+    const existingPattern = this.patterns.find(
+      (p) => p.hourOfDay === hour && p.dayOfWeek === day,
+    );
     if (existingPattern) {
       for (const topic of topics) {
-        existingPattern.topics.set(topic, (existingPattern.topics.get(topic) || 0) + 1);
+        existingPattern.topics.set(
+          topic,
+          (existingPattern.topics.get(topic) || 0) + 1,
+        );
       }
       existingPattern.queries.push(query);
       if (existingPattern.queries.length > 50) {
@@ -367,7 +392,9 @@ export class TemporalPatternAnalyzer {
   /**
    * Predict likely topics for current time
    */
-  predictForCurrentTime(topK: number = 5): Array<{ topic: string; score: number }> {
+  predictForCurrentTime(
+    topK: number = 5,
+  ): Array<{ topic: string; score: number }> {
     const now = new Date();
     const hour = now.getHours();
 
@@ -387,7 +414,10 @@ export class TemporalPatternAnalyzer {
   /**
    * Get queries typically asked at current time
    */
-  getTypicalQueriesForTime(timestamp: number = Date.now(), limit: number = 10): string[] {
+  getTypicalQueriesForTime(
+    timestamp: number = Date.now(),
+    limit: number = 10,
+  ): string[] {
     const hour = new Date(timestamp).getHours();
     const queries = this.hourlyQueries.get(hour) || [];
 
@@ -408,7 +438,11 @@ export class TemporalPatternAnalyzer {
   /**
    * Get pattern summary
    */
-  getPatternSummary(): Array<{ hour: number; day: number; topTopics: string[] }> {
+  getPatternSummary(): Array<{
+    hour: number;
+    day: number;
+    topTopics: string[];
+  }> {
     return this.patterns.map((p) => ({
       hour: p.hourOfDay,
       day: p.dayOfWeek,
@@ -492,7 +526,7 @@ export class SemanticQueryCache {
   findSimilar(
     query: string,
     topK: number = 5,
-    threshold: number = 0.3
+    threshold: number = 0.3,
   ): Array<{ query: string; similarity: number }> {
     const queryVec = this.vectorize(query);
     const results: Array<{ query: string; similarity: number }> = [];
@@ -600,22 +634,31 @@ export class PreloadCache {
   /**
    * Find approximate match using normalized query
    */
-  findApproximate(query: string, threshold: number = 0.8): PreloadedContext | undefined {
+  findApproximate(
+    query: string,
+    threshold: number = 0.8,
+  ): PreloadedContext | undefined {
     const normalizedQuery = query.toLowerCase().trim();
 
     for (const [key, value] of this.cache) {
       const normalizedKey = key.toLowerCase().trim();
 
       // Exact prefix match
-      if (normalizedKey.startsWith(normalizedQuery) || normalizedQuery.startsWith(normalizedKey)) {
+      if (
+        normalizedKey.startsWith(normalizedQuery) ||
+        normalizedQuery.startsWith(normalizedKey)
+      ) {
         return value;
       }
 
       // Word overlap
       const queryWords = new Set(normalizedQuery.split(/\s+/));
       const keyWords = new Set(normalizedKey.split(/\s+/));
-      const intersection = new Set([...queryWords].filter((w) => keyWords.has(w)));
-      const overlap = intersection.size / Math.max(queryWords.size, keyWords.size);
+      const intersection = new Set(
+        [...queryWords].filter((w) => keyWords.has(w)),
+      );
+      const overlap =
+        intersection.size / Math.max(queryWords.size, keyWords.size);
 
       if (overlap >= threshold) {
         return value;
@@ -704,114 +747,114 @@ export class PredictivePreloader extends EventEmitter {
    */
   private extractTopics(query: string): string[] {
     const stopwords = new Set([
-      'the',
-      'a',
-      'an',
-      'is',
-      'are',
-      'was',
-      'were',
-      'be',
-      'been',
-      'being',
-      'have',
-      'has',
-      'had',
-      'do',
-      'does',
-      'did',
-      'will',
-      'would',
-      'could',
-      'should',
-      'may',
-      'might',
-      'must',
-      'can',
-      'to',
-      'of',
-      'in',
-      'for',
-      'on',
-      'with',
-      'at',
-      'by',
-      'from',
-      'as',
-      'into',
-      'through',
-      'during',
-      'before',
-      'after',
-      'above',
-      'below',
-      'between',
-      'under',
-      'again',
-      'further',
-      'then',
-      'once',
-      'here',
-      'there',
-      'when',
-      'where',
-      'why',
-      'how',
-      'all',
-      'each',
-      'few',
-      'more',
-      'most',
-      'other',
-      'some',
-      'such',
-      'no',
-      'nor',
-      'not',
-      'only',
-      'own',
-      'same',
-      'so',
-      'than',
-      'too',
-      'very',
-      'just',
-      'and',
-      'but',
-      'if',
-      'or',
-      'because',
-      'until',
-      'while',
-      'this',
-      'that',
-      'these',
-      'those',
-      'what',
-      'which',
-      'who',
-      'whom',
-      'it',
-      'its',
-      'i',
-      'me',
-      'my',
-      'you',
-      'your',
-      'he',
-      'him',
-      'his',
-      'she',
-      'her',
-      'we',
-      'they',
-      'them',
-      'their',
+      "the",
+      "a",
+      "an",
+      "is",
+      "are",
+      "was",
+      "were",
+      "be",
+      "been",
+      "being",
+      "have",
+      "has",
+      "had",
+      "do",
+      "does",
+      "did",
+      "will",
+      "would",
+      "could",
+      "should",
+      "may",
+      "might",
+      "must",
+      "can",
+      "to",
+      "of",
+      "in",
+      "for",
+      "on",
+      "with",
+      "at",
+      "by",
+      "from",
+      "as",
+      "into",
+      "through",
+      "during",
+      "before",
+      "after",
+      "above",
+      "below",
+      "between",
+      "under",
+      "again",
+      "further",
+      "then",
+      "once",
+      "here",
+      "there",
+      "when",
+      "where",
+      "why",
+      "how",
+      "all",
+      "each",
+      "few",
+      "more",
+      "most",
+      "other",
+      "some",
+      "such",
+      "no",
+      "nor",
+      "not",
+      "only",
+      "own",
+      "same",
+      "so",
+      "than",
+      "too",
+      "very",
+      "just",
+      "and",
+      "but",
+      "if",
+      "or",
+      "because",
+      "until",
+      "while",
+      "this",
+      "that",
+      "these",
+      "those",
+      "what",
+      "which",
+      "who",
+      "whom",
+      "it",
+      "its",
+      "i",
+      "me",
+      "my",
+      "you",
+      "your",
+      "he",
+      "him",
+      "his",
+      "she",
+      "her",
+      "we",
+      "they",
+      "them",
+      "their",
     ]);
 
     const words = query
       .toLowerCase()
-      .replace(/[^\w\s]/g, ' ')
+      .replace(/[^\w\s]/g, " ")
       .split(/\s+/)
       .filter((w) => w.length > 2 && !stopwords.has(w));
 
@@ -852,7 +895,10 @@ export class PredictivePreloader extends EventEmitter {
       // Link follow-up to previous query
       if (sessionQueries.length > 1) {
         const prevIndex = this.queryHistory.length - 2;
-        if (prevIndex >= 0 && this.queryHistory[prevIndex].sessionId === session) {
+        if (
+          prevIndex >= 0 &&
+          this.queryHistory[prevIndex].sessionId === session
+        ) {
           this.queryHistory[prevIndex].followUp = query;
 
           // Record topic transition
@@ -880,13 +926,16 @@ export class PredictivePreloader extends EventEmitter {
     this.stats.totalQueries++;
 
     // Check if we predicted this query
-    if (this.preloadCache.has(query) || this.preloadCache.findApproximate(query)) {
+    if (
+      this.preloadCache.has(query) ||
+      this.preloadCache.findApproximate(query)
+    ) {
       this.stats.cacheHits++;
       this.stats.accuratePredictions++;
     }
 
     // Emit event
-    this.emit('queryRecorded', pattern);
+    this.emit("queryRecorded", pattern);
   }
 
   /**
@@ -918,12 +967,15 @@ export class PredictivePreloader extends EventEmitter {
             .map((q) => q.query);
 
           if (matchingQueries.length > 0) {
-            const query = matchingQueries[Math.floor(Math.random() * matchingQueries.length)];
+            const query =
+              matchingQueries[
+                Math.floor(Math.random() * matchingQueries.length)
+              ];
             if (!predictions.has(query)) {
               predictions.set(query, {
                 query,
                 confidence: next.probability * 0.8,
-                source: 'markov',
+                source: "markov",
                 topics: [next.topic],
               });
             }
@@ -934,14 +986,17 @@ export class PredictivePreloader extends EventEmitter {
 
     // 3. Temporal predictions
     const _temporalTopics = this.temporalAnalyzer.predictForCurrentTime(5);
-    const typicalQueries = this.temporalAnalyzer.getTypicalQueriesForTime(Date.now(), 5);
+    const typicalQueries = this.temporalAnalyzer.getTypicalQueriesForTime(
+      Date.now(),
+      5,
+    );
 
     for (const query of typicalQueries) {
       if (!predictions.has(query)) {
         predictions.set(query, {
           query,
           confidence: 0.5,
-          source: 'temporal',
+          source: "temporal",
           topics: this.extractTopics(query),
         });
       }
@@ -957,7 +1012,7 @@ export class PredictivePreloader extends EventEmitter {
           predictions.set(sim.query, {
             query: sim.query,
             confidence: sim.similarity * 0.7,
-            source: 'semantic',
+            source: "semantic",
             topics: this.extractTopics(sim.query),
           });
         }
@@ -977,7 +1032,7 @@ export class PredictivePreloader extends EventEmitter {
           predictions.set(query, {
             query,
             confidence: 0.4,
-            source: 'frequent',
+            source: "frequent",
             topics: [topic],
           });
         }
@@ -1001,7 +1056,9 @@ export class PredictivePreloader extends EventEmitter {
   /**
    * Preload context for predicted queries
    */
-  async preload(preloadFn?: (query: string) => Promise<unknown>): Promise<number> {
+  async preload(
+    preloadFn?: (query: string) => Promise<unknown>,
+  ): Promise<number> {
     const predictions = this.generatePredictions(10);
     let preloaded = 0;
 
@@ -1020,7 +1077,7 @@ export class PredictivePreloader extends EventEmitter {
         this.preloadCache.set(pred.query, pred, context);
         preloaded++;
 
-        this.emit('contextPreloaded', pred);
+        this.emit("contextPreloaded", pred);
       }
     }
 
@@ -1042,7 +1099,7 @@ export class PredictivePreloader extends EventEmitter {
    */
   startAutoPreload(
     intervalMs: number = 30000,
-    preloadFn?: (query: string) => Promise<unknown>
+    preloadFn?: (query: string) => Promise<unknown>,
   ): void {
     if (this.preloadInterval) {
       clearInterval(this.preloadInterval);
@@ -1055,7 +1112,7 @@ export class PredictivePreloader extends EventEmitter {
       }
     }, intervalMs);
 
-    this.emit('autoPreloadStarted', { intervalMs });
+    this.emit("autoPreloadStarted", { intervalMs });
   }
 
   /**
@@ -1067,7 +1124,7 @@ export class PredictivePreloader extends EventEmitter {
       clearInterval(this.preloadInterval);
       this.preloadInterval = null;
     }
-    this.emit('autoPreloadStopped');
+    this.emit("autoPreloadStopped");
   }
 
   /**
@@ -1076,7 +1133,7 @@ export class PredictivePreloader extends EventEmitter {
   startSession(sessionId?: string): string {
     this.currentSession = sessionId || `session_${Date.now()}`;
     this.sessionHistory.set(this.currentSession, []);
-    this.emit('sessionStarted', { sessionId: this.currentSession });
+    this.emit("sessionStarted", { sessionId: this.currentSession });
     return this.currentSession;
   }
 
@@ -1090,7 +1147,9 @@ export class PredictivePreloader extends EventEmitter {
   /**
    * Get statistics
    */
-  getStats(): PreloaderStats & { cacheStats: ReturnType<PreloadCache['getStats']> } {
+  getStats(): PreloaderStats & {
+    cacheStats: ReturnType<PreloadCache["getStats"]>;
+  } {
     return {
       ...this.stats,
       topTopics: this.topicMarkov.getTopTopics(10),
@@ -1108,7 +1167,11 @@ export class PredictivePreloader extends EventEmitter {
   /**
    * Get temporal patterns for visualization
    */
-  getTemporalPatterns(): Array<{ hour: number; day: number; topTopics: string[] }> {
+  getTemporalPatterns(): Array<{
+    hour: number;
+    day: number;
+    topTopics: string[];
+  }> {
     return this.temporalAnalyzer.getPatternSummary();
   }
 
@@ -1139,7 +1202,7 @@ export class PredictivePreloader extends EventEmitter {
       avgPredictionConfidence: 0,
       topTopics: [],
     };
-    this.emit('reset');
+    this.emit("reset");
   }
 
   /**
@@ -1158,19 +1221,28 @@ export class PredictivePreloader extends EventEmitter {
   /**
    * Import state from persistence
    */
-  importState(state: { queryHistory: QueryPattern[]; stats?: PreloaderStats }): void {
+  importState(state: {
+    queryHistory: QueryPattern[];
+    stats?: PreloaderStats;
+  }): void {
     // Re-train from history
     for (const pattern of state.queryHistory) {
       this.queryHistory.push(pattern);
       this.ngramPredictor.train([pattern.query]);
       this.semanticCache.addQuery(pattern.query);
-      this.temporalAnalyzer.recordQuery(pattern.query, pattern.topics, pattern.timestamp);
+      this.temporalAnalyzer.recordQuery(
+        pattern.query,
+        pattern.topics,
+        pattern.timestamp,
+      );
 
       // Add to session history
       if (!this.sessionHistory.has(pattern.sessionId)) {
         this.sessionHistory.set(pattern.sessionId, []);
       }
-      const sessionHistoryForPattern = this.sessionHistory.get(pattern.sessionId);
+      const sessionHistoryForPattern = this.sessionHistory.get(
+        pattern.sessionId,
+      );
       if (sessionHistoryForPattern) {
         sessionHistoryForPattern.push(pattern.query);
       }
@@ -1195,7 +1267,7 @@ export class PredictivePreloader extends EventEmitter {
       this.stats = { ...this.stats, ...state.stats };
     }
 
-    this.emit('stateImported');
+    this.emit("stateImported");
   }
 }
 
@@ -1209,7 +1281,7 @@ export class PredictivePreloaderService {
   private defaultPreloader: PredictivePreloader;
 
   private constructor() {
-    this.defaultPreloader = new PredictivePreloader('default');
+    this.defaultPreloader = new PredictivePreloader("default");
   }
 
   static getInstance(): PredictivePreloaderService {
@@ -1245,9 +1317,12 @@ export class PredictivePreloaderService {
   /**
    * Get all preloaders stats
    */
-  getAllStats(): Map<string, ReturnType<PredictivePreloader['getStats']>> {
-    const stats = new Map<string, ReturnType<PredictivePreloader['getStats']>>();
-    stats.set('default', this.defaultPreloader.getStats());
+  getAllStats(): Map<string, ReturnType<PredictivePreloader["getStats"]>> {
+    const stats = new Map<
+      string,
+      ReturnType<PredictivePreloader["getStats"]>
+    >();
+    stats.set("default", this.defaultPreloader.getStats());
 
     for (const [userId, preloader] of this.preloaders) {
       stats.set(userId, preloader.getStats());

@@ -11,7 +11,7 @@
 // TYPES
 // ============================================================================
 
-export type StrictMode = 'off' | 'warn' | 'enforce';
+export type StrictMode = "off" | "warn" | "enforce";
 
 export interface CodeValidationConfig {
   /** Enable TypeScript compilation check */
@@ -122,7 +122,7 @@ export interface SecurityPatternsConfig {
   /** Enable data exfiltration detection */
   detectExfiltration: boolean;
   /** Action on detection: 'block' | 'warn' | 'log' */
-  actionOnDetection: 'block' | 'warn' | 'log';
+  actionOnDetection: "block" | "warn" | "log";
   /** Custom blocked patterns (regex strings) */
   customBlockedPatterns: string[];
   /** Custom allowed patterns (bypass detection) */
@@ -155,7 +155,7 @@ export interface GuardrailsConfig {
 function envBool(key: string, defaultValue: boolean): boolean {
   const value = process.env[key];
   if (value === undefined) return defaultValue;
-  return value.toLowerCase() === 'true' || value === '1';
+  return value.toLowerCase() === "true" || value === "1";
 }
 
 function envInt(key: string, defaultValue: number): number {
@@ -180,14 +180,14 @@ function envArray(key: string, defaultValue: string[]): string[] {
   const value = process.env[key];
   if (value === undefined) return defaultValue;
   return value
-    .split(',')
+    .split(",")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 }
 
 function envStrictMode(key: string, defaultValue: StrictMode): StrictMode {
   const value = process.env[key]?.toLowerCase();
-  if (value === 'off' || value === 'warn' || value === 'enforce') return value;
+  if (value === "off" || value === "warn" || value === "enforce") return value;
   return defaultValue;
 }
 
@@ -196,70 +196,70 @@ function envStrictMode(key: string, defaultValue: StrictMode): StrictMode {
 // ============================================================================
 
 const DEFAULT_BLOCKED_EXTENSIONS = [
-  '.exe',
-  '.dll',
-  '.so',
-  '.dylib', // Executables
-  '.bat',
-  '.cmd',
-  '.ps1',
-  '.sh', // Scripts (can be dangerous)
-  '.com',
-  '.msi',
-  '.app', // Installers
-  '.sys',
-  '.drv', // System files
-  '.pif',
-  '.scr', // Windows executables
+  ".exe",
+  ".dll",
+  ".so",
+  ".dylib", // Executables
+  ".bat",
+  ".cmd",
+  ".ps1",
+  ".sh", // Scripts (can be dangerous)
+  ".com",
+  ".msi",
+  ".app", // Installers
+  ".sys",
+  ".drv", // System files
+  ".pif",
+  ".scr", // Windows executables
 ];
 
 const DEFAULT_BLOCKED_DIRECTORIES = [
-  '/etc',
-  '/usr',
-  '/bin',
-  '/sbin',
-  '/boot',
-  '/root',
-  '/sys',
-  '/proc',
-  '/dev',
-  'C:\\Windows',
-  'C:\\Program Files',
-  'C:\\Program Files (x86)',
-  'C:\\ProgramData',
-  '.git/hooks',
-  'node_modules/.bin',
+  "/etc",
+  "/usr",
+  "/bin",
+  "/sbin",
+  "/boot",
+  "/root",
+  "/sys",
+  "/proc",
+  "/dev",
+  "C:\\Windows",
+  "C:\\Program Files",
+  "C:\\Program Files (x86)",
+  "C:\\ProgramData",
+  ".git/hooks",
+  "node_modules/.bin",
 ];
 
 const DEFAULT_HIGH_RISK_COMMANDS = [
-  'rm -rf',
-  'rm -r /',
-  'rmdir /s',
-  'del /f /s',
-  'format ',
-  'mkfs.',
-  'dd if=',
-  'chmod 777',
-  'chmod -R 777',
-  ':(){:|:&};:', // Fork bomb
-  'curl | sh',
-  'curl | bash',
-  'wget | sh',
-  'wget | bash',
-  'sudo rm',
-  'sudo dd',
-  'git push --force',
-  'git push -f origin main',
-  'git push -f origin master',
-  'DROP TABLE',
-  'DROP DATABASE',
-  'TRUNCATE TABLE',
-  'DELETE FROM',
-  'shutdown',
-  'reboot',
-  'halt',
-  'init 0',
-  'init 6',
+  "rm -rf",
+  "rm -r /",
+  "rmdir /s",
+  "del /f /s",
+  "format ",
+  "mkfs.",
+  "dd if=",
+  "chmod 777",
+  "chmod -R 777",
+  ":(){:|:&};:", // Fork bomb
+  "curl | sh",
+  "curl | bash",
+  "wget | sh",
+  "wget | bash",
+  "sudo rm",
+  "sudo dd",
+  "git push --force",
+  "git push -f origin main",
+  "git push -f origin master",
+  "DROP TABLE",
+  "DROP DATABASE",
+  "TRUNCATE TABLE",
+  "DELETE FROM",
+  "shutdown",
+  "reboot",
+  "halt",
+  "init 0",
+  "init 6",
 ];
 
 // ============================================================================
@@ -268,77 +268,89 @@ const DEFAULT_HIGH_RISK_COMMANDS = [
 
 export function buildGuardrailsConfig(): GuardrailsConfig {
   return {
-    strictMode: envStrictMode('GUARDRAILS_STRICT_MODE', 'warn'),
-    enabled: envBool('GUARDRAILS_ENABLED', true),
+    strictMode: envStrictMode("GUARDRAILS_STRICT_MODE", "warn"),
+    enabled: envBool("GUARDRAILS_ENABLED", true),
 
     codeValidation: {
-      requireCompilation: envBool('GUARDRAILS_REQUIRE_COMPILATION', true),
-      requireLinting: envBool('GUARDRAILS_REQUIRE_LINTING', true),
-      failOnTsErrors: envBool('GUARDRAILS_FAIL_ON_TS_ERRORS', true),
-      failOnLintErrors: envBool('GUARDRAILS_FAIL_ON_LINT_ERRORS', false),
-      tsStrictMode: envBool('GUARDRAILS_TS_STRICT', true),
-      maxTsErrors: envInt('GUARDRAILS_MAX_TS_ERRORS', 0),
-      maxLintErrors: envInt('GUARDRAILS_MAX_LINT_ERRORS', 5),
-      compilationTimeoutMs: envInt('GUARDRAILS_COMPILATION_TIMEOUT_MS', 60000),
+      requireCompilation: envBool("GUARDRAILS_REQUIRE_COMPILATION", true),
+      requireLinting: envBool("GUARDRAILS_REQUIRE_LINTING", true),
+      failOnTsErrors: envBool("GUARDRAILS_FAIL_ON_TS_ERRORS", true),
+      failOnLintErrors: envBool("GUARDRAILS_FAIL_ON_LINT_ERRORS", false),
+      tsStrictMode: envBool("GUARDRAILS_TS_STRICT", true),
+      maxTsErrors: envInt("GUARDRAILS_MAX_TS_ERRORS", 0),
+      maxLintErrors: envInt("GUARDRAILS_MAX_LINT_ERRORS", 5),
+      compilationTimeoutMs: envInt("GUARDRAILS_COMPILATION_TIMEOUT_MS", 60000),
     },
 
     runtimeVerification: {
-      verifyNpmInstall: envBool('GUARDRAILS_VERIFY_NPM_INSTALL', true),
-      runTests: envBool('GUARDRAILS_RUN_TESTS', true),
-      verifyAppStart: envBool('GUARDRAILS_VERIFY_APP_START', false),
-      minTestPassRate: envFloat('GUARDRAILS_MIN_TEST_PASS_RATE', 0.8),
-      npmInstallTimeoutMs: envInt('GUARDRAILS_NPM_INSTALL_TIMEOUT_MS', 120000),
-      testTimeoutMs: envInt('GUARDRAILS_TEST_TIMEOUT_MS', 300000),
-      appStartTimeoutMs: envInt('GUARDRAILS_APP_START_TIMEOUT_MS', 30000),
-      maxRetries: envInt('GUARDRAILS_MAX_RETRIES', 2),
-      appVerifyPort: envInt('GUARDRAILS_APP_VERIFY_PORT', 3000),
+      verifyNpmInstall: envBool("GUARDRAILS_VERIFY_NPM_INSTALL", true),
+      runTests: envBool("GUARDRAILS_RUN_TESTS", true),
+      verifyAppStart: envBool("GUARDRAILS_VERIFY_APP_START", false),
+      minTestPassRate: envFloat("GUARDRAILS_MIN_TEST_PASS_RATE", 0.8),
+      npmInstallTimeoutMs: envInt("GUARDRAILS_NPM_INSTALL_TIMEOUT_MS", 120000),
+      testTimeoutMs: envInt("GUARDRAILS_TEST_TIMEOUT_MS", 300000),
+      appStartTimeoutMs: envInt("GUARDRAILS_APP_START_TIMEOUT_MS", 30000),
+      maxRetries: envInt("GUARDRAILS_MAX_RETRIES", 2),
+      appVerifyPort: envInt("GUARDRAILS_APP_VERIFY_PORT", 3000),
     },
 
     budgetLimits: {
-      maxTokensPerRequest: envInt('MAX_TOKENS_PER_REQUEST', 100000),
-      maxTokensPerSession: envInt('MAX_TOKENS_PER_SESSION', 1000000),
-      maxTokensPerUserDaily: envInt('MAX_TOKENS_PER_USER_DAILY', 5000000),
-      maxCostPerRequestCents: envInt('MAX_COST_PER_REQUEST_CENTS', 100),
-      maxCostPerSessionCents: envInt('MAX_COST_PER_SESSION_CENTS', 1000),
-      maxCostPerUserDailyCents: envInt('MAX_COST_PER_USER_DAILY_CENTS', 5000),
-      hardCutoffEnabled: envBool('BUDGET_HARD_CUTOFF', true),
-      warningThresholdPercent: envFloat('BUDGET_WARNING_THRESHOLD_PERCENT', 80),
+      maxTokensPerRequest: envInt("MAX_TOKENS_PER_REQUEST", 100000),
+      maxTokensPerSession: envInt("MAX_TOKENS_PER_SESSION", 1000000),
+      maxTokensPerUserDaily: envInt("MAX_TOKENS_PER_USER_DAILY", 5000000),
+      maxCostPerRequestCents: envInt("MAX_COST_PER_REQUEST_CENTS", 100),
+      maxCostPerSessionCents: envInt("MAX_COST_PER_SESSION_CENTS", 1000),
+      maxCostPerUserDailyCents: envInt("MAX_COST_PER_USER_DAILY_CENTS", 5000),
+      hardCutoffEnabled: envBool("BUDGET_HARD_CUTOFF", true),
+      warningThresholdPercent: envFloat("BUDGET_WARNING_THRESHOLD_PERCENT", 80),
     },
 
     fileSystem: {
-      maxFileSizeBytes: envInt('MAX_FILE_SIZE_BYTES', 10 * 1024 * 1024), // 10MB
-      maxDirectoryDepth: envInt('MAX_DIRECTORY_DEPTH', 15),
-      blockedExtensions: envArray('BLOCKED_FILE_EXTENSIONS', DEFAULT_BLOCKED_EXTENSIONS),
-      allowedExtensionsOnly: envArray('ALLOWED_FILE_EXTENSIONS_ONLY', []),
-      blockedDirectories: envArray('BLOCKED_DIRECTORIES', DEFAULT_BLOCKED_DIRECTORIES),
-      strictPathValidation: envBool('STRICT_PATH_VALIDATION', true),
-      maxFilesPerOperation: envInt('MAX_FILES_PER_OPERATION', 100),
-      maxBytesPerOperation: envInt('MAX_BYTES_PER_OPERATION', 50 * 1024 * 1024), // 50MB
+      maxFileSizeBytes: envInt("MAX_FILE_SIZE_BYTES", 10 * 1024 * 1024), // 10MB
+      maxDirectoryDepth: envInt("MAX_DIRECTORY_DEPTH", 15),
+      blockedExtensions: envArray(
+        "BLOCKED_FILE_EXTENSIONS",
+        DEFAULT_BLOCKED_EXTENSIONS,
+      ),
+      allowedExtensionsOnly: envArray("ALLOWED_FILE_EXTENSIONS_ONLY", []),
+      blockedDirectories: envArray(
+        "BLOCKED_DIRECTORIES",
+        DEFAULT_BLOCKED_DIRECTORIES,
+      ),
+      strictPathValidation: envBool("STRICT_PATH_VALIDATION", true),
+      maxFilesPerOperation: envInt("MAX_FILES_PER_OPERATION", 100),
+      maxBytesPerOperation: envInt("MAX_BYTES_PER_OPERATION", 50 * 1024 * 1024), // 50MB
     },
 
     approvalGates: {
-      requireApprovalForShell: envBool('REQUIRE_APPROVAL_FOR_SHELL', false),
-      requireApprovalForDelete: envBool('REQUIRE_APPROVAL_FOR_DELETE', false),
-      requireApprovalForNetwork: envBool('REQUIRE_APPROVAL_FOR_NETWORK', false),
-      requireApprovalForGitPush: envBool('REQUIRE_APPROVAL_FOR_GIT_PUSH', true),
-      requireApprovalForPackageInstall: envBool('REQUIRE_APPROVAL_FOR_PACKAGE_INSTALL', false),
-      approvalTimeoutSeconds: envInt('APPROVAL_TIMEOUT_SECONDS', 300),
-      autoApproveLowRisk: envBool('AUTO_APPROVE_LOW_RISK', true),
-      highRiskCommands: envArray('HIGH_RISK_COMMANDS', DEFAULT_HIGH_RISK_COMMANDS),
+      requireApprovalForShell: envBool("REQUIRE_APPROVAL_FOR_SHELL", false),
+      requireApprovalForDelete: envBool("REQUIRE_APPROVAL_FOR_DELETE", false),
+      requireApprovalForNetwork: envBool("REQUIRE_APPROVAL_FOR_NETWORK", false),
+      requireApprovalForGitPush: envBool("REQUIRE_APPROVAL_FOR_GIT_PUSH", true),
+      requireApprovalForPackageInstall: envBool(
+        "REQUIRE_APPROVAL_FOR_PACKAGE_INSTALL",
+        false,
+      ),
+      approvalTimeoutSeconds: envInt("APPROVAL_TIMEOUT_SECONDS", 300),
+      autoApproveLowRisk: envBool("AUTO_APPROVE_LOW_RISK", true),
+      highRiskCommands: envArray(
+        "HIGH_RISK_COMMANDS",
+        DEFAULT_HIGH_RISK_COMMANDS,
+      ),
     },
 
     securityPatterns: {
-      detectJailbreaks: envBool('DETECT_JAILBREAKS', true),
-      detectPromptInjection: envBool('DETECT_PROMPT_INJECTION', true),
-      detectCredentials: envBool('DETECT_CREDENTIALS', true),
-      detectCryptoMining: envBool('DETECT_CRYPTO_MINING', true),
-      detectExfiltration: envBool('DETECT_EXFILTRATION', true),
-      actionOnDetection: envString('SECURITY_ACTION_ON_DETECTION', 'warn') as
-        | 'block'
-        | 'warn'
-        | 'log',
-      customBlockedPatterns: envArray('CUSTOM_BLOCKED_PATTERNS', []),
-      customAllowedPatterns: envArray('CUSTOM_ALLOWED_PATTERNS', []),
+      detectJailbreaks: envBool("DETECT_JAILBREAKS", true),
+      detectPromptInjection: envBool("DETECT_PROMPT_INJECTION", true),
+      detectCredentials: envBool("DETECT_CREDENTIALS", true),
+      detectCryptoMining: envBool("DETECT_CRYPTO_MINING", true),
+      detectExfiltration: envBool("DETECT_EXFILTRATION", true),
+      actionOnDetection: envString("SECURITY_ACTION_ON_DETECTION", "warn") as
+        | "block"
+        | "warn"
+        | "log",
+      customBlockedPatterns: envArray("CUSTOM_BLOCKED_PATTERNS", []),
+      customAllowedPatterns: envArray("CUSTOM_ALLOWED_PATTERNS", []),
     },
   };
 }
@@ -385,7 +397,7 @@ export function setGuardrailsConfig(config: Partial<GuardrailsConfig>): void {
  */
 export function isExtensionBlocked(filePath: string): boolean {
   const config = getGuardrailsConfig();
-  const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
+  const ext = filePath.substring(filePath.lastIndexOf(".")).toLowerCase();
 
   // If allowedExtensionsOnly is set, only those are allowed
   if (config.fileSystem.allowedExtensionsOnly.length > 0) {
@@ -400,12 +412,13 @@ export function isExtensionBlocked(filePath: string): boolean {
  */
 export function isDirectoryBlocked(dirPath: string): boolean {
   const config = getGuardrailsConfig();
-  const normalizedPath = dirPath.replace(/\\/g, '/').toLowerCase();
+  const normalizedPath = dirPath.replace(/\\/g, "/").toLowerCase();
 
   return config.fileSystem.blockedDirectories.some((blocked) => {
-    const normalizedBlocked = blocked.replace(/\\/g, '/').toLowerCase();
+    const normalizedBlocked = blocked.replace(/\\/g, "/").toLowerCase();
     return (
-      normalizedPath.startsWith(normalizedBlocked) || normalizedPath.includes(normalizedBlocked)
+      normalizedPath.startsWith(normalizedBlocked) ||
+      normalizedPath.includes(normalizedBlocked)
     );
   });
 }
@@ -434,8 +447,8 @@ export function isFileSizeAllowed(sizeBytes: number): boolean {
  * Get directory depth from path
  */
 export function getDirectoryDepth(filePath: string): number {
-  const normalized = filePath.replace(/\\/g, '/');
-  return normalized.split('/').filter((p) => p.length > 0).length;
+  const normalized = filePath.replace(/\\/g, "/");
+  return normalized.split("/").filter((p) => p.length > 0).length;
 }
 
 /**

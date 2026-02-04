@@ -10,9 +10,9 @@
  * - Cloud/K8s tools (premium)
  */
 
-import logger from '../middleware/logger.js';
-import { getDatabase } from '../db/database.js';
-import { writeAuditLog } from './auditLogService.js';
+import logger from "../middleware/logger.js";
+import { getDatabase } from "../db/database.js";
+import { writeAuditLog } from "./auditLogService.js";
 
 export interface ToolContext {
   userId: string;
@@ -37,14 +37,15 @@ export interface ToolResult {
 export async function dbQuery(
   query: string,
   params: unknown[],
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
   // Security: Only allow SELECT statements
   const normalized = query.trim().toUpperCase();
-  if (!normalized.startsWith('SELECT')) {
+  if (!normalized.startsWith("SELECT")) {
     return {
       success: false,
-      error: 'Only SELECT queries are allowed. Use db_migrate_dryrun for schema changes.',
+      error:
+        "Only SELECT queries are allowed. Use db_migrate_dryrun for schema changes.",
     };
   }
 
@@ -54,19 +55,20 @@ export async function dbQuery(
     // For now, return a placeholder indicating the capability
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.db_query',
-      category: 'tool',
-      target: 'database',
+      action: "freeagent.db_query",
+      category: "tool",
+      target: "database",
       metadata: { query: query.slice(0, 200) },
     });
 
     return {
       success: true,
-      data: { message: 'Query executed', query: query.slice(0, 100) },
-      warning: 'Database query execution requires database connection configuration',
+      data: { message: "Query executed", query: query.slice(0, 100) },
+      warning:
+        "Database query execution requires database connection configuration",
     };
   } catch (err) {
-    logger.error({ err, query }, 'db_query failed');
+    logger.error({ err, query }, "db_query failed");
     return { success: false, error: (err as Error).message };
   }
 }
@@ -78,14 +80,14 @@ export async function dbSchema(ctx: ToolContext): Promise<ToolResult> {
   try {
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.db_schema',
-      category: 'tool',
-      target: 'database',
+      action: "freeagent.db_schema",
+      category: "tool",
+      target: "database",
     });
 
     return {
       success: true,
-      data: { message: 'Schema introspection available', tables: [] },
+      data: { message: "Schema introspection available", tables: [] },
     };
   } catch (err) {
     return { success: false, error: (err as Error).message };
@@ -95,13 +97,16 @@ export async function dbSchema(ctx: ToolContext): Promise<ToolResult> {
 /**
  * Run migration in dry-run mode (shows what would change)
  */
-export async function dbMigrateDryrun(migrationSql: string, ctx: ToolContext): Promise<ToolResult> {
+export async function dbMigrateDryrun(
+  migrationSql: string,
+  ctx: ToolContext,
+): Promise<ToolResult> {
   try {
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.db_migrate_dryrun',
-      category: 'tool',
-      target: 'database',
+      action: "freeagent.db_migrate_dryrun",
+      category: "tool",
+      target: "database",
       metadata: { sql: migrationSql.slice(0, 500) },
     });
 
@@ -109,7 +114,7 @@ export async function dbMigrateDryrun(migrationSql: string, ctx: ToolContext): P
       success: true,
       data: {
         dryRun: true,
-        message: 'Migration would apply the following changes',
+        message: "Migration would apply the following changes",
         sql: migrationSql,
         affectedTables: [],
       },
@@ -126,15 +131,15 @@ export async function dbBackup(ctx: ToolContext): Promise<ToolResult> {
   try {
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.db_backup',
-      category: 'tool',
-      target: 'database',
+      action: "freeagent.db_backup",
+      category: "tool",
+      target: "database",
     });
 
     return {
       success: true,
       data: {
-        message: 'Backup initiated',
+        message: "Backup initiated",
         timestamp: new Date().toISOString(),
       },
     };
@@ -154,7 +159,7 @@ function isUrlAllowed(url: string, allowlist: string[] = []): boolean {
     const host = parsed.hostname.toLowerCase();
     return allowlist.some((allowed) => {
       const pattern = allowed.toLowerCase();
-      return host === pattern || host.endsWith('.' + pattern);
+      return host === pattern || host.endsWith("." + pattern);
     });
   } catch {
     return false;
@@ -167,7 +172,7 @@ function isUrlAllowed(url: string, allowlist: string[] = []): boolean {
 export async function httpGet(
   url: string,
   headers: Record<string, string> = {},
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
   if (!isUrlAllowed(url, ctx.allowlist)) {
     return {
@@ -178,22 +183,22 @@ export async function httpGet(
 
   try {
     const res = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers,
       signal: AbortSignal.timeout(30_000),
     });
 
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.http_get',
-      category: 'tool',
+      action: "freeagent.http_get",
+      category: "tool",
       target: url,
       metadata: { status: res.status },
     });
 
-    const contentType = res.headers.get('content-type') || '';
+    const contentType = res.headers.get("content-type") || "";
     let data: unknown;
-    if (contentType.includes('application/json')) {
+    if (contentType.includes("application/json")) {
       data = await res.json();
     } else {
       data = await res.text();
@@ -211,7 +216,7 @@ export async function httpGet(
       error: res.ok ? undefined : `HTTP ${res.status}`,
     };
   } catch (err) {
-    logger.error({ err, url }, 'http_get failed');
+    logger.error({ err, url }, "http_get failed");
     return { success: false, error: (err as Error).message };
   }
 }
@@ -223,7 +228,7 @@ export async function httpPost(
   url: string,
   body: unknown,
   headers: Record<string, string> = {},
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
   if (!isUrlAllowed(url, ctx.allowlist)) {
     return {
@@ -234,23 +239,23 @@ export async function httpPost(
 
   try {
     const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(30_000),
     });
 
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.http_post',
-      category: 'tool',
+      action: "freeagent.http_post",
+      category: "tool",
       target: url,
       metadata: { status: res.status },
     });
 
-    const contentType = res.headers.get('content-type') || '';
+    const contentType = res.headers.get("content-type") || "";
     let data: unknown;
-    if (contentType.includes('application/json')) {
+    if (contentType.includes("application/json")) {
       data = await res.json();
     } else {
       data = await res.text();
@@ -262,7 +267,7 @@ export async function httpPost(
       error: res.ok ? undefined : `HTTP ${res.status}`,
     };
   } catch (err) {
-    logger.error({ err, url }, 'http_post failed');
+    logger.error({ err, url }, "http_post failed");
     return { success: false, error: (err as Error).message };
   }
 }
@@ -274,7 +279,7 @@ export async function httpPut(
   url: string,
   body: unknown,
   headers: Record<string, string> = {},
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
   if (!isUrlAllowed(url, ctx.allowlist)) {
     return { success: false, error: `URL not in allowlist.` };
@@ -282,16 +287,16 @@ export async function httpPut(
 
   try {
     const res = await fetch(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...headers },
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(30_000),
     });
 
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.http_put',
-      category: 'tool',
+      action: "freeagent.http_put",
+      category: "tool",
       target: url,
     });
 
@@ -311,7 +316,7 @@ export async function httpPut(
 export async function httpDelete(
   url: string,
   headers: Record<string, string> = {},
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
   if (!isUrlAllowed(url, ctx.allowlist)) {
     return { success: false, error: `URL not in allowlist.` };
@@ -319,15 +324,15 @@ export async function httpDelete(
 
   try {
     const res = await fetch(url, {
-      method: 'DELETE',
+      method: "DELETE",
       headers,
       signal: AbortSignal.timeout(30_000),
     });
 
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.http_delete',
-      category: 'tool',
+      action: "freeagent.http_delete",
+      category: "tool",
       target: url,
     });
 
@@ -349,7 +354,7 @@ export async function graphqlQuery(
   query: string,
   variables: Record<string, unknown> = {},
   headers: Record<string, string> = {},
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
   if (!isUrlAllowed(endpoint, ctx.allowlist)) {
     return { success: false, error: `GraphQL endpoint not in allowlist.` };
@@ -357,8 +362,8 @@ export async function graphqlQuery(
 
   try {
     const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify({ query, variables }),
       signal: AbortSignal.timeout(30_000),
     });
@@ -367,8 +372,8 @@ export async function graphqlQuery(
 
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.graphql_query',
-      category: 'tool',
+      action: "freeagent.graphql_query",
+      category: "tool",
       target: endpoint,
     });
 
@@ -390,24 +395,26 @@ export async function graphqlQuery(
 export async function metricsQuery(
   query: string,
   timeRange?: { start: string; end: string },
-  _ctx?: ToolContext
+  _ctx?: ToolContext,
 ): Promise<ToolResult> {
   try {
     const prometheusUrl = process.env.PROMETHEUS_URL;
     if (!prometheusUrl) {
       return {
         success: true,
-        data: { message: 'Metrics query capability enabled', query },
-        warning: 'PROMETHEUS_URL not configured',
+        data: { message: "Metrics query capability enabled", query },
+        warning: "PROMETHEUS_URL not configured",
       };
     }
 
-    const url = new URL('/api/v1/query', prometheusUrl);
-    url.searchParams.set('query', query);
-    if (timeRange?.start) url.searchParams.set('start', timeRange.start);
-    if (timeRange?.end) url.searchParams.set('end', timeRange.end);
+    const url = new URL("/api/v1/query", prometheusUrl);
+    url.searchParams.set("query", query);
+    if (timeRange?.start) url.searchParams.set("start", timeRange.start);
+    if (timeRange?.end) url.searchParams.set("end", timeRange.end);
 
-    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(10_000) });
+    const res = await fetch(url.toString(), {
+      signal: AbortSignal.timeout(10_000),
+    });
     const data = await res.json();
 
     return { success: res.ok, data };
@@ -423,13 +430,13 @@ export async function alertCreate(
   name: string,
   condition: string,
   channels: string[],
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
   try {
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.alert_create',
-      category: 'tool',
+      action: "freeagent.alert_create",
+      category: "tool",
       target: name,
       metadata: { condition, channels },
     });
@@ -441,7 +448,7 @@ export async function alertCreate(
         name,
         condition,
         channels,
-        status: 'active',
+        status: "active",
       },
     };
   } catch (err) {
@@ -455,25 +462,31 @@ export async function alertCreate(
 export async function alertList(_ctx: ToolContext): Promise<ToolResult> {
   return {
     success: true,
-    data: { alerts: [], message: 'Alert listing requires alerting backend configuration' },
+    data: {
+      alerts: [],
+      message: "Alert listing requires alerting backend configuration",
+    },
   };
 }
 
 /**
  * Run health check on a URL or service
  */
-export async function healthCheck(target: string, ctx: ToolContext): Promise<ToolResult> {
+export async function healthCheck(
+  target: string,
+  ctx: ToolContext,
+): Promise<ToolResult> {
   try {
-    const isUrl = target.startsWith('http://') || target.startsWith('https://');
+    const isUrl = target.startsWith("http://") || target.startsWith("https://");
 
     if (isUrl) {
       if (!isUrlAllowed(target, ctx.allowlist)) {
-        return { success: false, error: 'URL not in allowlist' };
+        return { success: false, error: "URL not in allowlist" };
       }
 
       const start = Date.now();
       const res = await fetch(target, {
-        method: 'GET',
+        method: "GET",
         signal: AbortSignal.timeout(10_000),
       });
       const latency = Date.now() - start;
@@ -482,7 +495,7 @@ export async function healthCheck(target: string, ctx: ToolContext): Promise<Too
         success: true,
         data: {
           target,
-          status: res.ok ? 'healthy' : 'unhealthy',
+          status: res.ok ? "healthy" : "unhealthy",
           httpStatus: res.status,
           latencyMs: latency,
           checkedAt: new Date().toISOString(),
@@ -495,8 +508,9 @@ export async function healthCheck(target: string, ctx: ToolContext): Promise<Too
       success: true,
       data: {
         target,
-        status: 'unknown',
-        message: 'Service health check requires service discovery configuration',
+        status: "unknown",
+        message:
+          "Service health check requires service discovery configuration",
       },
     };
   } catch (err) {
@@ -504,7 +518,7 @@ export async function healthCheck(target: string, ctx: ToolContext): Promise<Too
       success: true,
       data: {
         target,
-        status: 'unhealthy',
+        status: "unhealthy",
         error: (err as Error).message,
         checkedAt: new Date().toISOString(),
       },
@@ -518,14 +532,14 @@ export async function healthCheck(target: string, ctx: ToolContext): Promise<Too
 export async function logsSearch(
   query: string,
   options: { limit?: number; since?: string; until?: string } = {},
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
   try {
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.logs_search',
-      category: 'tool',
-      target: 'logs',
+      action: "freeagent.logs_search",
+      category: "tool",
+      target: "logs",
       metadata: { query, limit: options.limit },
     });
 
@@ -534,7 +548,8 @@ export async function logsSearch(
       data: {
         query,
         results: [],
-        message: 'Log search requires log aggregation backend (Loki, Elasticsearch)',
+        message:
+          "Log search requires log aggregation backend (Loki, Elasticsearch)",
       },
     };
   } catch (err) {
@@ -548,40 +563,40 @@ export async function logsSearch(
  * Trigger a CI/CD pipeline
  */
 export async function pipelineTrigger(
-  provider: 'github' | 'gitlab' | 'jenkins',
+  provider: "github" | "gitlab" | "jenkins",
   repo: string,
   workflow: string,
   inputs: Record<string, unknown> = {},
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
-  if (ctx.tier === 'free') {
-    return { success: false, error: 'CI/CD tools require PRO tier or higher' };
+  if (ctx.tier === "free") {
+    return { success: false, error: "CI/CD tools require PRO tier or higher" };
   }
 
   try {
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.pipeline_trigger',
-      category: 'tool',
+      action: "freeagent.pipeline_trigger",
+      category: "tool",
       target: `${provider}/${repo}/${workflow}`,
     });
 
     // GitHub Actions implementation
-    if (provider === 'github') {
+    if (provider === "github") {
       const token = process.env.GITHUB_TOKEN;
       if (!token) {
-        return { success: false, error: 'GITHUB_TOKEN not configured' };
+        return { success: false, error: "GITHUB_TOKEN not configured" };
       }
 
       const url = `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`;
       const res = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
+          Accept: "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ref: 'main', inputs }),
+        body: JSON.stringify({ ref: "main", inputs }),
       });
 
       return {
@@ -593,7 +608,12 @@ export async function pipelineTrigger(
 
     return {
       success: true,
-      data: { provider, repo, workflow, message: 'Pipeline trigger capability enabled' },
+      data: {
+        provider,
+        repo,
+        workflow,
+        message: "Pipeline trigger capability enabled",
+      },
       warning: `${provider} integration requires configuration`,
     };
   } catch (err) {
@@ -605,16 +625,16 @@ export async function pipelineTrigger(
  * Get pipeline/workflow status
  */
 export async function pipelineStatus(
-  provider: 'github' | 'gitlab' | 'jenkins',
+  provider: "github" | "gitlab" | "jenkins",
   repo: string,
   runId?: string,
-  _ctx?: ToolContext
+  _ctx?: ToolContext,
 ): Promise<ToolResult> {
   try {
-    if (provider === 'github') {
+    if (provider === "github") {
       const token = process.env.GITHUB_TOKEN;
       if (!token) {
-        return { success: false, error: 'GITHUB_TOKEN not configured' };
+        return { success: false, error: "GITHUB_TOKEN not configured" };
       }
 
       const url = runId
@@ -624,7 +644,7 @@ export async function pipelineStatus(
       const res = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
+          Accept: "application/vnd.github.v3+json",
         },
       });
 
@@ -645,27 +665,27 @@ export async function pipelineStatus(
  * Get build logs
  */
 export async function buildLogs(
-  provider: 'github' | 'gitlab' | 'jenkins',
+  provider: "github" | "gitlab" | "jenkins",
   repo: string,
   runId: string,
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
-  if (ctx.tier === 'free') {
-    return { success: false, error: 'CI/CD tools require PRO tier or higher' };
+  if (ctx.tier === "free") {
+    return { success: false, error: "CI/CD tools require PRO tier or higher" };
   }
 
   try {
-    if (provider === 'github') {
+    if (provider === "github") {
       const token = process.env.GITHUB_TOKEN;
       if (!token) {
-        return { success: false, error: 'GITHUB_TOKEN not configured' };
+        return { success: false, error: "GITHUB_TOKEN not configured" };
       }
 
       const url = `https://api.github.com/repos/${repo}/actions/runs/${runId}/logs`;
       const res = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
+          Accept: "application/vnd.github.v3+json",
         },
       });
 
@@ -673,13 +693,16 @@ export async function buildLogs(
         // Logs come as a zip file, return download URL
         return {
           success: true,
-          data: { provider, repo, runId, logsUrl: url, format: 'zip' },
+          data: { provider, repo, runId, logsUrl: url, format: "zip" },
         };
       }
       return { success: false, error: `GitHub API returned ${res.status}` };
     }
 
-    return { success: true, data: { message: `${provider} logs require configuration` } };
+    return {
+      success: true,
+      data: { message: `${provider} logs require configuration` },
+    };
   } catch (err) {
     return { success: false, error: (err as Error).message };
   }
@@ -689,42 +712,47 @@ export async function buildLogs(
  * Create a release
  */
 export async function releaseCreate(
-  provider: 'github' | 'gitlab',
+  provider: "github" | "gitlab",
   repo: string,
   tag: string,
-  options: { name?: string; body?: string; draft?: boolean; prerelease?: boolean } = {},
-  ctx: ToolContext
+  options: {
+    name?: string;
+    body?: string;
+    draft?: boolean;
+    prerelease?: boolean;
+  } = {},
+  ctx: ToolContext,
 ): Promise<ToolResult> {
-  if (ctx.tier === 'free') {
-    return { success: false, error: 'CI/CD tools require PRO tier or higher' };
+  if (ctx.tier === "free") {
+    return { success: false, error: "CI/CD tools require PRO tier or higher" };
   }
 
   try {
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.release_create',
-      category: 'tool',
+      action: "freeagent.release_create",
+      category: "tool",
       target: `${provider}/${repo}/${tag}`,
     });
 
-    if (provider === 'github') {
+    if (provider === "github") {
       const token = process.env.GITHUB_TOKEN;
       if (!token) {
-        return { success: false, error: 'GITHUB_TOKEN not configured' };
+        return { success: false, error: "GITHUB_TOKEN not configured" };
       }
 
       const url = `https://api.github.com/repos/${repo}/releases`;
       const res = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
+          Accept: "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           tag_name: tag,
           name: options.name || tag,
-          body: options.body || '',
+          body: options.body || "",
           draft: options.draft || false,
           prerelease: options.prerelease || false,
         }),
@@ -738,7 +766,10 @@ export async function releaseCreate(
       };
     }
 
-    return { success: true, data: { message: `${provider} release requires configuration` } };
+    return {
+      success: true,
+      data: { message: `${provider} release requires configuration` },
+    };
   } catch (err) {
     return { success: false, error: (err as Error).message };
   }
@@ -748,22 +779,22 @@ export async function releaseCreate(
  * List releases
  */
 export async function releaseList(
-  provider: 'github' | 'gitlab',
+  provider: "github" | "gitlab",
   repo: string,
-  _ctx: ToolContext
+  _ctx: ToolContext,
 ): Promise<ToolResult> {
   try {
-    if (provider === 'github') {
+    if (provider === "github") {
       const token = process.env.GITHUB_TOKEN;
       if (!token) {
-        return { success: false, error: 'GITHUB_TOKEN not configured' };
+        return { success: false, error: "GITHUB_TOKEN not configured" };
       }
 
       const url = `https://api.github.com/repos/${repo}/releases?per_page=10`;
       const res = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
+          Accept: "application/vnd.github.v3+json",
         },
       });
 
@@ -771,7 +802,10 @@ export async function releaseList(
       return { success: res.ok, data };
     }
 
-    return { success: true, data: { message: `${provider} releases require configuration` } };
+    return {
+      success: true,
+      data: { message: `${provider} releases require configuration` },
+    };
   } catch (err) {
     return { success: false, error: (err as Error).message };
   }
@@ -785,17 +819,17 @@ export async function releaseList(
 export async function k8sDeploy(
   namespace: string,
   manifest: string,
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
-  if (ctx.tier === 'free') {
-    return { success: false, error: 'Cloud tools require PRO tier or higher' };
+  if (ctx.tier === "free") {
+    return { success: false, error: "Cloud tools require PRO tier or higher" };
   }
 
   try {
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.k8s_deploy',
-      category: 'tool',
+      action: "freeagent.k8s_deploy",
+      category: "tool",
       target: namespace,
       metadata: { manifestLength: manifest.length },
     });
@@ -805,10 +839,10 @@ export async function k8sDeploy(
       success: true,
       data: {
         namespace,
-        message: 'Kubernetes deployment requires cluster configuration',
+        message: "Kubernetes deployment requires cluster configuration",
         manifestPreview: manifest.slice(0, 500),
       },
-      warning: 'Set KUBECONFIG or configure in-cluster auth',
+      warning: "Set KUBECONFIG or configure in-cluster auth",
     };
   } catch (err) {
     return { success: false, error: (err as Error).message };
@@ -822,25 +856,30 @@ export async function k8sScale(
   namespace: string,
   deployment: string,
   replicas: number,
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
-  if (ctx.tier === 'free') {
-    return { success: false, error: 'Cloud tools require PRO tier or higher' };
+  if (ctx.tier === "free") {
+    return { success: false, error: "Cloud tools require PRO tier or higher" };
   }
 
   try {
     await writeAuditLog({
       userId: ctx.userId,
-      action: 'freeagent.k8s_scale',
-      category: 'tool',
+      action: "freeagent.k8s_scale",
+      category: "tool",
       target: `${namespace}/${deployment}`,
       metadata: { replicas },
     });
 
     return {
       success: true,
-      data: { namespace, deployment, replicas, message: 'Scale command prepared' },
-      warning: 'Kubernetes cluster configuration required',
+      data: {
+        namespace,
+        deployment,
+        replicas,
+        message: "Scale command prepared",
+      },
+      warning: "Kubernetes cluster configuration required",
     };
   } catch (err) {
     return { success: false, error: (err as Error).message };
@@ -854,10 +893,10 @@ export async function k8sLogs(
   namespace: string,
   pod: string,
   options: { container?: string; tail?: number; since?: string } = {},
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
-  if (ctx.tier === 'free') {
-    return { success: false, error: 'Cloud tools require PRO tier or higher' };
+  if (ctx.tier === "free") {
+    return { success: false, error: "Cloud tools require PRO tier or higher" };
   }
 
   try {
@@ -868,7 +907,7 @@ export async function k8sLogs(
         pod,
         container: options.container,
         tail: options.tail || 100,
-        message: 'Kubernetes logs require cluster configuration',
+        message: "Kubernetes logs require cluster configuration",
       },
     };
   } catch (err) {
@@ -881,9 +920,9 @@ export async function k8sLogs(
  */
 export async function k8sStatus(
   namespace: string,
-  resourceType: 'deployment' | 'pod' | 'service' | 'ingress',
+  resourceType: "deployment" | "pod" | "service" | "ingress",
   resourceName?: string,
-  _ctx?: ToolContext
+  _ctx?: ToolContext,
 ): Promise<ToolResult> {
   try {
     return {
@@ -892,7 +931,7 @@ export async function k8sStatus(
         namespace,
         resourceType,
         resourceName,
-        message: 'Kubernetes status requires cluster configuration',
+        message: "Kubernetes status requires cluster configuration",
       },
     };
   } catch (err) {
@@ -907,7 +946,7 @@ export async function k8sRollback(
   namespace: string,
   deployment: string,
   revision?: number,
-  _ctx?: ToolContext
+  _ctx?: ToolContext,
 ): Promise<ToolResult> {
   try {
     return {
@@ -915,8 +954,8 @@ export async function k8sRollback(
       data: {
         namespace,
         deployment,
-        revision: revision || 'previous',
-        message: 'Rollback command prepared',
+        revision: revision || "previous",
+        message: "Rollback command prepared",
       },
     };
   } catch (err) {
@@ -928,11 +967,11 @@ export async function k8sRollback(
  * Get cloud provider status
  */
 export async function cloudStatus(
-  provider: 'aws' | 'gcp' | 'azure',
-  ctx: ToolContext
+  provider: "aws" | "gcp" | "azure",
+  ctx: ToolContext,
 ): Promise<ToolResult> {
-  if (ctx.tier === 'free') {
-    return { success: false, error: 'Cloud tools require PRO tier or higher' };
+  if (ctx.tier === "free") {
+    return { success: false, error: "Cloud tools require PRO tier or higher" };
   }
 
   try {
@@ -940,10 +979,10 @@ export async function cloudStatus(
       success: true,
       data: {
         provider,
-        status: 'configured',
+        status: "configured",
         message: `${provider.toUpperCase()} integration ready`,
       },
-      warning: 'Cloud provider credentials required',
+      warning: "Cloud provider credentials required",
     };
   } catch (err) {
     return { success: false, error: (err as Error).message };
@@ -953,31 +992,31 @@ export async function cloudStatus(
 // ========== Tool Registry ==========
 
 export type ToolName =
-  | 'db_query'
-  | 'db_schema'
-  | 'db_migrate_dryrun'
-  | 'db_backup'
-  | 'http_get'
-  | 'http_post'
-  | 'http_put'
-  | 'http_delete'
-  | 'graphql_query'
-  | 'metrics_query'
-  | 'alert_create'
-  | 'alert_list'
-  | 'health_check'
-  | 'logs_search'
-  | 'pipeline_trigger'
-  | 'pipeline_status'
-  | 'build_logs'
-  | 'release_create'
-  | 'release_list'
-  | 'k8s_deploy'
-  | 'k8s_scale'
-  | 'k8s_logs'
-  | 'k8s_status'
-  | 'k8s_rollback'
-  | 'cloud_status';
+  | "db_query"
+  | "db_schema"
+  | "db_migrate_dryrun"
+  | "db_backup"
+  | "http_get"
+  | "http_post"
+  | "http_put"
+  | "http_delete"
+  | "graphql_query"
+  | "metrics_query"
+  | "alert_create"
+  | "alert_list"
+  | "health_check"
+  | "logs_search"
+  | "pipeline_trigger"
+  | "pipeline_status"
+  | "build_logs"
+  | "release_create"
+  | "release_list"
+  | "k8s_deploy"
+  | "k8s_scale"
+  | "k8s_logs"
+  | "k8s_status"
+  | "k8s_rollback"
+  | "cloud_status";
 
 /**
  * Execute a Free Agent tool by name
@@ -985,139 +1024,160 @@ export type ToolName =
 export async function executeFreAgentTool(
   toolName: ToolName,
   args: Record<string, unknown>,
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolResult> {
   switch (toolName) {
     // Database
-    case 'db_query':
-      return dbQuery(args.query as string, (args.params as unknown[]) || [], ctx);
-    case 'db_schema':
+    case "db_query":
+      return dbQuery(
+        args.query as string,
+        (args.params as unknown[]) || [],
+        ctx,
+      );
+    case "db_schema":
       return dbSchema(ctx);
-    case 'db_migrate_dryrun':
+    case "db_migrate_dryrun":
       return dbMigrateDryrun(args.sql as string, ctx);
-    case 'db_backup':
+    case "db_backup":
       return dbBackup(ctx);
 
     // API
-    case 'http_get':
-      return httpGet(args.url as string, (args.headers as Record<string, string>) || {}, ctx);
-    case 'http_post':
+    case "http_get":
+      return httpGet(
+        args.url as string,
+        (args.headers as Record<string, string>) || {},
+        ctx,
+      );
+    case "http_post":
       return httpPost(
         args.url as string,
         args.body,
         (args.headers as Record<string, string>) || {},
-        ctx
+        ctx,
       );
-    case 'http_put':
+    case "http_put":
       return httpPut(
         args.url as string,
         args.body,
         (args.headers as Record<string, string>) || {},
-        ctx
+        ctx,
       );
-    case 'http_delete':
-      return httpDelete(args.url as string, (args.headers as Record<string, string>) || {}, ctx);
-    case 'graphql_query':
+    case "http_delete":
+      return httpDelete(
+        args.url as string,
+        (args.headers as Record<string, string>) || {},
+        ctx,
+      );
+    case "graphql_query":
       return graphqlQuery(
         args.endpoint as string,
         args.query as string,
         (args.variables as Record<string, unknown>) || {},
         (args.headers as Record<string, string>) || {},
-        ctx
+        ctx,
       );
 
     // Monitoring
-    case 'metrics_query':
+    case "metrics_query":
       return metricsQuery(
         args.query as string,
         args.timeRange as { start: string; end: string },
-        ctx
+        ctx,
       );
-    case 'alert_create':
+    case "alert_create":
       return alertCreate(
         args.name as string,
         args.condition as string,
         (args.channels as string[]) || [],
-        ctx
+        ctx,
       );
-    case 'alert_list':
+    case "alert_list":
       return alertList(ctx);
-    case 'health_check':
+    case "health_check":
       return healthCheck(args.target as string, ctx);
-    case 'logs_search':
+    case "logs_search":
       return logsSearch(
         args.query as string,
         args.options as { limit?: number; since?: string; until?: string },
-        ctx
+        ctx,
       );
 
     // CI/CD
-    case 'pipeline_trigger':
+    case "pipeline_trigger":
       return pipelineTrigger(
-        args.provider as 'github' | 'gitlab' | 'jenkins',
+        args.provider as "github" | "gitlab" | "jenkins",
         args.repo as string,
         args.workflow as string,
         (args.inputs as Record<string, unknown>) || {},
-        ctx
+        ctx,
       );
-    case 'pipeline_status':
+    case "pipeline_status":
       return pipelineStatus(
-        args.provider as 'github' | 'gitlab' | 'jenkins',
+        args.provider as "github" | "gitlab" | "jenkins",
         args.repo as string,
         args.runId as string,
-        ctx
+        ctx,
       );
-    case 'build_logs':
+    case "build_logs":
       return buildLogs(
-        args.provider as 'github' | 'gitlab' | 'jenkins',
+        args.provider as "github" | "gitlab" | "jenkins",
         args.repo as string,
         args.runId as string,
-        ctx
+        ctx,
       );
-    case 'release_create':
+    case "release_create":
       return releaseCreate(
-        args.provider as 'github' | 'gitlab',
+        args.provider as "github" | "gitlab",
         args.repo as string,
         args.tag as string,
-        args.options as { name?: string; body?: string; draft?: boolean; prerelease?: boolean },
-        ctx
+        args.options as {
+          name?: string;
+          body?: string;
+          draft?: boolean;
+          prerelease?: boolean;
+        },
+        ctx,
       );
-    case 'release_list':
-      return releaseList(args.provider as 'github' | 'gitlab', args.repo as string, ctx);
+    case "release_list":
+      return releaseList(
+        args.provider as "github" | "gitlab",
+        args.repo as string,
+        ctx,
+      );
 
     // Cloud/K8s
-    case 'k8s_deploy':
+    case "k8s_deploy":
       return k8sDeploy(args.namespace as string, args.manifest as string, ctx);
-    case 'k8s_scale':
+    case "k8s_scale":
       return k8sScale(
         args.namespace as string,
         args.deployment as string,
         args.replicas as number,
-        ctx
+        ctx,
       );
-    case 'k8s_logs':
+    case "k8s_logs":
       return k8sLogs(
         args.namespace as string,
         args.pod as string,
         args.options as { container?: string; tail?: number; since?: string },
-        ctx
+        ctx,
       );
-    case 'k8s_status':
+    case "k8s_status":
       return k8sStatus(
         args.namespace as string,
-        args.resourceType as 'deployment' | 'pod' | 'service' | 'ingress',
+        args.resourceType as "deployment" | "pod" | "service" | "ingress",
         args.resourceName as string,
-        ctx
+        ctx,
       );
-    case 'k8s_rollback':
+    case "k8s_rollback":
       return k8sRollback(
         args.namespace as string,
         args.deployment as string,
         args.revision as number,
-        ctx
+        ctx,
       );
-    case 'cloud_status':
-      return cloudStatus(args.provider as 'aws' | 'gcp' | 'azure', ctx);
+    case "cloud_status":
+      return cloudStatus(args.provider as "aws" | "gcp" | "azure", ctx);
 
     default:
       return { success: false, error: `Unknown tool: ${toolName}` };

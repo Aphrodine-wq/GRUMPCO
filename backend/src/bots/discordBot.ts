@@ -5,10 +5,10 @@
  */
 
 // @ts-expect-error discord.js types have known issues with GatewayIntentBits export
-import { Client, GatewayIntentBits, type TextChannel } from 'discord.js';
-import { processMessage } from '../services/messagingService.js';
-import { setDiscordSendFn } from '../services/messagingShipNotifier.js';
-import logger from '../middleware/logger.js';
+import { Client, GatewayIntentBits, type TextChannel } from "discord.js";
+import { processMessage } from "../services/messagingService.js";
+import { setDiscordSendFn } from "../services/messagingShipNotifier.js";
+import logger from "../middleware/logger.js";
 
 let client: Client | null = null;
 
@@ -20,7 +20,10 @@ async function sendToChannel(channelId: string, text: string): Promise<void> {
       await channel.send(text.slice(0, 2000));
     }
   } catch (err) {
-    logger.warn({ err: (err as Error).message, channelId }, 'Discord send failed');
+    logger.warn(
+      { err: (err as Error).message, channelId },
+      "Discord send failed",
+    );
     throw err;
   }
 }
@@ -40,22 +43,27 @@ export async function startDiscordBot(): Promise<void> {
 
   setDiscordSendFn(sendToChannel);
 
-  client.on('messageCreate', async (message) => {
+  client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
     const content = message.content?.trim();
     if (!content) return;
 
     const channelId = message.channel.id;
     try {
-      const reply = await processMessage('discord', channelId, content);
-      if (reply && 'send' in message.channel) {
+      const reply = await processMessage("discord", channelId, content);
+      if (reply && "send" in message.channel) {
         await (message.channel as TextChannel).send(reply.slice(0, 2000));
       }
     } catch (err) {
-      logger.warn({ err: (err as Error).message, channelId }, 'Discord processMessage failed');
+      logger.warn(
+        { err: (err as Error).message, channelId },
+        "Discord processMessage failed",
+      );
       try {
-        if ('send' in message.channel) {
-          await (message.channel as TextChannel).send('Sorry, something went wrong.');
+        if ("send" in message.channel) {
+          await (message.channel as TextChannel).send(
+            "Sorry, something went wrong.",
+          );
         }
       } catch {
         // ignore
@@ -63,12 +71,12 @@ export async function startDiscordBot(): Promise<void> {
     }
   });
 
-  client.once('ready', () => {
-    logger.info({ user: client?.user?.tag }, 'Discord bot connected');
+  client.once("ready", () => {
+    logger.info({ user: client?.user?.tag }, "Discord bot connected");
   });
 
-  client.on('error', (err) => {
-    logger.error({ err: err.message }, 'Discord client error');
+  client.on("error", (err) => {
+    logger.error({ err: err.message }, "Discord client error");
   });
 
   await client.login(token);

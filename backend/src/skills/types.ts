@@ -3,8 +3,8 @@
  * Modular, discoverable capabilities for the platform
  */
 
-import type { Router } from 'express';
-import type { StreamEvent } from '../services/llmGateway.js';
+import type { Router } from "express";
+import type { StreamEvent } from "../services/llmGateway.js";
 
 /**
  * Skill manifest - metadata about a skill
@@ -48,15 +48,15 @@ export interface SkillManifest {
 }
 
 export type SkillCategory =
-  | 'code' // Code analysis, generation, refactoring
-  | 'git' // Git operations
-  | 'docs' // Documentation
-  | 'test' // Testing
-  | 'deploy' // Deployment, CI/CD
-  | 'analyze' // Analysis, metrics
-  | 'security' // Security scanning
-  | 'life' // Life automation: reminders, calendar, inbox
-  | 'custom'; // User-defined
+  | "code" // Code analysis, generation, refactoring
+  | "git" // Git operations
+  | "docs" // Documentation
+  | "test" // Testing
+  | "deploy" // Deployment, CI/CD
+  | "analyze" // Analysis, metrics
+  | "security" // Security scanning
+  | "life" // Life automation: reminders, calendar, inbox
+  | "custom"; // User-defined
 
 export interface SkillCapabilities {
   /** Skill provides LLM tools */
@@ -79,13 +79,13 @@ export interface SkillCapabilities {
 }
 
 export type SkillPermission =
-  | 'file_read' // Read files
-  | 'file_write' // Write/modify files
-  | 'file_delete' // Delete files
-  | 'bash_execute' // Execute shell commands
-  | 'network' // Make network requests
-  | 'git' // Git operations
-  | 'env_read'; // Read environment variables
+  | "file_read" // Read files
+  | "file_write" // Write/modify files
+  | "file_delete" // Delete files
+  | "bash_execute" // Execute shell commands
+  | "network" // Make network requests
+  | "git" // Git operations
+  | "env_read"; // Read environment variables
 
 export interface SkillTriggers {
   /** Keywords that suggest this skill */
@@ -118,7 +118,7 @@ export interface SkillContext {
   request: {
     id: string;
     timestamp: Date;
-    source: 'chat' | 'api' | 'command' | 'skill_test';
+    source: "chat" | "api" | "command" | "skill_test";
   };
 
   /** Available services */
@@ -143,7 +143,7 @@ export interface ToolDefinition {
   name: string;
   description: string;
   input_schema: {
-    type: 'object';
+    type: "object";
     properties?: Record<string, unknown>;
     required?: string[];
   };
@@ -162,7 +162,7 @@ export interface SkillTools {
 
 export type SkillToolHandler = (
   input: Record<string, unknown>,
-  context: SkillContext
+  context: SkillContext,
 ) => Promise<ToolExecutionResult>;
 
 export interface ToolExecutionResult {
@@ -193,15 +193,19 @@ export interface SkillPrompts {
  * Events emitted during skill execution
  */
 export type SkillEvent =
-  | { type: 'started'; skillId: string; timestamp: Date }
-  | { type: 'progress'; percent: number; message?: string }
-  | { type: 'thinking'; content: string }
-  | { type: 'tool_call'; toolName: string; input: Record<string, unknown> }
-  | { type: 'tool_result'; toolName: string; result: ToolExecutionResult }
-  | { type: 'output'; content: string }
-  | { type: 'file_change'; path: string; action: 'created' | 'modified' | 'deleted' }
-  | { type: 'error'; error: Error; recoverable: boolean }
-  | { type: 'completed'; summary?: string; duration: number };
+  | { type: "started"; skillId: string; timestamp: Date }
+  | { type: "progress"; percent: number; message?: string }
+  | { type: "thinking"; content: string }
+  | { type: "tool_call"; toolName: string; input: Record<string, unknown> }
+  | { type: "tool_result"; toolName: string; result: ToolExecutionResult }
+  | { type: "output"; content: string }
+  | {
+      type: "file_change";
+      path: string;
+      action: "created" | "modified" | "deleted";
+    }
+  | { type: "error"; error: Error; recoverable: boolean }
+  | { type: "completed"; summary?: string; duration: number };
 
 /**
  * Input to skill execution
@@ -211,7 +215,7 @@ export interface SkillExecutionInput {
   message: string;
 
   /** Conversation history */
-  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
 
   /** Files to operate on */
   files?: string[];
@@ -267,14 +271,20 @@ export interface Skill {
   /** Main execution method (streaming) */
   execute?(
     input: SkillExecutionInput,
-    context: SkillContext
+    context: SkillContext,
   ): AsyncGenerator<SkillEvent, SkillExecutionResult, undefined>;
 
   /** Quick execution (non-streaming) */
-  run?(input: SkillExecutionInput, context: SkillContext): Promise<SkillExecutionResult>;
+  run?(
+    input: SkillExecutionInput,
+    context: SkillContext,
+  ): Promise<SkillExecutionResult>;
 
   /** Check if this skill should handle the input */
-  shouldHandle?(input: string, context: SkillContext): boolean | Promise<boolean>;
+  shouldHandle?(
+    input: string,
+    context: SkillContext,
+  ): boolean | Promise<boolean>;
 }
 
 /**
@@ -293,7 +303,7 @@ export interface SkillRegistration {
 export interface LLMService {
   /** Complete a message (non-streaming) and return the full response text */
   complete(params: {
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+    messages: Array<{ role: "user" | "assistant"; content: string }>;
     system?: string;
     tools?: ToolDefinition[];
     maxTokens?: number;
@@ -301,7 +311,7 @@ export interface LLMService {
 
   /** Stream message events from the LLM */
   stream(params: {
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+    messages: Array<{ role: "user" | "assistant"; content: string }>;
     system?: string;
     tools?: ToolDefinition[];
     maxTokens?: number;

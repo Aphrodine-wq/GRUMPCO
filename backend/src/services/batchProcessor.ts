@@ -3,8 +3,8 @@
  * Batches and coalesces similar LLM requests to reduce API calls and costs
  */
 
-import logger from '../middleware/logger.js';
-import { createHash } from 'crypto';
+import logger from "../middleware/logger.js";
+import { createHash } from "crypto";
 
 export interface BatchRequest<T = unknown, R = unknown> {
   id: string;
@@ -30,7 +30,10 @@ export class BatchProcessor<T = unknown, R = unknown> {
   private deduplicateRequests: boolean;
   private processor: (requests: T[]) => Promise<R[]>;
 
-  constructor(processor: (requests: T[]) => Promise<R[]>, options: BatchProcessorOptions = {}) {
+  constructor(
+    processor: (requests: T[]) => Promise<R[]>,
+    options: BatchProcessorOptions = {},
+  ) {
     this.processor = processor;
     this.maxBatchSize = options.maxBatchSize || 10;
     this.maxWaitTime = options.maxWaitTime || 100; // 100ms default
@@ -42,13 +45,13 @@ export class BatchProcessor<T = unknown, R = unknown> {
    */
   public async add(batchKey: string, data: T): Promise<R> {
     return new Promise<R>((resolve, reject) => {
-      const hash = this.deduplicateRequests ? this.hashRequest(data) : '';
+      const hash = this.deduplicateRequests ? this.hashRequest(data) : "";
 
       // Check for duplicate in-flight request
       if (this.deduplicateRequests && hash) {
         const existingRequest = this.pendingRequests.get(hash);
         if (existingRequest) {
-          logger.debug({ hash }, 'Coalescing duplicate request');
+          logger.debug({ hash }, "Coalescing duplicate request");
           // Piggyback on existing request
           const originalResolve = existingRequest.resolve;
           existingRequest.resolve = (value: R) => {
@@ -115,7 +118,7 @@ export class BatchProcessor<T = unknown, R = unknown> {
     // Remove batch from queue
     this.batches.delete(batchKey);
 
-    logger.debug({ batchKey, size: batch.length }, 'Processing batch');
+    logger.debug({ batchKey, size: batch.length }, "Processing batch");
 
     try {
       // Extract data for processing
@@ -127,7 +130,7 @@ export class BatchProcessor<T = unknown, R = unknown> {
       // Distribute results
       if (results.length !== batch.length) {
         throw new Error(
-          `Batch processor returned ${results.length} results for ${batch.length} requests`
+          `Batch processor returned ${results.length} results for ${batch.length} requests`,
         );
       }
 
@@ -141,10 +144,11 @@ export class BatchProcessor<T = unknown, R = unknown> {
       });
     } catch (error) {
       // Reject all requests in batch
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       logger.error(
         { error: errorMessage, batchKey, size: batch.length },
-        'Batch processing failed'
+        "Batch processing failed",
       );
 
       batch.forEach((request) => {
@@ -164,9 +168,9 @@ export class BatchProcessor<T = unknown, R = unknown> {
   private hashRequest(data: T): string {
     try {
       const json = JSON.stringify(data);
-      return createHash('sha256').update(json).digest('hex').substring(0, 16);
+      return createHash("sha256").update(json).digest("hex").substring(0, 16);
     } catch (_error) {
-      return '';
+      return "";
     }
   }
 
@@ -206,7 +210,7 @@ export class BatchProcessor<T = unknown, R = unknown> {
     // Reject all pending requests
     for (const batch of this.batches.values()) {
       for (const request of batch) {
-        request.reject(new Error('Batch processor cleared'));
+        request.reject(new Error("Batch processor cleared"));
       }
     }
 
@@ -226,7 +230,7 @@ export interface EmbeddingBatchOptions {
  */
 export function createEmbeddingBatchProcessor(
   embeddingFn: (texts: string[]) => Promise<number[][]>,
-  options?: EmbeddingBatchOptions
+  options?: EmbeddingBatchOptions,
 ): BatchProcessor<string, number[]> {
   const maxBatchSize =
     options?.maxBatchSize ??
@@ -248,7 +252,7 @@ export function createEmbeddingBatchProcessor(
       maxBatchSize,
       maxWaitTime,
       deduplicateRequests: true,
-    }
+    },
   );
 }
 
@@ -256,7 +260,7 @@ export function createEmbeddingBatchProcessor(
  * Create a batch processor for simple text completions
  */
 export function createCompletionBatchProcessor(
-  completionFn: (prompts: string[]) => Promise<string[]>
+  completionFn: (prompts: string[]) => Promise<string[]>,
 ): BatchProcessor<string, string> {
   return new BatchProcessor<string, string>(
     async (prompts: string[]) => {
@@ -266,6 +270,6 @@ export function createCompletionBatchProcessor(
       maxBatchSize: 10,
       maxWaitTime: 100,
       deduplicateRequests: true,
-    }
+    },
   );
 }

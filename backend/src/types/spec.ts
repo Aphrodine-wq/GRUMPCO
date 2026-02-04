@@ -3,9 +3,19 @@
  * Interactive Q&A for requirements gathering and specification generation
  */
 
-export type SpecStatus = 'collecting' | 'generating' | 'completed' | 'cancelled';
+export type SpecStatus =
+  | "collecting"
+  | "generating"
+  | "completed"
+  | "cancelled";
 
-export type QuestionType = 'text' | 'choice' | 'multi-choice' | 'number' | 'boolean' | 'code';
+export type QuestionType =
+  | "text"
+  | "choice"
+  | "multi-choice"
+  | "number"
+  | "boolean"
+  | "code";
 
 export interface SpecQuestion {
   id: string;
@@ -70,7 +80,7 @@ export interface Requirement {
   id: string;
   title: string;
   description: string;
-  priority: 'must' | 'should' | 'could' | 'wont';
+  priority: "must" | "should" | "could" | "wont";
   acceptanceCriteria: string[];
 }
 
@@ -78,7 +88,7 @@ export interface TechnicalSpec {
   id: string;
   name: string;
   description: string;
-  type: 'framework' | 'library' | 'service' | 'pattern' | 'architecture';
+  type: "framework" | "library" | "service" | "pattern" | "architecture";
   details?: Record<string, unknown>;
 }
 
@@ -93,13 +103,13 @@ export interface DataModelSpec {
   }[];
   relationships?: {
     target: string;
-    type: 'one-to-one' | 'one-to-many' | 'many-to-many';
+    type: "one-to-one" | "one-to-many" | "many-to-many";
   }[];
 }
 
 export interface APISpec {
   id: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   path: string;
   description: string;
   requestBody?: {
@@ -115,7 +125,7 @@ export interface UIComponentSpec {
   id: string;
   name: string;
   description: string;
-  type: 'page' | 'component' | 'layout' | 'form' | 'modal';
+  type: "page" | "component" | "layout" | "form" | "modal";
   region?: string;
   placement?: string;
   layoutNotes?: string;
@@ -150,7 +160,12 @@ export interface SpecAnswerResponse {
 /** Context-only spec generation (no Q&A): used by Ship when design result provides PRD + CDD */
 export interface SpecDesignContext {
   projectDescription: string;
-  prdOverview?: { vision?: string; problem?: string; solution?: string; targetMarket?: string };
+  prdOverview?: {
+    vision?: string;
+    problem?: string;
+    solution?: string;
+    targetMarket?: string;
+  };
   creativeDesignDoc?: unknown;
 }
 

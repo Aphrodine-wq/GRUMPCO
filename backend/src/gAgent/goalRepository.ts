@@ -7,8 +7,8 @@
  * @module gAgent/goalRepository
  */
 
-import cronParser from 'cron-parser';
-import type { GoalRow } from '../db/schema.js';
+import cronParser from "cron-parser";
+import type { GoalRow } from "../db/schema.js";
 import type {
   Goal,
   GoalCheckpoint,
@@ -16,9 +16,9 @@ import type {
   GoalPriority,
   GoalTrigger,
   AgentArtifact,
-} from './types.js';
-import logger from '../middleware/logger.js';
-import { recordDbOperation } from '../middleware/metrics.js';
+} from "./types.js";
+import logger from "../middleware/logger.js";
+import { recordDbOperation } from "../middleware/metrics.js";
 
 // =============================================================================
 // Database Types
@@ -30,7 +30,10 @@ import { recordDbOperation } from '../middleware/metrics.js';
  * better-sqlite3 directly (allowing for database abstraction).
  */
 interface DatabaseStatement<T = unknown> {
-  run(...params: unknown[]): { changes: number; lastInsertRowid: number | bigint };
+  run(...params: unknown[]): {
+    changes: number;
+    lastInsertRowid: number | bigint;
+  };
   get(...params: unknown[]): T | undefined;
   all(...params: unknown[]): T[];
 }
@@ -87,8 +90,8 @@ export interface GoalFilter {
   tags?: string[];
   limit?: number;
   offset?: number;
-  orderBy?: 'createdAt' | 'priority' | 'nextRunAt';
-  orderDir?: 'asc' | 'desc';
+  orderBy?: "createdAt" | "priority" | "nextRunAt";
+  orderDir?: "asc" | "desc";
 }
 
 export interface GoalStats {
@@ -123,7 +126,9 @@ class GoalRepository {
    */
   private getDb(): Database {
     if (!this.db) {
-      throw new Error('GoalRepository not initialized. Call setDatabase() first.');
+      throw new Error(
+        "GoalRepository not initialized. Call setDatabase() first.",
+      );
     }
     return this.db;
   }
@@ -144,8 +149,9 @@ class GoalRepository {
       const now = new Date().toISOString();
 
       const status: GoalStatus =
-        input.scheduledAt || input.cronExpression ? 'scheduled' : 'pending';
-      const trigger: GoalTrigger = input.trigger ?? (input.scheduledAt ? 'scheduled' : 'immediate');
+        input.scheduledAt || input.cronExpression ? "scheduled" : "pending";
+      const trigger: GoalTrigger =
+        input.trigger ?? (input.scheduledAt ? "scheduled" : "immediate");
 
       // Calculate next run time
       let nextRunAt: string | null = null;
@@ -169,35 +175,35 @@ class GoalRepository {
         input.userId,
         input.description,
         status,
-        input.priority ?? 'normal',
+        input.priority ?? "normal",
         trigger,
         input.scheduledAt ?? null,
         input.cronExpression ?? null,
         input.workspaceRoot ?? null,
         input.parentGoalId ?? null,
-        '[]', // child_goal_ids
-        '[]', // checkpoints
+        "[]", // child_goal_ids
+        "[]", // checkpoints
         JSON.stringify(input.tags ?? []),
         0,
         input.maxRetries ?? 3,
         now,
         now,
-        nextRunAt
+        nextRunAt,
       );
 
       const goal = await this.getById(id);
       if (!goal) {
-        throw new Error('Failed to create goal');
+        throw new Error("Failed to create goal");
       }
 
       const duration = Number(process.hrtime.bigint() - start) / 1e9;
-      recordDbOperation('createGoal', 'goals', duration, 'success');
+      recordDbOperation("createGoal", "goals", duration, "success");
 
-      logger.info({ goalId: id, userId: input.userId }, 'Goal created');
+      logger.info({ goalId: id, userId: input.userId }, "Goal created");
       return goal;
     } catch (error) {
       const duration = Number(process.hrtime.bigint() - start) / 1e9;
-      recordDbOperation('createGoal', 'goals', duration, 'error');
+      recordDbOperation("createGoal", "goals", duration, "error");
       throw error;
     }
   }
@@ -208,7 +214,7 @@ class GoalRepository {
   async getById(id: string): Promise<Goal | null> {
     const db = this.getDb();
 
-    const stmt = db.prepare('SELECT * FROM goals WHERE id = ?');
+    const stmt = db.prepare("SELECT * FROM goals WHERE id = ?");
     const row = stmt.get(id) as GoalRow | undefined;
 
     if (!row) {
@@ -235,59 +241,59 @@ class GoalRepository {
       const params: SqlParam[] = [];
 
       if (input.status !== undefined) {
-        updates.push('status = ?');
+        updates.push("status = ?");
         params.push(input.status);
       }
       if (input.priority !== undefined) {
-        updates.push('priority = ?');
+        updates.push("priority = ?");
         params.push(input.priority);
       }
       if (input.planId !== undefined) {
-        updates.push('plan_id = ?');
+        updates.push("plan_id = ?");
         params.push(input.planId);
       }
       if (input.sessionId !== undefined) {
-        updates.push('session_id = ?');
+        updates.push("session_id = ?");
         params.push(input.sessionId);
       }
       if (input.result !== undefined) {
-        updates.push('result = ?');
+        updates.push("result = ?");
         params.push(input.result);
       }
       if (input.error !== undefined) {
-        updates.push('error = ?');
+        updates.push("error = ?");
         params.push(input.error);
       }
       if (input.startedAt !== undefined) {
-        updates.push('started_at = ?');
+        updates.push("started_at = ?");
         params.push(input.startedAt);
       }
       if (input.completedAt !== undefined) {
-        updates.push('completed_at = ?');
+        updates.push("completed_at = ?");
         params.push(input.completedAt);
       }
       if (input.nextRunAt !== undefined) {
-        updates.push('next_run_at = ?');
+        updates.push("next_run_at = ?");
         params.push(input.nextRunAt);
       }
       if (input.retryCount !== undefined) {
-        updates.push('retry_count = ?');
+        updates.push("retry_count = ?");
         params.push(input.retryCount);
       }
       if (input.checkpoints !== undefined) {
-        updates.push('checkpoints = ?');
+        updates.push("checkpoints = ?");
         params.push(JSON.stringify(input.checkpoints));
       }
       if (input.currentCheckpointId !== undefined) {
-        updates.push('current_checkpoint_id = ?');
+        updates.push("current_checkpoint_id = ?");
         params.push(input.currentCheckpointId);
       }
       if (input.childGoalIds !== undefined) {
-        updates.push('child_goal_ids = ?');
+        updates.push("child_goal_ids = ?");
         params.push(JSON.stringify(input.childGoalIds));
       }
       if (input.artifacts !== undefined) {
-        updates.push('artifacts = ?');
+        updates.push("artifacts = ?");
         params.push(JSON.stringify(input.artifacts));
       }
 
@@ -295,22 +301,22 @@ class GoalRepository {
         return existing;
       }
 
-      updates.push('updated_at = ?');
+      updates.push("updated_at = ?");
       params.push(new Date().toISOString());
       params.push(id);
 
       const stmt = db.prepare(`
-        UPDATE goals SET ${updates.join(', ')} WHERE id = ?
+        UPDATE goals SET ${updates.join(", ")} WHERE id = ?
       `);
       stmt.run(...params);
 
       const duration = Number(process.hrtime.bigint() - start) / 1e9;
-      recordDbOperation('updateGoal', 'goals', duration, 'success');
+      recordDbOperation("updateGoal", "goals", duration, "success");
 
       return this.getById(id);
     } catch (error) {
       const duration = Number(process.hrtime.bigint() - start) / 1e9;
-      recordDbOperation('updateGoal', 'goals', duration, 'error');
+      recordDbOperation("updateGoal", "goals", duration, "error");
       throw error;
     }
   }
@@ -321,7 +327,7 @@ class GoalRepository {
   async delete(id: string): Promise<boolean> {
     const db = this.getDb();
 
-    const stmt = db.prepare('DELETE FROM goals WHERE id = ?');
+    const stmt = db.prepare("DELETE FROM goals WHERE id = ?");
     const result = stmt.run(id);
 
     return result.changes > 0;
@@ -333,53 +339,53 @@ class GoalRepository {
   async list(filter: GoalFilter = {}): Promise<Goal[]> {
     const db = this.getDb();
 
-    let sql = 'SELECT * FROM goals WHERE 1=1';
+    let sql = "SELECT * FROM goals WHERE 1=1";
     const params: SqlParam[] = [];
 
     if (filter.userId) {
-      sql += ' AND user_id = ?';
+      sql += " AND user_id = ?";
       params.push(filter.userId);
     }
 
     if (filter.status && filter.status.length > 0) {
-      sql += ` AND status IN (${filter.status.map(() => '?').join(', ')})`;
+      sql += ` AND status IN (${filter.status.map(() => "?").join(", ")})`;
       params.push(...filter.status);
     }
 
     if (filter.priority && filter.priority.length > 0) {
-      sql += ` AND priority IN (${filter.priority.map(() => '?').join(', ')})`;
+      sql += ` AND priority IN (${filter.priority.map(() => "?").join(", ")})`;
       params.push(...filter.priority);
     }
 
     if (filter.trigger && filter.trigger.length > 0) {
-      sql += ` AND trigger IN (${filter.trigger.map(() => '?').join(', ')})`;
+      sql += ` AND trigger IN (${filter.trigger.map(() => "?").join(", ")})`;
       params.push(...filter.trigger);
     }
 
     if (filter.parentGoalId) {
-      sql += ' AND parent_goal_id = ?';
+      sql += " AND parent_goal_id = ?";
       params.push(filter.parentGoalId);
     }
 
     // Order by
-    const orderDir = filter.orderDir === 'asc' ? 'ASC' : 'DESC';
+    const orderDir = filter.orderDir === "asc" ? "ASC" : "DESC";
 
     // For priority ordering, we need custom ordering (urgent=0, high=1, normal=2, low=3)
-    if (filter.orderBy === 'priority') {
+    if (filter.orderBy === "priority") {
       sql += ` ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 WHEN 'low' THEN 3 END ${orderDir}`;
-    } else if (filter.orderBy === 'nextRunAt') {
+    } else if (filter.orderBy === "nextRunAt") {
       sql += ` ORDER BY next_run_at ${orderDir}`;
     } else {
       sql += ` ORDER BY created_at ${orderDir}`;
     }
 
     if (filter.limit) {
-      sql += ' LIMIT ?';
+      sql += " LIMIT ?";
       params.push(filter.limit);
     }
 
     if (filter.offset) {
-      sql += ' OFFSET ?';
+      sql += " OFFSET ?";
       params.push(filter.offset);
     }
 
@@ -445,11 +451,11 @@ class GoalRepository {
     const params: SqlParam[] = [];
 
     if (userId) {
-      sql += ' WHERE user_id = ?';
+      sql += " WHERE user_id = ?";
       params.push(userId);
     }
 
-    sql += ' GROUP BY status';
+    sql += " GROUP BY status";
 
     const stmt = db.prepare(sql);
     const rows = stmt.all(...params) as { status: GoalStatus; count: number }[];
@@ -469,7 +475,7 @@ class GoalRepository {
 
     for (const row of rows) {
       if (row.status in stats) {
-        stats[row.status as keyof Omit<GoalStats, 'total'>] = row.count;
+        stats[row.status as keyof Omit<GoalStats, "total">] = row.count;
       }
       stats.total += row.count;
     }
@@ -486,7 +492,7 @@ class GoalRepository {
    */
   async addCheckpoint(
     goalId: string,
-    checkpoint: Omit<GoalCheckpoint, 'id' | 'goalId' | 'createdAt'>
+    checkpoint: Omit<GoalCheckpoint, "id" | "goalId" | "createdAt">,
   ): Promise<GoalCheckpoint | null> {
     const goal = await this.getById(goalId);
     if (!goal) {
@@ -522,7 +528,9 @@ class GoalRepository {
     }
 
     if (goal.currentCheckpointId) {
-      return goal.checkpoints.find((c) => c.id === goal.currentCheckpointId) ?? null;
+      return (
+        goal.checkpoints.find((c) => c.id === goal.currentCheckpointId) ?? null
+      );
     }
 
     return goal.checkpoints[goal.checkpoints.length - 1];
@@ -535,7 +543,10 @@ class GoalRepository {
   /**
    * Add a child goal ID to a parent goal
    */
-  async addChildGoal(parentGoalId: string, childGoalId: string): Promise<boolean> {
+  async addChildGoal(
+    parentGoalId: string,
+    childGoalId: string,
+  ): Promise<boolean> {
     const parent = await this.getById(parentGoalId);
     if (!parent) {
       return false;
@@ -615,7 +626,10 @@ class GoalRepository {
       const interval = cronParser.parseExpression(cronExpression);
       return interval.next().toDate().toISOString();
     } catch (err) {
-      logger.warn({ err, cronExpression }, 'Invalid cron expression, falling back to next minute');
+      logger.warn(
+        { err, cronExpression },
+        "Invalid cron expression, falling back to next minute",
+      );
       const now = new Date();
       now.setMinutes(now.getMinutes() + 1);
       now.setSeconds(0);

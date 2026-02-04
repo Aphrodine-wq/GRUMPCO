@@ -28,9 +28,9 @@
  * }));
  */
 
-import type { Request, Response, NextFunction, RequestHandler } from 'express';
-import logger from '../middleware/logger.js';
-import { sendServerError, ApiError, sendError } from './errorResponse.js';
+import type { Request, Response, NextFunction, RequestHandler } from "express";
+import logger from "../middleware/logger.js";
+import { sendServerError, ApiError, sendError } from "./errorResponse.js";
 
 /**
  * Async request handler function type
@@ -38,7 +38,7 @@ import { sendServerError, ApiError, sendError } from './errorResponse.js';
 export type AsyncRequestHandler = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => Promise<void | Response>;
 
 /**
@@ -52,15 +52,16 @@ export function asyncHandler(fn: AsyncRequestHandler): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch((error: unknown) => {
       // Log the error with request context
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       logger.error(
         {
           error: errorMessage,
           method: req.method,
           path: req.path,
-          correlationId: req.headers['x-correlation-id'],
+          correlationId: req.headers["x-correlation-id"],
         },
-        'Request handler error'
+        "Request handler error",
       );
 
       // Handle ApiError specially
@@ -84,7 +85,7 @@ export function asyncHandler(fn: AsyncRequestHandler): RequestHandler {
  */
 export function asyncHandlerWithCustomError(
   fn: AsyncRequestHandler,
-  errorHandler: (error: unknown, req: Request, res: Response) => void
+  errorHandler: (error: unknown, req: Request, res: Response) => void,
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch((error: unknown) => {
@@ -96,8 +97,10 @@ export function asyncHandlerWithCustomError(
 /**
  * Type guard to check if a function is an async function
  */
-export function isAsyncFunction(fn: unknown): fn is (...args: unknown[]) => Promise<unknown> {
-  return fn instanceof Function && fn.constructor.name === 'AsyncFunction';
+export function isAsyncFunction(
+  fn: unknown,
+): fn is (...args: unknown[]) => Promise<unknown> {
+  return fn instanceof Function && fn.constructor.name === "AsyncFunction";
 }
 
 export default asyncHandler;

@@ -3,8 +3,8 @@
  * Predictive cache warming based on access patterns
  */
 
-import logger from '../middleware/logger.js';
-import { getTieredCache } from './tieredCache.js';
+import logger from "../middleware/logger.js";
+import { getTieredCache } from "./tieredCache.js";
 
 export interface AccessPattern {
   key: string;
@@ -27,7 +27,10 @@ export class CacheWarmer {
   private accessPatterns = new Map<string, AccessPattern>();
   private warmingInterval: NodeJS.Timeout | null = null;
   private strategy: WarmingStrategy;
-  private warmingCallbacks = new Map<string, (key: string) => Promise<unknown>>();
+  private warmingCallbacks = new Map<
+    string,
+    (key: string) => Promise<unknown>
+  >();
 
   constructor(strategy: Partial<WarmingStrategy> = {}) {
     this.strategy = {
@@ -42,7 +45,7 @@ export class CacheWarmer {
       this.startWarming();
     }
 
-    logger.info({ strategy: this.strategy }, 'Cache warmer initialized');
+    logger.info({ strategy: this.strategy }, "Cache warmer initialized");
   }
 
   /**
@@ -57,7 +60,8 @@ export class CacheWarmer {
     if (existing) {
       const interval = now - existing.lastAccess;
       const newAvgInterval =
-        (existing.avgAccessInterval * existing.frequency + interval) / (existing.frequency + 1);
+        (existing.avgAccessInterval * existing.frequency + interval) /
+        (existing.frequency + 1);
 
       this.accessPatterns.set(patternKey, {
         ...existing,
@@ -83,7 +87,7 @@ export class CacheWarmer {
    */
   public registerWarmingCallback(
     namespace: string,
-    callback: (key: string) => Promise<unknown>
+    callback: (key: string) => Promise<unknown>,
   ): void {
     this.warmingCallbacks.set(namespace, callback);
   }
@@ -108,7 +112,10 @@ export class CacheWarmer {
 
       // Check if predicted access time is near
       const timeToPredictedAccess = pattern.nextPredictedAccess - now;
-      if (timeToPredictedAccess > 0 && timeToPredictedAccess < this.strategy.warmingInterval) {
+      if (
+        timeToPredictedAccess > 0 &&
+        timeToPredictedAccess < this.strategy.warmingInterval
+      ) {
         patterns.push(pattern);
       }
     }
@@ -126,11 +133,11 @@ export class CacheWarmer {
     const patterns = this.getPatternsToWarm();
 
     if (patterns.length === 0) {
-      logger.debug('No patterns to warm');
+      logger.debug("No patterns to warm");
       return;
     }
 
-    logger.info({ count: patterns.length }, 'Warming cache entries');
+    logger.info({ count: patterns.length }, "Warming cache entries");
 
     for (const pattern of patterns) {
       try {
@@ -142,7 +149,10 @@ export class CacheWarmer {
           // Check if already cached
           const existing = await cache.get(pattern.namespace, pattern.key);
           if (existing) {
-            logger.debug({ namespace: pattern.namespace, key: pattern.key }, 'Already cached');
+            logger.debug(
+              { namespace: pattern.namespace, key: pattern.key },
+              "Already cached",
+            );
             continue;
           }
 
@@ -150,7 +160,10 @@ export class CacheWarmer {
           const data = await callback(pattern.key);
           await cache.set(pattern.namespace, pattern.key, data);
 
-          logger.debug({ namespace: pattern.namespace, key: pattern.key }, 'Cache warmed');
+          logger.debug(
+            { namespace: pattern.namespace, key: pattern.key },
+            "Cache warmed",
+          );
         }
       } catch (error) {
         logger.warn(
@@ -159,7 +172,7 @@ export class CacheWarmer {
             namespace: pattern.namespace,
             key: pattern.key,
           },
-          'Failed to warm cache entry'
+          "Failed to warm cache entry",
         );
       }
     }
@@ -175,12 +188,12 @@ export class CacheWarmer {
       } catch (error) {
         logger.error(
           { error: error instanceof Error ? error.message : String(error) },
-          'Cache warming failed'
+          "Cache warming failed",
         );
       }
     }, this.strategy.warmingInterval);
 
-    logger.info('Cache warming started');
+    logger.info("Cache warming started");
   }
 
   /**
@@ -190,7 +203,7 @@ export class CacheWarmer {
     if (this.warmingInterval) {
       clearInterval(this.warmingInterval);
       this.warmingInterval = null;
-      logger.info('Cache warming stopped');
+      logger.info("Cache warming stopped");
     }
   }
 
@@ -225,7 +238,7 @@ export class CacheWarmer {
     }
 
     if (removed > 0) {
-      logger.info({ removed }, 'Cleaned up old access patterns');
+      logger.info({ removed }, "Cleaned up old access patterns");
     }
   }
 }

@@ -3,18 +3,18 @@
  * Provides a consistent interface for parsing intents via WASM, CLI, or LLM fallback
  */
 
-import logger from '../middleware/logger.js';
-import { parseIntentWasm, isWasmAvailable } from './intentParserWasm.js';
-import { type StructuredIntent } from './intentCliRunner.js';
-import { withResilience } from './resilience.js';
-import { getStream, type StreamParams } from './llmGateway.js';
-import { getIntentExtractionFallbackPrompt } from '../prompts/intent-compiler.js';
+import logger from "../middleware/logger.js";
+import { parseIntentWasm, isWasmAvailable } from "./intentParserWasm.js";
+import { type StructuredIntent } from "./intentCliRunner.js";
+import { withResilience } from "./resilience.js";
+import { getStream, type StreamParams } from "./llmGateway.js";
+import { getIntentExtractionFallbackPrompt } from "../prompts/intent-compiler.js";
 
 // Version tag for intent caching/normalization
-export const INTENT_CACHE_VERSION = 'v1';
+export const INTENT_CACHE_VERSION = "v1";
 
 // Default model for LLM fallback
-const DEFAULT_INTENT_MODEL = 'moonshotai/kimi-k2.5';
+const DEFAULT_INTENT_MODEL = "moonshotai/kimi-k2.5";
 
 /**
  * Parser configuration options
@@ -37,7 +37,7 @@ export interface ParserResult {
   /** Parsed intent */
   intent: StructuredIntent;
   /** Parser used */
-  parser: 'wasm' | 'cli' | 'llm';
+  parser: "wasm" | "cli" | "llm";
   /** Time taken in ms */
   durationMs: number;
   /** Whether result was from cache */
@@ -60,7 +60,7 @@ export interface IntentParser {
   parse(
     text: string,
     constraints?: Record<string, unknown>,
-    config?: ParserConfig
+    config?: ParserConfig,
   ): Promise<ParserResult>;
 
   /**
@@ -79,16 +79,19 @@ export interface IntentParser {
  */
 async function getCompletion(
   params: StreamParams,
-  options?: { model?: string; timeout?: number }
+  options?: { model?: string; timeout?: number },
 ): Promise<string> {
   const modelId = options?.model ?? DEFAULT_INTENT_MODEL;
-  const stream = getStream(params, { provider: 'nim', modelId });
+  const stream = getStream(params, { provider: "nim", modelId });
 
-  let fullText = '';
+  let fullText = "";
   for await (const event of stream) {
-    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
       fullText += event.delta.text;
-    } else if (event.type === 'error') {
+    } else if (event.type === "error") {
       throw new Error(`LLM Gateway error: ${JSON.stringify(event.error)}`);
     }
   }
@@ -101,11 +104,12 @@ async function getCompletion(
  */
 async function extractIntentViaLlm(
   text: string,
-  model: string = DEFAULT_INTENT_MODEL
+  model: string = DEFAULT_INTENT_MODEL,
 ): Promise<StructuredIntent> {
   const resilient = withResilience(
-    async (params: StreamParams): Promise<string> => getCompletion(params, { model }),
-    'nim-intent-extraction'
+    async (params: StreamParams): Promise<string> =>
+      getCompletion(params, { model }),
+    "nim-intent-extraction",
   );
 
   const systemPrompt = getIntentExtractionFallbackPrompt();
@@ -115,33 +119,39 @@ async function extractIntentViaLlm(
     model,
     max_tokens: 2048,
     system: systemPrompt,
-    messages: [{ role: 'user', content: userMsg }],
+    messages: [{ role: "user", content: userMsg }],
   });
 
   let extracted = res.trim();
   const jsonMatch = extracted.match(/\{[\s\S]*\}/);
   if (jsonMatch) extracted = jsonMatch[0];
-  if (extracted.includes('```json')) {
+  if (extracted.includes("```json")) {
     const m = extracted.match(/```json\n?([\s\S]*?)\n?```/);
     if (m) extracted = m[1];
-  } else if (extracted.includes('```')) {
+  } else if (extracted.includes("```")) {
     const m = extracted.match(/```\n?([\s\S]*?)\n?```/);
     if (m) extracted = m[1];
   }
 
   const parsed = JSON.parse(extracted) as Record<string, unknown>;
   return {
-    actors: Array.isArray(parsed.actors) ? (parsed.actors as string[]) : ['user'],
-    features: Array.isArray(parsed.features) ? (parsed.features as string[]) : [],
-    data_flows: Array.isArray(parsed.data_flows) ? (parsed.data_flows as string[]) : [],
+    actors: Array.isArray(parsed.actors)
+      ? (parsed.actors as string[])
+      : ["user"],
+    features: Array.isArray(parsed.features)
+      ? (parsed.features as string[])
+      : [],
+    data_flows: Array.isArray(parsed.data_flows)
+      ? (parsed.data_flows as string[])
+      : [],
     tech_stack_hints: Array.isArray(parsed.tech_stack_hints)
       ? (parsed.tech_stack_hints as string[])
       : [],
     constraints:
-      parsed.constraints && typeof parsed.constraints === 'object'
+      parsed.constraints && typeof parsed.constraints === "object"
         ? (parsed.constraints as Record<string, unknown>)
         : {},
-    raw: typeof parsed.raw === 'string' ? parsed.raw : text.trim(),
+    raw: typeof parsed.raw === "string" ? parsed.raw : text.trim(),
   };
 }
 
@@ -153,7 +163,7 @@ export class WasmIntentParser implements IntentParser {
   private cache = new Map<string, StructuredIntent>();
 
   getName(): string {
-    return 'wasm';
+    return "wasm";
   }
 
   async isAvailable(): Promise<boolean> {
@@ -163,7 +173,7 @@ export class WasmIntentParser implements IntentParser {
   async parse(
     text: string,
     constraints?: Record<string, unknown>,
-    config?: ParserConfig
+    config?: ParserConfig,
   ): Promise<ParserResult> {
     const startTime = Date.now();
     const cacheKey = JSON.stringify({ text: text.trim(), constraints });
@@ -174,7 +184,7 @@ export class WasmIntentParser implements IntentParser {
       if (cached) {
         return {
           intent: cached,
-          parser: 'wasm',
+          parser: "wasm",
           durationMs: Date.now() - startTime,
           fromCache: true,
         };
@@ -183,7 +193,7 @@ export class WasmIntentParser implements IntentParser {
 
     // Check if WASM is actually available
     if (!(await this.isAvailable())) {
-      throw new Error('WASM module not available');
+      throw new Error("WASM module not available");
     }
 
     try {
@@ -196,13 +206,13 @@ export class WasmIntentParser implements IntentParser {
 
       return {
         intent: result,
-        parser: 'wasm',
+        parser: "wasm",
         durationMs: Date.now() - startTime,
       };
     } catch (error) {
       logger.error(
         { error: error instanceof Error ? error.message : String(error) },
-        'WASM intent parser failed'
+        "WASM intent parser failed",
       );
       throw error;
     }
@@ -225,14 +235,14 @@ export class CliIntentParser implements IntentParser {
   private cache = new Map<string, StructuredIntent>();
 
   getName(): string {
-    return 'cli';
+    return "cli";
   }
 
   async isAvailable(): Promise<boolean> {
     try {
       // Quick check - try to spawn the CLI with --help
-      const { runIntentCli } = await import('./intentCliRunner.js');
-      await runIntentCli('test', {}, 5000);
+      const { runIntentCli } = await import("./intentCliRunner.js");
+      await runIntentCli("test", {}, 5000);
       return true;
     } catch {
       return false;
@@ -242,7 +252,7 @@ export class CliIntentParser implements IntentParser {
   async parse(
     text: string,
     constraints?: Record<string, unknown>,
-    config?: ParserConfig
+    config?: ParserConfig,
   ): Promise<ParserResult> {
     const startTime = Date.now();
     const cacheKey = JSON.stringify({ text: text.trim(), constraints });
@@ -253,7 +263,7 @@ export class CliIntentParser implements IntentParser {
       if (cached) {
         return {
           intent: cached,
-          parser: 'cli',
+          parser: "cli",
           durationMs: Date.now() - startTime,
           fromCache: true,
         };
@@ -261,7 +271,7 @@ export class CliIntentParser implements IntentParser {
     }
 
     try {
-      const { runIntentCli } = await import('./intentCliRunner.js');
+      const { runIntentCli } = await import("./intentCliRunner.js");
       const timeoutMs = config?.timeoutMs ?? 20000;
       const result = await runIntentCli(text.trim(), constraints, timeoutMs);
 
@@ -272,13 +282,13 @@ export class CliIntentParser implements IntentParser {
 
       return {
         intent: result,
-        parser: 'cli',
+        parser: "cli",
         durationMs: Date.now() - startTime,
       };
     } catch (error) {
       logger.error(
         { error: error instanceof Error ? error.message : String(error) },
-        'CLI intent parser failed'
+        "CLI intent parser failed",
       );
       throw error;
     }
@@ -306,7 +316,7 @@ export class LlmIntentParser implements IntentParser {
   }
 
   getName(): string {
-    return 'llm';
+    return "llm";
   }
 
   async isAvailable(): Promise<boolean> {
@@ -316,10 +326,14 @@ export class LlmIntentParser implements IntentParser {
   async parse(
     text: string,
     constraints?: Record<string, unknown>,
-    config?: ParserConfig
+    config?: ParserConfig,
   ): Promise<ParserResult> {
     const startTime = Date.now();
-    const cacheKey = JSON.stringify({ text: text.trim(), constraints, model: this.model });
+    const cacheKey = JSON.stringify({
+      text: text.trim(),
+      constraints,
+      model: this.model,
+    });
 
     // Check cache if enabled
     if (config?.useCache !== false && this.cache.has(cacheKey)) {
@@ -327,7 +341,7 @@ export class LlmIntentParser implements IntentParser {
       if (cached) {
         return {
           intent: cached,
-          parser: 'llm',
+          parser: "llm",
           durationMs: Date.now() - startTime,
           fromCache: true,
         };
@@ -350,13 +364,13 @@ export class LlmIntentParser implements IntentParser {
 
       return {
         intent: result,
-        parser: 'llm',
+        parser: "llm",
         durationMs: Date.now() - startTime,
       };
     } catch (error) {
       logger.error(
         { error: error instanceof Error ? error.message : String(error) },
-        'LLM intent parser failed'
+        "LLM intent parser failed",
       );
       throw error;
     }
@@ -387,7 +401,7 @@ export class HybridIntentParser implements IntentParser {
   }
 
   getName(): string {
-    return 'hybrid';
+    return "hybrid";
   }
 
   async isAvailable(): Promise<boolean> {
@@ -403,7 +417,7 @@ export class HybridIntentParser implements IntentParser {
   async parse(
     text: string,
     constraints?: Record<string, unknown>,
-    config?: ParserConfig
+    config?: ParserConfig,
   ): Promise<ParserResult> {
     const startTime = Date.now();
     const warnings: string[] = [];
@@ -418,7 +432,7 @@ export class HybridIntentParser implements IntentParser {
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        logger.debug({ error: message }, 'WASM parser failed, trying CLI');
+        logger.debug({ error: message }, "WASM parser failed, trying CLI");
         warnings.push(`WASM failed: ${message}`);
       }
     }
@@ -434,13 +448,16 @@ export class HybridIntentParser implements IntentParser {
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        logger.debug({ error: message }, 'CLI parser failed, trying LLM');
+        logger.debug({ error: message }, "CLI parser failed, trying LLM");
         warnings.push(`CLI failed: ${message}`);
       }
     }
 
     // Try LLM fallback if enabled
-    if (config?.fallbackToLlm !== false && (await this.llmParser.isAvailable())) {
+    if (
+      config?.fallbackToLlm !== false &&
+      (await this.llmParser.isAvailable())
+    ) {
       try {
         const result = await this.llmParser.parse(text, constraints, config);
         return {
@@ -450,13 +467,15 @@ export class HybridIntentParser implements IntentParser {
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        logger.error({ error: message }, 'LLM parser failed');
+        logger.error({ error: message }, "LLM parser failed");
         warnings.push(`LLM failed: ${message}`);
       }
     }
 
     // All parsers failed
-    throw new Error(`All intent parsers failed. Warnings: ${warnings.join('; ')}`);
+    throw new Error(
+      `All intent parsers failed. Warnings: ${warnings.join("; ")}`,
+    );
   }
 
   clearCache(): void {
@@ -467,7 +486,9 @@ export class HybridIntentParser implements IntentParser {
 
   getCacheSize(): number {
     return (
-      this.wasmParser.getCacheSize() + this.cliParser.getCacheSize() + this.llmParser.getCacheSize()
+      this.wasmParser.getCacheSize() +
+      this.cliParser.getCacheSize() +
+      this.llmParser.getCacheSize()
     );
   }
 }
@@ -476,16 +497,16 @@ export class HybridIntentParser implements IntentParser {
  * Get the default parser based on environment configuration
  */
 export function getDefaultParser(): IntentParser {
-  const mode = process.env.GRUMP_INTENT_PARSER_MODE ?? 'hybrid';
+  const mode = process.env.GRUMP_INTENT_PARSER_MODE ?? "hybrid";
 
   switch (mode) {
-    case 'wasm':
+    case "wasm":
       return new WasmIntentParser();
-    case 'cli':
+    case "cli":
       return new CliIntentParser();
-    case 'llm':
+    case "llm":
       return new LlmIntentParser();
-    case 'hybrid':
+    case "hybrid":
     default:
       return new HybridIntentParser();
   }

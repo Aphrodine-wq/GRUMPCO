@@ -5,7 +5,7 @@
  * Uses pattern matching to classify requests into different G-Agent modes.
  */
 
-import type { AgentMode } from './types.js';
+import type { AgentMode } from "./types.js";
 
 /**
  * Result of intent detection
@@ -34,7 +34,10 @@ const MODE_PATTERNS: Record<AgentMode, RegExp[]> = {
     /\bdon't execute\b/i,
   ],
   execute: [/\b(execute|run|do it|go ahead|proceed)\b/i, /\bapproved?\b/i],
-  swarm: [/\b(swarm|multi-?agent|parallel|team)\b/i, /\b(comprehensive|thorough|all aspects)\b/i],
+  swarm: [
+    /\b(swarm|multi-?agent|parallel|team)\b/i,
+    /\b(comprehensive|thorough|all aspects)\b/i,
+  ],
   codegen: [
     /\b(generate|create|build|implement)\b.*\b(app|application|project|feature|component)\b/i,
     /\b(prd|spec|specification)\b/i,
@@ -44,7 +47,10 @@ const MODE_PATTERNS: Record<AgentMode, RegExp[]> = {
     /\b(autonomous|auto|on your own|without asking)\b/i,
     /\b(keep going|don't stop|continuous)\b/i,
   ],
-  chat: [/\b(explain|what is|how does|tell me about)\b/i, /\b(help|question|ask)\b/i],
+  chat: [
+    /\b(explain|what is|how does|tell me about)\b/i,
+    /\b(help|question|ask)\b/i,
+  ],
 };
 
 /**
@@ -60,7 +66,8 @@ const MODE_PATTERNS: Record<AgentMode, RegExp[]> = {
  * ```
  */
 export function detectIntent(message: string): DetectedIntent {
-  const results: Array<{ mode: AgentMode; score: number; keywords: string[] }> = [];
+  const results: Array<{ mode: AgentMode; score: number; keywords: string[] }> =
+    [];
 
   for (const [mode, patterns] of Object.entries(MODE_PATTERNS)) {
     const keywords: string[] = [];
@@ -92,7 +99,7 @@ export function detectIntent(message: string): DetectedIntent {
   }
 
   // Default to chat mode
-  return { mode: 'chat', confidence: 0.5, keywords: [] };
+  return { mode: "chat", confidence: 0.5, keywords: [] };
 }
 
 /**
@@ -103,13 +110,13 @@ export function detectIntent(message: string): DetectedIntent {
  */
 export function getExplicitMode(message: string): AgentMode | null {
   const modeKeywords: Record<string, AgentMode> = {
-    '/goal': 'goal',
-    '/plan': 'plan',
-    '/execute': 'execute',
-    '/swarm': 'swarm',
-    '/codegen': 'codegen',
-    '/autonomous': 'autonomous',
-    '/chat': 'chat',
+    "/goal": "goal",
+    "/plan": "plan",
+    "/execute": "execute",
+    "/swarm": "swarm",
+    "/codegen": "codegen",
+    "/autonomous": "autonomous",
+    "/chat": "chat",
   };
 
   for (const [keyword, mode] of Object.entries(modeKeywords)) {

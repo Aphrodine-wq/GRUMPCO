@@ -3,13 +3,13 @@
  * Uses node-cron; schedules stored in memory (extend with DB for persistence).
  */
 
-import cron from 'node-cron';
-import logger from '../middleware/logger.js';
+import cron from "node-cron";
+import logger from "../middleware/logger.js";
 
 export interface CronJob {
   id: string;
   schedule: string; // cron expression, e.g. '0 9 * * *' for daily at 9am
-  action: 'ship' | 'chat' | 'webhook';
+  action: "ship" | "chat" | "webhook";
   payload?: Record<string, unknown>;
   enabled: boolean;
 }
@@ -35,17 +35,17 @@ export function upsertCronJob(job: CronJob): { ok: boolean; error?: string } {
 
   const task = cron.schedule(job.schedule, async () => {
     if (!job.enabled) return;
-    logger.info({ cronId: job.id, action: job.action }, 'Cron job triggered');
+    logger.info({ cronId: job.id, action: job.action }, "Cron job triggered");
     try {
-      if (job.action === 'webhook' && job.payload?.url) {
+      if (job.action === "webhook" && job.payload?.url) {
         await fetch(job.payload.url as string, {
-          method: (job.payload.method as string) || 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: (job.payload.method as string) || "POST",
+          headers: { "Content-Type": "application/json" },
           body: job.payload.body ? JSON.stringify(job.payload.body) : undefined,
         });
-      } else if (job.action === 'ship' && job.payload?.projectDescription) {
-        const { startShipMode } = await import('./shipModeService.js');
-        const { enqueueShipJob } = await import('./jobQueue.js');
+      } else if (job.action === "ship" && job.payload?.projectDescription) {
+        const { startShipMode } = await import("./shipModeService.js");
+        const { enqueueShipJob } = await import("./jobQueue.js");
         const session = await startShipMode({
           projectDescription: job.payload.projectDescription as string,
         });
@@ -53,7 +53,10 @@ export function upsertCronJob(job: CronJob): { ok: boolean; error?: string } {
       }
       // chat action would need similar handling
     } catch (e) {
-      logger.warn({ cronId: job.id, err: (e as Error).message }, 'Cron job failed');
+      logger.warn(
+        { cronId: job.id, err: (e as Error).message },
+        "Cron job failed",
+      );
     }
   });
 

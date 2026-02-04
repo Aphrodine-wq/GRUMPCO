@@ -27,6 +27,17 @@
     ],
     "patterns": ["review\\s+(my|this|the)?\\s*code", "code\\s+quality"],
     "commands": ["/review", "/code-review"],
-    "fileExtensions": [".ts", ".js", ".tsx", ".jsx", ".py", ".go", ".rs", ".java", ".cpp", ".c"]
+    "fileExtensions": [
+      ".ts",
+      ".js",
+      ".tsx",
+      ".jsx",
+      ".py",
+      ".go",
+      ".rs",
+      ".java",
+      ".cpp",
+      ".c"
+    ]
   }
 }

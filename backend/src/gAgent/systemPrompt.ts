@@ -19,11 +19,11 @@
 // ============================================================================
 
 export const GAGENT_IDENTITY = {
-  name: 'G-Agent',
-  version: '2.0.0',
-  codename: 'Grump Intelligence Engine',
-  creator: 'G-Rump Team',
-  philosophy: 'Autonomous efficiency with human respect',
+  name: "G-Agent",
+  version: "2.0.0",
+  codename: "Grump Intelligence Engine",
+  creator: "G-Rump Team",
+  philosophy: "Autonomous efficiency with human respect",
 } as const;
 
 // ============================================================================
@@ -282,7 +282,7 @@ Write for the reader. Examples are essential. Keep it current.`,
 /**
  * Autonomy levels determine how much independence G-Agent has.
  */
-export type AutonomyLevel = 'supervised' | 'semi-autonomous' | 'autonomous';
+export type AutonomyLevel = "supervised" | "semi-autonomous" | "autonomous";
 
 export interface AutonomyConfig {
   level: AutonomyLevel;
@@ -300,17 +300,17 @@ export interface AutonomyConfig {
 
 export const AUTONOMY_CONFIGS: Record<AutonomyLevel, AutonomyConfig> = {
   supervised: {
-    level: 'supervised',
-    description: 'Every significant action requires approval',
+    level: "supervised",
+    description: "Every significant action requires approval",
     approvalRequired: [
-      'file_write',
-      'file_delete',
-      'code_execute',
-      'agent_spawn',
-      'network_request',
-      'cost_incur',
+      "file_write",
+      "file_delete",
+      "code_execute",
+      "agent_spawn",
+      "network_request",
+      "cost_incur",
     ],
-    autoApprove: ['file_read', 'plan_generate', 'cost_estimate'],
+    autoApprove: ["file_read", "plan_generate", "cost_estimate"],
     maxCostWithoutApproval: 0,
     maxTokensWithoutApproval: 1000,
     maxFilesWithoutApproval: 0,
@@ -319,11 +319,17 @@ export const AUTONOMY_CONFIGS: Record<AutonomyLevel, AutonomyConfig> = {
     canModifyFiles: false,
     canAccessNetwork: false,
   },
-  'semi-autonomous': {
-    level: 'semi-autonomous',
-    description: 'Low-risk actions auto-approved, high-risk requires approval',
-    approvalRequired: ['file_delete', 'code_execute', 'network_request'],
-    autoApprove: ['file_read', 'file_write', 'plan_generate', 'agent_spawn', 'cost_estimate'],
+  "semi-autonomous": {
+    level: "semi-autonomous",
+    description: "Low-risk actions auto-approved, high-risk requires approval",
+    approvalRequired: ["file_delete", "code_execute", "network_request"],
+    autoApprove: [
+      "file_read",
+      "file_write",
+      "plan_generate",
+      "agent_spawn",
+      "cost_estimate",
+    ],
     maxCostWithoutApproval: 100, // $1.00
     maxTokensWithoutApproval: 50000,
     maxFilesWithoutApproval: 10,
@@ -333,16 +339,16 @@ export const AUTONOMY_CONFIGS: Record<AutonomyLevel, AutonomyConfig> = {
     canAccessNetwork: false,
   },
   autonomous: {
-    level: 'autonomous',
-    description: 'Full autonomy within budget limits',
-    approvalRequired: ['budget_exceeded', 'dangerous_operation'],
+    level: "autonomous",
+    description: "Full autonomy within budget limits",
+    approvalRequired: ["budget_exceeded", "dangerous_operation"],
     autoApprove: [
-      'file_read',
-      'file_write',
-      'file_delete',
-      'code_execute',
-      'agent_spawn',
-      'network_request',
+      "file_read",
+      "file_write",
+      "file_delete",
+      "code_execute",
+      "agent_spawn",
+      "network_request",
     ],
     maxCostWithoutApproval: 1000, // $10.00
     maxTokensWithoutApproval: 500000,
@@ -381,7 +387,7 @@ export const DEFAULT_CONFIDENCE_THRESHOLDS: ConfidenceThresholds = {
 // RISK ASSESSMENT
 // ============================================================================
 
-export type RiskLevel = 'minimal' | 'low' | 'medium' | 'high' | 'critical';
+export type RiskLevel = "minimal" | "low" | "medium" | "high" | "critical";
 
 export interface RiskAssessment {
   level: RiskLevel;
@@ -427,11 +433,11 @@ export const RISK_FACTORS: Record<string, number> = {
  * Calculate risk level from score
  */
 export function calculateRiskLevel(score: number): RiskLevel {
-  if (score >= 80) return 'critical';
-  if (score >= 60) return 'high';
-  if (score >= 40) return 'medium';
-  if (score >= 20) return 'low';
-  return 'minimal';
+  if (score >= 80) return "critical";
+  if (score >= 60) return "high";
+  if (score >= 40) return "medium";
+  if (score >= 20) return "low";
+  return "minimal";
 }
 
 // ============================================================================
@@ -441,7 +447,7 @@ export function calculateRiskLevel(score: number): RiskLevel {
 export const PROMPT_TEMPLATES = {
   costEstimate: `Before proceeding, here's the estimated cost:
 - Tokens: ~{tokens}
-- Cost: ~${'{cost}'}
+- Cost: ~${"{cost}"}
 - Time: ~{time}
 
 Would you like me to proceed?`,
@@ -450,14 +456,14 @@ Would you like me to proceed?`,
 
 {taskList}
 
-Estimated cost: ${'{cost}'} | Time: {time}
+Estimated cost: ${"{cost}"} | Time: {time}
 
 Reply "proceed" to execute, or suggest changes.`,
 
   budgetWarning: `⚠️ BUDGET ALERT
 
-You've used ${'{used}'} of your ${'{limit}'} budget.
-Remaining: ${'{remaining}'}
+You've used ${"{used}"} of your ${"{limit}"} budget.
+Remaining: ${"{remaining}"}
 
 I'll pause expensive operations until you confirm to continue.`,
 

@@ -1,6 +1,6 @@
-import { getDatabase } from '../db/database.js';
-import logger from '../middleware/logger.js';
-import type { AuditCategory, AuditLogRecord } from '../types/integrations.js';
+import { getDatabase } from "../db/database.js";
+import logger from "../middleware/logger.js";
+import type { AuditCategory, AuditLogRecord } from "../types/integrations.js";
 
 export interface AuditLogInput {
   userId: string;
@@ -32,7 +32,7 @@ export async function writeAuditLog(entry: AuditLogInput): Promise<void> {
     await db.saveAuditLog(record);
   } catch (err) {
     // Audit log failures should not break the application
-    logger.warn({ error: (err as Error).message }, 'Audit log write failed');
+    logger.warn({ error: (err as Error).message }, "Audit log write failed");
   }
 }
 
@@ -45,7 +45,7 @@ export async function queryAuditLogs(
     category?: AuditCategory;
     limit?: number;
     offset?: number;
-  } = {}
+  } = {},
 ): Promise<AuditLogRecord[]> {
   try {
     const db = getDatabase();
@@ -56,10 +56,10 @@ export async function queryAuditLogs(
       offset: options.offset,
     });
   } catch (err) {
-    logger.error({ error: (err as Error).message }, 'Audit log query failed');
+    logger.error({ error: (err as Error).message }, "Audit log query failed");
     return [];
   }
 }
 
 // Re-export AuditCategory for convenience
-export type { AuditCategory } from '../types/integrations.js';
+export type { AuditCategory } from "../types/integrations.js";

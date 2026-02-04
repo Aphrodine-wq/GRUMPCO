@@ -3,8 +3,8 @@
  * Provides Redis connection with connection pooling and error handling
  */
 
-import { Redis } from 'ioredis';
-import logger from '../middleware/logger.js';
+import { Redis } from "ioredis";
+import logger from "../middleware/logger.js";
 
 let redisClient: Redis | null = null;
 let isConnected = false;
@@ -21,10 +21,10 @@ export interface RedisConfig {
 }
 
 const DEFAULT_CONFIG: RedisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379', 10),
+  host: process.env.REDIS_HOST || "localhost",
+  port: parseInt(process.env.REDIS_PORT || "6379", 10),
   password: process.env.REDIS_PASSWORD,
-  db: parseInt(process.env.REDIS_DB || '0', 10),
+  db: parseInt(process.env.REDIS_DB || "0", 10),
   maxRetriesPerRequest: 3,
   enableReadyCheck: true,
   lazyConnect: false,
@@ -55,27 +55,33 @@ export function initializeRedis(config?: RedisConfig): Redis {
     retryStrategy: redisConfig.retryStrategy,
   });
 
-  redisClient.on('connect', () => {
-    logger.info({ host: redisConfig.host, port: redisConfig.port }, 'Redis connecting');
+  redisClient.on("connect", () => {
+    logger.info(
+      { host: redisConfig.host, port: redisConfig.port },
+      "Redis connecting",
+    );
   });
 
-  redisClient.on('ready', () => {
+  redisClient.on("ready", () => {
     isConnected = true;
-    logger.info({ host: redisConfig.host, port: redisConfig.port }, 'Redis connected and ready');
+    logger.info(
+      { host: redisConfig.host, port: redisConfig.port },
+      "Redis connected and ready",
+    );
   });
 
-  redisClient.on('error', (error) => {
+  redisClient.on("error", (error) => {
     isConnected = false;
-    logger.error({ error: error.message }, 'Redis connection error');
+    logger.error({ error: error.message }, "Redis connection error");
   });
 
-  redisClient.on('close', () => {
+  redisClient.on("close", () => {
     isConnected = false;
-    logger.warn('Redis connection closed');
+    logger.warn("Redis connection closed");
   });
 
-  redisClient.on('reconnecting', () => {
-    logger.info('Redis reconnecting');
+  redisClient.on("reconnecting", () => {
+    logger.info("Redis reconnecting");
   });
 
   return redisClient;
@@ -108,8 +114,8 @@ export function createRedisClient(config?: RedisConfig): Redis {
     retryStrategy: redisConfig.retryStrategy,
   });
 
-  client.on('error', (error) => {
-    logger.error({ error: error.message }, 'Redis subscriber connection error');
+  client.on("error", (error) => {
+    logger.error({ error: error.message }, "Redis subscriber connection error");
   });
 
   return client;
@@ -125,9 +131,12 @@ export async function isRedisConnected(): Promise<boolean> {
 
   try {
     const result = await redisClient.ping();
-    return result === 'PONG';
+    return result === "PONG";
   } catch (error) {
-    logger.error({ error: (error as Error).message }, 'Redis health check failed');
+    logger.error(
+      { error: (error as Error).message },
+      "Redis health check failed",
+    );
     return false;
   }
 }
@@ -140,14 +149,17 @@ export async function closeRedis(): Promise<void> {
     await redisClient.quit();
     redisClient = null;
     isConnected = false;
-    logger.info('Redis connection closed');
+    logger.info("Redis connection closed");
   }
 }
 
 /**
  * Health check for Redis
  */
-export async function healthCheck(): Promise<{ connected: boolean; latency?: number }> {
+export async function healthCheck(): Promise<{
+  connected: boolean;
+  latency?: number;
+}> {
   if (!redisClient) {
     return { connected: false };
   }
@@ -158,7 +170,10 @@ export async function healthCheck(): Promise<{ connected: boolean; latency?: num
     const latency = Date.now() - start;
     return { connected: true, latency };
   } catch (error) {
-    logger.error({ error: (error as Error).message }, 'Redis health check failed');
+    logger.error(
+      { error: (error as Error).message },
+      "Redis health check failed",
+    );
     return { connected: false };
   }
 }

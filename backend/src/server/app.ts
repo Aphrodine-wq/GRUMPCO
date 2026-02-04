@@ -9,38 +9,49 @@
  * @module server/app
  */
 
-import express, { type Request, type Response, type NextFunction, type Express } from 'express';
-import cookieParser from 'cookie-parser';
-import compression from 'compression';
-import { requestIdMiddleware, httpLogger, default as logger } from '../middleware/logger.js';
-import { metricsMiddleware, getMetrics } from '../middleware/metrics.js';
-import { requestTimeout } from '../middleware/timeout.js';
-import { initializeTracing, tracingMiddleware } from '../middleware/tracing.js';
-import { applySecurityMiddleware } from '../middleware/security.js';
-import { applyRateLimiting } from '../middleware/rateLimiter.js';
-import { apiAuthMiddleware } from '../middleware/authMiddleware.js';
-import { mountLazyRoutes } from '../routes/registry.js';
-import { env } from '../config/env.js';
-import { timingSafeEqualString } from '../utils/security.js';
-import { isServerlessRuntime } from '../config/runtime.js';
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+  type Express,
+} from "express";
+import cookieParser from "cookie-parser";
+import compression from "compression";
+import {
+  requestIdMiddleware,
+  httpLogger,
+  default as logger,
+} from "../middleware/logger.js";
+import { metricsMiddleware, getMetrics } from "../middleware/metrics.js";
+import { requestTimeout } from "../middleware/timeout.js";
+import { initializeTracing, tracingMiddleware } from "../middleware/tracing.js";
+import { applySecurityMiddleware } from "../middleware/security.js";
+import { applyRateLimiting } from "../middleware/rateLimiter.js";
+import { apiAuthMiddleware } from "../middleware/authMiddleware.js";
+import { mountLazyRoutes } from "../routes/registry.js";
+import { env } from "../config/env.js";
+import { timingSafeEqualString } from "../utils/security.js";
+import { isServerlessRuntime } from "../config/runtime.js";
 
 // Lazy-loaded middleware (only imported when needed)
 let agentGovernanceMiddleware:
-  | typeof import('../middleware/agentGovernance.js').agentGovernanceMiddleware
+  | typeof import("../middleware/agentGovernance.js").agentGovernanceMiddleware
   | null = null;
 let kimiOptimizationMiddleware:
-  | typeof import('../middleware/kimiMiddleware.js').kimiOptimizationMiddleware
+  | typeof import("../middleware/kimiMiddleware.js").kimiOptimizationMiddleware
   | null = null;
 let kimiPromptOptimizationMiddleware:
-  | typeof import('../middleware/kimiMiddleware.js').kimiPromptOptimizationMiddleware
+  | typeof import("../middleware/kimiMiddleware.js").kimiPromptOptimizationMiddleware
   | null = null;
 let usageTrackingMiddleware:
-  | typeof import('../middleware/usageTrackingMiddleware.js').usageTrackingMiddleware
+  | typeof import("../middleware/usageTrackingMiddleware.js").usageTrackingMiddleware
   | null = null;
 let usageLimitsMiddleware:
-  | typeof import('../middleware/usageLimitsMiddleware.js').usageLimitsMiddleware
+  | typeof import("../middleware/usageLimitsMiddleware.js").usageLimitsMiddleware
   | null = null;
-let createCsrfMiddleware: typeof import('../middleware/csrf.js').createCsrfMiddleware | null = null;
+let createCsrfMiddleware:
+  | typeof import("../middleware/csrf.js").createCsrfMiddleware
+  | null = null;
 
 /**
  * Creates the Express application with base middleware configured.
@@ -63,7 +74,7 @@ export function createApp(): Express {
   app.use(tracingMiddleware);
 
   // HTTP request logging - skip in serverless for reduced overhead
-  if (!isServerlessRuntime || process.env.LOG_REQUESTS === 'true') {
+  if (!isServerlessRuntime || process.env.LOG_REQUESTS === "true") {
     app.use(httpLogger);
   }
 
@@ -80,13 +91,13 @@ export function createApp(): Express {
   // Body parsing
   app.use(
     express.json({
-      limit: '100kb',
+      limit: "100kb",
       verify: (req: Request, _res: Response, buf: Buffer) => {
         (req as Request & { rawBody?: Buffer }).rawBody = buf;
       },
-    })
+    }),
   );
-  app.use(express.urlencoded({ extended: true, limit: '64kb' }));
+  app.use(express.urlencoded({ extended: true, limit: "64kb" }));
   app.use(cookieParser());
 
   // Request timeout
@@ -105,11 +116,13 @@ function createCompressionMiddleware() {
     threshold: 1024, // Only compress responses > 1KB
     filter: (req, res) => {
       // Don't compress if client doesn't support it
-      if (req.headers['x-no-compression']) {
+      if (req.headers["x-no-compression"]) {
         return false;
       }
       // Don't compress SSE streams
-      if (res.getHeader('Content-Type')?.toString().includes('text/event-stream')) {
+      if (
+        res.getHeader("Content-Type")?.toString().includes("text/event-stream")
+      ) {
         return false;
       }
       return compression.filter(req, res);
@@ -123,13 +136,14 @@ function createCompressionMiddleware() {
 async function loadHeavyMiddleware(): Promise<void> {
   if (agentGovernanceMiddleware) return; // Already loaded
 
-  const [govMod, kimiMod, usageTrackMod, usageLimitMod, csrfMod] = await Promise.all([
-    import('../middleware/agentGovernance.js'),
-    import('../middleware/kimiMiddleware.js'),
-    import('../middleware/usageTrackingMiddleware.js'),
-    import('../middleware/usageLimitsMiddleware.js'),
-    import('../middleware/csrf.js'),
-  ]);
+  const [govMod, kimiMod, usageTrackMod, usageLimitMod, csrfMod] =
+    await Promise.all([
+      import("../middleware/agentGovernance.js"),
+      import("../middleware/kimiMiddleware.js"),
+      import("../middleware/usageTrackingMiddleware.js"),
+      import("../middleware/usageLimitsMiddleware.js"),
+      import("../middleware/csrf.js"),
+    ]);
 
   agentGovernanceMiddleware = govMod.agentGovernanceMiddleware;
   kimiOptimizationMiddleware = kimiMod.kimiOptimizationMiddleware;
@@ -138,7 +152,7 @@ async function loadHeavyMiddleware(): Promise<void> {
   usageLimitsMiddleware = usageLimitMod.usageLimitsMiddleware;
   createCsrfMiddleware = csrfMod.createCsrfMiddleware;
 
-  logger.debug('Lazy-loaded heavy middleware modules');
+  logger.debug("Lazy-loaded heavy middleware modules");
 }
 
 /**
@@ -149,41 +163,48 @@ async function loadHeavyMiddleware(): Promise<void> {
 export async function applyAsyncMiddleware(app: Express): Promise<void> {
   // Rate limiting (uses Redis store when available)
   const rateLimitMw = await applyRateLimiting();
-  app.use('/api', rateLimitMw);
-  app.use('/auth', rateLimitMw);
+  app.use("/api", rateLimitMw);
+  app.use("/auth", rateLimitMw);
 
   // Load heavy middleware modules in parallel
   await loadHeavyMiddleware();
 
   // CSRF protection (production enabled by default, development opt-in)
   if (createCsrfMiddleware) {
-    app.use('/api', createCsrfMiddleware());
-    app.use('/auth', createCsrfMiddleware());
+    app.use("/api", createCsrfMiddleware());
+    app.use("/auth", createCsrfMiddleware());
   }
 
   // Agent governance (block/control AI agents)
   if (agentGovernanceMiddleware) {
-    app.use('/api', agentGovernanceMiddleware);
+    app.use("/api", agentGovernanceMiddleware);
   }
 
   // API authentication
-  app.use('/api', apiAuthMiddleware);
+  app.use("/api", apiAuthMiddleware);
 
   // Usage limits + tracking (after auth, before routes)
   if (usageLimitsMiddleware) {
-    app.use('/api', usageLimitsMiddleware);
+    app.use("/api", usageLimitsMiddleware);
   }
   if (usageTrackingMiddleware) {
-    app.use('/api', usageTrackingMiddleware);
+    app.use("/api", usageTrackingMiddleware);
   }
 
   // Kimi K2.5 optimization middleware - only for AI routes and when not in minimal mode
-  if (kimiOptimizationMiddleware && kimiPromptOptimizationMiddleware && !isServerlessRuntime) {
-    const kimiRoutes = ['/api/chat', '/api/ship', '/api/codegen', '/api/plan'];
+  if (
+    kimiOptimizationMiddleware &&
+    kimiPromptOptimizationMiddleware &&
+    !isServerlessRuntime
+  ) {
+    const kimiRoutes = ["/api/chat", "/api/ship", "/api/codegen", "/api/plan"];
     for (const route of kimiRoutes) {
-      app.use(route, kimiOptimizationMiddleware({ autoRoute: true, trackSavings: true }));
+      app.use(
+        route,
+        kimiOptimizationMiddleware({ autoRoute: true, trackSavings: true }),
+      );
     }
-    app.use('/api/chat', kimiPromptOptimizationMiddleware());
+    app.use("/api/chat", kimiPromptOptimizationMiddleware());
   }
 
   // Mount all API routes via lazy-loading registry
@@ -196,23 +217,27 @@ export async function applyAsyncMiddleware(app: Express): Promise<void> {
  */
 export function applyMetricsEndpoint(app: Express): void {
   app.get(
-    '/metrics',
+    "/metrics",
     (req: Request, res: Response, next: NextFunction) => {
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV === "production") {
         if (!env.METRICS_AUTH) {
-          res.status(403).json({ error: 'Metrics disabled in production without METRICS_AUTH' });
+          res
+            .status(403)
+            .json({
+              error: "Metrics disabled in production without METRICS_AUTH",
+            });
           return;
         }
         const auth = req.headers.authorization;
-        const expected = `Basic ${Buffer.from(env.METRICS_AUTH).toString('base64')}`;
+        const expected = `Basic ${Buffer.from(env.METRICS_AUTH).toString("base64")}`;
         if (!auth || !timingSafeEqualString(auth, expected)) {
-          res.status(401).json({ error: 'Unauthorized' });
+          res.status(401).json({ error: "Unauthorized" });
           return;
         }
       }
       next();
     },
-    getMetrics
+    getMetrics,
   );
 }
 
@@ -224,23 +249,27 @@ export function applyMetricsEndpoint(app: Express): void {
 export function applyErrorHandlers(app: Express): void {
   // 404 handler
   app.use((_req: Request, res: Response) => {
-    res.status(404).json({ error: 'Not found', type: 'not_found' });
+    res.status(404).json({ error: "Not found", type: "not_found" });
   });
 
   // Global error handler
   app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-    const correlationId = (req as Request & { correlationId?: string }).correlationId;
-    logger.error({ error: err.message, stack: err.stack, correlationId }, 'Unhandled error');
+    const correlationId = (req as Request & { correlationId?: string })
+      .correlationId;
+    logger.error(
+      { error: err.message, stack: err.stack, correlationId },
+      "Unhandled error",
+    );
 
-    if (err.message === 'Not allowed by CORS') {
-      res.status(403).json({ error: 'CORS error', type: 'forbidden' });
+    if (err.message === "Not allowed by CORS") {
+      res.status(403).json({ error: "CORS error", type: "forbidden" });
       return;
     }
 
     res.status(500).json({
-      error: 'Internal server error',
-      type: 'internal_error',
-      ...(process.env.NODE_ENV === 'development' && { details: err.message }),
+      error: "Internal server error",
+      type: "internal_error",
+      ...(process.env.NODE_ENV === "development" && { details: err.message }),
     });
   });
 }

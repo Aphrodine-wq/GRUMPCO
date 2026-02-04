@@ -5,11 +5,11 @@
  * POST /api/intent/optimize - Optimize raw intent for codegen or architecture mode
  */
 
-import { Router, type Request, type Response } from 'express';
-import logger from '../../middleware/logger.js';
-import { sendServerError } from '../../utils/errorResponse.js';
-import { optimizeIntentWithMetadata } from './intentOptimizer.js';
-import { type OptimizationMode, type OptimizationRequest } from './types.js';
+import { Router, type Request, type Response } from "express";
+import logger from "../../middleware/logger.js";
+import { sendServerError } from "../../utils/errorResponse.js";
+import { optimizeIntentWithMetadata } from "./intentOptimizer.js";
+import { type OptimizationMode, type OptimizationRequest } from "./types.js";
 
 const router = Router();
 
@@ -19,7 +19,7 @@ interface OptimizeBody {
   projectContext?: {
     name?: string;
     existingTechStack?: string[];
-    phase?: 'greenfield' | 'maintenance' | 'migration';
+    phase?: "greenfield" | "maintenance" | "migration";
     teamSize?: number;
     timeline?: string;
     budget?: string;
@@ -41,24 +41,30 @@ interface OptimizeBody {
  * Optimizes raw or parsed intent and returns a cleaned, design-ready version.
  */
 router.post(
-  '/optimize',
-  async (req: Request<Record<string, never>, object, OptimizeBody>, res: Response) => {
-    const log = logger.child({ requestId: req.headers['x-request-id'] || 'unknown' });
+  "/optimize",
+  async (
+    req: Request<Record<string, never>, object, OptimizeBody>,
+    res: Response,
+  ) => {
+    const log = logger.child({
+      requestId: req.headers["x-request-id"] || "unknown",
+    });
     const { intent, mode, projectContext, options } = req.body;
 
     // Validate required fields
-    if (!intent || typeof intent !== 'string') {
+    if (!intent || typeof intent !== "string") {
       res.status(400).json({
         error: 'Missing or invalid "intent" field - must be a non-empty string',
-        type: 'validation_error',
+        type: "validation_error",
       });
       return;
     }
 
-    if (!mode || !['codegen', 'architecture'].includes(mode)) {
+    if (!mode || !["codegen", "architecture"].includes(mode)) {
       res.status(400).json({
-        error: 'Missing or invalid "mode" field - must be "codegen" or "architecture"',
-        type: 'validation_error',
+        error:
+          'Missing or invalid "mode" field - must be "codegen" or "architecture"',
+        type: "validation_error",
       });
       return;
     }
@@ -66,16 +72,16 @@ router.post(
     // Validate intent length
     if (intent.trim().length === 0) {
       res.status(400).json({
-        error: 'Intent cannot be empty',
-        type: 'validation_error',
+        error: "Intent cannot be empty",
+        type: "validation_error",
       });
       return;
     }
 
     if (intent.length > 10000) {
       res.status(400).json({
-        error: 'Intent exceeds maximum length of 10000 characters',
-        type: 'validation_error',
+        error: "Intent exceeds maximum length of 10000 characters",
+        type: "validation_error",
       });
       return;
     }
@@ -87,7 +93,7 @@ router.post(
           mode,
           hasContext: !!projectContext,
         },
-        'Intent optimization API requested'
+        "Intent optimization API requested",
       );
 
       const request: OptimizationRequest = {
@@ -105,10 +111,13 @@ router.post(
       });
     } catch (e) {
       const err = e as Error;
-      log.error({ error: err.message, stack: err.stack }, 'Intent optimization failed');
+      log.error(
+        { error: err.message, stack: err.stack },
+        "Intent optimization failed",
+      );
       sendServerError(res, err);
     }
-  }
+  },
 );
 
 /**
@@ -118,39 +127,50 @@ router.post(
  *
  * Batch optimization endpoint for multiple intents
  */
-router.post('/optimize/batch', async (req: Request, res: Response) => {
-  const log = logger.child({ requestId: req.headers['x-request-id'] || 'unknown' });
+router.post("/optimize/batch", async (req: Request, res: Response) => {
+  const log = logger.child({
+    requestId: req.headers["x-request-id"] || "unknown",
+  });
   const { intents, projectContext } = req.body;
 
   if (!Array.isArray(intents) || intents.length === 0) {
     res.status(400).json({
       error: 'Missing or invalid "intents" field - must be a non-empty array',
-      type: 'validation_error',
+      type: "validation_error",
     });
     return;
   }
 
   if (intents.length > 10) {
     res.status(400).json({
-      error: 'Batch size exceeds maximum of 10 intents',
-      type: 'validation_error',
+      error: "Batch size exceeds maximum of 10 intents",
+      type: "validation_error",
     });
     return;
   }
 
   try {
-    log.info({ batchSize: intents.length }, 'Batch intent optimization requested');
+    log.info(
+      { batchSize: intents.length },
+      "Batch intent optimization requested",
+    );
 
     const results = await Promise.all(
-      intents.map(async (item: { intent: string; mode: OptimizationMode; options?: object }) => {
-        const request: OptimizationRequest = {
-          intent: item.intent.trim(),
-          mode: item.mode,
-          projectContext,
-          options: item.options,
-        };
-        return optimizeIntentWithMetadata(request);
-      })
+      intents.map(
+        async (item: {
+          intent: string;
+          mode: OptimizationMode;
+          options?: object;
+        }) => {
+          const request: OptimizationRequest = {
+            intent: item.intent.trim(),
+            mode: item.mode,
+            projectContext,
+            options: item.options,
+          };
+          return optimizeIntentWithMetadata(request);
+        },
+      ),
     );
 
     res.json({
@@ -159,7 +179,7 @@ router.post('/optimize/batch', async (req: Request, res: Response) => {
     });
   } catch (e) {
     const err = e as Error;
-    log.error({ error: err.message }, 'Batch intent optimization failed');
+    log.error({ error: err.message }, "Batch intent optimization failed");
     sendServerError(res, err);
   }
 });
@@ -168,13 +188,13 @@ router.post('/optimize/batch', async (req: Request, res: Response) => {
  * GET /api/intent/optimize/health
  * Health check for intent optimizer service
  */
-router.get('/optimize/health', (_req: Request, res: Response) => {
+router.get("/optimize/health", (_req: Request, res: Response) => {
   const nimConfigured = !!process.env.NVIDIA_NIM_API_KEY;
 
   res.json({
-    status: nimConfigured ? 'ok' : 'degraded',
-    service: 'intent-optimizer',
-    version: '1.0.0',
+    status: nimConfigured ? "ok" : "degraded",
+    service: "intent-optimizer",
+    version: "1.0.0",
     nimConfigured,
   });
 });
@@ -183,28 +203,32 @@ router.get('/optimize/health', (_req: Request, res: Response) => {
  * GET /api/intent/optimize/modes
  * Get available optimization modes and their descriptions
  */
-router.get('/optimize/modes', (_req: Request, res: Response) => {
+router.get("/optimize/modes", (_req: Request, res: Response) => {
   res.json({
     success: true,
     data: {
       modes: [
         {
-          id: 'codegen',
-          name: 'Code Generation',
+          id: "codegen",
+          name: "Code Generation",
           description:
-            'Optimize intent for code generation with focus on implementation details, code patterns, and specific libraries',
+            "Optimize intent for code generation with focus on implementation details, code patterns, and specific libraries",
           bestFor: [
-            'Generating production code',
-            'Creating test suites',
-            'Refactoring existing code',
+            "Generating production code",
+            "Creating test suites",
+            "Refactoring existing code",
           ],
         },
         {
-          id: 'architecture',
-          name: 'Architecture Review',
+          id: "architecture",
+          name: "Architecture Review",
           description:
-            'Optimize intent for architecture review with focus on high-level design, system structure, and scalability',
-          bestFor: ['System design reviews', 'Architecture planning', 'Component modeling'],
+            "Optimize intent for architecture review with focus on high-level design, system structure, and scalability",
+          bestFor: [
+            "System design reviews",
+            "Architecture planning",
+            "Component modeling",
+          ],
         },
       ],
     },

@@ -3,7 +3,7 @@
  * Supports multiple diagrams per response, templates, and narrow file save for diagrams.
  */
 
-import { getDesignTemplatesBlock } from '../design-templates.js';
+import { getDesignTemplatesBlock } from "../design-templates.js";
 
 export interface DesignPromptOptions {
   workspaceRoot?: string;

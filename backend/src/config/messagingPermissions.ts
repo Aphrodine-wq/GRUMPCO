@@ -3,11 +3,17 @@
  * Defines per-platform and per-user permissions for Free Agent via messaging
  */
 
-import type { FreeAgentCapabilityKey } from '../types/settings.js';
+import type { FreeAgentCapabilityKey } from "../types/settings.js";
 
 // ========== Types ==========
 
-export type MessagingPlatform = 'telegram' | 'discord' | 'twilio' | 'slack' | 'web' | 'electron';
+export type MessagingPlatform =
+  | "telegram"
+  | "discord"
+  | "twilio"
+  | "slack"
+  | "web"
+  | "electron";
 
 export interface PlatformPermissions {
   /** Whether Free Agent is enabled on this platform */
@@ -42,10 +48,13 @@ export interface UserMessagingPermissions {
  * Default permissions by platform
  * These are conservative defaults that can be overridden per-user
  */
-export const DEFAULT_PLATFORM_PERMISSIONS: Record<MessagingPlatform, PlatformPermissions> = {
+export const DEFAULT_PLATFORM_PERMISSIONS: Record<
+  MessagingPlatform,
+  PlatformPermissions
+> = {
   telegram: {
     freeAgentEnabled: false, // Disabled by default for security
-    allowedCapabilities: ['file', 'git', 'internet_search'], // Read-mostly
+    allowedCapabilities: ["file", "git", "internet_search"], // Read-mostly
     requireConfirmation: true,
     timeoutSeconds: 30,
     requireSandbox: true,
@@ -53,7 +62,7 @@ export const DEFAULT_PLATFORM_PERMISSIONS: Record<MessagingPlatform, PlatformPer
   },
   discord: {
     freeAgentEnabled: false,
-    allowedCapabilities: ['file', 'git', 'internet_search'],
+    allowedCapabilities: ["file", "git", "internet_search"],
     requireConfirmation: true,
     timeoutSeconds: 30,
     requireSandbox: true,
@@ -61,7 +70,7 @@ export const DEFAULT_PLATFORM_PERMISSIONS: Record<MessagingPlatform, PlatformPer
   },
   twilio: {
     freeAgentEnabled: false,
-    allowedCapabilities: ['file', 'git'], // More limited for SMS
+    allowedCapabilities: ["file", "git"], // More limited for SMS
     requireConfirmation: true,
     timeoutSeconds: 20, // Shorter for SMS
     requireSandbox: true,
@@ -69,7 +78,7 @@ export const DEFAULT_PLATFORM_PERMISSIONS: Record<MessagingPlatform, PlatformPer
   },
   slack: {
     freeAgentEnabled: false,
-    allowedCapabilities: ['file', 'git', 'internet_search'],
+    allowedCapabilities: ["file", "git", "internet_search"],
     requireConfirmation: true,
     timeoutSeconds: 30,
     requireSandbox: true,
@@ -78,17 +87,17 @@ export const DEFAULT_PLATFORM_PERMISSIONS: Record<MessagingPlatform, PlatformPer
   web: {
     freeAgentEnabled: true, // Enabled for web by default
     allowedCapabilities: [
-      'file',
-      'git',
-      'bash',
-      'npm',
-      'docker',
-      'webhooks',
-      'heartbeats',
-      'internet_search',
-      'database',
-      'api_call',
-      'monitoring',
+      "file",
+      "git",
+      "bash",
+      "npm",
+      "docker",
+      "webhooks",
+      "heartbeats",
+      "internet_search",
+      "database",
+      "api_call",
+      "monitoring",
     ],
     requireConfirmation: false,
     timeoutSeconds: 60,
@@ -98,19 +107,19 @@ export const DEFAULT_PLATFORM_PERMISSIONS: Record<MessagingPlatform, PlatformPer
   electron: {
     freeAgentEnabled: true,
     allowedCapabilities: [
-      'file',
-      'git',
-      'bash',
-      'npm',
-      'docker',
-      'webhooks',
-      'heartbeats',
-      'internet_search',
-      'database',
-      'api_call',
-      'monitoring',
-      'cloud',
-      'cicd', // Premium features available
+      "file",
+      "git",
+      "bash",
+      "npm",
+      "docker",
+      "webhooks",
+      "heartbeats",
+      "internet_search",
+      "database",
+      "api_call",
+      "monitoring",
+      "cloud",
+      "cicd", // Premium features available
     ],
     requireConfirmation: false,
     timeoutSeconds: 60,
@@ -123,24 +132,24 @@ export const DEFAULT_PLATFORM_PERMISSIONS: Record<MessagingPlatform, PlatformPer
  * Read-only capabilities that don't require confirmation
  */
 export const READ_ONLY_CAPABILITIES: FreeAgentCapabilityKey[] = [
-  'file', // file_read, list_directory, codebase_search
-  'git', // git_status, git_diff, git_log
-  'internet_search',
-  'monitoring', // metrics_query, alert_list, health_check
+  "file", // file_read, list_directory, codebase_search
+  "git", // git_status, git_diff, git_log
+  "internet_search",
+  "monitoring", // metrics_query, alert_list, health_check
 ];
 
 /**
  * Write capabilities that should require confirmation when requireConfirmation is true
  */
 export const WRITE_CAPABILITIES: FreeAgentCapabilityKey[] = [
-  'bash',
-  'npm',
-  'docker',
-  'cloud',
-  'cicd',
-  'webhooks',
-  'database',
-  'api_call',
+  "bash",
+  "npm",
+  "docker",
+  "cloud",
+  "cicd",
+  "webhooks",
+  "database",
+  "api_call",
 ];
 
 // ========== Permission Resolution ==========
@@ -150,7 +159,7 @@ export const WRITE_CAPABILITIES: FreeAgentCapabilityKey[] = [
  */
 export function getEffectivePermissions(
   platform: MessagingPlatform,
-  userPermissions?: UserMessagingPermissions
+  userPermissions?: UserMessagingPermissions,
 ): PlatformPermissions {
   const defaults = DEFAULT_PLATFORM_PERMISSIONS[platform];
 
@@ -168,12 +177,14 @@ export function getEffectivePermissions(
       defaults.freeAgentEnabled,
     allowedCapabilities: intersectCapabilities(
       userPermissions.capabilities,
-      platformOverrides.allowedCapabilities ?? defaults.allowedCapabilities
+      platformOverrides.allowedCapabilities ?? defaults.allowedCapabilities,
     ),
-    requireConfirmation: platformOverrides.requireConfirmation ?? defaults.requireConfirmation,
+    requireConfirmation:
+      platformOverrides.requireConfirmation ?? defaults.requireConfirmation,
     timeoutSeconds: platformOverrides.timeoutSeconds ?? defaults.timeoutSeconds,
     requireSandbox: platformOverrides.requireSandbox ?? defaults.requireSandbox,
-    rateLimitPerHour: platformOverrides.rateLimitPerHour ?? defaults.rateLimitPerHour,
+    rateLimitPerHour:
+      platformOverrides.rateLimitPerHour ?? defaults.rateLimitPerHour,
   };
 }
 
@@ -182,7 +193,7 @@ export function getEffectivePermissions(
  */
 function intersectCapabilities(
   userCaps: FreeAgentCapabilityKey[],
-  platformCaps: FreeAgentCapabilityKey[]
+  platformCaps: FreeAgentCapabilityKey[],
 ): FreeAgentCapabilityKey[] {
   const platformSet = new Set(platformCaps);
   return userCaps.filter((cap) => platformSet.has(cap));
@@ -194,10 +205,13 @@ function intersectCapabilities(
 export function isCapabilityAllowed(
   platform: MessagingPlatform,
   capability: FreeAgentCapabilityKey,
-  userPermissions?: UserMessagingPermissions
+  userPermissions?: UserMessagingPermissions,
 ): boolean {
   const effective = getEffectivePermissions(platform, userPermissions);
-  return effective.freeAgentEnabled && effective.allowedCapabilities.includes(capability);
+  return (
+    effective.freeAgentEnabled &&
+    effective.allowedCapabilities.includes(capability)
+  );
 }
 
 /**
@@ -206,7 +220,7 @@ export function isCapabilityAllowed(
 export function requiresConfirmation(
   platform: MessagingPlatform,
   capability: FreeAgentCapabilityKey,
-  userPermissions?: UserMessagingPermissions
+  userPermissions?: UserMessagingPermissions,
 ): boolean {
   const effective = getEffectivePermissions(platform, userPermissions);
 
@@ -233,7 +247,7 @@ const rateLimitCounters = new Map<string, { count: number; resetAt: number }>();
 export function checkRateLimit(
   platform: MessagingPlatform,
   userId: string,
-  userPermissions?: UserMessagingPermissions
+  userPermissions?: UserMessagingPermissions,
 ): { allowed: boolean; remaining: number; resetIn: number } {
   const effective = getEffectivePermissions(platform, userPermissions);
   const key = `${platform}:${userId}`;
@@ -281,7 +295,7 @@ export function createConfirmationRequest(
   userId: string,
   capability: FreeAgentCapabilityKey,
   tool: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): { confirmationId: string; message: string } {
   const id = `confirm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
@@ -314,7 +328,10 @@ export function createConfirmationRequest(
 /**
  * Confirm a pending request
  */
-export function confirmRequest(confirmationId: string, userId: string): PendingConfirmation | null {
+export function confirmRequest(
+  confirmationId: string,
+  userId: string,
+): PendingConfirmation | null {
   const conf = pendingConfirmations.get(confirmationId);
 
   if (!conf) return null;
@@ -346,14 +363,18 @@ const userPermissionsStore = new Map<string, UserMessagingPermissions>();
 /**
  * Get user permissions (for admin dashboard)
  */
-export function getUserPermissions(userId: string): UserMessagingPermissions | null {
+export function getUserPermissions(
+  userId: string,
+): UserMessagingPermissions | null {
   return userPermissionsStore.get(userId) || null;
 }
 
 /**
  * Set user permissions (for admin dashboard)
  */
-export function setUserPermissions(permissions: UserMessagingPermissions): void {
+export function setUserPermissions(
+  permissions: UserMessagingPermissions,
+): void {
   userPermissionsStore.set(permissions.userId, permissions);
 }
 
@@ -363,7 +384,7 @@ export function setUserPermissions(permissions: UserMessagingPermissions): void 
 export function updatePlatformPermissions(
   userId: string,
   platform: MessagingPlatform,
-  updates: Partial<PlatformPermissions>
+  updates: Partial<PlatformPermissions>,
 ): void {
   let perms = userPermissionsStore.get(userId);
   if (!perms) {

@@ -9,27 +9,31 @@
  * - Automatic tier promotion on cache hits
  */
 
-import { LRUCache } from 'lru-cache';
-import { getRedisClient, isRedisConnected, createRedisClient } from './redis.js';
-import { promises as fs } from 'fs';
-import { join } from 'path';
-import { createHash } from 'crypto';
-import { gzip, gunzip } from 'zlib';
-import { promisify } from 'util';
-import logger from '../middleware/logger.js';
-import { recordTieredCacheAccess } from '../middleware/metrics.js';
-import { safeCleanup } from '../utils/safeAsync.js';
-import type { Redis } from 'ioredis';
+import { LRUCache } from "lru-cache";
+import {
+  getRedisClient,
+  isRedisConnected,
+  createRedisClient,
+} from "./redis.js";
+import { promises as fs } from "fs";
+import { join } from "path";
+import { createHash } from "crypto";
+import { gzip, gunzip } from "zlib";
+import { promisify } from "util";
+import logger from "../middleware/logger.js";
+import { recordTieredCacheAccess } from "../middleware/metrics.js";
+import { safeCleanup } from "../utils/safeAsync.js";
+import type { Redis } from "ioredis";
 
 const gzipAsync = promisify(gzip);
 const gunzipAsync = promisify(gunzip);
 
 // Redis pub/sub channel for cache invalidation
-const CACHE_INVALIDATION_CHANNEL = 'cache:invalidation';
+const CACHE_INVALIDATION_CHANNEL = "cache:invalidation";
 
 // Message types for pub/sub
 interface InvalidationMessage {
-  type: 'delete' | 'clear_namespace' | 'clear_all';
+  type: "delete" | "clear_namespace" | "clear_all";
   namespace?: string;
   key?: string;
   instanceId: string;
@@ -66,7 +70,10 @@ export interface CacheStats {
   totalMisses: number;
   hitRate: number;
   instanceId: string;
-  byNamespace?: Record<string, { hits: number; misses: number; hitRate: number }>;
+  byNamespace?: Record<
+    string,
+    { hits: number; misses: number; hitRate: number }
+  >;
 }
 
 export class TieredCache {
@@ -89,8 +96,11 @@ export class TieredCache {
     l3: { hits: 0, misses: 0 },
     invalidations: { sent: 0, received: 0 },
   };
-  private statsByNamespace = new Map<string, { hits: number; misses: number }>();
-  private entryMetadata = new Map<string, Omit<CacheEntry, 'data'>>();
+  private statsByNamespace = new Map<
+    string,
+    { hits: number; misses: number }
+  >();
+  private entryMetadata = new Map<string, Omit<CacheEntry, "data">>();
 
   private recordNamespaceAccess(namespace: string, hit: boolean): void {
     let entry = this.statsByNamespace.get(namespace);
@@ -123,7 +133,7 @@ export class TieredCache {
 
     this.l2TTL = options.l2TTL || 3600; // 1 hour (Redis uses seconds)
     this.l3TTL = options.l3TTL || 86400; // 24 hours
-    this.l3Path = options.l3Path || join(process.cwd(), 'data', 'cache');
+    this.l3Path = options.l3Path || join(process.cwd(), "data", "cache");
     this.compression = options.compression !== false;
     this.compressionThreshold = options.compressionThreshold || 1024; // 1KB
 
@@ -142,7 +152,7 @@ export class TieredCache {
         instanceId: this.instanceId,
         pubsubEnabled: this.pubsubEnabled,
       },
-      'Tiered cache initialized'
+      "Tiered cache initialized",
     );
   }
 
@@ -152,7 +162,7 @@ export class TieredCache {
   private async initPubSub(): Promise<void> {
     try {
       if (!(await isRedisConnected())) {
-        logger.warn('Redis not connected, pub/sub disabled');
+        logger.warn("Redis not connected, pub/sub disabled");
         return;
       }
 
@@ -160,7 +170,7 @@ export class TieredCache {
       this.subscriber = createRedisClient();
 
       if (!this.subscriber) {
-        logger.warn('Could not create Redis subscriber');
+        logger.warn("Could not create Redis subscriber");
         return;
       }
 
@@ -168,7 +178,7 @@ export class TieredCache {
       await this.subscriber.subscribe(CACHE_INVALIDATION_CHANNEL);
 
       // Handle incoming invalidation messages
-      this.subscriber.on('message', (channel: string, message: string) => {
+      this.subscriber.on("message", (channel: string, message: string) => {
         if (channel !== CACHE_INVALIDATION_CHANNEL) return;
 
         try {
@@ -181,16 +191,19 @@ export class TieredCache {
         } catch (error) {
           logger.warn(
             { error: error instanceof Error ? error.message : String(error) },
-            'Failed to parse invalidation message'
+            "Failed to parse invalidation message",
           );
         }
       });
 
-      logger.info({ channel: CACHE_INVALIDATION_CHANNEL }, 'Cache pub/sub initialized');
+      logger.info(
+        { channel: CACHE_INVALIDATION_CHANNEL },
+        "Cache pub/sub initialized",
+      );
     } catch (error) {
       logger.error(
         { error: error instanceof Error ? error.message : String(error) },
-        'Failed to initialize cache pub/sub'
+        "Failed to initialize cache pub/sub",
       );
     }
   }
@@ -202,16 +215,19 @@ export class TieredCache {
     this.stats.invalidations.received++;
 
     switch (msg.type) {
-      case 'delete':
+      case "delete":
         if (msg.namespace && msg.key) {
           const cacheKey = this.getCacheKey(msg.namespace, msg.key);
           this.l1Cache.delete(cacheKey);
           this.entryMetadata.delete(cacheKey);
-          logger.debug({ namespace: msg.namespace, key: msg.key }, 'L1 invalidated via pub/sub');
+          logger.debug(
+            { namespace: msg.namespace, key: msg.key },
+            "L1 invalidated via pub/sub",
+          );
         }
         break;
 
-      case 'clear_namespace':
+      case "clear_namespace":
         if (msg.namespace) {
           for (const key of this.l1Cache.keys()) {
             if (key.startsWith(`${msg.namespace}:`)) {
@@ -219,14 +235,17 @@ export class TieredCache {
               this.entryMetadata.delete(key);
             }
           }
-          logger.debug({ namespace: msg.namespace }, 'L1 namespace cleared via pub/sub');
+          logger.debug(
+            { namespace: msg.namespace },
+            "L1 namespace cleared via pub/sub",
+          );
         }
         break;
 
-      case 'clear_all':
+      case "clear_all":
         this.l1Cache.clear();
         this.entryMetadata.clear();
-        logger.debug('L1 cache cleared via pub/sub');
+        logger.debug("L1 cache cleared via pub/sub");
         break;
     }
   }
@@ -235,7 +254,7 @@ export class TieredCache {
    * Publish invalidation message to other instances
    */
   private async publishInvalidation(
-    msg: Omit<InvalidationMessage, 'instanceId' | 'timestamp'>
+    msg: Omit<InvalidationMessage, "instanceId" | "timestamp">,
   ): Promise<void> {
     if (!this.pubsubEnabled) return;
 
@@ -254,12 +273,12 @@ export class TieredCache {
 
       logger.debug(
         { type: msg.type, namespace: msg.namespace, key: msg.key },
-        'Published cache invalidation'
+        "Published cache invalidation",
       );
     } catch (error) {
       logger.warn(
         { error: error instanceof Error ? error.message : String(error) },
-        'Failed to publish cache invalidation'
+        "Failed to publish cache invalidation",
       );
     }
   }
@@ -272,7 +291,7 @@ export class TieredCache {
       await this.subscriber.unsubscribe(CACHE_INVALIDATION_CHANNEL);
       await this.subscriber.quit();
       this.subscriber = null;
-      logger.info('Cache pub/sub shutdown');
+      logger.info("Cache pub/sub shutdown");
     }
   }
 
@@ -281,8 +300,11 @@ export class TieredCache {
       await fs.mkdir(this.l3Path, { recursive: true });
     } catch (error) {
       logger.error(
-        { error: error instanceof Error ? error.message : String(error), path: this.l3Path },
-        'Failed to create cache directory'
+        {
+          error: error instanceof Error ? error.message : String(error),
+          path: this.l3Path,
+        },
+        "Failed to create cache directory",
       );
     }
   }
@@ -292,7 +314,7 @@ export class TieredCache {
   }
 
   private getL3FilePath(cacheKey: string): string {
-    const hash = createHash('sha256').update(cacheKey).digest('hex');
+    const hash = createHash("sha256").update(cacheKey).digest("hex");
     return join(this.l3Path, `${hash}.cache`);
   }
 
@@ -303,7 +325,10 @@ export class TieredCache {
     return await gzipAsync(data);
   }
 
-  private async decompressData(data: Buffer, compressed: boolean): Promise<Buffer> {
+  private async decompressData(
+    data: Buffer,
+    compressed: boolean,
+  ): Promise<Buffer> {
     if (!compressed) {
       return data;
     }
@@ -314,7 +339,7 @@ export class TieredCache {
    * Calculate eviction score for cost-aware eviction
    * Higher score = more valuable to keep
    */
-  private calculateEvictionScore(metadata: Omit<CacheEntry, 'data'>): number {
+  private calculateEvictionScore(metadata: Omit<CacheEntry, "data">): number {
     const now = Date.now();
     const age = now - metadata.lastAccess;
     const ageSeconds = age / 1000;
@@ -322,7 +347,8 @@ export class TieredCache {
     // Score = (cost * accessCount) / (size * timeSinceAccess)
     // Keep high-cost, frequently-accessed, recently-used items
     const score =
-      (metadata.cost * metadata.accessCount) / (metadata.size * Math.max(1, ageSeconds));
+      (metadata.cost * metadata.accessCount) /
+      (metadata.size * Math.max(1, ageSeconds));
 
     return score;
   }
@@ -349,7 +375,10 @@ export class TieredCache {
 
     if (keyToEvict) {
       this.l1Cache.delete(keyToEvict);
-      logger.debug({ key: keyToEvict, score: lowestScore }, 'Cost-aware eviction');
+      logger.debug(
+        { key: keyToEvict, score: lowestScore },
+        "Cost-aware eviction",
+      );
     }
   }
 
@@ -364,7 +393,7 @@ export class TieredCache {
     if (l1Data) {
       this.stats.l1.hits++;
       this.recordNamespaceAccess(namespace, true);
-      recordTieredCacheAccess('L1', true, namespace);
+      recordTieredCacheAccess("L1", true, namespace);
 
       // Update access metadata
       if (this.costAwareEviction) {
@@ -375,11 +404,11 @@ export class TieredCache {
         }
       }
 
-      logger.debug({ namespace, key, layer: 'L1' }, 'Cache hit');
-      return JSON.parse(l1Data.toString('utf-8')) as T;
+      logger.debug({ namespace, key, layer: "L1" }, "Cache hit");
+      return JSON.parse(l1Data.toString("utf-8")) as T;
     }
     this.stats.l1.misses++;
-    recordTieredCacheAccess('L1', false, namespace);
+    recordTieredCacheAccess("L1", false, namespace);
 
     // L2: Redis cache
     if (await isRedisConnected()) {
@@ -390,47 +419,59 @@ export class TieredCache {
         if (l2Data) {
           this.stats.l2.hits++;
           this.recordNamespaceAccess(namespace, true);
-          recordTieredCacheAccess('L2', true, namespace);
-          logger.debug({ namespace, key, layer: 'L2' }, 'Cache hit');
+          recordTieredCacheAccess("L2", true, namespace);
+          logger.debug({ namespace, key, layer: "L2" }, "Cache hit");
 
           // Promote to L1
           this.l1Cache.set(cacheKey, l2Data);
 
-          const decompressed = await this.decompressData(l2Data, this.compression);
-          return JSON.parse(decompressed.toString('utf-8')) as T;
+          const decompressed = await this.decompressData(
+            l2Data,
+            this.compression,
+          );
+          return JSON.parse(decompressed.toString("utf-8")) as T;
         }
       } catch (error) {
         logger.warn(
-          { error: error instanceof Error ? error.message : String(error), namespace, key },
-          'L2 cache read failed'
+          {
+            error: error instanceof Error ? error.message : String(error),
+            namespace,
+            key,
+          },
+          "L2 cache read failed",
         );
       }
     }
     this.stats.l2.misses++;
-    recordTieredCacheAccess('L2', false, namespace);
+    recordTieredCacheAccess("L2", false, namespace);
 
     // L3: Disk cache
     try {
       const l3Path = this.getL3FilePath(cacheKey);
       const l3Data = await fs.readFile(l3Path);
-      const metadata = JSON.parse(l3Data.slice(0, 256).toString('utf-8').trim());
+      const metadata = JSON.parse(
+        l3Data.slice(0, 256).toString("utf-8").trim(),
+      );
 
       // Check expiration
       if (metadata.expiresAt && Date.now() > metadata.expiresAt) {
-        safeCleanup(() => fs.unlink(l3Path), 'Remove expired L3 cache file');
+        safeCleanup(() => fs.unlink(l3Path), "Remove expired L3 cache file");
         this.stats.l3.misses++;
         this.recordNamespaceAccess(namespace, false);
-        recordTieredCacheAccess('L3', false, namespace);
+        recordTieredCacheAccess("L3", false, namespace);
         return null;
       }
 
       this.stats.l3.hits++;
       this.recordNamespaceAccess(namespace, true);
-      recordTieredCacheAccess('L3', true, namespace);
-      logger.debug({ namespace, key, layer: 'L3' }, 'Cache hit');
+      recordTieredCacheAccess("L3", true, namespace);
+      logger.debug({ namespace, key, layer: "L3" }, "Cache hit");
 
       const dataBuffer = l3Data.slice(256);
-      const decompressed = await this.decompressData(dataBuffer, metadata.compressed);
+      const decompressed = await this.decompressData(
+        dataBuffer,
+        metadata.compressed,
+      );
 
       // Promote to L2 and L1
       this.l1Cache.set(cacheKey, decompressed);
@@ -439,11 +480,11 @@ export class TieredCache {
         await redis.setex(cacheKey, this.l2TTL, decompressed);
       }
 
-      return JSON.parse(decompressed.toString('utf-8')) as T;
+      return JSON.parse(decompressed.toString("utf-8")) as T;
     } catch (_error) {
       // File doesn't exist or read error
       this.stats.l3.misses++;
-      recordTieredCacheAccess('L3', false, namespace);
+      recordTieredCacheAccess("L3", false, namespace);
     }
 
     this.recordNamespaceAccess(namespace, false);
@@ -458,11 +499,11 @@ export class TieredCache {
     key: string,
     value: T,
     ttl?: number,
-    computationCost?: number
+    computationCost?: number,
   ): Promise<void> {
     const cacheKey = this.getCacheKey(namespace, key);
     const jsonData = JSON.stringify(value);
-    const buffer = Buffer.from(jsonData, 'utf-8');
+    const buffer = Buffer.from(jsonData, "utf-8");
     const compressed = await this.compressData(buffer);
 
     // Perform cost-aware eviction if needed
@@ -489,8 +530,12 @@ export class TieredCache {
         await redis.setex(cacheKey, ttl || this.l2TTL, compressed);
       } catch (error) {
         logger.warn(
-          { error: error instanceof Error ? error.message : String(error), namespace, key },
-          'L2 cache write failed'
+          {
+            error: error instanceof Error ? error.message : String(error),
+            namespace,
+            key,
+          },
+          "L2 cache write failed",
         );
       }
     }
@@ -508,14 +553,18 @@ export class TieredCache {
 
       // Write metadata (first 256 bytes) + data
       const metadataBuffer = Buffer.alloc(256);
-      metadataBuffer.write(JSON.stringify(metadata), 'utf-8');
+      metadataBuffer.write(JSON.stringify(metadata), "utf-8");
       const fileData = Buffer.concat([metadataBuffer, compressed]);
 
       await fs.writeFile(l3Path, fileData);
     } catch (error) {
       logger.warn(
-        { error: error instanceof Error ? error.message : String(error), namespace, key },
-        'L3 cache write failed'
+        {
+          error: error instanceof Error ? error.message : String(error),
+          namespace,
+          key,
+        },
+        "L3 cache write failed",
       );
     }
   }
@@ -538,7 +587,7 @@ export class TieredCache {
       } catch (error) {
         logger.warn(
           { error: error instanceof Error ? error.message : String(error) },
-          'L2 cache delete failed'
+          "L2 cache delete failed",
         );
       }
     }
@@ -552,7 +601,7 @@ export class TieredCache {
     }
 
     // Publish invalidation to other instances
-    await this.publishInvalidation({ type: 'delete', namespace, key });
+    await this.publishInvalidation({ type: "delete", namespace, key });
   }
 
   /**
@@ -578,7 +627,7 @@ export class TieredCache {
       } catch (error) {
         logger.warn(
           { error: error instanceof Error ? error.message : String(error) },
-          'L2 namespace clear failed'
+          "L2 namespace clear failed",
         );
       }
     }
@@ -586,11 +635,11 @@ export class TieredCache {
     // L3: Clear all files (no efficient way to filter by namespace)
     logger.info(
       { namespace },
-      'L3 cache namespace clear not implemented (would require full scan)'
+      "L3 cache namespace clear not implemented (would require full scan)",
     );
 
     // Publish invalidation to other instances
-    await this.publishInvalidation({ type: 'clear_namespace', namespace });
+    await this.publishInvalidation({ type: "clear_namespace", namespace });
   }
 
   /**
@@ -606,29 +655,35 @@ export class TieredCache {
       try {
         const redis = getRedisClient();
         // Only flush keys with our prefix pattern, not entire Redis
-        const keys = await redis.keys('*:*');
+        const keys = await redis.keys("*:*");
         if (keys.length > 0) {
           await redis.del(...keys);
         }
       } catch (error) {
         logger.warn(
           { error: error instanceof Error ? error.message : String(error) },
-          'L2 cache clear failed'
+          "L2 cache clear failed",
         );
       }
     }
 
     // Publish invalidation to other instances
-    await this.publishInvalidation({ type: 'clear_all' });
+    await this.publishInvalidation({ type: "clear_all" });
 
-    logger.info('All cache layers cleared');
+    logger.info("All cache layers cleared");
   }
 
   /**
    * Get cache statistics by namespace (hits, misses, hitRate per namespace).
    */
-  public getStatsByNamespace(): Record<string, { hits: number; misses: number; hitRate: number }> {
-    const out: Record<string, { hits: number; misses: number; hitRate: number }> = {};
+  public getStatsByNamespace(): Record<
+    string,
+    { hits: number; misses: number; hitRate: number }
+  > {
+    const out: Record<
+      string,
+      { hits: number; misses: number; hitRate: number }
+    > = {};
     for (const [ns, entry] of this.statsByNamespace) {
       const total = entry.hits + entry.misses;
       out[ns] = {
@@ -644,8 +699,10 @@ export class TieredCache {
    * Get cache statistics
    */
   public getStats(): CacheStats {
-    const totalHits = this.stats.l1.hits + this.stats.l2.hits + this.stats.l3.hits;
-    const totalMisses = this.stats.l1.misses + this.stats.l2.misses + this.stats.l3.misses;
+    const totalHits =
+      this.stats.l1.hits + this.stats.l2.hits + this.stats.l3.hits;
+    const totalMisses =
+      this.stats.l1.misses + this.stats.l2.misses + this.stats.l3.misses;
     const total = totalHits + totalMisses;
 
     return {
@@ -678,16 +735,19 @@ export class TieredCache {
    * Warm cache with common entries
    */
   public async warmCache(
-    entries: Array<{ namespace: string; key: string; value: unknown }>
+    entries: Array<{ namespace: string; key: string; value: unknown }>,
   ): Promise<void> {
-    logger.info({ count: entries.length }, 'Warming cache');
+    logger.info({ count: entries.length }, "Warming cache");
 
     await Promise.all(
       entries.map(({ namespace, key, value }) =>
         this.set(namespace, key, value).catch((error) => {
-          logger.warn({ error: error.message, namespace, key }, 'Failed to warm cache entry');
-        })
-      )
+          logger.warn(
+            { error: error.message, namespace, key },
+            "Failed to warm cache entry",
+          );
+        }),
+      ),
     );
   }
 
@@ -705,7 +765,9 @@ export class TieredCache {
           try {
             const filePath = join(this.l3Path, file);
             const data = await fs.readFile(filePath);
-            const metadata = JSON.parse(data.slice(0, 256).toString('utf-8').trim());
+            const metadata = JSON.parse(
+              data.slice(0, 256).toString("utf-8").trim(),
+            );
 
             if (metadata.expiresAt && Date.now() > metadata.expiresAt) {
               await fs.unlink(filePath);
@@ -714,16 +776,16 @@ export class TieredCache {
           } catch (_error) {
             // Ignore errors for individual files
           }
-        })
+        }),
       );
 
       if (cleaned > 0) {
-        logger.info({ cleaned }, 'Cleaned up expired cache files');
+        logger.info({ cleaned }, "Cleaned up expired cache files");
       }
     } catch (error) {
       logger.error(
         { error: error instanceof Error ? error.message : String(error) },
-        'Failed to cleanup expired cache'
+        "Failed to cleanup expired cache",
       );
     }
 
@@ -762,7 +824,7 @@ export async function withTieredCache<T>(
   namespace: string,
   key: string,
   fn: () => Promise<T>,
-  ttl?: number
+  ttl?: number,
 ): Promise<T> {
   const cache = getTieredCache();
 
@@ -777,7 +839,10 @@ export async function withTieredCache<T>(
 
   // Store in cache (fire and forget)
   cache.set(namespace, key, result, ttl).catch((error) => {
-    logger.warn({ error: error.message, namespace, key }, 'Failed to cache result');
+    logger.warn(
+      { error: error.message, namespace, key },
+      "Failed to cache result",
+    );
   });
 
   return result;

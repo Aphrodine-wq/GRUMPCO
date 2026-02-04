@@ -3,9 +3,9 @@
  * Monitors system performance and reports metrics
  */
 
-import { cpus, freemem, totalmem } from 'os';
-import { performance } from 'perf_hooks';
-import logger from '../middleware/logger.js';
+import { cpus, freemem, totalmem } from "os";
+import { performance } from "perf_hooks";
+import logger from "../middleware/logger.js";
 
 export interface PerformanceSnapshot {
   timestamp: number;
@@ -46,7 +46,7 @@ export class PerformanceMonitor {
       this.collectMetrics();
     }, intervalMs);
 
-    logger.info({ intervalMs }, 'Performance monitoring started');
+    logger.info({ intervalMs }, "Performance monitoring started");
   }
 
   /**
@@ -57,7 +57,7 @@ export class PerformanceMonitor {
       clearInterval(this.monitorInterval);
       this.monitorInterval = null;
     }
-    logger.info('Performance monitoring stopped');
+    logger.info("Performance monitoring stopped");
   }
 
   /**
@@ -140,7 +140,7 @@ export class PerformanceMonitor {
         memory: snapshot.memory.usagePercent.toFixed(2),
         eventLoopLag: snapshot.eventLoop.lag.toFixed(2),
       },
-      'Performance snapshot'
+      "Performance snapshot",
     );
 
     // Report to Prometheus metrics
@@ -153,7 +153,9 @@ export class PerformanceMonitor {
   public isHighLoad(): boolean {
     const snapshot = this.getSnapshot();
     return (
-      snapshot.cpu.usage > 80 || snapshot.memory.usagePercent > 85 || snapshot.eventLoop.lag > 100
+      snapshot.cpu.usage > 80 ||
+      snapshot.memory.usagePercent > 85 ||
+      snapshot.eventLoop.lag > 100
     );
   }
 
@@ -166,25 +168,25 @@ export class PerformanceMonitor {
 
     if (snapshot.cpu.usage > 80) {
       recommendations.push(
-        'High CPU usage detected. Consider scaling horizontally or optimizing CPU-bound operations.'
+        "High CPU usage detected. Consider scaling horizontally or optimizing CPU-bound operations.",
       );
     }
 
     if (snapshot.memory.usagePercent > 85) {
       recommendations.push(
-        'High memory usage detected. Consider increasing memory allocation or optimizing memory usage.'
+        "High memory usage detected. Consider increasing memory allocation or optimizing memory usage.",
       );
     }
 
     if (snapshot.eventLoop.lag > 100) {
       recommendations.push(
-        'Event loop lag detected. Consider offloading CPU-intensive tasks to worker threads.'
+        "Event loop lag detected. Consider offloading CPU-intensive tasks to worker threads.",
       );
     }
 
     if (snapshot.cpu.cores < 4) {
       recommendations.push(
-        'Limited CPU cores available. Consider upgrading to a larger instance for better parallel processing.'
+        "Limited CPU cores available. Consider upgrading to a larger instance for better parallel processing.",
       );
     }
 

@@ -9,18 +9,18 @@
  * - Market Trends: relevant tech updates
  */
 
-import logger from '../middleware/logger.js';
-import { getDatabase as _getDatabase } from '../db/database.js';
-import { writeAuditLog } from './auditLogService.js';
-import { queueAgentTask, isAgentRunning } from './persistentAgentService.js';
+import logger from "../middleware/logger.js";
+import { getDatabase as _getDatabase } from "../db/database.js";
+import { writeAuditLog } from "./auditLogService.js";
+import { queueAgentTask, isAgentRunning } from "./persistentAgentService.js";
 
 // ========== Types ==========
 
 export interface AnticipatoryInsight {
   id: string;
   userId: string;
-  category: 'code_issue' | 'project_health' | 'user_pattern' | 'market_trend';
-  severity: 'info' | 'warning' | 'critical';
+  category: "code_issue" | "project_health" | "user_pattern" | "market_trend";
+  severity: "info" | "warning" | "critical";
   title: string;
   description: string;
   suggestedAction?: string;
@@ -41,7 +41,7 @@ export interface ProjectHealthScore {
 
 export interface CodeScanResult {
   vulnerabilities: Array<{
-    severity: 'low' | 'medium' | 'high' | 'critical';
+    severity: "low" | "medium" | "high" | "critical";
     file: string;
     line?: number;
     message: string;
@@ -80,9 +80,9 @@ const userPatternHistory = new Map<string, string[]>();
  */
 export async function scanForCodeIssues(
   userId: string,
-  workspacePath: string
+  workspacePath: string,
 ): Promise<CodeScanResult> {
-  logger.info({ userId, workspacePath }, 'Starting code issue scan');
+  logger.info({ userId, workspacePath }, "Starting code issue scan");
 
   // In a real implementation, this would:
   // 1. Run npm audit / yarn audit for deps
@@ -103,11 +103,13 @@ export async function scanForCodeIssues(
     if (result.vulnerabilities.length > 0) {
       await createInsight({
         userId,
-        category: 'code_issue',
-        severity: 'critical',
+        category: "code_issue",
+        severity: "critical",
         title: `${result.vulnerabilities.length} security vulnerabilities detected`,
-        description: 'Security scan found potential vulnerabilities in your dependencies.',
-        suggestedAction: 'Run `npm audit fix` to resolve automatically fixable issues.',
+        description:
+          "Security scan found potential vulnerabilities in your dependencies.",
+        suggestedAction:
+          "Run `npm audit fix` to resolve automatically fixable issues.",
         metadata: { vulnerabilities: result.vulnerabilities },
       });
     }
@@ -115,11 +117,11 @@ export async function scanForCodeIssues(
     if (result.outdatedDeps.length > 0) {
       await createInsight({
         userId,
-        category: 'code_issue',
-        severity: 'warning',
+        category: "code_issue",
+        severity: "warning",
         title: `${result.outdatedDeps.length} outdated dependencies`,
-        description: 'Some dependencies have newer versions available.',
-        suggestedAction: 'Review and update dependencies with `npm update`.',
+        description: "Some dependencies have newer versions available.",
+        suggestedAction: "Review and update dependencies with `npm update`.",
         metadata: { outdatedDeps: result.outdatedDeps },
       });
     }
@@ -130,10 +132,10 @@ export async function scanForCodeIssues(
         vulnerabilities: result.vulnerabilities.length,
         outdatedDeps: result.outdatedDeps.length,
       },
-      'Code issue scan complete'
+      "Code issue scan complete",
     );
   } catch (err) {
-    logger.error({ userId, err }, 'Code issue scan failed');
+    logger.error({ userId, err }, "Code issue scan failed");
   }
 
   return result;
@@ -145,17 +147,22 @@ export async function scanForCodeIssues(
 export async function scheduleCodeScan(
   userId: string,
   workspacePath: string,
-  intervalHours: number = 24
+  intervalHours: number = 24,
 ): Promise<void> {
   if (!isAgentRunning(userId)) {
-    logger.warn({ userId }, 'Cannot schedule code scan - persistent agent not running');
+    logger.warn(
+      { userId },
+      "Cannot schedule code scan - persistent agent not running",
+    );
     return;
   }
 
-  await queueAgentTask(userId, 'anticipatory', {
-    type: 'code_scan',
+  await queueAgentTask(userId, "anticipatory", {
+    type: "code_scan",
     workspacePath,
-    scheduledFor: new Date(Date.now() + intervalHours * 60 * 60 * 1000).toISOString(),
+    scheduledFor: new Date(
+      Date.now() + intervalHours * 60 * 60 * 1000,
+    ).toISOString(),
   });
 }
 
@@ -166,9 +173,9 @@ export async function scheduleCodeScan(
  */
 export async function calculateProjectHealth(
   userId: string,
-  workspacePath: string
+  workspacePath: string,
 ): Promise<ProjectHealthScore> {
-  logger.info({ userId, workspacePath }, 'Calculating project health');
+  logger.info({ userId, workspacePath }, "Calculating project health");
 
   // In a real implementation:
   // - Test coverage from jest/vitest coverage reports
@@ -191,33 +198,33 @@ export async function calculateProjectHealth(
   if (score.testCoverage < 50) {
     await createInsight({
       userId,
-      category: 'project_health',
-      severity: 'warning',
-      title: 'Low test coverage detected',
+      category: "project_health",
+      severity: "warning",
+      title: "Low test coverage detected",
       description: `Test coverage is at ${score.testCoverage}%. Consider adding more tests.`,
-      suggestedAction: 'Focus on testing critical paths and edge cases.',
+      suggestedAction: "Focus on testing critical paths and edge cases.",
     });
   }
 
   if (score.docsFreshness < 50) {
     await createInsight({
       userId,
-      category: 'project_health',
-      severity: 'info',
-      title: 'Documentation may be outdated',
+      category: "project_health",
+      severity: "info",
+      title: "Documentation may be outdated",
       description: "Some documentation files haven't been updated recently.",
-      suggestedAction: 'Review and update README and API documentation.',
+      suggestedAction: "Review and update README and API documentation.",
     });
   }
 
   if (score.securityScore < 60) {
     await createInsight({
       userId,
-      category: 'project_health',
-      severity: 'critical',
-      title: 'Security score needs attention',
-      description: 'Security analysis indicates potential issues.',
-      suggestedAction: 'Run security audit and address findings.',
+      category: "project_health",
+      severity: "critical",
+      title: "Security score needs attention",
+      description: "Security analysis indicates potential issues.",
+      suggestedAction: "Run security audit and address findings.",
     });
   }
 
@@ -239,11 +246,11 @@ export function getProjectHealth(userId: string): ProjectHealthScore | null {
 export async function recordUserInteraction(
   userId: string,
   interaction: {
-    type: 'chat' | 'ship' | 'codegen' | 'plan';
+    type: "chat" | "ship" | "codegen" | "plan";
     prompt: string;
-    result?: 'success' | 'failure';
+    result?: "success" | "failure";
     context?: Record<string, unknown>;
-  }
+  },
 ): Promise<void> {
   const history = userPatternHistory.get(userId) || [];
 
@@ -252,7 +259,7 @@ export async function recordUserInteraction(
     JSON.stringify({
       ...interaction,
       timestamp: new Date().toISOString(),
-    })
+    }),
   );
 
   if (history.length > 100) {
@@ -267,7 +274,7 @@ export async function recordUserInteraction(
  */
 export async function predictUserIntent(
   userId: string,
-  _currentContext: Record<string, unknown>
+  _currentContext: Record<string, unknown>,
 ): Promise<UserPatternPrediction | null> {
   const history = userPatternHistory.get(userId);
   if (!history || history.length < 5) {
@@ -282,22 +289,23 @@ export async function predictUserIntent(
 
   // Simple pattern: if last 3 were 'chat', predict 'ship'
   const lastThreeTypes = interactionTypes.slice(-3);
-  if (lastThreeTypes.every((t) => t === 'chat')) {
+  if (lastThreeTypes.every((t) => t === "chat")) {
     return {
-      predictedIntent: 'ship',
+      predictedIntent: "ship",
       confidence: 0.6,
-      basedOn: ['frequent_chat_pattern'],
-      suggestedPrompt: 'Ready to build something? Try SHIP mode to generate code.',
+      basedOn: ["frequent_chat_pattern"],
+      suggestedPrompt:
+        "Ready to build something? Try SHIP mode to generate code.",
     };
   }
 
   // Pattern: after 'plan', usually 'codegen'
-  if (lastThreeTypes[lastThreeTypes.length - 1] === 'plan') {
+  if (lastThreeTypes[lastThreeTypes.length - 1] === "plan") {
     return {
-      predictedIntent: 'codegen',
+      predictedIntent: "codegen",
       confidence: 0.7,
-      basedOn: ['plan_to_code_pattern'],
-      suggestedPrompt: 'Your plan is ready. Generate code to implement it?',
+      basedOn: ["plan_to_code_pattern"],
+      suggestedPrompt: "Your plan is ready. Generate code to implement it?",
     };
   }
 
@@ -308,21 +316,22 @@ export async function predictUserIntent(
  * Get proactive suggestions based on user patterns
  */
 export async function getProactiveSuggestions(
-  userId: string
+  userId: string,
 ): Promise<Array<{ type: string; message: string; action?: string }>> {
-  const suggestions: Array<{ type: string; message: string; action?: string }> = [];
+  const suggestions: Array<{ type: string; message: string; action?: string }> =
+    [];
 
   // Check for pending insights
   const insights = getUserInsights(userId);
   const unacknowledged = insights.filter((i) => !i.acknowledgedAt);
 
   if (unacknowledged.length > 0) {
-    const critical = unacknowledged.filter((i) => i.severity === 'critical');
+    const critical = unacknowledged.filter((i) => i.severity === "critical");
     if (critical.length > 0) {
       suggestions.push({
-        type: 'insight',
+        type: "insight",
         message: `${critical.length} critical issues need attention`,
-        action: 'View insights',
+        action: "View insights",
       });
     }
   }
@@ -331,9 +340,9 @@ export async function getProactiveSuggestions(
   const health = getProjectHealth(userId);
   if (health && health.overall < 60) {
     suggestions.push({
-      type: 'health',
+      type: "health",
       message: `Project health score is ${health.overall}%`,
-      action: 'View health report',
+      action: "View health report",
     });
   }
 
@@ -341,8 +350,9 @@ export async function getProactiveSuggestions(
   const prediction = await predictUserIntent(userId, {});
   if (prediction && prediction.confidence > 0.5) {
     suggestions.push({
-      type: 'prediction',
-      message: prediction.suggestedPrompt || `Try ${prediction.predictedIntent}`,
+      type: "prediction",
+      message:
+        prediction.suggestedPrompt || `Try ${prediction.predictedIntent}`,
       action: prediction.predictedIntent,
     });
   }
@@ -357,8 +367,10 @@ export async function getProactiveSuggestions(
  */
 export async function fetchTechTrends(
   _userId: string,
-  _techStack: string[]
-): Promise<Array<{ title: string; summary: string; url?: string; relevance: number }>> {
+  _techStack: string[],
+): Promise<
+  Array<{ title: string; summary: string; url?: string; relevance: number }>
+> {
   // In a real implementation:
   // - Fetch from RSS feeds (dev.to, Hacker News, etc.)
   // - Filter by relevance to user's tech stack
@@ -366,8 +378,8 @@ export async function fetchTechTrends(
 
   return [
     {
-      title: 'New features in your tech stack',
-      summary: 'Relevant updates for your technologies',
+      title: "New features in your tech stack",
+      summary: "Relevant updates for your technologies",
       relevance: 0.8,
     },
   ];
@@ -376,13 +388,16 @@ export async function fetchTechTrends(
 /**
  * Schedule trend check
  */
-export async function scheduleTrendCheck(userId: string, techStack: string[]): Promise<void> {
+export async function scheduleTrendCheck(
+  userId: string,
+  techStack: string[],
+): Promise<void> {
   if (!isAgentRunning(userId)) {
     return;
   }
 
-  await queueAgentTask(userId, 'anticipatory', {
-    type: 'trend_check',
+  await queueAgentTask(userId, "anticipatory", {
+    type: "trend_check",
     techStack,
   });
 }
@@ -393,7 +408,7 @@ export async function scheduleTrendCheck(userId: string, techStack: string[]): P
  * Create a new insight
  */
 async function createInsight(
-  input: Omit<AnticipatoryInsight, 'id' | 'createdAt'>
+  input: Omit<AnticipatoryInsight, "id" | "createdAt">,
 ): Promise<AnticipatoryInsight> {
   const insight: AnticipatoryInsight = {
     id: `insight_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -413,15 +428,15 @@ async function createInsight(
 
   await writeAuditLog({
     userId: input.userId,
-    action: 'anticipatory.insight_created',
-    category: 'ai',
+    action: "anticipatory.insight_created",
+    category: "ai",
     target: input.title,
     metadata: { category: input.category, severity: input.severity },
   });
 
   logger.info(
     { userId: input.userId, insightId: insight.id, category: input.category },
-    'Anticipatory insight created'
+    "Anticipatory insight created",
   );
 
   return insight;
@@ -437,7 +452,10 @@ export function getUserInsights(userId: string): AnticipatoryInsight[] {
 /**
  * Acknowledge an insight
  */
-export async function acknowledgeInsight(userId: string, insightId: string): Promise<void> {
+export async function acknowledgeInsight(
+  userId: string,
+  insightId: string,
+): Promise<void> {
   const insights = userInsights.get(userId);
   if (!insights) return;
 
@@ -450,7 +468,10 @@ export async function acknowledgeInsight(userId: string, insightId: string): Pro
 /**
  * Mark insight as actioned
  */
-export async function markInsightActioned(userId: string, insightId: string): Promise<void> {
+export async function markInsightActioned(
+  userId: string,
+  insightId: string,
+): Promise<void> {
   const insights = userInsights.get(userId);
   if (!insights) return;
 
@@ -468,7 +489,9 @@ export function clearOldInsights(userId: string, maxAgeDays: number = 7): void {
   if (!insights) return;
 
   const cutoff = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000;
-  const filtered = insights.filter((i) => new Date(i.createdAt).getTime() > cutoff);
+  const filtered = insights.filter(
+    (i) => new Date(i.createdAt).getTime() > cutoff,
+  );
   userInsights.set(userId, filtered);
 }
 
@@ -480,14 +503,14 @@ export function clearOldInsights(userId: string, maxAgeDays: number = 7): void {
 export async function runAnticipatoryChecks(
   userId: string,
   workspacePath?: string,
-  techStack?: string[]
+  techStack?: string[],
 ): Promise<{
   codeIssues: CodeScanResult | null;
   projectHealth: ProjectHealthScore | null;
   predictions: UserPatternPrediction | null;
   suggestions: Array<{ type: string; message: string; action?: string }>;
 }> {
-  logger.info({ userId }, 'Running anticipatory checks');
+  logger.info({ userId }, "Running anticipatory checks");
 
   let codeIssues: CodeScanResult | null = null;
   let projectHealth: ProjectHealthScore | null = null;

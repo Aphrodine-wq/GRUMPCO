@@ -7,7 +7,7 @@
  */
 /** Tool input schema shape for LLM gateway (default when tool has no input_schema). */
 const _DEFAULT_TOOL_INPUT_SCHEMA = {
-  type: 'object' as const,
+  type: "object" as const,
   properties: undefined as Record<string, unknown> | undefined,
   required: undefined as string[] | undefined,
 };
@@ -72,9 +72,9 @@ import {
   browserTypeInputSchema,
   browserGetContentInputSchema,
   browserScreenshotInputSchema,
-} from '../tools/index.js';
-import { generateSchemaFromDescription } from './dbSchemaService.js';
-import { generateMigrations } from './migrationService.js';
+} from "../tools/index.js";
+import { generateSchemaFromDescription } from "./dbSchemaService.js";
+import { generateMigrations } from "./migrationService.js";
 import {
   screenshotUrl,
   browserRunScript,
@@ -84,57 +84,75 @@ import {
   browserGetContent,
   browserScreenshot,
   type BrowserStep,
-} from './browserService.js';
-import { toolExecutionService, ToolExecutionService } from './toolExecutionService.js';
-import logger from '../middleware/logger.js';
-import { getPlan, startPlanExecution } from './planService.js';
-import { getSpecSession } from './specService.js';
-import { withRetry as _withRetry, type ErrorWithStatus as _ErrorWithStatus } from './resilience.js';
-import { checkRateLimit as _checkRateLimit } from './bulkheads.js';
-import { checkInput, checkOutput } from './guardrailsService.js';
-import { skillRegistry } from '../skills/index.js';
-import { createSkill, editSkill, runSkillTest, listSkills } from './userSkillsService.js';
-import { getMcpTools } from '../mcp/registry.js';
+} from "./browserService.js";
+import {
+  toolExecutionService,
+  ToolExecutionService,
+} from "./toolExecutionService.js";
+import logger from "../middleware/logger.js";
+import { getPlan, startPlanExecution } from "./planService.js";
+import { getSpecSession } from "./specService.js";
+import {
+  withRetry as _withRetry,
+  type ErrorWithStatus as _ErrorWithStatus,
+} from "./resilience.js";
+import { checkRateLimit as _checkRateLimit } from "./bulkheads.js";
+import { checkInput, checkOutput } from "./guardrailsService.js";
+import { skillRegistry } from "../skills/index.js";
+import {
+  createSkill,
+  editSkill,
+  runSkillTest,
+  listSkills,
+} from "./userSkillsService.js";
+import { getMcpTools } from "../mcp/registry.js";
 import {
   getUserToolDefinitions,
   executeUserTool,
   isUserTool,
-} from '../skills/userToolsRegistry.js';
-import { createSkillContext } from '../skills/base/SkillContext.js';
-import { getHeadSystemPrompt } from '../prompts/head.js';
-import { wrapModeContext } from '../prompts/compose.js';
+} from "../skills/userToolsRegistry.js";
+import { createSkillContext } from "../skills/base/SkillContext.js";
+import { getHeadSystemPrompt } from "../prompts/head.js";
+import { wrapModeContext } from "../prompts/compose.js";
 import {
   getChatModePrompt,
   getGAgentModePrompt,
   type ChatModeName,
   type CodeSpecialist,
-} from '../prompts/chat/index.js';
-import { getStream, type LLMProvider, type MultimodalContentPart } from './llmGateway.js';
-import { getIntentGuidedRagContext } from './ragService.js';
-import { filterOutput } from '../utils/outputFilters.js';
-import { getAllowedToolNames } from '../config/gAgentTools.js';
-import { parseAndEnrichIntent } from './intentCompilerService.js';
-import { isMcpTool, executeMcpTool } from '../mcp/client.js';
+} from "../prompts/chat/index.js";
+import {
+  getStream,
+  type LLMProvider,
+  type MultimodalContentPart,
+} from "./llmGateway.js";
+import { getIntentGuidedRagContext } from "./ragService.js";
+import { filterOutput } from "../utils/outputFilters.js";
+import { getAllowedToolNames } from "../config/gAgentTools.js";
+import { parseAndEnrichIntent } from "./intentCompilerService.js";
+import { isMcpTool, executeMcpTool } from "../mcp/client.js";
 
 // ============================================================================
 // CHAT STREAM EVENT TYPES
 // ============================================================================
 
 export type ChatStreamEvent =
-  | { type: 'text'; text: string }
-  | { type: 'thinking'; content: string }
-  | { type: 'intent'; value: Record<string, unknown> }
-  | { type: 'context'; value: { mode: string; capabilities?: string[]; toolCount?: number } }
-  | { type: 'tool_planning'; tools: string[] }
-  | { type: 'tool_progress'; id: string; percent: number; message?: string }
+  | { type: "text"; text: string }
+  | { type: "thinking"; content: string }
+  | { type: "intent"; value: Record<string, unknown> }
   | {
-      type: 'tool_call';
+      type: "context";
+      value: { mode: string; capabilities?: string[]; toolCount?: number };
+    }
+  | { type: "tool_planning"; tools: string[] }
+  | { type: "tool_progress"; id: string; percent: number; message?: string }
+  | {
+      type: "tool_call";
       id: string;
       name: string;
       input: Record<string, unknown>;
     }
   | {
-      type: 'tool_result';
+      type: "tool_result";
       id: string;
       toolName: string;
       output: string;
@@ -144,15 +162,19 @@ export type ChatStreamEvent =
         filePath: string;
         beforeContent: string;
         afterContent: string;
-        changeType: 'created' | 'modified' | 'deleted';
-        operations?: Array<{ type: string; lineStart: number; lineEnd?: number }>;
+        changeType: "created" | "modified" | "deleted";
+        operations?: Array<{
+          type: string;
+          lineStart: number;
+          lineEnd?: number;
+        }>;
       };
     }
-  | { type: 'skill_activated'; skillId: string; skillName: string }
-  | { type: 'autonomous'; value: boolean }
-  | { type: 'done' }
+  | { type: "skill_activated"; skillId: string; skillName: string }
+  | { type: "autonomous"; value: boolean }
+  | { type: "done" }
   | {
-      type: 'error';
+      type: "error";
       message: string;
       toolId?: string;
       errorType?: string;
@@ -192,7 +214,7 @@ export type ChatStreamEvent =
  */
 export class ClaudeServiceWithTools {
   /** Default model for API calls */
-  private model: string = 'moonshotai/kimi-k2.5';
+  private model: string = "moonshotai/kimi-k2.5";
   /** Shared tool execution service */
   private toolExecutionService: ToolExecutionService;
   /** Request-scoped tool execution service (for isolation) */
@@ -216,12 +238,20 @@ export class ClaudeServiceWithTools {
   /**
    * Helper to collect stream events into a complete response
    */
-  private async collectStreamResponse(stream: AsyncIterable<unknown>): Promise<string> {
-    let fullText = '';
+  private async collectStreamResponse(
+    stream: AsyncIterable<unknown>,
+  ): Promise<string> {
+    let fullText = "";
     for await (const event of stream) {
-      const ev = event as { type?: string; delta?: { type?: string; text?: string } };
-      if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
-        fullText += ev.delta.text ?? '';
+      const ev = event as {
+        type?: string;
+        delta?: { type?: string; text?: string };
+      };
+      if (
+        ev.type === "content_block_delta" &&
+        ev.delta?.type === "text_delta"
+      ) {
+        fullText += ev.delta.text ?? "";
       }
     }
     return fullText;
@@ -239,34 +269,34 @@ export class ClaudeServiceWithTools {
    * autonomous: when true (Yolo mode), emit { type: 'autonomous', value: true } so client can skip tool confirmations.
    */
   async *generateChatStream(
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+    messages: Array<{ role: "user" | "assistant"; content: string }>,
     abortSignal?: AbortSignal,
     workspaceRoot?: string,
-    mode: 'normal' | 'plan' | 'spec' | 'execute' | 'design' = 'normal',
+    mode: "normal" | "plan" | "spec" | "execute" | "design" = "normal",
     agentProfile?: string,
     planId?: string,
     specSessionId?: string,
     provider?: LLMProvider,
     modelId?: string,
     guardRailOptions?: { allowedDirs?: string[] },
-    tierOverride?: 'free' | 'pro' | 'team' | 'enterprise',
+    tierOverride?: "free" | "pro" | "team" | "enterprise",
     autonomous?: boolean,
-    sessionType?: 'chat' | 'gAgent' | 'freeAgent',
-    gAgentCapabilities?: import('../types/settings.js').GAgentCapabilityKey[],
+    sessionType?: "chat" | "gAgent" | "freeAgent",
+    gAgentCapabilities?: import("../types/settings.js").GAgentCapabilityKey[],
     gAgentExternalAllowlist?: string[],
     includeRagContext?: boolean,
     toolAllowlist?: string[],
-    toolDenylist?: string[]
+    toolDenylist?: string[],
   ): AsyncGenerator<ChatStreamEvent, void, unknown> {
     // Handle execute mode - load plan and execute it
-    if (mode === 'execute' && planId) {
+    if (mode === "execute" && planId) {
       const plan = await getPlan(planId);
       if (!plan) {
-        yield { type: 'error', message: `Plan ${planId} not found` };
+        yield { type: "error", message: `Plan ${planId} not found` };
         return;
       }
-      if (plan.status !== 'approved') {
-        yield { type: 'error', message: `Plan ${planId} is not approved` };
+      if (plan.status !== "approved") {
+        yield { type: "error", message: `Plan ${planId} is not approved` };
         return;
       }
 
@@ -274,39 +304,39 @@ export class ClaudeServiceWithTools {
       startPlanExecution(planId);
 
       // Add plan context to messages
-      const planContext = `Execute this approved plan:\n\n${plan.title}\n${plan.description}\n\nSteps:\n${plan.steps.map((s) => `${s.order}. ${s.title}: ${s.description}`).join('\n')}`;
+      const planContext = `Execute this approved plan:\n\n${plan.title}\n${plan.description}\n\nSteps:\n${plan.steps.map((s) => `${s.order}. ${s.title}: ${s.description}`).join("\n")}`;
       messages = [
         ...messages,
         {
-          role: 'assistant',
+          role: "assistant",
           content: planContext,
         },
       ];
-      mode = 'normal'; // Continue in normal mode to execute
+      mode = "normal"; // Continue in normal mode to execute
     }
 
     // Handle spec mode - load spec session context
-    if (mode === 'spec' && specSessionId) {
+    if (mode === "spec" && specSessionId) {
       const session = await getSpecSession(specSessionId);
       if (session && session.specification) {
-        const specContext = `Generate code based on this specification:\n\n${session.specification.title}\n${session.specification.description}\n\nRequirements:\n${session.specification.sections.requirements?.map((r) => `- ${r.title}: ${r.description}`).join('\n') || 'None'}`;
+        const specContext = `Generate code based on this specification:\n\n${session.specification.title}\n${session.specification.description}\n\nRequirements:\n${session.specification.sections.requirements?.map((r) => `- ${r.title}: ${r.description}`).join("\n") || "None"}`;
         messages = [
           ...messages,
           {
-            role: 'assistant',
+            role: "assistant",
             content: specContext,
           },
         ];
-        mode = 'normal'; // Continue in normal mode to implement
+        mode = "normal"; // Continue in normal mode to implement
       }
     }
 
-    if (workspaceRoot && mode !== 'plan') {
+    if (workspaceRoot && mode !== "plan") {
       this.requestScopedTes = new ToolExecutionService(workspaceRoot, {
         allowedDirs: guardRailOptions?.allowedDirs,
       });
     }
-    if (sessionType === 'gAgent' || sessionType === 'freeAgent') {
+    if (sessionType === "gAgent" || sessionType === "freeAgent") {
       this.freeAgentSession = true;
       if (gAgentExternalAllowlist?.length) {
         this.freeAgentExternalAllowlist = gAgentExternalAllowlist;
@@ -314,19 +344,20 @@ export class ClaudeServiceWithTools {
     }
     try {
       if (autonomous) {
-        yield { type: 'autonomous', value: true };
+        yield { type: "autonomous", value: true };
       }
 
-      const chatMode: ChatModeName = mode === 'execute' ? 'execute' : (mode as ChatModeName);
+      const chatMode: ChatModeName =
+        mode === "execute" ? "execute" : (mode as ChatModeName);
       const specialist: CodeSpecialist | undefined =
         agentProfile &&
-        agentProfile !== 'general' &&
+        agentProfile !== "general" &&
         /^(router|frontend|backend|devops|test)$/.test(agentProfile)
           ? (agentProfile as CodeSpecialist)
           : undefined;
       const headPrompt = getHeadSystemPrompt({ tier: tierOverride });
       const modePrompt =
-        sessionType === 'gAgent' || sessionType === 'freeAgent'
+        sessionType === "gAgent" || sessionType === "freeAgent"
           ? getGAgentModePrompt({
               workspaceRoot,
               specialist,
@@ -337,28 +368,36 @@ export class ClaudeServiceWithTools {
           : getChatModePrompt(chatMode, { workspaceRoot, specialist });
       let systemPrompt = `${headPrompt}\n\n${wrapModeContext(modePrompt)}`;
       const ragContextEnabled =
-        process.env.RAG_CONTEXT_ENABLED === 'true' || includeRagContext === true;
+        process.env.RAG_CONTEXT_ENABLED === "true" ||
+        includeRagContext === true;
       if (ragContextEnabled && messages.length > 0) {
-        const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-        const lastUserText = typeof lastUser?.content === 'string' ? lastUser.content : undefined;
+        const lastUser = [...messages].reverse().find((m) => m.role === "user");
+        const lastUserText =
+          typeof lastUser?.content === "string" ? lastUser.content : undefined;
         if (lastUserText?.trim().length) {
           try {
-            const ragResult = await getIntentGuidedRagContext(lastUserText.trim(), {
-              namespace: workspaceRoot ?? undefined,
-              maxChunks: 6,
-            });
+            const ragResult = await getIntentGuidedRagContext(
+              lastUserText.trim(),
+              {
+                namespace: workspaceRoot ?? undefined,
+                maxChunks: 6,
+              },
+            );
             if (ragResult?.context) {
               systemPrompt += `\n\nRelevant context from knowledge base:\n\n${ragResult.context}`;
             }
           } catch (e) {
-            logger.debug({ error: (e as Error).message }, 'RAG context for prompt failed');
+            logger.debug(
+              { error: (e as Error).message },
+              "RAG context for prompt failed",
+            );
           }
         }
       }
 
       // Get tools: base + user-defined + MCP + skills; filter by Free Agent capabilities when applicable
       let allTools =
-        mode !== 'plan'
+        mode !== "plan"
           ? [
               ...AVAILABLE_TOOLS,
               ...getUserToolDefinitions(),
@@ -366,34 +405,47 @@ export class ClaudeServiceWithTools {
               ...skillRegistry.getAllTools(),
             ]
           : [];
-      if ((sessionType === 'gAgent' || sessionType === 'freeAgent') && gAgentCapabilities?.length) {
+      if (
+        (sessionType === "gAgent" || sessionType === "freeAgent") &&
+        gAgentCapabilities?.length
+      ) {
         const allowedNames = getAllowedToolNames(gAgentCapabilities);
         if (allowedNames) {
-          allTools = allTools.filter((t: { name: string }) => allowedNames.has(t.name));
+          allTools = allTools.filter((t: { name: string }) =>
+            allowedNames.has(t.name),
+          );
           logger.debug(
             { allowedCount: allTools.length, allowedNames: [...allowedNames] },
-            'G-Agent tools filtered by capabilities'
+            "G-Agent tools filtered by capabilities",
           );
         }
       }
       // Per-session tool allowlist/denylist
       if (toolAllowlist?.length) {
-        const allowSet = new Set(toolAllowlist.map((n) => String(n).trim()).filter(Boolean));
-        allTools = allTools.filter((t: { name: string }) => allowSet.has(t.name));
+        const allowSet = new Set(
+          toolAllowlist.map((n) => String(n).trim()).filter(Boolean),
+        );
+        allTools = allTools.filter((t: { name: string }) =>
+          allowSet.has(t.name),
+        );
       }
       if (toolDenylist?.length) {
-        const denySet = new Set(toolDenylist.map((n) => String(n).trim()).filter(Boolean));
-        allTools = allTools.filter((t: { name: string }) => !denySet.has(t.name));
+        const denySet = new Set(
+          toolDenylist.map((n) => String(n).trim()).filter(Boolean),
+        );
+        allTools = allTools.filter(
+          (t: { name: string }) => !denySet.has(t.name),
+        );
       }
 
       // Emit context at start (mode, capabilities, tool count)
-      const toolCount = mode !== 'plan' ? allTools.length : 0;
+      const toolCount = mode !== "plan" ? allTools.length : 0;
       yield {
-        type: 'context',
+        type: "context",
         value: {
           mode: chatMode,
           capabilities:
-            sessionType === 'gAgent' || sessionType === 'freeAgent'
+            sessionType === "gAgent" || sessionType === "freeAgent"
               ? gAgentCapabilities
               : undefined,
           toolCount,
@@ -401,15 +453,22 @@ export class ClaudeServiceWithTools {
       };
 
       // When mode is design, parse intent from last user message and emit
-      if (mode === 'design') {
-        const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-        const raw = typeof lastUser?.content === 'string' ? lastUser.content : undefined;
+      if (mode === "design") {
+        const lastUser = [...messages].reverse().find((m) => m.role === "user");
+        const raw =
+          typeof lastUser?.content === "string" ? lastUser.content : undefined;
         if (raw && raw.trim().length > 10) {
           try {
             const enriched = await parseAndEnrichIntent(raw.trim(), undefined);
-            yield { type: 'intent', value: enriched as unknown as Record<string, unknown> };
+            yield {
+              type: "intent",
+              value: enriched as unknown as Record<string, unknown>,
+            };
           } catch (err) {
-            logger.warn({ err }, 'Intent parse failed; continuing without intent');
+            logger.warn(
+              { err },
+              "Intent parse failed; continuing without intent",
+            );
           }
         }
       }
@@ -425,14 +484,14 @@ export class ClaudeServiceWithTools {
           autonomous,
           sessionType,
         },
-        'Starting chat stream'
+        "Starting chat stream",
       );
 
       const gwMessages = messages.map((msg) => {
-        const role = msg.role as 'user' | 'assistant';
+        const role = msg.role as "user" | "assistant";
         const content: string | unknown = msg.content as string | unknown;
         // Handle string content
-        if (typeof content === 'string') {
+        if (typeof content === "string") {
           return { role, content };
         }
         // Handle array content (multimodal)
@@ -444,22 +503,35 @@ export class ClaudeServiceWithTools {
                 text?: string;
                 source?: { type: string; url?: string };
               };
-              if (b.type === 'text') {
-                return { type: 'text' as const, text: b.text ?? '' };
-              } else if (b.type === 'image' && b.source?.type === 'url' && b.source?.url) {
-                return { type: 'image_url' as const, image_url: { url: b.source.url } };
+              if (b.type === "text") {
+                return { type: "text" as const, text: b.text ?? "" };
+              } else if (
+                b.type === "image" &&
+                b.source?.type === "url" &&
+                b.source?.url
+              ) {
+                return {
+                  type: "image_url" as const,
+                  image_url: { url: b.source.url },
+                };
               }
-              logger.warn({ block }, 'Unsupported content block type for LLM Gateway, skipping.');
+              logger.warn(
+                { block },
+                "Unsupported content block type for LLM Gateway, skipping.",
+              );
               return null;
             })
-            .filter((p: MultimodalContentPart | null): p is MultimodalContentPart => p !== null);
+            .filter(
+              (p: MultimodalContentPart | null): p is MultimodalContentPart =>
+                p !== null,
+            );
           return { role, content: transformedContent };
         }
         // Fallback for other types
         return { role, content: JSON.stringify(content) };
       });
 
-      const finalProvider = (provider ?? 'nim') as LLMProvider;
+      const finalProvider = (provider ?? "nim") as LLMProvider;
       const finalModelId = modelId ?? this.model;
 
       // Map tools to gateway format
@@ -470,14 +542,14 @@ export class ClaudeServiceWithTools {
                 name: string;
                 description?: string;
                 input_schema?: {
-                  type: 'object';
+                  type: "object";
                   properties?: Record<string, unknown>;
                   required?: string[];
                 };
               };
               return {
                 name: tool.name,
-                description: tool.description ?? '',
+                description: tool.description ?? "",
                 input_schema: tool.input_schema ?? _DEFAULT_TOOL_INPUT_SCHEMA,
               };
             })
@@ -491,10 +563,10 @@ export class ClaudeServiceWithTools {
           messages: gwMessages,
           tools: mappedTools,
         },
-        { provider: finalProvider, modelId: finalModelId }
+        { provider: finalProvider, modelId: finalModelId },
       );
 
-      let currentTextBlock = '';
+      let currentTextBlock = "";
 
       for await (const ev of response) {
         const event = ev as {
@@ -508,35 +580,38 @@ export class ClaudeServiceWithTools {
           };
         };
         if (abortSignal?.aborted) {
-          logger.debug({}, 'Stream aborted');
-          yield { type: 'error', message: 'Stream aborted' };
+          logger.debug({}, "Stream aborted");
+          yield { type: "error", message: "Stream aborted" };
           break;
         }
 
         // Handle content block deltas (text)
-        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
-          const raw = event.delta.text ?? '';
+        if (
+          event.type === "content_block_delta" &&
+          event.delta?.type === "text_delta"
+        ) {
+          const raw = event.delta.text ?? "";
           currentTextBlock += raw;
-          yield { type: 'text', text: filterOutput(raw) };
+          yield { type: "text", text: filterOutput(raw) };
         }
 
         // Handle tool use blocks
-        if (event.type === 'content_block_start') {
+        if (event.type === "content_block_start") {
           const contentBlock = event.content_block;
-          if (contentBlock?.type === 'tool_use') {
+          if (contentBlock?.type === "tool_use") {
             // Flush any accumulated text
             if (currentTextBlock.trim()) {
-              currentTextBlock = '';
+              currentTextBlock = "";
             }
 
             const toolUse = contentBlock;
-            const toolId = toolUse.id ?? '';
-            const toolName = toolUse.name ?? '';
-            logger.debug({ toolName, toolId }, 'Tool use started');
+            const toolId = toolUse.id ?? "";
+            const toolName = toolUse.name ?? "";
+            logger.debug({ toolName, toolId }, "Tool use started");
 
             // Emit tool call event
             yield {
-              type: 'tool_call',
+              type: "tool_call",
               id: toolId,
               name: toolName,
               input: (toolUse.input ?? {}) as Record<string, unknown>,
@@ -546,13 +621,13 @@ export class ClaudeServiceWithTools {
             const result = await this._executeTool(
               toolName,
               (toolUse.input ?? {}) as Record<string, unknown>,
-              workspaceRoot
+              workspaceRoot,
             );
 
             // Emit tool result event (filter output for secrets/PII)
-            const rawOutput = result.output || result.error || '';
+            const rawOutput = result.output || result.error || "";
             yield {
-              type: 'tool_result',
+              type: "tool_result",
               id: toolId,
               toolName,
               output: filterOutput(rawOutput),
@@ -564,9 +639,12 @@ export class ClaudeServiceWithTools {
         }
       }
 
-      yield { type: 'done' };
+      yield { type: "done" };
     } catch (error: unknown) {
-      logger.error({ error, workspaceRoot, mode, agentProfile }, 'Chat stream error');
+      logger.error(
+        { error, workspaceRoot, mode, agentProfile },
+        "Chat stream error",
+      );
 
       // Enhanced error handling with structured error types
       const err = error as {
@@ -580,31 +658,38 @@ export class ClaudeServiceWithTools {
       const status = err.status ?? err.statusCode;
       const errorCode = err.code ?? err.name;
 
-      let errorType = 'api_error';
-      let userMessage = 'An error occurred. Please try again.';
+      let errorType = "api_error";
+      let userMessage = "An error occurred. Please try again.";
       let retryable = false;
       let retryAfter: number | undefined;
 
       if (status === 401) {
-        errorType = 'auth_error';
-        userMessage = 'Authentication failed. Please check your API key.';
+        errorType = "auth_error";
+        userMessage = "Authentication failed. Please check your API key.";
         retryable = false;
       } else if (status === 429) {
-        errorType = 'rate_limit';
-        userMessage = 'Rate limit exceeded. Please wait a moment and try again.';
+        errorType = "rate_limit";
+        userMessage =
+          "Rate limit exceeded. Please wait a moment and try again.";
         retryable = true;
-        retryAfter = parseInt(err.headers?.['retry-after'] ?? '60', 10);
+        retryAfter = parseInt(err.headers?.["retry-after"] ?? "60", 10);
       } else if (status === 500 || status === 502 || status === 503) {
-        errorType = 'service_error';
-        userMessage = 'Service temporarily unavailable. Please try again in a moment.';
+        errorType = "service_error";
+        userMessage =
+          "Service temporarily unavailable. Please try again in a moment.";
         retryable = true;
-      } else if (errorCode === 'ETIMEDOUT' || errorCode === 'ECONNRESET') {
-        errorType = 'timeout';
-        userMessage = 'Request timed out. The server may be busy. Please try again.';
+      } else if (errorCode === "ETIMEDOUT" || errorCode === "ECONNRESET") {
+        errorType = "timeout";
+        userMessage =
+          "Request timed out. The server may be busy. Please try again.";
         retryable = true;
-      } else if (err.message?.toLowerCase().includes('network') || errorCode === 'ENOTFOUND') {
-        errorType = 'network_error';
-        userMessage = 'Network error. Please check your connection and try again.';
+      } else if (
+        err.message?.toLowerCase().includes("network") ||
+        errorCode === "ENOTFOUND"
+      ) {
+        errorType = "network_error";
+        userMessage =
+          "Network error. Please check your connection and try again.";
         retryable = true;
       } else if (err.message) {
         userMessage = err.message;
@@ -612,7 +697,7 @@ export class ClaudeServiceWithTools {
       }
 
       yield {
-        type: 'error',
+        type: "error",
         message: userMessage,
         errorType,
         retryable,
@@ -637,37 +722,48 @@ export class ClaudeServiceWithTools {
   private async _executeTool(
     toolName: string,
     input: Record<string, unknown>,
-    workspaceRoot?: string
+    workspaceRoot?: string,
   ): Promise<ToolExecutionResult> {
     try {
       // Free Agent: run guardrails before tool execution
       if (this.freeAgentSession) {
         const inputStr = JSON.stringify(input);
-        const inputCheck = await checkInput(inputStr, 'default');
+        const inputCheck = await checkInput(inputStr, "default");
         if (!inputCheck.passed) {
           return {
             success: false,
-            error: `Guardrails blocked: ${inputCheck.triggeredPolicies.map((p) => p.reason).join('; ')}`,
+            error: `Guardrails blocked: ${inputCheck.triggeredPolicies.map((p) => p.reason).join("; ")}`,
             toolName,
             executionTime: 0,
           };
         }
       }
 
-      logger.debug({ toolName, inputKeys: Object.keys(input) }, 'Executing tool');
+      logger.debug(
+        { toolName, inputKeys: Object.keys(input) },
+        "Executing tool",
+      );
 
       let result: ToolExecutionResult;
 
       // Check if this is a skill tool (prefixed with skill_)
-      if (toolName.startsWith('skill_')) {
+      if (toolName.startsWith("skill_")) {
         result = await this._executeSkillTool(toolName, input, workspaceRoot);
       } else if (isUserTool(toolName)) {
         // User-defined tools (from "add to skills" or API)
         const start = Date.now();
         try {
-          const context = createSkillContext({ workspacePath: workspaceRoot, source: 'chat' });
+          const context = createSkillContext({
+            workspacePath: workspaceRoot,
+            source: "chat",
+          });
           const { output } = await executeUserTool(toolName, input, context);
-          result = { success: true, output, toolName, executionTime: Date.now() - start };
+          result = {
+            success: true,
+            output,
+            toolName,
+            executionTime: Date.now() - start,
+          };
         } catch (err: unknown) {
           result = {
             success: false,
@@ -689,155 +785,155 @@ export class ClaudeServiceWithTools {
         };
       } else {
         switch (toolName) {
-          case 'bash_execute':
+          case "bash_execute":
             result = await this._executeBash(input);
             break;
 
-          case 'file_read':
+          case "file_read":
             result = await this._executeFileRead(input);
             break;
 
-          case 'file_write':
+          case "file_write":
             result = await this._executeFileWrite(input);
             break;
 
-          case 'file_edit':
+          case "file_edit":
             result = await this._executeFileEdit(input);
             break;
 
-          case 'list_directory':
+          case "list_directory":
             result = await this._executeListDirectory(input);
             break;
 
-          case 'codebase_search':
+          case "codebase_search":
             result = await this._executeCodebaseSearch(input);
             break;
 
-          case 'generate_db_schema':
+          case "generate_db_schema":
             result = await this._executeGenerateDbSchema(input);
             break;
 
-          case 'generate_migrations':
+          case "generate_migrations":
             result = await this._executeGenerateMigrations(input);
             break;
 
-          case 'screenshot_url':
+          case "screenshot_url":
             result = await this._executeScreenshotUrl(input);
             break;
 
-          case 'browser_run_script':
+          case "browser_run_script":
             result = await this._executeBrowserRunScript(input);
             break;
 
-          case 'browser_navigate':
+          case "browser_navigate":
             result = await this._executeBrowserNavigate(input);
             break;
 
-          case 'browser_click':
+          case "browser_click":
             result = await this._executeBrowserClick(input);
             break;
 
-          case 'browser_type':
+          case "browser_type":
             result = await this._executeBrowserType(input);
             break;
 
-          case 'browser_get_content':
+          case "browser_get_content":
             result = await this._executeBrowserGetContent(input);
             break;
 
-          case 'browser_screenshot':
+          case "browser_screenshot":
             result = await this._executeBrowserScreenshot(input);
             break;
 
-          case 'browser_snapshot':
+          case "browser_snapshot":
             result = await this._executeBrowserSnapshot(input);
             break;
 
-          case 'browser_upload':
+          case "browser_upload":
             result = await this._executeBrowserUpload(input);
             break;
 
-          case 'browser_profiles_list':
+          case "browser_profiles_list":
             result = await this._executeBrowserProfilesList();
             break;
 
-          case 'browser_profile_switch':
+          case "browser_profile_switch":
             result = await this._executeBrowserProfileSwitch(input);
             break;
 
-          case 'git_status':
+          case "git_status":
             result = await this._executeGitStatus(input);
             break;
 
-          case 'git_diff':
+          case "git_diff":
             result = await this._executeGitDiff(input);
             break;
 
-          case 'git_log':
+          case "git_log":
             result = await this._executeGitLog(input);
             break;
 
-          case 'git_commit':
+          case "git_commit":
             result = await this._executeGitCommit(input);
             break;
 
-          case 'git_branch':
+          case "git_branch":
             result = await this._executeGitBranch(input);
             break;
 
-          case 'git_push':
+          case "git_push":
             result = await this._executeGitPush(input);
             break;
 
-          case 'terminal_execute':
+          case "terminal_execute":
             result = await this._executeTerminalExecute(input);
             break;
 
-          case 'skill_create':
+          case "skill_create":
             result = await this._executeSkillCreate(input);
             break;
 
-          case 'skill_edit':
+          case "skill_edit":
             result = await this._executeSkillEdit(input);
             break;
 
-          case 'skill_run_test':
+          case "skill_run_test":
             result = await this._executeSkillRunTest(input, workspaceRoot);
             break;
 
-          case 'skill_list':
+          case "skill_list":
             result = await this._executeSkillList();
             break;
 
-          case 'sessions_list':
+          case "sessions_list":
             result = await this._executeSessionsList(input);
             break;
 
-          case 'sessions_history':
+          case "sessions_history":
             result = await this._executeSessionsHistory(input);
             break;
 
-          case 'sessions_send':
+          case "sessions_send":
             result = await this._executeSessionsSend(input);
             break;
 
-          case 'camera_capture':
+          case "camera_capture":
             result = await this._executeCameraCapture();
             break;
 
-          case 'screen_record':
+          case "screen_record":
             result = await this._executeScreenRecord(input);
             break;
 
-          case 'location_get':
+          case "location_get":
             result = await this._executeLocationGet();
             break;
 
-          case 'system_exec':
+          case "system_exec":
             result = await this._executeSystemExec(input);
             break;
 
-          case 'canvas_update':
+          case "canvas_update":
             result = await this._executeCanvasUpdate(input);
             break;
 
@@ -852,19 +948,23 @@ export class ClaudeServiceWithTools {
       }
 
       // Free Agent: run guardrails on output after execution
-      if (this.freeAgentSession && result.success && typeof result.output === 'string') {
-        const outputCheck = await checkOutput(result.output, 'default');
-        if (!outputCheck.passed && outputCheck.action === 'block') {
+      if (
+        this.freeAgentSession &&
+        result.success &&
+        typeof result.output === "string"
+      ) {
+        const outputCheck = await checkOutput(result.output, "default");
+        if (!outputCheck.passed && outputCheck.action === "block") {
           return {
             ...result,
-            output: '[Output filtered by guardrails]',
+            output: "[Output filtered by guardrails]",
             success: true,
           };
         }
       }
       return result;
     } catch (error: unknown) {
-      logger.error({ error, toolName }, 'Tool execution failed');
+      logger.error({ error, toolName }, "Tool execution failed");
 
       return {
         success: false,
@@ -881,7 +981,7 @@ export class ClaudeServiceWithTools {
   private async _executeSkillTool(
     toolName: string,
     input: Record<string, unknown>,
-    workspaceRoot?: string
+    workspaceRoot?: string,
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
 
@@ -896,11 +996,14 @@ export class ClaudeServiceWithTools {
     }
 
     const { skill, handler } = toolHandler;
-    logger.debug({ toolName, skillId: skill.manifest.id }, 'Executing skill tool');
+    logger.debug(
+      { toolName, skillId: skill.manifest.id },
+      "Executing skill tool",
+    );
 
     const context = createSkillContext({
       workspacePath: workspaceRoot,
-      source: 'chat',
+      source: "chat",
     });
 
     try {
@@ -911,7 +1014,10 @@ export class ClaudeServiceWithTools {
         executionTime: Date.now() - startTime,
       };
     } catch (error: unknown) {
-      logger.error({ error, toolName, skillId: skill.manifest.id }, 'Skill tool execution failed');
+      logger.error(
+        { error, toolName, skillId: skill.manifest.id },
+        "Skill tool execution failed",
+      );
       return {
         success: false,
         error: (error as Error).message,
@@ -921,17 +1027,20 @@ export class ClaudeServiceWithTools {
     }
   }
 
-  private async _executeSkillCreate(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeSkillCreate(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const name = input.name as string;
     const description = input.description as string;
-    const tools = (input.tools as Array<{ name: string; description: string }>) ?? [];
+    const tools =
+      (input.tools as Array<{ name: string; description: string }>) ?? [];
     const prompts = (input.prompts as Record<string, string>) ?? {};
     if (!name || !description) {
       return {
         success: false,
-        error: 'name and description required',
-        toolName: 'skill_create',
+        error: "name and description required",
+        toolName: "skill_create",
         executionTime: Date.now() - start,
       };
     }
@@ -940,50 +1049,55 @@ export class ClaudeServiceWithTools {
       return {
         success: true,
         output: `Skill created: ${result.skillId}`,
-        toolName: 'skill_create',
+        toolName: "skill_create",
         executionTime: Date.now() - start,
       };
     }
     return {
       success: false,
       error: result.error,
-      toolName: 'skill_create',
+      toolName: "skill_create",
       executionTime: Date.now() - start,
     };
   }
 
-  private async _executeSkillEdit(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeSkillEdit(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const skillId = input.skillId as string;
     const updates = input.updates as Record<string, unknown>;
     if (!skillId || !updates) {
       return {
         success: false,
-        error: 'skillId and updates required',
-        toolName: 'skill_edit',
+        error: "skillId and updates required",
+        toolName: "skill_edit",
         executionTime: Date.now() - start,
       };
     }
-    const result = await editSkill(skillId, updates as Parameters<typeof editSkill>[1]);
+    const result = await editSkill(
+      skillId,
+      updates as Parameters<typeof editSkill>[1],
+    );
     if (result.success) {
       return {
         success: true,
         output: `Skill ${skillId} updated`,
-        toolName: 'skill_edit',
+        toolName: "skill_edit",
         executionTime: Date.now() - start,
       };
     }
     return {
       success: false,
       error: result.error,
-      toolName: 'skill_edit',
+      toolName: "skill_edit",
       executionTime: Date.now() - start,
     };
   }
 
   private async _executeSkillRunTest(
     input: Record<string, unknown>,
-    workspaceRoot?: string
+    workspaceRoot?: string,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const skillId = input.skillId as string;
@@ -991,8 +1105,8 @@ export class ClaudeServiceWithTools {
     if (!skillId) {
       return {
         success: false,
-        error: 'skillId required',
-        toolName: 'skill_run_test',
+        error: "skillId required",
+        toolName: "skill_run_test",
         executionTime: Date.now() - start,
       };
     }
@@ -1004,7 +1118,7 @@ export class ClaudeServiceWithTools {
       success: result.success,
       output,
       error: result.error,
-      toolName: 'skill_run_test',
+      toolName: "skill_run_test",
       executionTime: Date.now() - start,
     };
   }
@@ -1013,104 +1127,113 @@ export class ClaudeServiceWithTools {
     const start = Date.now();
     const skills = await listSkills();
     const lines = skills.map(
-      (s) => `- ${s.id}: ${s.name} (${s.version})${s.isUser ? ' [user]' : ''}`
+      (s) => `- ${s.id}: ${s.name} (${s.version})${s.isUser ? " [user]" : ""}`,
     );
     return {
       success: true,
-      output: `Available skills:\n${lines.join('\n')}`,
-      toolName: 'skill_list',
+      output: `Available skills:\n${lines.join("\n")}`,
+      toolName: "skill_list",
       executionTime: Date.now() - start,
     };
   }
 
-  private async _executeSessionsList(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeSessionsList(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const start = Date.now();
-    const { sessionsList } = await import('./sessionCoordinatorService.js');
-    const limit = typeof input.limit === 'number' ? Math.min(100, input.limit) : 50;
+    const { sessionsList } = await import("./sessionCoordinatorService.js");
+    const limit =
+      typeof input.limit === "number" ? Math.min(100, input.limit) : 50;
     const sessions = await sessionsList({ limit });
     const lines = sessions.map(
       (s) =>
-        `- ${s.id}: type=${s.type} model=${s.model ?? 'N/A'} status=${s.status} started=${s.startedAt}`
+        `- ${s.id}: type=${s.type} model=${s.model ?? "N/A"} status=${s.status} started=${s.startedAt}`,
     );
     return {
       success: true,
-      output: lines.length ? `Sessions:\n${lines.join('\n')}` : 'No sessions found.',
-      toolName: 'sessions_list',
+      output: lines.length
+        ? `Sessions:\n${lines.join("\n")}`
+        : "No sessions found.",
+      toolName: "sessions_list",
       executionTime: Date.now() - start,
     };
   }
 
   private async _executeSessionsHistory(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const sessionId = input.sessionId;
-    if (typeof sessionId !== 'string' || !sessionId.trim()) {
+    if (typeof sessionId !== "string" || !sessionId.trim()) {
       return {
         success: false,
-        error: 'sessionId is required',
-        toolName: 'sessions_history',
+        error: "sessionId is required",
+        toolName: "sessions_history",
         executionTime: Date.now() - start,
       };
     }
-    const { sessionsHistory } = await import('./sessionCoordinatorService.js');
+    const { sessionsHistory } = await import("./sessionCoordinatorService.js");
     const hist = await sessionsHistory(sessionId.trim());
     if (!hist) {
       return {
         success: false,
         error: `Session ${sessionId} not found`,
-        toolName: 'sessions_history',
+        toolName: "sessions_history",
         executionTime: Date.now() - start,
       };
     }
     const lines = hist.messages.map((m) => `[${m.role}]: ${m.content}`);
     return {
       success: true,
-      output: lines.length ? `Transcript:\n${lines.join('\n')}` : 'No messages in session.',
-      toolName: 'sessions_history',
+      output: lines.length
+        ? `Transcript:\n${lines.join("\n")}`
+        : "No messages in session.",
+      toolName: "sessions_history",
       executionTime: Date.now() - start,
     };
   }
 
-  private async _executeSessionsSend(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeSessionsSend(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const sessionId = input.sessionId;
     const message = input.message;
-    if (typeof sessionId !== 'string' || !sessionId.trim()) {
+    if (typeof sessionId !== "string" || !sessionId.trim()) {
       return {
         success: false,
-        error: 'sessionId is required',
-        toolName: 'sessions_send',
+        error: "sessionId is required",
+        toolName: "sessions_send",
         executionTime: Date.now() - start,
       };
     }
-    if (typeof message !== 'string' || !message.trim()) {
+    if (typeof message !== "string" || !message.trim()) {
       return {
         success: false,
-        error: 'message is required',
-        toolName: 'sessions_send',
+        error: "message is required",
+        toolName: "sessions_send",
         executionTime: Date.now() - start,
       };
     }
-    const { sessionsSend } = await import('./sessionCoordinatorService.js');
+    const { sessionsSend } = await import("./sessionCoordinatorService.js");
     const result = await sessionsSend(sessionId.trim(), message.trim());
     if (!result.ok) {
       return {
         success: false,
-        error: result.error ?? 'Send failed',
-        toolName: 'sessions_send',
+        error: result.error ?? "Send failed",
+        toolName: "sessions_send",
         executionTime: Date.now() - start,
       };
     }
     const output = result.reply
       ? `Reply from session:\n${result.reply}`
       : result.queued
-        ? 'Message queued for session.'
-        : 'Message sent.';
+        ? "Message queued for session."
+        : "Message sent.";
     return {
       success: true,
       output,
-      toolName: 'sessions_send',
+      toolName: "sessions_send",
       executionTime: Date.now() - start,
     };
   }
@@ -1118,13 +1241,15 @@ export class ClaudeServiceWithTools {
   /**
    * Execute bash tool
    */
-  private async _executeBash(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeBash(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const validation = bashExecuteInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'bash_execute',
+        toolName: "bash_execute",
         executionTime: 0,
       };
     }
@@ -1136,13 +1261,15 @@ export class ClaudeServiceWithTools {
   /**
    * Execute file_read tool
    */
-  private async _executeFileRead(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeFileRead(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const validation = fileReadInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'file_read',
+        toolName: "file_read",
         executionTime: 0,
       };
     }
@@ -1154,13 +1281,15 @@ export class ClaudeServiceWithTools {
   /**
    * Execute file_write tool
    */
-  private async _executeFileWrite(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeFileWrite(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const validation = fileWriteInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'file_write',
+        toolName: "file_write",
         executionTime: 0,
       };
     }
@@ -1172,13 +1301,15 @@ export class ClaudeServiceWithTools {
   /**
    * Execute file_edit tool
    */
-  private async _executeFileEdit(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeFileEdit(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const validation = fileEditInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'file_edit',
+        toolName: "file_edit",
         executionTime: 0,
       };
     }
@@ -1186,7 +1317,7 @@ export class ClaudeServiceWithTools {
     const { path, operations } = validation.data;
     // Map operations to ensure required 'type' and 'lineStart' are treated as non-optional for the service
     const typedOps = operations.map((op) => ({
-      type: op.type as 'insert' | 'replace' | 'delete',
+      type: op.type as "insert" | "replace" | "delete",
       lineStart: op.lineStart,
       lineEnd: op.lineEnd,
       content: op.content,
@@ -1198,14 +1329,14 @@ export class ClaudeServiceWithTools {
    * Execute list_directory tool
    */
   private async _executeListDirectory(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const validation = listDirectoryInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'list_directory',
+        toolName: "list_directory",
         executionTime: 0,
       };
     }
@@ -1218,41 +1349,49 @@ export class ClaudeServiceWithTools {
    * Execute codebase_search tool
    */
   private async _executeCodebaseSearch(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const validation = codebaseSearchInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'codebase_search',
+        toolName: "codebase_search",
         executionTime: 0,
       };
     }
     const { query, workingDirectory, maxResults } = validation.data;
-    return await this.getTes().searchCodebase(query, workingDirectory, maxResults);
+    return await this.getTes().searchCodebase(
+      query,
+      workingDirectory,
+      maxResults,
+    );
   }
 
-  private async _executeGitStatus(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeGitStatus(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const validation = gitStatusInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'git_status',
+        toolName: "git_status",
         executionTime: 0,
       };
     }
     return await this.getTes().gitStatus(validation.data.workingDirectory);
   }
 
-  private async _executeGitDiff(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeGitDiff(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const validation = gitDiffInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'git_diff',
+        toolName: "git_diff",
         executionTime: 0,
       };
     }
@@ -1260,13 +1399,15 @@ export class ClaudeServiceWithTools {
     return await this.getTes().gitDiff(workingDirectory, staged, file);
   }
 
-  private async _executeGitLog(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeGitLog(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const validation = gitLogInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'git_log',
+        toolName: "git_log",
         executionTime: 0,
       };
     }
@@ -1274,13 +1415,15 @@ export class ClaudeServiceWithTools {
     return await this.getTes().gitLog(workingDirectory, maxCount, oneline);
   }
 
-  private async _executeGitCommit(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeGitCommit(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const validation = gitCommitInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'git_commit',
+        toolName: "git_commit",
         executionTime: 0,
       };
     }
@@ -1288,27 +1431,35 @@ export class ClaudeServiceWithTools {
     return await this.getTes().gitCommit(message, workingDirectory, addAll);
   }
 
-  private async _executeGitBranch(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeGitBranch(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const validation = gitBranchInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'git_branch',
+        toolName: "git_branch",
         executionTime: 0,
       };
     }
     const { workingDirectory, list, create } = validation.data;
-    return await this.getTes().gitBranch(workingDirectory, list ?? true, create);
+    return await this.getTes().gitBranch(
+      workingDirectory,
+      list ?? true,
+      create,
+    );
   }
 
-  private async _executeGitPush(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeGitPush(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const validation = gitPushInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'git_push',
+        toolName: "git_push",
         executionTime: 0,
       };
     }
@@ -1317,23 +1468,27 @@ export class ClaudeServiceWithTools {
   }
 
   private async _executeTerminalExecute(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const validation = terminalExecuteInputSchema.safeParse(input);
     if (!validation.success) {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'terminal_execute',
+        toolName: "terminal_execute",
         executionTime: 0,
       };
     }
     const { command, workingDirectory, timeout } = validation.data;
-    return await this.getTes().executeTerminal(command, workingDirectory, timeout);
+    return await this.getTes().executeTerminal(
+      command,
+      workingDirectory,
+      timeout,
+    );
   }
 
   private async _executeGenerateDbSchema(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const validation = generateDbSchemaInputSchema.safeParse(input);
@@ -1341,37 +1496,38 @@ export class ClaudeServiceWithTools {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'generate_db_schema',
+        toolName: "generate_db_schema",
         executionTime: 0,
       };
     }
     try {
       const { description, targetDb, format } = validation.data;
       const result = await generateSchemaFromDescription(description, {
-        targetDb: targetDb as 'sqlite' | 'postgres' | 'mysql',
-        format: format as 'sql' | 'drizzle',
+        targetDb: targetDb as "sqlite" | "postgres" | "mysql",
+        format: format as "sql" | "drizzle",
       });
       let output = `DDL:\n${result.ddl}`;
       if (result.drizzle) output += `\n\nDrizzle schema:\n${result.drizzle}`;
-      if (result.tables?.length) output += `\n\nTables: ${result.tables.join(', ')}`;
+      if (result.tables?.length)
+        output += `\n\nTables: ${result.tables.join(", ")}`;
       return {
         success: true,
         output,
-        toolName: 'generate_db_schema',
+        toolName: "generate_db_schema",
         executionTime: Date.now() - start,
       };
     } catch (e) {
       return {
         success: false,
         error: (e as Error).message,
-        toolName: 'generate_db_schema',
+        toolName: "generate_db_schema",
         executionTime: Date.now() - start,
       };
     }
   }
 
   private async _executeGenerateMigrations(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const validation = generateMigrationsInputSchema.safeParse(input);
@@ -1379,34 +1535,39 @@ export class ClaudeServiceWithTools {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'generate_migrations',
+        toolName: "generate_migrations",
         executionTime: 0,
       };
     }
     try {
       const { schemaDdl, targetDb } = validation.data;
-      const result = await generateMigrations(schemaDdl, targetDb as 'sqlite' | 'postgres');
+      const result = await generateMigrations(
+        schemaDdl,
+        targetDb as "sqlite" | "postgres",
+      );
       const output = result.migrations.length
-        ? result.migrations.map((m, i) => `-- Migration ${i + 1}\n${m}`).join('\n\n')
-        : 'No migrations generated.';
+        ? result.migrations
+            .map((m, i) => `-- Migration ${i + 1}\n${m}`)
+            .join("\n\n")
+        : "No migrations generated.";
       return {
         success: true,
-        output: (result.summary ? `${result.summary}\n\n` : '') + output,
-        toolName: 'generate_migrations',
+        output: (result.summary ? `${result.summary}\n\n` : "") + output,
+        toolName: "generate_migrations",
         executionTime: Date.now() - start,
       };
     } catch (e) {
       return {
         success: false,
         error: (e as Error).message,
-        toolName: 'generate_migrations',
+        toolName: "generate_migrations",
         executionTime: Date.now() - start,
       };
     }
   }
 
   private async _executeScreenshotUrl(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const validation = screenshotUrlInputSchema.safeParse(input);
@@ -1414,7 +1575,7 @@ export class ClaudeServiceWithTools {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'screenshot_url',
+        toolName: "screenshot_url",
         executionTime: 0,
       };
     }
@@ -1422,20 +1583,22 @@ export class ClaudeServiceWithTools {
     if (this.freeAgentExternalAllowlist?.length) {
       try {
         const host = new URL(url).hostname.toLowerCase();
-        const allowed = this.freeAgentExternalAllowlist.map((h) => h.toLowerCase().trim());
+        const allowed = this.freeAgentExternalAllowlist.map((h) =>
+          h.toLowerCase().trim(),
+        );
         if (!allowed.includes(host)) {
           return {
             success: false,
             error: `URL host "${host}" is not in Free Agent external allowlist. Add the domain in Free Agent settings.`,
-            toolName: 'screenshot_url',
+            toolName: "screenshot_url",
             executionTime: Date.now() - start,
           };
         }
       } catch {
         return {
           success: false,
-          error: 'Invalid URL',
-          toolName: 'screenshot_url',
+          error: "Invalid URL",
+          toolName: "screenshot_url",
           executionTime: Date.now() - start,
         };
       }
@@ -1444,19 +1607,24 @@ export class ClaudeServiceWithTools {
     if (!result.ok) {
       return {
         success: false,
-        error: result.error ?? 'Screenshot failed',
-        toolName: 'screenshot_url',
+        error: result.error ?? "Screenshot failed",
+        toolName: "screenshot_url",
         executionTime: Date.now() - start,
       };
     }
     const output = result.imageBase64
       ? `Screenshot captured (base64 PNG, ${result.imageBase64.length} chars). Use for visual verification.`
-      : 'Screenshot captured.';
-    return { success: true, output, toolName: 'screenshot_url', executionTime: Date.now() - start };
+      : "Screenshot captured.";
+    return {
+      success: true,
+      output,
+      toolName: "screenshot_url",
+      executionTime: Date.now() - start,
+    };
   }
 
   private async _executeBrowserRunScript(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const validation = browserRunScriptInputSchema.safeParse(input);
@@ -1464,33 +1632,37 @@ export class ClaudeServiceWithTools {
       return {
         success: false,
         error: `Invalid input: ${validation.error.message}`,
-        toolName: 'browser_run_script',
+        toolName: "browser_run_script",
         executionTime: 0,
       };
     }
-    const result = await browserRunScript(validation.data.steps as BrowserStep[]);
+    const result = await browserRunScript(
+      validation.data.steps as BrowserStep[],
+    );
     if (!result.ok) {
       return {
         success: false,
-        error: result.error ?? 'Script failed',
-        toolName: 'browser_run_script',
+        error: result.error ?? "Script failed",
+        toolName: "browser_run_script",
         executionTime: Date.now() - start,
       };
     }
-    const parts = result.logs ? [`Steps: ${result.logs.join('; ')}`] : [];
+    const parts = result.logs ? [`Steps: ${result.logs.join("; ")}`] : [];
     if (result.lastUrl) parts.push(`Last URL: ${result.lastUrl}`);
     if (result.screenshotBase64)
-      parts.push(`Screenshot captured (base64, ${result.screenshotBase64.length} chars)`);
+      parts.push(
+        `Screenshot captured (base64, ${result.screenshotBase64.length} chars)`,
+      );
     return {
       success: true,
-      output: parts.join('\n') || 'Script completed.',
-      toolName: 'browser_run_script',
+      output: parts.join("\n") || "Script completed.",
+      toolName: "browser_run_script",
       executionTime: Date.now() - start,
     };
   }
 
   private async _executeBrowserNavigate(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const validation = browserNavigateInputSchema.safeParse(input);
@@ -1498,26 +1670,33 @@ export class ClaudeServiceWithTools {
       return {
         success: false,
         error: validation.error.message,
-        toolName: 'browser_navigate',
+        toolName: "browser_navigate",
         executionTime: 0,
       };
-    const res = await browserNavigate(validation.data.url, validation.data.timeout);
+    const res = await browserNavigate(
+      validation.data.url,
+      validation.data.timeout,
+    );
     return {
       success: res.ok,
-      output: res.ok ? `Navigated to ${res.result?.url}. Title: ${res.result?.title}` : res.error,
-      toolName: 'browser_navigate',
+      output: res.ok
+        ? `Navigated to ${res.result?.url}. Title: ${res.result?.title}`
+        : res.error,
+      toolName: "browser_navigate",
       executionTime: Date.now() - start,
     };
   }
 
-  private async _executeBrowserClick(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeBrowserClick(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const validation = browserClickInputSchema.safeParse(input);
     if (!validation.success)
       return {
         success: false,
         error: validation.error.message,
-        toolName: 'browser_click',
+        toolName: "browser_click",
         executionTime: 0,
       };
     const { selector, url } = validation.data;
@@ -1525,19 +1704,21 @@ export class ClaudeServiceWithTools {
     return {
       success: res.ok,
       output: res.ok ? `Clicked element: ${selector}` : res.error,
-      toolName: 'browser_click',
+      toolName: "browser_click",
       executionTime: Date.now() - start,
     };
   }
 
-  private async _executeBrowserType(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeBrowserType(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const validation = browserTypeInputSchema.safeParse(input);
     if (!validation.success)
       return {
         success: false,
         error: validation.error.message,
-        toolName: 'browser_type',
+        toolName: "browser_type",
         executionTime: 0,
       };
     const { selector, text, url } = validation.data;
@@ -1545,13 +1726,13 @@ export class ClaudeServiceWithTools {
     return {
       success: res.ok,
       output: res.ok ? `Typed "${text}" into ${selector}` : res.error,
-      toolName: 'browser_type',
+      toolName: "browser_type",
       executionTime: Date.now() - start,
     };
   }
 
   private async _executeBrowserGetContent(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const validation = browserGetContentInputSchema.safeParse(input);
@@ -1559,7 +1740,7 @@ export class ClaudeServiceWithTools {
       return {
         success: false,
         error: validation.error.message,
-        toolName: 'browser_get_content',
+        toolName: "browser_get_content",
         executionTime: 0,
       };
     const res = await browserGetContent(validation.data.url);
@@ -1568,13 +1749,13 @@ export class ClaudeServiceWithTools {
       output: res.ok
         ? `HTML Length: ${res.html?.length}\nText Content:\n${res.text?.substring(0, 5000)}`
         : res.error,
-      toolName: 'browser_get_content',
+      toolName: "browser_get_content",
       executionTime: Date.now() - start,
     };
   }
 
   private async _executeBrowserScreenshot(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const validation = browserScreenshotInputSchema.safeParse(input);
@@ -1582,92 +1763,96 @@ export class ClaudeServiceWithTools {
       return {
         success: false,
         error: validation.error.message,
-        toolName: 'browser_screenshot',
+        toolName: "browser_screenshot",
         executionTime: 0,
       };
-    const res = await browserScreenshot(validation.data.url, validation.data.fullPage);
+    const res = await browserScreenshot(
+      validation.data.url,
+      validation.data.fullPage,
+    );
     return {
       success: res.ok,
-      output: res.ok ? 'Screenshot captured.' : res.error,
-      toolName: 'browser_screenshot',
+      output: res.ok ? "Screenshot captured." : res.error,
+      toolName: "browser_screenshot",
       executionTime: Date.now() - start,
     };
   }
 
   private async _executeBrowserSnapshot(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
-    const { browserSnapshot } = await import('./chromeCdpservice.js');
-    const url = typeof input.url === 'string' ? input.url : undefined;
-    const profile = typeof input.profile === 'string' ? input.profile : undefined;
+    const { browserSnapshot } = await import("./chromeCdpservice.js");
+    const url = typeof input.url === "string" ? input.url : undefined;
+    const profile =
+      typeof input.profile === "string" ? input.profile : undefined;
     const res = await browserSnapshot(url, profile);
     return {
       success: res.ok,
       output: res.ok ? res.snapshot : res.error,
-      toolName: 'browser_snapshot',
+      toolName: "browser_snapshot",
       executionTime: Date.now() - start,
     };
   }
 
   private async _executeBrowserUpload(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const selector = input.selector;
     const filePath = input.filePath;
-    if (typeof selector !== 'string' || typeof filePath !== 'string') {
+    if (typeof selector !== "string" || typeof filePath !== "string") {
       return {
         success: false,
-        error: 'selector and filePath required',
-        toolName: 'browser_upload',
+        error: "selector and filePath required",
+        toolName: "browser_upload",
         executionTime: 0,
       };
     }
-    const { browserUpload } = await import('./chromeCdpservice.js');
+    const { browserUpload } = await import("./chromeCdpservice.js");
     const res = await browserUpload(selector, filePath, {
-      url: typeof input.url === 'string' ? input.url : undefined,
-      profile: typeof input.profile === 'string' ? input.profile : undefined,
+      url: typeof input.url === "string" ? input.url : undefined,
+      profile: typeof input.profile === "string" ? input.profile : undefined,
     });
     return {
       success: res.ok,
-      output: res.ok ? 'File uploaded.' : res.error,
-      toolName: 'browser_upload',
+      output: res.ok ? "File uploaded." : res.error,
+      toolName: "browser_upload",
       executionTime: Date.now() - start,
     };
   }
 
   private async _executeBrowserProfilesList(): Promise<ToolExecutionResult> {
     const start = Date.now();
-    const { listProfiles } = await import('./chromeCdpservice.js');
+    const { listProfiles } = await import("./chromeCdpservice.js");
     const profiles = await listProfiles();
     return {
       success: true,
-      output: `Profiles: ${profiles.join(', ')}`,
-      toolName: 'browser_profiles_list',
+      output: `Profiles: ${profiles.join(", ")}`,
+      toolName: "browser_profiles_list",
       executionTime: Date.now() - start,
     };
   }
 
   private async _executeBrowserProfileSwitch(
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const profile = input.profile;
-    if (typeof profile !== 'string') {
+    if (typeof profile !== "string") {
       return {
         success: false,
-        error: 'profile required',
-        toolName: 'browser_profile_switch',
+        error: "profile required",
+        toolName: "browser_profile_switch",
         executionTime: 0,
       };
     }
-    const { switchProfile } = await import('./chromeCdpservice.js');
+    const { switchProfile } = await import("./chromeCdpservice.js");
     switchProfile(profile);
     return {
       success: true,
       output: `Switched to profile: ${profile}`,
-      toolName: 'browser_profile_switch',
+      toolName: "browser_profile_switch",
       executionTime: Date.now() - start,
     };
   }
@@ -1677,20 +1862,21 @@ export class ClaudeServiceWithTools {
     return {
       success: false,
       output:
-        'camera_capture requires Electron desktop app with camera permission. Use the desktop app and grant camera access.',
-      toolName: 'camera_capture',
+        "camera_capture requires Electron desktop app with camera permission. Use the desktop app and grant camera access.",
+      toolName: "camera_capture",
       executionTime: Date.now() - start,
     };
   }
 
   private async _executeScreenRecord(
-    _input: Record<string, unknown>
+    _input: Record<string, unknown>,
   ): Promise<ToolExecutionResult> {
     const start = Date.now();
     return {
       success: false,
-      output: 'screen_record requires Electron desktop app with screen capture permission.',
-      toolName: 'screen_record',
+      output:
+        "screen_record requires Electron desktop app with screen capture permission.",
+      toolName: "screen_record",
       executionTime: Date.now() - start,
     };
   }
@@ -1699,60 +1885,66 @@ export class ClaudeServiceWithTools {
     const start = Date.now();
     return {
       success: false,
-      output: 'location_get requires Electron desktop app with location permission.',
-      toolName: 'location_get',
+      output:
+        "location_get requires Electron desktop app with location permission.",
+      toolName: "location_get",
       executionTime: Date.now() - start,
     };
   }
 
-  private async _executeSystemExec(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeSystemExec(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const command = input.command;
-    if (typeof command !== 'string' || !command.trim()) {
+    if (typeof command !== "string" || !command.trim()) {
       return {
         success: false,
-        error: 'command required',
-        toolName: 'system_exec',
+        error: "command required",
+        toolName: "system_exec",
         executionTime: 0,
       };
     }
     // Reuse bash execution validation; system_exec runs on host (not Docker)
-    const { execSync } = await import('child_process');
-    const STRICT = process.env.STRICT_COMMAND_ALLOWLIST === 'true';
+    const { execSync } = await import("child_process");
+    const STRICT = process.env.STRICT_COMMAND_ALLOWLIST === "true";
     const ALLOWED = new Set([
-      'npm',
-      'npx',
-      'node',
-      'git',
-      'pnpm',
-      'yarn',
-      'tsx',
-      'ts-node',
-      'ls',
-      'pwd',
+      "npm",
+      "npx",
+      "node",
+      "git",
+      "pnpm",
+      "yarn",
+      "tsx",
+      "ts-node",
+      "ls",
+      "pwd",
     ]);
     if (STRICT) {
       const first =
         command
           .trim()
           .split(/\s+/)[0]
-          ?.replace(/^[\s"']+|["']$/g, '') ?? '';
-      const base = first.split('/').pop() ?? first;
+          ?.replace(/^[\s"']+|["']$/g, "") ?? "";
+      const base = first.split("/").pop() ?? first;
       if (!ALLOWED.has(base.toLowerCase())) {
         return {
           success: false,
           error: `Command not in allowlist: ${base}. Set STRICT_COMMAND_ALLOWLIST=false or add to allowlist.`,
-          toolName: 'system_exec',
+          toolName: "system_exec",
           executionTime: Date.now() - start,
         };
       }
     }
     try {
-      const out = execSync(command.trim(), { encoding: 'utf8', timeout: 30000 });
+      const out = execSync(command.trim(), {
+        encoding: "utf8",
+        timeout: 30000,
+      });
       return {
         success: true,
-        output: out || '(no output)',
-        toolName: 'system_exec',
+        output: out || "(no output)",
+        toolName: "system_exec",
         executionTime: Date.now() - start,
       };
     } catch (e) {
@@ -1760,46 +1952,49 @@ export class ClaudeServiceWithTools {
       return {
         success: false,
         output: err.stderr || err.stdout || err.message,
-        toolName: 'system_exec',
+        toolName: "system_exec",
         executionTime: Date.now() - start,
       };
     }
   }
 
-  private async _executeCanvasUpdate(input: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async _executeCanvasUpdate(
+    input: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const start = Date.now();
     const sessionId = input.sessionId;
     const action = input.action;
-    if (typeof sessionId !== 'string' || typeof action !== 'string') {
+    if (typeof sessionId !== "string" || typeof action !== "string") {
       return {
         success: false,
-        error: 'sessionId and action required',
-        toolName: 'canvas_update',
+        error: "sessionId and action required",
+        toolName: "canvas_update",
         executionTime: 0,
       };
     }
     try {
-      const { applyCanvasAction } = await import('./canvasService.js');
+      const { applyCanvasAction } = await import("./canvasService.js");
       const result = await applyCanvasAction({
         sessionId,
-        action: action as 'create' | 'update' | 'delete',
-        elementId: typeof input.elementId === 'string' ? input.elementId : undefined,
+        action: action as "create" | "update" | "delete",
+        elementId:
+          typeof input.elementId === "string" ? input.elementId : undefined,
         element:
-          typeof input.element === 'object' && input.element
+          typeof input.element === "object" && input.element
             ? (input.element as Record<string, unknown>)
             : undefined,
       });
       return {
         success: true,
         output: `Canvas updated. Elements: ${JSON.stringify(result.elements ?? []).slice(0, 500)}`,
-        toolName: 'canvas_update',
+        toolName: "canvas_update",
         executionTime: Date.now() - start,
       };
     } catch (e) {
       return {
         success: false,
         output: (e as Error).message,
-        toolName: 'canvas_update',
+        toolName: "canvas_update",
         executionTime: Date.now() - start,
       };
     }

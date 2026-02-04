@@ -3,15 +3,21 @@
  * Structures for system architecture generation and PRD
  */
 
-export type C4Level = 'context' | 'container' | 'component' | 'code';
-export type ProjectType = 'web' | 'mobile' | 'api' | 'fullstack' | 'saas' | 'general';
-export type Complexity = 'mvp' | 'standard' | 'enterprise';
+export type C4Level = "context" | "container" | "component" | "code";
+export type ProjectType =
+  | "web"
+  | "mobile"
+  | "api"
+  | "fullstack"
+  | "saas"
+  | "general";
+export type Complexity = "mvp" | "standard" | "enterprise";
 
 export interface Component {
   id: string;
   name: string;
   description: string;
-  type: 'frontend' | 'backend' | 'database' | 'service' | 'external' | 'queue';
+  type: "frontend" | "backend" | "database" | "service" | "external" | "queue";
   technology?: string[];
   responsibilities?: string[];
 }
@@ -36,13 +42,13 @@ export interface DataModel {
   relationships?: {
     field: string;
     references: string;
-    type: 'one-to-one' | 'one-to-many' | 'many-to-many';
+    type: "one-to-one" | "one-to-many" | "many-to-many";
   }[];
 }
 
 export interface APIEndpoint {
   id: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   path: string;
   description: string;
   parameters?: {
@@ -109,7 +115,7 @@ export interface ArchitectureRequest {
 
 export interface ArchitectureResponse {
   id: string;
-  status: 'generating' | 'complete' | 'error';
+  status: "generating" | "complete" | "error";
   architecture?: SystemArchitecture;
   error?: string;
   timestamp: string;

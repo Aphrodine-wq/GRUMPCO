@@ -29,21 +29,21 @@
  *    - Share learnings across similar projects
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 export type FeedbackType =
-  | 'helpful' // User found the context helpful
-  | 'not_helpful' // Context wasn't useful
-  | 'missing_context' // User needed something not included
-  | 'too_verbose' // Too much detail
-  | 'too_brief' // Not enough detail
-  | 'wrong_intent' // Misunderstood user's intent
-  | 'wrong_files' // Wrong files included
-  | 'correction'; // User provided explicit correction
+  | "helpful" // User found the context helpful
+  | "not_helpful" // Context wasn't useful
+  | "missing_context" // User needed something not included
+  | "too_verbose" // Too much detail
+  | "too_brief" // Not enough detail
+  | "wrong_intent" // Misunderstood user's intent
+  | "wrong_files" // Wrong files included
+  | "correction"; // User provided explicit correction
 
 export interface UserFeedback {
   id: string;
@@ -63,13 +63,13 @@ export interface UserFeedback {
   unwantedFiles?: string[]; // Files that shouldn't have been included
 
   // Metadata
-  responseQuality?: 'good' | 'acceptable' | 'poor';
+  responseQuality?: "good" | "acceptable" | "poor";
   userComment?: string;
 }
 
 export interface LearningSignal {
-  type: 'boost' | 'suppress' | 'adjust';
-  target: 'file' | 'unit' | 'modality' | 'intent' | 'pattern';
+  type: "boost" | "suppress" | "adjust";
+  target: "file" | "unit" | "modality" | "intent" | "pattern";
   targetId: string;
   magnitude: number; // -1 to 1
   reason: string;
@@ -79,7 +79,7 @@ export interface LearningSignal {
 
 export interface UserPreferences {
   // Detail level preferences
-  preferredDetailLevel: 'abstract' | 'summary' | 'detailed' | 'source';
+  preferredDetailLevel: "abstract" | "summary" | "detailed" | "source";
   detailLevelConfidence: number;
 
   // Modality weights (learned)
@@ -209,7 +209,7 @@ export class RealTimeLearningService extends EventEmitter {
     };
 
     this.preferences = {
-      preferredDetailLevel: 'detailed',
+      preferredDetailLevel: "detailed",
       detailLevelConfidence: 0,
       modalityWeights: {},
       fileImportance: new Map(),
@@ -259,7 +259,7 @@ export class RealTimeLearningService extends EventEmitter {
     } else if (feedback.rating && feedback.rating <= 2) {
       this.metrics.negativeFeedback++;
     }
-    if (feedback.type === 'correction') {
+    if (feedback.type === "correction") {
       this.metrics.corrections++;
     }
 
@@ -267,28 +267,28 @@ export class RealTimeLearningService extends EventEmitter {
     const signals: LearningSignal[] = [];
 
     switch (feedback.type) {
-      case 'helpful':
+      case "helpful":
         signals.push(...this.processPositiveFeedback(feedback));
         break;
-      case 'not_helpful':
+      case "not_helpful":
         signals.push(...this.processNegativeFeedback(feedback));
         break;
-      case 'missing_context':
+      case "missing_context":
         signals.push(...this.processMissingContextFeedback(feedback));
         break;
-      case 'too_verbose':
-        signals.push(...this.processVerbosityFeedback(feedback, 'less'));
+      case "too_verbose":
+        signals.push(...this.processVerbosityFeedback(feedback, "less"));
         break;
-      case 'too_brief':
-        signals.push(...this.processVerbosityFeedback(feedback, 'more'));
+      case "too_brief":
+        signals.push(...this.processVerbosityFeedback(feedback, "more"));
         break;
-      case 'wrong_intent':
+      case "wrong_intent":
         signals.push(...this.processIntentCorrectionFeedback(feedback));
         break;
-      case 'wrong_files':
+      case "wrong_files":
         signals.push(...this.processWrongFilesFeedback(feedback));
         break;
-      case 'correction':
+      case "correction":
         signals.push(...this.processExplicitCorrection(feedback));
         break;
     }
@@ -304,7 +304,7 @@ export class RealTimeLearningService extends EventEmitter {
     this.updateAccuracyEstimate();
 
     // Emit learning event
-    this.emit('learned', { feedback, signals });
+    this.emit("learned", { feedback, signals });
 
     return signals;
   }
@@ -336,16 +336,17 @@ export class RealTimeLearningService extends EventEmitter {
 
   private processPositiveFeedback(feedback: UserFeedback): LearningSignal[] {
     const signals: LearningSignal[] = [];
-    const boostMagnitude = ((feedback.rating || 4) / 5) * this.config.boostLearningRate;
+    const boostMagnitude =
+      ((feedback.rating || 4) / 5) * this.config.boostLearningRate;
 
     // Boost all included units
     for (const unitId of feedback.includedUnits) {
       signals.push({
-        type: 'boost',
-        target: 'unit',
+        type: "boost",
+        target: "unit",
         targetId: unitId,
         magnitude: boostMagnitude,
-        reason: 'positive_feedback',
+        reason: "positive_feedback",
         confidence: 0.8,
         decay: 0.001,
       });
@@ -361,11 +362,11 @@ export class RealTimeLearningService extends EventEmitter {
     // Suppress all included units (they weren't helpful)
     for (const unitId of feedback.includedUnits) {
       signals.push({
-        type: 'suppress',
-        target: 'unit',
+        type: "suppress",
+        target: "unit",
         targetId: unitId,
         magnitude: -suppressMagnitude,
-        reason: 'negative_feedback',
+        reason: "negative_feedback",
         confidence: 0.7,
         decay: 0.005,
       });
@@ -374,18 +375,20 @@ export class RealTimeLearningService extends EventEmitter {
     return signals;
   }
 
-  private processMissingContextFeedback(feedback: UserFeedback): LearningSignal[] {
+  private processMissingContextFeedback(
+    feedback: UserFeedback,
+  ): LearningSignal[] {
     const signals: LearningSignal[] = [];
 
     // Boost missing files significantly
     if (feedback.missingFiles) {
       for (const file of feedback.missingFiles) {
         signals.push({
-          type: 'boost',
-          target: 'file',
+          type: "boost",
+          target: "file",
           targetId: file,
           magnitude: this.config.boostLearningRate * 2,
-          reason: 'user_requested_missing',
+          reason: "user_requested_missing",
           confidence: 0.95,
           decay: 0.0001, // Slow decay - user explicitly wanted this
         });
@@ -400,36 +403,36 @@ export class RealTimeLearningService extends EventEmitter {
 
   private processVerbosityFeedback(
     feedback: UserFeedback,
-    direction: 'more' | 'less'
+    direction: "more" | "less",
   ): LearningSignal[] {
     const signals: LearningSignal[] = [];
 
     // Adjust detail level preference
-    const levels: Array<UserPreferences['preferredDetailLevel']> = [
-      'abstract',
-      'summary',
-      'detailed',
-      'source',
+    const levels: Array<UserPreferences["preferredDetailLevel"]> = [
+      "abstract",
+      "summary",
+      "detailed",
+      "source",
     ];
     const currentIdx = levels.indexOf(this.preferences.preferredDetailLevel);
 
-    if (direction === 'more' && currentIdx < levels.length - 1) {
+    if (direction === "more" && currentIdx < levels.length - 1) {
       this.preferences.preferredDetailLevel = levels[currentIdx + 1];
-    } else if (direction === 'less' && currentIdx > 0) {
+    } else if (direction === "less" && currentIdx > 0) {
       this.preferences.preferredDetailLevel = levels[currentIdx - 1];
     }
 
     this.preferences.detailLevelConfidence = Math.min(
       1,
-      this.preferences.detailLevelConfidence + 0.2
+      this.preferences.detailLevelConfidence + 0.2,
     );
 
     signals.push({
-      type: 'adjust',
-      target: 'pattern',
+      type: "adjust",
+      target: "pattern",
       targetId: `detail_level_${direction}`,
-      magnitude: direction === 'more' ? 0.2 : -0.2,
-      reason: 'verbosity_feedback',
+      magnitude: direction === "more" ? 0.2 : -0.2,
+      reason: "verbosity_feedback",
       confidence: 0.8,
       decay: 0.01,
     });
@@ -437,21 +440,26 @@ export class RealTimeLearningService extends EventEmitter {
     return signals;
   }
 
-  private processIntentCorrectionFeedback(feedback: UserFeedback): LearningSignal[] {
+  private processIntentCorrectionFeedback(
+    feedback: UserFeedback,
+  ): LearningSignal[] {
     const signals: LearningSignal[] = [];
 
     if (feedback.correction) {
       // Learn the intent correction
       this.model.intentCorrections.set(feedback.query, feedback.correction);
-      this.preferences.intentVocabulary.set(feedback.query, feedback.correction);
+      this.preferences.intentVocabulary.set(
+        feedback.query,
+        feedback.correction,
+      );
       this.metrics.learnedIntentCorrections++;
 
       signals.push({
-        type: 'adjust',
-        target: 'intent',
+        type: "adjust",
+        target: "intent",
         targetId: feedback.query,
         magnitude: 1,
-        reason: 'intent_correction',
+        reason: "intent_correction",
         confidence: 1.0, // User explicitly corrected
         decay: 0.0001, // Very slow decay
       });
@@ -467,11 +475,11 @@ export class RealTimeLearningService extends EventEmitter {
     if (feedback.unwantedFiles) {
       for (const file of feedback.unwantedFiles) {
         signals.push({
-          type: 'suppress',
-          target: 'file',
+          type: "suppress",
+          target: "file",
           targetId: file,
           magnitude: -this.config.suppressLearningRate * 2,
-          reason: 'user_rejected_file',
+          reason: "user_rejected_file",
           confidence: 0.95,
           decay: 0.0001,
         });
@@ -487,11 +495,11 @@ export class RealTimeLearningService extends EventEmitter {
     if (feedback.missingFiles) {
       for (const file of feedback.missingFiles) {
         signals.push({
-          type: 'boost',
-          target: 'file',
+          type: "boost",
+          target: "file",
           targetId: file,
           magnitude: this.config.boostLearningRate * 2,
-          reason: 'user_requested_file',
+          reason: "user_requested_file",
           confidence: 0.95,
           decay: 0.0001,
         });
@@ -510,11 +518,11 @@ export class RealTimeLearningService extends EventEmitter {
       this.model.intentCorrections.set(feedback.query, feedback.correction);
 
       signals.push({
-        type: 'adjust',
-        target: 'pattern',
+        type: "adjust",
+        target: "pattern",
         targetId: `correction_${this.generateId()}`,
         magnitude: 1,
-        reason: 'explicit_correction',
+        reason: "explicit_correction",
         confidence: 1.0,
         decay: 0.00001, // Almost permanent
       });
@@ -535,17 +543,17 @@ export class RealTimeLearningService extends EventEmitter {
     }
 
     switch (signal.target) {
-      case 'file':
-      case 'unit':
+      case "file":
+      case "unit":
         this.applyBoostSignal(signal);
         break;
-      case 'modality':
+      case "modality":
         this.applyModalitySignal(signal);
         break;
-      case 'intent':
+      case "intent":
         // Already handled in generation
         break;
-      case 'pattern':
+      case "pattern":
         this.applyPatternSignal(signal);
         break;
     }
@@ -565,7 +573,7 @@ export class RealTimeLearningService extends EventEmitter {
     const current = this.preferences.modalityWeights[signal.targetId] || 1;
     this.preferences.modalityWeights[signal.targetId] = Math.max(
       0.1,
-      Math.min(2, current + signal.magnitude)
+      Math.min(2, current + signal.magnitude),
     );
   }
 
@@ -610,7 +618,8 @@ export class RealTimeLearningService extends EventEmitter {
     const similar = new Map<string, number>();
     const queryWords = new Set(query.toLowerCase().split(/\s+/));
 
-    for (const [storedQuery, associations] of this.model.queryFileAssociations) {
+    for (const [storedQuery, associations] of this.model
+      .queryFileAssociations) {
       const storedWords = new Set(storedQuery.toLowerCase().split(/\s+/));
       const overlap = [...queryWords].filter((w) => storedWords.has(w)).length;
       const similarity = overlap / Math.max(queryWords.size, storedWords.size);
@@ -654,7 +663,7 @@ export class RealTimeLearningService extends EventEmitter {
    * Get preferred detail level
    */
   getPreferredDetailLevel(): {
-    level: UserPreferences['preferredDetailLevel'];
+    level: UserPreferences["preferredDetailLevel"];
     confidence: number;
   } {
     return {
@@ -735,10 +744,14 @@ export class RealTimeLearningService extends EventEmitter {
 
   private trimHistory(): void {
     if (this.model.feedbackHistory.length > this.config.maxHistorySize) {
-      this.model.feedbackHistory = this.model.feedbackHistory.slice(-this.config.maxHistorySize);
+      this.model.feedbackHistory = this.model.feedbackHistory.slice(
+        -this.config.maxHistorySize,
+      );
     }
     if (this.model.signalHistory.length > this.config.maxHistorySize * 3) {
-      this.model.signalHistory = this.model.signalHistory.slice(-this.config.maxHistorySize * 3);
+      this.model.signalHistory = this.model.signalHistory.slice(
+        -this.config.maxHistorySize * 3,
+      );
     }
   }
 
@@ -755,10 +768,9 @@ export class RealTimeLearningService extends EventEmitter {
         fileBoosts: Object.fromEntries(this.model.fileBoosts),
         unitTypeBoosts: Object.fromEntries(this.model.unitTypeBoosts),
         queryFileAssociations: Object.fromEntries(
-          Array.from(this.model.queryFileAssociations.entries()).map(([k, v]) => [
-            k,
-            Object.fromEntries(v),
-          ])
+          Array.from(this.model.queryFileAssociations.entries()).map(
+            ([k, v]) => [k, Object.fromEntries(v)],
+          ),
         ),
         intentCorrections: Object.fromEntries(this.model.intentCorrections),
         patternScores: Object.fromEntries(this.model.patternScores),
@@ -791,18 +803,26 @@ export class RealTimeLearningService extends EventEmitter {
 
       // Import model
       if (parsed.model) {
-        this.model.fileBoosts = new Map(Object.entries(parsed.model.fileBoosts || {}));
-        this.model.unitTypeBoosts = new Map(Object.entries(parsed.model.unitTypeBoosts || {}));
+        this.model.fileBoosts = new Map(
+          Object.entries(parsed.model.fileBoosts || {}),
+        );
+        this.model.unitTypeBoosts = new Map(
+          Object.entries(parsed.model.unitTypeBoosts || {}),
+        );
         this.model.queryFileAssociations = new Map(
-          Object.entries(parsed.model.queryFileAssociations || {}).map(([k, v]) => [
-            k,
-            new Map(Object.entries(v as Record<string, number>)),
-          ])
+          Object.entries(parsed.model.queryFileAssociations || {}).map(
+            ([k, v]) => [
+              k,
+              new Map(Object.entries(v as Record<string, number>)),
+            ],
+          ),
         );
         this.model.intentCorrections = new Map(
-          Object.entries(parsed.model.intentCorrections || {})
+          Object.entries(parsed.model.intentCorrections || {}),
         );
-        this.model.patternScores = new Map(Object.entries(parsed.model.patternScores || {}));
+        this.model.patternScores = new Map(
+          Object.entries(parsed.model.patternScores || {}),
+        );
         this.model.version = parsed.model.version || 1;
         this.model.lastUpdated = parsed.model.lastUpdated || Date.now();
         this.model.totalFeedback = parsed.model.totalFeedback || 0;
@@ -812,17 +832,23 @@ export class RealTimeLearningService extends EventEmitter {
       // Import preferences
       if (parsed.preferences) {
         this.preferences.preferredDetailLevel =
-          parsed.preferences.preferredDetailLevel || 'detailed';
-        this.preferences.detailLevelConfidence = parsed.preferences.detailLevelConfidence || 0;
-        this.preferences.modalityWeights = parsed.preferences.modalityWeights || {};
+          parsed.preferences.preferredDetailLevel || "detailed";
+        this.preferences.detailLevelConfidence =
+          parsed.preferences.detailLevelConfidence || 0;
+        this.preferences.modalityWeights =
+          parsed.preferences.modalityWeights || {};
         this.preferences.fileImportance = new Map(
-          Object.entries(parsed.preferences.fileImportance || {})
+          Object.entries(parsed.preferences.fileImportance || {}),
         );
         this.preferences.intentVocabulary = new Map(
-          Object.entries(parsed.preferences.intentVocabulary || {})
+          Object.entries(parsed.preferences.intentVocabulary || {}),
         );
-        this.preferences.antiPatterns = new Set(parsed.preferences.antiPatterns || []);
-        this.preferences.preferredPatterns = new Set(parsed.preferences.preferredPatterns || []);
+        this.preferences.antiPatterns = new Set(
+          parsed.preferences.antiPatterns || [],
+        );
+        this.preferences.preferredPatterns = new Set(
+          parsed.preferences.preferredPatterns || [],
+        );
       }
 
       // Import metrics
@@ -830,10 +856,10 @@ export class RealTimeLearningService extends EventEmitter {
         this.metrics = { ...this.metrics, ...parsed.metrics };
       }
 
-      this.emit('imported', { success: true });
+      this.emit("imported", { success: true });
       return true;
     } catch (error) {
-      console.error('[RealTimeLearning] Import failed:', error);
+      console.error("[RealTimeLearning] Import failed:", error);
       return false;
     }
   }
@@ -857,7 +883,7 @@ export class RealTimeLearningService extends EventEmitter {
     };
 
     this.preferences = {
-      preferredDetailLevel: 'detailed',
+      preferredDetailLevel: "detailed",
       detailLevelConfidence: 0,
       modalityWeights: {},
       fileImportance: new Map(),
@@ -880,7 +906,7 @@ export class RealTimeLearningService extends EventEmitter {
       learnedPatterns: 0,
     };
 
-    this.emit('reset');
+    this.emit("reset");
   }
 
   // ==========================================================================
@@ -902,8 +928,8 @@ const learningInstances = new Map<string, RealTimeLearningService>();
  * Get or create a learning service for a session
  */
 export function getRealTimeLearning(
-  sessionId: string = 'default',
-  config?: Partial<LearningConfig>
+  sessionId: string = "default",
+  config?: Partial<LearningConfig>,
 ): RealTimeLearningService {
   const existing = learningInstances.get(sessionId);
   if (existing) return existing;

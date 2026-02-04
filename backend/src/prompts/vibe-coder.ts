@@ -1,24 +1,27 @@
 // Vibe Coder System Prompt
 // Software engineering focused prompt for building apps section by section
 
-import { C4_SYNTAX_GUIDE, C4_LEVEL_DESCRIPTIONS } from './shared/c4-examples.js';
+import {
+  C4_SYNTAX_GUIDE,
+  C4_LEVEL_DESCRIPTIONS,
+} from "./shared/c4-examples.js";
 
 export interface VibeCoderPreferences {
-  projectType?: 'web' | 'mobile' | 'api' | 'fullstack' | 'general';
+  projectType?: "web" | "mobile" | "api" | "fullstack" | "general";
   techStack?: string[];
-  complexity?: 'mvp' | 'standard' | 'enterprise';
-  currentPhase?: 'intent' | 'architecture' | 'coding';
+  complexity?: "mvp" | "standard" | "enterprise";
+  currentPhase?: "intent" | "architecture" | "coding";
   currentSection?: string;
 }
 
 export type ProjectSection =
-  | 'frontend'
-  | 'backend'
-  | 'database'
-  | 'api'
-  | 'auth'
-  | 'deployment'
-  | 'testing';
+  | "frontend"
+  | "backend"
+  | "database"
+  | "api"
+  | "auth"
+  | "deployment"
+  | "testing";
 
 export interface ProjectArchitecture {
   sections: ProjectSection[];
@@ -171,7 +174,7 @@ ${C4_SYNTAX_GUIDE}
 ### C4 Levels
 ${Object.entries(C4_LEVEL_DESCRIPTIONS)
   .map(([level, desc]) => `- **${level}**: ${desc}`)
-  .join('\n')}
+  .join("\n")}
 
 ## Current Session
 
@@ -197,14 +200,14 @@ Focus on mobile-first design, native features, and offline capabilities.`,
 Focus on RESTful/GraphQL design, documentation, and performance.`,
       fullstack: `\n\n## Active Project Type: Full-Stack Application
 Balance frontend UX with robust backend architecture.`,
-      general: '',
+      general: "",
     };
-    prompt += projectDescriptions[preferences.projectType] || '';
+    prompt += projectDescriptions[preferences.projectType] || "";
   }
 
   // Add tech stack context
   if (preferences?.techStack && preferences.techStack.length > 0) {
-    prompt += `\n\n## Tech Stack Preference\nUser prefers: ${preferences.techStack.join(', ')}. Use these technologies unless there's a strong reason for alternatives.`;
+    prompt += `\n\n## Tech Stack Preference\nUser prefers: ${preferences.techStack.join(", ")}. Use these technologies unless there's a strong reason for alternatives.`;
   }
 
   // Add complexity context
@@ -217,7 +220,7 @@ Balance features with maintainability. Include proper error handling and testing
       enterprise: `\n\n## Complexity Level: Enterprise
 Include comprehensive error handling, logging, monitoring, security hardening, and scalability considerations.`,
     };
-    prompt += complexityDescriptions[preferences.complexity] || '';
+    prompt += complexityDescriptions[preferences.complexity] || "";
   }
 
   // Add current phase context
@@ -230,7 +233,7 @@ Create a comprehensive Mermaid diagram showing the system architecture.`,
       coding: `\n\n## Current Phase: Coding
 Generate complete, working code for the requested section.`,
     };
-    prompt += phaseInstructions[preferences.currentPhase] || '';
+    prompt += phaseInstructions[preferences.currentPhase] || "";
   }
 
   // Add current section context

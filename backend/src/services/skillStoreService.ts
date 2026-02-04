@@ -3,9 +3,9 @@
  * List installable skills, install gating, enable/disable, managed updates.
  */
 
-import { getDatabase } from '../db/database.js';
-import { skillRegistry } from '../skills/index.js';
-import logger from '../middleware/logger.js';
+import { getDatabase } from "../db/database.js";
+import { skillRegistry } from "../skills/index.js";
+import logger from "../middleware/logger.js";
 
 export interface SkillStoreItem {
   id: string;
@@ -22,7 +22,9 @@ export interface SkillStoreItem {
 /**
  * List all available skills (built-in + user) with install/enabled state
  */
-export async function listSkillStore(userId?: string): Promise<SkillStoreItem[]> {
+export async function listSkillStore(
+  userId?: string,
+): Promise<SkillStoreItem[]> {
   const skills = skillRegistry.getAllSkills();
   const installed = await getInstalledSkills(userId);
   const enabled = await getEnabledSkills(userId);
@@ -32,8 +34,8 @@ export async function listSkillStore(userId?: string): Promise<SkillStoreItem[]>
     return {
       id,
       name: s.manifest.name,
-      description: s.manifest.description ?? '',
-      version: s.manifest.version ?? '1.0.0',
+      description: s.manifest.description ?? "",
+      version: s.manifest.version ?? "1.0.0",
       installed: installed.has(id),
       enabled: enabled.has(id),
       isUser: false,
@@ -46,7 +48,8 @@ async function getInstalledSkills(userId?: string): Promise<Set<string>> {
     const db = getDatabase();
     const settings = userId ? await db.getSettings(userId) : null;
     const installed =
-      (settings?.preferences as { installedSkills?: string[] })?.installedSkills ?? [];
+      (settings?.preferences as { installedSkills?: string[] })
+        ?.installedSkills ?? [];
     return new Set(installed);
   } catch {
     return new Set();
@@ -57,7 +60,9 @@ async function getEnabledSkills(userId?: string): Promise<Set<string>> {
   try {
     const db = getDatabase();
     const settings = userId ? await db.getSettings(userId) : null;
-    const enabled = (settings?.preferences as { enabledSkills?: string[] })?.enabledSkills ?? [];
+    const enabled =
+      (settings?.preferences as { enabledSkills?: string[] })?.enabledSkills ??
+      [];
     return new Set(enabled);
   } catch {
     return new Set();
@@ -69,7 +74,7 @@ async function getEnabledSkills(userId?: string): Promise<Set<string>> {
  */
 export async function installSkill(
   skillId: string,
-  userId?: string
+  userId?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const skill = skillRegistry.getSkill(skillId);
   if (!skill) {
@@ -83,13 +88,16 @@ export async function installSkill(
     const installed = (prefs.installedSkills as string[]) ?? [];
     if (!installed.includes(skillId)) {
       prefs.installedSkills = [...installed, skillId];
-      prefs.enabledSkills = [...((prefs.enabledSkills as string[]) ?? []), skillId];
+      prefs.enabledSkills = [
+        ...((prefs.enabledSkills as string[]) ?? []),
+        skillId,
+      ];
       await db.saveSettings(userId, {
         ...settings,
         preferences: prefs,
-      } as unknown as import('../types/settings.js').Settings);
+      } as unknown as import("../types/settings.js").Settings);
     }
-    logger.info({ skillId, userId }, 'Skill installed');
+    logger.info({ skillId, userId }, "Skill installed");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
@@ -101,22 +109,26 @@ export async function installSkill(
  */
 export async function uninstallSkill(
   skillId: string,
-  userId?: string
+  userId?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     if (!userId) return { ok: true };
     const db = getDatabase();
     const settings = (await db.getSettings(userId)) ?? {};
     const prefs = (settings.preferences ?? {}) as Record<string, unknown>;
-    const installed = ((prefs.installedSkills as string[]) ?? []).filter((id) => id !== skillId);
-    const enabled = ((prefs.enabledSkills as string[]) ?? []).filter((id) => id !== skillId);
+    const installed = ((prefs.installedSkills as string[]) ?? []).filter(
+      (id) => id !== skillId,
+    );
+    const enabled = ((prefs.enabledSkills as string[]) ?? []).filter(
+      (id) => id !== skillId,
+    );
     prefs.installedSkills = installed;
     prefs.enabledSkills = enabled;
     await db.saveSettings(userId, {
       ...settings,
       preferences: prefs,
-    } as unknown as import('../types/settings.js').Settings);
-    logger.info({ skillId, userId }, 'Skill uninstalled');
+    } as unknown as import("../types/settings.js").Settings);
+    logger.info({ skillId, userId }, "Skill uninstalled");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
@@ -129,7 +141,7 @@ export async function uninstallSkill(
 export async function setSkillEnabled(
   skillId: string,
   enabled: boolean,
-  userId?: string
+  userId?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     if (!userId) return { ok: true };
@@ -138,7 +150,8 @@ export async function setSkillEnabled(
     const prefs = (settings.preferences ?? {}) as Record<string, unknown>;
     let enabledList = (prefs.enabledSkills as string[]) ?? [];
     if (enabled) {
-      if (!enabledList.includes(skillId)) enabledList = [...enabledList, skillId];
+      if (!enabledList.includes(skillId))
+        enabledList = [...enabledList, skillId];
     } else {
       enabledList = enabledList.filter((id) => id !== skillId);
     }
@@ -146,7 +159,7 @@ export async function setSkillEnabled(
     await db.saveSettings(userId, {
       ...settings,
       preferences: prefs,
-    } as unknown as import('../types/settings.js').Settings);
+    } as unknown as import("../types/settings.js").Settings);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: (e as Error).message };

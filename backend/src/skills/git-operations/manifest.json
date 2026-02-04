@@ -17,8 +17,22 @@
   },
   "permissions": ["file_read", "git", "bash_execute"],
   "triggers": {
-    "keywords": ["commit", "git", "branch", "merge", "pr", "pull request", "push", "stage", "diff"],
-    "patterns": ["(create|make|write)\\s+(a\\s+)?commit", "commit\\s+message", "git\\s+\\w+"],
+    "keywords": [
+      "commit",
+      "git",
+      "branch",
+      "merge",
+      "pr",
+      "pull request",
+      "push",
+      "stage",
+      "diff"
+    ],
+    "patterns": [
+      "(create|make|write)\\s+(a\\s+)?commit",
+      "commit\\s+message",
+      "git\\s+\\w+"
+    ],
     "commands": ["/commit", "/git", "/branch", "/pr"]
   }
 }

@@ -3,9 +3,9 @@
  * Caches generated contexts to avoid regeneration
  */
 
-import crypto from 'crypto';
-import logger from '../middleware/logger.js';
-import type { MasterContext } from '../types/context.js';
+import crypto from "crypto";
+import logger from "../middleware/logger.js";
+import type { MasterContext } from "../types/context.js";
 
 export interface ContextCacheOptions {
   enrichedIntent?: unknown;
@@ -36,15 +36,18 @@ function generateCacheKey(
     enrichedIntent?: unknown;
     architecture?: unknown;
     prd?: unknown;
-  }
+  },
 ): string {
   const data = {
     projectDescription,
-    enrichedIntent: options?.enrichedIntent ? 'provided' : undefined,
-    architecture: options?.architecture ? 'provided' : undefined,
-    prd: options?.prd ? 'provided' : undefined,
+    enrichedIntent: options?.enrichedIntent ? "provided" : undefined,
+    architecture: options?.architecture ? "provided" : undefined,
+    prd: options?.prd ? "provided" : undefined,
   };
-  const hash = crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex');
+  const hash = crypto
+    .createHash("sha256")
+    .update(JSON.stringify(data))
+    .digest("hex");
   return `context_${hash}`;
 }
 
@@ -53,7 +56,7 @@ function generateCacheKey(
  */
 export function getCachedContext(
   projectDescription: string,
-  options?: ContextCacheOptions
+  options?: ContextCacheOptions,
 ): MasterContext | null {
   const cacheKey = generateCacheKey(projectDescription, options);
   const cached = contextCache.get(cacheKey);
@@ -68,11 +71,11 @@ export function getCachedContext(
 
   if (now > expiresAt) {
     contextCache.delete(cacheKey);
-    logger.debug({ cacheKey }, 'Context cache expired');
+    logger.debug({ cacheKey }, "Context cache expired");
     return null;
   }
 
-  logger.debug({ cacheKey }, 'Context cache hit');
+  logger.debug({ cacheKey }, "Context cache hit");
   return cached.context;
 }
 
@@ -82,7 +85,7 @@ export function getCachedContext(
 export function cacheContext(
   projectDescription: string,
   context: MasterContext,
-  options?: ContextCacheOptions
+  options?: ContextCacheOptions,
 ): void {
   const cacheKey = generateCacheKey(projectDescription, options);
   const now = new Date();
@@ -96,7 +99,7 @@ export function cacheContext(
   };
 
   contextCache.set(cacheKey, cached);
-  logger.debug({ cacheKey, expiresAt: cached.expiresAt }, 'Context cached');
+  logger.debug({ cacheKey, expiresAt: cached.expiresAt }, "Context cached");
 }
 
 /**
@@ -105,7 +108,7 @@ export function cacheContext(
 export function invalidateCache(projectDescription: string): void {
   const cacheKey = generateCacheKey(projectDescription);
   contextCache.delete(cacheKey);
-  logger.debug({ cacheKey }, 'Context cache invalidated');
+  logger.debug({ cacheKey }, "Context cache invalidated");
 }
 
 /**
@@ -114,7 +117,7 @@ export function invalidateCache(projectDescription: string): void {
 export function clearCache(): void {
   const count = contextCache.size;
   contextCache.clear();
-  logger.info({ clearedCount: count }, 'Context cache cleared');
+  logger.info({ clearedCount: count }, "Context cache cleared");
 }
 
 /**
@@ -134,7 +137,8 @@ export function getCacheStats(): {
 
   if (entries.length > 0) {
     const sorted = entries.sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
     oldestEntry = sorted[0].createdAt;
     newestEntry = sorted[sorted.length - 1].createdAt;
@@ -164,7 +168,7 @@ export function cleanupExpiredEntries(): number {
   }
 
   if (cleaned > 0) {
-    logger.debug({ cleaned }, 'Expired context cache entries cleaned');
+    logger.debug({ cleaned }, "Expired context cache entries cleaned");
   }
 
   return cleaned;

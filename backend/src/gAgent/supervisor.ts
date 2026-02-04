@@ -9,9 +9,9 @@
  * - Managing agent concurrency limits
  */
 
-import { EventEmitter } from 'events';
-import { agentRegistry } from './registry.js';
-import { messageBus, CHANNELS, type BusMessage } from './messageBus.js';
+import { EventEmitter } from "events";
+import { agentRegistry } from "./registry.js";
+import { messageBus, CHANNELS, type BusMessage } from "./messageBus.js";
 import type {
   AgentType,
   AgentTier,
@@ -22,7 +22,7 @@ import type {
   Plan,
   Task,
   AgentEvent,
-} from './types.js';
+} from "./types.js";
 
 // ============================================================================
 // TYPES
@@ -31,7 +31,7 @@ import type {
 export interface SpawnOptions {
   taskId: string;
   goalId?: string;
-  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  priority?: "low" | "normal" | "high" | "urgent";
   userTier?: AgentTier;
   context?: Record<string, unknown>;
   parentAgentId?: string;
@@ -97,8 +97,8 @@ export class Supervisor {
       } catch (err) {
         messageBus.systemError(
           `Failed to spawn agent ${msg.agentType}: ${(err as Error).message}`,
-          'SPAWN_FAILED',
-          'supervisor'
+          "SPAWN_FAILED",
+          "supervisor",
         );
       }
     });
@@ -108,12 +108,12 @@ export class Supervisor {
     const completeSub = messageBus.onTaskComplete((msg) => {
       const instance = this.findInstanceByTaskId(msg.taskId);
       if (instance) {
-        this.updateInstanceStatus(instance.id, 'completed', {
+        this.updateInstanceStatus(instance.id, "completed", {
           result: {
             success: true,
             output: msg.output,
             artifacts: msg.artifacts as Array<{
-              type: 'file' | 'code' | 'diagram' | 'report';
+              type: "file" | "code" | "diagram" | "report";
               path?: string;
               content: string;
               language?: string;
@@ -129,10 +129,10 @@ export class Supervisor {
     const failSub = messageBus.onTaskFailed((msg) => {
       const instance = this.findInstanceByTaskId(msg.taskId);
       if (instance) {
-        this.updateInstanceStatus(instance.id, 'failed', {
+        this.updateInstanceStatus(instance.id, "failed", {
           result: {
             success: false,
-            output: '',
+            output: "",
             error: msg.error,
             durationMs: 0,
           },
@@ -158,21 +158,31 @@ export class Supervisor {
   /**
    * Spawn a new agent instance
    */
-  async spawn(agentType: AgentType, options: SpawnOptions): Promise<AgentInstance> {
+  async spawn(
+    agentType: AgentType,
+    options: SpawnOptions,
+  ): Promise<AgentInstance> {
     const definition = agentRegistry.getByType(agentType);
     if (!definition) {
       throw new Error(`Unknown agent type: ${agentType}`);
     }
 
     // Check tier access
-    if (options.userTier && !agentRegistry.isAvailable(definition.id, options.userTier)) {
-      throw new Error(`Agent ${agentType} requires higher tier than ${options.userTier}`);
+    if (
+      options.userTier &&
+      !agentRegistry.isAvailable(definition.id, options.userTier)
+    ) {
+      throw new Error(
+        `Agent ${agentType} requires higher tier than ${options.userTier}`,
+      );
     }
 
     // Check concurrency limits
     const currentCount = this.concurrencyCount.get(agentType) || 0;
     if (currentCount >= definition.maxConcurrency) {
-      throw new Error(`Agent ${agentType} at max concurrency (${definition.maxConcurrency})`);
+      throw new Error(
+        `Agent ${agentType} at max concurrency (${definition.maxConcurrency})`,
+      );
     }
 
     // Create instance
@@ -181,7 +191,7 @@ export class Supervisor {
       id: instanceId,
       definitionId: definition.id,
       type: agentType,
-      status: 'starting',
+      status: "starting",
       taskId: options.taskId,
       goalId: options.goalId,
       startedAt: new Date().toISOString(),
@@ -194,12 +204,12 @@ export class Supervisor {
 
     // Emit spawn event
     this.emitEvent({
-      type: 'agent_spawned',
+      type: "agent_spawned",
       agentId: instanceId,
       agentType,
     });
 
-    messageBus.updateAgentStatus(instanceId, agentType, 'starting', {
+    messageBus.updateAgentStatus(instanceId, agentType, "starting", {
       taskId: options.taskId,
     });
 
@@ -209,7 +219,10 @@ export class Supervisor {
   /**
    * Spawn multiple agents for a workflow
    */
-  async spawnWorkflow(agentTypes: AgentType[], options: WorkflowOptions): Promise<AgentInstance[]> {
+  async spawnWorkflow(
+    agentTypes: AgentType[],
+    options: WorkflowOptions,
+  ): Promise<AgentInstance[]> {
     // Get execution order (respects dependencies)
     const batches = agentRegistry.getExecutionOrder(agentTypes);
     const instances: AgentInstance[] = [];
@@ -248,7 +261,7 @@ export class Supervisor {
       progress?: number;
       message?: string;
       result?: AgentResult;
-    }
+    },
   ): void {
     const instance = this.instances.get(instanceId);
     if (!instance) return;
@@ -263,10 +276,12 @@ export class Supervisor {
 
     // Update concurrency count on completion
     if (
-      (status === 'completed' || status === 'failed' || status === 'cancelled') &&
-      previousStatus !== 'completed' &&
-      previousStatus !== 'failed' &&
-      previousStatus !== 'cancelled'
+      (status === "completed" ||
+        status === "failed" ||
+        status === "cancelled") &&
+      previousStatus !== "completed" &&
+      previousStatus !== "failed" &&
+      previousStatus !== "cancelled"
     ) {
       const count = this.concurrencyCount.get(instance.type) || 0;
       this.concurrencyCount.set(instance.type, Math.max(0, count - 1));
@@ -279,9 +294,9 @@ export class Supervisor {
       message: updates?.message,
     });
 
-    if (status === 'completed' && instance.result) {
+    if (status === "completed" && instance.result) {
       this.emitEvent({
-        type: 'agent_completed',
+        type: "agent_completed",
         agentId: instanceId,
         result: instance.result,
       });
@@ -295,7 +310,7 @@ export class Supervisor {
     instanceId: string,
     phase: string,
     progress: number,
-    data?: Record<string, unknown>
+    data?: Record<string, unknown>,
   ): AgentCheckpoint | undefined {
     const instance = this.instances.get(instanceId);
     if (!instance) return undefined;
@@ -332,12 +347,15 @@ export class Supervisor {
    * Execute a plan using appropriate agents
    * Returns an async generator that yields AgentEvents
    */
-  executePlan(plan: Plan, options: WorkflowOptions): AsyncGenerator<AgentEvent> {
+  executePlan(
+    plan: Plan,
+    options: WorkflowOptions,
+  ): AsyncGenerator<AgentEvent> {
     const executeTaskAndCollect = this.executeTaskAndCollect.bind(this);
 
     return (async function* (): AsyncGenerator<AgentEvent> {
       yield {
-        type: 'plan_started',
+        type: "plan_started",
         planId: plan.id,
       };
 
@@ -355,7 +373,7 @@ export class Supervisor {
 
         // Execute each task and collect events (can't yield from inside map callback)
         const taskEventPromises = batchTasks.map((task) =>
-          executeTaskAndCollect(task, options, taskResults)
+          executeTaskAndCollect(task, options, taskResults),
         );
 
         // Wait for all tasks in batch to complete
@@ -373,9 +391,9 @@ export class Supervisor {
       }
 
       yield {
-        type: 'plan_completed',
+        type: "plan_completed",
         planId: plan.id,
-        status: hasFailure ? 'failed' : 'completed',
+        status: hasFailure ? "failed" : "completed",
       };
     })();
   }
@@ -386,17 +404,20 @@ export class Supervisor {
   private async executeTaskAndCollect(
     task: Task,
     options: WorkflowOptions,
-    _previousResults: Map<string, AgentResult>
+    _previousResults: Map<string, AgentResult>,
   ): Promise<{ events: AgentEvent[]; success: boolean }> {
     const events: AgentEvent[] = [];
     let success = true;
 
     // Determine best agent for this task
-    const agentTypes = agentRegistry.selectAgentsForTask(task.description, options.userTier);
-    const agentType = agentTypes[0] || 'executor';
+    const agentTypes = agentRegistry.selectAgentsForTask(
+      task.description,
+      options.userTier,
+    );
+    const agentType = agentTypes[0] || "executor";
 
     events.push({
-      type: 'task_started',
+      type: "task_started",
       taskId: task.id,
       description: task.description,
     });
@@ -414,25 +435,25 @@ export class Supervisor {
       });
 
       events.push({
-        type: 'agent_spawned',
+        type: "agent_spawned",
         agentId: instance.id,
         agentType,
       });
 
       // Update to running
-      this.updateInstanceStatus(instance.id, 'running');
+      this.updateInstanceStatus(instance.id, "running");
 
       events.push({
-        type: 'agent_started',
+        type: "agent_started",
         agentId: instance.id,
       });
 
       // Wait for task completion via message bus
       const result = await messageBus.waitForTask(task.id);
 
-      if (result.type === 'task_complete') {
+      if (result.type === "task_complete") {
         events.push({
-          type: 'task_completed',
+          type: "task_completed",
           taskId: task.id,
           output: result.output,
           durationMs: result.durationMs,
@@ -440,7 +461,7 @@ export class Supervisor {
       } else {
         success = false;
         events.push({
-          type: 'task_failed',
+          type: "task_failed",
           taskId: task.id,
           error: (result as { error: string }).error,
         });
@@ -448,7 +469,7 @@ export class Supervisor {
     } catch (err) {
       success = false;
       events.push({
-        type: 'task_failed',
+        type: "task_failed",
         taskId: task.id,
         error: (err as Error).message,
       });
@@ -519,8 +540,12 @@ export class Supervisor {
     }
 
     const instance = this.instances.get(instanceId);
-    if (instance && instance.status !== 'completed' && instance.status !== 'failed') {
-      this.updateInstanceStatus(instanceId, 'cancelled');
+    if (
+      instance &&
+      instance.status !== "completed" &&
+      instance.status !== "failed"
+    ) {
+      this.updateInstanceStatus(instanceId, "cancelled");
       return true;
     }
 
@@ -557,9 +582,9 @@ export class Supervisor {
 
     for (const instance of this.instances.values()) {
       if (
-        instance.status === 'running' ||
-        instance.status === 'waiting' ||
-        instance.status === 'starting'
+        instance.status === "running" ||
+        instance.status === "waiting" ||
+        instance.status === "starting"
       ) {
         const lastBeat = new Date(instance.lastHeartbeat).getTime();
         if (now - lastBeat > maxStaleMs) {
@@ -579,11 +604,11 @@ export class Supervisor {
     let killed = 0;
 
     for (const instance of stale) {
-      this.updateInstanceStatus(instance.id, 'failed', {
+      this.updateInstanceStatus(instance.id, "failed", {
         result: {
           success: false,
-          output: '',
-          error: 'Agent became unresponsive (no heartbeat)',
+          output: "",
+          error: "Agent became unresponsive (no heartbeat)",
           durationMs: Date.now() - new Date(instance.startedAt).getTime(),
         },
       });
@@ -602,9 +627,9 @@ export class Supervisor {
 
     for (const [id, instance] of this.instances) {
       if (
-        instance.status === 'completed' ||
-        instance.status === 'failed' ||
-        instance.status === 'cancelled'
+        instance.status === "completed" ||
+        instance.status === "failed" ||
+        instance.status === "cancelled"
       ) {
         const age = now - new Date(instance.startedAt).getTime();
         if (age > maxAgeMs) {
@@ -623,15 +648,15 @@ export class Supervisor {
   // ============================================================================
 
   private emitEvent(event: AgentEvent): void {
-    this.eventEmitter.emit('event', event);
+    this.eventEmitter.emit("event", event);
   }
 
   /**
    * Subscribe to supervisor events
    */
   onEvent(handler: (event: AgentEvent) => void): () => void {
-    this.eventEmitter.on('event', handler);
-    return () => this.eventEmitter.off('event', handler);
+    this.eventEmitter.on("event", handler);
+    return () => this.eventEmitter.off("event", handler);
   }
 
   /**
@@ -674,9 +699,9 @@ export class Supervisor {
     // Cancel all running agents
     for (const instance of this.instances.values()) {
       if (
-        instance.status === 'running' ||
-        instance.status === 'starting' ||
-        instance.status === 'waiting'
+        instance.status === "running" ||
+        instance.status === "starting" ||
+        instance.status === "waiting"
       ) {
         this.cancel(instance.id);
       }

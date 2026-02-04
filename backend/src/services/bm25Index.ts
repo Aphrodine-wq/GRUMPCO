@@ -6,7 +6,7 @@
 function tokenize(text: string): string[] {
   return text
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s_-]/gu, ' ')
+    .replace(/[^\p{L}\p{N}\s_-]/gu, " ")
     .split(/\s+/)
     .filter((t) => t.length > 1);
 }

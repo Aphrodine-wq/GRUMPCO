@@ -1,1 +1,1 @@
-declare module 'ts-morph';
+declare module "ts-morph";

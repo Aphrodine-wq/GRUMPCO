@@ -6,4 +6,4 @@
 export {
   getGAgentModePrompt as getFreeAgentModePrompt,
   type GAgentPromptOptions as FreeAgentPromptOptions,
-} from './gAgent.js';
+} from "./gAgent.js";

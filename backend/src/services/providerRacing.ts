@@ -9,10 +9,10 @@
  * - Provider performance tracking
  */
 
-import { connectionPool as _connectionPool } from './connectionPool.js';
-import { getTieredCache } from './tieredCache.js';
-import logger from '../middleware/logger.js';
-import type { LLMProvider, StreamParams, StreamEvent } from './llmGateway.js';
+import { connectionPool as _connectionPool } from "./connectionPool.js";
+import { getTieredCache } from "./tieredCache.js";
+import logger from "../middleware/logger.js";
+import type { LLMProvider, StreamParams, StreamEvent } from "./llmGateway.js";
 
 interface RaceResult {
   provider: LLMProvider;
@@ -39,7 +39,10 @@ class ProviderRacingService {
   async race(
     providers: LLMProvider[],
     params: StreamParams,
-    streamFn: (provider: LLMProvider, params: StreamParams) => AsyncGenerator<StreamEvent>
+    streamFn: (
+      provider: LLMProvider,
+      params: StreamParams,
+    ) => AsyncGenerator<StreamEvent>,
   ): Promise<RaceResult> {
     // Select top providers to race
     const racers = this.selectRacers(providers);
@@ -49,7 +52,7 @@ class ProviderRacingService {
         racers,
         model: params.model,
       },
-      'Starting provider race'
+      "Starting provider race",
     );
 
     const _startTime = Date.now();
@@ -61,45 +64,50 @@ class ProviderRacingService {
     });
 
     // Race all providers
-    const racePromises = racers.map(async (provider): Promise<RaceResult | null> => {
-      const providerStart = Date.now();
-      let timeToFirstByte = 0;
-      const events: StreamEvent[] = [];
+    const racePromises = racers.map(
+      async (provider): Promise<RaceResult | null> => {
+        const providerStart = Date.now();
+        let timeToFirstByte = 0;
+        const events: StreamEvent[] = [];
 
-      try {
-        for await (const event of streamFn(provider, params)) {
-          if (timeToFirstByte === 0) {
-            timeToFirstByte = Date.now() - providerStart;
+        try {
+          for await (const event of streamFn(provider, params)) {
+            if (timeToFirstByte === 0) {
+              timeToFirstByte = Date.now() - providerStart;
+            }
+
+            events.push(event);
+
+            // Check if we should abort (another provider won)
+            const abortController = abortControllers.get(provider);
+            if (abortController?.signal.aborted) {
+              logger.debug({ provider }, "Aborting slow provider");
+              return null;
+            }
+
+            // Stop after first few events if another provider is winning
+            if (events.length > 5) {
+              // Let it continue, but track
+            }
           }
 
-          events.push(event);
+          const totalTime = Date.now() - providerStart;
 
-          // Check if we should abort (another provider won)
-          const abortController = abortControllers.get(provider);
-          if (abortController?.signal.aborted) {
-            logger.debug({ provider }, 'Aborting slow provider');
-            return null;
-          }
-
-          // Stop after first few events if another provider is winning
-          if (events.length > 5) {
-            // Let it continue, but track
-          }
+          return {
+            provider,
+            events,
+            timeToFirstByte,
+            totalTime,
+          };
+        } catch (error) {
+          logger.warn(
+            { provider, error: (error as Error).message },
+            "Provider failed in race",
+          );
+          return null;
         }
-
-        const totalTime = Date.now() - providerStart;
-
-        return {
-          provider,
-          events,
-          timeToFirstByte,
-          totalTime,
-        };
-      } catch (error) {
-        logger.warn({ provider, error: (error as Error).message }, 'Provider failed in race');
-        return null;
-      }
-    });
+      },
+    );
 
     // Wait for first successful result
     let winner: RaceResult | null = null;
@@ -125,7 +133,7 @@ class ProviderRacingService {
     }
 
     if (!winner) {
-      throw new Error('All providers failed in race');
+      throw new Error("All providers failed in race");
     }
 
     // Update performance metrics
@@ -141,7 +149,7 @@ class ProviderRacingService {
         totalTime: winner.totalTime,
         racers: racers.length,
       },
-      'Provider race completed'
+      "Provider race completed",
     );
 
     return winner;
@@ -190,7 +198,8 @@ class ProviderRacingService {
     perf.wins++;
     perf.totalRequests++;
     perf.avgTimeToFirstByte =
-      (perf.avgTimeToFirstByte * (perf.totalRequests - 1) + winner.timeToFirstByte) /
+      (perf.avgTimeToFirstByte * (perf.totalRequests - 1) +
+        winner.timeToFirstByte) /
       perf.totalRequests;
     perf.lastUsed = Date.now();
 
@@ -200,17 +209,20 @@ class ProviderRacingService {
   /**
    * Cache winner for future identical requests
    */
-  private async cacheWinner(params: StreamParams, winner: RaceResult): Promise<void> {
+  private async cacheWinner(
+    params: StreamParams,
+    winner: RaceResult,
+  ): Promise<void> {
     const cacheKey = this.createCacheKey(params);
 
     await this.cache.set(
-      'race-winner',
+      "race-winner",
       cacheKey,
       {
         provider: winner.provider,
         timestamp: Date.now(),
       },
-      300
+      300,
     ); // 5 min cache
   }
 
@@ -219,10 +231,10 @@ class ProviderRacingService {
    */
   async getCachedWinner(params: StreamParams): Promise<LLMProvider | null> {
     const cacheKey = this.createCacheKey(params);
-    const cached = await this.cache.get<{ provider: LLMProvider; timestamp: number }>(
-      'race-winner',
-      cacheKey
-    );
+    const cached = await this.cache.get<{
+      provider: LLMProvider;
+      timestamp: number;
+    }>("race-winner", cacheKey);
 
     if (cached && Date.now() - cached.timestamp < 300000) {
       // 5 min
@@ -237,8 +249,10 @@ class ProviderRacingService {
    */
   private createCacheKey(params: StreamParams): string {
     const content =
-      typeof params.messages[0]?.content === 'string' ? params.messages[0].content : '';
-    return content.slice(0, 100).replace(/[^a-zA-Z0-9]/g, '');
+      typeof params.messages[0]?.content === "string"
+        ? params.messages[0].content
+        : "";
+    return content.slice(0, 100).replace(/[^a-zA-Z0-9]/g, "");
   }
 
   /**

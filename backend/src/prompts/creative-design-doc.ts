@@ -80,15 +80,24 @@ You MUST respond with a VALID JSON object (no markdown, no code blocks) matching
 export function getCreativeDesignDocUserPrompt(
   projectDescription: string,
   architectureJson: string,
-  prdOverview?: { vision?: string; problem?: string; solution?: string; targetMarket?: string }
+  prdOverview?: {
+    vision?: string;
+    problem?: string;
+    solution?: string;
+    targetMarket?: string;
+  },
 ): string {
   let out = `Project description:\n${projectDescription}\n\nArchitecture:\n${architectureJson}`;
-  if (prdOverview && (prdOverview.vision || prdOverview.problem || prdOverview.solution)) {
+  if (
+    prdOverview &&
+    (prdOverview.vision || prdOverview.problem || prdOverview.solution)
+  ) {
     out += `\n\nPRD overview:\n`;
     if (prdOverview.vision) out += `Vision: ${prdOverview.vision}\n`;
     if (prdOverview.problem) out += `Problem: ${prdOverview.problem}\n`;
     if (prdOverview.solution) out += `Solution: ${prdOverview.solution}\n`;
-    if (prdOverview.targetMarket) out += `Target market: ${prdOverview.targetMarket}\n`;
+    if (prdOverview.targetMarket)
+      out += `Target market: ${prdOverview.targetMarket}\n`;
   }
   out += `\n\nGenerate a Creative Design Document (layout, UI/UX principles, key screens, UX flows, accessibility, responsiveness). Return only valid JSON.`;
   return out;

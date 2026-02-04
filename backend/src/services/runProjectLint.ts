@@ -3,10 +3,10 @@
  * Result is attached to the codegen response for top-tier output quality.
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import * as fs from 'fs';
-import * as path from 'path';
+import { exec } from "child_process";
+import { promisify } from "util";
+import * as fs from "fs";
+import * as path from "path";
 
 const execAsync = promisify(exec);
 
@@ -25,44 +25,58 @@ export interface RunProjectLintResult {
  */
 export async function runProjectLint(
   workspaceRoot: string,
-  options: { timeoutMs?: number } = {}
+  options: { timeoutMs?: number } = {},
 ): Promise<RunProjectLintResult> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const resolvedRoot = path.resolve(workspaceRoot);
 
   try {
-    if (!fs.existsSync(resolvedRoot) || !fs.statSync(resolvedRoot).isDirectory()) {
+    if (
+      !fs.existsSync(resolvedRoot) ||
+      !fs.statSync(resolvedRoot).isDirectory()
+    ) {
       return {
         passed: true,
         exitCode: 0,
-        error: 'Workspace root is not a directory; skipping lint',
+        error: "Workspace root is not a directory; skipping lint",
       };
     }
 
-    const packagePath = path.join(resolvedRoot, 'package.json');
+    const packagePath = path.join(resolvedRoot, "package.json");
     if (!fs.existsSync(packagePath)) {
-      return { passed: true, exitCode: 0, error: 'No package.json; skipping lint' };
+      return {
+        passed: true,
+        exitCode: 0,
+        error: "No package.json; skipping lint",
+      };
     }
 
-    const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf-8')) as {
+    const pkg = JSON.parse(fs.readFileSync(packagePath, "utf-8")) as {
       scripts?: { lint?: string };
     };
     if (!pkg?.scripts?.lint) {
-      return { passed: true, exitCode: 0, error: 'No lint script in package.json; skipping lint' };
+      return {
+        passed: true,
+        exitCode: 0,
+        error: "No lint script in package.json; skipping lint",
+      };
     }
 
-    const { stdout, stderr } = await execAsync('npm run lint', {
+    const { stdout, stderr } = await execAsync("npm run lint", {
       cwd: resolvedRoot,
       timeout: timeoutMs,
       maxBuffer: 1024 * 1024,
     });
 
-    const output = [stdout, stderr].filter(Boolean).join('\n').slice(0, 2000);
+    const output = [stdout, stderr].filter(Boolean).join("\n").slice(0, 2000);
     return { passed: true, exitCode: 0, output: output || undefined };
   } catch (err: unknown) {
     const execErr = err as { code?: number; stdout?: string; stderr?: string };
-    const exitCode = typeof execErr.code === 'number' ? execErr.code : 1;
-    const output = [execErr.stdout, execErr.stderr].filter(Boolean).join('\n').slice(0, 2000);
+    const exitCode = typeof execErr.code === "number" ? execErr.code : 1;
+    const output = [execErr.stdout, execErr.stderr]
+      .filter(Boolean)
+      .join("\n")
+      .slice(0, 2000);
     return {
       passed: false,
       exitCode,

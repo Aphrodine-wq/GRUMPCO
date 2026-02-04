@@ -1,5 +1,5 @@
-import net from 'net';
-import logger from '../middleware/logger.js';
+import net from "net";
+import logger from "../middleware/logger.js";
 
 /**
  * Check if a port is available for use
@@ -7,14 +7,14 @@ import logger from '../middleware/logger.js';
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const server = net.createServer();
-    server.once('error', (err: NodeJS.ErrnoException) => {
-      if (err.code === 'EADDRINUSE') {
+    server.once("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
         resolve(false);
       } else {
         resolve(false);
       }
     });
-    server.once('listening', () => {
+    server.once("listening", () => {
       server.close();
       resolve(true);
     });
@@ -27,7 +27,7 @@ function isPortAvailable(port: number): Promise<boolean> {
  */
 export async function findAvailablePort(
   startPort: number = 3000,
-  maxAttempts: number = 10
+  maxAttempts: number = 10,
 ): Promise<number> {
   const port = Number(startPort);
   if (isNaN(port)) {
@@ -41,12 +41,14 @@ export async function findAvailablePort(
       if (attempt > 0) {
         logger.warn(
           { preferredPort: port, actualPort: testPort },
-          `Port ${port} busy, using fallback port ${testPort}`
+          `Port ${port} busy, using fallback port ${testPort}`,
         );
       }
       return testPort;
     }
   }
 
-  throw new Error(`No available ports in range ${port}-${port + maxAttempts - 1}`);
+  throw new Error(
+    `No available ports in range ${port}-${port + maxAttempts - 1}`,
+  );
 }

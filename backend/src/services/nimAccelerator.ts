@@ -3,10 +3,10 @@
  * GPU-accelerated embeddings and parallel inference using NVIDIA NIM
  */
 
-import logger from '../middleware/logger.js';
-import { createEmbeddingBatchProcessor } from './batchProcessor.js';
-import { updateGpuMetrics } from '../middleware/metrics.js';
-import { getNimApiBase } from '../config/nim.js';
+import logger from "../middleware/logger.js";
+import { createEmbeddingBatchProcessor } from "./batchProcessor.js";
+import { updateGpuMetrics } from "../middleware/metrics.js";
+import { getNimApiBase } from "../config/nim.js";
 
 export interface NIMConfig {
   apiKey: string;
@@ -51,21 +51,28 @@ export interface InferenceResponse {
 
 export class NIMAccelerator {
   private config: NIMConfig;
-  private embeddingBatchProcessor: ReturnType<typeof createEmbeddingBatchProcessor> | null = null;
+  private embeddingBatchProcessor: ReturnType<
+    typeof createEmbeddingBatchProcessor
+  > | null = null;
   private activeRequests = 0;
   private maxParallelRequests: number;
   private currentBatchSize: number;
   private gpuMetricsCache: Map<
     number,
-    { utilization: number; memoryUsed: number; memoryTotal: number; timestamp: number }
+    {
+      utilization: number;
+      memoryUsed: number;
+      memoryTotal: number;
+      timestamp: number;
+    }
   > = new Map();
   private gpuRoundRobin = 0;
 
   constructor(config: NIMConfig) {
     this.config = {
-      baseUrl: config.baseUrl || 'https://integrate.api.nvidia.com/v1',
-      embeddingModel: config.embeddingModel || 'nvidia/nv-embed-v1',
-      inferenceModel: config.inferenceModel || 'moonshotai/kimi-k2.5',
+      baseUrl: config.baseUrl || "https://integrate.api.nvidia.com/v1",
+      embeddingModel: config.embeddingModel || "nvidia/nv-embed-v1",
+      inferenceModel: config.inferenceModel || "moonshotai/kimi-k2.5",
       maxBatchSize: config.maxBatchSize || 256,
       maxParallelRequests: config.maxParallelRequests || 32,
       enableDynamicBatching: config.enableDynamicBatching ?? true,
@@ -83,7 +90,7 @@ export class NIMAccelerator {
       {
         maxBatchSize: this.currentBatchSize,
         maxWaitTime: undefined,
-      }
+      },
     );
 
     // Start GPU metrics monitoring if multi-GPU is enabled
@@ -100,7 +107,7 @@ export class NIMAccelerator {
         multiGPU: this.config.enableMultiGPU,
         gpuIds: this.config.gpuIds,
       },
-      'NIM Accelerator initialized'
+      "NIM Accelerator initialized",
     );
   }
 
@@ -109,16 +116,16 @@ export class NIMAccelerator {
    */
   public async generateEmbeddings(texts: string[]): Promise<number[][]> {
     if (!this.embeddingBatchProcessor) {
-      throw new Error('Embedding batch processor not initialized');
+      throw new Error("Embedding batch processor not initialized");
     }
 
     // Use batch processor for automatic batching
     const embeddings = await Promise.all(
       texts.map(
         (text) =>
-          this.embeddingBatchProcessor?.add('embeddings', text) ??
-          Promise.reject(new Error('Batch processor not available'))
-      )
+          this.embeddingBatchProcessor?.add("embeddings", text) ??
+          Promise.reject(new Error("Batch processor not available")),
+      ),
     );
 
     return embeddings;
@@ -191,7 +198,7 @@ export class NIMAccelerator {
       const optimalSize = await this.getOptimalBatchSize();
       if (optimalSize !== this.currentBatchSize) {
         this.currentBatchSize = optimalSize;
-        logger.debug({ newBatchSize: optimalSize }, 'Adjusted batch size');
+        logger.debug({ newBatchSize: optimalSize }, "Adjusted batch size");
       }
     }
 
@@ -200,16 +207,16 @@ export class NIMAccelerator {
 
     try {
       const response = await fetch(`${this.config.baseUrl}/embeddings`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${this.config.apiKey}`,
-          'X-GPU-ID': String(gpuId), // Custom header for GPU selection (if supported)
+          "X-GPU-ID": String(gpuId), // Custom header for GPU selection (if supported)
         },
         body: JSON.stringify({
           model: this.config.embeddingModel,
           input: texts,
-          encoding_format: 'float',
+          encoding_format: "float",
         }),
       });
 
@@ -232,11 +239,13 @@ export class NIMAccelerator {
           tokensUsed: data.usage.total_tokens,
           gpuId,
         },
-        'Batch embeddings generated'
+        "Batch embeddings generated",
       );
 
       // Return embeddings in correct order
-      return data.data.sort((a, b) => a.index - b.index).map((item) => item.embedding);
+      return data.data
+        .sort((a, b) => a.index - b.index)
+        .map((item) => item.embedding);
     } catch (error) {
       logger.error(
         {
@@ -244,7 +253,7 @@ export class NIMAccelerator {
           batchSize: texts.length,
           gpuId,
         },
-        'Batch embedding generation failed'
+        "Batch embedding generation failed",
       );
       throw error;
     }
@@ -253,7 +262,9 @@ export class NIMAccelerator {
   /**
    * Generate completions for multiple prompts in parallel
    */
-  public async parallelInference(requests: InferenceRequest): Promise<InferenceResponse> {
+  public async parallelInference(
+    requests: InferenceRequest,
+  ): Promise<InferenceResponse> {
     const { prompts, model, maxTokens = 1024, temperature = 0.7 } = requests;
 
     // Limit concurrent requests
@@ -268,7 +279,9 @@ export class NIMAccelerator {
 
     for (const chunk of chunks) {
       const chunkResults = await Promise.all(
-        chunk.map((prompt) => this.singleInference(prompt, model, maxTokens, temperature))
+        chunk.map((prompt) =>
+          this.singleInference(prompt, model, maxTokens, temperature),
+        ),
       );
 
       chunkResults.forEach((result) => {
@@ -280,7 +293,7 @@ export class NIMAccelerator {
 
     return {
       completions: allCompletions,
-      model: model || this.config.inferenceModel || 'moonshotai/kimi-k2.5',
+      model: model || this.config.inferenceModel || "moonshotai/kimi-k2.5",
       usage: {
         inputTokens: totalInputTokens,
         outputTokens: totalOutputTokens,
@@ -295,20 +308,23 @@ export class NIMAccelerator {
     prompt: string,
     model?: string,
     maxTokens = 1024,
-    temperature = 0.7
-  ): Promise<{ completion: string; usage: { inputTokens: number; outputTokens: number } }> {
+    temperature = 0.7,
+  ): Promise<{
+    completion: string;
+    usage: { inputTokens: number; outputTokens: number };
+  }> {
     this.activeRequests++;
 
     try {
       const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${this.config.apiKey}`,
         },
         body: JSON.stringify({
           model: model || this.config.inferenceModel,
-          messages: [{ role: 'user', content: prompt }],
+          messages: [{ role: "user", content: prompt }],
           max_tokens: maxTokens,
           temperature,
         }),
@@ -325,7 +341,7 @@ export class NIMAccelerator {
       };
 
       return {
-        completion: data.choices[0]?.message?.content || '',
+        completion: data.choices[0]?.message?.content || "",
         usage: {
           inputTokens: data.usage.prompt_tokens,
           outputTokens: data.usage.completion_tokens,
@@ -363,11 +379,14 @@ export class NIMAccelerator {
   } | null> {
     try {
       // Try to get GPU metrics from NIM API
-      const response = await fetch(`${this.config.baseUrl}/metrics?gpu_id=${gpuId}`, {
-        headers: {
-          Authorization: `Bearer ${this.config.apiKey}`,
+      const response = await fetch(
+        `${this.config.baseUrl}/metrics?gpu_id=${gpuId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.config.apiKey}`,
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         return null;
@@ -382,7 +401,11 @@ export class NIMAccelerator {
       };
 
       if (data.gpu) {
-        updateGpuMetrics(`nim-${gpuId}`, data.gpu.utilization, data.gpu.memory_used);
+        updateGpuMetrics(
+          `nim-${gpuId}`,
+          data.gpu.utilization,
+          data.gpu.memory_used,
+        );
         return {
           utilization: data.gpu.utilization,
           memoryUsed: data.gpu.memory_used,
@@ -392,7 +415,7 @@ export class NIMAccelerator {
 
       return null;
     } catch (_error) {
-      logger.debug({ gpuId }, 'GPU metrics not available');
+      logger.debug({ gpuId }, "GPU metrics not available");
       return null;
     }
   }
@@ -419,9 +442,15 @@ export class NIMAccelerator {
     }
 
     return {
-      utilization: recentMetrics.reduce((sum, m) => sum + m.utilization, 0) / recentMetrics.length,
-      memoryUsed: recentMetrics.reduce((sum, m) => sum + m.memoryUsed, 0) / recentMetrics.length,
-      memoryTotal: recentMetrics.reduce((sum, m) => sum + m.memoryTotal, 0) / recentMetrics.length,
+      utilization:
+        recentMetrics.reduce((sum, m) => sum + m.utilization, 0) /
+        recentMetrics.length,
+      memoryUsed:
+        recentMetrics.reduce((sum, m) => sum + m.memoryUsed, 0) /
+        recentMetrics.length,
+      memoryTotal:
+        recentMetrics.reduce((sum, m) => sum + m.memoryTotal, 0) /
+        recentMetrics.length,
     };
   }
 
@@ -430,7 +459,12 @@ export class NIMAccelerator {
    */
   public getAllGPUMetrics(): Map<
     number,
-    { utilization: number; memoryUsed: number; memoryTotal: number; timestamp: number }
+    {
+      utilization: number;
+      memoryUsed: number;
+      memoryTotal: number;
+      timestamp: number;
+    }
   > {
     return new Map(this.gpuMetricsCache);
   }
@@ -470,7 +504,7 @@ export function getNIMAccelerator(): NIMAccelerator | null {
   const apiKey = process.env.NVIDIA_NIM_API_KEY;
 
   if (!apiKey) {
-    logger.debug('NVIDIA_NIM_API_KEY not set, NIM accelerator disabled');
+    logger.debug("NVIDIA_NIM_API_KEY not set, NIM accelerator disabled");
     return null;
   }
 

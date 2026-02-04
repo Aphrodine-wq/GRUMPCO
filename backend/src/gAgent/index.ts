@@ -11,18 +11,18 @@
  */
 
 // Core service
-export { GAgentCore, gAgentCore } from './core.js';
-export type { CoreOptions, Session } from './core.js';
+export { GAgentCore, gAgentCore } from "./core.js";
+export type { CoreOptions, Session } from "./core.js";
 
 // Agent registry
-export { AgentRegistry, agentRegistry } from './registry.js';
+export { AgentRegistry, agentRegistry } from "./registry.js";
 
 // Supervisor
-export { Supervisor, supervisor } from './supervisor.js';
-export type { SpawnOptions, WorkflowOptions } from './supervisor.js';
+export { Supervisor, supervisor } from "./supervisor.js";
+export type { SpawnOptions, WorkflowOptions } from "./supervisor.js";
 
 // Message bus
-export { MessageBus, messageBus, CHANNELS } from './messageBus.js';
+export { MessageBus, messageBus, CHANNELS } from "./messageBus.js";
 export type {
   Channel,
   BusMessage,
@@ -38,11 +38,16 @@ export type {
   GoalCompletedMessage,
   BroadcastMessage,
   SystemErrorMessage,
-} from './messageBus.js';
+} from "./messageBus.js";
 
 // Goal repository (persistence layer)
-export { goalRepository } from './goalRepository.js';
-export type { GoalCreateInput, GoalUpdateInput, GoalFilter, GoalStats } from './goalRepository.js';
+export { goalRepository } from "./goalRepository.js";
+export type {
+  GoalCreateInput,
+  GoalUpdateInput,
+  GoalFilter,
+  GoalStats,
+} from "./goalRepository.js";
 
 // Security layer
 export {
@@ -72,7 +77,7 @@ export {
   validateGoalCreateRequest,
   validateRecurringGoalRequest,
   validateFollowUpGoalRequest,
-} from './security.js';
+} from "./security.js";
 export type {
   SecurityCheckResult,
   ValidatedRequest,
@@ -80,15 +85,18 @@ export type {
   GoalCreateRequest,
   RecurringGoalRequest,
   FollowUpGoalRequest,
-} from './security.js';
+} from "./security.js";
 
 // Agent Lightning Bridge
-export { agentLightningBridge, generateCodeFromGoal } from './agentLightningBridge.js';
+export {
+  agentLightningBridge,
+  generateCodeFromGoal,
+} from "./agentLightningBridge.js";
 export type {
   CodeGenFromGoalOptions,
   CodeGenProgressEvent,
   CodeGenResult,
-} from './agentLightningBridge.js';
+} from "./agentLightningBridge.js";
 
 // System Prompt (G-Agent identity and personality)
 export {
@@ -100,14 +108,14 @@ export {
   RISK_FACTORS,
   calculateRiskLevel,
   PROMPT_TEMPLATES,
-} from './systemPrompt.js';
+} from "./systemPrompt.js";
 export type {
   AutonomyLevel,
   AutonomyConfig,
   ConfidenceThresholds,
   RiskLevel,
   RiskAssessment,
-} from './systemPrompt.js';
+} from "./systemPrompt.js";
 
 // Budget Manager (cost tracking and wallet respect)
 export {
@@ -120,7 +128,7 @@ export {
   quickCostCheck,
   canAfford,
   formatBudgetMessage,
-} from './budgetManager.js';
+} from "./budgetManager.js";
 export type {
   BudgetConfig,
   CostOperation,
@@ -131,7 +139,7 @@ export type {
   ApprovalRequest,
   BudgetEvent,
   RunawayMetrics,
-} from './budgetManager.js';
+} from "./budgetManager.js";
 
 // Kill Switch (emergency stop system)
 export {
@@ -147,7 +155,7 @@ export {
   createAbortController,
   shouldContinue,
   canStartOperation,
-} from './killSwitch.js';
+} from "./killSwitch.js";
 export type {
   StopReason,
   StopResult,
@@ -155,7 +163,7 @@ export type {
   KillSwitchState,
   GracefulShutdownOptions,
   KillSwitchEvent,
-} from './killSwitch.js';
+} from "./killSwitch.js";
 
 // Power Expansion (advanced AI capabilities)
 export {
@@ -168,7 +176,7 @@ export {
   PatternMatcher,
   MAX_HEALING_RETRIES,
   STRATEGIES,
-} from './powerExpansion.js';
+} from "./powerExpansion.js";
 export type {
   Strategy,
   ConfidenceAnalysis,
@@ -182,7 +190,7 @@ export type {
   StrategySelection,
   LearningRecord,
   PowerEvent,
-} from './powerExpansion.js';
+} from "./powerExpansion.js";
 
 // Configuration System (centralized settings)
 export {
@@ -202,7 +210,7 @@ export {
   getAutonomyLevel,
   getModel,
   applyPreset,
-} from './config.js';
+} from "./config.js";
 export type {
   Environment,
   Feature,
@@ -216,14 +224,14 @@ export type {
   UserConfig,
   ConfigChangeEvent,
   ConfigPreset,
-} from './config.js';
+} from "./config.js";
 
 // Semantic Compiler (100x solution to Data Wall Problem)
 export {
   SemanticCompiler,
   getSemanticCompiler,
   destroySemanticCompiler,
-} from './semanticCompiler.js';
+} from "./semanticCompiler.js";
 export type {
   SemanticUnit,
   SemanticType,
@@ -231,17 +239,20 @@ export type {
   CompilationRequest,
   CompilationResult,
   ProgressiveLoadState,
-} from './semanticCompiler.js';
+} from "./semanticCompiler.js";
 
 // Semantic Deduplication (cross-session pattern sharing)
-export { SemanticDeduplicationService, getSemanticDedup } from './semanticDedup.js';
+export {
+  SemanticDeduplicationService,
+  getSemanticDedup,
+} from "./semanticDedup.js";
 export type {
   SemanticPattern,
   PatternType,
   PatternRef,
   DeduplicationResult,
   LibraryStats,
-} from './semanticDedup.js';
+} from "./semanticDedup.js";
 
 // Predictive Prefetch (ML-based query and file prediction)
 export {
@@ -250,7 +261,7 @@ export {
   createPredictivePrefetch,
   destroyPredictivePrefetch,
   DEFAULT_PREFETCH_CONFIG,
-} from '../services/predictivePrefetch.js';
+} from "../services/predictivePrefetch.js";
 export type {
   QueryPattern,
   PatternTriggerType,
@@ -261,7 +272,7 @@ export type {
   PrefetchResult,
   PrefetchConfig,
   PrefetchMetrics,
-} from '../services/predictivePrefetch.js';
+} from "../services/predictivePrefetch.js";
 
 // Multi-Modal Compiler (code + docs + tests unified context)
 export {
@@ -271,7 +282,7 @@ export {
   DEFAULT_MODALITY_WEIGHTS,
   INTENT_MODIFIERS,
   MODALITY_PATTERNS,
-} from '../services/multiModalCompiler.js';
+} from "../services/multiModalCompiler.js";
 export type {
   ContentModality,
   MultiModalUnit,
@@ -282,7 +293,7 @@ export type {
   MultiModalRequest,
   MultiModalResult,
   MultiModalConfig,
-} from '../services/multiModalCompiler.js';
+} from "../services/multiModalCompiler.js";
 
 // Hierarchical Cache (3-tier: L1 hot → L2 warm → L3 persistent)
 export {
@@ -290,14 +301,14 @@ export {
   getHierarchicalCache,
   destroyHierarchicalCache,
   destroyAllHierarchicalCaches,
-} from '../services/hierarchicalCache.js';
+} from "../services/hierarchicalCache.js";
 export type {
   CacheEntry,
   CacheTierConfig,
   HierarchicalCacheConfig,
   CacheMetrics,
   TierMetrics,
-} from '../services/hierarchicalCache.js';
+} from "../services/hierarchicalCache.js";
 
 // Real-Time Learning (feedback-based model refinement)
 export {
@@ -306,7 +317,7 @@ export {
   destroyRealTimeLearning,
   destroyAllRealTimeLearning,
   DEFAULT_LEARNING_CONFIG,
-} from '../services/realTimeLearning.js';
+} from "../services/realTimeLearning.js";
 export type {
   FeedbackType,
   UserFeedback,
@@ -315,7 +326,7 @@ export type {
   LearningModel,
   LearningConfig,
   LearningMetrics,
-} from '../services/realTimeLearning.js';
+} from "../services/realTimeLearning.js";
 
 // Types (re-export all)
-export * from './types.js';
+export * from "./types.js";

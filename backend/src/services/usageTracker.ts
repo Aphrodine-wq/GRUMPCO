@@ -3,9 +3,9 @@
  * Persists to database with optional in-memory cache for performance.
  */
 
-import logger from '../middleware/logger.js';
-import { getDatabase } from '../db/database.js';
-import { v4 as uuid } from 'uuid';
+import logger from "../middleware/logger.js";
+import { getDatabase } from "../db/database.js";
+import { v4 as uuid } from "uuid";
 
 export interface UsageRecord {
   userId: string;
@@ -28,7 +28,9 @@ const CACHE_LIMIT = 1000;
  * Record an API call with automatic database persistence
  * Fails silently to avoid breaking the request if analytics fails
  */
-export async function recordApiCall(record: Omit<UsageRecord, 'createdAt'>): Promise<void> {
+export async function recordApiCall(
+  record: Omit<UsageRecord, "createdAt">,
+): Promise<void> {
   const full: UsageRecord = { ...record, createdAt: new Date() };
 
   try {
@@ -54,14 +56,21 @@ export async function recordApiCall(record: Omit<UsageRecord, 'createdAt'>): Pro
     });
 
     logger.debug(
-      { userId: record.userId, endpoint: record.endpoint, tokens: record.inputTokens },
-      'Usage recorded'
+      {
+        userId: record.userId,
+        endpoint: record.endpoint,
+        tokens: record.inputTokens,
+      },
+      "Usage recorded",
     );
   } catch (error) {
     // Fail silently - usage tracking errors should not break API responses
     logger.warn(
-      { error: error instanceof Error ? error.message : String(error), userId: record.userId },
-      'Failed to record usage'
+      {
+        error: error instanceof Error ? error.message : String(error),
+        userId: record.userId,
+      },
+      "Failed to record usage",
     );
   }
 }
@@ -74,12 +83,12 @@ export async function recordTokenUsage(
   model: string,
   inputTokens: number,
   outputTokens: number,
-  estimatedCostUsd?: number
+  estimatedCostUsd?: number,
 ): Promise<void> {
   await recordApiCall({
     userId,
-    endpoint: '/api/chat/stream',
-    method: 'POST',
+    endpoint: "/api/chat/stream",
+    method: "POST",
     model,
     inputTokens,
     outputTokens,
@@ -87,7 +96,7 @@ export async function recordTokenUsage(
   });
 
   if (estimatedCostUsd) {
-    logger.debug({ userId, model, estimatedCostUsd }, 'Token cost tracked');
+    logger.debug({ userId, model, estimatedCostUsd }, "Token cost tracked");
   }
 }
 
@@ -97,13 +106,13 @@ export async function recordTokenUsage(
 export async function recordStorageUsage(
   userId: string,
   storageBytes: number,
-  source: 'codegen' | 'ship' | 'other' = 'codegen'
+  source: "codegen" | "ship" | "other" = "codegen",
 ): Promise<void> {
   if (!userId || storageBytes <= 0) return;
   await recordApiCall({
     userId,
     endpoint: `/api/storage/${source}`,
-    method: 'POST',
+    method: "POST",
     storageBytes,
     success: true,
   });
@@ -116,12 +125,13 @@ export async function recordStorageUsage(
 export async function getUsageForUser(
   userId: string,
   fromDate: Date,
-  toDate: Date
+  toDate: Date,
 ): Promise<UsageRecord[]> {
   try {
     // Check cache first (reserved for future cache-first path)
     const _cachedRecords = recentUsageCache.filter(
-      (r) => r.userId === userId && r.createdAt >= fromDate && r.createdAt <= toDate
+      (r) =>
+        r.userId === userId && r.createdAt >= fromDate && r.createdAt <= toDate,
     );
 
     // Query database for complete results
@@ -130,21 +140,23 @@ export async function getUsageForUser(
     const rows = records as Array<Record<string, unknown>>;
 
     return rows.map((r) => ({
-      userId: String(r.user_id ?? ''),
-      endpoint: String(r.endpoint ?? ''),
-      method: String(r.method ?? ''),
+      userId: String(r.user_id ?? ""),
+      endpoint: String(r.endpoint ?? ""),
+      method: String(r.method ?? ""),
       model: r.model != null ? String(r.model) : undefined,
       inputTokens: r.input_tokens != null ? Number(r.input_tokens) : undefined,
-      outputTokens: r.output_tokens != null ? Number(r.output_tokens) : undefined,
+      outputTokens:
+        r.output_tokens != null ? Number(r.output_tokens) : undefined,
       latencyMs: r.latency_ms != null ? Number(r.latency_ms) : undefined,
-      storageBytes: r.storage_bytes != null ? Number(r.storage_bytes) : undefined,
+      storageBytes:
+        r.storage_bytes != null ? Number(r.storage_bytes) : undefined,
       success: r.success === 1,
-      createdAt: new Date(String(r.created_at ?? '')),
+      createdAt: new Date(String(r.created_at ?? "")),
     })) as UsageRecord[];
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error), userId },
-      'Failed to get usage records'
+      "Failed to get usage records",
     );
     return [];
   }
@@ -162,7 +174,7 @@ export async function getMonthlyCallCount(userId: string): Promise<number> {
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error), userId },
-      'Failed to get monthly call count'
+      "Failed to get monthly call count",
     );
     return 0;
   }
@@ -185,7 +197,7 @@ export async function getUsageSummary(userId: string): Promise<{
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error), userId },
-      'Failed to get usage summary'
+      "Failed to get usage summary",
     );
     return {
       totalRequests: 0,

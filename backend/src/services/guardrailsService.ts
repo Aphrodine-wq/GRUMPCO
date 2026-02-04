@@ -9,13 +9,13 @@
  * - Audit logging
  */
 
-import logger from '../middleware/logger.js';
-import { writeAuditLog } from './auditLogService.js';
-import type { TierId } from '../config/pricing.js';
+import logger from "../middleware/logger.js";
+import { writeAuditLog } from "./auditLogService.js";
+import type { TierId } from "../config/pricing.js";
 
 // ========== Types ==========
 
-export type GuardrailAction = 'block' | 'warn' | 'log' | 'pass';
+export type GuardrailAction = "block" | "warn" | "log" | "pass";
 
 export interface GuardrailPolicy {
   id: string;
@@ -68,90 +68,90 @@ export interface ContentClassification {
   /** Whether this is harmful */
   isHarmful: boolean;
   /** Severity level */
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  severity: "low" | "medium" | "high" | "critical";
 }
 
 // ========== Default Policies ==========
 
 const DEFAULT_INPUT_POLICIES: GuardrailPolicy[] = [
   {
-    id: 'jailbreak_detection',
-    name: 'Jailbreak Detection',
+    id: "jailbreak_detection",
+    name: "Jailbreak Detection",
     enabled: true,
-    action: 'block',
+    action: "block",
     threshold: 0.8,
   },
   {
-    id: 'prompt_injection',
-    name: 'Prompt Injection',
+    id: "prompt_injection",
+    name: "Prompt Injection",
     enabled: true,
-    action: 'block',
+    action: "block",
     threshold: 0.85,
   },
   {
-    id: 'pii_detection',
-    name: 'PII Detection',
+    id: "pii_detection",
+    name: "PII Detection",
     enabled: true,
-    action: 'warn',
+    action: "warn",
     threshold: 0.7,
   },
   {
-    id: 'topic_control',
-    name: 'Topic Control',
+    id: "topic_control",
+    name: "Topic Control",
     enabled: false,
-    action: 'block',
+    action: "block",
     threshold: 0.9,
   },
   {
-    id: 'credential_detection',
-    name: 'Credential Detection',
+    id: "credential_detection",
+    name: "Credential Detection",
     enabled: true,
-    action: 'block',
+    action: "block",
     threshold: 0.9,
   },
 ];
 
 const DEFAULT_OUTPUT_POLICIES: GuardrailPolicy[] = [
   {
-    id: 'harmful_content',
-    name: 'Harmful Content',
+    id: "harmful_content",
+    name: "Harmful Content",
     enabled: true,
-    action: 'block',
+    action: "block",
     threshold: 0.8,
   },
   {
-    id: 'misinformation',
-    name: 'Misinformation',
+    id: "misinformation",
+    name: "Misinformation",
     enabled: true,
-    action: 'warn',
+    action: "warn",
     threshold: 0.7,
   },
   {
-    id: 'bias_detection',
-    name: 'Bias Detection',
+    id: "bias_detection",
+    name: "Bias Detection",
     enabled: false,
-    action: 'log',
+    action: "log",
     threshold: 0.6,
   },
   {
-    id: 'code_safety',
-    name: 'Unsafe Code Patterns',
+    id: "code_safety",
+    name: "Unsafe Code Patterns",
     enabled: true,
-    action: 'warn',
+    action: "warn",
     threshold: 0.75,
   },
   {
-    id: 'crypto_mining',
-    name: 'Crypto Mining Detection',
+    id: "crypto_mining",
+    name: "Crypto Mining Detection",
     enabled: true,
-    action: 'block',
+    action: "block",
     threshold: 0.8,
   },
   {
-    id: 'exfiltration',
-    name: 'Data Exfiltration Detection',
+    id: "exfiltration",
+    name: "Data Exfiltration Detection",
     enabled: true,
-    action: 'block',
+    action: "block",
     threshold: 0.85,
   },
 ];
@@ -394,28 +394,28 @@ const PII_PATTERNS = [
 export async function checkInput(
   content: string,
   userId: string,
-  config?: Partial<GuardrailConfig>
+  config?: Partial<GuardrailConfig>,
 ): Promise<GuardrailCheckResult> {
   const startTime = Date.now();
   const policies = config?.policies || DEFAULT_INPUT_POLICIES;
-  const triggeredPolicies: GuardrailCheckResult['triggeredPolicies'] = [];
-  let finalAction: GuardrailAction = 'pass';
+  const triggeredPolicies: GuardrailCheckResult["triggeredPolicies"] = [];
+  let finalAction: GuardrailAction = "pass";
 
   // Length check
   const maxLength = config?.maxInputLength || 100_000;
   if (content.length > maxLength) {
     triggeredPolicies.push({
-      policyId: 'length_limit',
-      policyName: 'Input Length Limit',
+      policyId: "length_limit",
+      policyName: "Input Length Limit",
       confidence: 1.0,
       reason: `Input exceeds maximum length of ${maxLength} characters`,
     });
-    finalAction = 'block';
+    finalAction = "block";
   }
 
   // Check each enabled policy
   for (const policy of policies.filter((p) => p.enabled)) {
-    const result = await checkPolicy(policy, content, 'input');
+    const result = await checkPolicy(policy, content, "input");
     if (result.triggered) {
       triggeredPolicies.push({
         policyId: policy.id,
@@ -435,9 +435,9 @@ export async function checkInput(
   if (triggeredPolicies.length > 0) {
     await writeAuditLog({
       userId,
-      action: 'guardrails.input_check',
-      category: 'security',
-      target: 'input_filter',
+      action: "guardrails.input_check",
+      category: "security",
+      target: "input_filter",
       metadata: {
         action: finalAction,
         triggeredPolicies: triggeredPolicies.map((p) => p.policyId),
@@ -445,11 +445,11 @@ export async function checkInput(
     });
   }
 
-  const passed = finalAction === 'pass' || finalAction === 'log';
+  const passed = finalAction === "pass" || finalAction === "log";
 
   logger.debug(
     { passed, action: finalAction, triggeredCount: triggeredPolicies.length },
-    'Guardrails input check complete'
+    "Guardrails input check complete",
   );
 
   return {
@@ -466,28 +466,28 @@ export async function checkInput(
 export async function checkOutput(
   content: string,
   userId: string,
-  config?: Partial<GuardrailConfig>
+  config?: Partial<GuardrailConfig>,
 ): Promise<GuardrailCheckResult> {
   const startTime = Date.now();
   const policies = config?.policies || DEFAULT_OUTPUT_POLICIES;
-  const triggeredPolicies: GuardrailCheckResult['triggeredPolicies'] = [];
-  let finalAction: GuardrailAction = 'pass';
+  const triggeredPolicies: GuardrailCheckResult["triggeredPolicies"] = [];
+  let finalAction: GuardrailAction = "pass";
 
   // Length check
   const maxLength = config?.maxOutputLength || 200_000;
   if (content.length > maxLength) {
     triggeredPolicies.push({
-      policyId: 'length_limit',
-      policyName: 'Output Length Limit',
+      policyId: "length_limit",
+      policyName: "Output Length Limit",
       confidence: 1.0,
       reason: `Output exceeds maximum length of ${maxLength} characters`,
     });
-    finalAction = 'warn';
+    finalAction = "warn";
   }
 
   // Check each enabled policy
   for (const policy of policies.filter((p) => p.enabled)) {
-    const result = await checkPolicy(policy, content, 'output');
+    const result = await checkPolicy(policy, content, "output");
     if (result.triggered) {
       triggeredPolicies.push({
         policyId: policy.id,
@@ -506,9 +506,9 @@ export async function checkOutput(
   if (triggeredPolicies.length > 0) {
     await writeAuditLog({
       userId,
-      action: 'guardrails.output_check',
-      category: 'security',
-      target: 'output_filter',
+      action: "guardrails.output_check",
+      category: "security",
+      target: "output_filter",
       metadata: {
         action: finalAction,
         triggeredPolicies: triggeredPolicies.map((p) => p.policyId),
@@ -516,7 +516,7 @@ export async function checkOutput(
     });
   }
 
-  const passed = finalAction === 'pass' || finalAction === 'log';
+  const passed = finalAction === "pass" || finalAction === "log";
 
   return {
     passed,
@@ -532,53 +532,53 @@ export async function checkOutput(
 async function checkPolicy(
   policy: GuardrailPolicy,
   content: string,
-  _direction: 'input' | 'output'
+  _direction: "input" | "output",
 ): Promise<{ triggered: boolean; confidence: number; reason: string }> {
   let confidence = 0;
-  let reason = '';
+  let reason = "";
 
   switch (policy.id) {
-    case 'jailbreak_detection':
+    case "jailbreak_detection":
       for (const pattern of JAILBREAK_PATTERNS) {
         if (pattern.test(content)) {
           confidence = 0.9;
-          reason = 'Jailbreak attempt detected';
+          reason = "Jailbreak attempt detected";
           break;
         }
       }
       break;
 
-    case 'prompt_injection':
+    case "prompt_injection":
       for (const pattern of INJECTION_PATTERNS) {
         if (pattern.test(content)) {
           confidence = 0.85;
-          reason = 'Prompt injection pattern detected';
+          reason = "Prompt injection pattern detected";
           break;
         }
       }
       break;
 
-    case 'pii_detection':
+    case "pii_detection":
       for (const pattern of PII_PATTERNS) {
         if (pattern.test(content)) {
           confidence = 0.75;
-          reason = 'Potential PII detected';
+          reason = "Potential PII detected";
           break;
         }
       }
       break;
 
-    case 'code_safety':
+    case "code_safety":
       for (const pattern of UNSAFE_CODE_PATTERNS) {
         if (pattern.test(content)) {
           confidence = 0.8;
-          reason = 'Potentially unsafe code pattern detected';
+          reason = "Potentially unsafe code pattern detected";
           break;
         }
       }
       break;
 
-    case 'credential_detection': {
+    case "credential_detection": {
       // Check for hardcoded credentials
       const credentialPatterns = [
         /(?:password|passwd|secret|api_?key|auth_?token|access_?token)\s*[:=]\s*["'][^"']{8,}["']/i,
@@ -591,42 +591,42 @@ async function checkPolicy(
       for (const pattern of credentialPatterns) {
         if (pattern.test(content)) {
           confidence = 0.95;
-          reason = 'Hardcoded credentials detected';
+          reason = "Hardcoded credentials detected";
           break;
         }
       }
       break;
     }
 
-    case 'crypto_mining':
+    case "crypto_mining":
       for (const pattern of CRYPTO_MINING_PATTERNS) {
         if (pattern.test(content)) {
           confidence = 0.85;
-          reason = 'Crypto mining pattern detected';
+          reason = "Crypto mining pattern detected";
           break;
         }
       }
       break;
 
-    case 'exfiltration':
+    case "exfiltration":
       for (const pattern of EXFILTRATION_PATTERNS) {
         if (pattern.test(content)) {
           confidence = 0.9;
-          reason = 'Data exfiltration pattern detected';
+          reason = "Data exfiltration pattern detected";
           break;
         }
       }
       break;
 
-    case 'harmful_content': {
+    case "harmful_content": {
       // Would use NeMo Guardrails API or local model
       // For now, basic keyword detection
-      const harmfulKeywords = ['kill', 'harm', 'illegal', 'exploit'];
+      const harmfulKeywords = ["kill", "harm", "illegal", "exploit"];
       const contentLower = content.toLowerCase();
       for (const keyword of harmfulKeywords) {
         if (contentLower.includes(keyword)) {
           confidence = 0.6;
-          reason = 'Potentially harmful content detected';
+          reason = "Potentially harmful content detected";
           break;
         }
       }
@@ -650,13 +650,13 @@ async function checkPolicy(
  */
 function getActionPriority(action: GuardrailAction): number {
   switch (action) {
-    case 'pass':
+    case "pass":
       return 0;
-    case 'log':
+    case "log":
       return 1;
-    case 'warn':
+    case "warn":
       return 2;
-    case 'block':
+    case "block":
       return 3;
     default:
       return 0;
@@ -721,19 +721,25 @@ export function sanitizePII(content: string): string {
   let sanitized = content;
 
   // Replace SSN
-  sanitized = sanitized.replace(/\b\d{3}[-.]?\d{2}[-.]?\d{4}\b/g, '[SSN REDACTED]');
+  sanitized = sanitized.replace(
+    /\b\d{3}[-.]?\d{2}[-.]?\d{4}\b/g,
+    "[SSN REDACTED]",
+  );
 
   // Replace credit card
-  sanitized = sanitized.replace(/\b\d{16}\b/g, '[CARD REDACTED]');
+  sanitized = sanitized.replace(/\b\d{16}\b/g, "[CARD REDACTED]");
 
   // Replace email
   sanitized = sanitized.replace(
     /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z]{2,}\b/gi,
-    '[EMAIL REDACTED]'
+    "[EMAIL REDACTED]",
   );
 
   // Replace phone
-  sanitized = sanitized.replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[PHONE REDACTED]');
+  sanitized = sanitized.replace(
+    /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g,
+    "[PHONE REDACTED]",
+  );
 
   return sanitized;
 }
@@ -741,16 +747,18 @@ export function sanitizePII(content: string): string {
 /**
  * Classify content
  */
-export async function classifyContent(content: string): Promise<ContentClassification[]> {
+export async function classifyContent(
+  content: string,
+): Promise<ContentClassification[]> {
   const classifications: ContentClassification[] = [];
 
   // Check for code
   if (/```[\s\S]*```|function\s+\w+|class\s+\w+|import\s+\w+/i.test(content)) {
     classifications.push({
-      category: 'code',
+      category: "code",
       confidence: 0.9,
       isHarmful: false,
-      severity: 'low',
+      severity: "low",
     });
   }
 
@@ -758,10 +766,10 @@ export async function classifyContent(content: string): Promise<ContentClassific
   for (const pattern of PII_PATTERNS) {
     if (pattern.test(content)) {
       classifications.push({
-        category: 'pii',
+        category: "pii",
         confidence: 0.8,
         isHarmful: true,
-        severity: 'medium',
+        severity: "medium",
       });
       break;
     }
@@ -771,10 +779,10 @@ export async function classifyContent(content: string): Promise<ContentClassific
   for (const pattern of UNSAFE_CODE_PATTERNS) {
     if (pattern.test(content)) {
       classifications.push({
-        category: 'unsafe_code',
+        category: "unsafe_code",
         confidence: 0.85,
         isHarmful: true,
-        severity: 'high',
+        severity: "high",
       });
       break;
     }

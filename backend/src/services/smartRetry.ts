@@ -11,19 +11,19 @@
  * - Integration with provider health monitoring
  */
 
-import logger from '../middleware/logger.js';
-import type { LLMProvider, StreamParams, StreamEvent } from './llmGateway.js';
-import { getConfiguredProviders, getProviderConfig } from './llmGateway.js';
+import logger from "../middleware/logger.js";
+import type { LLMProvider, StreamParams, StreamEvent } from "./llmGateway.js";
+import { getConfiguredProviders, getProviderConfig } from "./llmGateway.js";
 
 // Lazy import to avoid circular dependency
-let providerHealthModule: typeof import('./providerHealth.js') | undefined;
+let providerHealthModule: typeof import("./providerHealth.js") | undefined;
 
 /**
  * Safely get provider health module (lazy loaded to avoid circular deps)
  */
 async function getProviderHealth() {
   if (!providerHealthModule) {
-    providerHealthModule = await import('./providerHealth.js');
+    providerHealthModule = await import("./providerHealth.js");
   }
   return providerHealthModule;
 }
@@ -69,13 +69,13 @@ const CIRCUIT_BREAKER_RESET_MS = 60000; // 1 minute
 
 // Provider performance characteristics
 const PROVIDER_SPEED_RANKING: LLMProvider[] = [
-  'nim', // Fastest and most reliable
-  'kimi', // Fast long-context
-  'github-copilot', // Fast for code generation
-  'mistral', // Fast European provider
-  'anthropic', // Good balance
-  'openrouter', // Variable by model
-  'ollama', // Depends on hardware
+  "nim", // Fastest and most reliable
+  "kimi", // Fast long-context
+  "github-copilot", // Fast for code generation
+  "mistral", // Fast European provider
+  "anthropic", // Good balance
+  "openrouter", // Variable by model
+  "ollama", // Depends on hardware
 ];
 
 class SmartRetryService {
@@ -92,8 +92,11 @@ class SmartRetryService {
   async *executeWithRetry(
     primaryProvider: LLMProvider,
     params: StreamParams,
-    streamFn: (provider: LLMProvider, params: StreamParams) => AsyncGenerator<StreamEvent>,
-    customConfig?: Partial<RetryConfig>
+    streamFn: (
+      provider: LLMProvider,
+      params: StreamParams,
+    ) => AsyncGenerator<StreamEvent>,
+    customConfig?: Partial<RetryConfig>,
   ): AsyncGenerator<StreamEvent> {
     const config = { ...this.config, ...customConfig };
     const providers = await this.buildProviderChain(primaryProvider);
@@ -104,7 +107,7 @@ class SmartRetryService {
     for (const provider of providers) {
       // Check circuit breaker
       if (this.isCircuitBreakerOpen(provider)) {
-        logger.warn({ provider }, 'Circuit breaker open, skipping provider');
+        logger.warn({ provider }, "Circuit breaker open, skipping provider");
         continue;
       }
 
@@ -112,7 +115,7 @@ class SmartRetryService {
       if (config.enableProviderFallback) {
         const healthy = await isProviderHealthy(provider);
         if (!healthy) {
-          logger.warn({ provider }, 'Provider unhealthy, skipping');
+          logger.warn({ provider }, "Provider unhealthy, skipping");
           continue;
         }
       }
@@ -132,7 +135,7 @@ class SmartRetryService {
               model: params.model,
               maxAttempts: config.maxAttempts,
             },
-            'Streaming attempt'
+            "Streaming attempt",
           );
 
           const startTime = Date.now();
@@ -158,7 +161,7 @@ class SmartRetryService {
               duration: durationSeconds,
               tokenCount,
             },
-            'Streaming completed successfully'
+            "Streaming completed successfully",
           );
 
           return;
@@ -173,15 +176,19 @@ class SmartRetryService {
               error: lastError.message,
               stack: lastError.stack,
             },
-            'Streaming attempt failed'
+            "Streaming attempt failed",
           );
 
           // Check if we should retry
-          const shouldRetry = attempt < config.maxAttempts && this.isRetryableError(lastError);
+          const shouldRetry =
+            attempt < config.maxAttempts && this.isRetryableError(lastError);
 
           if (shouldRetry) {
             const delay = this.calculateDelay(attempt, config);
-            logger.info({ delay, nextAttempt: attempt + 1 }, 'Retrying after delay');
+            logger.info(
+              { delay, nextAttempt: attempt + 1 },
+              "Retrying after delay",
+            );
             await this.sleep(delay);
           } else {
             // Move to next provider
@@ -193,16 +200,18 @@ class SmartRetryService {
 
     // All attempts exhausted
     yield {
-      type: 'error',
+      type: "error",
       error: `All ${attempt} attempts failed across ${providers.length} providers. Last error: ${lastError?.message}`,
     };
-    yield { type: 'message_stop' };
+    yield { type: "message_stop" };
   }
 
   /**
    * Build provider fallback chain
    */
-  private async buildProviderChain(primary: LLMProvider): Promise<LLMProvider[]> {
+  private async buildProviderChain(
+    primary: LLMProvider,
+  ): Promise<LLMProvider[]> {
     const chain: LLMProvider[] = [];
 
     // Add primary if healthy
@@ -244,18 +253,18 @@ class SmartRetryService {
    */
   private isRetryableError(error: Error): boolean {
     const retryableMessages = [
-      'timeout',
-      'ETIMEDOUT',
-      'ECONNRESET',
-      'ECONNREFUSED',
-      'network error',
-      'rate limit',
-      '429',
-      '503',
-      '502',
-      '504',
-      'fetch failed',
-      'connection',
+      "timeout",
+      "ETIMEDOUT",
+      "ECONNRESET",
+      "ECONNREFUSED",
+      "network error",
+      "rate limit",
+      "429",
+      "503",
+      "502",
+      "504",
+      "fetch failed",
+      "connection",
     ];
 
     const errorMessage = error.message.toLowerCase();
@@ -266,7 +275,8 @@ class SmartRetryService {
    * Calculate retry delay with exponential backoff and jitter
    */
   private calculateDelay(attempt: number, config: RetryConfig): number {
-    const exponential = config.baseDelayMs * Math.pow(config.backoffMultiplier, attempt - 1);
+    const exponential =
+      config.baseDelayMs * Math.pow(config.backoffMultiplier, attempt - 1);
     const capped = Math.min(exponential, config.maxDelayMs);
 
     if (config.enableJitter) {
@@ -288,7 +298,10 @@ class SmartRetryService {
     if (state.isOpen) {
       // Check if we should attempt reset
       if (Date.now() - state.lastFailure > CIRCUIT_BREAKER_RESET_MS) {
-        logger.info({ provider }, 'Circuit breaker reset timeout elapsed, allowing retry');
+        logger.info(
+          { provider },
+          "Circuit breaker reset timeout elapsed, allowing retry",
+        );
         state.isOpen = false;
         state.failures = 0;
         return false;
@@ -332,7 +345,7 @@ class SmartRetryService {
           failures: state.failures,
           resetIn: CIRCUIT_BREAKER_RESET_MS / 1000,
         },
-        'Circuit breaker opened'
+        "Circuit breaker opened",
       );
     }
   }
@@ -366,7 +379,7 @@ class SmartRetryService {
    */
   resetCircuitBreakers(): void {
     this.circuitBreakers.clear();
-    logger.info('All circuit breakers reset');
+    logger.info("All circuit breakers reset");
   }
 
   /**
@@ -374,7 +387,7 @@ class SmartRetryService {
    */
   resetCircuitBreaker(provider: LLMProvider): void {
     this.circuitBreakers.delete(provider);
-    logger.info({ provider }, 'Circuit breaker reset');
+    logger.info({ provider }, "Circuit breaker reset");
   }
 
   private sleep(ms: number): Promise<void> {
@@ -394,8 +407,11 @@ export { SmartRetryService };
 export async function* streamWithRetry(
   provider: LLMProvider,
   params: StreamParams,
-  streamFn: (provider: LLMProvider, params: StreamParams) => AsyncGenerator<StreamEvent>,
-  config?: Partial<RetryConfig>
+  streamFn: (
+    provider: LLMProvider,
+    params: StreamParams,
+  ) => AsyncGenerator<StreamEvent>,
+  config?: Partial<RetryConfig>,
 ): AsyncGenerator<StreamEvent> {
   yield* smartRetry.executeWithRetry(provider, params, streamFn, config);
 }

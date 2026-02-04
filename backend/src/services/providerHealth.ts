@@ -10,14 +10,14 @@
  * @module services/providerHealth
  */
 
-import logger from '../middleware/logger.js';
-import { env } from '../config/env.js';
+import logger from "../middleware/logger.js";
+import { env } from "../config/env.js";
 import {
   type LLMProvider,
   getConfiguredProviders,
   getProviderConfig,
   getApiKeyForProvider,
-} from './llmGateway.js';
+} from "./llmGateway.js";
 
 // =============================================================================
 // Types & Interfaces
@@ -26,7 +26,7 @@ import {
 /** Health status for a provider */
 export interface ProviderHealth {
   provider: LLMProvider;
-  status: 'healthy' | 'degraded' | 'unhealthy' | 'disabled';
+  status: "healthy" | "degraded" | "unhealthy" | "disabled";
   lastCheck: number;
   lastSuccess: number | null;
   lastFailure: number | null;
@@ -72,16 +72,16 @@ const DEFAULT_CONFIG: HealthCheckConfig = {
 };
 
 /** Provider endpoints for health checks */
-const HEALTH_CHECK_ENDPOINTS: Record<Exclude<LLMProvider, 'mock'>, string> = {
+const HEALTH_CHECK_ENDPOINTS: Record<Exclude<LLMProvider, "mock">, string> = {
   nim:
-    env.NVIDIA_NIM_URL?.replace('/chat/completions', '/models') ??
-    'https://integrate.api.nvidia.com/v1/models',
-  openrouter: 'https://openrouter.ai/api/v1/models',
+    env.NVIDIA_NIM_URL?.replace("/chat/completions", "/models") ??
+    "https://integrate.api.nvidia.com/v1/models",
+  openrouter: "https://openrouter.ai/api/v1/models",
   ollama: `${env.OLLAMA_BASE_URL}/api/tags`,
-  'github-copilot': 'https://api.githubcopilot.com/models',
-  kimi: 'https://api.moonshot.cn/v1/models',
-  anthropic: 'https://api.anthropic.com/v1/models',
-  mistral: 'https://api.mistral.ai/v1/models',
+  "github-copilot": "https://api.githubcopilot.com/models",
+  kimi: "https://api.moonshot.cn/v1/models",
+  anthropic: "https://api.anthropic.com/v1/models",
+  mistral: "https://api.mistral.ai/v1/models",
 };
 
 // =============================================================================
@@ -108,7 +108,7 @@ class ProviderHealthService {
     for (const provider of providers) {
       this.healthStatus.set(provider, {
         provider,
-        status: 'healthy',
+        status: "healthy",
         lastCheck: 0,
         lastSuccess: null,
         lastFailure: null,
@@ -122,7 +122,10 @@ class ProviderHealthService {
       this.enabledProviders.add(provider);
     }
 
-    logger.info({ providers: Array.from(providers) }, 'Provider health service initialized');
+    logger.info(
+      { providers: Array.from(providers) },
+      "Provider health service initialized",
+    );
   }
 
   /**
@@ -130,7 +133,7 @@ class ProviderHealthService {
    */
   startHealthChecks(): void {
     if (this.checkInterval) {
-      logger.warn('Health checks already running');
+      logger.warn("Health checks already running");
       return;
     }
 
@@ -142,7 +145,10 @@ class ProviderHealthService {
       this.runHealthChecks();
     }, this.config.checkIntervalMs);
 
-    logger.info({ intervalMs: this.config.checkIntervalMs }, 'Provider health checks started');
+    logger.info(
+      { intervalMs: this.config.checkIntervalMs },
+      "Provider health checks started",
+    );
   }
 
   /**
@@ -152,7 +158,7 @@ class ProviderHealthService {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
-      logger.info('Provider health checks stopped');
+      logger.info("Provider health checks stopped");
     }
   }
 
@@ -162,24 +168,24 @@ class ProviderHealthService {
   private async runHealthChecks(): Promise<void> {
     const providers = Array.from(this.enabledProviders);
 
-    logger.debug('Running health checks');
+    logger.debug("Running health checks");
 
     const results = await Promise.allSettled(
-      providers.map((provider) => this.checkProvider(provider))
+      providers.map((provider) => this.checkProvider(provider)),
     );
 
     for (let i = 0; i < providers.length; i++) {
       const provider = providers[i];
       const result = results[i];
 
-      if (result.status === 'fulfilled') {
+      if (result.status === "fulfilled") {
         this.updateHealthStatus(provider, result.value);
       } else {
         this.updateHealthStatus(provider, {
           provider,
           healthy: false,
           latencyMs: 0,
-          error: result.reason?.message || 'Unknown error',
+          error: result.reason?.message || "Unknown error",
         });
       }
     }
@@ -188,8 +194,10 @@ class ProviderHealthService {
   /**
    * Check the health of a single provider.
    */
-  private async checkProvider(provider: LLMProvider): Promise<HealthCheckResult> {
-    if (provider === 'mock') {
+  private async checkProvider(
+    provider: LLMProvider,
+  ): Promise<HealthCheckResult> {
+    if (provider === "mock") {
       return { provider, healthy: true, latencyMs: 0 };
     }
 
@@ -197,14 +205,22 @@ class ProviderHealthService {
     const config = getProviderConfig(provider);
 
     if (!endpoint || !config) {
-      return { provider, healthy: false, latencyMs: 0, error: 'No endpoint configured' };
+      return {
+        provider,
+        healthy: false,
+        latencyMs: 0,
+        error: "No endpoint configured",
+      };
     }
 
     const startTime = Date.now();
 
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), this.config.maxLatencyMs);
+      const timeout = setTimeout(
+        () => controller.abort(),
+        this.config.maxLatencyMs,
+      );
 
       const headers: Record<string, string> = {};
       if (config.apiKeyEnvVar) {
@@ -215,7 +231,7 @@ class ProviderHealthService {
       }
 
       const response = await fetch(endpoint, {
-        method: 'GET',
+        method: "GET",
         headers,
         signal: controller.signal,
       });
@@ -228,7 +244,7 @@ class ProviderHealthService {
           provider,
           healthy: false,
           latencyMs,
-          error: `HTTP ${response.status}: ${await response.text().catch(() => 'Unknown error')}`,
+          error: `HTTP ${response.status}: ${await response.text().catch(() => "Unknown error")}`,
         };
       }
 
@@ -247,7 +263,10 @@ class ProviderHealthService {
   /**
    * Update health status based on check result.
    */
-  private updateHealthStatus(provider: LLMProvider, result: HealthCheckResult): void {
+  private updateHealthStatus(
+    provider: LLMProvider,
+    result: HealthCheckResult,
+  ): void {
     const current = this.healthStatus.get(provider);
     if (!current) return;
 
@@ -270,13 +289,13 @@ class ProviderHealthService {
 
       // Check if provider should recover from degraded/unhealthy
       if (
-        (current.status === 'unhealthy' || current.status === 'degraded') &&
+        (current.status === "unhealthy" || current.status === "degraded") &&
         this.config.autoEnable
       ) {
         const recentSuccesses = this.countRecentSuccesses(provider);
         if (recentSuccesses >= this.config.recoveryThreshold) {
-          updated.status = 'healthy';
-          logger.info({ provider }, 'Provider recovered to healthy status');
+          updated.status = "healthy";
+          logger.info({ provider }, "Provider recovered to healthy status");
         }
       }
     } else {
@@ -286,30 +305,35 @@ class ProviderHealthService {
 
       // Check if provider should be marked as degraded
       if (
-        current.status === 'healthy' &&
+        current.status === "healthy" &&
         updated.consecutiveFailures >= this.config.degradedThreshold
       ) {
-        updated.status = 'degraded';
+        updated.status = "degraded";
         logger.warn(
           { provider, consecutiveFailures: updated.consecutiveFailures },
-          'Provider marked as degraded'
+          "Provider marked as degraded",
         );
       }
 
       // Check if provider should be disabled
-      if (updated.consecutiveFailures >= this.config.failureThreshold && this.config.autoDisable) {
-        updated.status = 'unhealthy';
+      if (
+        updated.consecutiveFailures >= this.config.failureThreshold &&
+        this.config.autoDisable
+      ) {
+        updated.status = "unhealthy";
         this.enabledProviders.delete(provider);
         logger.error(
           { provider, consecutiveFailures: updated.consecutiveFailures },
-          'Provider marked as unhealthy and disabled'
+          "Provider marked as unhealthy and disabled",
         );
       }
     }
 
     // Calculate error rate (last 100 requests)
     updated.errorRate =
-      updated.totalRequests > 0 ? updated.failedRequests / updated.totalRequests : 0;
+      updated.totalRequests > 0
+        ? updated.failedRequests / updated.totalRequests
+        : 0;
 
     this.healthStatus.set(provider, updated);
   }
@@ -322,7 +346,9 @@ class ProviderHealthService {
     if (!status || !status.lastSuccess) return 0;
 
     // Simple heuristic: if last failure was a while ago, we're recovering
-    const timeSinceLastFailure = status.lastFailure ? Date.now() - status.lastFailure : Infinity;
+    const timeSinceLastFailure = status.lastFailure
+      ? Date.now() - status.lastFailure
+      : Infinity;
 
     return timeSinceLastFailure > this.config.checkIntervalMs * 2 ? 1 : 0;
   }
@@ -354,7 +380,7 @@ class ProviderHealthService {
     if (!status) {
       return true;
     }
-    return status.status === 'healthy' && this.enabledProviders.has(provider);
+    return status.status === "healthy" && this.enabledProviders.has(provider);
   }
 
   /**
@@ -376,7 +402,9 @@ class ProviderHealthService {
    */
   getHealthyProviders(): LLMProvider[] {
     return this.getAllHealth()
-      .filter((h) => h.status === 'healthy' && this.enabledProviders.has(h.provider))
+      .filter(
+        (h) => h.status === "healthy" && this.enabledProviders.has(h.provider),
+      )
       .map((h) => h.provider);
   }
 
@@ -387,10 +415,10 @@ class ProviderHealthService {
     this.enabledProviders.delete(provider);
     const status = this.healthStatus.get(provider);
     if (status) {
-      status.status = 'disabled';
+      status.status = "disabled";
       this.healthStatus.set(provider, status);
     }
-    logger.info({ provider }, 'Provider manually disabled');
+    logger.info({ provider }, "Provider manually disabled");
   }
 
   /**
@@ -398,18 +426,18 @@ class ProviderHealthService {
    */
   enableProvider(provider: LLMProvider): void {
     if (!getConfiguredProviders().includes(provider)) {
-      logger.warn({ provider }, 'Cannot enable provider - not configured');
+      logger.warn({ provider }, "Cannot enable provider - not configured");
       return;
     }
 
     this.enabledProviders.add(provider);
     const status = this.healthStatus.get(provider);
     if (status) {
-      status.status = 'healthy';
+      status.status = "healthy";
       status.consecutiveFailures = 0;
       this.healthStatus.set(provider, status);
     }
-    logger.info({ provider }, 'Provider manually enabled');
+    logger.info({ provider }, "Provider manually enabled");
   }
 
   /**
@@ -428,7 +456,7 @@ class ProviderHealthService {
     const config = getProviderConfig(provider);
     this.healthStatus.set(provider, {
       provider,
-      status: 'healthy',
+      status: "healthy",
       lastCheck: 0,
       lastSuccess: null,
       lastFailure: null,
@@ -440,7 +468,7 @@ class ProviderHealthService {
       errorRate: 0,
     });
     this.enabledProviders.add(provider);
-    logger.info({ provider }, 'Provider health reset');
+    logger.info({ provider }, "Provider health reset");
   }
 
   /**
@@ -455,7 +483,7 @@ class ProviderHealthService {
    */
   updateConfig(config: Partial<HealthCheckConfig>): void {
     this.config = { ...this.config, ...config };
-    logger.info({ config: this.config }, 'Health check config updated');
+    logger.info({ config: this.config }, "Health check config updated");
   }
 
   /**
@@ -472,10 +500,10 @@ class ProviderHealthService {
     const statuses = this.getAllHealth();
     return {
       total: statuses.length,
-      healthy: statuses.filter((s) => s.status === 'healthy').length,
-      degraded: statuses.filter((s) => s.status === 'degraded').length,
-      unhealthy: statuses.filter((s) => s.status === 'unhealthy').length,
-      disabled: statuses.filter((s) => s.status === 'disabled').length,
+      healthy: statuses.filter((s) => s.status === "healthy").length,
+      degraded: statuses.filter((s) => s.status === "degraded").length,
+      unhealthy: statuses.filter((s) => s.status === "unhealthy").length,
+      disabled: statuses.filter((s) => s.status === "disabled").length,
       enabled: this.enabledProviders.size,
     };
   }
@@ -529,6 +557,8 @@ export function getHealthyProvidersForRouting(): LLMProvider[] {
 /**
  * Filter providers by health status for routing.
  */
-export function filterHealthyProviders(providers: LLMProvider[]): LLMProvider[] {
+export function filterHealthyProviders(
+  providers: LLMProvider[],
+): LLMProvider[] {
   return providers.filter((p) => providerHealth.isHealthy(p));
 }

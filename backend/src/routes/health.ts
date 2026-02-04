@@ -1,32 +1,36 @@
-import express, { type Request, type Response, type Router } from 'express';
-import { getRequestLogger } from '../middleware/logger.js';
-import { getDatabase } from '../db/database.js';
-import { getAllServiceStates } from '../services/bulkheads.js';
-import { getAlertingService } from '../services/alerting.js';
-import { isRedisConnected } from '../services/redis.js';
-import { getConfiguredProviders, getProviderConfig, type LLMProvider } from '../services/llmGateway.js';
-import { env } from '../config/env.js';
+import express, { type Request, type Response, type Router } from "express";
+import { getRequestLogger } from "../middleware/logger.js";
+import { getDatabase } from "../db/database.js";
+import { getAllServiceStates } from "../services/bulkheads.js";
+import { getAlertingService } from "../services/alerting.js";
+import { isRedisConnected } from "../services/redis.js";
+import {
+  getConfiguredProviders,
+  getProviderConfig,
+  type LLMProvider,
+} from "../services/llmGateway.js";
+import { env } from "../config/env.js";
 
 const router: Router = express.Router();
 
 // Shallow health check for load balancers
-router.get('/', (_req: Request, res: Response) => {
-  res.json({ status: 'ok' });
+router.get("/", (_req: Request, res: Response) => {
+  res.json({ status: "ok" });
 });
 
 // Quick health check for frontend status badge - no API calls, token-free
-router.get('/quick', (_req: Request, res: Response) => {
+router.get("/quick", (_req: Request, res: Response) => {
   const apiKeyConfigured = !!process.env.NVIDIA_NIM_API_KEY;
 
   const authEnabled =
     !!process.env.SUPABASE_URL &&
     !!process.env.SUPABASE_SERVICE_KEY &&
-    process.env.SUPABASE_URL !== 'https://your-project.supabase.co';
+    process.env.SUPABASE_URL !== "https://your-project.supabase.co";
 
   // Determine overall status
-  let status: 'healthy' | 'unhealthy' = 'healthy';
+  let status: "healthy" | "unhealthy" = "healthy";
   if (!apiKeyConfigured) {
-    status = 'unhealthy';
+    status = "unhealthy";
   }
 
   res.json({
@@ -41,7 +45,7 @@ router.get('/quick', (_req: Request, res: Response) => {
 });
 
 // Liveness probe - is the process alive?
-router.get('/live', (_req: Request, res: Response) => {
+router.get("/live", (_req: Request, res: Response) => {
   const memUsage = process.memoryUsage();
   const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
   const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
@@ -50,8 +54,8 @@ router.get('/live', (_req: Request, res: Response) => {
   // Fail if heap usage exceeds 90%
   if (heapPercentage > 90) {
     res.status(503).json({
-      status: 'unhealthy',
-      reason: 'high_memory_usage',
+      status: "unhealthy",
+      reason: "high_memory_usage",
       memory: {
         heapUsedMB: Math.round(heapUsedMB),
         heapTotalMB: Math.round(heapTotalMB),
@@ -62,7 +66,7 @@ router.get('/live', (_req: Request, res: Response) => {
   }
 
   res.json({
-    status: 'healthy',
+    status: "healthy",
     uptime: Math.round(process.uptime()),
     memory: {
       heapUsedMB: Math.round(heapUsedMB),
@@ -73,7 +77,7 @@ router.get('/live', (_req: Request, res: Response) => {
 });
 
 // Readiness probe - can we handle requests?
-router.get('/ready', async (_req: Request, res: Response) => {
+router.get("/ready", async (_req: Request, res: Response) => {
   const log = getRequestLogger();
 
   const checks: Record<string, boolean> = {
@@ -83,8 +87,8 @@ router.get('/ready', async (_req: Request, res: Response) => {
   };
 
   const redisRequired =
-    (process.env.REDIS_HOST != null && process.env.REDIS_HOST !== '') ||
-    process.env.SESSION_STORAGE === 'redis';
+    (process.env.REDIS_HOST != null && process.env.REDIS_HOST !== "") ||
+    process.env.SESSION_STORAGE === "redis";
   if (redisRequired) {
     checks.redis = false;
   }
@@ -98,11 +102,11 @@ router.get('/ready', async (_req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const dbInstance = db.getDb();
-    dbInstance.prepare('SELECT 1').get();
+    dbInstance.prepare("SELECT 1").get();
     checks.database = true;
   } catch (error) {
     const err = error as Error;
-    log.warn({ error: err.message }, 'Database health check failed');
+    log.warn({ error: err.message }, "Database health check failed");
     checks.database = false;
   }
 
@@ -112,7 +116,7 @@ router.get('/ready', async (_req: Request, res: Response) => {
       checks.redis = await isRedisConnected();
     } catch (error) {
       const err = error as Error;
-      log.warn({ error: err.message }, 'Redis health check failed');
+      log.warn({ error: err.message }, "Redis health check failed");
       checks.redis = false;
     }
   }
@@ -121,24 +125,24 @@ router.get('/ready', async (_req: Request, res: Response) => {
   if (process.env.NVIDIA_NIM_API_KEY) {
     try {
       const response = await fetch(
-        `${process.env.NVIDIA_NIM_URL || 'https://integrate.api.nvidia.com/v1'}/chat/completions`,
+        `${process.env.NVIDIA_NIM_URL || "https://integrate.api.nvidia.com/v1"}/chat/completions`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${process.env.NVIDIA_NIM_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'meta/llama-3.1-70b-instruct',
+            model: "meta/llama-3.1-70b-instruct",
             max_tokens: 1,
-            messages: [{ role: 'user', content: 'ping' }],
+            messages: [{ role: "user", content: "ping" }],
           }),
-        }
+        },
       );
       checks.nim_api = response.ok;
     } catch (error) {
       const err = error as Error;
-      log.warn({ error: err.message }, 'NVIDIA NIM API health check failed');
+      log.warn({ error: err.message }, "NVIDIA NIM API health check failed");
       checks.nim_api = false;
     }
   }
@@ -146,17 +150,17 @@ router.get('/ready', async (_req: Request, res: Response) => {
   const allHealthy = Object.values(checks).every((v) => v);
 
   res.status(allHealthy ? 200 : 503).json({
-    status: allHealthy ? 'ready' : 'not_ready',
+    status: allHealthy ? "ready" : "not_ready",
     checks,
   });
 });
 
 // Detailed health check with all component statuses
-router.get('/detailed', async (_req: Request, res: Response) => {
+router.get("/detailed", async (_req: Request, res: Response) => {
   const _log = getRequestLogger();
   const checks: Record<
     string,
-    { status: 'healthy' | 'unhealthy' | 'degraded'; details?: unknown }
+    { status: "healthy" | "unhealthy" | "degraded"; details?: unknown }
   > = {};
 
   // Database check
@@ -164,15 +168,15 @@ router.get('/detailed', async (_req: Request, res: Response) => {
     const db = getDatabase();
     const dbInstance = db.getDb();
     const start = Date.now();
-    dbInstance.prepare('SELECT 1').get();
+    dbInstance.prepare("SELECT 1").get();
     const latency = Date.now() - start;
     checks.database = {
-      status: 'healthy',
+      status: "healthy",
       details: { latencyMs: latency },
     };
   } catch (error) {
     checks.database = {
-      status: 'unhealthy',
+      status: "unhealthy",
       details: { error: (error as Error).message },
     };
   }
@@ -184,32 +188,32 @@ router.get('/detailed', async (_req: Request, res: Response) => {
     const halfOpenCircuits: string[] = [];
 
     for (const [serviceName, state] of Object.entries(serviceStates)) {
-      if (state.state === 'open') {
+      if (state.state === "open") {
         openCircuits.push(serviceName);
-      } else if (state.state === 'half-open') {
+      } else if (state.state === "half-open") {
         halfOpenCircuits.push(serviceName);
       }
     }
 
     if (openCircuits.length > 0) {
       checks.circuit_breakers = {
-        status: 'unhealthy',
+        status: "unhealthy",
         details: { openCircuits, halfOpenCircuits, allStates: serviceStates },
       };
     } else if (halfOpenCircuits.length > 0) {
       checks.circuit_breakers = {
-        status: 'degraded',
+        status: "degraded",
         details: { openCircuits, halfOpenCircuits, allStates: serviceStates },
       };
     } else {
       checks.circuit_breakers = {
-        status: 'healthy',
+        status: "healthy",
         details: { allStates: serviceStates },
       };
     }
   } catch (error) {
     checks.circuit_breakers = {
-      status: 'unhealthy',
+      status: "unhealthy",
       details: { error: (error as Error).message },
     };
   }
@@ -221,36 +225,36 @@ router.get('/detailed', async (_req: Request, res: Response) => {
 
     if (process.env.NVIDIA_NIM_API_KEY) {
       response = await fetch(
-        `${process.env.NVIDIA_NIM_URL || 'https://integrate.api.nvidia.com/v1'}/chat/completions`,
+        `${process.env.NVIDIA_NIM_URL || "https://integrate.api.nvidia.com/v1"}/chat/completions`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${process.env.NVIDIA_NIM_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'meta/llama-3.1-70b-instruct',
+            model: "meta/llama-3.1-70b-instruct",
             max_tokens: 1,
-            messages: [{ role: 'user', content: 'ping' }],
+            messages: [{ role: "user", content: "ping" }],
           }),
-        }
+        },
       );
     } else {
-      throw new Error('NVIDIA NIM API key not configured');
+      throw new Error("NVIDIA NIM API key not configured");
     }
 
     const latency = Date.now() - start;
     if (response.ok) {
       checks.api_endpoint = {
-        status: 'healthy',
-        details: { latencyMs: latency, provider: 'nvidia-nim' },
+        status: "healthy",
+        details: { latencyMs: latency, provider: "nvidia-nim" },
       };
     } else {
       throw new Error(`API returned status ${response.status}`);
     }
   } catch (error) {
     checks.api_endpoint = {
-      status: 'unhealthy',
+      status: "unhealthy",
       details: { error: (error as Error).message },
     };
   }
@@ -258,36 +262,39 @@ router.get('/detailed', async (_req: Request, res: Response) => {
   // Metrics endpoint check
   try {
     checks.metrics = {
-      status: 'healthy',
+      status: "healthy",
       details: { available: true },
     };
   } catch (error) {
     checks.metrics = {
-      status: 'unhealthy',
+      status: "unhealthy",
       details: { error: (error as Error).message },
     };
   }
 
   // Redis (optional): report degraded when configured but disconnected
-  const redisConfigured = !!(process.env.REDIS_HOST && process.env.REDIS_HOST.trim() !== '');
+  const redisConfigured = !!(
+    process.env.REDIS_HOST && process.env.REDIS_HOST.trim() !== ""
+  );
   if (redisConfigured) {
     try {
       const connected = await isRedisConnected();
       checks.redis = {
-        status: connected ? 'healthy' : 'degraded',
+        status: connected ? "healthy" : "degraded",
         details: connected
-          ? { message: 'connected' }
+          ? { message: "connected" }
           : {
-              message: 'Redis configured but disconnected',
-              impact: 'Rate limiting not shared; L2 cache disabled. See docs/RUNBOOK_REDIS.md.',
+              message: "Redis configured but disconnected",
+              impact:
+                "Rate limiting not shared; L2 cache disabled. See docs/RUNBOOK_REDIS.md.",
             },
       };
     } catch (error) {
       checks.redis = {
-        status: 'degraded',
+        status: "degraded",
         details: {
           error: (error as Error).message,
-          impact: 'L2 cache disabled; rate limits in-memory only.',
+          impact: "L2 cache disabled; rate limits in-memory only.",
         },
       };
     }
@@ -300,7 +307,12 @@ router.get('/detailed', async (_req: Request, res: Response) => {
   const heapPercentage = (heapUsedMB / heapTotalMB) * 100;
 
   checks.memory = {
-    status: heapPercentage > 90 ? 'unhealthy' : heapPercentage > 75 ? 'degraded' : 'healthy',
+    status:
+      heapPercentage > 90
+        ? "unhealthy"
+        : heapPercentage > 75
+          ? "degraded"
+          : "healthy",
     details: {
       heapUsedMB: Math.round(heapUsedMB),
       heapTotalMB: Math.round(heapTotalMB),
@@ -313,40 +325,59 @@ router.get('/detailed', async (_req: Request, res: Response) => {
     const alertingService = getAlertingService();
     const recentAlerts = alertingService.getRecentAlerts(10);
     checks.alerts = {
-      status: recentAlerts.some((a) => a.severity === 'critical') ? 'unhealthy' : 'healthy',
+      status: recentAlerts.some((a) => a.severity === "critical")
+        ? "unhealthy"
+        : "healthy",
       details: { recentAlerts: recentAlerts.length, alerts: recentAlerts },
     };
   } catch (error) {
     checks.alerts = {
-      status: 'degraded',
+      status: "degraded",
       details: { error: (error as Error).message },
     };
   }
 
   // Overall status
-  const allHealthy = Object.values(checks).every((c) => c.status === 'healthy');
-  const anyUnhealthy = Object.values(checks).some((c) => c.status === 'unhealthy');
-  const overallStatus = anyUnhealthy ? 'unhealthy' : allHealthy ? 'healthy' : 'degraded';
+  const allHealthy = Object.values(checks).every((c) => c.status === "healthy");
+  const anyUnhealthy = Object.values(checks).some(
+    (c) => c.status === "unhealthy",
+  );
+  const overallStatus = anyUnhealthy
+    ? "unhealthy"
+    : allHealthy
+      ? "healthy"
+      : "degraded";
 
-  res.status(overallStatus === 'unhealthy' ? 503 : overallStatus === 'degraded' ? 200 : 200).json({
-    status: overallStatus,
-    timestamp: new Date().toISOString(),
-    checks,
-  });
+  res
+    .status(
+      overallStatus === "unhealthy"
+        ? 503
+        : overallStatus === "degraded"
+          ? 200
+          : 200,
+    )
+    .json({
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      checks,
+    });
 });
 
 // AI Providers status endpoint
-router.get('/ai-providers', async (_req: Request, res: Response) => {
+router.get("/ai-providers", async (_req: Request, res: Response) => {
   const log = getRequestLogger();
   const providers = getConfiguredProviders();
-  
-  const providerStatus: Record<string, { 
-    configured: boolean; 
-    healthy?: boolean; 
-    latencyMs?: number;
-    error?: string;
-    models?: string[];
-  }> = {};
+
+  const providerStatus: Record<
+    string,
+    {
+      configured: boolean;
+      healthy?: boolean;
+      latencyMs?: number;
+      error?: string;
+      models?: string[];
+    }
+  > = {};
 
   // Check each configured provider
   for (const provider of providers) {
@@ -358,44 +389,50 @@ router.get('/ai-providers', async (_req: Request, res: Response) => {
       // Quick health check - just validate the endpoint is reachable
       // For most providers, we'll do a lightweight check
       let healthy = false;
-      
+
       switch (provider) {
-        case 'nim':
+        case "nim":
           if (env.NVIDIA_NIM_API_KEY) {
             const response = await fetch(
-              `${env.NVIDIA_NIM_URL || 'https://integrate.api.nvidia.com/v1'}/models`,
+              `${env.NVIDIA_NIM_URL || "https://integrate.api.nvidia.com/v1"}/models`,
               {
                 headers: { Authorization: `Bearer ${env.NVIDIA_NIM_API_KEY}` },
-              }
+              },
             );
             healthy = response.ok;
           }
           break;
-        case 'groq':
+        case "groq":
           if (env.GROQ_API_KEY) {
-            const response = await fetch('https://api.groq.com/openai/v1/models', {
-              headers: { Authorization: `Bearer ${env.GROQ_API_KEY}` },
-            });
+            const response = await fetch(
+              "https://api.groq.com/openai/v1/models",
+              {
+                headers: { Authorization: `Bearer ${env.GROQ_API_KEY}` },
+              },
+            );
             healthy = response.ok;
           }
           break;
-        case 'openrouter':
+        case "openrouter":
           if (env.OPENROUTER_API_KEY) {
-            const response = await fetch('https://openrouter.ai/api/v1/models', {
-              headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },
-            });
+            const response = await fetch(
+              "https://openrouter.ai/api/v1/models",
+              {
+                headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },
+              },
+            );
             healthy = response.ok;
           }
           break;
-        case 'together':
+        case "together":
           if (env.TOGETHER_API_KEY) {
-            const response = await fetch('https://api.together.xyz/v1/models', {
+            const response = await fetch("https://api.together.xyz/v1/models", {
               headers: { Authorization: `Bearer ${env.TOGETHER_API_KEY}` },
             });
             healthy = response.ok;
           }
           break;
-        case 'ollama':
+        case "ollama":
           if (env.OLLAMA_BASE_URL) {
             const response = await fetch(`${env.OLLAMA_BASE_URL}/api/tags`);
             healthy = response.ok;
@@ -421,18 +458,33 @@ router.get('/ai-providers', async (_req: Request, res: Response) => {
   }
 
   // Add unconfigured providers
-  const allProviders: LLMProvider[] = ['nim', 'groq', 'openrouter', 'together', 'ollama'];
+  const allProviders: LLMProvider[] = [
+    "nim",
+    "groq",
+    "openrouter",
+    "together",
+    "ollama",
+  ];
   for (const provider of allProviders) {
     if (!providerStatus[provider]) {
       providerStatus[provider] = { configured: false };
     }
   }
 
-  const healthyCount = Object.values(providerStatus).filter(p => p.healthy).length;
-  const configuredCount = Object.values(providerStatus).filter(p => p.configured).length;
+  const healthyCount = Object.values(providerStatus).filter(
+    (p) => p.healthy,
+  ).length;
+  const configuredCount = Object.values(providerStatus).filter(
+    (p) => p.configured,
+  ).length;
 
   res.json({
-    status: healthyCount > 0 ? 'healthy' : configuredCount > 0 ? 'degraded' : 'unhealthy',
+    status:
+      healthyCount > 0
+        ? "healthy"
+        : configuredCount > 0
+          ? "degraded"
+          : "unhealthy",
     summary: {
       total: allProviders.length,
       configured: configuredCount,

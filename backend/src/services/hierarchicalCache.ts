@@ -15,9 +15,9 @@
  * - Namespace isolation for different cache types
  */
 
-import { createHash } from 'crypto';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { createHash } from "crypto";
+import { promises as fs } from "fs";
+import path from "path";
 
 // ============================================================================
 // TYPES
@@ -195,12 +195,16 @@ class LRUCacheTier<T = unknown> {
       memoryUsageMb: this.memoryUsage / (1024 * 1024),
       hits: this.hits,
       misses: this.misses,
-      hitRate: this.hits + this.misses > 0 ? this.hits / (this.hits + this.misses) : 0,
+      hitRate:
+        this.hits + this.misses > 0 ? this.hits / (this.hits + this.misses) : 0,
       avgAccessCount:
         entries.length > 0
           ? entries.reduce((sum, e) => sum + e.accessCount, 0) / entries.length
           : 0,
-      oldestEntryAge: entries.length > 0 ? now - Math.min(...entries.map((e) => e.createdAt)) : 0,
+      oldestEntryAge:
+        entries.length > 0
+          ? now - Math.min(...entries.map((e) => e.createdAt))
+          : 0,
     };
   }
 
@@ -209,7 +213,10 @@ class LRUCacheTier<T = unknown> {
    */
   getEvictionCandidates(count: number): CacheEntry<T>[] {
     return this.getAll()
-      .sort((a, b) => this.calculateEvictionScore(a) - this.calculateEvictionScore(b))
+      .sort(
+        (a, b) =>
+          this.calculateEvictionScore(a) - this.calculateEvictionScore(b),
+      )
       .slice(0, count);
   }
 
@@ -229,7 +236,10 @@ class LRUCacheTier<T = unknown> {
     const now = Date.now();
     return this.getAll()
       .filter((e) => now - e.lastAccessedAt > ageThresholdMs)
-      .sort((a, b) => this.calculateEvictionScore(a) - this.calculateEvictionScore(b));
+      .sort(
+        (a, b) =>
+          this.calculateEvictionScore(a) - this.calculateEvictionScore(b),
+      );
   }
 
   private isExpired(entry: CacheEntry<T>): boolean {
@@ -239,7 +249,11 @@ class LRUCacheTier<T = unknown> {
 
   private shouldEvict(newEntry: CacheEntry<T>): boolean {
     if (this.cache.size >= this.config.maxSize) return true;
-    if (this.memoryUsage + newEntry.size > this.config.maxMemoryMb * 1024 * 1024) return true;
+    if (
+      this.memoryUsage + newEntry.size >
+      this.config.maxMemoryMb * 1024 * 1024
+    )
+      return true;
     return false;
   }
 
@@ -247,7 +261,9 @@ class LRUCacheTier<T = unknown> {
     if (this.accessOrder.length === 0) return false;
 
     // Find best eviction candidate (consider importance)
-    const candidates = this.getEvictionCandidates(this.config.evictionBatchSize);
+    const candidates = this.getEvictionCandidates(
+      this.config.evictionBatchSize,
+    );
     if (candidates.length === 0) return false;
 
     const victim = candidates[0];
@@ -292,8 +308,8 @@ class PersistentCacheTier {
   private misses: number = 0;
 
   constructor(
-    private config: HierarchicalCacheConfig['l3'],
-    private onError: (error: Error) => void
+    private config: HierarchicalCacheConfig["l3"],
+    private onError: (error: Error) => void,
   ) {}
 
   async initialize(): Promise<void> {
@@ -324,11 +340,14 @@ class PersistentCacheTier {
 
     try {
       const filePath = this.getFilePath(key);
-      const data = await fs.readFile(filePath, 'utf-8');
+      const data = await fs.readFile(filePath, "utf-8");
       const serialized: SerializedEntry = JSON.parse(data);
 
       // Check TTL
-      if (serialized.ttl && Date.now() > serialized.createdAt + serialized.ttl) {
+      if (
+        serialized.ttl &&
+        Date.now() > serialized.createdAt + serialized.ttl
+      ) {
         await this.delete(key);
         this.misses++;
         return undefined;
@@ -400,7 +419,9 @@ class PersistentCacheTier {
 
       const files = await fs.readdir(this.config.persistPath);
       await Promise.all(
-        files.map((f) => fs.unlink(path.join(this.config.persistPath, f)).catch(() => {}))
+        files.map((f) =>
+          fs.unlink(path.join(this.config.persistPath, f)).catch(() => {}),
+        ),
       );
     } catch {
       // Ignore errors
@@ -426,7 +447,7 @@ class PersistentCacheTier {
           };
           const data = JSON.stringify(serialized);
           const filePath = this.getFilePath(key);
-          await fs.writeFile(filePath, data, 'utf-8');
+          await fs.writeFile(filePath, data, "utf-8");
 
           this.index.set(key, { offset: 0, size: data.length });
           this.pendingWrites.delete(key);
@@ -434,7 +455,7 @@ class PersistentCacheTier {
           this.onError(error as Error);
           this.dirty.add(key); // Re-add for retry
         }
-      })
+      }),
     );
   }
 
@@ -451,17 +472,23 @@ class PersistentCacheTier {
       const files = await fs.readdir(this.config.persistPath);
       await Promise.all(
         files
-          .filter((f) => f.endsWith('.cache'))
+          .filter((f) => f.endsWith(".cache"))
           .map(async (f) => {
-            const key = f.replace('.cache', '');
+            const key = f.replace(".cache", "");
             if (this.pendingWrites.has(key)) return;
 
             try {
-              const data = await fs.readFile(path.join(this.config.persistPath, f), 'utf-8');
+              const data = await fs.readFile(
+                path.join(this.config.persistPath, f),
+                "utf-8",
+              );
               const serialized: SerializedEntry = JSON.parse(data);
 
               // Skip expired
-              if (serialized.ttl && Date.now() > serialized.createdAt + serialized.ttl) {
+              if (
+                serialized.ttl &&
+                Date.now() > serialized.createdAt + serialized.ttl
+              ) {
                 return;
               }
 
@@ -472,7 +499,7 @@ class PersistentCacheTier {
             } catch {
               // Skip corrupted entries
             }
-          })
+          }),
       );
     } catch {
       // Ignore errors
@@ -487,7 +514,8 @@ class PersistentCacheTier {
       memoryUsageMb: 0, // Disk-based
       hits: this.hits,
       misses: this.misses,
-      hitRate: this.hits + this.misses > 0 ? this.hits / (this.hits + this.misses) : 0,
+      hitRate:
+        this.hits + this.misses > 0 ? this.hits / (this.hits + this.misses) : 0,
       avgAccessCount: 0, // Would need to scan all files
       oldestEntryAge: 0, // Would need to scan all files
     };
@@ -502,7 +530,7 @@ class PersistentCacheTier {
   }
 
   private getFilePath(key: string): string {
-    const hash = createHash('sha256').update(key).digest('hex').slice(0, 16);
+    const hash = createHash("sha256").update(key).digest("hex").slice(0, 16);
     return path.join(this.config.persistPath, `${hash}.cache`);
   }
 
@@ -510,9 +538,9 @@ class PersistentCacheTier {
     try {
       const files = await fs.readdir(this.config.persistPath);
       for (const file of files) {
-        if (file.endsWith('.cache')) {
+        if (file.endsWith(".cache")) {
           const stats = await fs.stat(path.join(this.config.persistPath, file));
-          this.index.set(file.replace('.cache', ''), {
+          this.index.set(file.replace(".cache", ""), {
             offset: 0,
             size: stats.size,
           });
@@ -551,7 +579,7 @@ const DEFAULT_CONFIG: HierarchicalCacheConfig = {
   },
   l3: {
     enabled: true,
-    persistPath: './cache',
+    persistPath: "./cache",
     maxSizeMb: 500,
     syncIntervalMs: 30000, // 30 seconds
   },
@@ -574,7 +602,10 @@ export class HierarchicalCacheService {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.l1 = new LRUCacheTier(this.config.l1);
     this.l2 = new LRUCacheTier(this.config.l2);
-    this.l3 = new PersistentCacheTier(this.config.l3, this.handleError.bind(this));
+    this.l3 = new PersistentCacheTier(
+      this.config.l3,
+      this.handleError.bind(this),
+    );
   }
 
   async initialize(): Promise<void> {
@@ -592,7 +623,10 @@ export class HierarchicalCacheService {
   /**
    * Get a value from the cache, checking all tiers
    */
-  async get<T = unknown>(key: string, namespace: string = 'default'): Promise<T | undefined> {
+  async get<T = unknown>(
+    key: string,
+    namespace: string = "default",
+  ): Promise<T | undefined> {
     const fullKey = this.makeKey(key, namespace);
 
     // Try L1 first (hot cache)
@@ -634,11 +668,11 @@ export class HierarchicalCacheService {
       namespace?: string;
       ttl?: number;
       importance?: number;
-      tier?: 'l1' | 'l2' | 'l3';
+      tier?: "l1" | "l2" | "l3";
       metadata?: Record<string, unknown>;
-    } = {}
+    } = {},
   ): Promise<void> {
-    const namespace = options.namespace || 'default';
+    const namespace = options.namespace || "default";
     const fullKey = this.makeKey(key, namespace);
 
     const entry: CacheEntry<T> = {
@@ -654,19 +688,19 @@ export class HierarchicalCacheService {
       metadata: options.metadata,
     };
 
-    const tier = options.tier || 'l2';
+    const tier = options.tier || "l2";
 
     switch (tier) {
-      case 'l1':
+      case "l1":
         if (!this.l1.set(fullKey, entry)) {
           // Overflow to L2
           this.l2.set(fullKey, entry);
         }
         break;
-      case 'l2':
+      case "l2":
         this.l2.set(fullKey, entry);
         break;
-      case 'l3':
+      case "l3":
         await this.l3.set(fullKey, entry as CacheEntry);
         break;
     }
@@ -675,7 +709,7 @@ export class HierarchicalCacheService {
   /**
    * Delete from all tiers
    */
-  async delete(key: string, namespace: string = 'default'): Promise<boolean> {
+  async delete(key: string, namespace: string = "default"): Promise<boolean> {
     const fullKey = this.makeKey(key, namespace);
 
     const l1Deleted = this.l1.delete(fullKey);
@@ -688,7 +722,7 @@ export class HierarchicalCacheService {
   /**
    * Check if key exists in any tier
    */
-  async has(key: string, namespace: string = 'default'): Promise<boolean> {
+  async has(key: string, namespace: string = "default"): Promise<boolean> {
     const fullKey = this.makeKey(key, namespace);
 
     if (this.l1.has(fullKey)) return true;
@@ -701,7 +735,9 @@ export class HierarchicalCacheService {
   /**
    * Clear all caches
    */
-  async clear(options: { l1?: boolean; l2?: boolean; l3?: boolean } = {}): Promise<void> {
+  async clear(
+    options: { l1?: boolean; l2?: boolean; l3?: boolean } = {},
+  ): Promise<void> {
     const clearAll = !options.l1 && !options.l2 && !options.l3;
 
     if (clearAll || options.l1) this.l1.clear();
@@ -718,7 +754,7 @@ export class HierarchicalCacheService {
    */
   async getMany<T = unknown>(
     keys: string[],
-    namespace: string = 'default'
+    namespace: string = "default",
   ): Promise<Map<string, T>> {
     const results = new Map<string, T>();
 
@@ -728,7 +764,7 @@ export class HierarchicalCacheService {
         if (value !== undefined) {
           results.set(key, value);
         }
-      })
+      }),
     );
 
     return results;
@@ -739,15 +775,19 @@ export class HierarchicalCacheService {
    */
   async setMany<T = unknown>(
     entries: Array<{ key: string; value: T; importance?: number }>,
-    options: { namespace?: string; ttl?: number; tier?: 'l1' | 'l2' | 'l3' } = {}
+    options: {
+      namespace?: string;
+      ttl?: number;
+      tier?: "l1" | "l2" | "l3";
+    } = {},
   ): Promise<void> {
     await Promise.all(
       entries.map((e) =>
         this.set(e.key, e.value, {
           ...options,
           importance: e.importance,
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -819,7 +859,9 @@ export class HierarchicalCacheService {
    * Demote entries from L1 to L2
    */
   private demoteFromL1(): void {
-    const candidates = this.l1.getDemotionCandidates(this.config.demotionIntervalMs / 2);
+    const candidates = this.l1.getDemotionCandidates(
+      this.config.demotionIntervalMs / 2,
+    );
 
     for (const entry of candidates.slice(0, 10)) {
       if (this.l2.set(entry.key, entry)) {
@@ -835,7 +877,9 @@ export class HierarchicalCacheService {
   private async demoteFromL2(): Promise<void> {
     if (!this.config.l3.enabled) return;
 
-    const candidates = this.l2.getDemotionCandidates(this.config.demotionIntervalMs);
+    const candidates = this.l2.getDemotionCandidates(
+      this.config.demotionIntervalMs,
+    );
 
     for (const entry of candidates.slice(0, 20)) {
       await this.l3.set(entry.key, entry as CacheEntry);
@@ -869,7 +913,7 @@ export class HierarchicalCacheService {
    */
   async warmFromPersistent(
     filter?: (entry: CacheEntry) => boolean,
-    limit: number = 100
+    limit: number = 100,
   ): Promise<number> {
     if (!this.config.l3.enabled) return 0;
 
@@ -880,8 +924,10 @@ export class HierarchicalCacheService {
 
     // Sort by importance and recency
     candidates.sort((a, b) => {
-      const scoreA = a.importance + 1 / (1 + (Date.now() - a.lastAccessedAt) / 60000);
-      const scoreB = b.importance + 1 / (1 + (Date.now() - b.lastAccessedAt) / 60000);
+      const scoreA =
+        a.importance + 1 / (1 + (Date.now() - a.lastAccessedAt) / 60000);
+      const scoreB =
+        b.importance + 1 / (1 + (Date.now() - b.lastAccessedAt) / 60000);
       return scoreB - scoreA;
     });
 
@@ -898,9 +944,14 @@ export class HierarchicalCacheService {
    * Pre-populate cache with expected entries
    */
   async preload<T = unknown>(
-    entries: Array<{ key: string; value: T; namespace?: string; importance?: number }>
+    entries: Array<{
+      key: string;
+      value: T;
+      namespace?: string;
+      importance?: number;
+    }>,
   ): Promise<void> {
-    await this.setMany(entries, { tier: 'l2' });
+    await this.setMany(entries, { tier: "l2" });
   }
 
   // ==========================================================================
@@ -921,7 +972,8 @@ export class HierarchicalCacheService {
       l3: l3Metrics,
       totalHits,
       totalMisses,
-      overallHitRate: totalHits + totalMisses > 0 ? totalHits / (totalHits + totalMisses) : 0,
+      overallHitRate:
+        totalHits + totalMisses > 0 ? totalHits / (totalHits + totalMisses) : 0,
       promotions: this.promotions,
       demotions: this.demotions,
       evictions: this.evictions,
@@ -946,7 +998,7 @@ export class HierarchicalCacheService {
   }
 
   private handleError(error: Error): void {
-    console.error('[HierarchicalCache] Error:', error.message);
+    console.error("[HierarchicalCache] Error:", error.message);
   }
 
   /**
@@ -982,8 +1034,8 @@ const cacheInstances = new Map<string, HierarchicalCacheService>();
  * Get or create a hierarchical cache service for a session
  */
 export function getHierarchicalCache(
-  sessionId: string = 'default',
-  config?: Partial<HierarchicalCacheConfig>
+  sessionId: string = "default",
+  config?: Partial<HierarchicalCacheConfig>,
 ): HierarchicalCacheService {
   const existing = cacheInstances.get(sessionId);
   if (existing) return existing;
@@ -1004,7 +1056,9 @@ export function getHierarchicalCache(
 /**
  * Destroy a cache instance
  */
-export async function destroyHierarchicalCache(sessionId: string): Promise<void> {
+export async function destroyHierarchicalCache(
+  sessionId: string,
+): Promise<void> {
   const instance = cacheInstances.get(sessionId);
   if (instance) {
     await instance.shutdown();
@@ -1017,7 +1071,9 @@ export async function destroyHierarchicalCache(sessionId: string): Promise<void>
  */
 export async function destroyAllHierarchicalCaches(): Promise<void> {
   await Promise.all(
-    Array.from(cacheInstances.entries()).map(([id]) => destroyHierarchicalCache(id))
+    Array.from(cacheInstances.entries()).map(([id]) =>
+      destroyHierarchicalCache(id),
+    ),
   );
 }
 

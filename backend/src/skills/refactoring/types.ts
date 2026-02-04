@@ -3,14 +3,14 @@
  */
 
 export type RefactoringType =
-  | 'extract-function'
-  | 'extract-variable'
-  | 'extract-class'
-  | 'rename'
-  | 'inline'
-  | 'move'
-  | 'simplify'
-  | 'apply-pattern';
+  | "extract-function"
+  | "extract-variable"
+  | "extract-class"
+  | "rename"
+  | "inline"
+  | "move"
+  | "simplify"
+  | "apply-pattern";
 
 export interface RefactoringRequest {
   code: string;
@@ -32,7 +32,7 @@ export interface RefactoringOptions {
   // Rename
   oldName?: string;
   newName?: string;
-  symbolType?: 'variable' | 'function' | 'class' | 'interface' | 'type';
+  symbolType?: "variable" | "function" | "class" | "interface" | "type";
 
   // Inline
   targetName?: string;
@@ -42,14 +42,14 @@ export interface RefactoringOptions {
 }
 
 export type DesignPattern =
-  | 'strategy'
-  | 'factory'
-  | 'decorator'
-  | 'observer'
-  | 'builder'
-  | 'singleton'
-  | 'adapter'
-  | 'facade';
+  | "strategy"
+  | "factory"
+  | "decorator"
+  | "observer"
+  | "builder"
+  | "singleton"
+  | "adapter"
+  | "facade";
 
 export interface RefactoringResult {
   success: boolean;
@@ -61,7 +61,7 @@ export interface RefactoringResult {
 }
 
 export interface CodeChange {
-  type: 'insert' | 'delete' | 'replace';
+  type: "insert" | "delete" | "replace";
   startLine: number;
   endLine?: number;
   oldText?: string;
@@ -76,7 +76,7 @@ export interface RefactoringSuggestion {
     endLine: number;
   };
   description: string;
-  impact: 'high' | 'medium' | 'low';
+  impact: "high" | "medium" | "low";
   preview?: {
     before: string;
     after: string;

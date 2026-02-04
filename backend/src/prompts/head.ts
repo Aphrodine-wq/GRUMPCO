@@ -4,11 +4,11 @@
  * Uses XML-tagged composition when tier is provided for capability-aware prompts.
  */
 
-import { CLAUDE_CODE_QUALITY_BLOCK } from './shared/claude-code-quality.js';
-import { composeHead, type ComposeHeadOptions } from './compose.js';
+import { CLAUDE_CODE_QUALITY_BLOCK } from "./shared/claude-code-quality.js";
+import { composeHead, type ComposeHeadOptions } from "./compose.js";
 
 export interface HeadPromptOptions {
-  tier?: ComposeHeadOptions['tier'];
+  tier?: ComposeHeadOptions["tier"];
   userKey?: string;
   /** If false, head uses legacy flat format without XML. Default true for XML. */
   useXml?: boolean;

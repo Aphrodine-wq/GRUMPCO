@@ -4,14 +4,14 @@
  * @module middleware/csrf
  */
 
-import { type Request, type Response, type NextFunction } from 'express';
-import csrf from 'csurf';
-import logger from './logger.js';
+import { type Request, type Response, type NextFunction } from "express";
+import csrf from "csurf";
+import logger from "./logger.js";
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === "production";
 const CSRF_ENABLED = isProduction
-  ? process.env.CSRF_PROTECTION !== 'false'
-  : process.env.CSRF_PROTECTION === 'true';
+  ? process.env.CSRF_PROTECTION !== "false"
+  : process.env.CSRF_PROTECTION === "true";
 
 /**
  * Creates CSRF protection middleware
@@ -47,7 +47,7 @@ const CSRF_ENABLED = isProduction
 export function createCsrfMiddleware() {
   // Only enable in production by default, or when explicitly enabled in development
   if (!isProduction && !CSRF_ENABLED) {
-    logger.info('CSRF protection disabled (development mode)');
+    logger.info("CSRF protection disabled (development mode)");
     return (_req: Request, _res: Response, next: NextFunction) => next();
   }
 
@@ -55,24 +55,24 @@ export function createCsrfMiddleware() {
     cookie: {
       httpOnly: false, // Cookie must be readable by frontend JavaScript
       secure: isProduction, // HTTPS only in production
-      sameSite: 'strict', // Strict same-site policy
-      key: 'XSRF-TOKEN',
+      sameSite: "strict", // Strict same-site policy
+      key: "XSRF-TOKEN",
     },
     value: (req: Request) => {
       // Check header (preferred) or body (fallback)
-      return (req.headers['x-xsrf-token'] as string) || req.body?._csrf;
+      return (req.headers["x-xsrf-token"] as string) || req.body?._csrf;
     },
   });
 
-  logger.info('CSRF protection enabled');
+  logger.info("CSRF protection enabled");
 
   return (req: Request, res: Response, next: NextFunction) => {
     // Skip CSRF validation for safe methods (GET, HEAD, OPTIONS)
     // But still generate token for them
-    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
       csrfProtection(req, res, (err) => {
         if (err) {
-          logger.debug({ err: err.message }, 'CSRF token generation failed');
+          logger.debug({ err: err.message }, "CSRF token generation failed");
         }
         next();
       });
@@ -82,20 +82,21 @@ export function createCsrfMiddleware() {
     // Validate CSRF token for state-changing methods (POST, PUT, DELETE, PATCH)
     csrfProtection(req, res, (err) => {
       if (err) {
-        if (err.code === 'EBADCSRFTOKEN') {
+        if (err.code === "EBADCSRFTOKEN") {
           logger.warn(
             {
               method: req.method,
               path: req.path,
               ip: req.ip,
             },
-            'CSRF token validation failed'
+            "CSRF token validation failed",
           );
 
           res.status(403).json({
-            error: 'Invalid CSRF token',
-            type: 'csrf_error',
-            message: 'CSRF token missing or invalid. Include X-XSRF-TOKEN header in your request.',
+            error: "Invalid CSRF token",
+            type: "csrf_error",
+            message:
+              "CSRF token missing or invalid. Include X-XSRF-TOKEN header in your request.",
           });
           return;
         }

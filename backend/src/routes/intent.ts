@@ -4,17 +4,17 @@
  * POST /api/intent/optimize - Handled by intent-optimizer feature (see features/intent-optimizer).
  */
 
-import { Router, type Request, type Response } from 'express';
-import { parseAndEnrichIntent } from '../services/intentCompilerService.js';
-import { getRequestLogger } from '../middleware/logger.js';
-import { sendServerError } from '../utils/errorResponse.js';
+import { Router, type Request, type Response } from "express";
+import { parseAndEnrichIntent } from "../services/intentCompilerService.js";
+import { getRequestLogger } from "../middleware/logger.js";
+import { sendServerError } from "../utils/errorResponse.js";
 
 const router = Router();
 
 interface ParseBody {
   raw: string;
   constraints?: Record<string, unknown>;
-  mode?: 'hybrid' | 'rust-first' | 'llm-first';
+  mode?: "hybrid" | "rust-first" | "llm-first";
 }
 
 /**
@@ -24,15 +24,18 @@ interface ParseBody {
  * mode: hybrid (resolve ambiguity via LLM when score > threshold), rust-first (default), llm-first (LLM extracts first)
  */
 router.post(
-  '/parse',
-  async (req: Request<Record<string, never>, object, ParseBody>, res: Response) => {
+  "/parse",
+  async (
+    req: Request<Record<string, never>, object, ParseBody>,
+    res: Response,
+  ) => {
     const log = getRequestLogger();
     const { raw, constraints, mode } = req.body;
 
-    if (!raw || typeof raw !== 'string') {
+    if (!raw || typeof raw !== "string") {
       res.status(400).json({
         error: 'Missing or invalid "raw" field',
-        type: 'validation_error',
+        type: "validation_error",
       });
       return;
     }
@@ -40,20 +43,20 @@ router.post(
     try {
       log.info(
         { rawLength: raw.length, hasConstraints: !!constraints, mode },
-        'Intent parse requested'
+        "Intent parse requested",
       );
       const enriched = await parseAndEnrichIntent(
         raw.trim(),
         constraints,
-        mode ? { mode } : undefined
+        mode ? { mode } : undefined,
       );
       res.json(enriched);
     } catch (e) {
       const err = e as Error;
-      log.error({ error: err.message }, 'Intent parse failed');
+      log.error({ error: err.message }, "Intent parse failed");
       sendServerError(res, err);
     }
-  }
+  },
 );
 
 export default router;

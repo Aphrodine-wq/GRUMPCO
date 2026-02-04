@@ -1,5 +1,5 @@
-import { env } from '../config/env.js';
-import logger from '../middleware/logger.js';
+import { env } from "../config/env.js";
+import logger from "../middleware/logger.js";
 
 export interface MockAIResponse {
   content: string;
@@ -46,7 +46,10 @@ export class MockAIService {
   /**
    * Generate a mock response based on the prompt
    */
-  async generateResponse(prompt: string, options: MockAIOptions = {}): Promise<MockAIResponse> {
+  async generateResponse(
+    prompt: string,
+    options: MockAIOptions = {},
+  ): Promise<MockAIResponse> {
     const startTime = Date.now();
 
     // Simulate network delay
@@ -62,7 +65,7 @@ export class MockAIService {
         promptLength: prompt.length,
         responseLength: response.content.length,
       },
-      'Mock AI generated response'
+      "Mock AI generated response",
     );
 
     return response;
@@ -71,60 +74,69 @@ export class MockAIService {
   /**
    * Stream a mock response (for SSE compatibility)
    */
-  async *streamResponse(prompt: string, options: MockAIOptions = {}): AsyncGenerator<string> {
+  async *streamResponse(
+    prompt: string,
+    options: MockAIOptions = {},
+  ): AsyncGenerator<string> {
     const response = await this.generateResponse(prompt, options);
-    const words = response.content.split(' ');
+    const words = response.content.split(" ");
 
     // Simulate streaming by yielding words gradually
     for (let i = 0; i < words.length; i++) {
       await this.delay(50 + Math.random() * 100);
-      yield words[i] + (i < words.length - 1 ? ' ' : '');
+      yield words[i] + (i < words.length - 1 ? " " : "");
     }
   }
 
   /**
    * Craft an appropriate response based on prompt content
    */
-  private craftResponse(prompt: string, options: MockAIOptions): MockAIResponse {
+  private craftResponse(
+    prompt: string,
+    options: MockAIOptions,
+  ): MockAIResponse {
     const lowerPrompt = prompt.toLowerCase();
 
     // Architecture mode detection
-    if (lowerPrompt.includes('architecture') || lowerPrompt.includes('design')) {
+    if (
+      lowerPrompt.includes("architecture") ||
+      lowerPrompt.includes("design")
+    ) {
       return this.getArchitectureResponse(prompt, options);
     }
 
     // Code generation detection
     if (
-      lowerPrompt.includes('code') ||
-      lowerPrompt.includes('function') ||
-      lowerPrompt.includes('implement')
+      lowerPrompt.includes("code") ||
+      lowerPrompt.includes("function") ||
+      lowerPrompt.includes("implement")
     ) {
       return this.getCodeResponse(prompt, options);
     }
 
     // Diagram generation
     if (
-      lowerPrompt.includes('diagram') ||
-      lowerPrompt.includes('flowchart') ||
-      lowerPrompt.includes('mermaid')
+      lowerPrompt.includes("diagram") ||
+      lowerPrompt.includes("flowchart") ||
+      lowerPrompt.includes("mermaid")
     ) {
       return this.getDiagramResponse(prompt, options);
     }
 
     // PRD/spec generation
     if (
-      lowerPrompt.includes('prd') ||
-      lowerPrompt.includes('spec') ||
-      lowerPrompt.includes('requirements')
+      lowerPrompt.includes("prd") ||
+      lowerPrompt.includes("spec") ||
+      lowerPrompt.includes("requirements")
     ) {
       return this.getPRDResponse(prompt, options);
     }
 
     // Ship/deployment
     if (
-      lowerPrompt.includes('ship') ||
-      lowerPrompt.includes('deploy') ||
-      lowerPrompt.includes('docker')
+      lowerPrompt.includes("ship") ||
+      lowerPrompt.includes("deploy") ||
+      lowerPrompt.includes("docker")
     ) {
       return this.getShipResponse(prompt, options);
     }
@@ -133,7 +145,10 @@ export class MockAIService {
     return this.getChatResponse(prompt, options);
   }
 
-  private getArchitectureResponse(prompt: string, options: MockAIOptions): MockAIResponse {
+  private getArchitectureResponse(
+    prompt: string,
+    options: MockAIOptions,
+  ): MockAIResponse {
     const content = `# Architecture Design: Sample System
 
 ## Overview
@@ -164,11 +179,14 @@ graph TB
 ---
 *This is a mock response. Add a real AI provider (e.g., NVIDIA_NIM_API_KEY) for actual architecture generation.*`;
 
-    return this.createResponse(content, options.model || 'mock-architecture');
+    return this.createResponse(content, options.model || "mock-architecture");
   }
 
-  private getCodeResponse(prompt: string, options: MockAIOptions): MockAIResponse {
-    const functionName = this.extractFunctionName(prompt) || 'exampleFunction';
+  private getCodeResponse(
+    prompt: string,
+    options: MockAIOptions,
+  ): MockAIResponse {
+    const functionName = this.extractFunctionName(prompt) || "exampleFunction";
 
     const content = `// Mock Code Response
 // In real mode, this would be production-ready code based on your prompt
@@ -200,7 +218,7 @@ NOTES:
 - Supported providers: NVIDIA NIM, OpenRouter, Groq, Together AI
 */`;
 
-    return this.createResponse(content, options.model || 'mock-code');
+    return this.createResponse(content, options.model || "mock-code");
   }
 
   private extractFunctionName(prompt: string): string | null {
@@ -212,7 +230,10 @@ NOTES:
     return null;
   }
 
-  private getDiagramResponse(prompt: string, options: MockAIOptions): MockAIResponse {
+  private getDiagramResponse(
+    prompt: string,
+    options: MockAIOptions,
+  ): MockAIResponse {
     const content = `\`\`\`mermaid
 flowchart TD
     Start([Start]) --> Input[User Input]
@@ -230,10 +251,13 @@ flowchart TD
 
 **Note**: This is a mock diagram. With a real AI provider, this would be a custom diagram based on your specific requirements.`;
 
-    return this.createResponse(content, options.model || 'mock-diagram');
+    return this.createResponse(content, options.model || "mock-diagram");
   }
 
-  private getPRDResponse(prompt: string, options: MockAIOptions): MockAIResponse {
+  private getPRDResponse(
+    prompt: string,
+    options: MockAIOptions,
+  ): MockAIResponse {
     const content = `# Product Requirements Document (Mock)
 
 ## 1. Executive Summary
@@ -261,10 +285,13 @@ This is a sample PRD showing G-Rump's PRD generation capability. With a real AI 
 ---
 ⚠️ **Mock Mode**: Add NVIDIA_NIM_API_KEY or OPENROUTER_API_KEY for real PRD generation.`;
 
-    return this.createResponse(content, options.model || 'mock-prd');
+    return this.createResponse(content, options.model || "mock-prd");
   }
 
-  private getShipResponse(prompt: string, options: MockAIOptions): MockAIResponse {
+  private getShipResponse(
+    prompt: string,
+    options: MockAIOptions,
+  ): MockAIResponse {
     const content = `# Deployment Configuration (Mock)
 
 ## Docker Setup
@@ -302,10 +329,13 @@ services:
 ---
 💡 **Tip**: In mock mode, deployment files are templates. Enable real AI for production-ready configs.`;
 
-    return this.createResponse(content, options.model || 'mock-ship');
+    return this.createResponse(content, options.model || "mock-ship");
   }
 
-  private getChatResponse(prompt: string, options: MockAIOptions): MockAIResponse {
+  private getChatResponse(
+    prompt: string,
+    options: MockAIOptions,
+  ): MockAIResponse {
     const responses = [
       `👋 Welcome to G-Rump! I'm currently running in **mock mode**, which means I'm generating realistic placeholder responses instead of using real AI.
 
@@ -326,7 +356,7 @@ services:
 
 How can I help you today?`,
 
-      `I received your message: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"
+      `I received your message: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"
 
 This is a **mock response** - the AI isn't actually processing your input right now.
 
@@ -351,8 +381,9 @@ Your prompt has been received and would normally be processed by the multi-agent
 **Solution:** Add \\\`NVIDIA_NIM_API_KEY\\\` to \\\`backend/.env\\\` for real AI`,
     ];
 
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-    return this.createResponse(randomResponse, options.model || 'mock-chat');
+    const randomResponse =
+      responses[Math.floor(Math.random() * responses.length)];
+    return this.createResponse(randomResponse, options.model || "mock-chat");
   }
 
   private createResponse(content: string, model: string): MockAIResponse {

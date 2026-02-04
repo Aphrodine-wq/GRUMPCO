@@ -5,35 +5,66 @@
  * Integrates with the LLM and tool execution system.
  */
 
-import logger from '../middleware/logger.js';
-import { ClaudeServiceWithTools } from './claudeServiceWithTools.js';
-import { gAgentMemoryService } from './gAgentMemoryService.js';
-import { gAgentSelfImprovement } from './gAgentSelfImprovement.js';
-import type { Plan, Task, TaskStatus } from './intentCliRunner.js';
+import logger from "../middleware/logger.js";
+import { ClaudeServiceWithTools } from "./claudeServiceWithTools.js";
+import { gAgentMemoryService } from "./gAgentMemoryService.js";
+import { gAgentSelfImprovement } from "./gAgentSelfImprovement.js";
+import type { Plan, Task, TaskStatus } from "./intentCliRunner.js";
 
 // ============================================================================
 // SSE EVENT TYPES
 // ============================================================================
 
 export type TaskExecutionEvent =
-  | { type: 'plan_started'; planId: string; goal: string; taskCount: number }
-  | { type: 'batch_started'; batchIndex: number; batchSize: number; taskIds: string[] }
-  | { type: 'task_started'; taskId: string; description: string; tools: string[] }
-  | { type: 'task_progress'; taskId: string; percent: number; message: string }
-  | { type: 'task_tool_call'; taskId: string; toolName: string; toolInput: Record<string, unknown> }
-  | { type: 'task_tool_result'; taskId: string; toolName: string; success: boolean; output: string }
-  | { type: 'task_completed'; taskId: string; output: string; durationMs: number }
-  | { type: 'task_failed'; taskId: string; error: string; durationMs: number }
-  | { type: 'task_skipped'; taskId: string; reason: string }
-  | { type: 'batch_completed'; batchIndex: number; completedCount: number; failedCount: number }
+  | { type: "plan_started"; planId: string; goal: string; taskCount: number }
   | {
-      type: 'plan_completed';
-      planId: string;
-      status: 'completed' | 'failed' | 'cancelled';
+      type: "batch_started";
+      batchIndex: number;
+      batchSize: number;
+      taskIds: string[];
+    }
+  | {
+      type: "task_started";
+      taskId: string;
+      description: string;
+      tools: string[];
+    }
+  | { type: "task_progress"; taskId: string; percent: number; message: string }
+  | {
+      type: "task_tool_call";
+      taskId: string;
+      toolName: string;
+      toolInput: Record<string, unknown>;
+    }
+  | {
+      type: "task_tool_result";
+      taskId: string;
+      toolName: string;
+      success: boolean;
+      output: string;
+    }
+  | {
+      type: "task_completed";
+      taskId: string;
+      output: string;
       durationMs: number;
     }
-  | { type: 'error'; message: string; planId?: string; taskId?: string }
-  | { type: 'done' };
+  | { type: "task_failed"; taskId: string; error: string; durationMs: number }
+  | { type: "task_skipped"; taskId: string; reason: string }
+  | {
+      type: "batch_completed";
+      batchIndex: number;
+      completedCount: number;
+      failedCount: number;
+    }
+  | {
+      type: "plan_completed";
+      planId: string;
+      status: "completed" | "failed" | "cancelled";
+      durationMs: number;
+    }
+  | { type: "error"; message: string; planId?: string; taskId?: string }
+  | { type: "done" };
 
 // ============================================================================
 // TASK EXECUTOR STATE
@@ -74,18 +105,23 @@ export class GAgentTaskExecutor {
   async *executePlan(
     plan: Plan,
     workspaceRoot?: string,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
   ): AsyncGenerator<TaskExecutionEvent> {
     const planId = plan.id;
     const startTime = Date.now();
 
-    logger.info({ planId, taskCount: plan.tasks.length }, 'G-Agent: Starting plan execution');
+    logger.info(
+      { planId, taskCount: plan.tasks.length },
+      "G-Agent: Starting plan execution",
+    );
 
     // Initialize execution state
     const state: ExecutionState = {
       planId,
       plan,
-      taskStatuses: new Map(plan.tasks.map((t) => [t.id, 'pending' as TaskStatus])),
+      taskStatuses: new Map(
+        plan.tasks.map((t) => [t.id, "pending" as TaskStatus]),
+      ),
       taskOutputs: new Map(),
       taskErrors: new Map(),
       currentBatchIndex: 0,
@@ -96,25 +132,39 @@ export class GAgentTaskExecutor {
 
     // Handle abort signal
     if (abortSignal) {
-      abortSignal.addEventListener('abort', () => {
+      abortSignal.addEventListener("abort", () => {
         state.cancelled = true;
       });
     }
 
     try {
-      yield { type: 'plan_started', planId, goal: plan.goal, taskCount: plan.tasks.length };
+      yield {
+        type: "plan_started",
+        planId,
+        goal: plan.goal,
+        taskCount: plan.tasks.length,
+      };
 
       // Execute batches sequentially
-      for (let batchIndex = 0; batchIndex < plan.parallel_batches.length; batchIndex++) {
+      for (
+        let batchIndex = 0;
+        batchIndex < plan.parallel_batches.length;
+        batchIndex++
+      ) {
         if (state.cancelled) {
-          yield { type: 'error', message: 'Execution cancelled', planId };
+          yield { type: "error", message: "Execution cancelled", planId };
           break;
         }
 
         const batch = plan.parallel_batches[batchIndex];
         state.currentBatchIndex = batchIndex;
 
-        yield { type: 'batch_started', batchIndex, batchSize: batch.length, taskIds: batch };
+        yield {
+          type: "batch_started",
+          batchIndex,
+          batchSize: batch.length,
+          taskIds: batch,
+        };
 
         // Execute tasks in the batch (can be parallel or sequential based on batch size)
         const batchResults = await this.executeBatch(
@@ -124,7 +174,7 @@ export class GAgentTaskExecutor {
           abortSignal,
           (_event) => {
             // This callback is not used in generator pattern, but kept for potential future use
-          }
+          },
         );
 
         // Yield results for each task
@@ -134,67 +184,82 @@ export class GAgentTaskExecutor {
 
         // Count completed and failed
         const completedCount = batch.filter(
-          (id) => state.taskStatuses.get(id) === 'completed'
+          (id) => state.taskStatuses.get(id) === "completed",
         ).length;
-        const failedCount = batch.filter((id) => state.taskStatuses.get(id) === 'failed').length;
+        const failedCount = batch.filter(
+          (id) => state.taskStatuses.get(id) === "failed",
+        ).length;
 
-        yield { type: 'batch_completed', batchIndex, completedCount, failedCount };
+        yield {
+          type: "batch_completed",
+          batchIndex,
+          completedCount,
+          failedCount,
+        };
 
         // If any task failed, stop execution (can be configurable later)
         if (failedCount > 0) {
           logger.warn(
             { planId, batchIndex, failedCount },
-            'G-Agent: Batch had failures, stopping execution'
+            "G-Agent: Batch had failures, stopping execution",
           );
           break;
         }
       }
 
       // Determine final status
-      const allCompleted = plan.tasks.every((t) => state.taskStatuses.get(t.id) === 'completed');
-      const anyFailed = plan.tasks.some((t) => state.taskStatuses.get(t.id) === 'failed');
+      const allCompleted = plan.tasks.every(
+        (t) => state.taskStatuses.get(t.id) === "completed",
+      );
+      const anyFailed = plan.tasks.some(
+        (t) => state.taskStatuses.get(t.id) === "failed",
+      );
       const status = state.cancelled
-        ? 'cancelled'
+        ? "cancelled"
         : anyFailed
-          ? 'failed'
+          ? "failed"
           : allCompleted
-            ? 'completed'
-            : 'failed';
+            ? "completed"
+            : "failed";
       const durationMs = Date.now() - startTime;
 
-      yield { type: 'plan_completed', planId, status, durationMs };
-      yield { type: 'done' };
+      yield { type: "plan_completed", planId, status, durationMs };
+      yield { type: "done" };
 
-      logger.info({ planId, status, durationMs }, 'G-Agent: Plan execution finished');
+      logger.info(
+        { planId, status, durationMs },
+        "G-Agent: Plan execution finished",
+      );
 
       // Learn from this execution - store pattern in memory
-      const success = status === 'completed';
+      const success = status === "completed";
       try {
         const pattern = await gAgentMemoryService.learnPattern(
           plan.goal,
           plan.tasks,
           durationMs,
-          success
+          success,
         );
         if (pattern) {
           logger.info(
             { patternId: pattern.id, confidence: pattern.confidence },
-            'G-Agent: Pattern learned from execution'
+            "G-Agent: Pattern learned from execution",
           );
         }
       } catch (memErr) {
-        logger.warn({ error: (memErr as Error).message }, 'G-Agent: Failed to learn pattern');
+        logger.warn(
+          { error: (memErr as Error).message },
+          "G-Agent: Failed to learn pattern",
+        );
       }
 
       // Run self-improvement cycle on successful completion
       if (success) {
         try {
           // Use a default userId for now - can be enhanced to track actual user
-          const userId = 'system';
-          const improvementResult = await gAgentSelfImprovement.runSelfImprovementCycle(
-            userId,
-            plan
-          );
+          const userId = "system";
+          const improvementResult =
+            await gAgentSelfImprovement.runSelfImprovementCycle(userId, plan);
 
           if (
             improvementResult.skillsLearned.length > 0 ||
@@ -207,27 +272,27 @@ export class GAgentTaskExecutor {
                 termsLearned: improvementResult.termsLearned.length,
                 suggestions: improvementResult.suggestions.length,
               },
-              'G-Agent: Self-improvement cycle completed'
+              "G-Agent: Self-improvement cycle completed",
             );
           }
         } catch (improveErr) {
           logger.warn(
             { error: (improveErr as Error).message },
-            'G-Agent: Self-improvement cycle failed'
+            "G-Agent: Self-improvement cycle failed",
           );
         }
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      logger.error({ planId, error: message }, 'G-Agent: Plan execution error');
-      yield { type: 'error', message, planId };
+      const message = error instanceof Error ? error.message : "Unknown error";
+      logger.error({ planId, error: message }, "G-Agent: Plan execution error");
+      yield { type: "error", message, planId };
       yield {
-        type: 'plan_completed',
+        type: "plan_completed",
         planId,
-        status: 'failed',
+        status: "failed",
         durationMs: Date.now() - startTime,
       };
-      yield { type: 'done' };
+      yield { type: "done" };
     } finally {
       this.activeExecutions.delete(planId);
     }
@@ -241,7 +306,7 @@ export class GAgentTaskExecutor {
     taskIds: string[],
     workspaceRoot?: string,
     abortSignal?: AbortSignal,
-    _onEvent?: (event: TaskExecutionEvent) => void
+    _onEvent?: (event: TaskExecutionEvent) => void,
   ): Promise<TaskExecutionEvent[]> {
     const events: TaskExecutionEvent[] = [];
     const tasks = taskIds
@@ -253,7 +318,9 @@ export class GAgentTaskExecutor {
 
     if (runParallel) {
       const results = await Promise.all(
-        tasks.map((task) => this.executeTask(state, task, workspaceRoot, abortSignal))
+        tasks.map((task) =>
+          this.executeTask(state, task, workspaceRoot, abortSignal),
+        ),
       );
       for (const taskEvents of results) {
         events.push(...taskEvents);
@@ -261,7 +328,12 @@ export class GAgentTaskExecutor {
     } else {
       for (const task of tasks) {
         if (state.cancelled) break;
-        const taskEvents = await this.executeTask(state, task, workspaceRoot, abortSignal);
+        const taskEvents = await this.executeTask(
+          state,
+          task,
+          workspaceRoot,
+          abortSignal,
+        );
         events.push(...taskEvents);
       }
     }
@@ -276,17 +348,20 @@ export class GAgentTaskExecutor {
     state: ExecutionState,
     task: Task,
     workspaceRoot?: string,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
   ): Promise<TaskExecutionEvent[]> {
     const events: TaskExecutionEvent[] = [];
     const taskStartTime = Date.now();
 
-    logger.debug({ planId: state.planId, taskId: task.id }, 'G-Agent: Executing task');
+    logger.debug(
+      { planId: state.planId, taskId: task.id },
+      "G-Agent: Executing task",
+    );
 
     // Mark as in progress
-    state.taskStatuses.set(task.id, 'in_progress');
+    state.taskStatuses.set(task.id, "in_progress");
     events.push({
-      type: 'task_started',
+      type: "task_started",
       taskId: task.id,
       description: task.description,
       tools: task.tools,
@@ -297,16 +372,16 @@ export class GAgentTaskExecutor {
       const taskPrompt = this.buildTaskPrompt(task, state.plan);
 
       // Stream chat for this task
-      const messages = [{ role: 'user' as const, content: taskPrompt }];
+      const messages = [{ role: "user" as const, content: taskPrompt }];
 
-      let output = '';
+      let output = "";
 
       // Use the Claude service to execute the task
       for await (const event of this.claudeService.generateChatStream(
         messages,
         abortSignal,
         workspaceRoot,
-        'normal', // mode
+        "normal", // mode
         undefined, // agentProfile
         undefined, // planId
         undefined, // specSessionId
@@ -315,49 +390,49 @@ export class GAgentTaskExecutor {
         undefined, // guardRailOptions
         undefined, // tierOverride
         true, // autonomous (yolo mode for task execution)
-        'gAgent', // sessionType
+        "gAgent", // sessionType
         undefined, // gAgentCapabilities
         undefined, // gAgentExternalAllowlist
         false, // includeRagContext
-        task.tools // toolAllowlist - only allow tools specified for this task
+        task.tools, // toolAllowlist - only allow tools specified for this task
       )) {
         if (state.cancelled) {
-          throw new Error('Execution cancelled');
+          throw new Error("Execution cancelled");
         }
 
         switch (event.type) {
-          case 'text':
+          case "text":
             output += event.text;
             break;
-          case 'tool_call':
+          case "tool_call":
             events.push({
-              type: 'task_tool_call',
+              type: "task_tool_call",
               taskId: task.id,
               toolName: event.name,
               toolInput: event.input,
             });
             break;
-          case 'tool_result':
+          case "tool_result":
             events.push({
-              type: 'task_tool_result',
+              type: "task_tool_result",
               taskId: task.id,
               toolName: event.toolName,
               success: event.success,
               output: event.output.slice(0, 500), // Truncate for SSE
             });
             break;
-          case 'error':
+          case "error":
             throw new Error(event.message);
         }
       }
 
       // Task completed successfully
       const durationMs = Date.now() - taskStartTime;
-      state.taskStatuses.set(task.id, 'completed');
+      state.taskStatuses.set(task.id, "completed");
       state.taskOutputs.set(task.id, output);
 
       events.push({
-        type: 'task_completed',
+        type: "task_completed",
         taskId: task.id,
         output: output.slice(0, 1000), // Truncate for SSE
         durationMs,
@@ -365,17 +440,18 @@ export class GAgentTaskExecutor {
 
       logger.debug(
         { planId: state.planId, taskId: task.id, durationMs },
-        'G-Agent: Task completed'
+        "G-Agent: Task completed",
       );
     } catch (error) {
       const durationMs = Date.now() - taskStartTime;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
 
-      state.taskStatuses.set(task.id, 'failed');
+      state.taskStatuses.set(task.id, "failed");
       state.taskErrors.set(task.id, errorMessage);
 
       events.push({
-        type: 'task_failed',
+        type: "task_failed",
         taskId: task.id,
         error: errorMessage,
         durationMs,
@@ -383,7 +459,7 @@ export class GAgentTaskExecutor {
 
       logger.error(
         { planId: state.planId, taskId: task.id, error: errorMessage },
-        'G-Agent: Task failed'
+        "G-Agent: Task failed",
       );
     }
 
@@ -406,13 +482,13 @@ ${plan.goal}
 **Action:** ${task.action}
 
 ## Available Tools
-You have access to: ${task.tools.join(', ')}
+You have access to: ${task.tools.join(", ")}
 
 ## Dependencies
 ${
   task.depends_on.length > 0
-    ? `This task depends on: ${task.depends_on.join(', ')} (already completed)`
-    : 'This task has no dependencies.'
+    ? `This task depends on: ${task.depends_on.join(", ")} (already completed)`
+    : "This task has no dependencies."
 }
 
 ## Instructions
@@ -432,7 +508,7 @@ Begin executing the task now.`;
     const state = this.activeExecutions.get(planId);
     if (state) {
       state.cancelled = true;
-      logger.info({ planId }, 'G-Agent: Execution cancelled');
+      logger.info({ planId }, "G-Agent: Execution cancelled");
       return true;
     }
     return false;
@@ -451,10 +527,10 @@ Begin executing the task now.`;
     if (!state) return null;
 
     const completedTasks = Array.from(state.taskStatuses.values()).filter(
-      (s) => s === 'completed'
+      (s) => s === "completed",
     ).length;
     const failedTasks = Array.from(state.taskStatuses.values()).filter(
-      (s) => s === 'failed'
+      (s) => s === "failed",
     ).length;
 
     return {

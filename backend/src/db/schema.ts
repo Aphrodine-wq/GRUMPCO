@@ -5,7 +5,7 @@
 
 export interface SessionRow {
   id: string;
-  type: 'generation' | 'ship' | 'spec' | 'plan';
+  type: "generation" | "ship" | "spec" | "plan";
   status: string;
   data: string; // JSON string
   created_at: string;
@@ -75,17 +75,23 @@ export interface GoalRow {
   user_id: string;
   description: string;
   status:
-    | 'pending'
-    | 'scheduled'
-    | 'planning'
-    | 'awaiting_approval'
-    | 'executing'
-    | 'paused'
-    | 'completed'
-    | 'failed'
-    | 'cancelled';
-  priority: 'low' | 'normal' | 'high' | 'urgent';
-  trigger: 'immediate' | 'scheduled' | 'webhook' | 'cron' | 'file_change' | 'self_scheduled';
+    | "pending"
+    | "scheduled"
+    | "planning"
+    | "awaiting_approval"
+    | "executing"
+    | "paused"
+    | "completed"
+    | "failed"
+    | "cancelled";
+  priority: "low" | "normal" | "high" | "urgent";
+  trigger:
+    | "immediate"
+    | "scheduled"
+    | "webhook"
+    | "cron"
+    | "file_change"
+    | "self_scheduled";
 
   // Scheduling
   scheduled_at?: string | null;
@@ -135,7 +141,13 @@ export interface GoalCheckpointRow {
 export interface AgentInstanceRow {
   id: string;
   type: string;
-  status: 'spawning' | 'idle' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status:
+    | "spawning"
+    | "idle"
+    | "running"
+    | "completed"
+    | "failed"
+    | "cancelled";
   goal_id?: string | null;
   task_id?: string | null;
   parent_id?: string | null;

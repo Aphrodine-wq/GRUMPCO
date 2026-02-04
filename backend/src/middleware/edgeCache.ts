@@ -9,8 +9,8 @@
  * - Cache warming triggers
  */
 
-import type { Request, Response, NextFunction } from 'express';
-import logger from './logger.js';
+import type { Request, Response, NextFunction } from "express";
+import logger from "./logger.js";
 
 interface CacheConfig {
   ttl: number; // Time to live in seconds
@@ -22,7 +22,7 @@ interface CacheConfig {
 const DEFAULT_CACHE_CONFIG: CacheConfig = {
   ttl: 60, // 1 minute default
   staleWhileRevalidate: 300, // 5 minutes stale
-  varyBy: ['Accept-Encoding'],
+  varyBy: ["Accept-Encoding"],
   tags: [],
 };
 
@@ -34,41 +34,43 @@ export function edgeCache(config: Partial<CacheConfig> = {}) {
 
   return (req: Request, res: Response, next: NextFunction): void => {
     // Skip caching for non-GET requests
-    if (req.method !== 'GET') {
-      res.setHeader('Cache-Control', 'no-store');
+    if (req.method !== "GET") {
+      res.setHeader("Cache-Control", "no-store");
       return next();
     }
 
     // Skip caching for authenticated requests (unless explicitly allowed)
     if (req.headers.authorization && !config.ttl) {
-      res.setHeader('Cache-Control', 'private, no-cache');
+      res.setHeader("Cache-Control", "private, no-cache");
       return next();
     }
 
     // Build cache key components (used for cache-tag generation)
     const _cacheKeyParts = [
       req.path,
-      ...fullConfig.varyBy.map((header) => req.headers[header.toLowerCase()] || ''),
+      ...fullConfig.varyBy.map(
+        (header) => req.headers[header.toLowerCase()] || "",
+      ),
     ];
 
     // Set cache headers
     const cacheControl = [
-      'public',
+      "public",
       `max-age=${fullConfig.ttl}`,
       `stale-while-revalidate=${fullConfig.staleWhileRevalidate}`,
-    ].join(', ');
+    ].join(", ");
 
-    res.setHeader('Cache-Control', cacheControl);
-    res.setHeader('Vary', fullConfig.varyBy.join(', '));
+    res.setHeader("Cache-Control", cacheControl);
+    res.setHeader("Vary", fullConfig.varyBy.join(", "));
 
     // Add cache tags for selective invalidation
     if (fullConfig.tags.length > 0) {
-      res.setHeader('Cache-Tag', fullConfig.tags.join(','));
+      res.setHeader("Cache-Tag", fullConfig.tags.join(","));
     }
 
     // Add surrogate keys (Varnish/Fastly)
-    res.setHeader('Surrogate-Key', fullConfig.tags.join(' ') || 'default');
-    res.setHeader('Surrogate-Control', `max-age=${fullConfig.ttl}`);
+    res.setHeader("Surrogate-Key", fullConfig.tags.join(" ") || "default");
+    res.setHeader("Surrogate-Control", `max-age=${fullConfig.ttl}`);
 
     logger.debug(
       {
@@ -76,7 +78,7 @@ export function edgeCache(config: Partial<CacheConfig> = {}) {
         cacheControl,
         tags: fullConfig.tags,
       },
-      'Edge cache headers set'
+      "Edge cache headers set",
     );
 
     next();
@@ -87,12 +89,12 @@ export function edgeCache(config: Partial<CacheConfig> = {}) {
  * Cache tags for different resource types
  */
 export const CacheTags = {
-  MODELS: 'models',
-  SESSIONS: 'sessions',
-  SETTINGS: 'settings',
-  ANALYTICS: 'analytics',
-  STATIC: 'static',
-  API: 'api',
+  MODELS: "models",
+  SESSIONS: "sessions",
+  SETTINGS: "settings",
+  ANALYTICS: "analytics",
+  STATIC: "static",
+  API: "api",
 } as const;
 
 /**
@@ -118,7 +120,7 @@ export const CacheConfigs = {
     ttl: 30, // 30 seconds
     staleWhileRevalidate: 300, // 5 minutes
     tags: [CacheTags.SESSIONS],
-    varyBy: ['Authorization', 'Accept-Encoding'],
+    varyBy: ["Authorization", "Accept-Encoding"],
   },
 
   // Settings - moderate cache
@@ -148,7 +150,7 @@ export const CacheConfigs = {
  */
 export async function purgeCacheByTag(tag: string): Promise<void> {
   // Implementation depends on CDN (Vercel, CloudFlare, Fastly, etc.)
-  logger.info({ tag }, 'Cache purge requested');
+  logger.info({ tag }, "Cache purge requested");
 
   // Example for Vercel
   if (process.env.VERCEL_URL) {
@@ -156,15 +158,15 @@ export async function purgeCacheByTag(tag: string): Promise<void> {
       await fetch(
         `https://api.vercel.com/v1/integrations/deploy/${process.env.VERCEL_DEPLOYMENT_ID}/cache`,
         {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ tags: [tag] }),
-        }
+        },
       );
     } catch (error) {
-      logger.warn({ tag, error }, 'Failed to purge Vercel cache');
+      logger.warn({ tag, error }, "Failed to purge Vercel cache");
     }
   }
 }
@@ -180,7 +182,7 @@ export function cacheWarmer(urls: string[]): void {
         const start = Date.now();
         await fetch(url, {
           headers: {
-            'User-Agent': 'Cache-Warmer/1.0',
+            "User-Agent": "Cache-Warmer/1.0",
           },
         });
 
@@ -189,10 +191,10 @@ export function cacheWarmer(urls: string[]): void {
             url,
             duration: Date.now() - start,
           },
-          'Cache warmed'
+          "Cache warmed",
         );
       } catch (error) {
-        logger.warn({ url, error }, 'Failed to warm cache');
+        logger.warn({ url, error }, "Failed to warm cache");
       }
     }
   }, 100);
@@ -204,7 +206,7 @@ export function cacheWarmer(urls: string[]): void {
 export async function staleWhileRevalidate(
   generator: () => Promise<unknown>,
   _ttl: number,
-  _staleTtl: number
+  _staleTtl: number,
 ): Promise<unknown> {
   // Always return fresh data
   // Background refresh can be implemented here

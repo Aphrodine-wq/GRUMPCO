@@ -46,7 +46,9 @@ export function getApiBaseUrl(): string {
  * Get the frontend base URL from environment or default
  */
 export function getFrontendBaseUrl(): string {
-  return process.env.FRONTEND_URL || `http://localhost:${DEFAULT_FRONTEND_PORT}`;
+  return (
+    process.env.FRONTEND_URL || `http://localhost:${DEFAULT_FRONTEND_PORT}`
+  );
 }
 
 /**
@@ -71,36 +73,37 @@ export function getRedisUrl(): string {
  * NVIDIA NIM API base URL - Primary LLM Provider
  * Powered by NVIDIA - https://build.nvidia.com/
  */
-export const NVIDIA_NIM_API_URL = 'https://integrate.api.nvidia.com';
+export const NVIDIA_NIM_API_URL = "https://integrate.api.nvidia.com";
 
 /**
  * OpenAI API base URL (for embeddings compatibility)
  */
-export const OPENAI_API_URL = 'https://api.openai.com';
+export const OPENAI_API_URL = "https://api.openai.com";
 
 /**
  * GitHub API base URL
  */
-export const GITHUB_API_URL = 'https://api.github.com';
+export const GITHUB_API_URL = "https://api.github.com";
 
 /**
  * Google OAuth URLs
  */
-export const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
-export const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
-export const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo';
+export const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
+export const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+export const GOOGLE_USERINFO_URL =
+  "https://www.googleapis.com/oauth2/v3/userinfo";
 
 /**
  * Discord OAuth URLs
  */
-export const DISCORD_AUTH_URL = 'https://discord.com/api/oauth2/authorize';
-export const DISCORD_TOKEN_URL = 'https://discord.com/api/oauth2/token';
-export const DISCORD_API_URL = 'https://discord.com/api/v10';
+export const DISCORD_AUTH_URL = "https://discord.com/api/oauth2/authorize";
+export const DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token";
+export const DISCORD_API_URL = "https://discord.com/api/v10";
 
 /**
  * Stripe API URL
  */
-export const STRIPE_API_URL = 'https://api.stripe.com';
+export const STRIPE_API_URL = "https://api.stripe.com";
 
 // =============================================================================
 // URL PRESETS (grouped for convenience)

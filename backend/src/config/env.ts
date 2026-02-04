@@ -1,22 +1,23 @@
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
-import { existsSync } from 'fs';
-import { z } from 'zod';
-import pino from 'pino';
+import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+import { existsSync } from "fs";
+import { z } from "zod";
+import pino from "pino";
 
 // Bootstrap logger – used only during env loading (before the main logger is available)
-const log = pino({ name: 'env', level: process.env.LOG_LEVEL ?? 'info' });
+const log = pino({ name: "env", level: process.env.LOG_LEVEL ?? "info" });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const isTestEnv = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+const isTestEnv =
+  process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
 
 // Try multiple paths for .env file
 const possiblePaths = [
-  resolve(__dirname, '../../.env'), // From src/config/env.ts -> backend/.env
-  resolve(process.cwd(), '.env'), // From current working directory
-  resolve(process.cwd(), 'backend/.env'), // From project root
+  resolve(__dirname, "../../.env"), // From src/config/env.ts -> backend/.env
+  resolve(process.cwd(), ".env"), // From current working directory
+  resolve(process.cwd(), "backend/.env"), // From project root
 ];
 
 let envPath: string | null = null;
@@ -28,17 +29,20 @@ for (const path of possiblePaths) {
 }
 
 if (envPath) {
-  log.info({ path: envPath }, 'Loading .env file');
+  log.info({ path: envPath }, "Loading .env file");
   const result = dotenv.config({ path: envPath });
   if (result.error) {
-    log.error({ err: result.error.message }, 'Error loading .env');
+    log.error({ err: result.error.message }, "Error loading .env");
   }
 } else {
-  log.warn({ searched: possiblePaths }, '.env file not found in any searched location');
-  log.info('Attempting to load .env from current directory');
+  log.warn(
+    { searched: possiblePaths },
+    ".env file not found in any searched location",
+  );
+  log.info("Attempting to load .env from current directory");
   const result = dotenv.config();
   if (result.error) {
-    log.error({ err: result.error.message }, 'Error loading .env');
+    log.error({ err: result.error.message }, "Error loading .env");
   }
 }
 
@@ -50,29 +54,29 @@ const envSchema = z
     // ───────────────────────────────────────────
     // Enable mock AI mode for zero-config exploration (no API keys needed)
     MOCK_AI_MODE: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
     // Disable RAG (document search) - useful for quick setup
     DISABLE_RAG: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
     // Disable voice features (TTS/ASR)
     DISABLE_VOICE: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
     // Frontend-only mode (skip backend, use external API)
     FRONTEND_ONLY: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
     // Show onboarding tour on first run
     SHOW_ONBOARDING_TOUR: z
-      .enum(['true', 'false'])
-      .default('true')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("true")
+      .transform((v) => v === "true"),
 
     // AI Provider - NVIDIA NIM (Primary)
     // Get your free API key at https://build.nvidia.com
@@ -81,9 +85,9 @@ const envSchema = z
     // Multi-Provider AI Router Configuration
     // Enable provider routing (defaults to NIM-only if false)
     MULTI_PROVIDER_ROUTING: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
 
     // OpenRouter - https://openrouter.ai
     OPENROUTER_API_KEY: z.string().optional(),
@@ -92,10 +96,10 @@ const envSchema = z
     OLLAMA_BASE_URL: z
       .string()
       .optional()
-      .default('http://localhost:11434')
+      .default("http://localhost:11434")
       .refine(
         (v) => !v || /^https?:\/\/[^\s]+$/.test(String(v).trim()),
-        'OLLAMA_BASE_URL must be a valid http(s) URL'
+        "OLLAMA_BASE_URL must be a valid http(s) URL",
       ),
 
     // GitHub Copilot - https://github.com/features/copilot
@@ -111,21 +115,53 @@ const envSchema = z
     MISTRAL_API_KEY: z.string().optional(),
 
     // Provider routing preferences
-    ROUTER_FAST_PROVIDER: z.enum(['nim', 'kimi', 'github-copilot', 'mistral', 'openrouter', 'anthropic', 'ollama']).default('nim'),
-    ROUTER_QUALITY_PROVIDER: z.enum(['anthropic', 'openrouter', 'nim', 'mistral', 'github-copilot', 'kimi', 'ollama']).default('anthropic'),
-    ROUTER_CODING_PROVIDER: z.enum(['github-copilot', 'mistral', 'nim', 'anthropic', 'openrouter', 'kimi', 'ollama']).default('github-copilot'),
+    ROUTER_FAST_PROVIDER: z
+      .enum([
+        "nim",
+        "kimi",
+        "github-copilot",
+        "mistral",
+        "openrouter",
+        "anthropic",
+        "ollama",
+      ])
+      .default("nim"),
+    ROUTER_QUALITY_PROVIDER: z
+      .enum([
+        "anthropic",
+        "openrouter",
+        "nim",
+        "mistral",
+        "github-copilot",
+        "kimi",
+        "ollama",
+      ])
+      .default("anthropic"),
+    ROUTER_CODING_PROVIDER: z
+      .enum([
+        "github-copilot",
+        "mistral",
+        "nim",
+        "anthropic",
+        "openrouter",
+        "kimi",
+        "ollama",
+      ])
+      .default("github-copilot"),
 
     // Server
-    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    NODE_ENV: z
+      .enum(["development", "production", "test"])
+      .default("development"),
     PORT: z.coerce.number().int().positive().default(3000),
     CORS_ORIGINS: z.string().optional(),
-    SERVERLESS_MODE: z.enum(['vercel']).optional(),
-    EVENTS_MODE: z.enum(['sse', 'poll']).optional(),
+    SERVERLESS_MODE: z.enum(["vercel"]).optional(),
+    EVENTS_MODE: z.enum(["sse", "poll"]).optional(),
     PUBLIC_BASE_URL: z.string().url().optional(),
     ALLOWED_HOSTS: z.string().optional(),
 
     // Database
-    DB_PATH: z.string().default('./data/grump.db'),
+    DB_PATH: z.string().default("./data/grump.db"),
 
     // Redis (optional)
     REDIS_HOST: z.string().optional(),
@@ -134,29 +170,29 @@ const envSchema = z
 
     // Abuse prevention
     BLOCK_SUSPICIOUS_PROMPTS: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
     REQUIRE_AUTH_FOR_API: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
     SECURITY_STRICT_PROD: z
-      .enum(['true', 'false'])
-      .default('true')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("true")
+      .transform((v) => v === "true"),
     OUTPUT_FILTER_PII: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
     OUTPUT_FILTER_HARMFUL: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
     STRICT_COMMAND_ALLOWLIST: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
     SECURITY_SCAN_ROOT: z.string().optional(),
 
     // Webhooks
@@ -164,26 +200,30 @@ const envSchema = z
     GRUMP_WEBHOOK_URLS: z.string().optional(),
 
     // Agent governance (Moltbot/OpenClaw blocking)
-    AGENT_ACCESS_POLICY: z.enum(['block', 'allowlist', 'audit_only']).default('block'),
+    AGENT_ACCESS_POLICY: z
+      .enum(["block", "allowlist", "audit_only"])
+      .default("block"),
     AGENT_ALLOWLIST: z.string().optional(),
     AGENT_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().optional(),
     FREE_AGENT_ENABLED: z
       .string()
       .optional()
-      .transform((v) => v === 'true' || v === '1'),
+      .transform((v) => v === "true" || v === "1"),
 
     // Intent compiler
     GRUMP_INTENT_PATH: z.string().optional(),
-    INTENT_COMPILER_MODE: z.enum(['hybrid', 'rust-first', 'llm-first']).default('rust-first'),
+    INTENT_COMPILER_MODE: z
+      .enum(["hybrid", "rust-first", "llm-first"])
+      .default("rust-first"),
     INTENT_AMBIGUITY_THRESHOLD: z.coerce.number().min(0).max(1).default(0.6),
     GRUMP_USE_WASM_INTENT: z
       .string()
       .optional()
-      .transform((v) => v === 'true' || v === '1'),
+      .transform((v) => v === "true" || v === "1"),
     GRUMP_USE_WORKER_POOL_INTENT: z
       .string()
       .optional()
-      .transform((v) => v === 'true' || v === '1'),
+      .transform((v) => v === "true" || v === "1"),
 
     // Supabase
     SUPABASE_URL: z.string().url().optional(),
@@ -212,9 +252,9 @@ const envSchema = z
     TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
 
     // Docker Sandbox (optional)
-    DOCKER_HOST: z.string().default('unix:///var/run/docker.sock'),
+    DOCKER_HOST: z.string().default("unix:///var/run/docker.sock"),
     SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(60000),
-    SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
+    SANDBOX_MEMORY_LIMIT: z.string().default("512m"),
 
     // Metrics (optional)
     METRICS_AUTH: z.string().optional(),
@@ -225,7 +265,7 @@ const envSchema = z
       .optional()
       .refine(
         (v) => !v || /^https?:\/\/[^\s]+$/.test(String(v).trim()),
-        'NVIDIA_NIM_URL must be http(s) URL'
+        "NVIDIA_NIM_URL must be http(s) URL",
       ),
     NIM_EMBED_BATCH_SIZE: z.coerce.number().int().positive().optional(),
     NIM_EMBED_MAX_WAIT_MS: z.coerce.number().int().nonnegative().optional(),
@@ -236,9 +276,9 @@ const envSchema = z
     // Error tracking (Sentry)
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_DEBUG: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
 
     // Integrations Platform
     MASTER_KEY: z.string().min(32).optional(), // Required for encryption (32+ chars)
@@ -285,7 +325,7 @@ const envSchema = z
     BONJOUR_ENABLED: z
       .string()
       .optional()
-      .transform((v) => v === 'true'),
+      .transform((v) => v === "true"),
 
     // Notion Integration
     NOTION_CLIENT_ID: z.string().optional(),
@@ -309,19 +349,19 @@ const envSchema = z
     PINECONE_NAMESPACE: z.string().optional(),
 
     // RAG Configuration
-    RAG_INDEX_PATH: z.string().default('./data/rag-index.json'),
+    RAG_INDEX_PATH: z.string().default("./data/rag-index.json"),
     RAG_LLM_MODEL: z.string().optional(),
-    RAG_VECTOR_STORE: z.enum(['memory', 'pinecone', 'qdrant']).optional(),
+    RAG_VECTOR_STORE: z.enum(["memory", "pinecone", "qdrant"]).optional(),
     RAG_CONTEXT_ENABLED: z
       .string()
       .optional()
-      .transform((v) => v === 'true' || v === '1'),
+      .transform((v) => v === "true" || v === "1"),
     RAG_RERANKER: z.string().optional(),
     RAG_RERANKER_URL: z.string().url().optional(),
     RAG_CLAUDE_FALLBACK: z
       .string()
       .optional()
-      .transform((v) => v === 'true' || v === '1'),
+      .transform((v) => v === "true" || v === "1"),
     RAG_EMBED_MODEL: z.string().optional(),
     RAG_MEMORY_INDEX_PATH: z.string().optional(),
     RAG_NAMESPACE: z.string().optional(),
@@ -329,11 +369,11 @@ const envSchema = z
     RAG_INTENT_GUIDED: z
       .string()
       .optional()
-      .transform((v) => v !== 'false' && v !== '0'),
+      .transform((v) => v !== "false" && v !== "0"),
     INTENT_RAG_AUGMENT_ENRICH: z
       .string()
       .optional()
-      .transform((v) => v !== 'false' && v !== '0'),
+      .transform((v) => v !== "false" && v !== "0"),
 
     // Database URL (PostgreSQL - alternative to SQLite)
     DATABASE_URL: z.string().url().optional(),
@@ -348,18 +388,18 @@ const envSchema = z
         data.NVIDIA_NIM_API_KEY ||
         data.OPENROUTER_API_KEY ||
         data.GROQ_API_KEY ||
-        data.TOGETHER_API_KEY
+        data.TOGETHER_API_KEY,
       );
 
       return hasProvider;
     },
     {
       message:
-        'At least one AI provider API key is required (NVIDIA_NIM_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, or TOGETHER_API_KEY). Set MOCK_AI_MODE=true for zero-config mode. Get free keys: https://build.nvidia.com/',
-    }
+        "At least one AI provider API key is required (NVIDIA_NIM_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, or TOGETHER_API_KEY). Set MOCK_AI_MODE=true for zero-config mode. Get free keys: https://build.nvidia.com/",
+    },
   )
   .superRefine((data, ctx) => {
-    const isProd = data.NODE_ENV === 'production';
+    const isProd = data.NODE_ENV === "production";
     const strict = isProd && data.SECURITY_STRICT_PROD;
 
     if (!strict) return;
@@ -367,15 +407,16 @@ const envSchema = z
     if (!data.CORS_ORIGINS || !data.CORS_ORIGINS.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['CORS_ORIGINS'],
-        message: 'CORS_ORIGINS is required in production when SECURITY_STRICT_PROD=true',
+        path: ["CORS_ORIGINS"],
+        message:
+          "CORS_ORIGINS is required in production when SECURITY_STRICT_PROD=true",
       });
     }
 
-    if (data.CORS_ORIGINS?.includes('*')) {
+    if (data.CORS_ORIGINS?.includes("*")) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['CORS_ORIGINS'],
+        path: ["CORS_ORIGINS"],
         message: 'CORS_ORIGINS must not include "*" in production',
       });
     }
@@ -383,74 +424,81 @@ const envSchema = z
     if (!data.ALLOWED_HOSTS || !data.ALLOWED_HOSTS.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['ALLOWED_HOSTS'],
-        message: 'ALLOWED_HOSTS is required in production when SECURITY_STRICT_PROD=true',
+        path: ["ALLOWED_HOSTS"],
+        message:
+          "ALLOWED_HOSTS is required in production when SECURITY_STRICT_PROD=true",
       });
     }
 
     if (!data.REQUIRE_AUTH_FOR_API) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['REQUIRE_AUTH_FOR_API'],
-        message: 'REQUIRE_AUTH_FOR_API must be true in production when SECURITY_STRICT_PROD=true',
+        path: ["REQUIRE_AUTH_FOR_API"],
+        message:
+          "REQUIRE_AUTH_FOR_API must be true in production when SECURITY_STRICT_PROD=true",
       });
     }
 
     if (!data.BLOCK_SUSPICIOUS_PROMPTS) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['BLOCK_SUSPICIOUS_PROMPTS'],
+        path: ["BLOCK_SUSPICIOUS_PROMPTS"],
         message:
-          'BLOCK_SUSPICIOUS_PROMPTS must be true in production when SECURITY_STRICT_PROD=true',
+          "BLOCK_SUSPICIOUS_PROMPTS must be true in production when SECURITY_STRICT_PROD=true",
       });
     }
 
     if (!data.OUTPUT_FILTER_PII) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['OUTPUT_FILTER_PII'],
-        message: 'OUTPUT_FILTER_PII must be true in production when SECURITY_STRICT_PROD=true',
+        path: ["OUTPUT_FILTER_PII"],
+        message:
+          "OUTPUT_FILTER_PII must be true in production when SECURITY_STRICT_PROD=true",
       });
     }
 
     if (!data.OUTPUT_FILTER_HARMFUL) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['OUTPUT_FILTER_HARMFUL'],
-        message: 'OUTPUT_FILTER_HARMFUL must be true in production when SECURITY_STRICT_PROD=true',
+        path: ["OUTPUT_FILTER_HARMFUL"],
+        message:
+          "OUTPUT_FILTER_HARMFUL must be true in production when SECURITY_STRICT_PROD=true",
       });
     }
 
     if (!data.STRICT_COMMAND_ALLOWLIST) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['STRICT_COMMAND_ALLOWLIST'],
+        path: ["STRICT_COMMAND_ALLOWLIST"],
         message:
-          'STRICT_COMMAND_ALLOWLIST must be true in production when SECURITY_STRICT_PROD=true',
+          "STRICT_COMMAND_ALLOWLIST must be true in production when SECURITY_STRICT_PROD=true",
       });
     }
 
     if (!data.METRICS_AUTH || !data.METRICS_AUTH.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['METRICS_AUTH'],
-        message: 'METRICS_AUTH is required in production when SECURITY_STRICT_PROD=true',
+        path: ["METRICS_AUTH"],
+        message:
+          "METRICS_AUTH is required in production when SECURITY_STRICT_PROD=true",
       });
     }
 
     if (!data.MASTER_KEY || data.MASTER_KEY.length < 32) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['MASTER_KEY'],
-        message: 'MASTER_KEY (32+ chars) is required in production when SECURITY_STRICT_PROD=true',
+        path: ["MASTER_KEY"],
+        message:
+          "MASTER_KEY (32+ chars) is required in production when SECURITY_STRICT_PROD=true",
       });
     }
 
     if (!data.SECURITY_SCAN_ROOT || !data.SECURITY_SCAN_ROOT.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['SECURITY_SCAN_ROOT'],
-        message: 'SECURITY_SCAN_ROOT is required in production when SECURITY_STRICT_PROD=true',
+        path: ["SECURITY_SCAN_ROOT"],
+        message:
+          "SECURITY_SCAN_ROOT is required in production when SECURITY_STRICT_PROD=true",
       });
     }
   });
@@ -463,47 +511,62 @@ const parseResult = envSchema.safeParse(process.env);
 
 if (!parseResult.success) {
   const issues = parseResult.error.issues.map((i) => {
-    const field = i.path.join('.');
+    const field = i.path.join(".");
     const message = i.message;
 
     // Add helpful hints for common issues
     const hints: Record<string, string> = {
-      'At least one AI provider':
-        '💡 Try MOCK_AI_MODE=true for zero-config, or get free key: https://build.nvidia.com/',
-      'CORS_ORIGINS is required': '💡 Example: CORS_ORIGINS=https://yourdomain.com',
-      'ALLOWED_HOSTS is required': '💡 Example: ALLOWED_HOSTS=yourdomain.com,app.yourdomain.com',
-      'METRICS_AUTH is required': '💡 Example: METRICS_AUTH=username:password',
-      'MASTER_KEY (32+ chars) is required': '💡 Generate: openssl rand -base64 32',
+      "At least one AI provider":
+        "💡 Try MOCK_AI_MODE=true for zero-config, or get free key: https://build.nvidia.com/",
+      "CORS_ORIGINS is required":
+        "💡 Example: CORS_ORIGINS=https://yourdomain.com",
+      "ALLOWED_HOSTS is required":
+        "💡 Example: ALLOWED_HOSTS=yourdomain.com,app.yourdomain.com",
+      "METRICS_AUTH is required": "💡 Example: METRICS_AUTH=username:password",
+      "MASTER_KEY (32+ chars) is required":
+        "💡 Generate: openssl rand -base64 32",
     };
 
-    const hint = Object.entries(hints).find(([key]) => message.includes(key))?.[1];
+    const hint = Object.entries(hints).find(([key]) =>
+      message.includes(key),
+    )?.[1];
     return hint ? `${field}: ${message}\n  ${hint}` : `${field}: ${message}`;
   });
 
-  log.error('');
-  log.error('╔════════════════════════════════════════════════════════════════╗');
-  log.error('║                                                                ║');
-  log.error('║  ❌  Configuration Error - Cannot Start Server                ║');
-  log.error('║                                                                ║');
-  log.error('╚════════════════════════════════════════════════════════════════╝');
-  log.error('');
+  log.error("");
+  log.error(
+    "╔════════════════════════════════════════════════════════════════╗",
+  );
+  log.error(
+    "║                                                                ║",
+  );
+  log.error(
+    "║  ❌  Configuration Error - Cannot Start Server                ║",
+  );
+  log.error(
+    "║                                                                ║",
+  );
+  log.error(
+    "╚════════════════════════════════════════════════════════════════╝",
+  );
+  log.error("");
 
   issues.forEach((issue) => {
     log.error(`  ${issue}`);
-    log.error('');
+    log.error("");
   });
 
-  log.error('📝 Quick fixes:');
-  log.error('  1. Copy template: cp backend/.env.minimal backend/.env');
+  log.error("📝 Quick fixes:");
+  log.error("  1. Copy template: cp backend/.env.minimal backend/.env");
   log.error('  2. For mock mode: echo "MOCK_AI_MODE=true" > backend/.env');
-  log.error('  3. Full setup: see docs/GETTING_STARTED.md');
-  log.error('');
+  log.error("  3. Full setup: see docs/GETTING_STARTED.md");
+  log.error("");
   log.error(`Working directory: ${process.cwd()}`);
-  log.error(`Searched for .env in: ${envPath ?? 'default location'}`);
-  log.error('');
+  log.error(`Searched for .env in: ${envPath ?? "default location"}`);
+  log.error("");
 
   // In production, exit immediately on invalid config
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     process.exit(1);
   }
 }
@@ -511,17 +574,20 @@ if (!parseResult.success) {
 // Export validated env (with defaults applied)
 export const env: Env = parseResult.success
   ? parseResult.data
-  : envSchema.parse({ ...process.env, NVIDIA_NIM_API_KEY: 'invalid-key-see-errors-above' });
+  : envSchema.parse({
+      ...process.env,
+      NVIDIA_NIM_API_KEY: "invalid-key-see-errors-above",
+    });
 
 // Log successful validation (never log raw secrets or key material in production)
 if (parseResult.success) {
   const providers: string[] = [];
-  if (env.NVIDIA_NIM_API_KEY) providers.push('NVIDIA NIM');
-  if (env.OPENROUTER_API_KEY) providers.push('OpenRouter');
-  if (env.GROQ_API_KEY) providers.push('Groq');
-  if (env.TOGETHER_API_KEY) providers.push('Together AI');
-  if (env.OLLAMA_BASE_URL && env.OLLAMA_BASE_URL !== 'http://localhost:11434') {
-    providers.push('Ollama');
+  if (env.NVIDIA_NIM_API_KEY) providers.push("NVIDIA NIM");
+  if (env.OPENROUTER_API_KEY) providers.push("OpenRouter");
+  if (env.GROQ_API_KEY) providers.push("Groq");
+  if (env.TOGETHER_API_KEY) providers.push("Together AI");
+  if (env.OLLAMA_BASE_URL && env.OLLAMA_BASE_URL !== "http://localhost:11434") {
+    providers.push("Ollama");
   }
 
   const features: Record<string, boolean> = {};
@@ -534,31 +600,63 @@ if (parseResult.success) {
   log.info(
     {
       mode: env.NODE_ENV,
-      providers: providers.length ? providers : env.MOCK_AI_MODE ? ['MOCK'] : undefined,
+      providers: providers.length
+        ? providers
+        : env.MOCK_AI_MODE
+          ? ["MOCK"]
+          : undefined,
       features: Object.keys(features).length ? features : undefined,
       redis: env.REDIS_HOST ? `${env.REDIS_HOST}:${env.REDIS_PORT}` : undefined,
       nimUrl: env.NVIDIA_NIM_URL || undefined,
     },
-    'Environment validated successfully'
+    "Environment validated successfully",
   );
 
   if (env.MOCK_AI_MODE) {
-    log.warn('');
-    log.warn('╔════════════════════════════════════════════════════════════════╗');
-    log.warn('║                                                                ║');
-    log.warn('║  🤖  MOCK MODE ACTIVE - Zero-config exploration enabled       ║');
-    log.warn('║                                                                ║');
-    log.warn('║  AI responses will be realistic placeholders.                 ║');
-    log.warn('║  To enable real AI:                                           ║');
-    log.warn('║    1. Copy backend/.env.minimal to backend/.env              ║');
-    log.warn('║    2. Uncomment ONE provider key                             ║');
-    log.warn('║    3. Set MOCK_AI_MODE=false                                 ║');
-    log.warn('║    4. Restart the server                                     ║');
-    log.warn('║                                                                ║');
-    log.warn('║  Free API keys: https://build.nvidia.com/                    ║');
-    log.warn('║                                                                ║');
-    log.warn('╚════════════════════════════════════════════════════════════════╝');
-    log.warn('');
+    log.warn("");
+    log.warn(
+      "╔════════════════════════════════════════════════════════════════╗",
+    );
+    log.warn(
+      "║                                                                ║",
+    );
+    log.warn(
+      "║  🤖  MOCK MODE ACTIVE - Zero-config exploration enabled       ║",
+    );
+    log.warn(
+      "║                                                                ║",
+    );
+    log.warn(
+      "║  AI responses will be realistic placeholders.                 ║",
+    );
+    log.warn(
+      "║  To enable real AI:                                           ║",
+    );
+    log.warn(
+      "║    1. Copy backend/.env.minimal to backend/.env              ║",
+    );
+    log.warn(
+      "║    2. Uncomment ONE provider key                             ║",
+    );
+    log.warn(
+      "║    3. Set MOCK_AI_MODE=false                                 ║",
+    );
+    log.warn(
+      "║    4. Restart the server                                     ║",
+    );
+    log.warn(
+      "║                                                                ║",
+    );
+    log.warn(
+      "║  Free API keys: https://build.nvidia.com/                    ║",
+    );
+    log.warn(
+      "║                                                                ║",
+    );
+    log.warn(
+      "╚════════════════════════════════════════════════════════════════╝",
+    );
+    log.warn("");
   }
 }
 
@@ -569,24 +667,31 @@ export default process.env;
  * Get API key for a provider. Abstraction for future secret manager integration.
  * When SECRET_MANAGER_URL is set, this could fetch from Vault/AWS/GCP; for now uses env.
  */
-export type ApiProvider = 'nvidia_nim' | 'openrouter' | 'ollama' | 'github_copilot' | 'kimi' | 'anthropic' | 'mistral';
+export type ApiProvider =
+  | "nvidia_nim"
+  | "openrouter"
+  | "ollama"
+  | "github_copilot"
+  | "kimi"
+  | "anthropic"
+  | "mistral";
 
 export function getApiKey(provider: ApiProvider): string | undefined {
   switch (provider) {
-    case 'nvidia_nim':
+    case "nvidia_nim":
       return env.NVIDIA_NIM_API_KEY;
-    case 'openrouter':
+    case "openrouter":
       return env.OPENROUTER_API_KEY;
-    case 'ollama':
+    case "ollama":
       // Ollama typically doesn't require an API key for local instances
       return undefined;
-    case 'github_copilot':
+    case "github_copilot":
       return env.GITHUB_COPILOT_TOKEN;
-    case 'kimi':
+    case "kimi":
       return env.KIMI_API_KEY;
-    case 'anthropic':
+    case "anthropic":
       return env.ANTHROPIC_API_KEY;
-    case 'mistral':
+    case "mistral":
       return env.MISTRAL_API_KEY;
     default:
       return undefined;
@@ -598,19 +703,19 @@ export function getApiKey(provider: ApiProvider): string | undefined {
  */
 export function isProviderConfigured(provider: ApiProvider): boolean {
   switch (provider) {
-    case 'nvidia_nim':
+    case "nvidia_nim":
       return Boolean(env.NVIDIA_NIM_API_KEY);
-    case 'openrouter':
+    case "openrouter":
       return Boolean(env.OPENROUTER_API_KEY);
-    case 'ollama':
+    case "ollama":
       return Boolean(env.OLLAMA_BASE_URL);
-    case 'github_copilot':
+    case "github_copilot":
       return Boolean(env.GITHUB_COPILOT_TOKEN);
-    case 'kimi':
+    case "kimi":
       return Boolean(env.KIMI_API_KEY);
-    case 'anthropic':
+    case "anthropic":
       return Boolean(env.ANTHROPIC_API_KEY);
-    case 'mistral':
+    case "mistral":
       return Boolean(env.MISTRAL_API_KEY);
     default:
       return false;
@@ -622,12 +727,12 @@ export function isProviderConfigured(provider: ApiProvider): boolean {
  */
 export function getConfiguredProviders(): ApiProvider[] {
   const providers: ApiProvider[] = [];
-  if (env.NVIDIA_NIM_API_KEY) providers.push('nvidia_nim');
-  if (env.OPENROUTER_API_KEY) providers.push('openrouter');
-  if (env.OLLAMA_BASE_URL) providers.push('ollama');
-  if (env.GITHUB_COPILOT_TOKEN) providers.push('github_copilot');
-  if (env.KIMI_API_KEY) providers.push('kimi');
-  if (env.ANTHROPIC_API_KEY) providers.push('anthropic');
-  if (env.MISTRAL_API_KEY) providers.push('mistral');
+  if (env.NVIDIA_NIM_API_KEY) providers.push("nvidia_nim");
+  if (env.OPENROUTER_API_KEY) providers.push("openrouter");
+  if (env.OLLAMA_BASE_URL) providers.push("ollama");
+  if (env.GITHUB_COPILOT_TOKEN) providers.push("github_copilot");
+  if (env.KIMI_API_KEY) providers.push("kimi");
+  if (env.ANTHROPIC_API_KEY) providers.push("anthropic");
+  if (env.MISTRAL_API_KEY) providers.push("mistral");
   return providers;
 }

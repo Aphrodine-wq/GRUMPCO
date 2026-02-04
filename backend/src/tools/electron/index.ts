@@ -2,16 +2,16 @@
  * Electron-specific tool definitions
  */
 
-import type { Tool } from '../types.js';
+import type { Tool } from "../types.js";
 
 // ============================================================================
 // CAMERA TOOL
 // ============================================================================
 
 export const cameraCaptureTool: Tool = {
-  name: 'camera_capture',
-  description: 'Capture image from device camera.',
-  input_schema: { type: 'object', properties: {} },
+  name: "camera_capture",
+  description: "Capture image from device camera.",
+  input_schema: { type: "object", properties: {} },
 };
 
 // ============================================================================
@@ -19,14 +19,14 @@ export const cameraCaptureTool: Tool = {
 // ============================================================================
 
 export const screenRecordTool: Tool = {
-  name: 'screen_record',
-  description: 'Start or stop screen recording.',
+  name: "screen_record",
+  description: "Start or stop screen recording.",
   input_schema: {
-    type: 'object',
+    type: "object",
     properties: {
-      action: { type: 'string', enum: ['start', 'stop'] },
+      action: { type: "string", enum: ["start", "stop"] },
     },
-    required: ['action'],
+    required: ["action"],
   },
 };
 
@@ -35,9 +35,9 @@ export const screenRecordTool: Tool = {
 // ============================================================================
 
 export const locationGetTool: Tool = {
-  name: 'location_get',
-  description: 'Get device location.',
-  input_schema: { type: 'object', properties: {} },
+  name: "location_get",
+  description: "Get device location.",
+  input_schema: { type: "object", properties: {} },
 };
 
 // ============================================================================
@@ -45,14 +45,14 @@ export const locationGetTool: Tool = {
 // ============================================================================
 
 export const systemExecTool: Tool = {
-  name: 'system_exec',
-  description: 'Execute system command on host.',
+  name: "system_exec",
+  description: "Execute system command on host.",
   input_schema: {
-    type: 'object',
+    type: "object",
     properties: {
-      command: { type: 'string', description: 'Command to execute' },
+      command: { type: "string", description: "Command to execute" },
     },
-    required: ['command'],
+    required: ["command"],
   },
 };
 
@@ -61,17 +61,17 @@ export const systemExecTool: Tool = {
 // ============================================================================
 
 export const canvasUpdateTool: Tool = {
-  name: 'canvas_update',
-  description: 'Update elements on Live Canvas.',
+  name: "canvas_update",
+  description: "Update elements on Live Canvas.",
   input_schema: {
-    type: 'object',
+    type: "object",
     properties: {
-      sessionId: { type: 'string', description: 'Canvas session ID' },
-      action: { type: 'string', enum: ['create', 'update', 'delete'] },
-      elementId: { type: 'string', description: 'Element ID' },
-      element: { type: 'object', description: 'Element data' },
+      sessionId: { type: "string", description: "Canvas session ID" },
+      action: { type: "string", enum: ["create", "update", "delete"] },
+      elementId: { type: "string", description: "Element ID" },
+      element: { type: "object", description: "Element data" },
     },
-    required: ['sessionId', 'action'],
+    required: ["sessionId", "action"],
   },
 };
 

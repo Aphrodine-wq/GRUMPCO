@@ -4,11 +4,12 @@
  * When thread affinity is enabled, workerData contains { workerIndex, cpuCount } for process managers.
  */
 
-import { parentPort, workerData } from 'worker_threads';
-import { runIntentCli } from '../services/intentCliRunner.js';
+import { parentPort, workerData } from "worker_threads";
+import { runIntentCli } from "../services/intentCliRunner.js";
 
 const _workerIndex =
-  (workerData as { workerIndex?: number; cpuCount?: number } | undefined)?.workerIndex ?? -1;
+  (workerData as { workerIndex?: number; cpuCount?: number } | undefined)
+    ?.workerIndex ?? -1;
 
 interface WorkerMessage {
   type: string;
@@ -36,7 +37,9 @@ async function parseIntent(data: {
 /**
  * Generate context (CPU-intensive JSON processing)
  */
-async function generateContext(data: { projectDescription: string }): Promise<unknown> {
+async function generateContext(data: {
+  projectDescription: string;
+}): Promise<unknown> {
   // Placeholder for context generation
   return {
     projectDescription: data.projectDescription,
@@ -49,9 +52,9 @@ async function generateContext(data: { projectDescription: string }): Promise<un
  */
 async function processLargeJson(data: {
   json: string;
-  operation: 'parse' | 'stringify';
+  operation: "parse" | "stringify";
 }): Promise<unknown> {
-  if (data.operation === 'parse') {
+  if (data.operation === "parse") {
     return JSON.parse(data.json);
   } else {
     return JSON.stringify(data.json);
@@ -62,7 +65,7 @@ async function processLargeJson(data: {
  * Main message handler
  */
 if (parentPort) {
-  parentPort.on('message', async (message: WorkerMessage) => {
+  parentPort.on("message", async (message: WorkerMessage) => {
     const response: WorkerResponse = {
       taskId: message.taskId,
       success: false,
@@ -72,19 +75,24 @@ if (parentPort) {
       let result: unknown;
 
       switch (message.type) {
-        case 'parseIntent':
+        case "parseIntent":
           result = await parseIntent(
-            message.data as { text: string; constraints?: Record<string, unknown> }
+            message.data as {
+              text: string;
+              constraints?: Record<string, unknown>;
+            },
           );
           break;
 
-        case 'generateContext':
-          result = await generateContext(message.data as { projectDescription: string });
+        case "generateContext":
+          result = await generateContext(
+            message.data as { projectDescription: string },
+          );
           break;
 
-        case 'processLargeJson':
+        case "processLargeJson":
           result = await processLargeJson(
-            message.data as { json: string; operation: 'parse' | 'stringify' }
+            message.data as { json: string; operation: "parse" | "stringify" },
           );
           break;
 

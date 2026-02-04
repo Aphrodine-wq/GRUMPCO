@@ -4,4 +4,4 @@
  * Shared utilities for OAuth authentication across all providers.
  */
 
-export * from './oauthHelpers.js';
+export * from "./oauthHelpers.js";

@@ -1,40 +1,40 @@
-import { PostHog } from 'posthog-node';
-import { v4 as uuidv4 } from 'uuid';
+import { PostHog } from "posthog-node";
+import { v4 as uuidv4 } from "uuid";
 
 // Event types for analytics
 export type AnalyticsEventName =
   // Onboarding events
-  | 'user_signed_up'
-  | 'tour_started'
-  | 'tour_completed'
-  | 'first_project_created'
+  | "user_signed_up"
+  | "tour_started"
+  | "tour_completed"
+  | "first_project_created"
   // Core usage events
-  | 'intent_submitted'
-  | 'architecture_viewed'
-  | 'code_generated'
-  | 'project_downloaded'
-  | 'project_shipped'
+  | "intent_submitted"
+  | "architecture_viewed"
+  | "code_generated"
+  | "project_downloaded"
+  | "project_shipped"
   // Feature events
-  | 'skill_used'
-  | 'chat_message_sent'
-  | 'diagram_exported'
+  | "skill_used"
+  | "chat_message_sent"
+  | "diagram_exported"
   // Error events
-  | 'generation_failed'
-  | 'timeout_occurred'
-  | 'provider_error'
-  | 'error_occurred'
+  | "generation_failed"
+  | "timeout_occurred"
+  | "provider_error"
+  | "error_occurred"
   // Business events
-  | 'user_upgraded'
-  | 'payment_processed'
+  | "user_upgraded"
+  | "payment_processed"
   // Session events
-  | 'session_started'
-  | 'session_ended'
+  | "session_started"
+  | "session_ended"
   // Page events
-  | 'page_view'
+  | "page_view"
   // API request events
-  | 'api_request_started'
-  | 'api_request_completed'
-  | 'api_request_failed';
+  | "api_request_started"
+  | "api_request_completed"
+  | "api_request_failed";
 
 export interface AnalyticsEvent {
   event: AnalyticsEventName;
@@ -72,10 +72,10 @@ class AnalyticsService {
   private initializeFromEnv(): void {
     const config: AnalyticsConfig = {
       apiKey: process.env.POSTHOG_API_KEY,
-      host: process.env.POSTHOG_HOST || 'https://us.i.posthog.com',
-      enabled: process.env.ANALYTICS_ENABLED !== 'false',
-      debug: process.env.ANALYTICS_DEBUG === 'true',
-      flushInterval: parseInt(process.env.ANALYTICS_FLUSH_INTERVAL || '10000'),
+      host: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
+      enabled: process.env.ANALYTICS_ENABLED !== "false",
+      debug: process.env.ANALYTICS_DEBUG === "true",
+      flushInterval: parseInt(process.env.ANALYTICS_FLUSH_INTERVAL || "10000"),
     };
 
     this.initialize(config);
@@ -86,12 +86,14 @@ class AnalyticsService {
     this.debug = config.debug ?? false;
 
     if (!this.enabled) {
-      this.log('Analytics disabled');
+      this.log("Analytics disabled");
       return;
     }
 
     if (!config.apiKey) {
-      console.warn('[Analytics] POSTHOG_API_KEY not set. Analytics will be disabled.');
+      console.warn(
+        "[Analytics] POSTHOG_API_KEY not set. Analytics will be disabled.",
+      );
       this.enabled = false;
       return;
     }
@@ -101,7 +103,7 @@ class AnalyticsService {
         host: config.host,
       });
 
-      this.log('PostHog client initialized');
+      this.log("PostHog client initialized");
 
       // Setup periodic flush
       if (config.flushInterval) {
@@ -110,7 +112,7 @@ class AnalyticsService {
         }, config.flushInterval);
       }
     } catch (error) {
-      console.error('[Analytics] Failed to initialize PostHog:', error);
+      console.error("[Analytics] Failed to initialize PostHog:", error);
       this.enabled = false;
     }
   }
@@ -121,10 +123,10 @@ class AnalyticsService {
   track(
     event: AnalyticsEventName,
     properties: Record<string, unknown> = {},
-    userId?: string
+    userId?: string,
   ): void {
     if (!this.enabled) {
-      this.log('Skipping event (disabled):', event);
+      this.log("Skipping event (disabled):", event);
       return;
     }
 
@@ -134,9 +136,9 @@ class AnalyticsService {
       anonymousId: userId ? undefined : uuidv4(),
       properties: {
         ...properties,
-        source: 'backend',
-        environment: process.env.NODE_ENV || 'development',
-        version: process.env.npm_package_version || 'unknown',
+        source: "backend",
+        environment: process.env.NODE_ENV || "development",
+        version: process.env.npm_package_version || "unknown",
       },
       timestamp: new Date(),
     };
@@ -153,7 +155,7 @@ class AnalyticsService {
       });
     }
 
-    this.log('Tracked:', event, properties);
+    this.log("Tracked:", event, properties);
   }
 
   /**
@@ -169,7 +171,7 @@ class AnalyticsService {
       properties: traits,
     });
 
-    this.log('Identified user:', userId, traits);
+    this.log("Identified user:", userId, traits);
   }
 
   /**
@@ -178,15 +180,15 @@ class AnalyticsService {
   pageView(
     userId: string | undefined,
     pageName: string,
-    properties: Record<string, unknown> = {}
+    properties: Record<string, unknown> = {},
   ): void {
     this.track(
-      'page_view',
+      "page_view",
       {
         page: pageName,
         ...properties,
       },
-      userId
+      userId,
     );
   }
 
@@ -196,15 +198,15 @@ class AnalyticsService {
   featureUsed(
     featureName: string,
     userId: string | undefined,
-    properties: Record<string, unknown> = {}
+    properties: Record<string, unknown> = {},
   ): void {
     this.track(
-      'skill_used',
+      "skill_used",
       {
         feature: featureName,
         ...properties,
       },
-      userId
+      userId,
     );
   }
 
@@ -212,19 +214,19 @@ class AnalyticsService {
    * Track generation events with timing
    */
   trackGeneration(
-    type: 'architecture' | 'code' | 'intent',
+    type: "architecture" | "code" | "intent",
     success: boolean,
     durationMs: number,
     userId: string | undefined,
-    properties: Record<string, unknown> = {}
+    properties: Record<string, unknown> = {},
   ): void {
     const eventName: AnalyticsEventName = success
-      ? type === 'architecture'
-        ? 'architecture_viewed'
-        : type === 'code'
-          ? 'code_generated'
-          : 'intent_submitted'
-      : 'generation_failed';
+      ? type === "architecture"
+        ? "architecture_viewed"
+        : type === "code"
+          ? "code_generated"
+          : "intent_submitted"
+      : "generation_failed";
 
     this.track(
       eventName,
@@ -234,7 +236,7 @@ class AnalyticsService {
         duration_ms: durationMs,
         ...properties,
       },
-      userId
+      userId,
     );
   }
 
@@ -242,20 +244,25 @@ class AnalyticsService {
    * Track error events
    */
   trackError(
-    errorType: 'generation_failed' | 'timeout_occurred' | 'provider_error' | 'error_occurred',
+    errorType:
+      | "generation_failed"
+      | "timeout_occurred"
+      | "provider_error"
+      | "error_occurred",
     error: Error,
     userId: string | undefined,
-    properties: Record<string, unknown> = {}
+    properties: Record<string, unknown> = {},
   ): void {
     this.track(
       errorType,
       {
         error_message: error.message,
         error_name: error.name,
-        error_stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        error_stack:
+          process.env.NODE_ENV === "development" ? error.stack : undefined,
         ...properties,
       },
-      userId
+      userId,
     );
   }
 
@@ -263,15 +270,15 @@ class AnalyticsService {
    * Track project lifecycle events
    */
   trackProjectLifecycle(
-    stage: 'created' | 'downloaded' | 'shipped',
+    stage: "created" | "downloaded" | "shipped",
     projectId: string,
     userId: string | undefined,
-    properties: Record<string, unknown> = {}
+    properties: Record<string, unknown> = {},
   ): void {
     const eventMap: Record<string, AnalyticsEventName> = {
-      created: 'first_project_created',
-      downloaded: 'project_downloaded',
-      shipped: 'project_shipped',
+      created: "first_project_created",
+      downloaded: "project_downloaded",
+      shipped: "project_shipped",
     };
 
     this.track(
@@ -280,7 +287,7 @@ class AnalyticsService {
         project_id: projectId,
         ...properties,
       },
-      userId
+      userId,
     );
   }
 
@@ -295,9 +302,9 @@ class AnalyticsService {
     try {
       await this.client.flush();
       this.queue = [];
-      this.log('Flushed events to PostHog');
+      this.log("Flushed events to PostHog");
     } catch (error) {
-      console.error('[Analytics] Failed to flush events:', error);
+      console.error("[Analytics] Failed to flush events:", error);
     }
   }
 
@@ -316,7 +323,7 @@ class AnalyticsService {
       this.client = null;
     }
 
-    this.log('Analytics service shutdown complete');
+    this.log("Analytics service shutdown complete");
   }
 
   /**
@@ -335,7 +342,7 @@ class AnalyticsService {
 
   private log(...args: unknown[]): void {
     if (this.debug) {
-      console.log('[Analytics]', ...args);
+      console.log("[Analytics]", ...args);
     }
   }
 }

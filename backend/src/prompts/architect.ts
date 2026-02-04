@@ -5,7 +5,7 @@
 
 export interface ArchitectPromptOptions {
   projectType?: string;
-  complexity?: 'mvp' | 'standard' | 'enterprise';
+  complexity?: "mvp" | "standard" | "enterprise";
   techStack?: string[];
 }
 
@@ -157,30 +157,30 @@ graph TB
 
   if (options?.complexity) {
     const complexityGuidance: Record<string, string> = {
-      mvp: 'Focus on minimum viable product - simple, straightforward architecture with minimal components.',
+      mvp: "Focus on minimum viable product - simple, straightforward architecture with minimal components.",
       standard:
-        'Balance between simplicity and scalability. Include common patterns but avoid over-engineering.',
+        "Balance between simplicity and scalability. Include common patterns but avoid over-engineering.",
       enterprise:
-        'Design for scale, reliability, and maintainability. Include redundancy, monitoring, and sophisticated patterns.',
+        "Design for scale, reliability, and maintainability. Include redundancy, monitoring, and sophisticated patterns.",
     };
     prompt += `\n\nComplexity Level: ${options.complexity}\n${complexityGuidance[options.complexity]}`;
   }
 
   if (options?.techStack && options.techStack.length > 0) {
-    prompt += `\n\nPreferred Technologies: ${options.techStack.join(', ')}\nUse these technologies where appropriate in the architecture.`;
+    prompt += `\n\nPreferred Technologies: ${options.techStack.join(", ")}\nUse these technologies where appropriate in the architecture.`;
   }
 
   if (options?.projectType) {
     const typeGuidance: Record<string, string> = {
-      web: 'Design for web browsers. Include frontend framework, backend API, and database.',
+      web: "Design for web browsers. Include frontend framework, backend API, and database.",
       mobile:
-        'Design for mobile apps. Consider offline capabilities, push notifications, and mobile-specific patterns.',
-      api: 'Focus on backend API design. Design RESTful or GraphQL endpoints, databases, and microservices.',
+        "Design for mobile apps. Consider offline capabilities, push notifications, and mobile-specific patterns.",
+      api: "Focus on backend API design. Design RESTful or GraphQL endpoints, databases, and microservices.",
       fullstack:
-        'Design complete system from UI to database. Include both frontend and backend considerations.',
-      saas: 'Design for multi-tenant SaaS. Include user management, billing, authentication, and tenant isolation.',
+        "Design complete system from UI to database. Include both frontend and backend considerations.",
+      saas: "Design for multi-tenant SaaS. Include user management, billing, authentication, and tenant isolation.",
     };
-    prompt += `\n\nProject Type: ${options.projectType}\n${typeGuidance[options.projectType] || ''}`;
+    prompt += `\n\nProject Type: ${options.projectType}\n${typeGuidance[options.projectType] || ""}`;
   }
 
   return prompt;

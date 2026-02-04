@@ -3,28 +3,28 @@
  * Used by Settings Billing tab. Wire Stripe (or provider) for production.
  */
 
-import { Router, type Request, type Response } from 'express';
-import { TIERS, OVERAGE_RATES, type TierId } from '../config/pricing.js';
-import { getMonthlyCallCount } from '../services/usageTracker.js';
-import logger from '../middleware/logger.js';
+import { Router, type Request, type Response } from "express";
+import { TIERS, OVERAGE_RATES, type TierId } from "../config/pricing.js";
+import { getMonthlyCallCount } from "../services/usageTracker.js";
+import logger from "../middleware/logger.js";
 
 const router = Router();
-const DEFAULT_USER = 'default';
+const DEFAULT_USER = "default";
 
 /**
  * GET /api/billing/me
  * Current user's billing: tier, usage, limits. Frontend expects BillingMe shape.
  */
-router.get('/me', async (req: Request, res: Response) => {
+router.get("/me", async (req: Request, res: Response) => {
   try {
     const userId = (req.query.userId as string) || DEFAULT_USER;
-    const tierId = (process.env.TIER_DEFAULT as TierId) || 'free';
+    const tierId = (process.env.TIER_DEFAULT as TierId) || "free";
     const tier = TIERS[tierId] ?? TIERS.free;
     let usage = 0;
     try {
       usage = await getMonthlyCallCount(userId);
     } catch (e) {
-      logger.debug({ err: e }, 'Usage tracker not available for billing/me');
+      logger.debug({ err: e }, "Usage tracker not available for billing/me");
     }
     res.json({
       tier: tier.name,
@@ -39,13 +39,13 @@ router.get('/me', async (req: Request, res: Response) => {
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error) },
-      'Failed to get billing/me'
+      "Failed to get billing/me",
     );
     res.status(500).json({
       tier: null,
       usage: null,
       limit: null,
-      message: 'Failed to load billing',
+      message: "Failed to load billing",
     });
   }
 });
@@ -54,14 +54,14 @@ router.get('/me', async (req: Request, res: Response) => {
  * GET /api/billing/tiers
  * Available plans. Frontend expects { tiers: Tier[] }.
  */
-router.get('/tiers', (_req: Request, res: Response) => {
+router.get("/tiers", (_req: Request, res: Response) => {
   try {
     const tiers = Object.values(TIERS);
     res.json({ tiers });
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error) },
-      'Failed to get billing/tiers'
+      "Failed to get billing/tiers",
     );
     res.status(500).json({ tiers: [] });
   }
@@ -71,22 +71,24 @@ router.get('/tiers', (_req: Request, res: Response) => {
  * GET /api/billing/subscription
  * Current subscription (plan, status, renewal). Stub until Stripe wired.
  */
-router.get('/subscription', (_req: Request, res: Response) => {
+router.get("/subscription", (_req: Request, res: Response) => {
   try {
-    const tierId = (process.env.TIER_DEFAULT as TierId) || 'free';
+    const tierId = (process.env.TIER_DEFAULT as TierId) || "free";
     const tier = TIERS[tierId] ?? TIERS.free;
     res.json({
       plan: tier.id,
       planName: tier.name,
-      status: 'active',
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      status: "active",
+      currentPeriodEnd: new Date(
+        Date.now() + 30 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
     });
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error) },
-      'Failed to get billing/subscription'
+      "Failed to get billing/subscription",
     );
-    res.status(500).json({ error: 'Failed to load subscription' });
+    res.status(500).json({ error: "Failed to load subscription" });
   }
 });
 
@@ -94,13 +96,13 @@ router.get('/subscription', (_req: Request, res: Response) => {
  * GET /api/billing/payment-methods
  * Saved payment methods. Stub until Stripe wired.
  */
-router.get('/payment-methods', (_req: Request, res: Response) => {
+router.get("/payment-methods", (_req: Request, res: Response) => {
   try {
     res.json({ paymentMethods: [] });
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error) },
-      'Failed to get billing/payment-methods'
+      "Failed to get billing/payment-methods",
     );
     res.status(500).json({ paymentMethods: [] });
   }
@@ -110,16 +112,18 @@ router.get('/payment-methods', (_req: Request, res: Response) => {
  * POST /api/billing/payment-methods
  * Add or update payment method. Stub until Stripe wired.
  */
-router.post('/payment-methods', (req: Request, res: Response) => {
+router.post("/payment-methods", (req: Request, res: Response) => {
   try {
     // When Stripe is wired: create SetupIntent or attach payment method to customer
-    res.status(201).json({ success: true, message: 'Payment method support coming soon' });
+    res
+      .status(201)
+      .json({ success: true, message: "Payment method support coming soon" });
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error) },
-      'Failed to add billing/payment-method'
+      "Failed to add billing/payment-method",
     );
-    res.status(500).json({ error: 'Failed to add payment method' });
+    res.status(500).json({ error: "Failed to add payment method" });
   }
 });
 
@@ -127,13 +131,13 @@ router.post('/payment-methods', (req: Request, res: Response) => {
  * GET /api/billing/invoices
  * List invoices. Stub until Stripe wired.
  */
-router.get('/invoices', (_req: Request, res: Response) => {
+router.get("/invoices", (_req: Request, res: Response) => {
   try {
     res.json({ invoices: [] });
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error) },
-      'Failed to get billing/invoices'
+      "Failed to get billing/invoices",
     );
     res.status(500).json({ invoices: [] });
   }

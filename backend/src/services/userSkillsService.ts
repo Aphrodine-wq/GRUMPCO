@@ -3,28 +3,32 @@
  * CRUD for Free Agent self-created skills stored in backend/data/user-skills/
  */
 
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { skillRegistry } from '../skills/index.js';
-import { writeAuditLog } from './auditLogService.js';
-import { checkInput } from './guardrailsService.js';
-import type { SkillManifest } from '../skills/types.js';
-import logger from '../middleware/logger.js';
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+import { skillRegistry } from "../skills/index.js";
+import { writeAuditLog } from "./auditLogService.js";
+import { checkInput } from "./guardrailsService.js";
+import type { SkillManifest } from "../skills/types.js";
+import logger from "../middleware/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const USER_SKILLS_DIR = path.resolve(process.cwd(), 'data', 'user-skills');
+export const USER_SKILLS_DIR = path.resolve(
+  process.cwd(),
+  "data",
+  "user-skills",
+);
 
 /** Sanitize skill ID (alphanumeric, hyphens only) */
 function sanitizeSkillId(name: string): string {
   return (
     name
       .toLowerCase()
-      .replace(/[^a-z0-9-]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '') || 'skill'
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "skill"
   );
 }
 
@@ -33,17 +37,17 @@ function defaultManifest(
   id: string,
   name: string,
   description: string,
-  tools: Array<{ name: string; description: string }> = []
+  tools: Array<{ name: string; description: string }> = [],
 ): SkillManifest {
   return {
     id: `user-${id}`,
     name,
-    version: '1.0.0',
+    version: "1.0.0",
     description,
-    author: 'Free Agent',
-    category: 'custom',
-    icon: 'wrench',
-    tags: ['user-created', 'free-agent'],
+    author: "Free Agent",
+    category: "custom",
+    icon: "wrench",
+    tags: ["user-created", "free-agent"],
     capabilities: {
       providesTools: tools.length > 0,
       providesRoutes: false,
@@ -52,7 +56,7 @@ function defaultManifest(
       supportsStreaming: false,
       supportsBackground: false,
     },
-    permissions: ['file_read', 'file_write', 'bash_execute'],
+    permissions: ["file_read", "file_write", "bash_execute"],
     triggers: {
       keywords: [name.toLowerCase()],
       commands: [`/${id}`],
@@ -73,12 +77,12 @@ export async function createSkill(
   description: string,
   tools: Array<{ name: string; description: string }> = [],
   prompts: Record<string, string> = {},
-  userId: string = 'default'
+  userId: string = "default",
 ): Promise<{ success: boolean; skillId?: string; error?: string }> {
   const contentToCheck = `${name} ${description} ${JSON.stringify(tools)} ${JSON.stringify(prompts)}`;
   const guardResult = await checkInput(contentToCheck, userId);
   if (!guardResult.passed) {
-    return { success: false, error: 'Content blocked by guardrails' };
+    return { success: false, error: "Content blocked by guardrails" };
   }
 
   const id = sanitizeSkillId(name);
@@ -92,16 +96,19 @@ export async function createSkill(
       .then(() => true)
       .catch(() => false);
     if (existing) {
-      return { success: false, error: `Skill ${id} already exists. Use skill_edit to update.` };
+      return {
+        success: false,
+        error: `Skill ${id} already exists. Use skill_edit to update.`,
+      };
     }
 
     await fs.mkdir(skillPath, { recursive: true });
 
     const manifest = defaultManifest(id, name, description, tools);
     await fs.writeFile(
-      path.join(skillPath, 'manifest.json'),
+      path.join(skillPath, "manifest.json"),
       JSON.stringify(manifest, null, 2),
-      'utf-8'
+      "utf-8",
     );
 
     const indexContent = `/**
@@ -126,29 +133,29 @@ export default {
   },
 };
 `;
-    await fs.writeFile(path.join(skillPath, 'index.js'), indexContent, 'utf-8');
+    await fs.writeFile(path.join(skillPath, "index.js"), indexContent, "utf-8");
 
     if (Object.keys(prompts).length > 0) {
       await fs.writeFile(
-        path.join(skillPath, 'prompts.json'),
+        path.join(skillPath, "prompts.json"),
         JSON.stringify(prompts, null, 2),
-        'utf-8'
+        "utf-8",
       );
     }
 
     await skillRegistry.discoverSkills(USER_SKILLS_DIR);
     await writeAuditLog({
       userId,
-      action: 'skill_create',
-      category: 'skill',
+      action: "skill_create",
+      category: "skill",
       target: skillId,
       metadata: { name, path: skillPath },
     });
 
-    logger.info({ skillId, name, userId }, 'User skill created');
+    logger.info({ skillId, name, userId }, "User skill created");
     return { success: true, skillId };
   } catch (err) {
-    logger.error({ err, skillId, name }, 'Failed to create user skill');
+    logger.error({ err, skillId, name }, "Failed to create user skill");
     return {
       success: false,
       error: (err as Error).message,
@@ -167,52 +174,56 @@ export async function editSkill(
     tools: unknown[];
     prompts: Record<string, string>;
   }>,
-  userId: string = 'default'
+  userId: string = "default",
 ): Promise<{ success: boolean; error?: string }> {
   const contentToCheck = JSON.stringify(updates);
   const guardResult = await checkInput(contentToCheck, userId);
   if (!guardResult.passed) {
-    return { success: false, error: 'Content blocked by guardrails' };
+    return { success: false, error: "Content blocked by guardrails" };
   }
 
-  const id = skillId.startsWith('user-') ? skillId.slice(5) : skillId;
+  const id = skillId.startsWith("user-") ? skillId.slice(5) : skillId;
   const skillPath = path.join(USER_SKILLS_DIR, id);
 
   try {
-    const manifestPath = path.join(skillPath, 'manifest.json');
+    const manifestPath = path.join(skillPath, "manifest.json");
     await fs.access(manifestPath);
-    const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+    const manifestContent = await fs.readFile(manifestPath, "utf-8");
     const manifest = JSON.parse(manifestContent) as SkillManifest;
 
     if (updates.name) manifest.name = updates.name;
     if (updates.description) manifest.description = updates.description;
 
-    await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+    await fs.writeFile(
+      manifestPath,
+      JSON.stringify(manifest, null, 2),
+      "utf-8",
+    );
 
     if (updates.prompts) {
       await fs.writeFile(
-        path.join(skillPath, 'prompts.json'),
+        path.join(skillPath, "prompts.json"),
         JSON.stringify(updates.prompts, null, 2),
-        'utf-8'
+        "utf-8",
       );
     }
 
     await skillRegistry.discoverSkills(USER_SKILLS_DIR);
     await writeAuditLog({
       userId,
-      action: 'skill_edit',
-      category: 'skill',
+      action: "skill_edit",
+      category: "skill",
       target: skillId,
       metadata: { updates: Object.keys(updates) },
     });
 
-    logger.info({ skillId, userId }, 'User skill edited');
+    logger.info({ skillId, userId }, "User skill edited");
     return { success: true };
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return { success: false, error: `Skill ${skillId} not found` };
     }
-    logger.error({ err, skillId }, 'Failed to edit user skill');
+    logger.error({ err, skillId }, "Failed to edit user skill");
     return { success: false, error: (err as Error).message };
   }
 }
@@ -224,16 +235,25 @@ export async function runSkillTest(
   skillId: string,
   input: Record<string, unknown>,
   workspaceRoot?: string,
-  _userId: string = 'default'
-): Promise<{ success: boolean; output?: string; error?: string; duration?: number }> {
+  _userId: string = "default",
+): Promise<{
+  success: boolean;
+  output?: string;
+  error?: string;
+  duration?: number;
+}> {
   const skill = skillRegistry.getSkill(skillId);
   if (!skill) {
     return { success: false, error: `Skill ${skillId} not found` };
   }
 
   try {
-    const { createSkillContext } = await import('../skills/base/SkillContext.js');
-    const context = createSkillContext({ workspacePath: workspaceRoot, source: 'skill_test' });
+    const { createSkillContext } =
+      await import("../skills/base/SkillContext.js");
+    const context = createSkillContext({
+      workspacePath: workspaceRoot,
+      source: "skill_test",
+    });
     const start = Date.now();
     const execInput = {
       message: JSON.stringify(input),
@@ -241,7 +261,13 @@ export async function runSkillTest(
     };
     const result = skill.run
       ? await skill.run(execInput, context)
-      : { success: false, output: '', events: [], duration: 0, error: new Error('No run method') };
+      : {
+          success: false,
+          output: "",
+          events: [],
+          duration: 0,
+          error: new Error("No run method"),
+        };
     const duration = Date.now() - start;
     return {
       success: result.success,
@@ -250,7 +276,7 @@ export async function runSkillTest(
       duration,
     };
   } catch (err) {
-    logger.error({ err, skillId }, 'Skill test failed');
+    logger.error({ err, skillId }, "Skill test failed");
     return {
       success: false,
       error: (err as Error).message,
@@ -262,7 +288,13 @@ export async function runSkillTest(
  * List all skills (built-in + user)
  */
 export async function listSkills(): Promise<
-  Array<{ id: string; name: string; version: string; description?: string; isUser?: boolean }>
+  Array<{
+    id: string;
+    name: string;
+    version: string;
+    description?: string;
+    isUser?: boolean;
+  }>
 > {
   const skills = skillRegistry.getAllSkills();
   return skills.map((s) => ({
@@ -270,6 +302,6 @@ export async function listSkills(): Promise<
     name: s.manifest.name,
     version: s.manifest.version,
     description: s.manifest.description,
-    isUser: s.manifest.id.startsWith('user-'),
+    isUser: s.manifest.id.startsWith("user-"),
   }));
 }
