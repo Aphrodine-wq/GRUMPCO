@@ -113,6 +113,7 @@ const ROUTE_DEFINITIONS: RouteEntry[] = [
   { path: '/api/integrations', module: '../features/integrations/routes.js', priority: 'cold' },
   { path: '/api/integrations/gmail', module: './gmailWebhook.js', priority: 'cold' },
   { path: '/api/integrations-v2', module: './integrations-v2.js', priority: 'cold' },
+  { path: '/api/integrations-v2/oauth', module: './integrationsOAuth.js', priority: 'cold' },
   { path: '/api/slack', module: './slack.js', priority: 'cold' },
   { path: '/api/webhooks', module: './webhooks.js', priority: 'cold' },
 
