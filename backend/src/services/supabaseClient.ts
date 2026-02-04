@@ -8,7 +8,9 @@ import {
 import logger from "../middleware/logger.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+// Accept either name: app uses SUPABASE_SERVICE_KEY; Render/Supabase docs often use SUPABASE_SERVICE_ROLE_KEY
+const SUPABASE_SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 const isProduction = process.env.NODE_ENV === "production";
 
 // Production: require real Supabase; fail startup if not configured.
@@ -19,7 +21,7 @@ if (isProduction) {
     SUPABASE_URL === "https://your-project.supabase.co"
   ) {
     throw new Error(
-      "SUPABASE_URL and SUPABASE_SERVICE_KEY are required in production. Set them in your environment.",
+      "SUPABASE_URL and SUPABASE_SERVICE_KEY (or SUPABASE_SERVICE_ROLE_KEY) are required in production. Set them in your environment.",
     );
   }
 }
@@ -45,7 +47,8 @@ if (MOCK_MODE) {
 const supabaseClient: SupabaseClient | null = (() => {
   if (MOCK_MODE) return null;
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
+  const key =
+    process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key)
     throw new Error("SUPABASE_URL and SUPABASE_SERVICE_KEY are required");
   return createClient(url, key, {

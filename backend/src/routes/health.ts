@@ -22,9 +22,11 @@ router.get("/", (_req: Request, res: Response) => {
 router.get("/quick", (_req: Request, res: Response) => {
   const apiKeyConfigured = !!process.env.NVIDIA_NIM_API_KEY;
 
+  const supabaseServiceKey =
+    process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
   const authEnabled =
     !!process.env.SUPABASE_URL &&
-    !!process.env.SUPABASE_SERVICE_KEY &&
+    !!supabaseServiceKey &&
     process.env.SUPABASE_URL !== "https://your-project.supabase.co";
 
   // Determine overall status

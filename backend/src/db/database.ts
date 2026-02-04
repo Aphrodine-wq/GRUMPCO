@@ -1953,9 +1953,11 @@ function shouldUseSupabase(): boolean {
 
   // Auto-detect: use Supabase in production if configured
   const isProduction = process.env.NODE_ENV === "production";
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
   const hasSupabaseConfig =
     process.env.SUPABASE_URL &&
-    process.env.SUPABASE_SERVICE_KEY &&
+    serviceKey &&
     process.env.SUPABASE_URL !== "https://your-project.supabase.co";
 
   return Boolean(isProduction && hasSupabaseConfig);
@@ -1968,10 +1970,12 @@ export function getDatabase(): DatabaseInterface {
   if (shouldUseSupabase()) {
     if (!supabaseDbInstance) {
       const url = process.env.SUPABASE_URL;
-      const key = process.env.SUPABASE_SERVICE_KEY;
+      const key =
+        process.env.SUPABASE_SERVICE_KEY ??
+        process.env.SUPABASE_SERVICE_ROLE_KEY;
       if (!url || !key)
         throw new Error(
-          "SUPABASE_URL and SUPABASE_SERVICE_KEY are required when using Supabase",
+          "SUPABASE_URL and SUPABASE_SERVICE_KEY (or SUPABASE_SERVICE_ROLE_KEY) are required when using Supabase",
         );
       supabaseDbInstance = new SupabaseDatabaseService(url, key);
     }
