@@ -35,11 +35,38 @@ import type {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseRow = Record<string, any>;
 
+/** Project API URL must be https://<project-ref>.supabase.co (no /dashboard or app.supabase.com) */
+const SUPABASE_PROJECT_URL_REGEX = /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i;
+
+function isHtmlResponse(message: string): boolean {
+  return (
+    typeof message === "string" &&
+    (message.trimStart().startsWith("<!DOCTYPE") ||
+      message.includes('"page":"/404"') ||
+      (message.includes("<title") && message.includes("Supabase")))
+  );
+}
+
+function isProjectApiUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return (
+      SUPABASE_PROJECT_URL_REGEX.test(url) &&
+      !u.hostname.includes("app.") &&
+      (u.pathname === "" || u.pathname === "/")
+    );
+  } catch {
+    return false;
+  }
+}
+
 export class SupabaseDatabaseService {
   private client: SupabaseClient;
   private initialized = false;
+  private supabaseUrl: string;
 
   constructor(supabaseUrl: string, supabaseKey: string) {
+    this.supabaseUrl = supabaseUrl;
     this.client = createClient(supabaseUrl, supabaseKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
@@ -47,6 +74,17 @@ export class SupabaseDatabaseService {
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
+
+    if (!isProjectApiUrl(this.supabaseUrl)) {
+      const hint =
+        this.supabaseUrl.includes("dashboard") ||
+        this.supabaseUrl.includes("app.supabase.com")
+          ? " Use your project API URL (e.g. https://YOUR_PROJECT_REF.supabase.co), not the Supabase dashboard URL."
+          : " SUPABASE_URL must be your project API URL: https://YOUR_PROJECT_REF.supabase.co (find it in Supabase Dashboard → Project Settings → API).";
+      throw new Error(
+        `Invalid SUPABASE_URL: expected project API URL.${hint}`,
+      );
+    }
 
     // Test connection by checking if we can query
     const { error } = await this.client.from("sessions").select("id").limit(1);
@@ -58,8 +96,16 @@ export class SupabaseDatabaseService {
       );
       logger.warn("See DEPLOY_VERCEL.md for setup instructions.");
     } else if (error) {
-      logger.error({ error: error.message }, "Supabase connection test failed");
-      throw new Error(`Supabase connection failed: ${error.message}`);
+      const msg = error.message ?? String(error);
+      if (isHtmlResponse(msg)) {
+        throw new Error(
+          "Supabase connection failed: the server returned a web page instead of the API. " +
+            "Set SUPABASE_URL to your project API URL (e.g. https://YOUR_PROJECT_REF.supabase.co), " +
+            "not the Supabase dashboard or app URL. Find it in Supabase Dashboard → Project Settings → API.",
+        );
+      }
+      logger.error({ error: msg }, "Supabase connection test failed");
+      throw new Error(`Supabase connection failed: ${msg}`);
     }
 
     this.initialized = true;

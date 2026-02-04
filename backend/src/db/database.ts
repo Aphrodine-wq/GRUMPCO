@@ -1964,6 +1964,14 @@ function shouldUseSupabase(): boolean {
 }
 
 /**
+ * Whether the current database backend supports raw DB access (getDb()).
+ * Supabase does not; SQLite/Postgres do.
+ */
+export function databaseSupportsRawDb(): boolean {
+  return !shouldUseSupabase();
+}
+
+/**
  * Get or create database service instance
  */
 export function getDatabase(): DatabaseInterface {

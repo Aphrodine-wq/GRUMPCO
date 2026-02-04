@@ -241,6 +241,32 @@ describe('SupabaseDatabaseService', () => {
 
       await expect(service.initialize()).rejects.toThrow('Supabase connection failed');
     });
+
+    it('should throw when SUPABASE_URL is dashboard URL (not project API URL)', async () => {
+      const dashboardService = new SupabaseDatabaseService(
+        'https://supabase.com/dashboard/project/abc123',
+        'test-key'
+      );
+      await expect(dashboardService.initialize()).rejects.toThrow('Invalid SUPABASE_URL');
+      await expect(dashboardService.initialize()).rejects.toThrow('project API URL');
+    });
+
+    it('should throw clear error when server returns HTML (wrong URL)', async () => {
+      const htmlErrorService = new SupabaseDatabaseService('https://test.supabase.co', 'test-key');
+      mockQueryBuilder = createMockQueryBuilder({
+        data: null,
+        error: {
+          code: 'PGRST301',
+          message: '<!DOCTYPE html><html><title>Supabase</title><body>404</body></html>',
+        },
+      });
+      mockSupabaseClient.from = vi.fn().mockReturnValue(mockQueryBuilder);
+
+      await expect(htmlErrorService.initialize()).rejects.toThrow(
+        'the server returned a web page instead of the API'
+      );
+      await expect(htmlErrorService.initialize()).rejects.toThrow('Project Settings → API');
+    });
   });
 
   describe('close', () => {
