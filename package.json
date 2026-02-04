@@ -81,5 +81,5 @@
       "xxhash-addon"
     ]
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@8.15.4"
 }
