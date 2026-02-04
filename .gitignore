@@ -32,6 +32,10 @@ aux
 *.swp
 *.swo
 
+# Installer staging and output
+installer/stage/
+installer/Output/
+
 # Optional: uncomment if you don't want to track these
 # data/
 # backend/data/

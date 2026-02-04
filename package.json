@@ -39,7 +39,9 @@
     "sbom": "node scripts/generate-sbom.js",
     "benchmark": "tsx scripts/benchmark.ts",
     "data:synth": "cd services/nemo-curator && python generate_synthetic.py",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "installer:stage": "node scripts/build-installer-stage.js",
+    "installer:build": "node scripts/build-installer-stage.js && iscc installer/Setup.iss"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.0.0",
