@@ -30,10 +30,17 @@ function getAllowedOrigins(): string[] {
   }
 
   if (isProduction) {
+    // Production defaults - set CORS_ORIGINS env var for custom domains
     return [
       "tauri://localhost",
       "http://tauri.localhost",
+      "https://tauri.localhost",
       "http://127.0.0.1:3000",
+      // Common deployment platforms - add your domain via CORS_ORIGINS env var
+      "https://g-rump.com",
+      "https://www.g-rump.com",
+      "https://grump.onrender.com",
+      "https://grump-frontend.onrender.com",
     ];
   }
 
@@ -132,13 +139,10 @@ export function createCorsMiddleware() {
 
   return cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl) only in development
+      // Allow requests with no origin (health checks, server-to-server, mobile apps, curl)
+      // This is safe because CORS only protects browser-based requests
       if (!origin) {
-        if (!isProduction) {
-          callback(null, true);
-          return;
-        }
-        callback(new Error("Not allowed by CORS"));
+        callback(null, true);
         return;
       }
 
@@ -156,7 +160,7 @@ export function createCorsMiddleware() {
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        logger.warn({ origin }, "Blocked by CORS");
+        logger.warn({ origin, allowedOrigins }, "Blocked by CORS");
         callback(new Error("Not allowed by CORS"));
       }
     },
