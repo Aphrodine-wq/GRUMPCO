@@ -95,14 +95,14 @@ export type StreamEvent =
   | { type: "content_block_delta"; delta: { type: "text_delta"; text: string } }
   /** Tool invocation start */
   | {
-      type: "content_block_start";
-      content_block: {
-        type: "tool_use";
-        id: string;
-        name: string;
-        input: Record<string, unknown>;
-      };
-    }
+    type: "content_block_start";
+    content_block: {
+      type: "tool_use";
+      id: string;
+      name: string;
+      input: Record<string, unknown>;
+    };
+  }
   /** End of message stream */
   | { type: "message_stop" }
   /** Stream error */
@@ -349,10 +349,10 @@ async function* streamOpenAICompatible(
           typeof m.content === "string"
             ? m.content
             : (m.content as MultimodalContentPart[]).map((p) =>
-                p.type === "text"
-                  ? { type: "text" as const, text: p.text ?? "" }
-                  : { type: "image_url" as const, image_url: p.image_url },
-              ),
+              p.type === "text"
+                ? { type: "text" as const, text: p.text ?? "" }
+                : { type: "image_url" as const, image_url: p.image_url },
+            ),
       })),
     ],
   };
@@ -380,6 +380,8 @@ async function* streamOpenAICompatible(
     message_count: (body.messages as unknown[])?.length ?? 0,
     has_tools: Boolean(body.tools),
   });
+
+  let chunkCount = 0;
 
   try {
     const headers: Record<string, string> = {
@@ -411,7 +413,7 @@ async function* streamOpenAICompatible(
 
     const dec = new TextDecoder();
     let buf = "";
-    let chunkCount = 0;
+    // chunkCount initiated above
 
     // Track tool calls
     const toolCalls: Map<number, { id: string; name: string; args: string }> =

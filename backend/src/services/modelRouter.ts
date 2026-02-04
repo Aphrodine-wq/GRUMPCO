@@ -149,6 +149,7 @@ const DEFAULT_MODELS: Record<RequestType, Record<LLMProvider, string>> = {
     kimi: "moonshot-v1-8k",
     anthropic: "claude-3-haiku-20240307",
     mistral: "mistral-small-latest",
+    groq: "llama-3.1-70b-versatile",
     mock: "mock-model",
   },
   complex: {
@@ -159,6 +160,7 @@ const DEFAULT_MODELS: Record<RequestType, Record<LLMProvider, string>> = {
     kimi: "moonshot-v1-32k",
     anthropic: "claude-3-5-sonnet-20241022",
     mistral: "mistral-large-latest",
+    groq: "llama-3.1-70b-versatile",
     mock: "mock-model",
   },
   coding: {
@@ -169,6 +171,7 @@ const DEFAULT_MODELS: Record<RequestType, Record<LLMProvider, string>> = {
     kimi: "moonshot-v1-32k",
     anthropic: "claude-3-5-sonnet-20241022",
     mistral: "codestral-latest",
+    groq: "llama-3.1-70b-versatile",
     mock: "mock-model",
   },
   vision: {
@@ -179,6 +182,7 @@ const DEFAULT_MODELS: Record<RequestType, Record<LLMProvider, string>> = {
     kimi: "moonshot-v1-32k",
     anthropic: "claude-3-5-sonnet-20241022",
     mistral: "mistral-large-latest",
+    groq: "llama-3.2-90b-vision-preview",
     mock: "mock-model",
   },
   creative: {
@@ -189,6 +193,7 @@ const DEFAULT_MODELS: Record<RequestType, Record<LLMProvider, string>> = {
     kimi: "moonshot-v1-128k",
     anthropic: "claude-3-opus-20240229",
     mistral: "mistral-large-latest",
+    groq: "llama-3.1-70b-versatile",
     mock: "mock-model",
   },
   "long-context": {
@@ -199,6 +204,7 @@ const DEFAULT_MODELS: Record<RequestType, Record<LLMProvider, string>> = {
     kimi: "moonshot-v1-128k",
     anthropic: "claude-3-5-sonnet-20241022",
     mistral: "mistral-large-latest",
+    groq: "llama-3.1-70b-versatile",
     mock: "mock-model",
   },
   default: {
@@ -209,6 +215,7 @@ const DEFAULT_MODELS: Record<RequestType, Record<LLMProvider, string>> = {
     kimi: "moonshot-v1-32k",
     anthropic: "claude-3-5-sonnet-20241022",
     mistral: "mistral-large-latest",
+    groq: "llama-3.1-70b-versatile",
     mock: "mock-model",
   },
 };
@@ -523,4 +530,62 @@ export function getRecommendedProvider(
     default:
       return "nim";
   }
+}
+
+// =============================================================================
+// Backward Compatibility / Legacy
+// =============================================================================
+
+/**
+ * Route request using legacy parameters (used by chat.ts).
+ */
+export function route(params: {
+  messageChars: number;
+  messageCount: number;
+  mode: string;
+  toolsRequested: boolean;
+  multimodal?: boolean;
+  preferNim?: boolean;
+  maxLatencyMs?: number;
+  sessionType?: string;
+  modelPreference?: { source?: "cloud" | "auto"; provider?: string; modelId?: string };
+}): { provider: string; modelId: string; reason?: string } {
+  // Map legacy params to new RouterOptions
+  const options: RouterOptions = {
+    preferSpeed: params.mode === 'simple', // rough mapping
+    requiresTools: params.toolsRequested,
+    requiresVision: params.multimodal || false,
+    userPreference: params.modelPreference?.provider as LLMProvider | undefined,
+    model: params.modelPreference?.modelId,
+  };
+
+  if (params.preferNim) {
+    options.provider = 'nim';
+  }
+
+  // Determine request type based on mode/params if possible
+  let requestType: RequestType = 'default';
+  if (params.multimodal) requestType = 'vision';
+  else if (params.mode === 'coding') requestType = 'coding';
+  else if (params.messageChars > 10000) requestType = 'long-context';
+  else if (params.mode === 'complex') requestType = 'complex';
+  else if (params.mode === 'simple') requestType = 'simple';
+
+  const decision = selectProvider(requestType, options);
+
+  return {
+    provider: decision.provider,
+    modelId: decision.model,
+    reason: decision.reason
+  };
+}
+
+/**
+ * Get the best RAG model (used by ragService.ts).
+ */
+export function getRAGModel(): { provider: LLMProvider; modelId: string } {
+  // Favor long-context providers for RAG
+  const provider = getRecommendedProvider("long-context");
+  const model = DEFAULT_MODELS["long-context"][provider];
+  return { provider, modelId: model };
 }
