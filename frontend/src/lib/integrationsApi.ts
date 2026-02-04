@@ -251,6 +251,36 @@ export async function rejectRequest(id: string, reason?: string): Promise<Approv
 }
 
 // ============================================================================
+// Figma API (Design-to-Code / Architecture mode)
+// ============================================================================
+
+export interface FigmaFile {
+  key: string;
+  name: string;
+  thumbnail_url?: string;
+  last_modified?: string;
+}
+
+export async function getFigmaAuthUrl(): Promise<{ url: string }> {
+  const res = await fetchApi('/api/figma/auth-url');
+  if (!res.ok) throw new Error('Failed to get Figma auth URL');
+  return res.json();
+}
+
+export async function getFigmaMe(): Promise<{ connected: boolean }> {
+  const res = await fetchApi('/api/figma/me');
+  if (!res.ok) throw new Error('Failed to get Figma connection status');
+  return res.json();
+}
+
+export async function getFigmaFiles(): Promise<FigmaFile[]> {
+  const res = await fetchApi('/api/figma/files');
+  if (!res.ok) throw new Error('Failed to list Figma files');
+  const data = await res.json();
+  return data.files ?? [];
+}
+
+// ============================================================================
 // Heartbeats API
 // ============================================================================
 
