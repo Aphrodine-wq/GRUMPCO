@@ -28,6 +28,13 @@
   let newType = $state<MemoryType>('fact');
   let newContent = $state('');
   let newImportance = $state(0.5);
+  let newTags = $state<string[]>([]);
+  let contentTouched = $state(false);
+  let contentError = $state('');
+  let customTagInput = $state('');
+
+  const PREDEFINED_TAGS = ['work', 'personal', 'project-x'];
+  const MAX_CONTENT_LENGTH = 10000;
 
   const memoryTypes: { value: MemoryType; label: string; icon: string; color: string }[] = [
     {
@@ -94,10 +101,26 @@
     }
   }
 
+  function validateContent(): string {
+    const t = newContent.trim();
+    if (!t) return 'Content is required';
+    if (t.length > MAX_CONTENT_LENGTH) return `Content must be at most ${MAX_CONTENT_LENGTH.toLocaleString()} characters`;
+    return '';
+  }
+
+  function onContentBlur() {
+    contentTouched = true;
+    contentError = validateContent();
+  }
+
   function openAddModal() {
     newType = 'fact';
     newContent = '';
     newImportance = 0.5;
+    newTags = [];
+    contentTouched = false;
+    contentError = '';
+    customTagInput = '';
     showAddModal = true;
   }
 
@@ -105,11 +128,23 @@
     showAddModal = false;
   }
 
+  function addTag(tag: string) {
+    const t = tag.trim().toLowerCase();
+    if (t && !newTags.includes(t)) newTags = [...newTags, t];
+  }
+
+  function removeTag(tag: string) {
+    newTags = newTags.filter((t) => t !== tag);
+  }
+
   async function handleCreate() {
-    if (!newContent.trim()) return;
+    contentTouched = true;
+    const err = validateContent();
+    contentError = err;
+    if (err || !newContent.trim()) return;
     processing = true;
     try {
-      await createMemory(newType, newContent.trim(), newImportance);
+      await createMemory(newType, newContent.trim(), newImportance, undefined, newTags.length ? newTags : undefined);
       showToast('Memory saved', 'success');
       closeAddModal();
       await loadMemories();
@@ -169,7 +204,7 @@
       Back
     </button>
     <div class="header-content">
-      <h1>Memory Bank</h1>
+      <h1>Memory</h1>
       <p class="subtitle">Long-term knowledge that persists across conversations</p>
     </div>
     <button class="primary-btn" onclick={openAddModal}>
@@ -338,57 +373,115 @@
     >
       <h2>Add Memory</h2>
 
-      <div class="form-group" role="group" aria-labelledby="memory-type-label">
-        <span id="memory-type-label" class="form-label">Memory Type</span>
-        <div class="type-selector">
-          {#each memoryTypes as type}
-            <button
-              class="type-option"
-              class:selected={newType === type.value}
-              style="--color: {type.color}"
-              onclick={() => (newType = type.value)}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
+      <div class="modal-form">
+        <!-- Section: Type -->
+        <section class="form-section" role="group" aria-labelledby="memory-type-label">
+          <span id="memory-type-label" class="form-section-label">Type</span>
+          <div class="type-selector">
+            {#each memoryTypes as type}
+              <button
+                class="type-option"
+                class:selected={newType === type.value}
+                style="--color: {type.color}"
+                onclick={() => (newType = type.value)}
               >
-                <path d={type.icon} />
-              </svg>
-              {type.label}
-            </button>
-          {/each}
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d={type.icon} />
+                </svg>
+                {type.label}
+              </button>
+            {/each}
+          </div>
+        </section>
+
+        <!-- Section: Content -->
+        <section class="form-section" role="group" aria-labelledby="content-label">
+          <label id="content-label" class="form-section-label" for="content">Content</label>
+          <textarea
+            id="content"
+            bind:value={newContent}
+            onblur={onContentBlur}
+            rows="4"
+            placeholder="What should the AI remember?"
+            class:has-error={contentTouched && contentError}
+            aria-invalid={contentTouched && !!contentError}
+            aria-describedby={contentTouched && contentError ? 'content-error' : undefined}
+          ></textarea>
+          {#if contentTouched && contentError}
+            <p id="content-error" class="field-error" role="alert">{contentError}</p>
+          {/if}
+          <p class="hint">Required. Max {MAX_CONTENT_LENGTH.toLocaleString()} characters.</p>
+        </section>
+
+        <!-- Section: Importance -->
+        <section class="form-section" role="group" aria-labelledby="importance-label">
+          <label id="importance-label" class="form-section-label" for="importance">Importance: {Math.round(newImportance * 100)}%</label>
+          <input type="range" id="importance" bind:value={newImportance} min="0" max="1" step="0.1" />
+          <p class="hint">Higher importance = more likely to be recalled</p>
+        </section>
+
+        <!-- Section: Tags -->
+        <section class="form-section" role="group" aria-labelledby="tags-label">
+          <span id="tags-label" class="form-section-label">Tags</span>
+          <div class="tags-row">
+            <select
+              class="tags-select"
+              onchange={(e) => {
+                const el = e.currentTarget as HTMLSelectElement;
+                const v = el.value;
+                el.value = '';
+                if (v && v !== '__custom__') addTag(v);
+                else if (v === '__custom__') document.getElementById('custom-tag-input')?.focus();
+              }}
+              aria-label="Add predefined tag"
+            >
+              <option value="">Add tag…</option>
+              {#each PREDEFINED_TAGS as tag}
+                <option value={tag} disabled={newTags.includes(tag)}>{tag}</option>
+              {/each}
+              <option value="__custom__">Custom…</option>
+            </select>
+            <div class="custom-tag-row">
+              <input
+                id="custom-tag-input"
+                type="text"
+                class="custom-tag-input"
+                placeholder="Custom tag"
+                bind:value={customTagInput}
+                onkeydown={(e) => e.key === 'Enter' && (addTag(customTagInput), (customTagInput = ''))}
+              />
+              <button type="button" class="tag-add-btn" onclick={() => (addTag(customTagInput), (customTagInput = ''))}>Add</button>
+            </div>
+          </div>
+          {#if newTags.length > 0}
+            <div class="tag-pills">
+              {#each newTags as tag}
+                <span class="tag-pill">
+                  {tag}
+                  <button type="button" class="tag-remove" onclick={() => removeTag(tag)} aria-label="Remove {tag}">×</button>
+                </span>
+              {/each}
+            </div>
+          {/if}
+        </section>
+
+        <div class="modal-actions">
+          <button class="cancel-btn" onclick={closeAddModal}>Cancel</button>
+          <button
+            class="submit-btn"
+            onclick={handleCreate}
+            disabled={processing || !newContent.trim() || !!validateContent()}
+          >
+            {processing ? 'Saving...' : 'Save Memory'}
+          </button>
         </div>
-      </div>
-
-      <div class="form-group">
-        <label for="content">Content</label>
-        <textarea
-          id="content"
-          bind:value={newContent}
-          rows="4"
-          placeholder="What should the AI remember?"
-        ></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="importance">Importance: {Math.round(newImportance * 100)}%</label>
-        <input type="range" id="importance" bind:value={newImportance} min="0" max="1" step="0.1" />
-        <p class="hint">Higher importance = more likely to be recalled</p>
-      </div>
-
-      <div class="modal-actions">
-        <button class="cancel-btn" onclick={closeAddModal}>Cancel</button>
-        <button
-          class="submit-btn"
-          onclick={handleCreate}
-          disabled={!newContent.trim() || processing}
-        >
-          {processing ? 'Saving...' : 'Save Memory'}
-        </button>
       </div>
     </div>
   </div>
@@ -671,30 +764,38 @@
   .modal {
     background: white;
     border-radius: 16px;
-    padding: 1.5rem;
+    padding: 1.75rem;
     width: 100%;
-    max-width: 480px;
+    max-width: 560px;
     max-height: 90vh;
     overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   }
 
   .modal h2 {
-    margin: 0 0 1.25rem;
-    font-size: 1.25rem;
+    margin: 0 0 1.5rem;
+    font-size: 1.375rem;
+    font-weight: 600;
     color: #111827;
   }
 
-  .form-group {
-    margin-bottom: 1.25rem;
+  .modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
   }
 
-  .form-group label,
-  .form-label {
+  .form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .form-section-label {
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
     color: #374151;
-    margin-bottom: 0.5rem;
   }
 
   .type-selector {
@@ -722,13 +823,18 @@
     background: #f3f4f6;
   }
 
+  .type-option:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+  }
+
   .type-option.selected {
     background: var(--color);
     border-color: var(--color);
     color: white;
   }
 
-  .form-group textarea {
+  .form-section textarea {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid #e5e7eb;
@@ -736,27 +842,134 @@
     font-size: 0.875rem;
     font-family: inherit;
     resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
 
-  .form-group textarea:focus {
+  .form-section textarea:focus {
     outline: none;
     border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
   }
 
-  .form-group input[type='range'] {
+  .form-section textarea.has-error {
+    border-color: #dc2626;
+  }
+
+  .form-section textarea.has-error:focus {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+  }
+
+  .field-error {
+    font-size: 0.8125rem;
+    color: #dc2626;
+    margin: 0.25rem 0 0;
+  }
+
+  .form-section input[type='range'] {
     width: 100%;
   }
 
   .hint {
     font-size: 0.75rem;
     color: #9ca3af;
-    margin: 0.5rem 0 0;
+    margin: 0.25rem 0 0;
+  }
+
+  .tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .tags-select {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    color: #374151;
+    cursor: pointer;
+  }
+
+  .tags-select:focus {
+    outline: none;
+    border-color: #6366f1;
+  }
+
+  .custom-tag-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .custom-tag-input {
+    width: 120px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+  }
+
+  .custom-tag-input:focus {
+    outline: none;
+    border-color: #6366f1;
+  }
+
+  .tag-add-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #374151;
+    cursor: pointer;
+  }
+
+  .tag-add-btn:hover {
+    background: #f3f4f6;
+  }
+
+  .tag-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.25rem;
+  }
+
+  .tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    background: #e0e7ff;
+    color: #4338ca;
+    border-radius: 6px;
+  }
+
+  .tag-remove {
+    padding: 0 0.125rem;
+    background: none;
+    border: none;
+    color: #6366f1;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .tag-remove:hover {
+    color: #dc2626;
   }
 
   .modal-actions {
     display: flex;
     gap: 0.75rem;
     justify-content: flex-end;
+    margin-top: 0.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
   }
 
   .cancel-btn,
@@ -768,6 +981,12 @@
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
+  }
+
+  .cancel-btn:focus-visible,
+  .submit-btn:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
   }
 
   .cancel-btn {

@@ -40,11 +40,16 @@ router.post(
     try {
       const desc = (req.body.projectDescription as string).trim();
       const authReq = req as AuthenticatedRequest;
+      const body = req.body as Record<string, unknown>;
       const request: ShipStartRequest = {
         projectDescription: desc,
-        preferences: req.body.preferences,
+        preferences: body.preferences as ShipStartRequest['preferences'],
         userId: authReq.user?.id,
-        projectId: req.body.projectId,
+        projectId: body.projectId as string | undefined,
+        projectName: body.projectName as string | undefined,
+        repoOrg: body.repoOrg as string | undefined,
+        deploymentTarget: body.deploymentTarget as string | undefined,
+        phases: body.phases as ShipStartRequest['phases'],
       };
       const session = await startShipMode(request);
       registerSession(session.id, "ship");

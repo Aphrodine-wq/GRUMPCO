@@ -22,7 +22,6 @@
     Plug,
     Server,
     LogOut,
-    CheckSquare,
     BookOpen,
     Brain,
   } from 'lucide-svelte';
@@ -51,7 +50,7 @@
   interface NavItem {
     id: ViewType;
     label: string;
-    icon: 'chat' | 'architecture' | 'integrations' | 'approvals' | 'skills' | 'memory' | 'mcp' | 'settings';
+    icon: 'chat' | 'architecture' | 'integrations' | 'skills' | 'memory' | 'mcp' | 'settings';
     badge?: string;
   }
 
@@ -59,7 +58,6 @@
     { id: 'chat', label: 'Chat', icon: 'chat' },
     { id: 'designToCode', label: 'Architecture', icon: 'architecture' },
     { id: 'integrations', label: 'Integrations', icon: 'integrations' },
-    { id: 'approvals', label: 'Approvals', icon: 'approvals' },
     { id: 'skills', label: 'Skills', icon: 'skills' },
     { id: 'memory', label: 'Memory', icon: 'memory' },
     { id: 'mcp', label: 'MCP', icon: 'mcp' },
@@ -249,8 +247,6 @@
           <Layout size={18} />
         {:else if item.icon === 'integrations'}
           <Plug size={18} />
-        {:else if item.icon === 'approvals'}
-          <CheckSquare size={18} />
         {:else if item.icon === 'skills'}
           <BookOpen size={18} />
         {:else if item.icon === 'memory'}
@@ -601,7 +597,7 @@
   .unified-sidebar {
     display: flex;
     flex-direction: column;
-    width: 260px;
+    width: 230px;
     height: calc(100vh - 40px); /* Account for title bar */
     margin: 8px;
     background: var(--glass-bg, rgba(255, 255, 255, 0.95));

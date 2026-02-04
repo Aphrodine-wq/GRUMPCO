@@ -54,6 +54,8 @@ contextBridge.exposeInMainWorld('grump', {
   openPath: (pathToOpen) => ipcRenderer.invoke('shell:open-path', pathToOpen),
   // Reveal file/folder in system file manager
   showItemInFolder: (pathToOpen) => ipcRenderer.invoke('shell:show-item-in-folder', pathToOpen),
+  // Folder picker for Settings > Security (returns Promise<{ path?: string; canceled?: boolean }>)
+  selectDirectory: () => ipcRenderer.invoke('dialog:select-directory'),
 
   // Frameless window controls for custom title bar
   window: {

@@ -242,8 +242,8 @@
     top: calc(100% + 4px);
     left: 0;
     right: 0;
-    min-width: 280px;
-    max-height: 360px;
+    min-width: 320px;
+    max-height: 400px;
     overflow-y: auto;
     background: var(--color-bg-card, #fff);
     border: 1px solid var(--color-border, #e5e7eb);
@@ -251,6 +251,10 @@
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
     z-index: 1000;
     padding: 0.5rem 0;
+  }
+
+  .model-group .model-option {
+    padding-left: 1rem;
   }
 
   .model-option {
@@ -321,19 +325,24 @@
   .model-group-header {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.5rem 0.75rem 0.25rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    color: var(--color-text-muted, #6b7280);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem 0.35rem;
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-text, #111827);
+    letter-spacing: 0.02em;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .model-group-header:first-child {
+    margin-top: 0;
   }
 
   .model-group-icon {
-    width: 14px;
-    height: 14px;
-    border-radius: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
   }
 
   .model-picker-divider {

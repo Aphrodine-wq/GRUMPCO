@@ -4,6 +4,8 @@
 
   interface Props {
     children: Snippet;
+    /** Optional full-bleed background (renders behind content, covers whole slide) */
+    background?: Snippet;
     className?: string;
     title?: string;
     subtitle?: string;
@@ -13,6 +15,7 @@
 
   let {
     children,
+    background,
     className = '',
     title = '',
     subtitle = '',
@@ -31,6 +34,14 @@
 </script>
 
 <div class="slide-container {className}">
+  {#if background}
+    <div class="slide-background">{@render background()}</div>
+  {:else}
+    <div class="slide-background slide-background-default" aria-hidden="true">
+      <div class="slide-bg-gradient"></div>
+      <div class="slide-bg-dots"></div>
+    </div>
+  {/if}
   <div class="content" class:mounted>
     {#if title || subtitle || Icon}
       <div class="slide-header">
@@ -57,6 +68,38 @@
 </div>
 
 <style>
+  .slide-background {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .slide-background-default .slide-bg-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      165deg,
+      #fafafa 0%,
+      #f5f3ff 30%,
+      #ede9fe 55%,
+      #e9e5ff 80%,
+      #ddd6fe 100%
+    );
+  }
+
+  .slide-background-default .slide-bg-dots {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgba(124, 58, 237, 0.1) 1px,
+      transparent 0
+    );
+    background-size: 20px 20px;
+    opacity: 0.95;
+  }
+
   .slide-container {
     position: relative;
     display: flex;
@@ -81,7 +124,7 @@
     /* Start slightly lower and invisible */
     opacity: 0;
     transform: translateY(20px);
-    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     /* Auto margin for vertical centering if content is short */
     margin: auto 0;
   }

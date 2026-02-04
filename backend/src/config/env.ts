@@ -332,6 +332,11 @@ const envSchema = z
     NOTION_CLIENT_SECRET: z.string().optional(),
     NOTION_REDIRECT_URI: z.string().url().optional(),
 
+    // Figma Integration (Design-to-Code / Architecture mode)
+    FIGMA_CLIENT_ID: z.string().optional(),
+    FIGMA_CLIENT_SECRET: z.string().optional(),
+    FIGMA_REDIRECT_URI: z.string().url().optional(),
+
     // Twitter/X Integration
     TWITTER_CLIENT_ID: z.string().optional(),
     TWITTER_CLIENT_SECRET: z.string().optional(),

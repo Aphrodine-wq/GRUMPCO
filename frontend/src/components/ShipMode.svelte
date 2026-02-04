@@ -45,19 +45,40 @@
     return () => es.close();
   });
 
+  let projectName = $state('');
   let projectDescription = $state('');
+  let repoOrg = $state('');
+  let repoSource = $state<'git' | 'local'>('git');
+  let localPath = $state('');
+  let deploymentTarget = $state<string>('none');
+  let runDesign = $state(true);
+  let runSpec = $state(true);
+  let runPlan = $state(true);
+  let runCode = $state(true);
   let repoNameInput = $state('');
   let showGitHubPrompt = $state(false);
   let optimizeLoading = $state(false);
   let optimizeResult = $state<IntentOptimizerResult | null>(null);
   let optimizeError = $state<string | null>(null);
+  type FrontendFw = 'svelte' | 'next' | 'angular' | 'vue' | 'react';
+  type BackendRt = 'node' | 'bun' | 'deno' | 'python' | 'go';
+  type Db = 'postgres' | 'mongodb' | 'sqlite';
   let preferences = $state({
-    frontendFramework: 'vue' as 'vue' | 'react',
-    backendRuntime: 'node' as 'node' | 'python' | 'go',
-    database: 'postgres' as 'postgres' | 'mongodb',
+    frontendFramework: 'vue' as FrontendFw,
+    backendRuntime: 'node' as BackendRt,
+    database: 'postgres' as Db,
     includeTests: true,
     includeDocs: true,
   });
+
+  const DEPLOYMENT_OPTIONS = [
+    { value: 'none', label: 'None' },
+    { value: 'vercel', label: 'Vercel' },
+    { value: 'aws', label: 'AWS' },
+    { value: 'gcp', label: 'Google Cloud' },
+    { value: 'netlify', label: 'Netlify' },
+    { value: 'railway', label: 'Railway' },
+  ];
 
   let session = $derived($shipSession.session);
   let phase = $derived($shipSession.phase);
@@ -74,14 +95,31 @@
     failed: 'Failed',
   };
 
+  const selectedPhases = $derived(
+    [
+      runDesign && ('design' as const),
+      runSpec && ('spec' as const),
+      runPlan && ('plan' as const),
+      runCode && ('code' as const),
+    ].filter(Boolean) as ('design' | 'spec' | 'plan' | 'code')[]
+  );
+  const canStart = $derived(
+    projectDescription.trim().length > 0 && selectedPhases.length > 0 && status !== 'running'
+  );
+
   async function handleStart() {
-    if (!projectDescription.trim()) return;
+    if (!canStart) return;
 
     try {
+      // TODO: backend to accept localPath for local runs; for now only repoOrg (Git) is sent
       const request: ShipStartRequest = {
         projectDescription: projectDescription.trim(),
         preferences,
         projectId: getCurrentProjectId() ?? undefined,
+        projectName: projectName.trim() || undefined,
+        repoOrg: repoSource === 'git' ? repoOrg.trim() || undefined : undefined,
+        deploymentTarget: deploymentTarget === 'none' ? undefined : deploymentTarget,
+        phases: selectedPhases.length < 4 ? selectedPhases : undefined,
       };
 
       const newSession = await shipStore.start(request);
@@ -192,8 +230,7 @@
   <div class="ship-modal">
     <div class="ship-header">
       <div class="header-content">
-        <h1>SHIP Mode</h1>
-        <p class="subtitle">Sequential workflow: Design → Spec → Plan → Code</p>
+        <h1>Design → Spec → Plan → Code</h1>
       </div>
       <button
         class="close-btn"
@@ -219,27 +256,40 @@
     <div class="ship-content">
       {#if !session}
         <div class="start-section">
-          <p class="ship-empty-intro">
-            Describe your app idea and we'll generate architecture, spec, plan, and code in one run.
-          </p>
-          <div class="form-group">
-            <label for="description">Project Description</label>
-            <textarea
-              id="description"
-              bind:value={projectDescription}
-              placeholder="Describe your project idea in detail..."
-              rows="4"
-            ></textarea>
-            <div class="optimize-row">
-              <button
-                type="button"
-                class="optimize-btn"
-                onclick={handleOptimizeIntent}
-                disabled={!projectDescription.trim() || optimizeLoading}
-                title="Refine your intent for architecture before SHIP"
-              >
-                {optimizeLoading ? 'Optimizing…' : 'Optimize intent'}
-              </button>
+          <p class="ship-empty-intro">Describe your app. We'll generate architecture, spec, plan, and code.</p>
+
+          <!-- Section 1: Project -->
+          <div class="ship-section">
+            <h3 class="ship-section-title">1. Project</h3>
+            <div class="form-group">
+              <label for="project-name">Project name</label>
+              <input
+                id="project-name"
+                type="text"
+                bind:value={projectName}
+                placeholder="My App (optional)"
+                class="ship-input"
+              />
+            </div>
+            <div class="form-group">
+              <label for="description">Project description</label>
+              <textarea
+                id="description"
+                bind:value={projectDescription}
+                placeholder="Describe your project idea in detail..."
+                rows="4"
+              ></textarea>
+              <div class="optimize-row">
+                <button
+                  type="button"
+                  class="optimize-btn"
+                  onclick={handleOptimizeIntent}
+                  disabled={!projectDescription.trim() || optimizeLoading}
+                  title="Refine your intent for architecture before SHIP"
+                >
+                  {optimizeLoading ? 'Optimizing…' : 'Optimize intent'}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -311,60 +361,163 @@
             </div>
           {/if}
 
-          <div class="preferences-grid">
-            <div class="preference-col">
-              <h3>Configuration</h3>
-              <div class="preference-item">
-                <label>
-                  <span class="pref-label">Frontend</span>
-                  <select bind:value={preferences.frontendFramework}>
-                    <option value="vue">Vue</option>
-                    <option value="react">React</option>
-                  </select>
-                </label>
+          <!-- Section 2: Repo & deploy -->
+          <div class="ship-section">
+            <h3 class="ship-section-title">2. Repo & deploy</h3>
+            <div class="preferences-grid ship-section-grid">
+              <div class="form-group repo-source-group" role="group" aria-labelledby="repo-source-label">
+                <span id="repo-source-label" class="repo-source-label">Git integration or local file explorer</span>
+                <div class="repo-tabs">
+                  <button
+                    type="button"
+                    class="repo-tab"
+                    class:active={repoSource === 'git'}
+                    onclick={() => (repoSource = 'git')}
+                  >
+                    Git
+                  </button>
+                  <button
+                    type="button"
+                    class="repo-tab"
+                    class:active={repoSource === 'local'}
+                    onclick={() => (repoSource = 'local')}
+                  >
+                    Local
+                  </button>
+                </div>
+                {#if repoSource === 'git'}
+                  <input
+                    id="repo-org"
+                    type="text"
+                    bind:value={repoOrg}
+                    placeholder="username or org (optional)"
+                    class="ship-input"
+                  />
+                {:else}
+                  <div class="local-path-row">
+                    <input
+                      id="local-path"
+                      type="text"
+                      bind:value={localPath}
+                      placeholder="Path to local folder"
+                      class="ship-input"
+                    />
+                    {#if typeof window !== 'undefined' && (window as { grump?: { selectDirectory?: () => Promise<{ path?: string; canceled?: boolean }> } }).grump?.selectDirectory}
+                      <button
+                        type="button"
+                        class="browse-btn"
+                        onclick={async () => {
+                          const grump = (window as { grump?: { selectDirectory?: () => Promise<{ path?: string; canceled?: boolean }> } }).grump;
+                          const result = await grump?.selectDirectory?.();
+                          if (result?.path && !result.canceled) localPath = result.path;
+                        }}
+                      >
+                        Browse
+                      </button>
+                    {/if}
+                  </div>
+                {/if}
               </div>
-              <div class="preference-item">
-                <label>
-                  <span class="pref-label">Runtime</span>
-                  <select bind:value={preferences.backendRuntime}>
-                    <option value="node">Node.js</option>
-                    <option value="python">Python</option>
-                    <option value="go">Go</option>
-                  </select>
-                </label>
-              </div>
-              <div class="preference-item">
-                <label>
-                  <span class="pref-label">Database</span>
-                  <select bind:value={preferences.database}>
-                    <option value="postgres">PostgreSQL</option>
-                    <option value="mongodb">MongoDB</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-
-            <div class="preference-col">
-              <h3>Options</h3>
-              <div class="checkbox-group">
-                <label class="checkbox-label">
-                  <input type="checkbox" bind:checked={preferences.includeTests} />
-                  <span>Include Tests</span>
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" bind:checked={preferences.includeDocs} />
-                  <span>Include Documentation</span>
-                </label>
+              <div class="form-group deployment-target-group">
+                <label for="deployment-target">Deployment target</label>
+                <select id="deployment-target" bind:value={deploymentTarget} class="ship-select">
+                  {#each DEPLOYMENT_OPTIONS as opt}
+                    <option value={opt.value}>{opt.label}</option>
+                  {/each}
+                </select>
               </div>
             </div>
           </div>
 
-          <div class="footer-actions">
+          <!-- Section 3: Configuration -->
+          <details class="advanced-config ship-section">
+            <summary>3. Configuration (stack & options)</summary>
+            <div class="preferences-grid">
+              <div class="preference-col">
+                <h3>Configuration</h3>
+                <div class="preference-item">
+                  <label>
+                    <span class="pref-label">Frontend</span>
+                    <select bind:value={preferences.frontendFramework}>
+                      <option value="svelte">Svelte</option>
+                      <option value="next">Next.js</option>
+                      <option value="angular">Angular</option>
+                      <option value="vue">Vue</option>
+                      <option value="react">React</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="preference-item">
+                  <label>
+                    <span class="pref-label">Runtime</span>
+                    <select bind:value={preferences.backendRuntime}>
+                      <option value="node">Node.js</option>
+                      <option value="bun">Bun</option>
+                      <option value="deno">Deno</option>
+                      <option value="python">Python</option>
+                      <option value="go">Go</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="preference-item">
+                  <label>
+                    <span class="pref-label">Database</span>
+                    <select bind:value={preferences.database}>
+                      <option value="postgres">PostgreSQL</option>
+                      <option value="mongodb">MongoDB</option>
+                      <option value="sqlite">SQLite</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div class="preference-col">
+                <h3>Options</h3>
+                <div class="checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" bind:checked={preferences.includeTests} />
+                    <span>Include Tests</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" bind:checked={preferences.includeDocs} />
+                    <span>Include Documentation</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- Section 4: Phases -->
+          <div class="ship-section">
+            <h3 class="ship-section-title">4. Phases to run</h3>
+            <p class="ship-section-hint">Select which steps to run. Code requires Plan and Spec; Plan requires Spec; Spec requires Design.</p>
+            <div class="phases-checkboxes">
+              <label class="checkbox-label">
+                <input type="checkbox" bind:checked={runDesign} />
+                <span>Design</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" bind:checked={runSpec} />
+                <span>Specification</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" bind:checked={runPlan} />
+                <span>Planning</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" bind:checked={runCode} />
+                <span>Code generation</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Section 5: Actions -->
+          <div class="footer-actions ship-section">
             <p class="ai-disclaimer">Generated code is a suggestion. Review before use.</p>
             <button
               class="start-button"
               onclick={handleStart}
-              disabled={!projectDescription.trim() || status === 'running'}
+              disabled={!canStart}
             >
               Start SHIP Mode
             </button>
@@ -623,12 +776,6 @@
     letter-spacing: -0.02em;
   }
 
-  .subtitle {
-    color: #64748b;
-    font-size: 0.9rem;
-    margin: 0;
-  }
-
   .close-btn {
     background: transparent;
     border: none;
@@ -665,6 +812,63 @@
     margin: 0 0 1.5rem 0;
   }
 
+  .ship-section {
+    margin-bottom: 1.75rem;
+  }
+
+  .ship-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #334155;
+    margin: 0 0 0.75rem 0;
+  }
+
+  .ship-section-hint {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.4;
+  }
+
+  .ship-section-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .ship-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    background: white;
+  }
+
+  .ship-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+
+  .ship-select {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    background: white;
+  }
+
+  .phases-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+  }
+
+  .phases-checkboxes .checkbox-label {
+    margin: 0;
+  }
+
   /* Form Styles */
   .form-group {
     margin-bottom: 2rem;
@@ -676,6 +880,80 @@
     color: #334155;
     margin-bottom: 0.75rem;
     font-size: 0.95rem;
+  }
+
+  .repo-source-label {
+    display: block;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+  }
+
+  .deployment-target-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .deployment-target-group .ship-select {
+    max-width: 100%;
+  }
+
+  .repo-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .repo-tab {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .repo-tab:hover {
+    background: #e2e8f0;
+    color: #334155;
+  }
+
+  .repo-tab.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+  }
+
+  .local-path-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .local-path-row .ship-input {
+    flex: 1;
+  }
+
+  .browse-btn {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #334155;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .browse-btn:hover {
+    background: #e2e8f0;
   }
 
   textarea {
@@ -827,6 +1105,45 @@
 
   .optimize-panel-actions .action-btn.secondary:hover {
     background: #e2e8f0;
+  }
+
+  .advanced-config {
+    margin-bottom: 1.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    overflow: hidden;
+  }
+
+  .advanced-config summary {
+    padding: 0.75rem 1rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+
+  .advanced-config summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .advanced-config summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 0.5rem;
+    font-size: 0.75rem;
+    transition: transform 0.2s;
+  }
+
+  .advanced-config[open] summary::before {
+    transform: rotate(90deg);
+  }
+
+  .advanced-config .preferences-grid {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
   }
 
   .preferences-grid {

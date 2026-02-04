@@ -357,9 +357,10 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+    background: #ffffff;
     border-radius: 12px;
     overflow: hidden;
+    border: 1px solid #e5e7eb;
   }
 
   .memory-panel.compact {
@@ -371,8 +372,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    background: rgba(0, 0, 0, 0.2);
-    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
   }
 
   .header-left {
@@ -383,17 +384,14 @@
 
   .panel-icon {
     font-size: 24px;
+    color: #374151;
   }
 
   .panel-header h3 {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
-    color: #e0e0ff;
-    background: linear-gradient(90deg, #a78bfa, #818cf8);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #111827;
   }
 
   .new-badge {
@@ -425,7 +423,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    color: #a0a0ff;
+    color: #6b7280;
     font-size: 13px;
     cursor: help;
   }
@@ -438,52 +436,55 @@
     display: flex;
     padding: 12px 16px;
     gap: 8px;
-    border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
   }
 
   .search-bar input {
     flex: 1;
     padding: 8px 12px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(139, 92, 246, 0.2);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
     border-radius: 6px;
-    color: #e0e0ff;
+    color: #111827;
     font-size: 13px;
   }
 
   .search-bar input::placeholder {
-    color: #666;
+    color: #9ca3af;
   }
 
   .search-bar input:focus {
     outline: none;
-    border-color: #8b5cf6;
+    border-color: #6366f1;
   }
 
   .search-bar button {
     padding: 8px 12px;
-    background: rgba(139, 92, 246, 0.2);
-    border: none;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
     border-radius: 6px;
+    color: #374151;
     cursor: pointer;
   }
 
   .search-bar button:hover {
-    background: rgba(139, 92, 246, 0.3);
+    background: #e5e7eb;
   }
 
   .tabs {
     display: flex;
     padding: 0 16px;
     gap: 4px;
-    border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
   }
 
   .tabs button {
     padding: 10px 16px;
     background: transparent;
     border: none;
-    color: #888;
+    color: #6b7280;
     font-size: 12px;
     cursor: pointer;
     border-bottom: 2px solid transparent;
@@ -492,12 +493,12 @@
   }
 
   .tabs button.active {
-    color: #a78bfa;
-    border-bottom-color: #8b5cf6;
+    color: #4f46e5;
+    border-bottom-color: #6366f1;
   }
 
   .tabs button:hover:not(.active) {
-    color: #c0c0ff;
+    color: #374151;
   }
 
   .content {
@@ -512,15 +513,15 @@
     align-items: center;
     justify-content: center;
     height: 200px;
-    color: #666;
+    color: #6b7280;
     gap: 12px;
   }
 
   .spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid rgba(139, 92, 246, 0.2);
-    border-top-color: #8b5cf6;
+    border: 3px solid #e5e7eb;
+    border-top-color: #6366f1;
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -538,7 +539,7 @@
     justify-content: center;
     height: 200px;
     text-align: center;
-    color: #666;
+    color: #6b7280;
   }
 
   .empty-icon {
@@ -554,7 +555,7 @@
   .empty-state .hint {
     margin-top: 8px;
     font-size: 12px;
-    color: #555;
+    color: #6b7280;
   }
 
   .patterns-list,
@@ -569,8 +570,8 @@
   .skill-card,
   .lexicon-card {
     padding: 14px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(139, 92, 246, 0.15);
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
@@ -578,8 +579,8 @@
 
   .pattern-card:hover,
   .skill-card:hover {
-    background: rgba(139, 92, 246, 0.1);
-    border-color: rgba(139, 92, 246, 0.3);
+    background: #f3f4f6;
+    border-color: #d1d5db;
     transform: translateY(-1px);
   }
 
@@ -610,7 +611,7 @@
   .pattern-name,
   .skill-name {
     font-weight: 600;
-    color: #e0e0ff;
+    color: #111827;
     flex: 1;
   }
 
@@ -642,7 +643,7 @@
   .skill-description,
   .definition {
     margin: 0 0 10px;
-    color: #a0a0c0;
+    color: #374151;
     font-size: 12px;
     line-height: 1.4;
   }
@@ -653,7 +654,7 @@
     align-items: center;
     gap: 12px;
     font-size: 11px;
-    color: #666;
+    color: #6b7280;
   }
 
   .meta-item {
@@ -664,8 +665,8 @@
 
   .meta-item.category {
     padding: 2px 8px;
-    background: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
     border-radius: 4px;
     margin-left: auto;
   }
@@ -679,26 +680,26 @@
 
   .tag {
     padding: 2px 8px;
-    background: rgba(59, 130, 246, 0.15);
-    color: #60a5fa;
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
     font-size: 10px;
     border-radius: 4px;
   }
 
   .tag.more {
-    background: rgba(100, 100, 100, 0.2);
-    color: #888;
+    background: #f3f4f6;
+    color: #6b7280;
   }
 
   .term {
     font-weight: 600;
-    color: #e0e0ff;
+    color: #111827;
   }
 
   .lexicon-header .category {
     padding: 2px 8px;
-    background: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
     font-size: 10px;
     border-radius: 4px;
     margin-left: auto;

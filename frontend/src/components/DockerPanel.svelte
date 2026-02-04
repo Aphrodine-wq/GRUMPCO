@@ -412,27 +412,27 @@
   function getStatusColor(status: string): string {
     switch (status) {
       case 'running':
-        return 'text-green-400';
+        return 'status-running';
       case 'paused':
-        return 'text-yellow-400';
+        return 'status-paused';
       case 'stopped':
       case 'exited':
-        return 'text-red-400';
+        return 'status-stopped';
       default:
-        return 'text-gray-400';
+        return 'status-default';
     }
   }
 
   function getHealthColor(health?: string): string {
     switch (health) {
       case 'healthy':
-        return 'bg-green-500';
+        return 'health-healthy';
       case 'unhealthy':
-        return 'bg-red-500';
+        return 'health-unhealthy';
       case 'starting':
-        return 'bg-yellow-500';
+        return 'health-starting';
       default:
-        return 'bg-gray-500';
+        return 'health-default';
     }
   }
 
@@ -814,7 +814,7 @@
       <div class="logs-content">
         <header class="logs-header">
           <h3>Container Logs</h3>
-          <button onclick={() => selectedContainer.set(null)}>×[5~</button>
+          <button onclick={() => selectedContainer.set(null)} aria-label="Close">×</button>
         </header>
         <pre class="logs-output">{$logs.join('\n')}</pre>
       </div>
@@ -827,12 +827,9 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: var(--bg-primary, #1a1a2e);
-    color: var(--text-primary, #e8e8e8);
-    font-family:
-      system-ui,
-      -apple-system,
-      sans-serif;
+    background: #f9fafb;
+    color: #1f2937;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
   .panel-header {
@@ -840,8 +837,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem 1.5rem;
-    background: var(--bg-secondary, #16213e);
-    border-bottom: 1px solid var(--border, #333);
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   }
 
   .header-left {
@@ -852,16 +850,17 @@
 
   .back-btn {
     padding: 0.5rem;
-    background: transparent;
-    border: none;
-    color: var(--text-secondary, #888);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    color: #374151;
     cursor: pointer;
     border-radius: 8px;
-    transition: background 0.2s;
+    transition: all 0.2s;
   }
 
   .back-btn:hover {
-    background: var(--bg-hover, #222);
+    background: #f9fafb;
+    border-color: #d1d5db;
   }
 
   .back-btn svg {
@@ -872,13 +871,14 @@
   .docker-icon {
     width: 28px;
     height: 28px;
-    color: #0db7ed;
+    color: #374151;
   }
 
   .panel-header h2 {
     font-size: 1.25rem;
     font-weight: 600;
     margin: 0;
+    color: #111827;
   }
 
   .status-badge {
@@ -889,13 +889,13 @@
   }
 
   .status-badge.running {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
+    background: rgba(34, 197, 94, 0.15);
+    color: #059669;
   }
 
   .status-badge.stopped {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
   }
 
   .header-right {
@@ -909,26 +909,27 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.875rem;
-    color: var(--text-secondary, #888);
+    color: #6b7280;
     cursor: pointer;
   }
 
   .poll-toggle input {
-    accent-color: #0db7ed;
+    accent-color: #4b5563;
   }
 
   .refresh-btn {
     padding: 0.5rem;
-    background: transparent;
-    border: 1px solid var(--border, #333);
-    border-radius: 0.5rem;
-    color: var(--text-primary, #e8e8e8);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #374151;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .refresh-btn:hover {
-    background: var(--bg-hover, #222);
+    background: #f9fafb;
+    border-color: #d1d5db;
   }
 
   .refresh-btn .icon {
@@ -954,8 +955,8 @@
     align-items: center;
     gap: 1rem;
     padding: 1rem 1.5rem;
-    background: var(--bg-secondary, #16213e);
-    border-bottom: 1px solid var(--border, #333);
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
   }
 
   .action-btn {
@@ -963,17 +964,19 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: var(--bg-hover, #222);
-    border: 1px solid var(--border, #333);
-    border-radius: 0.5rem;
-    color: var(--text-primary, #e8e8e8);
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    color: #374151;
     font-size: 0.875rem;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .action-btn:hover {
-    background: var(--bg-active, #333);
+    background: #f3f4f6;
+    border-color: #4b5563;
   }
 
   .action-btn svg {
@@ -982,13 +985,15 @@
   }
 
   .action-btn.compose-up:hover {
-    background: rgba(34, 197, 94, 0.2);
-    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+    border-color: #10b981;
+    color: #059669;
   }
 
   .action-btn.compose-down:hover {
-    background: rgba(239, 68, 68, 0.2);
+    background: rgba(239, 68, 68, 0.1);
     border-color: #ef4444;
+    color: #dc2626;
   }
 
   .stats-summary {
@@ -1006,12 +1011,12 @@
   .stat-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--text-primary, #e8e8e8);
+    color: #374151;
   }
 
   .stat-label {
     font-size: 0.75rem;
-    color: var(--text-secondary, #888);
+    color: #6b7280;
     text-transform: uppercase;
   }
 
@@ -1042,8 +1047,8 @@
   .tabs {
     display: flex;
     padding: 0 1.5rem;
-    border-bottom: 1px solid var(--border, #333);
-    background: var(--bg-secondary, #16213e);
+    border-bottom: 1px solid #e5e7eb;
+    background: white;
   }
 
   .tab {
@@ -1051,25 +1056,27 @@
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
-    color: var(--text-secondary, #888);
+    color: #6b7280;
     font-size: 0.875rem;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .tab:hover {
-    color: var(--text-primary, #e8e8e8);
+    color: #374151;
   }
 
   .tab.active {
-    color: #0db7ed;
-    border-bottom-color: #0db7ed;
+    color: #4b5563;
+    border-bottom-color: #4b5563;
   }
 
   .tab-content {
     flex: 1;
     overflow-y: auto;
     padding: 1rem 1.5rem;
+    background: transparent;
   }
 
   .loading {
@@ -1079,14 +1086,14 @@
     justify-content: center;
     padding: 3rem;
     gap: 1rem;
-    color: var(--text-secondary, #888);
+    color: #6b7280;
   }
 
   .spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid var(--border, #333);
-    border-top-color: #0db7ed;
+    border: 3px solid #e5e7eb;
+    border-top-color: #4b5563;
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -1104,20 +1111,21 @@
   .image-card,
   .volume-card,
   .network-card {
-    background: var(--bg-secondary, #16213e);
-    border: 1px solid var(--border, #333);
-    border-radius: 0.75rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
     padding: 1rem;
     transition: all 0.2s;
+    box-shadow: 0 1px 3px rgba(124, 58, 237, 0.06);
   }
 
   .container-card:hover,
   .image-card:hover {
-    border-color: var(--border-hover, #444);
+    border-color: #c4b5fd;
   }
 
   .container-card.running {
-    border-left: 3px solid #22c55e;
+    border-left: 4px solid #10b981;
   }
 
   .container-header {
@@ -1133,6 +1141,7 @@
     gap: 0.5rem;
     font-weight: 600;
     font-size: 1rem;
+    color: #1f2937;
   }
 
   .health-dot {
@@ -1143,7 +1152,7 @@
 
   .container-image {
     font-size: 0.8rem;
-    color: var(--text-secondary, #888);
+    color: #6b7280;
     font-family: monospace;
   }
 
@@ -1151,6 +1160,40 @@
     font-size: 0.75rem;
     font-weight: 500;
     text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+  }
+
+  .status-pill.status-running {
+    background: rgba(16, 185, 129, 0.15);
+    color: #059669;
+  }
+
+  .status-pill.status-paused {
+    background: rgba(234, 179, 8, 0.15);
+    color: #d97706;
+  }
+
+  .status-pill.status-stopped,
+  .status-pill.status-default {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+  }
+
+  .health-dot.health-healthy {
+    background: #10b981;
+  }
+
+  .health-dot.health-unhealthy {
+    background: #ef4444;
+  }
+
+  .health-dot.health-starting {
+    background: #eab308;
+  }
+
+  .health-dot.health-default {
+    background: #9ca3af;
   }
 
   .container-ports {
@@ -1163,10 +1206,11 @@
   .port-badge {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
-    background: rgba(13, 183, 237, 0.1);
-    color: #0db7ed;
-    border-radius: 0.25rem;
+    background: #f9fafb;
+    color: #374151;
+    border-radius: 6px;
     font-family: monospace;
+    border: 1px solid #e5e7eb;
   }
 
   .container-stats {
@@ -1185,13 +1229,13 @@
   .stat-bar .stat-label {
     width: 32px;
     font-size: 0.7rem;
-    color: var(--text-secondary, #888);
+    color: #6b7280;
   }
 
   .progress-bar {
     flex: 1;
     height: 6px;
-    background: var(--bg-hover, #222);
+    background: #f3f4f6;
     border-radius: 3px;
     overflow: hidden;
   }
@@ -1215,29 +1259,30 @@
     font-size: 0.75rem;
     text-align: right;
     font-family: monospace;
-    color: var(--text-secondary, #888);
+    color: #6b7280;
   }
 
   .container-actions {
     display: flex;
     gap: 0.5rem;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--border, #333);
+    border-top: 1px solid #e5e7eb;
   }
 
   .action-btn-sm {
     padding: 0.4rem;
-    background: var(--bg-hover, #222);
-    border: 1px solid var(--border, #333);
-    border-radius: 0.375rem;
-    color: var(--text-secondary, #888);
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #6b7280;
     cursor: pointer;
     transition: all 0.15s;
   }
 
   .action-btn-sm:hover {
-    color: var(--text-primary, #e8e8e8);
-    background: var(--bg-active, #333);
+    color: #374151;
+    background: #f3f4f6;
+    border-color: #4b5563;
   }
 
   .action-btn-sm svg {
@@ -1277,7 +1322,7 @@
     justify-content: center;
     padding: 3rem;
     gap: 1rem;
-    color: var(--text-secondary, #888);
+    color: #6b7280;
   }
 
   .empty-state svg {
@@ -1312,7 +1357,7 @@
     display: flex;
     gap: 1rem;
     font-size: 0.75rem;
-    color: var(--text-secondary, #888);
+    color: #6b7280;
   }
 
   .image-meta .id {
@@ -1339,12 +1384,13 @@
     width: 80%;
     max-width: 900px;
     max-height: 80vh;
-    background: var(--bg-primary, #1a1a2e);
-    border: 1px solid var(--border, #333);
-    border-radius: 0.75rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 8px 32px rgba(124, 58, 237, 0.15);
   }
 
   .logs-header {
@@ -1352,19 +1398,20 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    background: var(--bg-secondary, #16213e);
-    border-bottom: 1px solid var(--border, #333);
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
   }
 
   .logs-header h3 {
     margin: 0;
     font-size: 1rem;
+    color: #374151;
   }
 
   .logs-header button {
     background: transparent;
     border: none;
-    color: var(--text-secondary, #888);
+    color: #6b7280;
     font-size: 1.5rem;
     cursor: pointer;
   }
@@ -1379,6 +1426,7 @@
     line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-all;
-    color: var(--text-primary, #e8e8e8);
+    color: #1f2937;
+    background: #f9fafb;
   }
 </style>

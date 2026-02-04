@@ -220,6 +220,8 @@ export const prdRefineRequestSchema = z.object({
 // Ship Workflow Schemas
 // ============================================================================
 
+const shipPhaseEnum = z.enum(['design', 'spec', 'plan', 'code']);
+
 /** Ship start request */
 export const shipStartRequestSchema = z.object({
   projectDescription: z
@@ -227,6 +229,9 @@ export const shipStartRequestSchema = z.object({
     .min(1, "Project description is required")
     .max(MAX_SHIP_PROJECT_DESCRIPTION_LENGTH),
   projectName: z.string().max(MAX_PROJECT_NAME_LENGTH).optional(),
+  repoOrg: z.string().max(256).optional(),
+  deploymentTarget: z.string().max(64).optional(),
+  phases: z.array(shipPhaseEnum).min(1).optional(),
   complexity: complexitySchema.optional(),
   techStack: z.array(z.string()).optional(),
   preferNim: z.boolean().optional(),

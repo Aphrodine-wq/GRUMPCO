@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 
-export type ChatMode = 'design' | 'code' | 'argument';
+export type ChatMode = 'design' | 'code' | 'argument' | 'none';
 
 const STORAGE_KEY = 'grump-chat-mode';
 
@@ -17,6 +17,7 @@ function loadStored(): ChatMode {
 }
 
 function persist(mode: ChatMode) {
+  if (mode === 'none') return;
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, mode);
@@ -33,5 +34,9 @@ export const chatModeStore = {
   setMode(mode: ChatMode) {
     persist(mode);
     set(mode);
+  },
+  /** Clear mode so no Architecture/Code button is active (not persisted). */
+  clearMode() {
+    set('none');
   },
 };

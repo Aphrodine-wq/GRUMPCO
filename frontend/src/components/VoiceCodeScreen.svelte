@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { tick, onMount } from 'svelte';
   import { Button, Card } from '../lib/design-system';
   import { fetchApi } from '../lib/api.js';
   import { showToast } from '../stores/toastStore.js';
@@ -12,6 +12,30 @@
 
   let { onBack }: Props = $props();
 
+  const LANGUAGE_OPTIONS = [
+    { id: 'en', label: 'English' },
+    { id: 'es', label: 'Spanish' },
+    { id: 'fr', label: 'French' },
+    { id: 'de', label: 'German' },
+    { id: 'ja', label: 'Japanese' },
+  ] as const;
+
+  const HISTORY_KEY = 'voice-code-history';
+  const HISTORY_MAX = 20;
+
+  interface HistoryEntry {
+    id: string;
+    timestamp: number;
+    transcriptPreview: string;
+    transcript: string | null;
+    answer: string | null;
+    code: string | null;
+    audioBase64: string | null;
+    sources: Array<{ source: string; type: string }>;
+    confidence?: number;
+  }
+
+  let language = $state('en');
   let recording = $state(false);
   let loading = $state(false);
   let transcript = $state<string | null>(null);
@@ -27,6 +51,7 @@
   let waveformAnimationId: number | null = null;
   let audioContext: AudioContext | null = null;
   let analyser: AnalyserNode | null = null;
+  let history = $state<HistoryEntry[]>([]);
 
   function drawWaveform() {
     if (!waveformCanvas || !analyser || !recording) return;
@@ -111,6 +136,48 @@
     recording = false;
   }
 
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (raw) history = JSON.parse(raw) as HistoryEntry[];
+    } catch {
+      history = [];
+    }
+  }
+
+  function saveToHistory() {
+    const preview = transcript?.slice(0, 60).trim() || 'No transcript';
+    const entry: HistoryEntry = {
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      transcriptPreview: preview + (transcript && transcript.length > 60 ? '…' : ''),
+      transcript,
+      answer,
+      code,
+      audioBase64,
+      sources: [...sources],
+      confidence,
+    };
+    history = [entry, ...history].slice(0, HISTORY_MAX);
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    } catch {
+      history = history.slice(0, HISTORY_MAX);
+    }
+  }
+
+  function selectHistoryEntry(entry: HistoryEntry) {
+    transcript = entry.transcript;
+    answer = entry.answer;
+    code = entry.code;
+    audioBase64 = entry.audioBase64;
+    sources = entry.sources ?? [];
+    confidence = entry.confidence;
+    error = null;
+  }
+
+  onMount(loadHistory);
+
   async function submitVoiceCode() {
     if (audioChunks.length === 0) return;
     loading = true;
@@ -121,7 +188,7 @@
       const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
       const res = await fetchApi('/api/voice/code', {
         method: 'POST',
-        body: JSON.stringify({ audio: base64 }),
+        body: JSON.stringify({ audio: base64, language }),
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
@@ -141,6 +208,7 @@
       audioBase64 = data.audioBase64 ?? null;
       sources = data.sources ?? [];
       confidence = data.confidence;
+      saveToHistory();
     } catch (e) {
       error = (e as Error).message;
       showToast('Voice code failed', 'error');
@@ -184,23 +252,31 @@
       {/if}
       <h1 class="voice-code-title">Voice code</h1>
     </div>
+    <p class="header-hint">
+      <button type="button" class="link-btn" onclick={() => setCurrentView('talkMode')}>
+        Switch to Talk Mode
+      </button>
+      for continuous conversation.
+    </p>
   </header>
 
   <div class="voice-code-container">
-    <Card title="Record" padding="md">
+    <!-- Card 1: Record -->
+    <Card title="Record" padding="md" class="voice-card voice-card-record">
       <p class="section-desc">
-        Describe what you want in code. Your voice is transcribed, then RAG + chat generate code and
-        a spoken summary.
+        Describe what you want in code. Your voice is transcribed, then RAG + chat generate code and a spoken summary.
       </p>
-      <p class="section-link">
-        <button type="button" class="link-btn" onclick={() => setCurrentView('talkMode')}
-          >Switch to Talk Mode</button
-        > for continuous conversation.
-      </p>
+      <div class="language-row">
+        <label class="label" for="voice-lang">Language</label>
+        <select id="voice-lang" class="select" bind:value={language} disabled={loading || recording}>
+          {#each LANGUAGE_OPTIONS as opt}
+            <option value={opt.id}>{opt.label}</option>
+          {/each}
+        </select>
+      </div>
       {#if recording}
         <div class="waveform-container">
-          <canvas bind:this={waveformCanvas} class="waveform-canvas" width="300" height="60"
-          ></canvas>
+          <canvas bind:this={waveformCanvas} class="waveform-canvas" width="300" height="60"></canvas>
         </div>
       {/if}
       <div class="record-row">
@@ -221,20 +297,23 @@
     </Card>
 
     {#if error}
-      <div class="result-card error">
-        <p class="result-label">Error</p>
+      <Card title="Error" padding="md" class="voice-card voice-card-error">
         <p class="result-text">{error}</p>
-      </div>
+      </Card>
     {/if}
 
-    {#if transcript !== null || answer !== null}
-      <div class="result-card">
-        {#if transcript}
-          <p class="result-label">Transcript</p>
-          <p class="result-text transcript">{transcript}</p>
-        {/if}
+    <!-- Card 2: Transcript -->
+    {#if transcript !== null}
+      <Card title="Transcript" padding="md" class="voice-card voice-card-transcript">
+        <p class="result-text transcript">{transcript}</p>
+      </Card>
+    {/if}
+
+    <!-- Card 3: Result (code + summary + playback) -->
+    {#if answer !== null || code !== null}
+      <Card title="Result" padding="md" class="voice-card voice-card-result">
         {#if answer}
-          <p class="result-label">Answer</p>
+          <p class="result-label">Summary</p>
           <div class="result-text markdown-ish">{answer}</div>
         {/if}
         {#if code}
@@ -243,7 +322,7 @@
         {/if}
         {#if audioBase64}
           <div class="speak-row">
-            <Button variant="secondary" size="sm" onclick={playTts}>Play summary</Button>
+            <Button variant="secondary" size="sm" onclick={playTts}>Play spoken summary</Button>
           </div>
         {/if}
         {#if sources.length > 0}
@@ -257,7 +336,28 @@
         {#if confidence !== undefined}
           <p class="confidence-tag">Confidence: {Math.round(confidence * 100)}%</p>
         {/if}
-      </div>
+      </Card>
+    {/if}
+
+    <!-- History -->
+    {#if history.length > 0}
+      <Card title="Recent" padding="md" class="voice-card voice-card-history">
+        <p class="section-desc">Select a past transcription to view again.</p>
+        <ul class="history-list">
+          {#each history as entry (entry.id)}
+            <li>
+              <button
+                type="button"
+                class="history-item"
+                onclick={() => selectHistoryEntry(entry)}
+              >
+                <span class="history-time">{new Date(entry.timestamp).toLocaleString()}</span>
+                <span class="history-preview">{entry.transcriptPreview}</span>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      </Card>
     {/if}
   </div>
 </div>
@@ -277,6 +377,9 @@
     padding: 12px 24px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .header-left {
@@ -286,30 +389,127 @@
   }
 
   .voice-code-title {
-    font-size: 18px;
+    font-size: 1.25rem;
     font-weight: 700;
+    margin: 0;
+    color: #18181b;
+  }
+
+  .header-hint {
+    font-size: 0.8125rem;
+    color: #71717a;
     margin: 0;
   }
 
   .voice-code-container {
     flex: 1;
     overflow-y: auto;
-    padding: 24px;
+    padding: 1.5rem 24px;
     max-width: 720px;
     margin: 0 auto;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .voice-card {
+    border: 1px solid #e4e4e7;
+    border-radius: 12px;
+    background: white;
+  }
+
+  .voice-card-record {
+    border-color: #e4e4e7;
+  }
+
+  .voice-card-transcript .result-text.transcript {
+    margin: 0;
+  }
+
+  .voice-card-result .result-label:first-of-type {
+    margin-top: 0;
+  }
+
+  .voice-card-error {
+    border-color: #fecaca;
+    background: #fef2f2;
+  }
+
+  .voice-card-history {
+    margin-top: 0.5rem;
+  }
+
+  .language-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .language-row .label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  .language-row .select {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    color: #18181b;
+  }
+
+  .history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .history-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 0.75rem 0;
+    border: none;
+    border-bottom: 1px solid #f4f4f5;
+    background: none;
+    font-size: 0.875rem;
+    color: #18181b;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .history-item:last-child {
+    border-bottom: none;
+  }
+
+  .history-item:hover {
+    background: #f9fafb;
+  }
+
+  .history-time {
+    font-size: 0.75rem;
+    color: #71717a;
+  }
+
+  .history-preview {
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .section-desc {
     font-size: 14px;
     color: #71717a;
     margin-bottom: 8px;
-  }
-
-  .section-link {
-    font-size: 13px;
-    color: #71717a;
-    margin: 0 0 16px;
   }
 
   .link-btn {
@@ -344,19 +544,6 @@
 
   .record-row {
     margin-top: 8px;
-  }
-
-  .result-card {
-    margin-top: 24px;
-    padding: 20px;
-    background: #fafafa;
-    border: 1px solid #e4e4e7;
-    border-radius: 8px;
-  }
-
-  .result-card.error {
-    background: #fef2f2;
-    border-color: #fecaca;
   }
 
   .result-label {

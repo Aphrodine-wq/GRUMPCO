@@ -11,12 +11,20 @@ export type DesignToCodeFramework = "svelte" | "react" | "vue" | "flutter";
 
 export interface DesignToCodeInput {
   /** Image as base64 string (no data URL prefix) or Buffer. */
-  image: string | Buffer;
+  image?: string | Buffer;
   /** Optional Figma or image URL (if no image buffer). */
   figmaUrl?: string;
   /** Description of what to build or requirements. */
   description: string;
   targetFramework: DesignToCodeFramework;
+  /** Styling approach: tailwind, css-modules, vanilla-css, sass. */
+  styling?: string;
+  /** Theme: light, dark, system. */
+  theme?: string;
+  /** Output language: ts, js. */
+  outputLang?: string;
+  /** Vue only: composition, options. */
+  componentStyle?: string;
 }
 
 export interface DesignToCodeResult {
@@ -48,9 +56,23 @@ export async function designToCode(
         : `data:image/png;base64,${(input.image as Buffer).toString("base64")}`);
   if (!imageUrl) throw new Error("Either image or figmaUrl is required");
 
+  const stylingHint = input.styling
+    ? ` Use ${input.styling} for styling.`
+    : '';
+  const themeHint = input.theme && input.theme !== 'system'
+    ? ` Prefer ${input.theme} theme.`
+    : '';
+  const langHint = input.outputLang === 'js'
+    ? ' Output JavaScript (no TypeScript).'
+    : ' Output TypeScript where applicable.';
+  const vueHint =
+    input.targetFramework === 'vue' && input.componentStyle
+      ? ` Use Vue ${input.componentStyle} API.`
+      : '';
+
   const systemPrompt = `You are an expert front-end developer. Convert the provided design (screenshot or image) into production-ready, accessible, responsive code.
 Output ONLY the code in a single markdown code block (e.g. \`\`\`svelte or \`\`\`tsx). No extra explanation before or after unless the user asked for it.
-Framework: ${input.targetFramework}. Follow best practices for that framework.`;
+Framework: ${input.targetFramework}. Follow best practices for that framework.${stylingHint}${themeHint}${langHint}${vueHint}`;
 
   const userContent = [
     { type: "image_url" as const, image_url: { url: imageUrl } },

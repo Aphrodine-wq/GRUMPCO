@@ -72,6 +72,7 @@ export type {
 // Ship types
 export type {
   ShipPhase,
+  ShipRunnablePhase,
   ShipPreferences,
   DesignPhaseResult,
   SpecPhaseResult,

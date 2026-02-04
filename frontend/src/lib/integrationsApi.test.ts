@@ -144,12 +144,14 @@ describe('integrationsApi', () => {
     it('should get OAuth URL', async () => {
       mockFetchApi.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ url: 'https://oauth.provider.com/authorize' }),
+        json: () =>
+          Promise.resolve({ authUrl: 'https://oauth.provider.com/authorize', state: 'abc' }),
       });
 
       const result = await getOAuthUrl('github');
 
-      expect(result.url).toBe('https://oauth.provider.com/authorize');
+      expect(result.authUrl).toBe('https://oauth.provider.com/authorize');
+      expect(mockFetchApi).toHaveBeenCalledWith('/api/integrations-v2/github/oauth/authorize');
     });
 
     it('should set API key', async () => {
@@ -711,20 +713,31 @@ describe('integrationsApi', () => {
       const providers: IntegrationProvider[] = [
         'discord',
         'slack',
-        'spotify',
         'obsidian',
         'gmail',
         'google_calendar',
         'notion',
         'twitter',
         'github',
+        'gitlab',
+        'bitbucket',
         'linear',
+        'jira',
+        'atlassian',
         'figma',
         'home_assistant',
         'elevenlabs',
         'twilio',
         'sendgrid',
         'stripe',
+        'telegram',
+        'vercel',
+        'netlify',
+        'aws',
+        'gcp',
+        'azure',
+        'supabase',
+        'firebase',
         'custom',
       ];
 

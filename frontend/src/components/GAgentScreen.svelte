@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
+  import { settingsStore } from '../stores/settingsStore';
   import { setCurrentView } from '../stores/uiStore';
   import { sessionsStore } from '../stores/sessionsStore';
   import { runMode as runModeStore } from '../stores/runModeStore';
@@ -28,6 +29,8 @@
     Server,
     Brain,
     Target,
+    Puzzle,
+    Settings,
   } from 'lucide-svelte';
   import ScreenLayout from './ScreenLayout.svelte';
   import ModelPicker from './ModelPicker.svelte';
@@ -199,16 +202,30 @@
     sessionsStore.createSession([], undefined, 'gAgent');
     setCurrentView('chat');
   }
+
+  function handleOpenSettingsMcp() {
+    setCurrentView('settings');
+  }
+
+  let mcpServers = $state<Array<{ id: string; name: string; enabled?: boolean }>>([]);
+  onMount(() => {
+    mcpServers = get(settingsStore)?.mcp?.servers ?? [];
+    const unsub = settingsStore.subscribe((s) => {
+      mcpServers = s?.mcp?.servers ?? [];
+    });
+    return unsub;
+  });
 </script>
 
 <ScreenLayout
   title="G-Agent"
-  subtitle="Autonomous AI agent with planning, memory, and self-improvement. Docker recommended."
+  subtitle="Autonomous agent: plans tasks, uses tools, and learns over time. Docker recommended for sandboxing."
   onBack={handleBack}
 >
-  <p class="pathway-hint">
-    You can also open G-Agent from the chat header or <kbd>Ctrl</kbd>+<kbd>K</kbd>.
+  <p class="intro-line">
+    What is G-Agent? An AI that runs goals in the background, uses your tools (files, git, Docker, etc.), and remembers patterns. Open from chat header or <kbd>Ctrl</kbd>+<kbd>K</kbd>.
   </p>
+  <h3 class="block-heading">Status</h3>
   <div class="status-grid">
     <div class="status-card">
       <div class="status-icon" class:loading={dockerLoading}>
@@ -294,11 +311,94 @@
     </div>
   </div>
 
-  <!-- Model preference (Ollama vs cloud) -->
-  <div class="model-preference-section">
-    <h3 class="section-title">Model preference</h3>
+  <!-- MCP Servers (connected tools for G-Agent) -->
+  <div class="gagent-section mcp-section">
+    <div class="section-header mcp-section-header">
+      <div class="section-header-left">
+        <Puzzle width={20} height={20} strokeWidth={2} />
+        <h3 class="section-title">MCP servers</h3>
+      </div>
+      <p class="section-desc">
+        Tools G-Agent can use from your configured MCP servers. Add and manage in Settings → Integrations.
+      </p>
+      <button type="button" class="mcp-settings-link" onclick={handleOpenSettingsMcp}>
+        <Settings width={16} height={16} strokeWidth={2} />
+        Manage in Settings
+      </button>
+    </div>
+    <div class="section-content mcp-section-content">
+      {#if mcpServers.length === 0}
+        <p class="mcp-empty">No MCP servers configured. Add one in Settings → Integrations to let G-Agent use external tools.</p>
+      {:else}
+        <ul class="mcp-status-list">
+          {#each mcpServers as server (server.id)}
+            <li class="mcp-status-item">
+              <span class="mcp-status-name">{server.name}</span>
+              {#if server.enabled === false}
+                <span class="mcp-status-badge disabled">Disabled</span>
+              {:else}
+                <span class="mcp-status-badge">Configured</span>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Goal Queue Section (primary) -->
+  <div class="gagent-section goal-queue-section">
+    <div class="section-header">
+      <div class="section-header-left">
+        <Target width={20} height={20} strokeWidth={2} />
+        <h3 class="section-title">Goal Queue</h3>
+      </div>
+      <p class="section-desc">
+        Tasks G-Agent runs in the background. Add goals here; the agent works on them even when you're away.
+      </p>
+    </div>
+    <div class="section-content goal-queue-container">
+      <GAgentGoalQueue workspaceRoot={undefined} />
+    </div>
+  </div>
+
+  <!-- Memory Section (primary) -->
+  <div class="gagent-section memory-section">
+    <div class="section-header">
+      <div class="section-header-left">
+        <Brain width={20} height={20} strokeWidth={2} />
+        <h3 class="section-title">Agent Memory</h3>
+      </div>
+      <p class="section-desc">
+        Patterns and skills G-Agent has learned from past runs. Use this to see what it remembers.
+      </p>
+    </div>
+    <div class="section-content memory-container">
+      <GAgentMemoryPanel compact={false} />
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="quick-actions">
+    <h3 class="section-title">Quick actions</h3>
+    <div class="actions-row">
+      <button type="button" class="action-btn" onclick={handleOpenChat}>
+        <MessageCircle width={20} height={20} strokeWidth={2} />
+        <span>Chat</span>
+      </button>
+      <button type="button" class="action-btn primary" onclick={handleOpenShip}>
+        <Rocket width={20} height={20} strokeWidth={2} />
+        <span>SHIP</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Model preference (secondary) -->
+  <details class="secondary-block" open>
+    <summary class="block-heading">Model preference</summary>
+    <div class="model-preference-section">
     <p class="section-desc">
-      Choose where G-Agent runs: local Ollama (no API cost) or cloud models.
+      Where G-Agent runs: local Ollama (no API cost) or cloud models.
     </p>
     <div class="model-preference-options">
       <label class="model-option">
@@ -368,9 +468,12 @@
       </div>
     {/if}
   </div>
+  </details>
 
-  <!-- Docker-first messaging -->
-  <div class="info-box">
+  <!-- Capabilities (secondary) -->
+  <details class="secondary-block">
+    <summary class="block-heading">Capabilities</summary>
+  <div class="capabilities-section">
     <div class="info-icon">
       <AlertTriangle width={20} height={20} strokeWidth={2} />
     </div>
@@ -434,8 +537,11 @@
     </div>
     <p class="section-hint">See docs for more capabilities and tool details.</p>
   </div>
+  </details>
 
   <!-- External APIs allowlist -->
+  <details class="secondary-block">
+    <summary class="block-heading">External APIs</summary>
   <div class="allowlist-section">
     <h3 class="section-title">External APIs</h3>
     <p class="section-desc">
@@ -482,51 +588,29 @@
       </p>
     {/if}
   </div>
+  </details>
 
-  <!-- Quick actions -->
-  <div class="quick-actions">
-    <h3 class="section-title">Quick actions</h3>
-    <div class="actions-row">
-      <button type="button" class="action-btn" onclick={handleOpenChat}>
-        <MessageCircle width={20} height={20} strokeWidth={2} />
-        <span>Chat</span>
-      </button>
-      <button type="button" class="action-btn primary" onclick={handleOpenShip}>
-        <Rocket width={20} height={20} strokeWidth={2} />
-        <span>SHIP</span>
-      </button>
+  <!-- Docker-first messaging -->
+  <div class="info-box">
+    <div class="info-icon">
+      <AlertTriangle width={20} height={20} strokeWidth={2} />
     </div>
-  </div>
-
-  <!-- Goal Queue Section -->
-  <div class="gagent-section goal-queue-section">
-    <div class="section-header">
-      <div class="section-header-left">
-        <Target width={20} height={20} strokeWidth={2} />
-        <h3 class="section-title">Goal Queue</h3>
-      </div>
-      <p class="section-desc">
-        Manage autonomous goals. G-Agent works on these in the background, even when you're away.
+    <div class="info-body">
+      <h4 class="info-title">G-Agent runs best in Docker</h4>
+      <p class="info-desc">
+        Docker provides sandboxing and isolation. If you run locally, the AI has full access to your
+        system. Use the Docker setup wizard to get started.
       </p>
-    </div>
-    <div class="section-content goal-queue-container">
-      <GAgentGoalQueue workspaceRoot={undefined} />
-    </div>
-  </div>
-
-  <!-- Memory Section -->
-  <div class="gagent-section memory-section">
-    <div class="section-header">
-      <div class="section-header-left">
-        <Brain width={20} height={20} strokeWidth={2} />
-        <h3 class="section-title">Agent Memory</h3>
+      <div class="info-actions">
+        <button type="button" class="info-action" onclick={handleOpenDockerSetup}>
+          Open Docker Setup
+        </button>
+        {#if !dockerDetected}
+          <button type="button" class="info-skip" onclick={() => runModeStore.set('local')}>
+            Continue without Docker (not recommended)
+          </button>
+        {/if}
       </div>
-      <p class="section-desc">
-        G-Agent learns from every execution. View patterns, skills, and terminology it has learned.
-      </p>
-    </div>
-    <div class="section-content memory-container">
-      <GAgentMemoryPanel compact={false} />
     </div>
   </div>
 
@@ -564,12 +648,13 @@
 
   .status-card {
     padding: 1.25rem;
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    background: white;
+    border: 1px solid #e9d5ff;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.06);
   }
 
   .status-icon {
@@ -579,8 +664,8 @@
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: var(--color-bg-subtle);
-    color: var(--color-primary);
+    background: #f5f3ff;
+    color: #7c3aed;
   }
 
   .status-icon.loading {
@@ -649,9 +734,10 @@
     gap: 1rem;
     padding: 1.25rem;
     margin-bottom: 2rem;
-    background: var(--color-bg-subtle);
-    border: 1px solid var(--color-border-highlight);
-    border-radius: var(--radius-md);
+    background: white;
+    border: 1px solid #e9d5ff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.06);
   }
 
   .info-icon {
@@ -1035,5 +1121,78 @@
   .memory-container {
     height: 400px;
     overflow: hidden;
+  }
+
+  .mcp-section-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .mcp-settings-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-primary);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .mcp-settings-link:hover {
+    background: var(--color-bg-subtle);
+  }
+
+  .mcp-section-content {
+    padding: 1rem 1.25rem;
+  }
+
+  .mcp-empty {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .mcp-status-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .mcp-status-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.875rem;
+  }
+
+  .mcp-status-item:last-child {
+    border-bottom: none;
+  }
+
+  .mcp-status-name {
+    font-weight: 500;
+    color: var(--color-text);
+  }
+
+  .mcp-status-badge {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: var(--color-bg-subtle);
+    color: var(--color-text-muted);
+  }
+
+  .mcp-status-badge.disabled {
+    background: #fef2f2;
+    color: #b91c1c;
   }
 </style>

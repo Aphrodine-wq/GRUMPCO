@@ -50,6 +50,8 @@
     height: 100%;
     overflow: hidden;
     padding: 1.5rem;
+    background: #f9fafb;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
   .screen-header {
@@ -66,27 +68,32 @@
     margin-bottom: 1rem;
     border: none;
     border-radius: 8px;
-    background: var(--color-bg-subtle, #f3f4f6);
-    color: var(--color-text, #111);
+    background: #ffffff;
+    color: #374151;
+    border: 1px solid #e5e7eb;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: all 0.15s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   }
 
   .back-btn:hover {
-    background: var(--color-bg-card-hover, #e5e7eb);
+    background: #f3f4f6;
+    border-color: #d1d5db;
   }
 
   .screen-title {
     font-size: 1.75rem;
     font-weight: 700;
-    color: var(--color-text, #111);
+    color: #111827;
     margin: 0 0 0.5rem 0;
+    letter-spacing: -0.02em;
   }
 
   .screen-subtitle {
     font-size: 1rem;
-    color: var(--color-text-muted, #6b7280);
+    color: #6b7280;
     margin: 0;
+    line-height: 1.5;
   }
 
   .screen-content {

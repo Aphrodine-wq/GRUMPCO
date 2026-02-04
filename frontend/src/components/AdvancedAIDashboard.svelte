@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { Card, Button } from '../lib/design-system';
   import {
     getSystemOverview,
     getHolographicStats,
@@ -339,8 +340,7 @@
       </div>
     {:else if activeTab === 'overview'}
       <div class="overview-grid">
-        <div class="card">
-          <h3>Holographic Memory</h3>
+        <Card title="Holographic Memory" padding="md">
           <div class="stat-grid">
             <div class="stat">
               <span class="label">Active Memories</span>
@@ -355,10 +355,9 @@
             Fixed-size vector memory using FFT-based holographic encoding. O(1) memory for unlimited
             key-value pairs.
           </p>
-        </div>
+        </Card>
 
-        <div class="card">
-          <h3>Swarm Intelligence</h3>
+        <Card title="Swarm Intelligence" padding="md">
           <div class="stat-grid">
             <div class="stat">
               <span class="label">Agents</span>
@@ -373,10 +372,9 @@
             Distributed micro-agents with gossip protocol and stigmergy for emergent
             problem-solving.
           </p>
-        </div>
+        </Card>
 
-        <div class="card">
-          <h3>Predictive Preloader</h3>
+        <Card title="Predictive Preloader" padding="md">
           <div class="stat-grid">
             <div class="stat">
               <span class="label">Queries Learned</span>
@@ -390,10 +388,9 @@
           <p class="description">
             N-gram and Markov chain prediction to anticipate user queries and pre-warm context.
           </p>
-        </div>
+        </Card>
 
-        <div class="card">
-          <h3>Recursive Distillation</h3>
+        <Card title="Recursive Distillation" padding="md">
           <div class="stat-grid">
             <div class="stat">
               <span class="label">Patterns</span>
@@ -407,7 +404,7 @@
           <p class="description">
             Extract and compress conversation patterns into personalized user models.
           </p>
-        </div>
+        </Card>
       </div>
     {:else if activeTab === 'holographic'}
       <div class="section">
@@ -926,7 +923,9 @@
     padding: 1.5rem;
     max-width: 1200px;
     margin: 0 auto;
-    font-family: var(--font-mono, monospace);
+    font-family: var(--font-sans, system-ui, sans-serif);
+    background: var(--color-bg, #fafafa);
+    color: var(--color-text, #111827);
   }
 
   .dashboard-header {
@@ -946,28 +945,28 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: var(--bg-secondary, #1a1a1a);
-    border: 1px solid var(--border-color, #333);
+    background: var(--color-bg-card, #fff);
+    border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 8px;
-    color: var(--text-secondary, #888);
+    color: var(--color-text-secondary, #374151);
     cursor: pointer;
     font-size: 0.875rem;
     transition: all 0.2s;
   }
 
   .back-btn:hover {
-    background: var(--bg-tertiary, #252525);
-    color: var(--text-primary, #fff);
+    background: var(--color-bg-subtle, #f9fafb);
+    color: var(--color-text, #111827);
   }
 
   .dashboard-header h1 {
     font-size: 1.75rem;
     margin: 0 0 0.5rem;
-    color: var(--text-primary, #fff);
+    color: var(--color-text, #111827);
   }
 
   .subtitle {
-    color: var(--text-secondary, #888);
+    color: var(--color-text-muted, #6b7280);
     font-size: 0.875rem;
   }
 
@@ -980,9 +979,9 @@
 
   .tab-nav button {
     padding: 0.5rem 1rem;
-    border: 1px solid var(--border-color, #333);
-    background: var(--bg-secondary, #1a1a1a);
-    color: var(--text-secondary, #888);
+    border: 1px solid var(--color-border, #e5e7eb);
+    background: var(--color-bg-card, #fff);
+    color: var(--color-text-secondary, #6b7280);
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.875rem;
@@ -990,13 +989,14 @@
   }
 
   .tab-nav button:hover {
-    background: var(--bg-tertiary, #252525);
+    background: var(--color-bg-subtle, #f3f4f6);
+    color: var(--color-text, #374151);
   }
 
   .tab-nav button.active {
-    background: var(--accent-color, #3b82f6);
+    background: var(--color-primary, #6366f1);
     color: white;
-    border-color: var(--accent-color, #3b82f6);
+    border-color: var(--color-primary, #6366f1);
   }
 
   .error-banner {
@@ -1042,17 +1042,15 @@
     gap: 1rem;
   }
 
-  .card {
-    background: var(--bg-secondary, #1a1a1a);
-    border: 1px solid var(--border-color, #333);
-    border-radius: 8px;
-    padding: 1.25rem;
+  .overview-grid .stat-grid,
+  .overview-grid .description {
+    margin: 0;
   }
 
-  .card h3 {
-    margin: 0 0 1rem;
-    font-size: 1rem;
-    color: var(--text-primary, #fff);
+  .overview-grid .description {
+    font-size: 0.875rem;
+    color: var(--color-text-muted, #6b7280);
+    margin-top: 0.75rem;
   }
 
   .stat-grid {
@@ -1069,25 +1067,25 @@
 
   .stat .label {
     font-size: 0.75rem;
-    color: var(--text-secondary, #888);
+    color: var(--color-text-muted, #6b7280);
     text-transform: uppercase;
   }
 
   .stat .value {
     font-size: 1.5rem;
     font-weight: bold;
-    color: var(--accent-color, #3b82f6);
+    color: var(--color-primary, #6366f1);
   }
 
   .description {
     font-size: 0.8rem;
-    color: var(--text-secondary, #888);
+    color: var(--color-text-muted, #6b7280);
     line-height: 1.4;
   }
 
   .section {
-    background: var(--bg-secondary, #1a1a1a);
-    border: 1px solid var(--border-color, #333);
+    background: var(--color-bg-card, #fff);
+    border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 8px;
     padding: 1.5rem;
   }
@@ -1095,7 +1093,7 @@
   .section h2 {
     margin: 0 0 0.5rem;
     font-size: 1.25rem;
-    color: var(--text-primary, #fff);
+    color: var(--color-text, #111827);
   }
 
   .section-desc {

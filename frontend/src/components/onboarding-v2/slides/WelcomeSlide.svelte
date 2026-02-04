@@ -2,6 +2,7 @@
   import { Sparkles } from 'lucide-svelte';
   import SlideLayout from '../shared/SlideLayout.svelte';
   import BackgroundBlobs from '../shared/BackgroundBlobs.svelte';
+  import FrownyFace from '../../FrownyFace.svelte';
 
   interface Props {
     onNext: () => void;
@@ -16,13 +17,15 @@
   ];
 </script>
 
-<SlideLayout>
+{#snippet background()}
   <BackgroundBlobs />
+{/snippet}
 
+<SlideLayout {background}>
   <div class="logo-area">
     <div class="logo-glow"></div>
     <div class="logo-icon">
-      <span class="grumpy-face">😤</span>
+      <FrownyFace size="xl" state="idle" animated={true} />
     </div>
   </div>
 
@@ -33,7 +36,7 @@
     </p>
     <p class="description">
       Turn ideas into production-ready apps with AI-powered architecture, specs, and code
-      generation. Ship 18x faster.
+      generation. From diagram to deploy—ship faster with full control.
     </p>
   </div>
 
@@ -62,14 +65,14 @@
   /* Logo styles */
   .logo-area {
     position: relative;
-    width: 96px;
-    height: 96px;
+    width: 128px;
+    height: 128px;
     margin-bottom: 2rem;
   }
 
   .logo-glow {
     position: absolute;
-    inset: -20px;
+    inset: -24px;
     background: radial-gradient(circle, rgba(124, 58, 237, 0.4) 0%, transparent 70%);
     filter: blur(20px);
     animation: pulse 4s ease-in-out infinite;
@@ -79,20 +82,10 @@
     position: relative;
     width: 100%;
     height: 100%;
-    background: white;
-    border-radius: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 3rem;
-    box-shadow: 0 10px 25px rgba(124, 58, 237, 0.15);
-    border: 1px solid rgba(124, 58, 237, 0.1);
     z-index: 10;
-  }
-
-  .grumpy-face {
-    display: inline-block;
-    animation: bounce 2s infinite;
   }
 
   /* Text Content */
@@ -176,19 +169,8 @@
     }
   }
 
-  @keyframes bounce {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-5px);
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .logo-glow,
-    .grumpy-face {
+    .logo-glow {
       animation: none;
     }
   }

@@ -20,7 +20,7 @@
   let {
     collapsed = $bindable(false),
     onToggle,
-    width = 260,
+    width = 230,
     collapsedWidth = 64,
     children,
     header,
