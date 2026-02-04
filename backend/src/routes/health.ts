@@ -1,6 +1,6 @@
 import express, { type Request, type Response, type Router } from "express";
 import { getRequestLogger } from "../middleware/logger.js";
-import { getDatabase, databaseSupportsRawDb } from "../db/database.js";
+import { getDatabase } from "../db/database.js";
 import { getAllServiceStates } from "../services/bulkheads.js";
 import { getAlertingService } from "../services/alerting.js";
 import { isRedisConnected } from "../services/redis.js";
@@ -22,11 +22,9 @@ router.get("/", (_req: Request, res: Response) => {
 router.get("/quick", (_req: Request, res: Response) => {
   const apiKeyConfigured = !!process.env.NVIDIA_NIM_API_KEY;
 
-  const supabaseServiceKey =
-    process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
   const authEnabled =
     !!process.env.SUPABASE_URL &&
-    !!supabaseServiceKey &&
+    !!process.env.SUPABASE_SERVICE_KEY &&
     process.env.SUPABASE_URL !== "https://your-project.supabase.co";
 
   // Determine overall status
@@ -100,15 +98,11 @@ router.get("/ready", async (_req: Request, res: Response) => {
     checks.api_key = true;
   }
 
-  // Check database connectivity (raw DB when SQLite/Postgres; Supabase client when in Supabase mode)
+  // Check database connectivity
   try {
     const db = getDatabase();
-    if (databaseSupportsRawDb()) {
-      const dbInstance = db.getDb();
-      dbInstance.prepare("SELECT 1").get();
-    } else {
-      await db.getSession("__health_check__");
-    }
+    const dbInstance = db.getDb();
+    dbInstance.prepare("SELECT 1").get();
     checks.database = true;
   } catch (error) {
     const err = error as Error;
@@ -169,16 +163,12 @@ router.get("/detailed", async (_req: Request, res: Response) => {
     { status: "healthy" | "unhealthy" | "degraded"; details?: unknown }
   > = {};
 
-  // Database check (raw DB when SQLite/Postgres; Supabase client when in Supabase mode)
+  // Database check
   try {
     const db = getDatabase();
+    const dbInstance = db.getDb();
     const start = Date.now();
-    if (databaseSupportsRawDb()) {
-      const dbInstance = db.getDb();
-      dbInstance.prepare("SELECT 1").get();
-    } else {
-      await db.getSession("__health_check__");
-    }
+    dbInstance.prepare("SELECT 1").get();
     const latency = Date.now() - start;
     checks.database = {
       status: "healthy",
@@ -434,6 +424,14 @@ router.get("/ai-providers", async (_req: Request, res: Response) => {
             healthy = response.ok;
           }
           break;
+        case "together":
+          if (env.TOGETHER_API_KEY) {
+            const response = await fetch("https://api.together.xyz/v1/models", {
+              headers: { Authorization: `Bearer ${env.TOGETHER_API_KEY}` },
+            });
+            healthy = response.ok;
+          }
+          break;
         case "ollama":
           if (env.OLLAMA_BASE_URL) {
             const response = await fetch(`${env.OLLAMA_BASE_URL}/api/tags`);
@@ -464,6 +462,7 @@ router.get("/ai-providers", async (_req: Request, res: Response) => {
     "nim",
     "groq",
     "openrouter",
+    "together",
     "ollama",
   ];
   for (const provider of allProviders) {

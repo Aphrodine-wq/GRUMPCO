@@ -98,20 +98,18 @@ class SkillRegistry {
         return;
       }
 
-      // Load skill module (prefer index.js for production, index.ts for dev)
-      const jsPath = path.join(skillPath, "index.js");
-      const tsPath = path.join(skillPath, "index.ts");
-      const modulePath = fs.existsSync(jsPath)
-        ? jsPath
-        : fs.existsSync(tsPath)
-          ? tsPath
-          : null;
-      if (!modulePath) {
-        logger.warn({ skillPath }, "No index.js or index.ts found");
-        return;
+      // Load skill module
+      const indexPath = path.join(skillPath, "index.js");
+      if (!fs.existsSync(indexPath)) {
+        // Try TypeScript source in development
+        const tsIndexPath = path.join(skillPath, "index.ts");
+        if (!fs.existsSync(tsIndexPath)) {
+          logger.warn({ skillPath }, "No index.js or index.ts found");
+          return;
+        }
       }
 
-      const skillModule = await import(pathToFileURL(modulePath).href);
+      const skillModule = await import(pathToFileURL(indexPath).href);
       const skillExport = skillModule.default || skillModule;
 
       // Construct skill object
@@ -137,21 +135,7 @@ class SkillRegistry {
         "Skill loaded",
       );
     } catch (error) {
-      const err = error as NodeJS.ErrnoException;
-      const isModuleNotFound =
-        err.code === "ERR_MODULE_NOT_FOUND" ||
-        err.message?.includes("Cannot find module");
-      logger.error(
-        {
-          skillPath,
-          error: err.message,
-          code: err.code,
-          ...(isModuleNotFound && {
-            hint: "Ensure backend build (swc) ran so dist/skills/<name>/index.js exists, or run from source with tsx.",
-          }),
-        },
-        "Failed to load skill",
-      );
+      logger.error({ skillPath, error }, "Failed to load skill");
     }
   }
 
