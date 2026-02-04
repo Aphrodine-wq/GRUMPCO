@@ -44,8 +44,13 @@ COPY backend/scripts ./scripts
 WORKDIR /app/packages/ai-core
 RUN npm install && npm run build
 
-# Build backend with SWC (using compatible options)
+# Link ai-core into node_modules so imports resolve during build
 WORKDIR /app
+RUN mkdir -p node_modules/@grump/ai-core && \
+    cp -r packages/ai-core/dist node_modules/@grump/ai-core/ && \
+    cp packages/ai-core/package.json node_modules/@grump/ai-core/
+
+# Build backend with SWC (using compatible options)
 RUN --mount=type=cache,target=/app/.swc \
     npx swc src -d dist --copy-files --config-file .swcrc && \
     node scripts/copy-migrations.mjs
