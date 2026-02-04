@@ -3,6 +3,7 @@
   import type { ComponentType } from 'svelte';
   import { chatModeStore } from '../stores/chatModeStore';
   import { setCurrentView, focusChatTrigger } from '../stores/uiStore';
+  import { getSavedPrompts } from '../stores/savedPromptsStore';
   import {
     MessageSquare,
     Clipboard,
@@ -225,7 +226,7 @@
       },
       {
         id: 'view-memory',
-        label: 'Memory bank',
+        label: 'Memory',
         category: 'ai',
         icon: Brain,
         action: () => {
@@ -410,7 +411,37 @@
           close();
         },
       },
+      {
+        id: 'save-current-prompt',
+        label: 'Save current prompt',
+        category: 'actions',
+        icon: Save,
+        action: () => {
+          window.dispatchEvent(new CustomEvent('save-current-prompt'));
+          setCurrentView('chat');
+          close();
+        },
+      },
     ];
+
+    // Dynamic: Insert saved prompt (one command per saved prompt)
+    const saved = getSavedPrompts();
+    for (const p of saved) {
+      const label = p.label || (p.text.length > 45 ? p.text.slice(0, 42) + '…' : p.text);
+      commands.push({
+        id: `insert-prompt-${p.id}`,
+        label: `Insert: ${label}`,
+        category: 'actions',
+        icon: FileText,
+        action: () => {
+          window.dispatchEvent(new CustomEvent('insert-saved-prompt', { detail: { text: p.text } }));
+          setCurrentView('chat');
+          focusChatTrigger.update((n) => n + 1);
+          close();
+        },
+      });
+    }
+
     filteredCommands = commands;
   }
 
@@ -507,6 +538,12 @@
   $effect(() => {
     if (open && searchInput) {
       searchInput.focus();
+    }
+  });
+
+  $effect(() => {
+    if (open) {
+      initializeCommands();
     }
   });
 

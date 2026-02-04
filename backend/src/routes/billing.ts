@@ -1,116 +1,142 @@
 /**
- * Billing / pricing routes for desktop and parity with backend-web.
- * GET /api/billing/tiers – tier definitions
- * GET /api/billing/me – current user tier/usage (user from auth when available)
+ * Billing API – subscription, usage, payment methods, invoices.
+ * Used by Settings Billing tab. Wire Stripe (or provider) for production.
  */
 
-import { Router, Request, Response } from 'express';
-import { TIERS, getTier } from '../config/pricing.js';
-import { getTierForUser } from '../services/featureFlagsService.js';
-import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
-import { createCheckoutSession } from '../services/stripeService.js';
-import { licenseService } from '../services/licenseService.js';
+import { Router, type Request, type Response } from 'express';
+import { TIERS, OVERAGE_RATES, type TierId } from '../config/pricing.js';
+import { getMonthlyCallCount } from '../services/usageTracker.js';
+import logger from '../middleware/logger.js';
 
 const router = Router();
-
-/**
- * GET /api/billing/tiers
- * Returns tier definitions for pricing display in settings.
- */
-router.get('/tiers', (_req: Request, res: Response) => {
-  res.json({ tiers: Object.values(TIERS) });
-});
+const DEFAULT_USER = 'default';
 
 /**
  * GET /api/billing/me
- * Returns current user tier and usage. Uses optionalAuth (via /api); when no user, returns null.
- * Desktop can show "Sign in to see usage" when tier/usage are null.
+ * Current user's billing: tier, usage, limits. Frontend expects BillingMe shape.
  */
 router.get('/me', async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
-
-  const license = await licenseService.getLicenseStatus(authReq.user?.id);
-  const tierDef = getTier(license.tier);
-
-  res.json({
-    tier: license.tier,
-    usage: null, // metrics service integration needed here
-    limit: tierDef.apiCallsPerMonth,
-    features: license.features,
-    message: !authReq.user?.id ? 'Sign in to see usage and manage billing.' : null,
-  });
-});
-
-/**
- * POST /api/billing/activate-license
- * Foundation endpoint for Activating a license key (offline/one-time purchase model)
- */
-router.post('/activate-license', async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
-  if (!authReq.user?.id) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
-  const { key } = req.body;
-  if (!key || typeof key !== 'string') {
-    res.status(400).json({ error: 'License key required' });
-    return;
-  }
-
-  // Validate license key format: GRUMP-{TIER}-{hex hash}
-  const LICENSE_KEY_RE = /^GRUMP-(FREE|PRO|TEAM|ENTERPRISE)-[a-f0-9]{16,64}$/i;
-  if (!LICENSE_KEY_RE.test(key)) {
-    res.status(400).json({ error: 'Invalid license key format' });
-    return;
-  }
-
-  const success = await licenseService.activateLicense(authReq.user.id, key);
-  if (success) {
-    res.json({ success: true, message: 'License activated' });
-  } else {
-    res.status(400).json({ error: 'Invalid license key' });
+  try {
+    const userId = (req.query.userId as string) || DEFAULT_USER;
+    const tierId = (process.env.TIER_DEFAULT as TierId) || 'free';
+    const tier = TIERS[tierId] ?? TIERS.free;
+    let usage = 0;
+    try {
+      usage = await getMonthlyCallCount(userId);
+    } catch (e) {
+      logger.debug({ err: e }, 'Usage tracker not available for billing/me');
+    }
+    res.json({
+      tier: tier.name,
+      usage,
+      limit: tier.creditsPerMonth ?? tier.apiCallsPerMonth ?? null,
+      computeMinutesUsed: 0,
+      computeMinutesLimit: tier.includedComputeMinutes ?? null,
+      storageGbUsed: 0,
+      storageGbLimit: tier.includedStorageGb ?? null,
+      overageRates: OVERAGE_RATES,
+    });
+  } catch (error) {
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      'Failed to get billing/me'
+    );
+    res.status(500).json({
+      tier: null,
+      usage: null,
+      limit: null,
+      message: 'Failed to load billing',
+    });
   }
 });
 
+/**
+ * GET /api/billing/tiers
+ * Available plans. Frontend expects { tiers: Tier[] }.
+ */
+router.get('/tiers', (_req: Request, res: Response) => {
+  try {
+    const tiers = Object.values(TIERS);
+    res.json({ tiers });
+  } catch (error) {
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      'Failed to get billing/tiers'
+    );
+    res.status(500).json({ tiers: [] });
+  }
+});
 
 /**
- * POST /api/billing/checkout
- * Creates a Stripe Checkout session for the requested priceId.
- * Requires authentication.
+ * GET /api/billing/subscription
+ * Current subscription (plan, status, renewal). Stub until Stripe wired.
  */
-router.post('/checkout', async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
-  if (!authReq.user?.id) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
+router.get('/subscription', (_req: Request, res: Response) => {
+  try {
+    const tierId = (process.env.TIER_DEFAULT as TierId) || 'free';
+    const tier = TIERS[tierId] ?? TIERS.free;
+    res.json({
+      plan: tier.id,
+      planName: tier.name,
+      status: 'active',
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+  } catch (error) {
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      'Failed to get billing/subscription'
+    );
+    res.status(500).json({ error: 'Failed to load subscription' });
   }
-  const { priceId } = req.body;
-  if (!priceId) {
-    res.status(400).json({ error: 'Missing priceId' });
-    return;
+});
+
+/**
+ * GET /api/billing/payment-methods
+ * Saved payment methods. Stub until Stripe wired.
+ */
+router.get('/payment-methods', (_req: Request, res: Response) => {
+  try {
+    res.json({ paymentMethods: [] });
+  } catch (error) {
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      'Failed to get billing/payment-methods'
+    );
+    res.status(500).json({ paymentMethods: [] });
   }
-  const userId = authReq.user.id;
-  const userEmail = authReq.user.email; // Assuming email is available on user object
+});
 
-  // Defines success/cancel URLs. ideally configurable or based on referrer
-  // For now using localhost or env vars if available, defaulting to standard locations
-  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-  const successUrl = `${baseUrl}/settings?checkout=success`;
-  const cancelUrl = `${baseUrl}/settings?checkout=cancel`;
-
-  const result = await createCheckoutSession({
-    userId,
-    priceId,
-    successUrl,
-    cancelUrl,
-    customerEmail: userEmail,
-  });
-
-  if (result.error) {
-    res.status(500).json({ error: result.error });
-    return;
+/**
+ * POST /api/billing/payment-methods
+ * Add or update payment method. Stub until Stripe wired.
+ */
+router.post('/payment-methods', (req: Request, res: Response) => {
+  try {
+    // When Stripe is wired: create SetupIntent or attach payment method to customer
+    res.status(201).json({ success: true, message: 'Payment method support coming soon' });
+  } catch (error) {
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      'Failed to add billing/payment-method'
+    );
+    res.status(500).json({ error: 'Failed to add payment method' });
   }
-  res.json({ url: result.url });
+});
+
+/**
+ * GET /api/billing/invoices
+ * List invoices. Stub until Stripe wired.
+ */
+router.get('/invoices', (_req: Request, res: Response) => {
+  try {
+    res.json({ invoices: [] });
+  } catch (error) {
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      'Failed to get billing/invoices'
+    );
+    res.status(500).json({ invoices: [] });
+  }
 });
 
 export default router;

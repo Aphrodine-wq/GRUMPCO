@@ -108,6 +108,7 @@ const ROUTE_DEFINITIONS: RouteEntry[] = [
   { path: '/api/share', module: './share.js', priority: 'cold' },
 
   // ── Integrations (COLD) ──────────────────────────────────────────────────
+  { path: '/api/figma', module: './figma.js', priority: 'cold' },
   { path: '/api/github', module: './github.js', priority: 'cold' },
   { path: '/api/integrations', module: '../features/integrations/routes.js', priority: 'cold' },
   { path: '/api/integrations/gmail', module: './gmailWebhook.js', priority: 'cold' },
@@ -115,8 +116,8 @@ const ROUTE_DEFINITIONS: RouteEntry[] = [
   { path: '/api/slack', module: './slack.js', priority: 'cold' },
   { path: '/api/webhooks', module: './webhooks.js', priority: 'cold' },
 
-  // ── Cost Analytics (COLD) ────────────────────────────────────────────────
-  // Billing routes removed (Stripe not used - desktop only)
+  // ── Cost Analytics & Billing (COLD) ───────────────────────────────────────
+  { path: '/api/billing', module: './billing.js', priority: 'cold' },
   { path: '/api/cost', module: './costDashboard.js', priority: 'cold' },
 
   // ── Skills (COLD) ────────────────────────────────────────────────────────
