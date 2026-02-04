@@ -37,6 +37,7 @@ interface AlertConfig {
     enabled: boolean;
     threshold: number; // percentage
     windowMinutes: number;
+    minRequests?: number; // only alert when total requests >= this (avoids 1 failure = 100% noise)
   };
   performanceDegradation: {
     enabled: boolean;
@@ -57,6 +58,7 @@ const DEFAULT_CONFIG: AlertConfig = {
     enabled: true,
     threshold: 5, // 5%
     windowMinutes: 5,
+    minRequests: 10, // don't alert on tiny samples (e.g. 1 request, 1 error = 100%)
   },
   performanceDegradation: {
     enabled: true,
@@ -65,7 +67,7 @@ const DEFAULT_CONFIG: AlertConfig = {
   databaseFailure: true,
   highMemoryUsage: {
     enabled: true,
-    threshold: 85, // 85%
+    threshold: 96, // 96% (avoid noise on small heaps e.g. 50MB where 85% is normal)
   },
 };
 
@@ -154,7 +156,8 @@ class AlertingService {
         })
         .reduce((sum, v) => sum + (v.value || 0), 0);
 
-      if (totalRequests > 0) {
+      const minRequests = this.config.highErrorRate.minRequests ?? 10;
+      if (totalRequests >= minRequests && totalRequests > 0) {
         const errorRate = (errorRequests / totalRequests) * 100;
 
         if (errorRate > this.config.highErrorRate.threshold) {
