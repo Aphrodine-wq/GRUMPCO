@@ -14,7 +14,6 @@ import {
   initializeDatabase,
   closeDatabase,
   getDatabase,
-  databaseSupportsRawDb,
 } from "../db/database.js";
 import { initializeCostTracking } from "../services/costAnalytics.js";
 import { goalRepository } from "../gAgent/goalRepository.js";
@@ -115,17 +114,15 @@ export async function initializeCore(): Promise<void> {
   await initializeDatabase();
   logger.info("Database initialized");
 
-  // Skip G-Agent repository when raw DB is not available (serverless or Supabase)
-  if (!isServerlessRuntime && databaseSupportsRawDb()) {
+  // Skip G-Agent repository in serverless (requires persistent connections)
+  if (!isServerlessRuntime) {
     const db = getDatabase().getDb();
     goalRepository.setDatabase(db);
     logger.info("G-Agent goal repository initialized");
   }
 
-  if (databaseSupportsRawDb()) {
-    await initializeCostTracking();
-    logger.info("Cost tracking initialized");
-  }
+  await initializeCostTracking();
+  logger.info("Cost tracking initialized");
 
   // Prewarm hot routes in serverless mode
   if (isServerlessRuntime) {
@@ -138,11 +135,11 @@ export async function initializeCore(): Promise<void> {
 
 /**
  * Initializes background job workers for async processing.
- * Skipped in serverless environments (Vercel, Lambda) or when DB has no raw access (e.g. Supabase).
+ * Skipped in serverless environments (Vercel, Lambda).
  */
 export async function initializeWorkers(): Promise<void> {
-  if (isServerlessRuntime || !databaseSupportsRawDb()) {
-    logger.info("Job workers and schedulers disabled (serverless or Supabase)");
+  if (isServerlessRuntime) {
+    logger.info("Serverless runtime: job workers and schedulers disabled");
     return;
   }
 
