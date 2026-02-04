@@ -340,10 +340,6 @@ OPENROUTER_API_KEY=${envVars.OPENROUTER_API_KEY || ''}
 # Get key: https://groq.com/
 GROQ_API_KEY=${envVars.GROQ_API_KEY || ''}
 
-# Together AI (Open models)
-# Get key: https://together.ai/
-TOGETHER_API_KEY=${envVars.TOGETHER_API_KEY || ''}
-
 # Ollama (Local/Offline)
 # Run locally: https://ollama.com/
 OLLAMA_URL=${envVars.OLLAMA_URL || 'http://localhost:11434'}

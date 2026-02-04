@@ -93,10 +93,10 @@ describe('connectionPool', () => {
     });
 
     it('should warn on failure', () => {
-      connectionPool.markFailure('together');
+      connectionPool.markFailure('openrouter');
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({ provider: 'together' }),
+        expect.objectContaining({ provider: 'openrouter' }),
         'Provider connection failure'
       );
     });

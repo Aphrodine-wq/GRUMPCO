@@ -117,9 +117,6 @@ const envSchema = z
     // Groq - https://groq.com
     GROQ_API_KEY: z.string().optional(),
 
-    // Together AI - https://together.ai
-    TOGETHER_API_KEY: z.string().optional(),
-
     // Provider routing preferences
     ROUTER_FAST_PROVIDER: z
       .enum([
@@ -131,7 +128,6 @@ const envSchema = z
         "anthropic",
         "ollama",
         "groq",
-        "together",
       ])
       .default("nim"),
     ROUTER_QUALITY_PROVIDER: z
@@ -144,7 +140,6 @@ const envSchema = z
         "kimi",
         "ollama",
         "groq",
-        "together",
       ])
       .default("anthropic"),
     ROUTER_CODING_PROVIDER: z
@@ -157,7 +152,6 @@ const envSchema = z
         "kimi",
         "ollama",
         "groq",
-        "together",
       ])
       .default("github-copilot"),
 
@@ -404,15 +398,14 @@ const envSchema = z
       const hasProvider = Boolean(
         data.NVIDIA_NIM_API_KEY ||
         data.OPENROUTER_API_KEY ||
-        data.GROQ_API_KEY ||
-        data.TOGETHER_API_KEY,
+        data.GROQ_API_KEY,
       );
 
       return hasProvider;
     },
     {
       message:
-        "At least one AI provider API key is required (NVIDIA_NIM_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, or TOGETHER_API_KEY). Set MOCK_AI_MODE=true for zero-config mode. Get free keys: https://build.nvidia.com/",
+        "At least one AI provider API key is required (NVIDIA_NIM_API_KEY, OPENROUTER_API_KEY, or GROQ_API_KEY). Set MOCK_AI_MODE=true for zero-config mode. Get free keys: https://build.nvidia.com/",
     },
   )
   .superRefine((data, ctx) => {
@@ -602,7 +595,6 @@ if (parseResult.success) {
   if (env.NVIDIA_NIM_API_KEY) providers.push("NVIDIA NIM");
   if (env.OPENROUTER_API_KEY) providers.push("OpenRouter");
   if (env.GROQ_API_KEY) providers.push("Groq");
-  if (env.TOGETHER_API_KEY) providers.push("Together AI");
   if (env.OLLAMA_BASE_URL && env.OLLAMA_BASE_URL !== "http://localhost:11434") {
     providers.push("Ollama");
   }
@@ -692,8 +684,7 @@ export type ApiProvider =
   | "kimi"
   | "anthropic"
   | "mistral"
-  | "groq"
-  | "together";
+  | "groq";
 
 export function getApiKey(provider: ApiProvider): string | undefined {
   switch (provider) {
@@ -714,8 +705,6 @@ export function getApiKey(provider: ApiProvider): string | undefined {
       return env.MISTRAL_API_KEY;
     case "groq":
       return env.GROQ_API_KEY;
-    case "together":
-      return env.TOGETHER_API_KEY;
     default:
       return undefined;
   }
@@ -742,8 +731,6 @@ export function isProviderConfigured(provider: ApiProvider): boolean {
       return Boolean(env.MISTRAL_API_KEY);
     case "groq":
       return Boolean(env.GROQ_API_KEY);
-    case "together":
-      return Boolean(env.TOGETHER_API_KEY);
     default:
       return false;
   }
@@ -762,6 +749,5 @@ export function getConfiguredProviders(): ApiProvider[] {
   if (env.ANTHROPIC_API_KEY) providers.push("anthropic");
   if (env.MISTRAL_API_KEY) providers.push("mistral");
   if (env.GROQ_API_KEY) providers.push("groq");
-  if (env.TOGETHER_API_KEY) providers.push("together");
   return providers;
 }

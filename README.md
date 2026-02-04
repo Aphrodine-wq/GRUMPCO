@@ -214,7 +214,6 @@ graph TB
         Kimi[Kimi K2.5]
         OpenRouter[OpenRouter]
         Groq[Groq]
-        Together[Together AI]
         Ollama[Ollama Local]
     end
     
@@ -303,7 +302,7 @@ See [docs/API.md](./docs/API.md) for complete reference.
 | **Frontend** | TypeScript 5.3, Mermaid.js, Shiki |
 | **Backend** | Node.js 20+, Express 5, TypeScript, SWC, Pino |
 | **Compiler** | Rust 1.77+, rayon, SIMD (AVX2/AVX-512), WASM |
-| **AI/ML** | NVIDIA NIM, Kimi K2.5, OpenRouter, Groq, Together AI, Ollama |
+| **AI/ML** | NVIDIA NIM, Kimi K2.5, OpenRouter, Groq, Ollama |
 | **Database** | SQLite (dev), PostgreSQL/Supabase (prod) |
 | **Queue** | BullMQ, Redis |
 | **Infrastructure** | Docker, Kubernetes, NGC (GCP/AWS) |

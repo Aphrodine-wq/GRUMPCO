@@ -14,7 +14,7 @@ AI-integrated compiler combining Rust's speed with LLM intelligence for intent p
 - **Caching Layer**: Redis-based caching for parsed intents
 - **Fallback Mechanisms**: Automatic fallback if one method fails
 - **Batch Processing**: Parse multiple intents efficiently
-- **Provider Support**: Works with NIM, Groq, Together, Ollama, and more
+- **Provider Support**: Works with NIM, Groq, Ollama, and more
 
 ## Quick Start
 
@@ -51,7 +51,7 @@ HYBRID_PARALLEL_PROCESSING=true
 HYBRID_CACHING_ENABLED=true
 
 # LLM provider selection
-HYBRID_LLM_PROVIDER=nim  # nim, groq, together, ollama, openrouter, zhipu
+HYBRID_LLM_PROVIDER=nim  # nim, groq, ollama, openrouter, zhipu
 
 # LLM model
 HYBRID_LLM_MODEL=moonshotai/kimi-k2.5

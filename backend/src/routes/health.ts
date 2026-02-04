@@ -424,14 +424,6 @@ router.get("/ai-providers", async (_req: Request, res: Response) => {
             healthy = response.ok;
           }
           break;
-        case "together":
-          if (env.TOGETHER_API_KEY) {
-            const response = await fetch("https://api.together.xyz/v1/models", {
-              headers: { Authorization: `Bearer ${env.TOGETHER_API_KEY}` },
-            });
-            healthy = response.ok;
-          }
-          break;
         case "ollama":
           if (env.OLLAMA_BASE_URL) {
             const response = await fetch(`${env.OLLAMA_BASE_URL}/api/tags`);
@@ -462,7 +454,6 @@ router.get("/ai-providers", async (_req: Request, res: Response) => {
     "nim",
     "groq",
     "openrouter",
-    "together",
     "ollama",
   ];
   for (const provider of allProviders) {

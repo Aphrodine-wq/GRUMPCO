@@ -32,7 +32,6 @@ G-Rump provides AI-powered code generation, architecture design, and development
 - **NVIDIA NIM** (Recommended) - Kimi K2.5, DeepSeek, Mistral
 - **OpenRouter** - Claude, GPT-4, Llama, and more
 - **Groq** - Ultra-fast Llama 3, Mixtral inference
-- **Together AI** - Open-source models at scale
 - **Ollama** - Local model deployment
 
 ## Authentication

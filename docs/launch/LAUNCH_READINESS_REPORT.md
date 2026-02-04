@@ -45,7 +45,6 @@
 Adding support beyond NIM:
 - Groq (fast, cheap)
 - OpenRouter (model variety)
-- Together AI (open source)
 - Ollama (local/enterprise)
 
 ### Analytics Setup

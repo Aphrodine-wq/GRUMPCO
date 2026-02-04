@@ -65,13 +65,6 @@ const AI_PROVIDERS: ProviderOption[] = [
     keyPlaceholder: 'gsk_...'
   },
   {
-    name: '🤝 Together AI',
-    value: 'together',
-    description: 'Open-source models',
-    requiresKey: true,
-    keyPlaceholder: ''
-  },
-  {
     name: '🦙 Ollama (Local)',
     value: 'ollama',
     description: 'Run models locally - no API key needed',
@@ -90,8 +83,7 @@ async function testProviderKey(provider: string, apiKey: string): Promise<boolea
     'openrouter': 'https://openrouter.ai/api/v1/models',
     'anthropic': 'https://api.anthropic.com/v1/messages',
     'openai': 'https://api.openai.com/v1/models',
-    'groq': 'https://api.groq.com/openai/v1/models',
-    'together': 'https://api.together.xyz/v1/models'
+    'groq': 'https://api.groq.com/openai/v1/models'
   };
 
   const endpoint = testEndpoints[provider];

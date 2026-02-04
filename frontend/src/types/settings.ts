@@ -19,7 +19,7 @@ export interface CustomModelConfig {
 }
 
 export interface ModelsSettings {
-  defaultProvider?: 'nim' | 'zhipu' | 'copilot' | 'openrouter' | 'groq' | 'together' | 'ollama' | 'mock';
+  defaultProvider?: 'nim' | 'zhipu' | 'copilot' | 'openrouter' | 'groq' | 'ollama' | 'mock';
   defaultModelId?: string;
   /** Embedding model ID (e.g. BAAI/bge-small-en-v1.5, nvidia/nv-embed-v2) */
   embeddingModelId?: string;

@@ -97,7 +97,7 @@
       "status": "done",
       "priority": "P2",
       "description": "Free Agent & Platform Upgrade",
-      "notes": "Onboarding (API key, integrations, model slides); ModelPicker with provider icons; Groq/Together in registry; Free Agent prompts + intent/context visibility; credit-based pricing; MCP consumption; Slack/GitHub/Notion stubs; capability presets."
+      "notes": "Onboarding (API key, integrations, model slides); ModelPicker with provider icons; Groq in registry; Free Agent prompts + intent/context visibility; credit-based pricing; MCP consumption; Slack/GitHub/Notion stubs; capability presets."
     },
     {
       "id": "phase2-100-coverage",

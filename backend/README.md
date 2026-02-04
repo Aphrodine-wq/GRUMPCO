@@ -10,7 +10,6 @@ Copy `.env.example` to `.env` and set at least one AI provider key:
 - `NVIDIA_NIM_API_KEY` (recommended for Kimi K2.5)
 - `OPENROUTER_API_KEY` (multi-model access)
 - `GROQ_API_KEY` (fast inference)
-- `TOGETHER_API_KEY` (open source models)
 
 See [.env.example](.env.example) for all variables. For production, see [docs/PRODUCTION.md](../docs/PRODUCTION.md).
 

@@ -40,7 +40,6 @@ vi.mock('../../src/config/env.js', () => ({
     NVIDIA_NIM_API_KEY: 'test-nim-key',
     OPENROUTER_API_KEY: 'test-openrouter-key',
     GROQ_API_KEY: 'test-groq-key',
-    TOGETHER_API_KEY: 'test-together-key',
     OLLAMA_BASE_URL: 'http://localhost:11434',
     PUBLIC_BASE_URL: 'https://test.example.com',
   },
@@ -49,19 +48,17 @@ vi.mock('../../src/config/env.js', () => ({
       nvidia_nim: 'test-nim-key',
       openrouter: 'test-openrouter-key',
       groq: 'test-groq-key',
-      together: 'test-together-key',
       ollama: undefined,
     };
     return keys[provider];
   }),
   isProviderConfigured: vi.fn((provider: string) => {
-    return ['nvidia_nim', 'openrouter', 'groq', 'together', 'ollama'].includes(provider);
+    return ['nvidia_nim', 'openrouter', 'groq', 'ollama'].includes(provider);
   }),
   getConfiguredProviders: vi.fn().mockReturnValue([
     'nvidia_nim',
     'openrouter',
     'groq',
-    'together',
     'ollama',
   ]),
 }));
@@ -89,7 +86,6 @@ describe('Multi-Provider AI Router', () => {
         'groq',
         'nim',
         'openrouter',
-        'together',
         'ollama',
       ];
 
@@ -120,7 +116,6 @@ describe('Multi-Provider AI Router', () => {
       expect(PROVIDER_CONFIGS.groq.supportsTools).toBe(true);
       expect(PROVIDER_CONFIGS.nim.supportsTools).toBe(true);
       expect(PROVIDER_CONFIGS.openrouter.supportsTools).toBe(true);
-      expect(PROVIDER_CONFIGS.together.supportsTools).toBe(true);
       expect(PROVIDER_CONFIGS.ollama.supportsTools).toBe(false);
     });
   });
@@ -333,7 +328,7 @@ describe('Multi-Provider AI Router', () => {
 
   describe('Default Models', () => {
     it('should return default model for each provider', () => {
-      const providers: LLMProvider[] = ['groq', 'nim', 'openrouter', 'together', 'ollama'];
+      const providers: LLMProvider[] = ['groq', 'nim', 'openrouter', 'ollama'];
 
       for (const provider of providers) {
         const defaultModel = getDefaultModelId(provider);
@@ -354,7 +349,6 @@ describe('Multi-Provider AI Router', () => {
       expect(PROVIDER_CONFIGS.groq.capabilities).toContain('streaming');
       expect(PROVIDER_CONFIGS.nim.capabilities).toContain('streaming');
       expect(PROVIDER_CONFIGS.openrouter.capabilities).toContain('streaming');
-      expect(PROVIDER_CONFIGS.together.capabilities).toContain('streaming');
       expect(PROVIDER_CONFIGS.ollama.capabilities).toContain('streaming');
     });
 

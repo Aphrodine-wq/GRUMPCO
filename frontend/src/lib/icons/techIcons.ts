@@ -302,7 +302,6 @@ export const AI_PROVIDER_ICONS: Record<string, ComponentType> = {
   anthropic: Brain,
   openai: Bot,
   groq: Zap,
-  together: Handshake,
   ollama: Box,
 };
 

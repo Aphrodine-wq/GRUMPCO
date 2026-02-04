@@ -124,7 +124,7 @@
       title: 'Choose Your AI Model',
       subtitle: 'Smart routing or pick a provider',
       description:
-        'Start with Auto (smart routing) or choose a provider: NVIDIA NIM, OpenRouter, Anthropic, Gemini, Groq, Together, or local Ollama. Change anytime in Settings.',
+        'Start with Auto (smart routing) or choose a provider: NVIDIA NIM, OpenRouter, Anthropic, Gemini, Groq, or local Ollama. Change anytime in Settings.',
       illustration: 'setup' as const,
       background: 'purple' as const,
       ctaLabel: 'Open Settings',

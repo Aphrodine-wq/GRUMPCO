@@ -556,7 +556,7 @@
                 }}
               />
               <p class="field-hint">
-                Providers: NVIDIA NIM, Kimi, OpenRouter, Groq, Together, Ollama. Configure API keys in Integrations or backend .env.
+                Providers: NVIDIA NIM, Kimi, OpenRouter, Groq, Ollama. Configure API keys in Integrations or backend .env.
               </p>
             </div>
             <div class="models-section">

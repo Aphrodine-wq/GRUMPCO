@@ -121,7 +121,6 @@ echo "OLLAMA_URL=http://localhost:11434" >> backend/.env
 | **NVIDIA NIM** | `NVIDIA_NIM_API_KEY` | Nemotron, Llama, Mistral |
 | **OpenRouter** | `OPENROUTER_API_KEY` | 100+ models |
 | **Groq** | `GROQ_API_KEY` | Fast inference |
-| **Together AI** | `TOGETHER_API_KEY` | Open models |
 | **Ollama** | `OLLAMA_URL` | Local models |
 
 ### Can I use G-Rump via API?
