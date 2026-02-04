@@ -2,6 +2,9 @@
  * NIM / GPU URL configuration.
  * NVIDIA_NIM_URL: base for local or self-hosted NIM (e.g. http://nim:8000).
  * When set, /v1 is appended if missing. When unset, cloud default is used.
+ *
+ * If you see NVIDIA API 404s: verify NVIDIA_NIM_API_KEY from https://build.nvidia.com/
+ * and that the requested model ID exists in the NIM catalog.
  */
 
 const CLOUD_NIM_BASE = "https://integrate.api.nvidia.com/v1";

@@ -69,6 +69,41 @@ const DEFAULT_CONFIG: AlertConfig = {
   },
 };
 
+/** Build alerting config from env (ALERTING_*). */
+function getConfigFromEnv(): Partial<AlertConfig> {
+  const envThreshold = process.env.ALERTING_HIGH_MEMORY_THRESHOLD;
+  const memoryThreshold =
+    envThreshold !== undefined && envThreshold !== ''
+      ? Math.min(100, Math.max(0, parseInt(envThreshold, 10) || 85))
+      : undefined;
+  const errorThreshold = process.env.ALERTING_HIGH_ERROR_RATE_THRESHOLD;
+  const errorRateThreshold =
+    errorThreshold !== undefined && errorThreshold !== ''
+      ? Math.min(100, Math.max(0, parseInt(errorThreshold, 10)))
+      : undefined;
+  const dbFailure =
+    process.env.ALERTING_DATABASE_FAILURE !== undefined
+      ? process.env.ALERTING_DATABASE_FAILURE === 'true'
+      : undefined;
+  return {
+    ...(memoryThreshold !== undefined && {
+      highMemoryUsage: {
+        ...DEFAULT_CONFIG.highMemoryUsage,
+        enabled: memoryThreshold > 0,
+        threshold: memoryThreshold,
+      },
+    }),
+    ...(errorRateThreshold !== undefined && {
+      highErrorRate: {
+        ...DEFAULT_CONFIG.highErrorRate,
+        enabled: errorRateThreshold > 0,
+        threshold: errorRateThreshold,
+      },
+    }),
+    ...(dbFailure !== undefined && { databaseFailure: dbFailure }),
+  };
+}
+
 class AlertingService {
   private config: AlertConfig;
   private alerts: Map<string, Alert> = new Map();
@@ -228,6 +263,9 @@ class AlertingService {
     }
     if (!databaseSupportsRawDb()) {
       return; // Supabase: no raw DB; connectivity is checked by API calls
+    }
+    if (process.env.SUPABASE_URL?.trim()) {
+      return; // Supabase mode: skip raw DB check
     }
 
     try {
@@ -393,11 +431,11 @@ class AlertingService {
 let alertingService: AlertingService | null = null;
 
 /**
- * Get or create alerting service instance
+ * Get or create alerting service instance (config from ALERTING_* env).
  */
 export function getAlertingService(): AlertingService {
   if (!alertingService) {
-    alertingService = new AlertingService();
+    alertingService = new AlertingService(getConfigFromEnv());
   }
   return alertingService;
 }
