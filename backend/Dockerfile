@@ -30,7 +30,7 @@ RUN node -e " \
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.npm \
-    npm install --prefer-offline --no-audit
+    npm install --prefer-offline --no-audit --legacy-peer-deps
 
 # Copy ai-core package source (will be bundled with esbuild)
 COPY packages/ai-core ./packages/ai-core
@@ -86,7 +86,7 @@ RUN node -e " \
 
 # Install production dependencies only
 RUN --mount=type=cache,target=/root/.npm \
-    npm install --omit=dev --prefer-offline --no-audit && \
+    npm install --omit=dev --prefer-offline --no-audit --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy built application from builder
