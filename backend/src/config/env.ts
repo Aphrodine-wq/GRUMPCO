@@ -85,29 +85,13 @@ const envSchema = z
       .default('false')
       .transform((v) => v === 'true'),
 
-    // OpenRouter - https://openrouter.ai
-    OPENROUTER_API_KEY: z.string().optional(),
-
-    // Groq - https://groq.com (Fastest inference)
-    GROQ_API_KEY: z.string().optional(),
-
-    // Together AI - https://together.ai (Open source models)
-    TOGETHER_API_KEY: z.string().optional(),
-
-    // Ollama - Local/self-hosted (Enterprise)
-    OLLAMA_BASE_URL: z
-      .string()
-      .optional()
-      .default('http://localhost:11434')
-      .refine(
-        (v) => !v || /^https?:\/\/[^\s]+$/.test(String(v).trim()),
-        'OLLAMA_BASE_URL must be a valid http(s) URL'
-      ),
+    // GitHub Copilot - https://github.com/features/copilot
+    GITHUB_COPILOT_TOKEN: z.string().optional(),
 
     // Provider routing preferences
-    ROUTER_FAST_PROVIDER: z.enum(['groq', 'nim', 'together', 'ollama']).default('groq'),
-    ROUTER_QUALITY_PROVIDER: z.enum(['openrouter', 'nim', 'together']).default('openrouter'),
-    ROUTER_CODING_PROVIDER: z.enum(['together', 'nim', 'groq', 'openrouter']).default('together'),
+    ROUTER_FAST_PROVIDER: z.enum(['nim', 'github-copilot']).default('nim'),
+    ROUTER_QUALITY_PROVIDER: z.enum(['nim', 'github-copilot']).default('nim'),
+    ROUTER_CODING_PROVIDER: z.enum(['github-copilot', 'nim']).default('github-copilot'),
 
     // Server
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -563,21 +547,14 @@ export default process.env;
  * Get API key for a provider. Abstraction for future secret manager integration.
  * When SECRET_MANAGER_URL is set, this could fetch from Vault/AWS/GCP; for now uses env.
  */
-export type ApiProvider = 'nvidia_nim' | 'openrouter' | 'groq' | 'together' | 'ollama';
+export type ApiProvider = 'nvidia_nim' | 'github_copilot';
 
 export function getApiKey(provider: ApiProvider): string | undefined {
   switch (provider) {
     case 'nvidia_nim':
       return env.NVIDIA_NIM_API_KEY;
-    case 'openrouter':
-      return env.OPENROUTER_API_KEY;
-    case 'groq':
-      return env.GROQ_API_KEY;
-    case 'together':
-      return env.TOGETHER_API_KEY;
-    case 'ollama':
-      // Ollama typically doesn't require an API key for local instances
-      return undefined;
+    case 'github_copilot':
+      return env.GITHUB_COPILOT_TOKEN;
     default:
       return undefined;
   }
@@ -590,14 +567,8 @@ export function isProviderConfigured(provider: ApiProvider): boolean {
   switch (provider) {
     case 'nvidia_nim':
       return Boolean(env.NVIDIA_NIM_API_KEY);
-    case 'openrouter':
-      return Boolean(env.OPENROUTER_API_KEY);
-    case 'groq':
-      return Boolean(env.GROQ_API_KEY);
-    case 'together':
-      return Boolean(env.TOGETHER_API_KEY);
-    case 'ollama':
-      return Boolean(env.OLLAMA_BASE_URL);
+    case 'github_copilot':
+      return Boolean(env.GITHUB_COPILOT_TOKEN);
     default:
       return false;
   }
@@ -609,9 +580,6 @@ export function isProviderConfigured(provider: ApiProvider): boolean {
 export function getConfiguredProviders(): ApiProvider[] {
   const providers: ApiProvider[] = [];
   if (env.NVIDIA_NIM_API_KEY) providers.push('nvidia_nim');
-  if (env.OPENROUTER_API_KEY) providers.push('openrouter');
-  if (env.GROQ_API_KEY) providers.push('groq');
-  if (env.TOGETHER_API_KEY) providers.push('together');
-  if (env.OLLAMA_BASE_URL) providers.push('ollama');
+  if (env.GITHUB_COPILOT_TOKEN) providers.push('github_copilot');
   return providers;
 }

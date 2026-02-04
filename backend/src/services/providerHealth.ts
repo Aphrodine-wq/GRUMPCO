@@ -73,13 +73,10 @@ const DEFAULT_CONFIG: HealthCheckConfig = {
 
 /** Provider endpoints for health checks */
 const HEALTH_CHECK_ENDPOINTS: Record<Exclude<LLMProvider, 'mock'>, string> = {
-  groq: 'https://api.groq.com/openai/v1/models',
   nim:
     env.NVIDIA_NIM_URL?.replace('/chat/completions', '/models') ??
     'https://integrate.api.nvidia.com/v1/models',
-  openrouter: 'https://openrouter.ai/api/v1/models',
-  together: 'https://api.together.xyz/v1/models',
-  ollama: `${env.OLLAMA_BASE_URL}/api/tags`,
+  'github-copilot': 'https://api.githubcopilot.com/models',
 };
 
 // =============================================================================

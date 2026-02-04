@@ -2,17 +2,15 @@
  * @fileoverview Unified LLM Gateway - Multi-Provider AI Router
  *
  * Enterprise-grade AI inference with intelligent provider routing.
- * Supports: NVIDIA NIM, OpenRouter, Groq, Together AI, and Ollama.
+ * Supports: NVIDIA NIM, GitHub Copilot, and local development (mock).
  *
  * ## Supported Providers
  *
  * | Provider | Best For | Models |
  * |----------|----------|--------|
- * | Groq | Fast inference, simple queries | Llama 3.1/3.2, Mixtral |
  * | NVIDIA NIM | Primary, reliable | Llama 3.1 70B/405B, Nemotron |
- * | OpenRouter | Best model selection | Claude, GPT-4, Llama, etc. |
- * | Together AI | Open source, coding | Codestral, Llama, Mixtral |
- * | Ollama | Local/self-hosted | Various local models |
+ * | GitHub Copilot | Code generation, completions | GPT-4, GPT-3.5 |
+ * | Mock | Demo/exploration | Zero-config testing |
  *
  * ## Event Stream Format
  *
@@ -33,7 +31,7 @@ import { getNimChatUrl } from '../config/nim.js';
 import { env, getApiKey, type ApiProvider } from '../config/env.js';
 
 /** Supported LLM provider identifiers */
-export type LLMProvider = 'nim' | 'openrouter' | 'groq' | 'together' | 'ollama' | 'mock';
+export type LLMProvider = 'nim' | 'github-copilot' | 'mock';
 
 /**
  * Multimodal content part for vision-capable models.
@@ -109,25 +107,6 @@ export interface ProviderConfig {
 
 /** Provider configurations */
 export const PROVIDER_CONFIGS: Record<Exclude<LLMProvider, 'mock'>, ProviderConfig> = {
-  groq: {
-    name: 'groq',
-    baseUrl: 'https://api.groq.com/openai/v1/chat/completions',
-    apiKeyEnvVar: 'GROQ_API_KEY',
-    models: [
-      'llama-3.1-8b-instant',
-      'llama-3.1-70b-versatile',
-      'llama-3.2-11b-vision-preview',
-      'llama-3.2-90b-vision-preview',
-      'mixtral-8x7b-32768',
-      'gemma2-9b-it',
-    ],
-    capabilities: ['streaming', 'json_mode', 'function_calling'],
-    costPer1kTokens: 0.0001,
-    speedRank: 1, // Fastest
-    qualityRank: 3,
-    defaultModel: 'llama-3.1-70b-versatile',
-    supportsTools: true,
-  },
   nim: {
     name: 'nim',
     baseUrl: getNimChatUrl(),
@@ -142,64 +121,31 @@ export const PROVIDER_CONFIGS: Record<Exclude<LLMProvider, 'mock'>, ProviderConf
     ],
     capabilities: ['streaming', 'vision', 'json_mode', 'function_calling'],
     costPer1kTokens: 0.0002,
-    speedRank: 2,
-    qualityRank: 2,
+    speedRank: 1,
+    qualityRank: 1,
     defaultModel: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
     supportsTools: true,
   },
-  openrouter: {
-    name: 'openrouter',
-    baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
-    apiKeyEnvVar: 'OPENROUTER_API_KEY',
+  'github-copilot': {
+    name: 'github-copilot',
+    baseUrl: 'https://api.githubcopilot.com/chat/completions',
+    apiKeyEnvVar: 'GITHUB_COPILOT_TOKEN',
     models: [
-      'anthropic/claude-3.5-sonnet',
-      'anthropic/claude-3-opus',
-      'openai/gpt-4o',
-      'openai/gpt-4o-mini',
-      'meta-llama/llama-3.1-405b-instruct',
-      'meta-llama/llama-3.1-70b-instruct',
-      'google/gemini-pro-1.5',
-    ],
-    capabilities: ['streaming', 'vision', 'json_mode', 'function_calling'],
-    costPer1kTokens: 0.003, // Variable, using Claude as reference
-    speedRank: 3,
-    qualityRank: 1, // Best quality
-    defaultModel: 'anthropic/claude-3.5-sonnet',
-    supportsTools: true,
-    headers: {
-      'HTTP-Referer': env.PUBLIC_BASE_URL || 'https://g-rump.com',
-      'X-Title': 'G-Rump AI',
-    },
-  },
-  together: {
-    name: 'together',
-    baseUrl: 'https://api.together.xyz/v1/chat/completions',
-    apiKeyEnvVar: 'TOGETHER_API_KEY',
-    models: [
-      'mistralai/Codestral-22B-v0.1',
-      'meta-llama/Llama-3.1-70B-Instruct-Turbo',
-      'meta-llama/Llama-3.1-405B-Instruct-Turbo',
-      'mistralai/Mixtral-8x22B-Instruct-v0.1',
-      'Qwen/Qwen2.5-Coder-32B-Instruct',
+      'gpt-4',
+      'gpt-4-turbo',
+      'gpt-3.5-turbo',
+      'claude-3.5-sonnet',
     ],
     capabilities: ['streaming', 'json_mode', 'function_calling'],
-    costPer1kTokens: 0.00015,
-    speedRank: 4,
-    qualityRank: 3,
-    defaultModel: 'mistralai/Codestral-22B-v0.1',
+    costPer1kTokens: 0.0003,
+    speedRank: 2,
+    qualityRank: 1,
+    defaultModel: 'gpt-4',
     supportsTools: true,
-  },
-  ollama: {
-    name: 'ollama',
-    baseUrl: `${env.OLLAMA_BASE_URL}/api/chat`,
-    apiKeyEnvVar: '',
-    models: ['llama3.1', 'llama3.2', 'mistral', 'codellama', 'qwen2.5-coder', 'deepseek-coder'],
-    capabilities: ['streaming'],
-    costPer1kTokens: 0, // Local = free
-    speedRank: 5,
-    qualityRank: 4,
-    defaultModel: 'llama3.1',
-    supportsTools: false,
+    headers: {
+      'Editor-Version': 'vscode/1.85.0',
+      'Editor-Plugin-Version': 'copilot/1.150.0',
+    },
   },
 };
 
@@ -212,11 +158,8 @@ const TIMEOUT_FAST_MS = Number(process.env.LLM_TIMEOUT_FAST_MS ?? 30_000);
 const TIMEOUT_SLOW_MS = Number(process.env.LLM_TIMEOUT_SLOW_MS ?? 180_000);
 
 function getTimeoutMs(provider: LLMProvider, maxTokens?: number): number {
-  // Groq is consistently fast
-  if (provider === 'groq') return TIMEOUT_FAST_MS;
-
-  // Ollama depends on local hardware
-  if (provider === 'ollama') return TIMEOUT_SLOW_MS;
+  // GitHub Copilot is consistently fast
+  if (provider === 'github-copilot') return TIMEOUT_FAST_MS;
 
   // Large token requests need more time
   if (typeof maxTokens === 'number' && maxTokens > 4096) {
@@ -232,11 +175,11 @@ function getTimeoutMs(provider: LLMProvider, maxTokens?: number): number {
 
 /**
  * Generic OpenAI-compatible stream generator.
- * Works for Groq, Together, and OpenRouter.
+ * Works for NIM and GitHub Copilot.
  */
 async function* streamOpenAICompatible(
   params: StreamParams,
-  provider: Exclude<LLMProvider, 'mock' | 'ollama'>
+  provider: Exclude<LLMProvider, 'mock'>
 ): AsyncGenerator<StreamEvent> {
   const config = PROVIDER_CONFIGS[provider];
   const apiKey = getApiKeyForProvider(provider);
@@ -298,124 +241,129 @@ async function* streamOpenAICompatible(
     timeout_ms: timeoutMs,
     max_tokens: params.max_tokens,
     message_count: (body.messages as unknown[])?.length ?? 0,
-    tool_count: Array.isArray(body.tools) ? body.tools.length : 0,
-    stream: true,
+    has_tools: Boolean(body.tools),
   });
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${apiKey}`,
-    ...config.headers,
-  };
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+      ...config.headers,
+    };
 
-  const res = await fetch(config.baseUrl, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+    const res = await fetch(config.baseUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
 
-  if (!res.ok) {
-    const t = await res.text();
-    logger.warn(
-      { status: res.status, body: t.slice(0, 500), model, provider },
-      `${provider} API error`
-    );
-    throw new Error(`${provider} API error: ${res.status} ${t.slice(0, 200)}`);
-  }
+    if (!res.ok) {
+      const t = await res.text();
+      logger.warn({ status: res.status, body: t.slice(0, 500), model, provider }, 'API error');
+      throw new Error(`${provider} API error: ${res.status} ${t.slice(0, 200)}`);
+    }
 
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error(`${provider}: no response body`);
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error(`${provider}: no response body`);
 
-  const dec = new TextDecoder();
-  let buf = '';
-  type ToolCallAccum = { id: string; name: string; args: string };
-  const toolCallsAccum: ToolCallAccum[] = [];
-  const emittedToolIndices = new Set<number>();
+    const dec = new TextDecoder();
+    let buf = '';
+    let chunkCount = 0;
 
-  let chunkCount = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunkCount++;
-    const decoded = dec.decode(value, { stream: true });
-    buf += decoded;
-    const lines = buf.split('\n');
-    buf = lines.pop() ?? '';
-    for (const line of lines) {
-      if (line.startsWith(':')) continue;
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6).trim();
-      if (data === '[DONE]') continue;
-      try {
-        const j = JSON.parse(data) as {
-          choices?: Array<{
-            delta?: {
-              content?: string;
-              reasoning_content?: string;
-              tool_calls?: Array<{
-                index?: number;
-                id?: string;
-                name?: string;
-                arguments?: string;
-              }>;
-            };
-            finish_reason?: string;
-          }>;
-          error?: { message?: string };
-        };
-        if (j.error) {
-          logger.warn({ error: j.error?.message, provider }, `${provider} stream error`);
+    // Track tool calls
+    const toolCalls: Map<
+      number,
+      { id: string; name: string; args: string }
+    > = new Map();
+    const emittedToolIndices = new Set<number>();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunkCount++;
+      const decoded = dec.decode(value, { stream: true });
+      buf += decoded;
+      const lines = buf.split('\n');
+      buf = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (!line.trim() || !line.startsWith('data: ')) continue;
+        const dataStr = line.slice(6);
+        if (dataStr === '[DONE]') {
           yield { type: 'message_stop' as const };
           return;
         }
-        const choice = j.choices?.[0];
-        const delta = choice?.delta;
-        if (!delta) continue;
 
-        // Content streaming
-        if (typeof delta.content === 'string' && delta.content.length > 0) {
-          yield {
-            type: 'content_block_delta' as const,
-            delta: { type: 'text_delta' as const, text: delta.content },
-          };
-        }
-
-        // Tool calls streaming
-        const toolCalls = delta.tool_calls;
-        if (Array.isArray(toolCalls)) {
-          for (const tc of toolCalls) {
-            const idx = tc.index ?? 0;
-            while (toolCallsAccum.length <= idx) {
-              toolCallsAccum.push({ id: '', name: '', args: '' });
-            }
-            const acc = toolCallsAccum[idx];
-            if (acc && tc.id) acc.id = tc.id;
-            if (acc && tc.name) acc.name = tc.name;
-            if (acc && tc.arguments) acc.args += tc.arguments;
-          }
-          for (let i = 0; i < toolCallsAccum.length; i++) {
-            if (emittedToolIndices.has(i)) continue;
-            const acc = toolCallsAccum[i];
-            if (acc && acc.id && acc.name) {
-              emittedToolIndices.add(i);
-              let input: Record<string, unknown> = {};
-              try {
-                if (acc.args.trim()) input = JSON.parse(acc.args) as Record<string, unknown>;
-              } catch {
-                input = { raw: acc.args };
-              }
-              yield {
-                type: 'content_block_start' as const,
-                content_block: { type: 'tool_use' as const, id: acc.id, name: acc.name, input },
+        try {
+          const j = JSON.parse(dataStr) as {
+            choices?: Array<{
+              delta?: {
+                content?: string;
+                tool_calls?: Array<{
+                  index: number;
+                  id?: string;
+                  type?: string;
+                  function?: { name?: string; arguments?: string };
+                }>;
               };
+              finish_reason?: string | null;
+            }>;
+          };
+
+          const delta = j.choices?.[0]?.delta;
+          if (!delta) continue;
+
+          // Text content
+          if (delta.content) {
+            yield {
+              type: 'content_block_delta' as const,
+              delta: { type: 'text_delta' as const, text: delta.content },
+            };
+          }
+
+          // Tool calls
+          if (delta.tool_calls) {
+            for (const tc of delta.tool_calls) {
+              const idx = tc.index;
+              if (!toolCalls.has(idx)) {
+                toolCalls.set(idx, { id: tc.id ?? '', name: '', args: '' });
+              }
+              const acc = toolCalls.get(idx)!;
+              if (tc.id) acc.id = tc.id;
+              if (tc.function?.name) acc.name = tc.function.name;
+              if (tc.function?.arguments) acc.args += tc.function.arguments;
+
+              // Emit once we have id + name
+              if (acc.id && acc.name && !emittedToolIndices.has(idx)) {
+                emittedToolIndices.add(idx);
+                let input: Record<string, unknown> = {};
+                try {
+                  if (acc.args.trim()) input = JSON.parse(acc.args) as Record<string, unknown>;
+                } catch {
+                  input = { raw: acc.args };
+                }
+                yield {
+                  type: 'content_block_start' as const,
+                  content_block: { type: 'tool_use' as const, id: acc.id, name: acc.name, input },
+                };
+              }
             }
           }
+        } catch {
+          // skip malformed chunk
         }
-      } catch {
-        // skip malformed chunk
       }
     }
+  } catch (error) {
+    logger.warn({ error, model, provider }, `${provider} request failed`);
+    yield {
+      type: 'content_block_delta' as const,
+      delta: {
+        type: 'text_delta' as const,
+        text: `[${provider} connection failed - ${error instanceof Error ? error.message : 'Unknown error'}]`,
+      },
+    };
   }
   logger.debug({ chunkCount, model, provider }, `[${provider}] Stream complete`);
   yield { type: 'message_stop' as const };
@@ -429,129 +377,10 @@ async function* streamNim(params: StreamParams): AsyncGenerator<StreamEvent> {
 }
 
 /**
- * Stream from Groq (OpenAI-compatible API).
+ * Stream from GitHub Copilot (OpenAI-compatible API).
  */
-async function* streamGroq(params: StreamParams): AsyncGenerator<StreamEvent> {
-  yield* streamOpenAICompatible(params, 'groq');
-}
-
-/**
- * Stream from OpenRouter (OpenAI-compatible API).
- */
-async function* streamOpenRouter(params: StreamParams): AsyncGenerator<StreamEvent> {
-  yield* streamOpenAICompatible(params, 'openrouter');
-}
-
-/**
- * Stream from Together AI (OpenAI-compatible API).
- */
-async function* streamTogether(params: StreamParams): AsyncGenerator<StreamEvent> {
-  yield* streamOpenAICompatible(params, 'together');
-}
-
-/**
- * Stream from Ollama (native API).
- */
-async function* streamOllama(params: StreamParams): AsyncGenerator<StreamEvent> {
-  const config = PROVIDER_CONFIGS.ollama;
-  const model = params.model || config.defaultModel;
-
-  logger.debug({ model, provider: 'ollama' }, '[Ollama] Starting stream request');
-
-  const body: Record<string, unknown> = {
-    model,
-    messages: [
-      ...(params.system ? [{ role: 'system' as const, content: params.system }] : []),
-      ...params.messages.map((m) => ({
-        role: m.role,
-        content: typeof m.content === 'string' ? m.content : 'Image content not supported',
-      })),
-    ],
-    stream: true,
-    options: {
-      num_predict: params.max_tokens,
-      temperature: params.temperature ?? 0.7,
-      top_p: params.top_p ?? 0.9,
-    },
-  };
-
-  const timeoutMs = getTimeoutMs('ollama', params.max_tokens);
-
-  try {
-    const res = await fetch(config.baseUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-
-    if (!res.ok) {
-      const t = await res.text();
-      logger.warn({ status: res.status, body: t.slice(0, 500), model }, 'Ollama API error');
-      throw new Error(`Ollama API error: ${res.status} ${t.slice(0, 200)}`);
-    }
-
-    const reader = res.body?.getReader();
-    if (!reader) throw new Error('Ollama: no response body');
-
-    const dec = new TextDecoder();
-    let buf = '';
-    let chunkCount = 0;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunkCount++;
-      const decoded = dec.decode(value, { stream: true });
-      buf += decoded;
-      const lines = buf.split('\n');
-      buf = lines.pop() ?? '';
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const j = JSON.parse(line) as {
-            message?: { content?: string };
-            done?: boolean;
-            error?: string;
-          };
-
-          if (j.error) {
-            logger.warn({ error: j.error }, 'Ollama stream error');
-            yield { type: 'message_stop' as const };
-            return;
-          }
-
-          if (j.message?.content) {
-            yield {
-              type: 'content_block_delta' as const,
-              delta: { type: 'text_delta' as const, text: j.message.content },
-            };
-          }
-
-          if (j.done) {
-            yield { type: 'message_stop' as const };
-            return;
-          }
-        } catch {
-          // skip malformed chunk
-        }
-      }
-    }
-
-    logger.debug({ chunkCount, model }, '[Ollama] Stream complete');
-    yield { type: 'message_stop' as const };
-  } catch (error) {
-    logger.warn({ error, model }, 'Ollama request failed');
-    yield {
-      type: 'content_block_delta' as const,
-      delta: {
-        type: 'text_delta' as const,
-        text: `[Ollama connection failed - ensure Ollama is running at ${env.OLLAMA_BASE_URL}]`,
-      },
-    };
-    yield { type: 'message_stop' as const };
-  }
+async function* streamGitHubCopilot(params: StreamParams): AsyncGenerator<StreamEvent> {
+  yield* streamOpenAICompatible(params, 'github-copilot');
 }
 
 // =============================================================================
@@ -617,21 +446,21 @@ async function* withStreamMetrics(
  *
  * @example
  * ```typescript
- * // Using Groq for fast inference
+ * // Using NVIDIA NIM for primary inference
  * const stream = getStream({
- *   model: 'llama-3.1-70b-versatile',
+ *   model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
  *   max_tokens: 1024,
  *   system: 'You are a helpful assistant',
  *   messages: [{ role: 'user', content: 'Hello' }]
- * }, { provider: 'groq' });
+ * }, { provider: 'nim' });
  *
- * // Using OpenRouter for best quality
+ * // Using GitHub Copilot for code generation
  * const stream = getStream({
- *   model: 'anthropic/claude-3.5-sonnet',
+ *   model: 'gpt-4',
  *   max_tokens: 2048,
  *   system: 'You are an expert software architect',
- *   messages: [{ role: 'user', content: 'Design a microservices architecture' }]
- * }, { provider: 'openrouter' });
+ *   messages: [{ role: 'user', content: 'Write a REST API in TypeScript' }]
+ * }, { provider: 'github-copilot' });
  * ```
  */
 export async function* getStream(
@@ -653,17 +482,8 @@ export async function* getStream(
   // Select the appropriate stream function
   let streamFn: (params: StreamParams) => AsyncGenerator<StreamEvent>;
   switch (provider) {
-    case 'groq':
-      streamFn = streamGroq;
-      break;
-    case 'openrouter':
-      streamFn = streamOpenRouter;
-      break;
-    case 'together':
-      streamFn = streamTogether;
-      break;
-    case 'ollama':
-      streamFn = streamOllama;
+    case 'github-copilot':
+      streamFn = streamGitHubCopilot;
       break;
     case 'nim':
     default:
@@ -696,18 +516,11 @@ export async function* getStream(
 // Register all providers with ai-core if available
 try {
   registerStreamProvider('nim', { name: 'nvidia-nim', supportsTools: true, stream: streamNim });
-  registerStreamProvider('groq', { name: 'groq', supportsTools: true, stream: streamGroq });
-  registerStreamProvider('openrouter', {
-    name: 'openrouter',
+  registerStreamProvider('github-copilot', {
+    name: 'github-copilot',
     supportsTools: true,
-    stream: streamOpenRouter,
+    stream: streamGitHubCopilot,
   });
-  registerStreamProvider('together', {
-    name: 'together',
-    supportsTools: true,
-    stream: streamTogether,
-  });
-  registerStreamProvider('ollama', { name: 'ollama', supportsTools: false, stream: streamOllama });
 } catch {
   // ai-core may not be available in all environments
 }
@@ -723,14 +536,8 @@ export function toApiProvider(provider: LLMProvider): ApiProvider | null {
   switch (provider) {
     case 'nim':
       return 'nvidia_nim';
-    case 'openrouter':
-      return 'openrouter';
-    case 'groq':
-      return 'groq';
-    case 'together':
-      return 'together';
-    case 'ollama':
-      return 'ollama';
+    case 'github-copilot':
+      return 'github_copilot';
     default:
       return null;
   }
@@ -749,7 +556,6 @@ export function getApiKeyForProvider(provider: LLMProvider): string | undefined 
  */
 export function isProviderConfigured(provider: LLMProvider): boolean {
   if (provider === 'mock') return true;
-  if (provider === 'ollama') return Boolean(env.OLLAMA_BASE_URL);
   return Boolean(getApiKeyForProvider(provider));
 }
 
@@ -770,10 +576,7 @@ export function getDefaultModelId(provider: LLMProvider = 'nim'): string {
 export function getConfiguredProviders(): LLMProvider[] {
   const providers: LLMProvider[] = [];
   if (isProviderConfigured('nim')) providers.push('nim');
-  if (isProviderConfigured('groq')) providers.push('groq');
-  if (isProviderConfigured('openrouter')) providers.push('openrouter');
-  if (isProviderConfigured('together')) providers.push('together');
-  if (isProviderConfigured('ollama')) providers.push('ollama');
+  if (isProviderConfigured('github-copilot')) providers.push('github-copilot');
   return providers;
 }
 

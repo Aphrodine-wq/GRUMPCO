@@ -8,11 +8,8 @@
  * - User preference
  *
  * Provider Priority:
- * 1. Groq - Fastest, cheapest for simple tasks
- * 2. NIM - Primary, reliable
- * 3. OpenRouter - Best model selection
- * 4. Together - Open source models, coding
- * 5. Ollama - Local/self-hosted (enterprise)
+ * 1. NIM - Primary, reliable, high performance
+ * 2. GitHub Copilot - Code generation specialist
  *
  * @module services/modelRouter
  */
@@ -82,60 +79,42 @@ interface ProviderRanking {
 
 /** Provider rankings by different criteria (only configured providers) */
 const PROVIDER_RANKINGS: ProviderRanking = {
-  speed: ['groq', 'nim', 'together', 'openrouter', 'ollama'],
-  quality: ['openrouter', 'nim', 'together', 'groq', 'ollama'],
-  cost: ['ollama', 'groq', 'together', 'nim', 'openrouter'],
-  coding: ['together', 'nim', 'groq', 'openrouter', 'ollama'],
+  speed: ['nim', 'github-copilot'],
+  quality: ['nim', 'github-copilot'],
+  cost: ['nim', 'github-copilot'],
+  coding: ['github-copilot', 'nim'],
 };
 
 /** Default model mappings by request type */
 const DEFAULT_MODELS: Record<RequestType, Record<LLMProvider, string>> = {
   simple: {
-    groq: 'llama-3.1-8b-instant',
     nim: 'meta/llama-3.1-70b-instruct',
-    openrouter: 'meta-llama/llama-3.1-70b-instruct',
-    together: 'meta-llama/Llama-3.1-70B-Instruct-Turbo',
-    ollama: 'llama3.1',
+    'github-copilot': 'gpt-3.5-turbo',
     mock: 'mock-model',
   },
   complex: {
-    groq: 'llama-3.1-70b-versatile',
     nim: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
-    openrouter: 'anthropic/claude-3.5-sonnet',
-    together: 'meta-llama/Llama-3.1-405B-Instruct-Turbo',
-    ollama: 'llama3.1',
+    'github-copilot': 'gpt-4',
     mock: 'mock-model',
   },
   coding: {
-    groq: 'llama-3.1-70b-versatile',
     nim: 'mistralai/codestral-22b-instruct-v0.1',
-    openrouter: 'anthropic/claude-3.5-sonnet',
-    together: 'mistralai/Codestral-22B-v0.1',
-    ollama: 'codellama',
+    'github-copilot': 'gpt-4',
     mock: 'mock-model',
   },
   vision: {
-    groq: 'llama-3.2-90b-vision-preview',
     nim: 'meta/llama-3.1-70b-instruct',
-    openrouter: 'openai/gpt-4o',
-    together: 'meta-llama/Llama-3.2-90B-Vision-Instruct',
-    ollama: 'llava',
+    'github-copilot': 'gpt-4',
     mock: 'mock-model',
   },
   creative: {
-    groq: 'llama-3.1-70b-versatile',
     nim: 'meta/llama-3.1-405b-instruct',
-    openrouter: 'anthropic/claude-3-opus',
-    together: 'meta-llama/Llama-3.1-405B-Instruct-Turbo',
-    ollama: 'llama3.1',
+    'github-copilot': 'gpt-4',
     mock: 'mock-model',
   },
   default: {
-    groq: 'llama-3.1-70b-versatile',
     nim: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
-    openrouter: 'anthropic/claude-3.5-sonnet',
-    together: 'meta-llama/Llama-3.1-70B-Instruct-Turbo',
-    ollama: 'llama3.1',
+    'github-copilot': 'gpt-4',
     mock: 'mock-model',
   },
 };
@@ -148,415 +127,197 @@ const DEFAULT_MODELS: Record<RequestType, Record<LLMProvider, string>> = {
  * Classify a request based on its content and parameters.
  */
 export function classifyRequest(params: StreamParams): RequestType {
-  const content = params.messages
-    .map((m) => (typeof m.content === 'string' ? m.content : ''))
-    .join(' ')
-    .toLowerCase();
+  const content = JSON.stringify(params.messages).toLowerCase();
 
-  // Check for vision content
-  const hasImages = params.messages.some(
-    (m) => typeof m.content !== 'string' && m.content.some((p) => p.type === 'image_url')
-  );
-  if (hasImages) return 'vision';
+  // Vision requests
+  if (params.messages.some((m) => Array.isArray(m.content))) {
+    return 'vision';
+  }
 
-  // Check for coding tasks
-  const codingKeywords = [
-    'code',
-    'function',
-    'implement',
-    'program',
-    'script',
-    'algorithm',
-    'bug',
-    'debug',
-    'refactor',
-    'typescript',
-    'javascript',
-    'python',
-    'rust',
-    'go',
-    'java',
-    'class',
-    'interface',
-    'api',
-    'endpoint',
-    'database',
-    'sql',
-    'query',
-  ];
-  const isCoding = codingKeywords.some((kw) => content.includes(kw));
+  // Coding requests
+  if (
+    content.includes('code') ||
+    content.includes('function') ||
+    content.includes('implement') ||
+    content.includes('debug') ||
+    content.includes('refactor') ||
+    content.includes('typescript') ||
+    content.includes('javascript') ||
+    content.includes('python')
+  ) {
+    return 'coding';
+  }
 
-  // Check for simple queries (short, straightforward questions)
-  const isShort = content.length < 200;
-  const isQuestion = content.includes('?') && isShort;
-  const simpleKeywords = ['what', 'who', 'when', 'where', 'how', 'is', 'are', 'can', 'does'];
-  const isSimple = isQuestion && simpleKeywords.some((kw) => content.includes(kw));
+  // Creative requests
+  if (
+    content.includes('creative') ||
+    content.includes('story') ||
+    content.includes('poem') ||
+    content.includes('imagine')
+  ) {
+    return 'creative';
+  }
 
-  // Check for creative writing
-  const creativeKeywords = ['write', 'story', 'poem', 'creative', 'imagine', 'fiction', 'novel'];
-  const isCreative = creativeKeywords.some((kw) => content.includes(kw));
+  // Complex requests (long prompts, tool use)
+  if (content.length > 2000 || params.tools) {
+    return 'complex';
+  }
 
-  // Check for complex tasks
-  const complexKeywords = [
-    'architecture',
-    'design',
-    'analyze',
-    'compare',
-    'evaluate',
-    'recommend',
-    'strategy',
-    'plan',
-    'review',
-  ];
-  const isComplex = complexKeywords.some((kw) => content.includes(kw)) || content.length > 1000;
+  // Simple requests
+  if (content.length < 500) {
+    return 'simple';
+  }
 
-  if (isCoding) return 'coding';
-  if (isCreative) return 'creative';
-  if (isComplex) return 'complex';
-  if (isSimple) return 'simple';
   return 'default';
 }
 
 // =============================================================================
-// Routing Logic
+// Provider Selection
 // =============================================================================
 
 /**
- * Get filtered rankings based on configured providers.
+ * Select the best provider based on request type and options.
  */
-function getFilteredRankings(): ProviderRanking {
-  const configured = new Set(getConfiguredProviders());
-
-  return {
-    speed: PROVIDER_RANKINGS.speed.filter((p) => configured.has(p)),
-    quality: PROVIDER_RANKINGS.quality.filter((p) => configured.has(p)),
-    cost: PROVIDER_RANKINGS.cost.filter((p) => configured.has(p)),
-    coding: PROVIDER_RANKINGS.coding.filter((p) => configured.has(p)),
-  };
-}
-
-/**
- * Select the best provider based on routing criteria.
- */
-function selectProvider(
-  rankings: ProviderRanking,
-  options: RouterOptions,
-  requestType: RequestType
-): { provider: LLMProvider; reason: string } {
-  // If user explicitly requested a provider, respect it
-  if (options.provider) {
-    return { provider: options.provider, reason: 'User-specified provider' };
-  }
-
-  // If user has a preference, respect it
-  if (options.userPreference) {
-    return { provider: options.userPreference, reason: 'User preference from settings' };
-  }
-
-  // Route based on request type and preferences
-  let candidates: LLMProvider[] = [];
-
-  switch (requestType) {
-    case 'simple':
-      // Simple queries -> fastest provider
-      candidates = options.preferQuality ? rankings.quality : rankings.speed;
-      return {
-        provider: candidates[0] ?? 'nim',
-        reason: 'Simple query routed to fast provider',
-      };
-
-    case 'coding':
-      // Coding tasks -> Together (Codestral) or user's preference
-      candidates = options.preferSpeed ? rankings.speed : rankings.coding;
-      return {
-        provider: candidates[0] ?? 'together',
-        reason: 'Coding task routed to coding-optimized provider',
-      };
-
-    case 'complex':
-      // Complex tasks -> OpenRouter (Claude) or NIM
-      candidates = options.preferQuality ? rankings.quality : rankings.speed;
-      return {
-        provider: candidates[0] ?? 'openrouter',
-        reason: 'Complex task routed to high-quality provider',
-      };
-
-    case 'vision':
-      // Vision tasks -> need vision-capable provider
-      candidates = ['groq', 'openrouter', 'together', 'nim'].filter((p) =>
-        rankings.quality.includes(p as LLMProvider)
-      ) as LLMProvider[];
-      return {
-        provider: candidates[0] ?? 'openrouter',
-        reason: 'Vision task routed to vision-capable provider',
-      };
-
-    case 'creative':
-      // Creative tasks -> quality provider
-      candidates = options.preferQuality ? rankings.quality : rankings.speed;
-      return {
-        provider: candidates[0] ?? 'openrouter',
-        reason: 'Creative task routed to quality provider',
-      };
-
-    case 'default':
-    default:
-      // Default -> balance of speed and quality
-      if (options.preferSpeed) {
-        return { provider: rankings.speed[0] ?? 'nim', reason: 'Speed preference' };
-      }
-      if (options.preferQuality) {
-        return { provider: rankings.quality[0] ?? 'openrouter', reason: 'Quality preference' };
-      }
-      // Use NIM as balanced default
-      return { provider: 'nim', reason: 'Balanced default provider' };
-  }
-}
-
-/**
- * Build fallback chain for a primary provider.
- */
-function buildFallbackChain(
-  primary: LLMProvider,
-  rankings: ProviderRanking,
-  requestType: RequestType
-): LLMProvider[] {
-  let candidates: LLMProvider[] = [];
-
-  switch (requestType) {
-    case 'simple':
-      candidates = rankings.speed;
-      break;
-    case 'coding':
-      candidates = rankings.coding;
-      break;
-    case 'complex':
-    case 'creative':
-      candidates = rankings.quality;
-      break;
-    default:
-      candidates = [...rankings.speed, ...rankings.quality];
-  }
-
-  // Remove primary and deduplicate
-  const chain = candidates.filter((p, i, arr) => p !== primary && arr.indexOf(p) === i);
-  return chain.slice(0, 3); // Max 3 fallbacks
-}
-
-// =============================================================================
-// Main Router
-// =============================================================================
-
-/**
- * Make a routing decision for a request.
- */
-export function makeRoutingDecision(
-  params: StreamParams,
+export function selectProvider(
+  requestType: RequestType,
   options: RouterOptions = {}
 ): RoutingDecision {
-  const rankings = getFilteredRankings();
-  const requestType = options.requestType ?? classifyRequest(params);
+  // Force provider if specified
+  if (options.provider) {
+    const config = getProviderConfig(options.provider);
+    const model = options.model || DEFAULT_MODELS[requestType][options.provider];
+    return {
+      provider: options.provider,
+      model,
+      reason: 'User-specified provider',
+      estimatedCost: config?.costPer1kTokens ?? 0,
+      estimatedLatency: options.provider === 'nim' ? 'fast' : 'medium',
+      fallbackChain: [options.provider],
+    };
+  }
 
-  const { provider, reason } = selectProvider(rankings, options, requestType);
-  const model = options.model ?? DEFAULT_MODELS[requestType][provider];
-  const config = getProviderConfig(provider);
+  // User preference
+  if (options.userPreference) {
+    const config = getProviderConfig(options.userPreference);
+    const model = options.model || DEFAULT_MODELS[requestType][options.userPreference];
+    return {
+      provider: options.userPreference,
+      model,
+      reason: 'User preference from settings',
+      estimatedCost: config?.costPer1kTokens ?? 0,
+      estimatedLatency: options.userPreference === 'nim' ? 'fast' : 'medium',
+      fallbackChain: [options.userPreference, 'nim'],
+    };
+  }
 
-  const fallbackChain = buildFallbackChain(provider, rankings, requestType);
+  // Coding requests prefer GitHub Copilot
+  if (requestType === 'coding' && !options.preferSpeed) {
+    const provider: LLMProvider = 'github-copilot';
+    const model = options.model || DEFAULT_MODELS.coding[provider];
+    return {
+      provider,
+      model,
+      reason: 'GitHub Copilot optimized for code generation',
+      estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
+      estimatedLatency: 'medium',
+      fallbackChain: ['github-copilot', 'nim'],
+    };
+  }
 
-  // Estimate cost and latency
-  const estimatedCost = config?.costPer1kTokens ?? 0.0002;
-  const estimatedLatency: 'fast' | 'medium' | 'slow' =
-    provider === 'groq' ? 'fast' : provider === 'ollama' ? 'slow' : 'medium';
-
+  // Default to NIM for all other cases
+  const provider: LLMProvider = 'nim';
+  const model = options.model || DEFAULT_MODELS[requestType][provider];
   return {
     provider,
     model,
-    reason,
-    estimatedCost,
-    estimatedLatency,
-    fallbackChain,
+    reason: 'NVIDIA NIM - Primary provider for balanced performance',
+    estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
+    estimatedLatency: 'fast',
+    fallbackChain: ['nim', 'github-copilot'],
   };
 }
 
+// =============================================================================
+// Main Router Function
+// =============================================================================
+
 /**
- * Stream with intelligent routing.
+ * Route a request to the optimal provider and return a stream.
  *
- * @param params - Request parameters
- * @param options - Routing options
- * @returns Async iterable of stream events
+ * @param params - Stream parameters
+ * @param options - Router options
+ * @returns Async generator of stream events
  *
  * @example
  * ```typescript
- * // Simple query -> routed to Groq
- * const stream = routeAndStream({
- *   messages: [{ role: 'user', content: 'What is 2+2?' }],
- *   max_tokens: 100,
- *   system: 'Be concise'
+ * // Simple query -> routed to NIM
+ * const stream = routeStream({
+ *   model: '',
+ *   max_tokens: 1024,
+ *   system: 'You are helpful',
+ *   messages: [{ role: 'user', content: 'Hello' }]
  * });
  *
- * // Coding task -> routed to Together (Codestral)
- * const stream = routeAndStream({
- *   messages: [{ role: 'user', content: 'Write a sorting function' }],
- *   max_tokens: 500,
- *   system: 'You are a coding assistant'
- * });
+ * // Coding query -> routed to GitHub Copilot
+ * const stream = routeStream({
+ *   model: '',
+ *   max_tokens: 2048,
+ *   system: 'You are a coding assistant',
+ *   messages: [{ role: 'user', content: 'Write a TypeScript function' }]
+ * }, { requestType: 'coding' });
  * ```
  */
-export async function* routeAndStream(
+export async function* routeStream(
   params: StreamParams,
   options: RouterOptions = {}
 ): AsyncGenerator<StreamEvent> {
-  // Check if multi-provider routing is enabled
-  if (!env.MULTI_PROVIDER_ROUTING) {
-    // Fall back to NIM-only mode
-    logger.debug('Multi-provider routing disabled, using NIM');
-    yield* getStream(params, { provider: 'nim', modelId: options.model });
-    return;
-  }
-
-  const decision = makeRoutingDecision(params, options);
+  const requestType = options.requestType ?? classifyRequest(params);
+  const decision = selectProvider(requestType, options);
 
   logger.info(
     {
       provider: decision.provider,
       model: decision.model,
+      requestType,
       reason: decision.reason,
-      requestType: options.requestType ?? classifyRequest(params),
-      estimatedCost: decision.estimatedCost,
-      estimatedLatency: decision.estimatedLatency,
     },
-    'Routing decision made'
+    'Routing request'
   );
 
-  let currentProvider = decision.provider;
-  const attemptedProviders: LLMProvider[] = [];
-
-  while (currentProvider) {
-    attemptedProviders.push(currentProvider);
-
-    try {
-      logger.debug({ provider: currentProvider }, 'Attempting stream');
-      const stream = getStream(params, { provider: currentProvider, modelId: decision.model });
-
-      for await (const event of stream) {
-        yield event;
-      }
-
-      logger.info({ provider: currentProvider }, 'Stream completed successfully');
-      return;
-    } catch (error) {
-      logger.warn(
-        {
-          provider: currentProvider,
-          error: (error as Error).message,
-          attempted: attemptedProviders,
-        },
-        'Provider failed, trying fallback'
-      );
-
-      // Find next fallback
-      const nextFallback = decision.fallbackChain.find((p) => !attemptedProviders.includes(p));
-
-      if (!nextFallback) {
-        // No more fallbacks
-        yield {
-          type: 'error',
-          error: `All providers failed. Attempted: ${attemptedProviders.join(', ')}`,
-        };
-        yield { type: 'message_stop' };
-        return;
-      }
-
-      currentProvider = nextFallback;
-
-      // Add a small delay before fallback
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-  }
-}
-
-/**
- * Get routing statistics and health.
- */
-export function getRouterStatus(): {
-  configured: LLMProvider[];
-  enabled: boolean;
-  rankings: ProviderRanking;
-} {
-  return {
-    configured: getConfiguredProviders(),
-    enabled: env.MULTI_PROVIDER_ROUTING,
-    rankings: getFilteredRankings(),
-  };
-}
-
-/**
- * Pre-warm the router by checking provider connectivity.
- */
-/**
- * Simple route function for basic routing
- * Returns the routing decision with provider and modelId
- */
-export function route(params: {
-  messages?: StreamParams['messages'];
-  model?: string;
-  max_tokens?: number;
-  system?: string;
-  messageCount?: number;
-  messageChars?: number;
-  mode?: string;
-  toolsRequested?: boolean;
-  multimodal?: boolean;
-  preferNim?: boolean;
-  maxLatencyMs?: number;
-  sessionType?: string;
-  modelPreference?: { source?: 'cloud' | 'auto'; provider?: string; modelId?: string };
-}): { provider: LLMProvider; modelId: string } {
-  const decision = makeRoutingDecision(params as StreamParams);
-  return {
+  yield* getStream(params, {
     provider: decision.provider,
     modelId: decision.model,
-  };
+  });
 }
 
 /**
- * Get the best model for RAG operations
+ * Get routing decision without executing the stream.
  */
-export function getRAGModel(): string {
-  // Default to a fast, capable embedding model
-  const config = getProviderConfig('nim');
-  return config?.models.find((m) => m.includes('embed')) || 'nvidia/nv-embedqa-e5-v5';
+export function getRoutingDecision(
+  params: StreamParams,
+  options: RouterOptions = {}
+): RoutingDecision {
+  const requestType = options.requestType ?? classifyRequest(params);
+  return selectProvider(requestType, options);
 }
 
-export async function warmRouter(): Promise<void> {
-  const providers = getConfiguredProviders();
-  logger.info({ providers }, 'Warming router');
+/**
+ * Get available providers for a specific request type.
+ */
+export function getAvailableProviders(requestType: RequestType): LLMProvider[] {
+  const configured = getConfiguredProviders();
+  return configured.filter((p) => p !== 'mock');
+}
 
-  // Quick connectivity check (non-blocking)
-  for (const provider of providers) {
-    const config = getProviderConfig(provider);
-    if (!config) continue;
-
-    try {
-      // Simple health check - just verify we can reach the endpoint
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-
-      await fetch(config.baseUrl.replace('/chat/completions', '/models'), {
-        method: 'GET',
-        headers: config.apiKeyEnvVar
-          ? { Authorization: `Bearer ${process.env[config.apiKeyEnvVar]}` }
-          : {},
-        signal: controller.signal,
-      }).catch(() => {
-        // Non-fatal, just log
-      });
-
-      clearTimeout(timeout);
-    } catch {
-      // Ignore errors during warming
-    }
-  }
-
-  logger.info('Router warming complete');
+/**
+ * Estimate cost for a request.
+ */
+export function estimateCost(
+  provider: LLMProvider,
+  inputTokens: number,
+  outputTokens: number
+): number {
+  const config = getProviderConfig(provider);
+  if (!config) return 0;
+  return ((inputTokens + outputTokens) / 1000) * config.costPer1kTokens;
 }
