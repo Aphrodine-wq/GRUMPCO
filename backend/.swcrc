@@ -22,11 +22,6 @@
         "jsonify": {
           "minCost": 0
         }
-      },
-      "constModules": {
-        "globals": {
-          "process.env.NODE_ENV": "production"
-        }
       }
     },
     "minify": {
