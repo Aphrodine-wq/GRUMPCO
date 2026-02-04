@@ -93,9 +93,17 @@ export class NIMAccelerator {
       },
     );
 
-    // Start GPU metrics monitoring if multi-GPU is enabled
-    if (this.config.enableMultiGPU) {
+    // Start GPU metrics monitoring only for self-hosted NIM (not cloud API).
+    // integrate.api.nvidia.com does not expose /v1/metrics; that endpoint is for local/on-prem NIM.
+    const isCloudNim =
+      !this.config.baseUrl ||
+      this.config.baseUrl.includes("integrate.api.nvidia.com");
+    if (this.config.enableMultiGPU && !isCloudNim) {
       this.startGPUMonitoring();
+    } else if (this.config.enableMultiGPU && isCloudNim) {
+      logger.debug(
+        "GPU metrics polling disabled for NVIDIA cloud API (integrate.api.nvidia.com); /v1/metrics is for self-hosted NIM only",
+      );
     }
 
     logger.info(
