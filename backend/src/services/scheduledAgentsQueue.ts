@@ -20,7 +20,7 @@ export async function getScheduledQueue(): Promise<import("bullmq").Queue> {
     port: parseInt(process.env.REDIS_PORT || "6379", 10),
     password: process.env.REDIS_PASSWORD || undefined,
   };
-  scheduledQueue = new Queue("grump:scheduled", { connection: conn });
+  scheduledQueue = new Queue("grump-scheduled", { connection: conn });
   return scheduledQueue;
 }
 
@@ -65,7 +65,7 @@ export async function startScheduledAgentsWorker(): Promise<void> {
     password: process.env.REDIS_PASSWORD || undefined,
   };
   scheduledWorker = new Worker(
-    "grump:scheduled",
+    "grump-scheduled",
     async (job) => {
       const { scheduleId, action, params } = job.data as {
         scheduleId: string;

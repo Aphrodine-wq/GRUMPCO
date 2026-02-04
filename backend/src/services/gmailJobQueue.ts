@@ -1,7 +1,7 @@
 import logger from "../middleware/logger.js";
 import { handleProcessGmailWebhook } from "./jobHandlers/gmail.js";
 
-const GMAIL_QUEUE_NAME = "grump:gmail";
+const GMAIL_QUEUE_NAME = "grump-gmail";
 
 let bullQueue: import("bullmq").Queue | null = null;
 let bullWorker: import("bullmq").Worker | null = null;

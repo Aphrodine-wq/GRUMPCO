@@ -10,7 +10,7 @@ import logger from "../middleware/logger.js";
 import { db as supabaseDb, isMockMode } from "./supabaseClient.js";
 import { isServerlessRuntime } from "../config/runtime.js";
 
-const _SCHEDULED_QUEUE_NAME = "grump:scheduled";
+const _SCHEDULED_QUEUE_NAME = "grump-scheduled";
 
 export type ScheduledAction = "ship" | "codegen" | "chat";
 
