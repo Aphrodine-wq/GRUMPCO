@@ -23,17 +23,19 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* .npmrc* ./
 
 # Copy workspace packages that are dependencies
 COPY packages/ai-core/package.json ./packages/ai-core/
+COPY backend/package.json ./backend/
 
 # Install dependencies with cache mount for faster rebuilds
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prefer-offline
 
 # Copy source code and build configuration
-COPY tsconfig.json .swcrc ./
-COPY src ./src
-COPY scripts ./scripts
+COPY backend/tsconfig.json backend/.swcrc ./backend/
+COPY backend/src ./backend/src
+COPY backend/scripts ./backend/scripts
 
 # Build with SWC (much faster than tsc)
+WORKDIR /app/backend
 RUN --mount=type=cache,target=/app/.swc \
     pnpm run build
 
@@ -71,6 +73,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* .npmrc* ./
 
 # Copy workspace packages that are dependencies
 COPY packages/ai-core/package.json ./packages/ai-core/
+COPY backend/package.json ./backend/
 
 # Install production dependencies only with cache mount
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
@@ -78,7 +81,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm store prune
 
 # Copy built application from builder
-COPY --from=builder --chown=grump:grump /app/dist ./dist
+COPY --from=builder --chown=grump:grump /app/backend/dist ./dist
 
 # Create data directory for SQLite with correct permissions
 RUN mkdir -p /app/data /app/logs && \
