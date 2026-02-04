@@ -1,7 +1,7 @@
 # G-Rump
 
 <p align="center">
-  <img src="docs/assets/grump-logo.svg" width="120" alt="G-Rump Logo" />
+  <img src="docs/assets/grump-logo.png" width="120" alt="G-Rump Logo" />
 </p>
 
 <p align="center">
@@ -10,14 +10,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Aphrodine-wq/G-rump.com/releases/tag/v1.0.0">
-    <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version" />
+  <a href="https://github.com/Aphrodine-wq/GRUMPCO/releases/tag/v1.0.0">
+    <img src="https://img.shields.io/badge/version-2.1.0-blue.svg" alt="Version" />
   </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License" />
   </a>
-  <a href="https://github.com/Aphrodine-wq/G-rump.com/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/Aphrodine-wq/G-rump.com/ci.yml?branch=main" alt="Build Status" />
+  <a href="https://github.com/Aphrodine-wq/GRUMPCO/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/Aphrodine-wq/GRUMPCO/ci.yml?branch=main" alt="Build Status" />
   </a>
   <a href="https://www.typescriptlang.org/">
     <img src="https://img.shields.io/badge/TypeScript-5.3-blue.svg" alt="TypeScript" />
@@ -49,7 +49,7 @@
     <img src="https://img.shields.io/badge/🚀_Try_Live_Demo-g--rump.com-6366F1?style=for-the-badge" alt="Live Demo" />
   </a>
   &nbsp;
-  <a href="https://github.com/Aphrodine-wq/G-rump.com">
+  <a href="https://github.com/Aphrodine-wq/GRUMPCO">
     <img src="https://img.shields.io/badge/⭐_Star_on_GitHub-181717?style=for-the-badge&logo=github" alt="Star on GitHub" />
   </a>
 </p>
@@ -96,8 +96,8 @@ Get started in under a minute:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Aphrodine-wq/G-rump.com.git
-cd G-rump.com
+git clone https://github.com/Aphrodine-wq/GRUMPCO.git
+cd GRUMPCO
 
 # 2. Install dependencies
 npm install
@@ -388,14 +388,14 @@ npm test
 
 ## 📄 License
 
-[MIT](./docs/legal/LICENSE)
+[MIT](./LICENSE)
 
 ---
 
 ## 💬 Support
 
-- 🐛 [Report Issues](https://github.com/Aphrodine-wq/G-rump.com/issues)
-- 💡 [Request Features](https://github.com/Aphrodine-wq/G-rump.com/discussions)
+- 🐛 [Report Issues](https://github.com/Aphrodine-wq/GRUMPCO/issues)
+- 💡 [Request Features](https://github.com/Aphrodine-wq/GRUMPCO/discussions)
 - 📧 Email: support@g-rump.com
 - 💬 Discord: [Join Community](https://discord.gg/grump)
 
@@ -407,6 +407,6 @@ npm test
 
 Made with ❤️ by the G-Rump Team
 
-[![GitHub Stars](https://img.shields.io/github/stars/Aphrodine-wq/G-rump.com?style=social)](https://github.com/Aphrodine-wq/G-rump.com)
+[![GitHub Stars](https://img.shields.io/github/stars/Aphrodine-wq/GRUMPCO?style=social)](https://github.com/Aphrodine-wq/GRUMPCO)
 
 </div>
