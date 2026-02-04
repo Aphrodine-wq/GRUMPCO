@@ -44,10 +44,11 @@ COPY backend/scripts ./scripts
 WORKDIR /app/packages/ai-core
 RUN npm install && npm run build
 
-# Build backend with SWC
+# Build backend with SWC (using compatible options)
 WORKDIR /app
 RUN --mount=type=cache,target=/app/.swc \
-    npm run build
+    npx swc src -d dist --copy-files --config-file .swcrc && \
+    node scripts/copy-migrations.mjs
 
 # =============================================================================
 # Production stage
