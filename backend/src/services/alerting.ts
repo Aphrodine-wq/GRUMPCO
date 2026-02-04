@@ -5,7 +5,7 @@
 
 import logger from "../middleware/logger.js";
 import { getAllServiceStates } from "./bulkheads.js";
-import { getDatabase } from "../db/database.js";
+import { getDatabase, databaseSupportsRawDb } from "../db/database.js";
 import { register } from "../middleware/metrics.js";
 
 // Type for metrics from getMetricsAsJSON()
@@ -229,7 +229,7 @@ class AlertingService {
   }
 
   /**
-   * Check database connectivity
+   * Check database connectivity (raw DB when SQLite/Postgres; Supabase client when in Supabase mode)
    */
   async checkDatabase(): Promise<void> {
     if (!this.config.databaseFailure) {
@@ -238,10 +238,12 @@ class AlertingService {
 
     try {
       const db = getDatabase();
-      const dbInstance = db.getDb();
-
-      // Simple query to test connectivity
-      dbInstance.prepare("SELECT 1").get();
+      if (databaseSupportsRawDb()) {
+        const dbInstance = db.getDb();
+        dbInstance.prepare("SELECT 1").get();
+      } else {
+        await db.getSession("__health_check__");
+      }
     } catch (error) {
       await this.sendAlert({
         severity: "critical",

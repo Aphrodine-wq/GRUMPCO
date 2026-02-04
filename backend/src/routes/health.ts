@@ -1,6 +1,6 @@
 import express, { type Request, type Response, type Router } from "express";
 import { getRequestLogger } from "../middleware/logger.js";
-import { getDatabase } from "../db/database.js";
+import { getDatabase, databaseSupportsRawDb } from "../db/database.js";
 import { getAllServiceStates } from "../services/bulkheads.js";
 import { getAlertingService } from "../services/alerting.js";
 import { isRedisConnected } from "../services/redis.js";
@@ -100,11 +100,15 @@ router.get("/ready", async (_req: Request, res: Response) => {
     checks.api_key = true;
   }
 
-  // Check database connectivity
+  // Check database connectivity (raw DB when SQLite/Postgres; Supabase client when in Supabase mode)
   try {
     const db = getDatabase();
-    const dbInstance = db.getDb();
-    dbInstance.prepare("SELECT 1").get();
+    if (databaseSupportsRawDb()) {
+      const dbInstance = db.getDb();
+      dbInstance.prepare("SELECT 1").get();
+    } else {
+      await db.getSession("__health_check__");
+    }
     checks.database = true;
   } catch (error) {
     const err = error as Error;
@@ -165,12 +169,16 @@ router.get("/detailed", async (_req: Request, res: Response) => {
     { status: "healthy" | "unhealthy" | "degraded"; details?: unknown }
   > = {};
 
-  // Database check
+  // Database check (raw DB when SQLite/Postgres; Supabase client when in Supabase mode)
   try {
     const db = getDatabase();
-    const dbInstance = db.getDb();
     const start = Date.now();
-    dbInstance.prepare("SELECT 1").get();
+    if (databaseSupportsRawDb()) {
+      const dbInstance = db.getDb();
+      dbInstance.prepare("SELECT 1").get();
+    } else {
+      await db.getSession("__health_check__");
+    }
     const latency = Date.now() - start;
     checks.database = {
       status: "healthy",
