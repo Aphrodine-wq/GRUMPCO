@@ -124,6 +124,30 @@ const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
     scopes: ['read:jira-work', 'write:jira-work'],
     callbackPath: '/api/integrations-v2/oauth/jira/callback',
   },
+  twilio: {
+    authUrl: 'https://www.twilio.com/authorize',
+    tokenUrl: 'https://api.twilio.com/oauth/token',
+    clientId: process.env.TWILIO_OAUTH_CLIENT_ID || '',
+    clientSecret: process.env.TWILIO_OAUTH_CLIENT_SECRET || '',
+    scopes: ['account'],
+    callbackPath: '/api/integrations-v2/oauth/twilio/callback',
+  },
+  stripe: {
+    authUrl: 'https://connect.stripe.com/oauth/authorize',
+    tokenUrl: 'https://connect.stripe.com/oauth/token',
+    clientId: process.env.STRIPE_CONNECT_CLIENT_ID || '',
+    clientSecret: process.env.STRIPE_SECRET_KEY || '',
+    scopes: ['read_write'],
+    callbackPath: '/api/integrations-v2/oauth/stripe/callback',
+  },
+  discord: {
+    authUrl: 'https://discord.com/api/oauth2/authorize',
+    tokenUrl: 'https://discord.com/api/oauth2/token',
+    clientId: process.env.DISCORD_OAUTH_CLIENT_ID || '',
+    clientSecret: process.env.DISCORD_OAUTH_CLIENT_SECRET || '',
+    scopes: ['identify', 'email', 'guilds'],
+    callbackPath: '/api/integrations-v2/oauth/discord/callback',
+  },
 };
 
 interface OAuthState {
