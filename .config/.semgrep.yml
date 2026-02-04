@@ -1,0 +1,72 @@
+rules:
+  - id: no-hardcoded-secrets
+    patterns:
+      - pattern-regex: "(password|secret|token|key|api_key|apikey)\\s*=\\s*['\"][^'\"]+['\"]"
+    languages:
+      - typescript
+      - javascript
+    message: Hardcoded secrets detected
+    severity: ERROR
+
+  - id: no-sql-injection
+    patterns:
+      - pattern-regex: "(exec|query)\\s*\\(\\s*[`\"'].*\\$\\{.*\\}.*[`\"']\\s*\\)"
+    languages:
+      - typescript
+      - javascript
+    message: Possible SQL injection vulnerability
+    severity: ERROR
+
+  - id: no-eval
+    patterns:
+      - pattern-regex: "eval\\s*\\("
+    languages:
+      - typescript
+      - javascript
+    message: eval() is dangerous and should not be used
+    severity: ERROR
+
+  - id: no-insecure-random
+    patterns:
+      - pattern-regex: "Math\\.random\\s*\\("
+    languages:
+      - typescript
+      - javascript
+    message: Math.random() is not cryptographically secure
+    severity: WARNING
+
+  - id: no-http-in-production
+    patterns:
+      - pattern-regex: "http://(?!localhost|127\\.0\\.0\\.1)"
+    languages:
+      - typescript
+      - javascript
+    message: HTTP URLs should use HTTPS in production
+    severity: WARNING
+
+  - id: no-disable-security-headers
+    patterns:
+      - pattern-regex: "helmet\\s*\\(\\s*\\{[^}]*contentSecurityPolicy\\s*:\\s*false[^}]*\\}\\s*\\)"
+    languages:
+      - typescript
+      - javascript
+    message: Security headers should not be disabled
+    severity: ERROR
+
+  - id: no-unsafe-deserialization
+    patterns:
+      - pattern-regex: "JSON\\.parse\\s*\\(\\s*.*req\\.body"
+    languages:
+      - typescript
+      - javascript
+    message: Unsafe deserialization of request body
+    severity: WARNING
+
+  - id: no-path-traversal
+    patterns:
+      - pattern-regex: "(readFile|writeFile|createReadStream)\\s*\\(\\s*.*req\\.(params|query|body)"
+    languages:
+      - typescript
+      - javascript
+    message: Possible path traversal vulnerability
+    severity: ERROR

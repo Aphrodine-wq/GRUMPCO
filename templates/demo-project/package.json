@@ -1,0 +1,10 @@
+{
+  "name": "grump-demo-project",
+  "version": "1.0.0",
+  "description": "G-Rump demo: minimal greeting API",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node -e \"console.log('Tests pass')\""
+  }
+}

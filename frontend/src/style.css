@@ -1,0 +1,263 @@
+/* Import theme and animation system - must be first */
+@import './styles/themes.css';
+@import './styles/animations.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* G-Rump Purple Theme */
+
+  /* Backgrounds */
+  --color-bg-app: #ffffff;
+  --color-bg-subtle: #f5f3ff;
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #f8f5ff;
+  --color-bg-input: #f3e8ff;
+
+  /* Text - High Contrast */
+  --color-text: #1f1147;
+  --color-text-secondary: #4c1d95;
+  --color-text-muted: #6d28d9;
+  --color-text-inverse: #ffffff;
+
+  /* Brand / Accents */
+  --color-primary: #7c3aed;
+  --color-primary-glow: rgba(124, 58, 237, 0.32);
+  --color-primary-hover: #6d28d9;
+
+  /* Status */
+  --color-success: #34c759;
+  --color-error: #ff3b30;
+  --color-warning: #ff9500;
+
+  /* Borders */
+  --color-border: #e9d5ff;
+  --color-border-light: #f3e8ff;
+  --color-border-highlight: #d8b4fe;
+
+  /* Glassmorphism (Light) - Enhanced */
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(124, 58, 237, 0.12);
+  --glass-shadow: 0 10px 36px rgba(76, 29, 149, 0.12);
+  --glass-backdrop: blur(24px);
+
+  /* Radius - Rounded (8, 12, 16, 24px) */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows - Diffuse & Clean - Enhanced */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.15);
+  --shadow-glow: 0 6px 26px rgba(124, 58, 237, 0.35);
+
+  /* Typography */
+  --font-sans: 'Space Grotesk', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Space Mono', 'SF Mono', Menlo, Monaco, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+.app {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 500;
+  /* Slightly larger for readability */
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar - Minimal */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c4b5fd;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a78bfa;
+}
+
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+button,
+input,
+textarea,
+select,
+.tooltip,
+.popover {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  color: #1b0f3a;
+  letter-spacing: 0.01em;
+  font-size: 1.05em;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+/* Font display optimization - prevent FOIT/FOUT */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-display: swap;
+  src: local('Space Grotesk'), local('Segoe UI'), local('Roboto');
+}
+
+@font-face {
+  font-family: 'Space Mono';
+  font-display: swap;
+  src: local('Space Mono'), local('SF Mono'), local('Menlo');
+}
+
+/* Content visibility for off-screen content - huge performance gain */
+.off-screen {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
+}
+
+/* CSS containment for complex components */
+.contain-layout {
+  contain: layout;
+}
+
+.contain-paint {
+  contain: paint;
+}
+
+.contain-strict {
+  contain: strict;
+}
+
+/* Optimize repaints with will-change (use sparingly) */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+/* GPU acceleration for animated elements */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Lazy loading placeholder optimization */
+.lazy-placeholder {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Optimize images with object-fit */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+img[loading='lazy'] {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+img[loading='lazy'].loaded {
+  opacity: 1;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .lazy-placeholder {
+    animation: none;
+    background: #f0f0f0;
+  }
+}

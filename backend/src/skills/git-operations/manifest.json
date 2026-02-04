@@ -1,0 +1,24 @@
+{
+  "id": "git-operations",
+  "name": "Git Operations",
+  "version": "1.0.0",
+  "description": "Git workflow automation: intelligent commit messages, branch management, PR descriptions, and conflict resolution",
+  "author": "G-Rump Team",
+  "category": "git",
+  "icon": "git-branch",
+  "tags": ["git", "commit", "branch", "pr", "merge", "version-control"],
+  "capabilities": {
+    "providesTools": true,
+    "providesRoutes": true,
+    "providesPrompts": true,
+    "requiresWorkspace": true,
+    "supportsStreaming": true,
+    "supportsBackground": false
+  },
+  "permissions": ["file_read", "git", "bash_execute"],
+  "triggers": {
+    "keywords": ["commit", "git", "branch", "merge", "pr", "pull request", "push", "stage", "diff"],
+    "patterns": ["(create|make|write)\\s+(a\\s+)?commit", "commit\\s+message", "git\\s+\\w+"],
+    "commands": ["/commit", "/git", "/branch", "/pr"]
+  }
+}

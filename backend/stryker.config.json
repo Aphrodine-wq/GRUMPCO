@@ -1,0 +1,54 @@
+{
+  "name": "backend",
+  "packageManager": "npm",
+  "mutate": ["src/**/*.ts"],
+  "reporters": ["html", "json", "console"],
+  "coverageAnalysis": "perTest",
+  "timeoutMS": 60000,
+  "timeoutFactor": 2,
+  "maxConcurrentTestRunners": 4,
+  "disableTypeChecks": false,
+  "checkers": ["typescript"],
+  "plugins": ["@stryker-mutator/typescript-checker"],
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vitest.config.ts"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 80
+  },
+  "mutators": {
+    "string": {
+      "enabled": true
+    },
+    "array": {
+      "enabled": true
+    },
+    "arithmetic": {
+      "enabled": true
+    },
+    "boolean": {
+      "enabled": true
+    },
+    "conditional": {
+      "enabled": true
+    },
+    "equality": {
+      "enabled": true
+    },
+    "logical": {
+      "enabled": true
+    },
+    "object": {
+      "enabled": true
+    },
+    "unary": {
+      "enabled": true
+    },
+    "update": {
+      "enabled": true
+    }
+  }
+}

@@ -1,0 +1,47 @@
+# Hadolint Configuration for Dockerfile linting
+# https://github.com/hadolint/hadolint
+
+# Trusted registries for base images
+trustedRegistries:
+  - docker.io
+  - gcr.io
+  - ghcr.io
+
+# Ignored rules (with justification)
+ignored:
+  # DL3018: We use --no-cache which is equivalent to pinning in Alpine
+  # - DL3018
+
+# Strict mode - fail on warnings
+failure-threshold: warning
+
+# Label schema validation
+label-schema:
+  author: true
+  version: true
+
+# Override specific rules
+override:
+  # Require explicit package versions in production
+  error:
+    - DL3008  # Pin versions in apt-get
+    - DL3013  # Pin versions in pip
+    - DL3016  # Pin versions in npm
+    - DL3018  # Pin versions in apk
+    - DL3028  # Pin versions in gem
+  
+  # Warnings that should be addressed but aren't blockers
+  warning:
+    - DL3003  # Use WORKDIR instead of cd
+    - DL3025  # Use JSON notation for CMD/ENTRYPOINT
+    - DL4006  # Set SHELL option -o pipefail
+  
+  # Informational
+  info:
+    - DL3059  # Multiple consecutive RUN instructions
+
+# Style preferences
+style:
+  - DL3000  # Use absolute WORKDIR
+  - DL3001  # Use COPY instead of ADD for files
+  - DL3002  # Last user should not be root

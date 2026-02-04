@@ -1,0 +1,29 @@
+# OWASP ZAP Configuration for Security Testing
+# This file configures security rules and exclusions for penetration testing
+
+# Score threshold - fail if score is below this
+score.threshold=70
+
+# Ignore these URLs from scanning
+url.ignore=.*\\/health,.*\\/metrics,.*\\/api\\/docs,.*\\/swagger,.*\\/static\\/.*
+
+# Alert filters - reduce false positives
+alert.filters=\\
+  10010|IGNORE|\\  # Informational: Cookie No HttpOnly Flag (handled by Helmet)\\
+  10011|IGNORE|\\  # Informational: Cookie Without Secure Flag (handled by Helmet)\\
+  10020|IGNORE|\\  # Informational: X-Frame-Options Header (handled by Helmet)\\
+  10021|IGNORE|\\  # Informational: X-Content-Type-Options (handled by Helmet)\\
+  10038|IGNORE|\\  # Low: Content Security Policy (handled by Helmet)\\
+
+# Active scan policy - which rules to run
+ascan.policy=Default Policy
+
+# Maximum minutes to wait for scan to complete
+ascan.maxScanDurationInMin=60
+
+# Number of concurrent threads
+thread.max=10
+
+# Spider configuration
+spider.maxDepth=5
+spider.maxDuration=30

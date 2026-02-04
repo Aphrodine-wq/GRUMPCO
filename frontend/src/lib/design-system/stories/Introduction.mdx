@@ -1,0 +1,76 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Design System/Introduction" />
+
+# G-Rump Design System
+
+Welcome to the G-Rump Design System documentation. This design system provides a consistent set of components, tokens, and patterns for building the G-Rump AI Development Platform.
+
+## Core Principles
+
+- **Consistency**: All components share the same visual language and behavior patterns
+- **Accessibility**: Built with a11y in mind, supporting keyboard navigation and screen readers
+- **Performance**: Lightweight components optimized for Svelte 5's reactivity
+- **Simplicity**: Easy to use with sensible defaults, yet flexible for customization
+
+## Getting Started
+
+Import components from the design system:
+
+```svelte
+<script>
+  import { Button, Card, Input, Modal } from '$lib/design-system';
+</script>
+
+<Button variant="primary">Click me</Button>
+```
+
+## Component Categories
+
+### Core Components
+- **Button** - Primary, secondary, ghost, and danger variants
+- **Input** - Text inputs with labels, hints, and validation
+- **Card** - Container component with various styles
+- **Badge** - Status indicators and labels
+
+### Form Components
+- **Toggle** - On/off switches
+- **Checkbox** - Multi-select options
+- **Radio** - Single-select options
+- **Dropdown** - Select menus
+
+### Overlay Components
+- **Modal** - Dialog windows
+- **Tooltip** - Contextual information on hover
+
+### Navigation
+- **Tabs** - Horizontal tab navigation
+- **Accordion** - Collapsible content sections
+
+### Data Display
+- **DataTable** - Sortable, paginated tables
+
+### Feedback & Loading
+- **Spinner** - Loading indicator
+- **Skeleton** - Content placeholder
+- **Progress** - Progress bars
+
+## Design Tokens
+
+The design system uses tokens for consistent theming:
+
+- **Colors**: Purple brand color (#8B5CF6), semantic colors for success/warning/danger
+- **Spacing**: 4px base unit
+- **Typography**: System font stack
+- **Border Radius**: 4px, 8px, 12px variants
+- **Shadows**: Subtle elevation system
+
+## Brand Colors
+
+| Color | Hex | Usage |
+|-------|-----|-------|
+| Primary | `#8B5CF6` | Buttons, links, accents |
+| Primary Hover | `#7C3AED` | Hover states |
+| Success | `#10B981` | Success states |
+| Warning | `#F59E0B` | Warning states |
+| Danger | `#EF4444` | Error states, destructive actions |

@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Logs and cache
+*.log
+.cache/
+.npm/
+.pnpm-store/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Windows reserved names
+nul
+con
+prn
+aux
+
+# IDE / Editor
+.idea/
+*.swp
+*.swo
+
+# Optional: uncomment if you don't want to track these
+# data/
+# backend/data/

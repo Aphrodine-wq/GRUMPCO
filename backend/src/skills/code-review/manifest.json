@@ -1,0 +1,32 @@
+{
+  "id": "code-review",
+  "name": "Code Review",
+  "version": "1.0.0",
+  "description": "AI-powered code review with quality analysis, pattern detection, security scanning, and improvement suggestions",
+  "author": "G-Rump Team",
+  "category": "code",
+  "icon": "magnifying-glass-code",
+  "tags": ["review", "quality", "analysis", "security", "patterns"],
+  "capabilities": {
+    "providesTools": true,
+    "providesRoutes": true,
+    "providesPrompts": true,
+    "requiresWorkspace": true,
+    "supportsStreaming": true,
+    "supportsBackground": false
+  },
+  "permissions": ["file_read"],
+  "triggers": {
+    "keywords": [
+      "review",
+      "code review",
+      "check code",
+      "analyze code",
+      "review this",
+      "look at this code"
+    ],
+    "patterns": ["review\\s+(my|this|the)?\\s*code", "code\\s+quality"],
+    "commands": ["/review", "/code-review"],
+    "fileExtensions": [".ts", ".js", ".tsx", ".jsx", ".py", ".go", ".rs", ".java", ".cpp", ".c"]
+  }
+}

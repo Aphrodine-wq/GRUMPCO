@@ -1,0 +1,678 @@
+<script lang="ts">
+  /**
+   * MessageBubble Component (Enhanced)
+   *
+   * Renders a single message in the chat interface with:
+   * - Text content with markdown support
+   * - Mermaid diagrams
+   * - Tool calls and results
+   * - Context and intent blocks
+   * - Hover actions: copy, edit, regenerate
+   */
+  import type { Message, ContentBlock } from '../../types';
+  import FrownyFace from '../FrownyFace.svelte';
+  import DiagramRenderer from '../DiagramRenderer.svelte';
+  import ToolCallCard from '../ToolCallCard.svelte';
+  import ToolResultCard from '../ToolResultCard.svelte';
+  import { Badge, Button, Tooltip } from '../../lib/design-system';
+  import { flattenTextContent } from '../../utils/contentParser';
+  import { showToast } from '../../stores/toastStore';
+
+  interface Props {
+    /** The message to render */
+    message: Message;
+    /** Index of this message in the messages array */
+    index: number;
+    /** Whether this is the last assistant message */
+    isLastAssistant?: boolean;
+    /** Whether model details are expanded */
+    isModelExpanded?: boolean;
+    /** Whether streaming is active */
+    streaming?: boolean;
+    /** Callback when export SVG is clicked */
+    onExportSvg?: (msgIndex: number, blockIndex: number) => void;
+    /** Callback when generate code from mermaid is clicked */
+    onGenerateCode?: (detail: { mermaidCode: string; framework: string; language: string }) => void;
+    /** Callback to toggle model details */
+    onToggleModelDetails?: () => void;
+    /** Callback to register diagram ref */
+    onDiagramRef?: (key: string, el: HTMLElement) => void;
+    /** Callback when edit is requested */
+    onEdit?: (index: number, content: string) => void;
+    /** Callback when regenerate is requested */
+    onRegenerate?: () => void;
+    /** Callback when copy is requested */
+    onCopy?: (content: string) => void;
+    /** Callback when thumbs up/down is clicked on a generation result */
+    onFeedback?: (index: number, rating: 'up' | 'down') => void;
+  }
+
+  let {
+    message,
+    index,
+    isLastAssistant = false,
+    isModelExpanded = false,
+    streaming = false,
+    onExportSvg,
+    onGenerateCode,
+    onToggleModelDetails,
+    onDiagramRef,
+    onEdit,
+    onRegenerate,
+    onCopy,
+    onFeedback,
+  }: Props = $props();
+
+  let feedbackSent = $state<'up' | 'down' | null>(null);
+
+  let isHovered = $state(false);
+  let showActions = $derived(isHovered && !streaming);
+
+  function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
+    if (Array.isArray(content)) return content;
+    return flattenTextContent(content) as unknown as ContentBlock[];
+  }
+
+  function getPlainTextContent(): string {
+    if (typeof message.content === 'string') {
+      return message.content;
+    }
+    return message.content
+      .filter((b): b is { type: 'text'; content: string } => b.type === 'text')
+      .map((b) => b.content)
+      .join('\n');
+  }
+
+  function formatTimestamp(timestamp?: number): string {
+    if (!timestamp) return '';
+    const now = Date.now();
+    const diff = now - timestamp;
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (seconds < 60) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return new Date(timestamp).toLocaleDateString();
+  }
+
+  async function handleCopy() {
+    const text = getPlainTextContent();
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Copied to clipboard', 'success', 2000);
+      onCopy?.(text);
+    } catch {
+      showToast('Failed to copy', 'error');
+    }
+  }
+
+  function handleEdit() {
+    const text = getPlainTextContent();
+    onEdit?.(index, text);
+  }
+
+  function handleRegenerate() {
+    onRegenerate?.();
+  }
+
+  function handleDiagramRef(el: HTMLElement, blockIdx: number) {
+    onDiagramRef?.(`${index}-${blockIdx}`, el);
+    return {
+      update() {
+        onDiagramRef?.(`${index}-${blockIdx}`, el);
+      },
+    };
+  }
+</script>
+
+<div
+  class="message-wrapper {message.role}"
+  onmouseenter={() => (isHovered = true)}
+  onmouseleave={() => (isHovered = false)}
+  role="article"
+  aria-label={message.role === 'user' ? 'Your message' : 'Assistant message'}
+>
+  <!-- Avatar -->
+  <div class="message-avatar">
+    {#if message.role === 'user'}
+      <div class="avatar-circle user">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      </div>
+    {:else}
+      <FrownyFace size="sm" state="idle" animated={false} />
+    {/if}
+  </div>
+
+  <div class="message-content-wrapper">
+    <!-- Message metadata -->
+    <div class="message-meta">
+      <span class="message-role">{message.role === 'user' ? 'You' : 'G-Rump'}</span>
+
+      {#if message.timestamp}
+        <span class="message-time">{formatTimestamp(message.timestamp)}</span>
+      {/if}
+
+      {#if message.role === 'assistant' && message.model}
+        <button
+          type="button"
+          class="model-badge"
+          onclick={() => onToggleModelDetails?.()}
+          title="View routing details"
+        >
+          <span class="model-name">{message.model}</span>
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4M12 8h.01" />
+          </svg>
+        </button>
+      {/if}
+    </div>
+
+    <!-- Expanded model details -->
+    {#if message.role === 'assistant' && message.routingDecision && isModelExpanded}
+      <div class="model-details">
+        {#if message.routingDecision.complexity != null}
+          <span class="detail-item">
+            <span class="detail-label">Complexity:</span>
+            <span class="detail-value">{message.routingDecision.complexity}</span>
+          </span>
+        {/if}
+        {#if message.routingDecision.reason}
+          <span class="detail-item">
+            <span class="detail-label">Reason:</span>
+            <span class="detail-value">{message.routingDecision.reason}</span>
+          </span>
+        {/if}
+        {#if message.routingDecision.estimatedCost != null}
+          <span class="detail-item">
+            <span class="detail-label">Est. cost:</span>
+            <span class="detail-value">{message.routingDecision.estimatedCost}</span>
+          </span>
+        {/if}
+      </div>
+    {/if}
+
+    <!-- Message content bubble -->
+    <div class="message-bubble">
+      {#if typeof message.content === 'string'}
+        {#each parseMessageContent(message.content) as block, bIdx}
+          {#if block.type === 'text'}
+            <div class="text-block">{block.content}</div>
+          {:else if block.type === 'mermaid'}
+            <div class="diagram-card" use:handleDiagramRef={bIdx}>
+              <div class="diagram-header">
+                <Badge variant="info">Architecture</Badge>
+                <Button variant="ghost" size="sm" onclick={() => onExportSvg?.(index, bIdx)}>
+                  Export
+                </Button>
+              </div>
+              <DiagramRenderer
+                code={block.content}
+                on:generate-code={(e) =>
+                  onGenerateCode?.({
+                    mermaidCode: e.detail.mermaidCode,
+                    framework: 'react',
+                    language: 'typescript',
+                  })}
+              />
+            </div>
+          {/if}
+        {/each}
+      {:else}
+        {#each message.content as block}
+          {#if block.type === 'text'}
+            <div class="text-block">{block.content}</div>
+          {:else if block.type === 'context'}
+            <details class="context-block">
+              <summary>Context: {block.content.mode} · {block.content.toolCount ?? 0} tools</summary
+              >
+              {#if block.content.capabilities?.length}
+                <p class="context-capabilities">{block.content.capabilities.join(', ')}</p>
+              {/if}
+            </details>
+          {:else if block.type === 'intent'}
+            <details class="intent-block">
+              <summary>Intent</summary>
+              <pre class="intent-content">{JSON.stringify(block.content, null, 2)}</pre>
+            </details>
+          {:else if block.type === 'tool_call'}
+            <ToolCallCard toolCall={block} />
+          {:else if block.type === 'tool_result'}
+            <ToolResultCard toolResult={block} />
+          {/if}
+        {/each}
+      {/if}
+    </div>
+
+    <!-- Hover actions -->
+    {#if showActions}
+      <div class="message-actions" class:visible={showActions}>
+        <Tooltip content="Copy" position="top">
+          <button type="button" class="action-btn" onclick={handleCopy} aria-label="Copy message">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+          </button>
+        </Tooltip>
+
+        {#if message.role === 'user'}
+          <Tooltip content="Edit" position="top">
+            <button type="button" class="action-btn" onclick={handleEdit} aria-label="Edit message">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
+          </Tooltip>
+        {/if}
+
+        {#if message.role === 'assistant' && isLastAssistant}
+          <Tooltip content="Regenerate" position="top">
+            <button
+              type="button"
+              class="action-btn"
+              onclick={handleRegenerate}
+              aria-label="Regenerate response"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 2v6h-6" />
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                <path d="M3 22v-6h6" />
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+              </svg>
+            </button>
+          </Tooltip>
+        {/if}
+
+        {#if message.role === 'assistant' && onFeedback}
+          <Tooltip content={feedbackSent === 'up' ? 'Thanks!' : 'Good response'} position="top">
+            <button
+              type="button"
+              class="action-btn"
+              class:selected={feedbackSent === 'up'}
+              disabled={feedbackSent !== null}
+              onclick={() => {
+                if (!feedbackSent) {
+                  feedbackSent = 'up';
+                  onFeedback(index, 'up');
+                }
+              }}
+              aria-label="Good response"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
+                />
+              </svg>
+            </button>
+          </Tooltip>
+          <Tooltip content={feedbackSent === 'down' ? 'Thanks!' : 'Needs work'} position="top">
+            <button
+              type="button"
+              class="action-btn"
+              class:selected={feedbackSent === 'down'}
+              disabled={feedbackSent !== null}
+              onclick={() => {
+                if (!feedbackSent) {
+                  feedbackSent = 'down';
+                  onFeedback(index, 'down');
+                }
+              }}
+              aria-label="Needs work"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"
+                />
+              </svg>
+            </button>
+          </Tooltip>
+        {/if}
+      </div>
+    {/if}
+  </div>
+</div>
+
+<style>
+  .message-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    transition: background-color 0.15s;
+    position: relative;
+  }
+
+  .message-wrapper:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+
+  .message-wrapper.user {
+    flex-direction: row-reverse;
+  }
+
+  .message-wrapper.user:hover {
+    background-color: rgba(124, 58, 237, 0.02);
+  }
+
+  /* Avatar */
+  .message-avatar {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+
+  .avatar-circle {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.75rem;
+  }
+
+  .avatar-circle.user {
+    background: linear-gradient(135deg, var(--color-primary, #7c3aed), #a78bfa);
+    color: white;
+  }
+
+  /* Content wrapper */
+  .message-content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-width: 80%;
+    min-width: 0;
+  }
+
+  .message-wrapper.user .message-content-wrapper {
+    align-items: flex-end;
+  }
+
+  /* Metadata */
+  .message-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .message-wrapper.user .message-meta {
+    flex-direction: row-reverse;
+  }
+
+  .message-role {
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .message-time {
+    color: #9ca3af;
+  }
+
+  .model-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    background: rgba(124, 58, 237, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    border-radius: 1rem;
+    font-size: 0.6875rem;
+    color: var(--color-primary, #7c3aed);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .model-badge:hover {
+    background: rgba(124, 58, 237, 0.12);
+    border-color: rgba(124, 58, 237, 0.25);
+  }
+
+  .model-name {
+    font-family: ui-monospace, monospace;
+    max-width: 10rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Model details */
+  .model-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    margin: 0.25rem 0;
+    background: #f9fafb;
+    border-radius: 0.5rem;
+    font-size: 0.6875rem;
+  }
+
+  .detail-item {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .detail-label {
+    color: #6b7280;
+  }
+
+  .detail-value {
+    color: #374151;
+    font-weight: 500;
+  }
+
+  /* Message bubble */
+  .message-bubble {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: #1f2937;
+    white-space: pre-wrap;
+    word-break: break-word;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .message-wrapper.user .message-bubble {
+    background: linear-gradient(135deg, var(--color-primary, #7c3aed), #8b5cf6);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 1.25rem;
+    border-bottom-right-radius: 0.375rem;
+  }
+
+  .message-wrapper.assistant .message-bubble {
+    background: transparent;
+    padding: 0.25rem 0;
+  }
+
+  .text-block {
+    margin: 0;
+  }
+
+  /* Diagram card */
+  .diagram-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    margin: 0.25rem 0;
+  }
+
+  .diagram-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+    background-color: #f9fafb;
+  }
+
+  /* Context and intent blocks */
+  .context-block,
+  .intent-block {
+    margin: 0.25rem 0;
+    padding: 0.5rem 0.75rem;
+    background: #f5f5f5;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .context-block summary,
+  .intent-block summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: #6b7280;
+  }
+
+  .context-capabilities {
+    margin: 0.5rem 0 0;
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .intent-content {
+    margin: 0.5rem 0 0;
+    padding: 0.5rem;
+    background: #fff;
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  /* Hover actions */
+  .message-actions {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 0.375rem;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: all 0.15s;
+    pointer-events: none;
+  }
+
+  .message-actions.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .message-wrapper.user .message-actions {
+    justify-content: flex-end;
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .action-btn:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    color: #374151;
+  }
+
+  .action-btn:active {
+    transform: scale(0.95);
+  }
+
+  .action-btn.selected {
+    background: var(--color-primary, #7c3aed);
+    border-color: var(--color-primary, #7c3aed);
+    color: white;
+  }
+
+  .action-btn:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .message-wrapper,
+    .model-badge,
+    .message-actions,
+    .action-btn {
+      transition: none;
+    }
+
+    .action-btn:active {
+      transform: none;
+    }
+  }
+</style>

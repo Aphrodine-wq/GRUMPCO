@@ -1,0 +1,84 @@
+{
+  "name": "grump-monorepo",
+  "version": "2.1.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "packages/shared-types",
+    "packages/utils",
+    "packages/ai-core",
+    "packages/rag",
+    "packages/voice",
+    "packages/memory",
+    "packages/kimi",
+    "packages/cli",
+    "packages/compiler-enhanced",
+    "packages/vscode-extension",
+    "infrastructure"
+  ],
+  "description": "G-Rump AI development platform monorepo",
+  "license": "MIT",
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "setup:interactive": "node scripts/setup-interactive.js",
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "build:packages": "npm run build --prefix packages/shared-types && npm run build --prefix packages/utils && npm run build --prefix packages/ai-core",
+    "check-all": "npm run type-check --prefix backend && npm run type-check --prefix frontend && npm run lint --prefix backend && npm run lint --prefix frontend",
+    "lint": "npm run lint --prefix frontend && npm run lint --prefix backend",
+    "lint:fix": "npm run lint:fix --prefix frontend && npm run lint:fix --prefix backend",
+    "format": "npm run format --prefix frontend && npm run format --prefix backend",
+    "format:check": "npm run format:check --prefix frontend && npm run format:check --prefix backend",
+    "type-check": "npm run type-check --prefix frontend && npm run type-check --prefix backend",
+    "test": "npm run test:run --prefix frontend && npm test --prefix backend",
+    "test:contract": "npm run test:contract --prefix backend",
+    "test:coverage": "npm run test:coverage --prefix frontend && npm run test:coverage --prefix backend",
+    "sbom": "node scripts/generate-sbom.js",
+    "benchmark": "tsx scripts/benchmark.ts",
+    "data:synth": "cd services/nemo-curator && python generate_synthetic.py",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "concurrently": "^8.2.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^16.2.7"
+  },
+  "optionalDependencies": {
+    "@swc/core-linux-x64-gnu": "^1.7.0"
+  },
+  "lint-staged": {
+    "frontend/src/**/*.{ts,js,vue}": [
+      "npm run lint:fix --prefix frontend",
+      "npm run format --prefix frontend"
+    ],
+    "backend/src/**/*.{ts,js}": [
+      "npm run lint:fix --prefix backend",
+      "npm run format --prefix backend"
+    ]
+  },
+  "dependencies": {
+    "uuid": "^13.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@scarf/scarf",
+      "@swc/core",
+      "better-sqlite3",
+      "core-js",
+      "cpu-features",
+      "electron",
+      "esbuild",
+      "keytar",
+      "msedge-tts",
+      "msgpackr-extract",
+      "protobufjs",
+      "ssh2",
+      "xxhash-addon"
+    ]
+  }
+}

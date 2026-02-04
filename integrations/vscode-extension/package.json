@@ -1,0 +1,103 @@
+{
+  "name": "grump-vscode",
+  "displayName": "G-Rump",
+  "description": "Connect to G-Rump API for chat, codegen, and full app generation",
+  "version": "0.1.0",
+  "publisher": "grump",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Snippets"
+  ],
+  "keywords": [
+    "g-rump",
+    "grump",
+    "codegen",
+    "ship",
+    "ai",
+    "chat",
+    "full-stack"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/milesproject"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/milesproject/issues"
+  },
+  "homepage": "https://github.com/your-org/milesproject#readme",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "grump.newFromDescription",
+        "title": "G-Rump: New from description"
+      },
+      {
+        "command": "grump.openChat",
+        "title": "G-Rump: Open chat"
+      },
+      {
+        "command": "grump.statusBarOpenChat",
+        "title": "G-Rump"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "grump",
+          "title": "G-Rump",
+          "icon": "$(comment-discussion)"
+        }
+      ]
+    },
+    "views": {
+      "grump": [
+        {
+          "id": "grump.chatView",
+          "name": "Chat"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "G-Rump",
+      "properties": {
+        "grump.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "G-Rump API base URL"
+        },
+        "grump.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key (if required)"
+        }
+      }
+    },
+    "menus": {
+      "statusbar": [
+        {
+          "command": "grump.statusBarOpenChat",
+          "when": "true",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./",
+    "package": "npm run compile && npx vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.1",
+    "typescript": "^5.3.0"
+  }
+}

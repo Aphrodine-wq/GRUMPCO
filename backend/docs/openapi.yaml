@@ -1,0 +1,1489 @@
+openapi: 3.1.0
+info:
+  title: G-Rump API
+  version: 2.0.0
+  description: |
+    G-Rump is an AI-powered development platform that helps developers build software faster.
+    
+    ## Authentication
+    Most endpoints require authentication via API key or OAuth token. Include the key in the 
+    `Authorization` header as `Bearer <token>`.
+    
+    ## Rate Limiting
+    API calls are rate-limited. Check the `X-RateLimit-Remaining` header for your remaining quota.
+    
+    ## Error Handling
+    All endpoints return standard error responses with the following structure:
+    ```json
+    {
+      "error": "Error message",
+      "code": "ERROR_CODE",
+      "details": {}
+    }
+    ```
+  contact:
+    name: G-Rump Support
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://api.grump.dev
+    description: Production server
+
+tags:
+  - name: Health
+    description: Health check and system status endpoints
+  - name: Chat
+    description: AI chat and conversation endpoints
+  - name: Skills
+    description: Skill management and generation
+  - name: Diagrams
+    description: Mermaid diagram generation
+  - name: Memory
+    description: Memory storage and retrieval
+  - name: Integrations
+    description: Third-party integration management
+  - name: Approvals
+    description: Action approval workflow
+  - name: Heartbeats
+    description: Scheduled task management
+  - name: Share
+    description: Content sharing endpoints
+  - name: Cost
+    description: Cost tracking and budget management
+  - name: Advanced AI
+    description: Advanced AI features (holographic memory, swarm, distillation)
+
+paths:
+  # ============================================================================
+  # Health Endpoints
+  # ============================================================================
+  /health:
+    get:
+      tags: [Health]
+      summary: Basic health check
+      description: Returns a simple status check to verify the API is running.
+      operationId: getHealth
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /health/quick:
+    get:
+      tags: [Health]
+      summary: Quick health check with basic diagnostics
+      operationId: getHealthQuick
+      responses:
+        '200':
+          description: Quick health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuickHealthResponse'
+
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Kubernetes liveness probe
+      operationId: getHealthLive
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessResponse'
+
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Kubernetes readiness probe
+      operationId: getHealthReady
+      responses:
+        '200':
+          description: Service is ready to accept requests
+        '503':
+          description: Service is not ready
+
+  /health/detailed:
+    get:
+      tags: [Health]
+      summary: Detailed health check with all subsystem statuses
+      operationId: getHealthDetailed
+      responses:
+        '200':
+          description: Detailed health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedHealthResponse'
+
+  # ============================================================================
+  # Chat Endpoints
+  # ============================================================================
+  /api/chat:
+    post:
+      tags: [Chat]
+      summary: Send a chat message
+      description: Send a message to the AI and receive a response. Supports streaming.
+      operationId: postChat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Chat response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-sent events for streaming responses
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/chat/stream:
+    post:
+      tags: [Chat]
+      summary: Send a chat message with streaming response
+      operationId: postChatStream
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Streaming chat response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  # ============================================================================
+  # Skills Endpoints
+  # ============================================================================
+  /api/skills:
+    get:
+      tags: [Skills]
+      summary: List all available skills
+      operationId: getSkills
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter skills by category
+      responses:
+        '200':
+          description: List of skills
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skills:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SkillSummary'
+
+  /api/skills/{id}:
+    get:
+      tags: [Skills]
+      summary: Get skill details
+      operationId: getSkillById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Skill details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # Memory Endpoints
+  # ============================================================================
+  /api/memory:
+    get:
+      tags: [Memory]
+      summary: List memories
+      operationId: getMemories
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [conversation, preference, task, fact, context]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: List of memories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  memories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MemoryRecord'
+    post:
+      tags: [Memory]
+      summary: Create a new memory
+      operationId: createMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMemoryRequest'
+      responses:
+        '201':
+          description: Memory created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  success:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/memory/{id}:
+    delete:
+      tags: [Memory]
+      summary: Delete a memory
+      operationId: deleteMemory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Memory deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/memory/search:
+    post:
+      tags: [Memory]
+      summary: Search memories
+      operationId: searchMemories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                limit:
+                  type: integer
+                  default: 10
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  memories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MemoryRecord'
+
+  # ============================================================================
+  # Integrations Endpoints
+  # ============================================================================
+  /api/integrations-v2:
+    get:
+      tags: [Integrations]
+      summary: List all integrations
+      operationId: getIntegrations
+      responses:
+        '200':
+          description: List of integrations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  integrations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Integration'
+    post:
+      tags: [Integrations]
+      summary: Create a new integration
+      operationId: createIntegration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIntegrationRequest'
+      responses:
+        '201':
+          description: Integration created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Integration'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/integrations-v2/{provider}:
+    delete:
+      tags: [Integrations]
+      summary: Delete an integration
+      operationId: deleteIntegration
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/IntegrationProvider'
+      responses:
+        '200':
+          description: Integration deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/integrations-v2/{provider}/api-key:
+    post:
+      tags: [Integrations]
+      summary: Store API key for integration
+      operationId: storeApiKey
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/IntegrationProvider'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [apiKey]
+              properties:
+                apiKey:
+                  type: string
+      responses:
+        '200':
+          description: API key stored
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/integrations-v2/audit-logs:
+    get:
+      tags: [Integrations]
+      summary: Get audit logs
+      operationId: getAuditLogs
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [integration, system, security, automation, billing, agent]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLogEntry'
+
+  # ============================================================================
+  # Approvals Endpoints
+  # ============================================================================
+  /api/approvals:
+    get:
+      tags: [Approvals]
+      summary: List approval requests
+      operationId: getApprovals
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, expired]
+      responses:
+        '200':
+          description: List of approvals
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  approvals:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApprovalRequest'
+
+  /api/approvals/{id}:
+    get:
+      tags: [Approvals]
+      summary: Get approval request details
+      operationId: getApprovalById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approval details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/approvals/{id}/approve:
+    post:
+      tags: [Approvals]
+      summary: Approve a pending request
+      operationId: approveRequest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approvedBy:
+                  type: string
+      responses:
+        '200':
+          description: Request approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/approvals/{id}/reject:
+    post:
+      tags: [Approvals]
+      summary: Reject a pending request
+      operationId: rejectRequest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # Heartbeats Endpoints
+  # ============================================================================
+  /api/heartbeats:
+    get:
+      tags: [Heartbeats]
+      summary: List all heartbeats
+      operationId: getHeartbeats
+      responses:
+        '200':
+          description: List of heartbeats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  heartbeats:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Heartbeat'
+    post:
+      tags: [Heartbeats]
+      summary: Create a new heartbeat
+      operationId: createHeartbeat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHeartbeatRequest'
+      responses:
+        '201':
+          description: Heartbeat created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Heartbeat'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/heartbeats/{id}:
+    get:
+      tags: [Heartbeats]
+      summary: Get heartbeat details
+      operationId: getHeartbeatById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Heartbeat details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Heartbeat'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Heartbeats]
+      summary: Update a heartbeat
+      operationId: updateHeartbeat
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateHeartbeatRequest'
+      responses:
+        '200':
+          description: Heartbeat updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Heartbeat'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Heartbeats]
+      summary: Delete a heartbeat
+      operationId: deleteHeartbeat
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Heartbeat deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/heartbeats/{id}/enable:
+    post:
+      tags: [Heartbeats]
+      summary: Enable a heartbeat
+      operationId: enableHeartbeat
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Heartbeat enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Heartbeat'
+
+  /api/heartbeats/{id}/disable:
+    post:
+      tags: [Heartbeats]
+      summary: Disable a heartbeat
+      operationId: disableHeartbeat
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Heartbeat disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Heartbeat'
+
+  /api/heartbeats/templates:
+    get:
+      tags: [Heartbeats]
+      summary: Get heartbeat templates
+      operationId: getHeartbeatTemplates
+      responses:
+        '200':
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  templates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HeartbeatTemplate'
+
+  # ============================================================================
+  # Share Endpoints
+  # ============================================================================
+  /api/share:
+    post:
+      tags: [Share]
+      summary: Create a share link
+      operationId: createShareLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShareRequest'
+      responses:
+        '201':
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/share/{shareId}:
+    get:
+      tags: [Share]
+      summary: Get shared content
+      operationId: getSharedContent
+      parameters:
+        - name: shareId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shared content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedContent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Share link has expired
+
+  # ============================================================================
+  # Cost Endpoints
+  # ============================================================================
+  /api/cost:
+    get:
+      tags: [Cost]
+      summary: Get cost summary
+      operationId: getCostSummary
+      responses:
+        '200':
+          description: Cost summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostSummary'
+
+  /api/cost/budget:
+    get:
+      tags: [Cost]
+      summary: Get cost budget
+      operationId: getCostBudget
+      responses:
+        '200':
+          description: Current budget settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostBudget'
+        '404':
+          description: No budget configured
+    post:
+      tags: [Cost]
+      summary: Set cost budget
+      operationId: setCostBudget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetBudgetRequest'
+      responses:
+        '200':
+          description: Budget set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostBudget'
+
+  # ============================================================================
+  # Advanced AI Endpoints
+  # ============================================================================
+  /api/advanced-ai/overview:
+    get:
+      tags: [Advanced AI]
+      summary: Get system overview
+      operationId: getAdvancedAiOverview
+      responses:
+        '200':
+          description: System overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemOverview'
+
+  /api/advanced-ai/holographic/store:
+    post:
+      tags: [Advanced AI]
+      summary: Store in holographic memory
+      operationId: storeHolographic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, value]
+              properties:
+                key:
+                  type: string
+                value:
+                  type: string
+                memoryId:
+                  type: string
+      responses:
+        '200':
+          description: Stored successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/advanced-ai/holographic/retrieve:
+    post:
+      tags: [Advanced AI]
+      summary: Retrieve from holographic memory
+      operationId: retrieveHolographic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key]
+              properties:
+                key:
+                  type: string
+                memoryId:
+                  type: string
+      responses:
+        '200':
+          description: Retrieved value
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  key:
+                    type: string
+                  similarity:
+                    type: number
+
+  /api/advanced-ai/swarm/create:
+    post:
+      tags: [Advanced AI]
+      summary: Create agent swarm
+      operationId: createSwarm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                swarmId:
+                  type: string
+                maxAgents:
+                  type: integer
+      responses:
+        '200':
+          description: Swarm created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  swarmId:
+                    type: string
+
+  /api/advanced-ai/swarm/task:
+    post:
+      tags: [Advanced AI]
+      summary: Submit task to swarm
+      operationId: submitSwarmTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                context:
+                  type: string
+                swarmId:
+                  type: string
+      responses:
+        '200':
+          description: Task submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  taskId:
+                    type: string
+
+  /api/advanced-ai/distill/turn:
+    post:
+      tags: [Advanced AI]
+      summary: Add conversation turn for distillation
+      operationId: addDistillTurn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role, content]
+              properties:
+                role:
+                  type: string
+                  enum: [user, assistant]
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Turn added
+
+  /api/advanced-ai/distill/run:
+    post:
+      tags: [Advanced AI]
+      summary: Run distillation process
+      operationId: runDistillation
+      responses:
+        '200':
+          description: Distillation complete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  result:
+                    $ref: '#/components/schemas/DistillationResult'
+
+components:
+  schemas:
+    # Health Schemas
+    QuickHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        checks:
+          type: object
+          properties:
+            api_key_configured:
+              type: boolean
+            server_responsive:
+              type: boolean
+        timestamp:
+          type: string
+          format: date-time
+
+    LivenessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        uptime:
+          type: number
+        memory:
+          type: object
+          properties:
+            heapUsedMB:
+              type: number
+            heapTotalMB:
+              type: number
+            heapPercentage:
+              type: number
+
+    DetailedHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        services:
+          type: object
+
+    # Chat Schemas
+    ChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        sessionId:
+          type: string
+        model:
+          type: string
+        stream:
+          type: boolean
+          default: false
+        context:
+          type: object
+
+    ChatResponse:
+      type: object
+      properties:
+        response:
+          type: string
+        sessionId:
+          type: string
+        model:
+          type: string
+        usage:
+          type: object
+          properties:
+            promptTokens:
+              type: integer
+            completionTokens:
+              type: integer
+            totalTokens:
+              type: integer
+
+    # Skill Schemas
+    SkillSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        icon:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    SkillDetail:
+      allOf:
+        - $ref: '#/components/schemas/SkillSummary'
+        - type: object
+          properties:
+            tools:
+              type: array
+              items:
+                type: string
+            hasRoutes:
+              type: boolean
+            hasPrompts:
+              type: boolean
+
+    # Memory Schemas
+    MemoryRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        type:
+          type: string
+          enum: [conversation, preference, task, fact, context]
+        content:
+          type: string
+        importance:
+          type: number
+        accessCount:
+          type: integer
+        lastAccessedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateMemoryRequest:
+      type: object
+      required: [type, content]
+      properties:
+        type:
+          type: string
+          enum: [conversation, preference, task, fact, context]
+        content:
+          type: string
+        importance:
+          type: number
+          default: 0.5
+        metadata:
+          type: object
+
+    # Integration Schemas
+    IntegrationProvider:
+      type: string
+      enum:
+        - discord
+        - slack
+        - spotify
+        - obsidian
+        - gmail
+        - google_calendar
+        - notion
+        - twitter
+        - github
+        - linear
+        - figma
+        - home_assistant
+        - elevenlabs
+        - twilio
+        - sendgrid
+        - stripe
+        - custom
+
+    Integration:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        provider:
+          $ref: '#/components/schemas/IntegrationProvider'
+        status:
+          type: string
+          enum: [active, disabled, error, pending]
+        displayName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateIntegrationRequest:
+      type: object
+      required: [provider]
+      properties:
+        provider:
+          $ref: '#/components/schemas/IntegrationProvider'
+        displayName:
+          type: string
+
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        actor:
+          type: string
+        action:
+          type: string
+        category:
+          type: string
+          enum: [integration, system, security, automation, billing, agent]
+        target:
+          type: string
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    # Approval Schemas
+    ApprovalRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected, expired]
+        action:
+          type: string
+        riskLevel:
+          type: string
+          enum: [low, medium, high]
+        reason:
+          type: string
+        payload:
+          type: object
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+
+    # Heartbeat Schemas
+    Heartbeat:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        cronExpression:
+          type: string
+        enabled:
+          type: boolean
+        payload:
+          type: object
+        lastRunAt:
+          type: string
+          format: date-time
+        nextRunAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateHeartbeatRequest:
+      type: object
+      required: [name, cronExpression]
+      properties:
+        name:
+          type: string
+        cronExpression:
+          type: string
+          description: "Cron expression (e.g., '0 9 * * *' for 9 AM daily)"
+        payload:
+          type: object
+
+    UpdateHeartbeatRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        cronExpression:
+          type: string
+        enabled:
+          type: boolean
+        payload:
+          type: object
+
+    HeartbeatTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        cronExpression:
+          type: string
+
+    # Share Schemas
+    CreateShareRequest:
+      type: object
+      required: [type, content]
+      properties:
+        type:
+          type: string
+          enum: [diagram, architecture, prd, code, bundle]
+        content:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        mermaidCode:
+          type: string
+        expiresIn:
+          type: integer
+          description: Hours until expiration (default 168 = 1 week)
+
+    ShareResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        shareId:
+          type: string
+        shareUrl:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+
+    SharedContent:
+      type: object
+      properties:
+        type:
+          type: string
+        content:
+          type: string
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # Cost Schemas
+    CostSummary:
+      type: object
+      properties:
+        totalCostCents:
+          type: integer
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+        breakdown:
+          type: object
+
+    CostBudget:
+      type: object
+      properties:
+        id:
+          type: string
+        period:
+          type: string
+          enum: [daily, weekly, monthly]
+        limitCents:
+          type: integer
+        spentCents:
+          type: integer
+        notifyAtPercent:
+          type: integer
+
+    SetBudgetRequest:
+      type: object
+      required: [limitCents]
+      properties:
+        limitCents:
+          type: integer
+        period:
+          type: string
+          enum: [daily, weekly, monthly]
+          default: monthly
+        notifyAtPercent:
+          type: integer
+          default: 80
+
+    # Advanced AI Schemas
+    SystemOverview:
+      type: object
+      properties:
+        holographicMemory:
+          type: object
+          properties:
+            status:
+              type: string
+        contextCompressor:
+          type: object
+          properties:
+            status:
+              type: string
+        swarmOrchestrator:
+          type: object
+          properties:
+            status:
+              type: string
+        predictivePreloader:
+          type: object
+          properties:
+            status:
+              type: string
+        recursiveDistillation:
+          type: object
+          properties:
+            status:
+              type: string
+
+    DistillationResult:
+      type: object
+      properties:
+        patternsExtracted:
+          type: integer
+        preferencesUpdated:
+          type: integer
+        constraintsFound:
+          type: integer
+        compressionRatio:
+          type: number
+        modelVersion:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              retryAfter:
+                type: integer
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - bearerAuth: []
+  - apiKey: []

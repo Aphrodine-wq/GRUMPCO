@@ -1,0 +1,26 @@
+# NeMo Curator synthetic data pipeline config for G-Rump
+# Uses NVIDIA NIM (OpenAI-compatible) for Nemotron-based generation
+
+# NIM API (OpenAI-compatible endpoint)
+nim:
+  base_url: "https://integrate.api.nvidia.com/v1"
+  api_key_env: "NVIDIA_NIM_API_KEY"
+  model: "nvidia/llama-3.3-nemotron-super-49b-v1.5"
+
+# Output
+output:
+  path: "data/synthetic_qa.jsonl"
+  format: "jsonl"
+
+# Generation
+generation:
+  topics: ["software architecture", "code generation", "API design", "testing"]
+  samples_per_topic: 5
+  max_tokens: 512
+  temperature: 0.7
+  top_p: 0.95
+  min_question_chars: 12
+  min_answer_chars: 40
+  max_answer_chars: 800
+  max_retries: 3
+  retry_backoff_ms: 500

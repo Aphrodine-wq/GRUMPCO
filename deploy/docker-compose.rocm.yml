@@ -1,0 +1,54 @@
+version: '3.8'
+
+# AMD ROCm GPU overlay for G-Rump
+#
+# Usage: docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.rocm.yml up -d
+#
+# Prerequisites:
+# - AMD GPU with ROCm support (e.g. RX 6000/7000, MI series)
+# - ROCm installed on host (Linux) or AMD drivers (Windows)
+# - Docker configured for GPU access (e.g. --device /dev/kfd --device /dev/dri, or rocm runtime)
+
+services:
+  backend:
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - GPU_ENABLED=true
+      - GPU_VENDOR=amd
+    depends_on:
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
+  # Ollama with ROCm for local inference on AMD GPUs
+  ollama:
+    image: ollama/ollama:latest
+    container_name: grump-ollama-rocm
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+    # AMD GPU access (Linux with ROCm): uncomment and ensure /dev/kfd, /dev/dri exist
+    # devices:
+    #   - /dev/kfd
+    #   - /dev/dri
+    group_add:
+      - video
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - grump-network
+    restart: unless-stopped
+
+volumes:
+  ollama-data:
+    driver: local

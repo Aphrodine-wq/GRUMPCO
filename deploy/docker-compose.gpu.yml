@@ -1,0 +1,194 @@
+version: '3.8'
+
+# GPU-enabled overlay for G-Rump
+# 
+# Usage: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+# 
+# Prerequisites:
+# - NVIDIA GPU with CUDA support
+# - nvidia-container-toolkit installed
+# - Docker configured with nvidia runtime
+
+services:
+  backend:
+    # Override backend with GPU support
+    environment:
+      # Enable GPU acceleration
+      - NVIDIA_NIM_ENABLED=true
+      - NVIDIA_NIM_URL=http://nim:8000
+      - NIM_EMBED_BATCH_SIZE=256
+      - NIM_EMBED_MAX_WAIT_MS=50
+      - GPU_ENABLED=true
+    depends_on:
+      redis:
+        condition: service_healthy
+      nim:
+        condition: service_healthy
+
+  nim:
+    # NVIDIA NIM for GPU-accelerated inference
+    image: nvcr.io/nvidia/nim:latest
+    container_name: grump-nim
+    ports:
+      - "8000:8000"
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY:-}
+      - NIM_MODEL_NAME=meta/llama-3.1-8b-instruct
+      - NIM_MAX_BATCH_SIZE=256
+      - NIM_MAX_CONCURRENT_REQUESTS=64
+    volumes:
+      - nim-cache:/opt/nim/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 16G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - grump-network
+    restart: unless-stopped
+
+  # GPU-accelerated embedding service (optional)
+  embeddings:
+    image: ghcr.io/huggingface/text-embeddings-inference:turing-1.2
+    container_name: grump-embeddings
+    ports:
+      - "8001:80"
+    environment:
+      - MODEL_ID=BAAI/bge-small-en-v1.5
+      - MAX_BATCH_SIZE=64
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - grump-network
+    restart: unless-stopped
+
+  # NVIDIA Triton Inference Server for local model serving
+  triton:
+    image: nvcr.io/nvidia/tritonserver:24.08-py3
+    container_name: grump-triton
+    ports:
+      - "8002:8000"  # HTTP
+      - "8003:8001"  # gRPC
+      - "8004:8002"  # Metrics
+    environment:
+      - TRITON_MODEL_REPOSITORY=/models
+    volumes:
+      - triton-models:/models
+      - triton-cache:/root/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 24G
+    command: ["tritonserver", "--model-repository=/models", "--strict-model-config=false"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v2/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - grump-network
+    restart: unless-stopped
+    profiles:
+      - triton  # Optional: use --profile triton to enable
+
+  # NVIDIA Riva for speech services (ASR/TTS)
+  riva:
+    image: nvcr.io/nvidia/riva/riva-speech:2.15.0
+    container_name: grump-riva
+    ports:
+      - "50051:50051"  # gRPC
+      - "8009:8009"    # HTTP
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY:-}
+      - RIVA_API_KEY=${NVIDIA_RIVA_API_KEY:-}
+    volumes:
+      - riva-models:/data/models
+      - riva-cache:/root/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 16G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8009/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    networks:
+      - grump-network
+    restart: unless-stopped
+    profiles:
+      - riva  # Optional: use --profile riva to enable
+
+  # NeMo Guardrails for safety filtering (lightweight)
+  guardrails:
+    image: nvcr.io/nvidia/nemo-guardrails:0.9.1
+    container_name: grump-guardrails
+    ports:
+      - "8010:8000"
+    environment:
+      - GUARDRAILS_CONFIG=/config/config.yml
+      - NVIDIA_API_KEY=${NVIDIA_NIM_API_KEY:-}
+    volumes:
+      - ./guardrails-config:/config:ro
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - grump-network
+    restart: unless-stopped
+    profiles:
+      - guardrails  # Optional: use --profile guardrails to enable
+
+volumes:
+  nim-cache:
+    driver: local
+  triton-models:
+    driver: local
+  triton-cache:
+    driver: local
+  riva-models:
+    driver: local
+  riva-cache:
+    driver: local

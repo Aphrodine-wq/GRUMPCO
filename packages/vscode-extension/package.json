@@ -1,0 +1,222 @@
+{
+  "name": "@grump/vscode",
+  "displayName": "G-Rump AI",
+  "description": "AI-powered development assistant with architecture diagrams, PRDs, and code generation",
+  "version": "0.1.0",
+  "publisher": "grump",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "assistant",
+    "code generation",
+    "architecture",
+    "diagrams",
+    "prd",
+    "copilot"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aphrodine-wq/G-rump.com"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "grump",
+          "title": "G-Rump AI",
+          "icon": "media/grump-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "grump": [
+        {
+          "type": "webview",
+          "id": "grump.chatView",
+          "name": "Chat"
+        },
+        {
+          "id": "grump.sessionsView",
+          "name": "Sessions"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "grump.openChat",
+        "title": "Open G-Rump Chat",
+        "category": "G-Rump"
+      },
+      {
+        "command": "grump.ship",
+        "title": "Start SHIP Workflow",
+        "category": "G-Rump"
+      },
+      {
+        "command": "grump.architecture",
+        "title": "Generate Architecture Diagram",
+        "category": "G-Rump"
+      },
+      {
+        "command": "grump.prd",
+        "title": "Generate PRD",
+        "category": "G-Rump"
+      },
+      {
+        "command": "grump.codegen",
+        "title": "Generate Code from Architecture",
+        "category": "G-Rump"
+      },
+      {
+        "command": "grump.explainCode",
+        "title": "Explain Selected Code",
+        "category": "G-Rump"
+      },
+      {
+        "command": "grump.refactorCode",
+        "title": "Refactor Selected Code",
+        "category": "G-Rump"
+      },
+      {
+        "command": "grump.generateTests",
+        "title": "Generate Tests for Selection",
+        "category": "G-Rump"
+      },
+      {
+        "command": "grump.generateDocs",
+        "title": "Generate Documentation",
+        "category": "G-Rump"
+      },
+      {
+        "command": "grump.setApiKey",
+        "title": "Set API Key",
+        "category": "G-Rump"
+      },
+      {
+        "command": "grump.connectToBackend",
+        "title": "Connect to G-Rump Backend",
+        "category": "G-Rump"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "submenu": "grump.contextMenu",
+          "group": "grump"
+        }
+      ],
+      "grump.contextMenu": [
+        {
+          "command": "grump.explainCode",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "grump.refactorCode",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "grump.generateTests",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "grump.generateDocs",
+          "when": "editorHasSelection"
+        }
+      ]
+    },
+    "submenus": [
+      {
+        "id": "grump.contextMenu",
+        "label": "G-Rump AI"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "grump.openChat",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g"
+      },
+      {
+        "command": "grump.ship",
+        "key": "ctrl+shift+s",
+        "mac": "cmd+shift+s",
+        "when": "!editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "title": "G-Rump AI",
+      "properties": {
+        "grump.backendUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "URL of the G-Rump backend server"
+        },
+        "grump.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for G-Rump services"
+        },
+        "grump.model": {
+          "type": "string",
+          "default": "moonshotai/kimi-k2.5",
+          "enum": [
+            "moonshotai/kimi-k2.5",
+            "gpt-4o",
+            "gpt-4-turbo",
+            "claude-3-5-sonnet-20241022",
+            "claude-3-opus-20240229",
+            "gemini-2.0-flash"
+          ],
+          "description": "AI model to use for generation"
+        },
+        "grump.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically connect to backend on startup"
+        },
+        "grump.showInlineHints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline code hints and suggestions"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.2",
+    "vsce": "^2.15.0"
+  },
+  "dependencies": {
+    "@grump/shared-types": "workspace:*",
+    "axios": "^1.6.2",
+    "ws": "^8.14.2"
+  }
+}

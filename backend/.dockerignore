@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build artifacts
+dist/
+dist-bundle/
+.tsbuildinfo
+.swc/
+*.tsbuildinfo
+
+# Tests
+tests/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+coverage/
+.nyc_output/
+
+# Development files
+.env
+.env.local
+.env.*.local
+*.md
+.git/
+.gitignore
+.github/
+.vscode/
+.idea/
+
+# Documentation
+docs/
+*.md
+README*
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+azure-pipelines.yml
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+
+# Database files (will be mounted as volume)
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Cache
+.npm/
+.cache/

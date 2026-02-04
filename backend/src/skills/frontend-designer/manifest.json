@@ -1,0 +1,54 @@
+{
+  "id": "frontend-designer",
+  "name": "Frontend Designer",
+  "version": "1.0.0",
+  "description": "High-end frontend designer that generates polished Svelte 5 components using the G-Rump design system tokens, themes, and patterns. Produces production-ready UI with proper theming, animations, accessibility, and responsive layout.",
+  "author": "G-Rump Team",
+  "category": "code",
+  "icon": "palette",
+  "tags": [
+    "design",
+    "ui",
+    "frontend",
+    "svelte",
+    "component",
+    "css",
+    "theme",
+    "layout",
+    "responsive"
+  ],
+  "capabilities": {
+    "providesTools": true,
+    "providesRoutes": true,
+    "providesPrompts": true,
+    "requiresWorkspace": true,
+    "supportsStreaming": true,
+    "supportsBackground": false
+  },
+  "permissions": ["file_read", "file_write"],
+  "triggers": {
+    "keywords": [
+      "design",
+      "designer",
+      "ui component",
+      "frontend component",
+      "styled component",
+      "create component",
+      "build ui",
+      "layout",
+      "page design",
+      "card design",
+      "form design",
+      "modal design",
+      "dashboard",
+      "landing page"
+    ],
+    "patterns": [
+      "design\\s+(a|an|the|me)?\\s*(component|page|layout|form|modal|card|dashboard|section|screen|sidebar|nav|header|footer)",
+      "(create|build|make|generate)\\s+(a|an)?\\s*(beautiful|polished|styled|modern|sleek|premium|elegant)\\s*(component|page|ui|layout|section)",
+      "frontend\\s+design"
+    ],
+    "commands": ["/design", "/frontend-design", "/ui"],
+    "fileExtensions": [".svelte"]
+  }
+}

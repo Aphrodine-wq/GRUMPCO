@@ -1,0 +1,37 @@
+{
+  "id": "refactoring",
+  "name": "Code Refactoring",
+  "version": "1.0.0",
+  "description": "Intelligent code refactoring: extract functions, rename symbols, restructure code, and apply design patterns",
+  "author": "G-Rump Team",
+  "category": "code",
+  "icon": "arrows-rotate",
+  "tags": ["refactor", "extract", "rename", "restructure", "patterns", "clean-code"],
+  "capabilities": {
+    "providesTools": true,
+    "providesRoutes": true,
+    "providesPrompts": true,
+    "requiresWorkspace": true,
+    "supportsStreaming": true,
+    "supportsBackground": false
+  },
+  "permissions": ["file_read", "file_write"],
+  "triggers": {
+    "keywords": [
+      "refactor",
+      "extract",
+      "rename",
+      "restructure",
+      "clean up",
+      "simplify",
+      "optimize"
+    ],
+    "patterns": [
+      "refactor\\s+(this|the)?\\s*code",
+      "extract\\s+(function|method|variable)",
+      "rename\\s+\\w+"
+    ],
+    "commands": ["/refactor", "/extract", "/rename"],
+    "fileExtensions": [".ts", ".js", ".tsx", ".jsx", ".py", ".go", ".rs", ".java"]
+  }
+}

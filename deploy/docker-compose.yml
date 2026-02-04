@@ -1,0 +1,121 @@
+version: '3.8'
+
+# G-Rump Docker Compose Configuration
+#
+# Run from project root: docker compose -f deploy/docker-compose.yml up --build -d
+# With GPU: docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.gpu.yml up -d
+#
+# Build context is relative to this file's directory (deploy/), so we use ../ to reach project root.
+
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      cache_from:
+        - ghcr.io/your-org/grump-backend:latest
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    image: grump-backend:latest
+    container_name: grump-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_TYPE=sqlite
+      - DB_PATH=/app/data/grump.db
+      # Cache settings
+      - TIERED_CACHE_L1_MAX=500
+      - TIERED_CACHE_L1_TTL_MS=300000
+      # Worker pool settings
+      - WORKER_POOL_MIN=2
+      - WORKER_POOL_MAX=8
+    volumes:
+      - backend-data:/app/data
+      - backend-cache:/app/.cache
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health/quick"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - grump-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    container_name: grump-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 512mb 
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --timeout 0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - grump-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      cache_from:
+        - ghcr.io/your-org/grump-frontend:latest
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    image: grump-frontend:latest
+    container_name: grump-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - grump-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+volumes:
+  backend-data:
+    driver: local
+  backend-cache:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  grump-network:
+    driver: bridge

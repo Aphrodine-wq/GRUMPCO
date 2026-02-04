@@ -1,0 +1,246 @@
+# =============================================================================
+# G-Rump Full-Stack Docker Compose Configuration
+# =============================================================================
+#
+# Usage:
+#   Local development:  docker-compose up --build
+#   Production:         docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   With PostgreSQL:    DB_TYPE=postgres docker-compose up -d
+#
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Backend API Service
+  # ===========================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      cache_from:
+        - ghcr.io/grump/backend:latest
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    image: grump/backend:latest
+    container_name: grump-backend
+    ports:
+      - "3000:3000"
+    environment:
+      # Server
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3000
+      
+      # Database (SQLite default, PostgreSQL optional)
+      - DB_TYPE=${DB_TYPE:-sqlite}
+      - DB_PATH=${DB_PATH:-/app/data/grump.db}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://grump:grump@postgres:5432/grump}
+      
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      
+      # AI Providers (set in .env)
+      - NVIDIA_NIM_API_KEY=${NVIDIA_NIM_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      
+      # Analytics
+      - POSTHOG_API_KEY=${POSTHOG_API_KEY:-}
+      - POSTHOG_HOST=${POSTHOG_HOST:-https://us.i.posthog.com}
+      - ANALYTICS_ENABLED=${ANALYTICS_ENABLED:-true}
+      
+      # Supabase
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:-}
+      
+      # Security
+      - BLOCK_SUSPICIOUS_PROMPTS=${BLOCK_SUSPICIOUS_PROMPTS:-true}
+      - REQUIRE_AUTH_FOR_API=${REQUIRE_AUTH_FOR_API:-true}
+      - MASTER_KEY=${MASTER_KEY:-}
+      
+      # Cache Settings
+      - TIERED_CACHE_L1_MAX=500
+      - TIERED_CACHE_L1_TTL_MS=300000
+      
+      # Worker Pool
+      - WORKER_POOL_MIN=2
+      - WORKER_POOL_MAX=8
+    volumes:
+      - backend-data:/app/data
+      - backend-cache:/app/.cache
+      - backend-logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - grump-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ===========================================================================
+  # Frontend Web Application
+  # ===========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      cache_from:
+        - ghcr.io/grump/frontend:latest
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+        VITE_API_URL: /api
+    image: grump/frontend:latest
+    container_name: grump-frontend
+    ports:
+      - "5173:80"
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - grump-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===========================================================================
+  # Redis - Job Queue & Caching
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: grump-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 512mb 
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --timeout 0
+      --requirepass ${REDIS_PASSWORD:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - grump-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # ===========================================================================
+  # PostgreSQL - Production Database (Optional)
+  # ===========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: grump-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-grump}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-grump}
+      - POSTGRES_DB=${POSTGRES_DB:-grump}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-grump}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - grump-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # ===========================================================================
+  # Nginx Reverse Proxy (Optional - for production with SSL)
+  # ===========================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: grump-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx-cache:/var/cache/nginx
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+    networks:
+      - grump-network
+    profiles:
+      - nginx
+      - production
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  backend-data:
+    driver: local
+  backend-cache:
+    driver: local
+  backend-logs:
+    driver: local
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+  nginx-cache:
+    driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  grump-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
