@@ -90,9 +90,9 @@ RUN node -e " \
     "
 
 # Install production dependencies only
+# Note: Don't run npm cache clean with cache mount - Docker manages the cache
 RUN --mount=type=cache,target=/root/.npm \
-    npm install --omit=dev --prefer-offline --no-audit --legacy-peer-deps && \
-    npm cache clean --force
+    npm install --omit=dev --prefer-offline --no-audit --legacy-peer-deps
 
 # Copy built application from builder
 COPY --from=builder --chown=grump:grump /app/dist ./dist
