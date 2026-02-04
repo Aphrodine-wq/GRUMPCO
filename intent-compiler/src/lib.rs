@@ -57,6 +57,15 @@ pub mod model_compression;
 // ULTIMATE parse engine - integrates EVERYTHING
 pub mod ultimate_parse;
 
+// Comprehensive error handling
+pub mod error_handling;
+
+// REAL AI optimizer that actually works
+pub mod real_ai_optimizer;
+
+// Production-ready parse engine (ACTUALLY WORKS!)
+pub mod production_parse;
+
 // Core NLP modules
 pub mod classifier;
 pub mod dependencies;
