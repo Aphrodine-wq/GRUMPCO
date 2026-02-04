@@ -8,7 +8,7 @@
     "start": "node --import tsx src/index.ts",
     "start:prod": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "build": "swc src -d dist --copy-files --strip-leading-paths --config-file .swcrc && node scripts/copy-migrations.mjs",
+    "build": "swc src -d dist --copy-files --config-file .swcrc && node scripts/copy-migrations.mjs",
     "build:tsc": "tsc && node scripts/copy-migrations.mjs",
     "bundle": "node scripts/esbuild-bundle.mjs",
     "bundle:windows": "node scripts/esbuild-bundle.mjs --platform=win32 --arch=x64",
