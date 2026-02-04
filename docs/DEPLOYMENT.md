@@ -557,6 +557,14 @@ docker-compose up -d
 docker-compose exec backend ls -la /app/data/
 ```
 
+### Supabase connection failed (HTML / 404)
+
+If the backend logs show **"Supabase connection failed"** with HTML or a Supabase 404 page in the error:
+
+- **Cause:** `SUPABASE_URL` is set to the **dashboard** or **app** URL instead of the **project API URL**.
+- **Fix:** Set `SUPABASE_URL` to your project API URL only: `https://YOUR_PROJECT_REF.supabase.co` (no path).
+- **Where to find it:** Supabase Dashboard → **Project Settings** → **API** → copy the **Project URL** (not the dashboard link).
+
 ### Out of Memory
 
 ```bash
