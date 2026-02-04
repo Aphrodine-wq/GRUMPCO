@@ -36,7 +36,9 @@ export type IntegrationProviderId =
   | 'github'
   | 'gitlab'
   | 'bitbucket'
-  | 'linear';
+  | 'linear'
+  | 'stripe'
+  | 'figma';
 
 export type IntegrationStatus = 'active' | 'disabled' | 'error' | 'pending';
 

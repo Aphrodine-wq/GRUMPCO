@@ -20,6 +20,9 @@ G-Rump now supports OAuth 2.0 authentication for multiple third-party services. 
 - **GitLab** - Repository management
 - **Bitbucket** - Repository management
 - **Jira** - Project management
+- **Twilio** - SMS and voice communications
+- **Stripe** - Payment processing via Stripe Connect
+- **Discord** - User authentication and guild access
 
 ## Architecture
 
@@ -119,6 +122,41 @@ For each provider you want to support, follow these steps:
    ```env
    GOOGLE_OAUTH_CLIENT_ID=your_client_id
    GOOGLE_OAUTH_CLIENT_SECRET=your_client_secret
+   ```
+
+#### Twilio
+
+1. Go to https://www.twilio.com/console/account/settings
+2. Navigate to "OAuth Applications"
+3. Create a new OAuth application
+4. Set callback URL: `{PUBLIC_BASE_URL}/api/integrations-v2/oauth/twilio/callback`
+5. Copy Client ID and Client Secret to `.env`:
+   ```env
+   TWILIO_OAUTH_CLIENT_ID=your_client_id
+   TWILIO_OAUTH_CLIENT_SECRET=your_client_secret
+   ```
+
+#### Stripe
+
+1. Go to https://dashboard.stripe.com/settings/applications
+2. Create a new Connect platform
+3. Set redirect URI: `{PUBLIC_BASE_URL}/api/integrations-v2/oauth/stripe/callback`
+4. Copy Client ID and Secret Key to `.env`:
+   ```env
+   STRIPE_CONNECT_CLIENT_ID=ca_xxxxx
+   STRIPE_SECRET_KEY=sk_live_xxxxx
+   ```
+
+#### Discord
+
+1. Go to https://discord.com/developers/applications
+2. Create a new application or select existing
+3. Go to OAuth2 settings
+4. Add redirect: `{PUBLIC_BASE_URL}/api/integrations-v2/oauth/discord/callback`
+5. Copy Client ID and Client Secret to `.env`:
+   ```env
+   DISCORD_OAUTH_CLIENT_ID=your_client_id
+   DISCORD_OAUTH_CLIENT_SECRET=your_client_secret
    ```
 
 #### Other Providers
