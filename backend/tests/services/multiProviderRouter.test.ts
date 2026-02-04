@@ -75,7 +75,7 @@ import {
 
 import {
   classifyRequest,
-  makeRoutingDecision,
+  getRoutingDecision,
 } from '../../src/services/modelRouter.js';
 
 describe('Multi-Provider AI Router', () => {
@@ -228,7 +228,7 @@ describe('Multi-Provider AI Router', () => {
         messages: [{ role: 'user' as const, content: 'Hello!' }],
       };
 
-      const decision = makeRoutingDecision(params, {
+      const decision = getRoutingDecision(params, {
         requestType: 'simple',
       });
 
@@ -246,7 +246,7 @@ describe('Multi-Provider AI Router', () => {
         ],
       };
 
-      const decision = makeRoutingDecision(params, {
+      const decision = getRoutingDecision(params, {
         requestType: 'coding',
       });
 
@@ -261,7 +261,7 @@ describe('Multi-Provider AI Router', () => {
         messages: [{ role: 'user' as const, content: 'Hello' }],
       };
 
-      const decision = makeRoutingDecision(params, {
+      const decision = getRoutingDecision(params, {
         provider: 'openrouter',
       });
 
@@ -277,7 +277,7 @@ describe('Multi-Provider AI Router', () => {
         messages: [{ role: 'user' as const, content: 'Hello' }],
       };
 
-      const decision = makeRoutingDecision(params, {
+      const decision = getRoutingDecision(params, {
         preferSpeed: true,
         requestType: 'default',
       });
@@ -293,7 +293,7 @@ describe('Multi-Provider AI Router', () => {
         messages: [{ role: 'user' as const, content: 'Hello' }],
       };
 
-      const decision = makeRoutingDecision(params, {
+      const decision = getRoutingDecision(params, {
         preferQuality: true,
         requestType: 'complex',
       });
@@ -309,7 +309,7 @@ describe('Multi-Provider AI Router', () => {
         messages: [{ role: 'user' as const, content: 'Hello' }],
       };
 
-      const decision = makeRoutingDecision(params);
+      const decision = getRoutingDecision(params);
 
       expect(decision.fallbackChain.length).toBeGreaterThan(0);
       expect(decision.fallbackChain).not.toContain(decision.provider);
@@ -323,7 +323,7 @@ describe('Multi-Provider AI Router', () => {
         messages: [{ role: 'user' as const, content: 'Hello' }],
       };
 
-      const decision = makeRoutingDecision(params, {
+      const decision = getRoutingDecision(params, {
         provider: 'groq',
       });
 
@@ -391,7 +391,7 @@ describe('Integration Tests', () => {
       messages: [{ role: 'user' as const, content: 'Hello' }],
     };
 
-    const decision = makeRoutingDecision(params);
+    const decision = getRoutingDecision(params);
 
     expect(new Set(decision.fallbackChain).size).toBe(decision.fallbackChain.length);
   });
@@ -404,7 +404,7 @@ describe('Integration Tests', () => {
       messages: [{ role: 'user' as const, content: 'Hello' }],
     };
 
-    const decision = makeRoutingDecision(params);
+    const decision = getRoutingDecision(params);
 
     expect(decision.fallbackChain).not.toContain(decision.provider);
   });

@@ -114,6 +114,12 @@ const envSchema = z
     // Mistral AI - https://mistral.ai
     MISTRAL_API_KEY: z.string().optional(),
 
+    // Groq - https://groq.com
+    GROQ_API_KEY: z.string().optional(),
+
+    // Together AI - https://together.ai
+    TOGETHER_API_KEY: z.string().optional(),
+
     // Provider routing preferences
     ROUTER_FAST_PROVIDER: z
       .enum([
@@ -124,6 +130,8 @@ const envSchema = z
         "openrouter",
         "anthropic",
         "ollama",
+        "groq",
+        "together",
       ])
       .default("nim"),
     ROUTER_QUALITY_PROVIDER: z
@@ -135,6 +143,8 @@ const envSchema = z
         "github-copilot",
         "kimi",
         "ollama",
+        "groq",
+        "together",
       ])
       .default("anthropic"),
     ROUTER_CODING_PROVIDER: z
@@ -146,6 +156,8 @@ const envSchema = z
         "openrouter",
         "kimi",
         "ollama",
+        "groq",
+        "together",
       ])
       .default("github-copilot"),
 
@@ -679,7 +691,9 @@ export type ApiProvider =
   | "github_copilot"
   | "kimi"
   | "anthropic"
-  | "mistral";
+  | "mistral"
+  | "groq"
+  | "together";
 
 export function getApiKey(provider: ApiProvider): string | undefined {
   switch (provider) {
@@ -698,6 +712,10 @@ export function getApiKey(provider: ApiProvider): string | undefined {
       return env.ANTHROPIC_API_KEY;
     case "mistral":
       return env.MISTRAL_API_KEY;
+    case "groq":
+      return env.GROQ_API_KEY;
+    case "together":
+      return env.TOGETHER_API_KEY;
     default:
       return undefined;
   }
@@ -722,6 +740,10 @@ export function isProviderConfigured(provider: ApiProvider): boolean {
       return Boolean(env.ANTHROPIC_API_KEY);
     case "mistral":
       return Boolean(env.MISTRAL_API_KEY);
+    case "groq":
+      return Boolean(env.GROQ_API_KEY);
+    case "together":
+      return Boolean(env.TOGETHER_API_KEY);
     default:
       return false;
   }
@@ -739,5 +761,7 @@ export function getConfiguredProviders(): ApiProvider[] {
   if (env.KIMI_API_KEY) providers.push("kimi");
   if (env.ANTHROPIC_API_KEY) providers.push("anthropic");
   if (env.MISTRAL_API_KEY) providers.push("mistral");
+  if (env.GROQ_API_KEY) providers.push("groq");
+  if (env.TOGETHER_API_KEY) providers.push("together");
   return providers;
 }
