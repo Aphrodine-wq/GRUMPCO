@@ -231,6 +231,7 @@ export const shipStartRequestSchema = z.object({
   projectName: z.string().max(MAX_PROJECT_NAME_LENGTH).optional(),
   repoOrg: z.string().max(256).optional(),
   deploymentTarget: z.string().max(64).optional(),
+  localPath: z.string().max(512).optional(),
   phases: z.array(shipPhaseEnum).min(1).optional(),
   complexity: complexitySchema.optional(),
   techStack: z.array(z.string()).optional(),
