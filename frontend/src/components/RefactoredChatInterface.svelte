@@ -21,7 +21,7 @@
     MessageBubble,
     ScrollNavigation,
     StreamingIndicator,
-    SuggestedModesCard,
+    // SuggestedModesCard,
   } from './chat';
 
   // Existing components
@@ -31,7 +31,7 @@
   import ShipMode from './ShipMode.svelte';
   import SettingsScreen from './TabbedSettingsScreen.svelte';
   import FreeAgentLocalConfirmModal from './FreeAgentLocalConfirmModal.svelte';
-  import AIQuestionModal from './AIQuestionModal.svelte';
+  import QuestionModal from './QuestionModal.svelte';
   import ModelPicker from './ModelPicker.svelte';
   import GAgentPlanViewer from './GAgentPlanViewer.svelte';
   import GAgentPlanApproval from './GAgentPlanApproval.svelte';
@@ -734,6 +734,7 @@
               value={currentModelKey}
               compact={false}
               showAuto={true}
+              embedded={true}
               onSelect={handleModelSelect}
             />
           </div>
@@ -871,12 +872,12 @@
                       {/if}
                     </div>
                   {:else if messages.length >= 2 && messages[messages.length - 1]?.role === 'assistant'}
-                    <SuggestedModesCard
+                    <!-- <SuggestedModesCard
                       onSelectMode={(view) => {
                         if (view === 'chat') return;
                         setCurrentView(view);
                       }}
-                    />
+                    /> -->
                   {/if}
                 {/if}
               </div>
@@ -1066,7 +1067,7 @@
     onRejected={() => (showGAgentPlanApproval = false)}
   />
 
-  <AIQuestionModal
+  <QuestionModal
     bind:open={showShipConfirmModal}
     title="Run SHIP?"
     message="Do you want to run SHIP (Design → Spec → Plan → Code) for this project? You'll be taken to the SHIP workflow to describe your app and generate architecture, spec, plan, and code."
