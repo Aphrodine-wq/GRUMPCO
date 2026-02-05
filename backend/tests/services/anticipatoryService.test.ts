@@ -11,6 +11,11 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+global.fetch = vi.fn().mockResolvedValue({
+  ok: true,
+  json: () => Promise.resolve([]),
+}) as any;
+
 // Hoisted mocks
 const {
   mockLogger,
@@ -18,6 +23,7 @@ const {
   mockWriteAuditLog,
   mockQueueAgentTask,
   mockIsAgentRunning,
+  mockGetCompletion,
 } = vi.hoisted(() => ({
   mockLogger: {
     error: vi.fn(),
@@ -29,6 +35,7 @@ const {
   mockWriteAuditLog: vi.fn().mockResolvedValue(undefined),
   mockQueueAgentTask: vi.fn().mockResolvedValue({ id: 'task_123' }),
   mockIsAgentRunning: vi.fn().mockReturnValue(true),
+  mockGetCompletion: vi.fn().mockResolvedValue({ text: "[]" }),
 }));
 
 vi.mock('../../src/middleware/logger.js', () => ({
@@ -41,6 +48,10 @@ vi.mock('../../src/db/database.js', () => ({
 
 vi.mock('../../src/services/auditLogService.js', () => ({
   writeAuditLog: (data: unknown) => mockWriteAuditLog(data),
+}));
+
+vi.mock('../../src/services/llmGatewayHelper.js', () => ({
+  getCompletion: (...args: unknown[]) => mockGetCompletion(...args),
 }));
 
 vi.mock('../../src/services/persistentAgentService.js', () => ({
@@ -555,6 +566,37 @@ describe('Anticipatory Service', () => {
   });
 
   describe('fetchTechTrends', () => {
+    beforeEach(() => {
+      // Mock fetch to return HN-like structure which is sufficient for one source working
+      (global.fetch as any).mockImplementation((url: string) => {
+        if (url.includes('hn.algolia')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              hits: [{
+                title: 'Test Trend',
+                url: 'http://example.com/trend',
+                objectID: '123',
+                points: 100,
+                created_at: new Date().toISOString()
+              }]
+            })
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ([]) // Dev.to returns empty array
+        });
+      });
+
+      mockGetCompletion.mockResolvedValue({
+        text: JSON.stringify([{
+          title: 'Test Trend',
+          summary: 'A test summary',
+          relevance: 0.8
+        }])
+      });
+    });
     it('should return trends array', async () => {
       const result = await fetchTechTrends(testUserId, ['react', 'typescript']);
 
