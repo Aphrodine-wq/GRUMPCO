@@ -43,7 +43,7 @@ export const codeSessionsStore = {
     const session: CodeSession = {
       id,
       name: name.trim() || `Session ${new Date().toLocaleString()}`,
-      messages: JSON.parse(JSON.stringify(messages)),
+      messages: structuredClone(messages),
       workspaceRoot,
       agentProfile,
       updatedAt: Date.now(),
