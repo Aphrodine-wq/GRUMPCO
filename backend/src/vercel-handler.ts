@@ -6,8 +6,10 @@ import path from "path";
 import { pathToFileURL } from "url";
 import type { IncomingMessage, ServerResponse } from "http";
 
-let appPromise: Promise<{ default: (req: IncomingMessage, res: ServerResponse) => void; appReady: Promise<void> }> | null =
-  null;
+let appPromise: Promise<{
+  default: (req: IncomingMessage, res: ServerResponse) => void;
+  appReady: Promise<void>;
+}> | null = null;
 
 async function getApp() {
   if (!appPromise) {
@@ -22,7 +24,7 @@ async function getApp() {
 
 export default async function handler(
   req: IncomingMessage,
-  res: ServerResponse
+  res: ServerResponse,
 ): Promise<void> {
   const { default: app, appReady } = await getApp();
   await appReady;

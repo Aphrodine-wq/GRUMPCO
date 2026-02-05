@@ -548,11 +548,15 @@ export function route(params: {
   preferNim?: boolean;
   maxLatencyMs?: number;
   sessionType?: string;
-  modelPreference?: { source?: "cloud" | "auto"; provider?: string; modelId?: string };
+  modelPreference?: {
+    source?: "cloud" | "auto";
+    provider?: string;
+    modelId?: string;
+  };
 }): { provider: string; modelId: string; reason?: string } {
   // Map legacy params to new RouterOptions
   const options: RouterOptions = {
-    preferSpeed: params.mode === 'simple', // rough mapping
+    preferSpeed: params.mode === "simple", // rough mapping
     requiresTools: params.toolsRequested,
     requiresVision: params.multimodal || false,
     userPreference: params.modelPreference?.provider as LLMProvider | undefined,
@@ -560,23 +564,23 @@ export function route(params: {
   };
 
   if (params.preferNim) {
-    options.provider = 'nim';
+    options.provider = "nim";
   }
 
   // Determine request type based on mode/params if possible
-  let requestType: RequestType = 'default';
-  if (params.multimodal) requestType = 'vision';
-  else if (params.mode === 'coding') requestType = 'coding';
-  else if (params.messageChars > 10000) requestType = 'long-context';
-  else if (params.mode === 'complex') requestType = 'complex';
-  else if (params.mode === 'simple') requestType = 'simple';
+  let requestType: RequestType = "default";
+  if (params.multimodal) requestType = "vision";
+  else if (params.mode === "coding") requestType = "coding";
+  else if (params.messageChars > 10000) requestType = "long-context";
+  else if (params.mode === "complex") requestType = "complex";
+  else if (params.mode === "simple") requestType = "simple";
 
   const decision = selectProvider(requestType, options);
 
   return {
     provider: decision.provider,
     modelId: decision.model,
-    reason: decision.reason
+    reason: decision.reason,
   };
 }
 

@@ -16,7 +16,10 @@ import crypto from "crypto";
 import { getDatabase } from "../db/database.js";
 import { encrypt } from "../utils/encryption.js";
 import type { IntegrationProviderId } from "../types/integrations.js";
-import type { OAuthTokenRecord, IntegrationRecord } from "../types/integrations.js";
+import type {
+  OAuthTokenRecord,
+  IntegrationRecord,
+} from "../types/integrations.js";
 
 const router: Router = express.Router();
 
@@ -367,7 +370,9 @@ router.get("/:provider/callback", async (req: Request, res: Response) => {
     await db.saveOAuthToken(tokenRecord);
 
     // Also create/update integration record
-    const existingIntegrations = await db.getIntegrationsForUser(stateData.userId);
+    const existingIntegrations = await db.getIntegrationsForUser(
+      stateData.userId,
+    );
     const existingIntegration = existingIntegrations.find(
       (i: IntegrationRecord) => i.provider === provider,
     );

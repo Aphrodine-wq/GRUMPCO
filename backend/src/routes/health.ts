@@ -450,12 +450,7 @@ router.get("/ai-providers", async (_req: Request, res: Response) => {
   }
 
   // Add unconfigured providers
-  const allProviders: LLMProvider[] = [
-    "nim",
-    "groq",
-    "openrouter",
-    "ollama",
-  ];
+  const allProviders: LLMProvider[] = ["nim", "groq", "openrouter", "ollama"];
   for (const provider of allProviders) {
     if (!providerStatus[provider]) {
       providerStatus[provider] = { configured: false };

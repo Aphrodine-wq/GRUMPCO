@@ -81,9 +81,7 @@ export class SupabaseDatabaseService {
         this.supabaseUrl.includes("app.supabase.com")
           ? " Use your project API URL (e.g. https://YOUR_PROJECT_REF.supabase.co), not the Supabase dashboard URL."
           : " SUPABASE_URL must be your project API URL: https://YOUR_PROJECT_REF.supabase.co (find it in Supabase Dashboard → Project Settings → API).";
-      throw new Error(
-        `Invalid SUPABASE_URL: expected project API URL.${hint}`,
-      );
+      throw new Error(`Invalid SUPABASE_URL: expected project API URL.${hint}`);
     }
 
     // Test connection by checking if we can query

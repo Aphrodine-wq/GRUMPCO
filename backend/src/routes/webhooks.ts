@@ -57,24 +57,20 @@ router.post(
     }
     const { action, params = {} } = req.body ?? {};
     if (!action || !["ship", "chat"].includes(action)) {
-      res
-        .status(400)
-        .json({
-          error: "Missing or invalid action (ship|chat)",
-          type: "validation_error",
-        });
+      res.status(400).json({
+        error: "Missing or invalid action (ship|chat)",
+        type: "validation_error",
+      });
       return;
     }
     try {
       if (action === "ship") {
         const sessionId = params.sessionId as string | undefined;
         if (!sessionId) {
-          res
-            .status(400)
-            .json({
-              error: "ship action requires params.sessionId",
-              type: "validation_error",
-            });
+          res.status(400).json({
+            error: "ship action requires params.sessionId",
+            type: "validation_error",
+          });
           return;
         }
         const jobId = await enqueueShipJob(sessionId);
@@ -149,12 +145,10 @@ router.post(
       return;
     }
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      res
-        .status(400)
-        .json({
-          error: "url must use http or https",
-          type: "validation_error",
-        });
+      res.status(400).json({
+        error: "url must use http or https",
+        type: "validation_error",
+      });
       return;
     }
     if (isProduction && parsed.protocol !== "https:") {

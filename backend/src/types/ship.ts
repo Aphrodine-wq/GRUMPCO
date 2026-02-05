@@ -104,10 +104,10 @@ export interface ShipPhaseResponse {
   phase: ShipPhase;
   status: "running" | "completed" | "failed";
   result?:
-  | DesignPhaseResult
-  | SpecPhaseResult
-  | PlanPhaseResult
-  | CodePhaseResult;
+    | DesignPhaseResult
+    | SpecPhaseResult
+    | PlanPhaseResult
+    | CodePhaseResult;
   error?: string;
   nextPhase?: ShipPhase;
 }

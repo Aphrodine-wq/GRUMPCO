@@ -189,11 +189,9 @@ router.post("/context/similarity", async (req: Request, res: Response) => {
     }
 
     if (!id1 || !id2) {
-      return res
-        .status(400)
-        .json({
-          error: "Either contextId1/contextId2 or text1/text2 are required",
-        });
+      return res.status(400).json({
+        error: "Either contextId1/contextId2 or text1/text2 are required",
+      });
     }
 
     const ctx1 = service.get(id1);

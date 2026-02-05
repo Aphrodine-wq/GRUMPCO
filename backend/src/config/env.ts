@@ -397,9 +397,7 @@ const envSchema = z
 
       // Check if any provider is configured
       const hasProvider = Boolean(
-        data.NVIDIA_NIM_API_KEY ||
-        data.OPENROUTER_API_KEY ||
-        data.GROQ_API_KEY,
+        data.NVIDIA_NIM_API_KEY || data.OPENROUTER_API_KEY || data.GROQ_API_KEY,
       );
 
       return hasProvider;

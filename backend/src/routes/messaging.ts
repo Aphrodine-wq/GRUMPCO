@@ -72,12 +72,10 @@ router.post("/inbound", async (req: Request, res: Response) => {
   const verification = verifyTwilioWebhook(req);
   if (verification.missingInProd) {
     logger.warn("Twilio webhook secret not configured in production");
-    res
-      .status(503)
-      .json({
-        error: "Messaging webhook secret not configured",
-        type: "config_error",
-      });
+    res.status(503).json({
+      error: "Messaging webhook secret not configured",
+      type: "config_error",
+    });
     return;
   }
   if (!verification.ok) {
