@@ -10,6 +10,7 @@
   } from '../lib/integrationsApi';
   import { showToast } from '../stores/toastStore';
   import EmptyState from './EmptyState.svelte';
+  import { Modal, Button } from '../lib/design-system';
 
   interface Props {
     onBack: () => void;
@@ -35,6 +36,13 @@
 
   const PREDEFINED_TAGS = ['work', 'personal', 'project-x'];
   const MAX_CONTENT_LENGTH = 10000;
+  const MAX_ATTACHMENT_SIZE = 500 * 1024; // 500KB per file
+  const MAX_ATTACHMENTS_TOTAL = 2 * 1024 * 1024; // 2MB total
+  const ACCEPT_ATTACHMENTS = 'image/*,.pdf,.txt,.md,.doc,.docx';
+
+  let attachmentFiles = $state<Array<{ file: File; id: string }>>([]);
+  let attachmentError = $state<string | null>(null);
+  let attachmentInputEl = $state<HTMLInputElement | null>(null);
 
   const memoryTypes: { value: MemoryType; label: string; icon: string; color: string }[] = [
     {
@@ -121,7 +129,48 @@
     contentTouched = false;
     contentError = '';
     customTagInput = '';
+    attachmentFiles = [];
+    attachmentError = null;
     showAddModal = true;
+  }
+
+  function addAttachmentFiles(files: FileList | null) {
+    if (!files?.length) return;
+    attachmentError = null;
+    const next: Array<{ file: File; id: string }> = [...attachmentFiles];
+    let totalBytes = next.reduce((s, { file }) => s + file.size, 0);
+    for (const file of Array.from(files)) {
+      if (file.size > MAX_ATTACHMENT_SIZE) {
+        attachmentError = `"${file.name}" is too large (max ${MAX_ATTACHMENT_SIZE / 1024}KB per file)`;
+        continue;
+      }
+      if (totalBytes + file.size > MAX_ATTACHMENTS_TOTAL) {
+        attachmentError = `Total attachments exceed ${MAX_ATTACHMENTS_TOTAL / 1024 / 1024}MB`;
+        break;
+      }
+      next.push({ file, id: `${Date.now()}-${Math.random().toString(36).slice(2)}` });
+      totalBytes += file.size;
+    }
+    attachmentFiles = next;
+    if (attachmentInputEl) attachmentInputEl.value = '';
+  }
+
+  function removeAttachment(id: string) {
+    attachmentFiles = attachmentFiles.filter((a) => a.id !== id);
+    attachmentError = null;
+  }
+
+  function readFileAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.includes(',') ? result.split(',')[1] : result;
+        resolve(base64 ?? '');
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
   }
 
   function closeAddModal() {
@@ -144,7 +193,24 @@
     if (err || !newContent.trim()) return;
     processing = true;
     try {
-      await createMemory(newType, newContent.trim(), newImportance, undefined, newTags.length ? newTags : undefined);
+      const metadata: Record<string, unknown> = newTags.length ? { tags: newTags } : {};
+      if (attachmentFiles.length > 0) {
+        const attachments: Array<{ name: string; mimeType: string; size: number; dataBase64?: string }> = [];
+        for (const { file } of attachmentFiles) {
+          const dataBase64 =
+            file.size <= MAX_ATTACHMENT_SIZE
+              ? await readFileAsBase64(file)
+              : undefined;
+          attachments.push({
+            name: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            size: file.size,
+            ...(dataBase64 ? { dataBase64 } : {}),
+          });
+        }
+        metadata.attachments = attachments;
+      }
+      await createMemory(newType, newContent.trim(), newImportance, Object.keys(metadata).length ? metadata : undefined);
       showToast('Memory saved', 'success');
       closeAddModal();
       await loadMemories();
@@ -295,9 +361,7 @@
     <EmptyState
       headline="No memories yet"
       description="Add facts, preferences, and context for the AI to remember."
-    >
-      <button class="primary-btn" onclick={openAddModal}>Add First Memory</button>
-    </EmptyState>
+    />
   {:else}
     <div class="stats-bar">
       <span>{memories.length} memories</span>
@@ -355,25 +419,19 @@
   {/if}
 </div>
 
-<!-- Add Memory Modal -->
-{#if showAddModal}
-  <div
-    class="modal-overlay"
-    role="button"
-    tabindex="-1"
-    onclick={closeAddModal}
-    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && closeAddModal()}
-  >
-    <div
-      class="modal"
-      role="dialog"
-      tabindex="-1"
-      onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => e.stopPropagation()}
-    >
-      <h2>Add Memory</h2>
-
-      <div class="modal-form">
+<!-- Add Memory Modal (wizard-style: same shell as New Project / onboarding modals) -->
+<Modal
+  bind:open={showAddModal}
+  onClose={closeAddModal}
+  title="Add Memory"
+  description="Store a fact, preference, task, or context for G-Agent to recall."
+  size="lg"
+  closeOnBackdrop={true}
+  closeOnEscape={true}
+  showCloseButton={true}
+  footer={addMemoryModalFooter}
+>
+  <div class="add-memory-form">
         <!-- Section: Type -->
         <section class="form-section" role="group" aria-labelledby="memory-type-label">
           <span id="memory-type-label" class="form-section-label">Type</span>
@@ -427,6 +485,35 @@
           <p class="hint">Higher importance = more likely to be recalled</p>
         </section>
 
+        <!-- Section: Attachments (optional) -->
+        <section class="form-section" role="group" aria-labelledby="attachments-label">
+          <span id="attachments-label" class="form-section-label">Attachments (optional)</span>
+          <p class="hint">Documents or images for AI to consider with this memory. Max 500KB per file, 2MB total.</p>
+          <input
+            type="file"
+            bind:this={attachmentInputEl}
+            accept={ACCEPT_ATTACHMENTS}
+            multiple
+            class="attachment-input"
+            onchange={(e) => addAttachmentFiles((e.target as HTMLInputElement)?.files ?? null)}
+            aria-label="Add documents or images"
+          />
+          {#if attachmentError}
+            <p class="field-error" role="alert">{attachmentError}</p>
+          {/if}
+          {#if attachmentFiles.length > 0}
+            <ul class="attachment-list">
+              {#each attachmentFiles as { file, id }}
+                <li class="attachment-item">
+                  <span class="attachment-name" title={file.name}>{file.name}</span>
+                  <span class="attachment-size">({(file.size / 1024).toFixed(1)} KB)</span>
+                  <button type="button" class="attachment-remove" onclick={() => removeAttachment(id)} aria-label="Remove {file.name}">×</button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </section>
+
         <!-- Section: Tags -->
         <section class="form-section" role="group" aria-labelledby="tags-label">
           <span id="tags-label" class="form-section-label">Tags</span>
@@ -471,27 +558,24 @@
             </div>
           {/if}
         </section>
-
-        <div class="modal-actions">
-          <button class="cancel-btn" onclick={closeAddModal}>Cancel</button>
-          <button
-            class="submit-btn"
-            onclick={handleCreate}
-            disabled={processing || !newContent.trim() || !!validateContent()}
-          >
-            {processing ? 'Saving...' : 'Save Memory'}
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
-{/if}
+</Modal>
+
+{#snippet addMemoryModalFooter()}
+  <Button variant="ghost" onclick={closeAddModal}>Cancel</Button>
+  <Button
+    variant="primary"
+    onclick={handleCreate}
+    disabled={processing || !newContent.trim() || !!validateContent()}
+  >
+    {processing ? 'Saving...' : 'Save Memory'}
+  </Button>
+{/snippet}
 
 <style>
   .memory-manager {
     padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
+    width: 100%;
     height: 100%;
     overflow-y: auto;
   }
@@ -546,14 +630,14 @@
     font-weight: 500;
     border: none;
     border-radius: 8px;
-    background: #6366f1;
+    background: var(--color-primary, #7c3aed);
     color: white;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .primary-btn:hover {
-    background: #4f46e5;
+    background: var(--color-primary-hover, #6d28d9);
   }
 
   .controls {
@@ -750,36 +834,7 @@
   }
 
   /* Modal */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 1rem;
-  }
-
-  .modal {
-    background: white;
-    border-radius: 16px;
-    padding: 1.75rem;
-    width: 100%;
-    max-width: 560px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  }
-
-  .modal h2 {
-    margin: 0 0 1.5rem;
-    font-size: 1.375rem;
-    font-weight: 600;
-    color: #111827;
-  }
-
-  .modal-form {
+  .add-memory-form {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
@@ -868,6 +923,60 @@
 
   .form-section input[type='range'] {
     width: 100%;
+  }
+
+  .attachment-input {
+    font-size: 0.875rem;
+    max-width: 100%;
+  }
+
+  .attachment-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .attachment-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-bg-subtle, #f4f4f5);
+    border-radius: 6px;
+    font-size: 0.875rem;
+  }
+
+  .attachment-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .attachment-size {
+    color: var(--color-text-muted, #71717a);
+    flex-shrink: 0;
+  }
+
+  .attachment-remove {
+    flex-shrink: 0;
+    padding: 0.2rem 0.4rem;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted, #71717a);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    border-radius: 4px;
+  }
+
+  .attachment-remove:hover {
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
   }
 
   .hint {
@@ -961,55 +1070,6 @@
 
   .tag-remove:hover {
     color: #dc2626;
-  }
-
-  .modal-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: flex-end;
-    margin-top: 0.25rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e5e7eb;
-  }
-
-  .cancel-btn,
-  .submit-btn {
-    padding: 0.625rem 1.25rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .cancel-btn:focus-visible,
-  .submit-btn:focus-visible {
-    outline: 2px solid #6366f1;
-    outline-offset: 2px;
-  }
-
-  .cancel-btn {
-    background: #f3f4f6;
-    color: #374151;
-  }
-
-  .cancel-btn:hover {
-    background: #e5e7eb;
-  }
-
-  .submit-btn {
-    background: #6366f1;
-    color: white;
-  }
-
-  .submit-btn:hover:not(:disabled) {
-    background: #4f46e5;
-  }
-
-  .submit-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   @media (max-width: 768px) {

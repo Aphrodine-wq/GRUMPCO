@@ -27,6 +27,10 @@ export interface ModelsSettings {
   customModels?: CustomModelConfig[];
   /** Quality vs speed: fast = NIM/Kimi, quality = Claude, balanced = router default */
   modelPreset?: ModelPreset;
+  /** Advanced: temperature (0–2). Higher = more creative. */
+  temperature?: number;
+  /** Advanced: max tokens per response. */
+  maxTokens?: number;
 }
 
 export interface McpServerConfig {
@@ -41,6 +45,22 @@ export interface McpServerConfig {
 
 export interface McpSettings {
   servers?: McpServerConfig[];
+  /** Request timeout in seconds for MCP calls. */
+  requestTimeoutSeconds?: number;
+  /** Max retries for MCP requests. */
+  maxRetries?: number;
+}
+
+export interface MemorySettings {
+  /** Max number of memories to keep (optional cap for UI/recall). */
+  maxMemoriesToKeep?: number;
+}
+
+export interface GitSettings {
+  /** Default branch name for new repos or suggestions. */
+  defaultBranch?: string;
+  /** Auto-fetch interval in minutes (0 = disabled). */
+  autoFetchIntervalMinutes?: number;
 }
 
 export interface SkillsSettings {
@@ -71,13 +91,22 @@ export interface GuardRailsSettings {
   useLargeContext?: boolean;
 }
 
+/** UI/billing preferences stored with settings */
+export interface SettingsPreferences {
+  /** Alert when usage exceeds this percent of limit (0–100). */
+  usageAlertPercent?: number;
+}
+
 export interface Settings {
   user?: UserSettings;
   models?: ModelsSettings;
   mcp?: McpSettings;
+  memory?: MemorySettings;
+  git?: GitSettings;
   skills?: SkillsSettings;
   accessibility?: AccessibilitySettings;
   integrations?: IntegrationsSettings;
   guardRails?: GuardRailsSettings;
+  preferences?: SettingsPreferences;
   updatedAt?: string;
 }

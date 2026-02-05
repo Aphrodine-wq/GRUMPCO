@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Button } from '../lib/design-system';
-  import { getSkills, getSkill, generateSkillMd, type SkillSummary } from '../lib/api';
+  import { getSkills, getSkill, generateSkillMd, createUserSkill, type SkillSummary } from '../lib/api';
   import { settingsStore } from '../stores/settingsStore';
   import { showToast } from '../stores/toastStore';
 
@@ -22,6 +22,11 @@
   let generatedMd = $state('');
   let expandedSkillId = $state<string | null>(null);
   let expandedSkillDetail = $state<{ tools?: string[] } | null>(null);
+  let showCreateInHouse = $state(false);
+  let createName = $state('');
+  let createDescription = $state('');
+  let creating = $state(false);
+  let createError = $state<string | null>(null);
 
   onMount(() => {
     load();
@@ -120,6 +125,40 @@
       expandedSkillDetail = {};
     }
   }
+
+  async function handleCreateInHouse() {
+    if (!createName.trim() || !createDescription.trim()) return;
+    creating = true;
+    createError = null;
+    try {
+      const result = await createUserSkill({
+        name: createName.trim(),
+        description: createDescription.trim(),
+      });
+      if (result.success) {
+        showToast('In-house skill created', 'success');
+        showCreateInHouse = false;
+        createName = '';
+        createDescription = '';
+        await load();
+      } else {
+        createError = result.error ?? 'Failed to create skill';
+        showToast(createError, 'error');
+      }
+    } catch (e) {
+      createError = (e as Error).message;
+      showToast(createError, 'error');
+    } finally {
+      creating = false;
+    }
+  }
+
+  function closeCreateInHouse() {
+    showCreateInHouse = false;
+    createName = '';
+    createDescription = '';
+    createError = null;
+  }
 </script>
 
 <div class="skills-screen">
@@ -152,7 +191,10 @@
     </div>
   {:else if error}
     <div class="error-state">
-      <p>{error}</p>
+      <p class="error-message">{error}</p>
+      <p class="error-hint">
+        Skills API unavailable. Ensure backend URL is correct (VITE_API_URL for Electron) and backend is running. If using a remote backend, ensure you're authenticated.
+      </p>
       <Button variant="secondary" onclick={load}>Retry</Button>
     </div>
   {:else}
@@ -271,11 +313,56 @@
         {/if}
       </section>
 
+      <section class="section create-in-house-section">
+        <h2>Create in-house skill</h2>
+        <p class="section-desc">
+          Add a custom skill that lives on the backend and appears in the list above. Use it for team-specific workflows.
+        </p>
+        {#if !showCreateInHouse}
+          <Button variant="secondary" onclick={() => (showCreateInHouse = true)}
+            >Create in-house skill</Button
+          >
+        {:else}
+          <div class="add-custom-form">
+            <label for="create-name">Name</label>
+            <input
+              id="create-name"
+              type="text"
+              bind:value={createName}
+              placeholder="e.g. Code review for Python"
+              disabled={creating}
+            />
+            <label for="create-desc">Description</label>
+            <textarea
+              id="create-desc"
+              bind:value={createDescription}
+              placeholder="What does this skill do?"
+              rows="3"
+              disabled={creating}
+            ></textarea>
+            {#if createError}
+              <p class="create-error">{createError}</p>
+            {/if}
+            <div class="add-custom-actions">
+              <Button
+                variant="primary"
+                onclick={handleCreateInHouse}
+                disabled={creating || !createName.trim() || !createDescription.trim()}
+              >
+                {creating ? 'Creating...' : 'Create skill'}
+              </Button>
+              <Button variant="ghost" onclick={closeCreateInHouse} disabled={creating}
+                >Cancel</Button
+              >
+            </div>
+          </div>
+        {/if}
+      </section>
+
       <section class="section assignment-section">
         <h2>Assignment</h2>
         <p class="section-desc">
-          Enabled skills apply to all chats by default. Per-session or per-model assignment is
-          coming soon.
+          Enabled skills apply to all chats by default. Per-session or per-model assignment will be available in a future update.
         </p>
         <div class="assignment-note">
           <span class="note-icon">ℹ</span>
@@ -346,6 +433,18 @@
     gap: 1rem;
     padding: 3rem;
     color: var(--color-text-muted, #71717a);
+    text-align: center;
+  }
+
+  .error-state .error-message {
+    font-weight: 500;
+    color: var(--color-text, #18181b);
+  }
+
+  .error-state .error-hint {
+    font-size: 0.875rem;
+    max-width: 360px;
+    margin: 0;
   }
 
   .spinner {
@@ -541,6 +640,25 @@
   .add-custom-form textarea:focus {
     outline: none;
     border-color: var(--color-primary, #7c3aed);
+  }
+
+  .add-custom-form input[type='text'] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-border, #d4d4d8);
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+
+  .add-custom-form input[type='text']:focus {
+    outline: none;
+    border-color: var(--color-primary, #7c3aed);
+  }
+
+  .add-custom-form .create-error {
+    font-size: 0.875rem;
+    color: var(--color-error, #dc2626);
+    margin: 0;
   }
 
   .add-custom-actions {

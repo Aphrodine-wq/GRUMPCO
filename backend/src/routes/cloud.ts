@@ -17,9 +17,52 @@ import {
   getVercelPresetForStack,
   type VercelPresetStack,
 } from "../services/deployService.js";
+import { getIntegrations } from "../services/integrationService.js";
+import type { IntegrationProviderId } from "../types/integrations.js";
 import logger from "../middleware/logger.js";
 
 const router = Router();
+
+/** Map provider to dashboard category for GET /dashboard */
+function providerToCategory(
+  provider: IntegrationProviderId,
+): "deploy" | "cloud" | "baas" | "vcs" | "pm" {
+  const deploy = ["vercel", "netlify"];
+  const cloud = ["aws", "gcp", "azure"];
+  const baas = ["supabase", "firebase"];
+  const vcs = ["github", "gitlab", "bitbucket"];
+  const pm = ["jira", "linear", "atlassian"];
+  if (deploy.includes(provider)) return "deploy";
+  if (cloud.includes(provider)) return "cloud";
+  if (baas.includes(provider)) return "baas";
+  if (vcs.includes(provider)) return "vcs";
+  if (pm.includes(provider)) return "pm";
+  return "deploy"; // fallback
+}
+
+/** Human-readable name for provider */
+function providerDisplayName(provider: string): string {
+  const names: Record<string, string> = {
+    vercel: "Vercel",
+    netlify: "Netlify",
+    aws: "AWS",
+    gcp: "Google Cloud",
+    azure: "Azure",
+    supabase: "Supabase",
+    firebase: "Firebase",
+    github: "GitHub",
+    gitlab: "GitLab",
+    bitbucket: "Bitbucket",
+    jira: "Jira",
+    linear: "Linear",
+    atlassian: "Atlassian",
+    figma: "Figma",
+    slack: "Slack",
+    discord: "Discord",
+    stripe: "Stripe",
+  };
+  return names[provider] ?? provider;
+}
 
 // ========== IaC Generation ==========
 
@@ -285,227 +328,44 @@ interface MockCostSummary {
 /**
  * Get dashboard overview data
  * GET /api/cloud/dashboard
+ * Integrations are sourced from the integrations API/DB; deployments, resources, and costs
+ * are empty until deploy/cost backends are configured (see docs/RENDER_BACKEND_ENV.md).
  */
-router.get("/dashboard", async (_req: Request, res: Response) => {
+router.get("/dashboard", async (req: Request, res: Response) => {
   try {
-    // In a real implementation, these would call actual cloud provider APIs
-    const integrations: MockIntegration[] = [
-      {
-        id: "vercel",
-        name: "Vercel",
-        icon: "vercel",
-        category: "deploy",
-        connected: true,
-        lastSync: new Date().toISOString(),
-        status: "healthy",
-      },
-      {
-        id: "netlify",
-        name: "Netlify",
-        icon: "netlify",
-        category: "deploy",
-        connected: true,
-        lastSync: new Date().toISOString(),
-        status: "healthy",
-      },
-      {
-        id: "aws",
-        name: "AWS",
-        icon: "aws",
-        category: "cloud",
-        connected: true,
-        lastSync: new Date().toISOString(),
-        status: "healthy",
-      },
-      {
-        id: "gcp",
-        name: "Google Cloud",
-        icon: "gcp",
-        category: "cloud",
-        connected: false,
-      },
-      {
-        id: "azure",
-        name: "Azure",
-        icon: "azure",
-        category: "cloud",
-        connected: false,
-      },
-      {
-        id: "supabase",
-        name: "Supabase",
-        icon: "supabase",
-        category: "baas",
-        connected: true,
-        lastSync: new Date().toISOString(),
-        status: "healthy",
-      },
-      {
-        id: "firebase",
-        name: "Firebase",
-        icon: "firebase",
-        category: "baas",
-        connected: false,
-      },
-      {
-        id: "github",
-        name: "GitHub",
-        icon: "github",
-        category: "vcs",
-        connected: true,
-        lastSync: new Date().toISOString(),
-        status: "healthy",
-      },
-      {
-        id: "jira",
-        name: "Jira",
-        icon: "jira",
-        category: "pm",
-        connected: true,
-        lastSync: new Date().toISOString(),
-        status: "warning",
-      },
-      {
-        id: "linear",
-        name: "Linear",
-        icon: "linear",
-        category: "pm",
-        connected: false,
-      },
-    ];
+    const userId =
+      (req.headers["x-user-id"] as string)?.trim() ||
+      (req as Request & { userId?: string }).userId ||
+      "default";
 
-    const deployments: MockDeployment[] = [
-      {
-        id: "d1",
-        project: "g-rump-app",
-        provider: "vercel",
-        status: "ready",
-        url: "https://g-rump.vercel.app",
-        branch: "main",
-        commit: "abc123",
-        createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-        duration: 45,
-      },
-      {
-        id: "d2",
-        project: "g-rump-docs",
-        provider: "netlify",
-        status: "building",
-        branch: "main",
-        commit: "def456",
-        createdAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
-      },
-      {
-        id: "d3",
-        project: "g-rump-api",
-        provider: "vercel",
-        status: "ready",
-        url: "https://api.g-rump.dev",
-        branch: "main",
-        commit: "ghi789",
-        createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-        duration: 62,
-      },
-      {
-        id: "d4",
-        project: "g-rump-app",
-        provider: "vercel",
-        status: "error",
-        branch: "feature/new-ui",
-        commit: "jkl012",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-      },
-      {
-        id: "d5",
-        project: "landing-page",
-        provider: "netlify",
-        status: "ready",
-        url: "https://grump.io",
-        branch: "main",
-        commit: "mno345",
-        createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-        duration: 28,
-      },
-    ];
+    let integrations: MockIntegration[] = [];
+    try {
+      const list = await getIntegrations(userId);
+      integrations = list.map((int) => ({
+        id: int.provider,
+        name: int.display_name?.trim() || providerDisplayName(int.provider),
+        icon: int.provider,
+        category: providerToCategory(int.provider),
+        connected: int.status === "active",
+        lastSync: int.status === "active" ? int.updated_at : undefined,
+        status:
+          int.status === "active"
+            ? ("healthy" as const)
+            : int.status === "error"
+              ? ("error" as const)
+              : ("warning" as const),
+      }));
+    } catch (e) {
+      logger.debug(
+        { error: (e as Error).message },
+        "Cloud dashboard: integrations unavailable, returning empty",
+      );
+    }
 
-    const resources: MockResource[] = [
-      {
-        id: "r1",
-        name: "prod-api-cluster",
-        provider: "aws",
-        type: "container",
-        status: "running",
-        region: "us-east-1",
-        cost: 145.5,
-      },
-      {
-        id: "r2",
-        name: "main-db",
-        provider: "aws",
-        type: "database",
-        status: "running",
-        region: "us-east-1",
-        cost: 89.99,
-      },
-      {
-        id: "r3",
-        name: "static-assets",
-        provider: "aws",
-        type: "storage",
-        status: "running",
-        region: "us-east-1",
-        cost: 12.3,
-      },
-      {
-        id: "r4",
-        name: "ai-inference",
-        provider: "gcp",
-        type: "compute",
-        status: "running",
-        region: "us-central1",
-        cost: 234.0,
-      },
-      {
-        id: "r5",
-        name: "edge-functions",
-        provider: "aws",
-        type: "serverless",
-        status: "running",
-        region: "global",
-        cost: 45.67,
-      },
-    ];
-
-    const costs: MockCostSummary[] = [
-      {
-        provider: "AWS",
-        current: 293.46,
-        forecast: 320.0,
-        trend: "up",
-        trendPercent: 8,
-      },
-      {
-        provider: "GCP",
-        current: 234.0,
-        forecast: 250.0,
-        trend: "up",
-        trendPercent: 5,
-      },
-      {
-        provider: "Vercel",
-        current: 20.0,
-        forecast: 20.0,
-        trend: "stable",
-        trendPercent: 0,
-      },
-      {
-        provider: "Supabase",
-        current: 25.0,
-        forecast: 25.0,
-        trend: "stable",
-        trendPercent: 0,
-      },
-    ];
+    // Deployments, resources, costs: populated when deploy/cost backends are configured
+    const deployments: MockDeployment[] = [];
+    const resources: MockResource[] = [];
+    const costs: MockCostSummary[] = [];
 
     return res.json({
       success: true,

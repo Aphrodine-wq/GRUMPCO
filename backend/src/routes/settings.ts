@@ -82,6 +82,10 @@ router.put("/", async (req: Request, res: Response): Promise<void> => {
         models: { ...existing?.models, ...body.models },
       }),
       ...(body.mcp !== undefined && { mcp: { ...existing?.mcp, ...body.mcp } }),
+      ...(body.memory !== undefined && {
+        memory: { ...existing?.memory, ...body.memory },
+      }),
+      ...(body.git !== undefined && { git: { ...existing?.git, ...body.git } }),
       ...(body.skills !== undefined && {
         skills: { ...existing?.skills, ...body.skills },
       }),

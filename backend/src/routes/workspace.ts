@@ -2,11 +2,14 @@
  * Workspace Routes
  *
  * Handles workspace-related operations including loading remote repositories
- * for code analysis and AI-assisted development.
+ * for code analysis and AI-assisted development, and listing directory trees
+ * for the file explorer panel.
  *
  * @module routes/workspace
  */
 
+import fs from "fs";
+import path from "path";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { loadRemoteWorkspace } from "../services/remoteWorkspaceService.js";
@@ -18,6 +21,19 @@ import {
 } from "../utils/errorResponse.js";
 
 const router = Router();
+
+/** Directories to skip when listing tree (security and noise) */
+const SKIP_DIRS = new Set([
+  "node_modules",
+  ".git",
+  "__pycache__",
+  ".next",
+  "dist",
+  "build",
+]);
+
+/** Max depth for tree listing to avoid huge responses */
+const MAX_TREE_DEPTH = 3;
 
 /**
  * Schema for remote workspace request validation.
@@ -54,6 +70,84 @@ const remoteWorkspaceSchema = z.object({
  * @internal Used for type inference but accessed via z.infer
  */
 type _RemoteWorkspaceBody = z.infer<typeof remoteWorkspaceSchema>;
+
+/**
+ * GET /api/workspace/tree
+ *
+ * List directory entries for the file explorer. path must be under an allowed base
+ * (process.cwd() or WORKSPACE_BASE env). Returns one level; request ?path=subdir to expand.
+ *
+ * @route GET /api/workspace/tree
+ * @param {string} [req.query.path] - Directory path to list (relative to base or absolute if under base)
+ * @returns {Object} { path, entries: [{ name, path, isDirectory }] }
+ */
+router.get("/tree", (req: Request, res: Response): void => {
+  try {
+    const rawPath = (req.query.path as string)?.trim();
+    const base = process.env.WORKSPACE_BASE
+      ? path.resolve(process.env.WORKSPACE_BASE)
+      : process.cwd();
+    const requestedDir = !rawPath
+      ? base
+      : path.isAbsolute(rawPath)
+        ? path.normalize(rawPath)
+        : path.resolve(base, rawPath);
+
+    const normalized = path.normalize(requestedDir);
+    const relative = path.relative(base, normalized);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) {
+      sendErrorResponse(
+        res,
+        ErrorCode.FORBIDDEN,
+        "Path not under workspace base",
+        {},
+      );
+      return;
+    }
+
+    if (!fs.existsSync(normalized)) {
+      sendErrorResponse(
+        res,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        "Directory not found",
+        {},
+      );
+      return;
+    }
+
+    const stat = fs.statSync(normalized);
+    if (!stat.isDirectory()) {
+      sendErrorResponse(
+        res,
+        ErrorCode.VALIDATION_ERROR,
+        "Path is not a directory",
+        {},
+      );
+      return;
+    }
+
+    const entries = fs
+      .readdirSync(normalized, { withFileTypes: true })
+      .filter((d) => !d.name.startsWith(".") && !SKIP_DIRS.has(d.name))
+      .map((d) => {
+        const fullPath = path.join(normalized, d.name);
+        return {
+          name: d.name,
+          path: fullPath,
+          isDirectory: d.isDirectory(),
+        };
+      })
+      .sort((a, b) => {
+        if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+        return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      });
+
+    res.json({ path: normalized, entries });
+  } catch (err) {
+    logger.warn({ err, path: req.query.path }, "Workspace tree list failed");
+    sendServerError(res, err, { type: "workspace_tree" });
+  }
+});
 
 /**
  * POST /api/workspace/remote

@@ -171,6 +171,73 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
   }
 });
 
+/** Map frontend memory types to backend (interaction | correction | preference) */
+function mapMemoryType(
+  type: string,
+): "interaction" | "correction" | "preference" {
+  if (type === "preference") return "preference";
+  if (type === "correction") return "correction";
+  return "interaction";
+}
+
+/**
+ * POST /api/memory
+ *
+ * Create a memory (integrations UI). Body: { type, content, importance?, metadata? }.
+ * metadata.attachments may contain [{ name, mimeType, size, dataBase64? }] for documents/images.
+ *
+ * @route POST /api/memory
+ * @group Memory - User memory operations
+ * @returns {object} 201 - Success
+ * @returns {ApiErrorResponse} 400 - Validation error
+ * @returns {ApiErrorResponse} 500 - Server error
+ */
+router.post("/", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const body = (req.body ?? {}) as {
+      type?: string;
+      content?: string;
+      importance?: number;
+      metadata?: Record<string, unknown>;
+    };
+    const { type, content, importance, metadata } = body;
+    if (
+      !type ||
+      typeof type !== "string" ||
+      !content ||
+      typeof content !== "string"
+    ) {
+      sendErrorResponse(
+        res,
+        ErrorCode.VALIDATION_ERROR,
+        "type and content required",
+        {},
+      );
+      return;
+    }
+    const userId =
+      (req.headers["x-user-id"] as string)?.trim() ||
+      (req as Request & { userId?: string }).userId ||
+      "default";
+    const backendType = mapMemoryType(type);
+    await remember({
+      userId,
+      type: backendType,
+      content: content.trim(),
+      summary: undefined,
+      metadata: {
+        ...metadata,
+        importance: importance ?? 0.5,
+        frontendType: type,
+      },
+    });
+    res.status(201).json({ ok: true });
+  } catch (e) {
+    logger.warn({ error: (e as Error).message }, "Memory create error");
+    sendServerError(res, e);
+  }
+});
+
 /**
  * POST /api/memory/recall
  *

@@ -21,6 +21,7 @@
     MessageBubble,
     ScrollNavigation,
     StreamingIndicator,
+    SuggestedModesCard,
   } from './chat';
 
   // Existing components
@@ -30,6 +31,7 @@
   import ShipMode from './ShipMode.svelte';
   import SettingsScreen from './TabbedSettingsScreen.svelte';
   import FreeAgentLocalConfirmModal from './FreeAgentLocalConfirmModal.svelte';
+  import AIQuestionModal from './AIQuestionModal.svelte';
   import ModelPicker from './ModelPicker.svelte';
   import GAgentPlanViewer from './GAgentPlanViewer.svelte';
   import GAgentPlanApproval from './GAgentPlanApproval.svelte';
@@ -40,7 +42,13 @@
   // Streaming service
   import { streamChat } from '../lib/chatStreaming';
   import type { ChatStreamEvent } from '../lib/chatStreaming';
-  import { fetchApi } from '../lib/api';
+  import {
+    fetchApi,
+    listSessionAttachments,
+    addSessionAttachments,
+    removeSessionAttachment,
+    type SessionAttachment,
+  } from '../lib/api';
 
   // Verdict integration
   import { verdictMiddleware } from '../lib/chatMiddleware';
@@ -66,7 +74,7 @@
   // Utilities
   import { processError, logError } from '../utils/errorHandler';
   import { trackMessageSent, trackError } from '../lib/analytics';
-  import { Mic, BookOpen, LayoutGrid, MessageCircle, Sparkles } from 'lucide-svelte';
+  import { Mic, BookOpen, LayoutGrid, MessageCircle, Sparkles, FolderOpen, X } from 'lucide-svelte';
 
   import type { Message, ContentBlock } from '../types';
 
@@ -105,8 +113,21 @@
   let lastUserMessage = $state('');
   let expandedModelIndex = $state<number | null>(null);
   let currentModelKey = $state<string>('auto');
-  let pendingImageDataUrl = $state<string | null>(null);
+  const MAX_PENDING_IMAGES = 3;
+  const MAX_PENDING_DOCUMENTS = 3;
+  let pendingImages = $state<string[]>([]);
+  let pendingDocuments = $state<File[]>([]);
   let showModelPicker = $state(false);
+  let addToProjectBannerDismissed = $state(false);
+  let sessionAttachments = $state<SessionAttachment[]>([]);
+  let sessionAttachmentsLoading = $state(false);
+  let sessionAttachmentInputEl = $state<HTMLInputElement | null>(null);
+
+  const showAddToProjectBanner = $derived.by(() => {
+    if (addToProjectBannerDismissed) return false;
+    const userMessages = messages.filter((m) => m.role === 'user').length;
+    return userMessages >= 3;
+  });
 
   // G-Agent state
   let showFreeAgentLocalConfirm = $state(false);
@@ -122,6 +143,8 @@
   // Chat mode (includes 'ship' for local Ship view; store has design | code | argument)
   let chatMode = $state<'normal' | 'plan' | 'spec' | 'ship' | 'execute' | 'design' | 'argument' | 'code'>('normal');
   const shipModeActive = $derived(chatMode === 'ship');
+  /** Show AI question modal before opening SHIP (user confirms first) */
+  let showShipConfirmModal = $state(false);
 
   /** Label for top-right mode indicator (Chat view only) */
   const modeIndicatorLabel = $derived(
@@ -177,6 +200,11 @@
     }
     return currentModelKey;
   });
+
+  // Project/session name for header (show when user has entered a named project; nothing for new chats)
+  const headerProjectName = $derived(
+    $currentSession?.name && $currentSession.name !== 'New Chat' ? $currentSession.name : ''
+  );
 
   // Event dispatcher
   const dispatch = createEventDispatcher<{ 'messages-updated': Message[] }>();
@@ -322,7 +350,7 @@
     });
 
     const onOpenShipMode = () => {
-      chatMode = 'ship';
+      showShipConfirmModal = true;
     };
     const onCloseShipMode = () => {
       const storeMode = get(chatModeStore);
@@ -377,13 +405,8 @@
     };
   });
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts (Ctrl+K is handled in App.svelte to avoid double-toggle)
   function handleGlobalKeydown(event: KeyboardEvent) {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-      event.preventDefault();
-      // Command palette - could trigger search
-      return;
-    }
     if ((event.ctrlKey || event.metaKey) && event.key === ',') {
       event.preventDefault();
       showSettings.set(true);
@@ -393,6 +416,74 @@
       event.preventDefault();
       cancelGeneration();
       return;
+    }
+  }
+
+  async function loadSessionAttachments() {
+    const sid = $currentSession?.id;
+    if (!sid) {
+      sessionAttachments = [];
+      return;
+    }
+    sessionAttachmentsLoading = true;
+    try {
+      sessionAttachments = await listSessionAttachments(sid);
+    } catch {
+      sessionAttachments = [];
+    } finally {
+      sessionAttachmentsLoading = false;
+    }
+  }
+
+  $effect(() => {
+    const sid = $currentSession?.id;
+    if (sid) loadSessionAttachments();
+    else sessionAttachments = [];
+  });
+
+  async function handleAddSessionAttachments(files: FileList | null) {
+    const sid = $currentSession?.id;
+    if (!sid || !files?.length) return;
+    const items: Array<{ name: string; mimeType: string; size: number; dataBase64?: string }> = [];
+    const maxSize = 500 * 1024;
+    for (const file of Array.from(files)) {
+      if (file.size > maxSize) continue;
+      const dataBase64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => {
+          const s = r.result as string;
+          resolve(s.includes(',') ? s.split(',')[1] ?? '' : s);
+        };
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(file);
+      });
+      items.push({
+        name: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        size: file.size,
+        dataBase64,
+      });
+    }
+    if (items.length === 0) return;
+    try {
+      const added = await addSessionAttachments(sid, items);
+      sessionAttachments = [...sessionAttachments, ...added];
+      showToast('Attachments added', 'success');
+    } catch {
+      showToast('Failed to add attachments', 'error');
+    }
+    if (sessionAttachmentInputEl) sessionAttachmentInputEl.value = '';
+  }
+
+  async function handleRemoveSessionAttachment(attachmentId: string) {
+    const sid = $currentSession?.id;
+    if (!sid) return;
+    try {
+      await removeSessionAttachment(sid, attachmentId);
+      sessionAttachments = sessionAttachments.filter((a) => a.id !== attachmentId);
+      showToast('Attachment removed', 'success');
+    } catch {
+      showToast('Failed to remove attachment', 'error');
     }
   }
 
@@ -429,8 +520,9 @@
     const text = inputText.trim();
     const s = settingsStore.getCurrent();
     const isNim = (s?.models?.defaultProvider ?? '') === 'nim';
-    const hasImage = Boolean(pendingImageDataUrl);
-    const canSend = text || (isNim && hasImage);
+    const hasImage = pendingImages.length > 0;
+    const hasDocs = pendingDocuments.length > 0;
+    const canSend = text || (isNim && hasImage) || hasDocs;
 
     if (!canSend || streaming) return;
 
@@ -485,7 +577,10 @@
       });
       logError(errorContext, { mode: get(chatModeStore) });
       trackError('api_error', errorContext.message);
-      showToast(errorContext.userMessage, 'error', 5000);
+      const message =
+        errorContext.userMessage?.trim() ||
+        'Something went wrong. Check your connection and try again.';
+      showToast(message, 'error', 5000);
     } finally {
       streaming = false;
       activeController = null;
@@ -500,8 +595,10 @@
     const mode =
       get(chatModeStore) === 'argument' ? 'argument' : chatMode !== 'normal' ? chatMode : 'normal';
 
-    // Clear pending image (TODO: pass to streaming service for vision support)
-    pendingImageDataUrl = null;
+    // Capture first image for vision (backend may support multiple later)
+    const imageForRequest = pendingImages[0] ?? undefined;
+    pendingImages = [];
+    pendingDocuments = [];
 
     // Handle stream events
     const handleEvent = async (event: ChatStreamEvent) => {
@@ -523,6 +620,7 @@
       modelId: s?.models?.defaultModelId,
       signal,
       onEvent: handleEvent,
+      lastUserMessageImage: imageForRequest,
     });
 
     // Finalize message
@@ -585,18 +683,40 @@
     <div class="chat-container">
       <!-- Header + model picker dropdown -->
       <div class="header-wrapper">
-        <div class="mode-indicator" aria-label="Current mode">{modeIndicatorLabel}</div>
         <ChatHeader
+          projectName={headerProjectName}
           {isGAgentSession}
           isConnected={$gAgentConnected}
           showStatusPanel={showGAgentStatusPanel}
           showMemoryPanel={showGAgentMemoryPanel}
           modelName={modelDisplayName()}
           modelPickerOpen={showModelPicker}
-          onGAgentClick={() => setCurrentView('freeAgent')}
+          onGAgentClick={() => {
+            const session = get(currentSession);
+            if (isGAgentSession) {
+              setCurrentView('freeAgent');
+              return;
+            }
+            if (session?.id) {
+              sessionsStore.setSessionType(session.id, 'gAgent');
+              showGAgentStatusPanel = true;
+              showToast('G-Agent mode on. Use Status and Memory in the header, or open G-Agent from the sidebar for settings.', 'info', 5000);
+            } else {
+              setCurrentView('freeAgent');
+            }
+          }}
           onStatusToggle={() => (showGAgentStatusPanel = !showGAgentStatusPanel)}
           onMemoryToggle={() => (showGAgentMemoryPanel = !showGAgentMemoryPanel)}
           onModelClick={() => (showModelPicker = !showModelPicker)}
+          onLeaveGAgent={() => {
+            const session = get(currentSession);
+            if (session?.id && isGAgentSession) {
+              sessionsStore.setSessionType(session.id, 'chat');
+              showGAgentStatusPanel = false;
+              showGAgentMemoryPanel = false;
+              showToast('Left G-Agent mode. This chat is now normal.', 'info', 3000);
+            }
+          }}
         />
         {#if showModelPicker}
           <div class="model-picker-dropdown">
@@ -617,8 +737,8 @@
         </div>
       {:else}
         <div class="chat-main" class:with-sidebar={showGAgentMemoryPanel}>
-          <!-- Status panel -->
-          {#if isGAgentSession && showGAgentStatusPanel}
+          <!-- Status panel: only mount when G-Agent is in use (panel open, plan, or executing) to avoid backend connect on every load -->
+          {#if isGAgentSession && (showGAgentStatusPanel || hasGAgentPlan || isGAgentExecuting)}
             <aside class="status-sidebar">
               <GAgentStatusPanel
                 sessionId={gAgentSessionId}
@@ -701,6 +821,28 @@
                     />
                   {/each}
 
+                  {#if showAddToProjectBanner}
+                    <div class="add-to-project-banner">
+                      <span class="banner-icon"><FolderOpen size={18} strokeWidth={2} /></span>
+                      <span class="banner-text">Add this conversation to a project?</span>
+                      <button
+                        type="button"
+                        class="banner-btn"
+                        onclick={() => setCurrentView('projects')}
+                      >
+                        View Projects
+                      </button>
+                      <button
+                        type="button"
+                        class="banner-dismiss"
+                        onclick={() => (addToProjectBannerDismissed = true)}
+                        aria-label="Dismiss"
+                      >
+                        <X size={14} strokeWidth={2} />
+                      </button>
+                    </div>
+                  {/if}
+
                   {#if streaming}
                     <div class="streaming-message">
                       <StreamingIndicator streaming={true} />
@@ -718,6 +860,13 @@
                         </div>
                       {/if}
                     </div>
+                  {:else if messages.length >= 2 && messages[messages.length - 1]?.role === 'assistant'}
+                    <SuggestedModesCard
+                      onSelectMode={(view) => {
+                        if (view === 'chat') return;
+                        setCurrentView(view);
+                      }}
+                    />
                   {/if}
                 {/if}
               </div>
@@ -765,95 +914,99 @@
         {/if}
 
         {#if chatMode !== 'ship'}
-          <CenteredChatInput
+          {#if $currentSession?.id}
+            <details class="session-attachments-details">
+              <summary class="session-attachments-summary">
+                Attachments ({sessionAttachments.length})
+              </summary>
+              <div class="session-attachments-body">
+                {#if sessionAttachmentsLoading}
+                  <p class="session-attachments-hint">Loading…</p>
+                {:else}
+                  <input
+                    type="file"
+                    bind:this={sessionAttachmentInputEl}
+                    multiple
+                    accept="image/*,.pdf,.txt,.md,.doc,.docx"
+                    class="session-attachment-input"
+                    onchange={(e) => handleAddSessionAttachments((e.target as HTMLInputElement)?.files ?? null)}
+                    aria-label="Attach file to session"
+                  />
+                  <button
+                    type="button"
+                    class="session-attach-btn"
+                    onclick={() => sessionAttachmentInputEl?.click()}
+                  >
+                    Attach file
+                  </button>
+                  {#if sessionAttachments.length > 0}
+                    <ul class="session-attachments-list">
+                      {#each sessionAttachments as att (att.id)}
+                        <li class="session-attachment-item">
+                          <span class="session-attachment-name" title={att.name}>{att.name}</span>
+                          <span class="session-attachment-size">({(att.size / 1024).toFixed(1)} KB)</span>
+                          <button
+                            type="button"
+                            class="session-attachment-remove"
+                            onclick={() => handleRemoveSessionAttachment(att.id)}
+                            aria-label="Remove {att.name}"
+                          >
+                            <X size={12} strokeWidth={2} />
+                          </button>
+                        </li>
+                      {/each}
+                    </ul>
+                  {/if}
+                {/if}
+              </div>
+            </details>
+          {/if}
+          <div class="input-row">
+            <button
+              type="button"
+              class="talk-mode-btn"
+              onclick={() => setCurrentView('talkMode')}
+              title="Talk Mode – live talking chat with the AI"
+            >
+              <MessageCircle size={18} strokeWidth={2} />
+              <span>Talk</span>
+            </button>
+            <div class="input-main">
+            <CenteredChatInput
             bind:value={inputText}
             bind:inputRef
             {streaming}
-            {isNimProvider}
-            hasPendingImage={!!pendingImageDataUrl}
+            isNimProvider={true}
+            hasPendingImage={pendingImages.length > 0}
+            hasPendingDocuments={pendingDocuments.length > 0}
+            pendingImageCount={pendingImages.length}
+            pendingDocumentCount={pendingDocuments.length}
             modelName={modelDisplayName()}
             hideModelSelector={true}
             onSubmit={handleSubmit}
             onCancel={cancelGeneration}
             onImageSelect={(url) => {
-              pendingImageDataUrl = url;
-              showToast('Image attached', 'success');
+              if (pendingImages.length < MAX_PENDING_IMAGES) {
+                pendingImages = [...pendingImages, url];
+                showToast('Image attached', 'success');
+              }
+            }}
+            onDocumentSelect={(file) => {
+              if (pendingDocuments.length >= MAX_PENDING_DOCUMENTS) return;
+              pendingDocuments = [...pendingDocuments, file];
+              showToast(`Document "${file.name}" attached`, 'success');
             }}
             onModelClick={() => (showModelPicker = !showModelPicker)}
-          />
+            />
+            </div>
+          </div>
         {/if}
 
-        <!-- Mode strip below chat input (Argument, Plan, Spec, Architecture, Code, Ship) -->
-        <div class="mode-strip-bottom">
-          <button
-            type="button"
-            class="mode-btn"
-            class:active={$chatModeStore === 'argument'}
-            onclick={setModeArgument}
-            aria-pressed={$chatModeStore === 'argument'}
-            title="Argument – refine ideas and constraints"
-          >
-            Argument
-          </button>
-          <button
-            type="button"
-            class="mode-btn"
-            class:active={chatMode === 'plan'}
-            onclick={setModePlan}
-            aria-pressed={chatMode === 'plan'}
-            title="Plan – break down into tasks"
-          >
-            Plan
-          </button>
-          <button
-            type="button"
-            class="mode-btn"
-            class:active={chatMode === 'spec'}
-            onclick={setModeSpec}
-            aria-pressed={chatMode === 'spec'}
-            title="Spec – write requirements"
-          >
-            Spec
-          </button>
-          <button
-            type="button"
-            class="mode-btn"
-            class:active={$chatModeStore === 'design'}
-            onclick={setModeArchitecture}
-            aria-pressed={$chatModeStore === 'design'}
-            title="Architecture – design system and structure"
-          >
-            Architecture
-          </button>
-          <button
-            type="button"
-            class="mode-btn"
-            class:active={$chatModeStore === 'code' && chatMode !== 'plan' && chatMode !== 'spec'}
-            onclick={setModeCode}
-            aria-pressed={$chatModeStore === 'code' && chatMode !== 'plan' && chatMode !== 'spec'}
-            title="Code – implement"
-          >
-            Code
-          </button>
-          <button
-            type="button"
-            class="mode-btn"
-            class:active={shipModeActive}
-            onclick={setModeShip}
-            aria-pressed={shipModeActive}
-            title="Ship – run full pipeline"
-          >
-            Ship
-          </button>
-        </div>
-        <div class="mode-flowchart" aria-hidden="true">
-          {#each modeFlowchartLabels as label, i}
-            {#if i > 0}<span class="flow-arrow" aria-hidden="true">→</span>{/if}
-            <span class="flow-label">{label}</span>
-          {/each}
-        </div>
-        <div class="shortcut-hint-bottom">
-          <span class="shortcut-hint-label"><kbd>Ctrl</kbd>+<kbd>K</kbd> search</span>
+        <!-- Shortcut hint only – mode buttons removed; AI offers modes after responding -->
+        <div class="mode-bottom-row">
+          <div class="shortcut-hint-bottom">
+            <span class="shortcut-hint-label"><kbd>Ctrl</kbd>+<kbd>K</kbd> for commands</span>
+          </div>
         </div>
       </div>
     </div>
@@ -874,6 +1027,20 @@
       gAgentPlanStore.startExecution();
     }}
     onRejected={() => (showGAgentPlanApproval = false)}
+  />
+
+  <AIQuestionModal
+    bind:open={showShipConfirmModal}
+    title="Run SHIP?"
+    message="Do you want to run SHIP (Design → Spec → Plan → Code) for this project? You'll be taken to the SHIP workflow to describe your app and generate architecture, spec, plan, and code."
+    confirmLabel="Start SHIP"
+    cancelLabel="Cancel"
+    onConfirm={() => {
+      showShipConfirmModal = false;
+      chatMode = 'ship';
+      setCurrentView('chat');
+    }}
+    onClose={() => (showShipConfirmModal = false)}
   />
 </div>
 
@@ -903,19 +1070,15 @@
     flex-shrink: 0;
   }
 
-  .mode-indicator {
-    position: absolute;
-    top: 0.5rem;
-    right: 1rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #6b7280;
-    background: #f3f4f6;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    border: 1px solid #e5e7eb;
-    z-index: 1;
-    pointer-events: none;
+  /* Bottom row: shortcut hint only (mode buttons removed) */
+  .mode-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 1rem 0.5rem;
+    flex-shrink: 0;
+    border-top: 1px solid var(--color-border, #f3f4f6);
+    background: var(--color-bg-subtle, #fafafa);
   }
 
   /* Main area */
@@ -944,8 +1107,8 @@
   /* Sidebars */
   .status-sidebar {
     width: 320px;
-    border-right: 1px solid #e5e7eb;
-    background: #f9fafb;
+    border-right: 1px solid var(--color-border, #e5e7eb);
+    background: var(--color-bg-subtle, #f9fafb);
     overflow-y: auto;
     animation: slideInLeft 0.3s ease;
   }
@@ -953,7 +1116,7 @@
   .memory-sidebar {
     width: 360px;
     border-left: 1px solid var(--color-border, #e5e7eb);
-    background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+    background: var(--color-bg-inset, #1e1e3f);
     overflow: hidden;
     animation: slideInRight 0.3s ease;
   }
@@ -992,7 +1155,7 @@
   .live-output-panel {
     height: 280px;
     border-bottom: 1px solid var(--color-border, #e5e7eb);
-    background: #1a1a2e;
+    background: var(--color-bg-inset, #1a1a2e);
   }
 
   /* Messages */
@@ -1016,95 +1179,37 @@
 
   .messages-inner.is-empty {
     flex: 1;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: 2rem;
   }
 
-  /* Empty state – pushed up a little */
+  /* Empty state – positioned higher on screen */
   .empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 2rem 1.5rem;
     gap: 0.5rem;
     text-align: center;
     width: 100%;
     min-height: 120px;
-    margin-top: -1rem;
   }
 
   .empty-title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--color-text, #111827);
     margin: 0;
   }
 
   .empty-subtitle {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-muted, #6b7280);
     margin: 0;
   }
 
-  .mode-btn {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: #6b7280;
-    background: transparent;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: color 0.15s, background 0.15s, border-color 0.15s;
-    flex-shrink: 0;
-  }
-
-  .mode-btn:hover {
-    color: #374151;
-    background: #f9fafb;
-    border-color: #d1d5db;
-  }
-
-  .mode-btn.active {
-    color: #7c3aed;
-    background: rgba(124, 58, 237, 0.08);
-    border-color: rgba(124, 58, 237, 0.35);
-  }
-
-  /* Mode strip below chat input (Architecture, Code, Ship only) */
-  .mode-strip-bottom {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    flex-shrink: 0;
-    border-top: 1px solid #f3f4f6;
-  }
-
-  .mode-flowchart {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    padding: 0.35rem 1rem;
-    flex-shrink: 0;
-    font-size: 0.6875rem;
-    color: var(--color-text-muted, #9ca3af);
-  }
-
-  .mode-flowchart .flow-label {
-    font-weight: 500;
-  }
-
-  .mode-flowchart .flow-arrow {
-    opacity: 0.7;
-  }
-
   .shortcut-hint-bottom {
-    display: flex;
-    justify-content: flex-end;
-    padding: 0.25rem 1rem 0.5rem;
     flex-shrink: 0;
   }
 
@@ -1122,6 +1227,64 @@
   }
 
   /* Streaming message */
+  .add-to-project-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin: 0 0 1rem;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(124, 58, 237, 0.04));
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    border-radius: 10px;
+    max-width: 600px;
+  }
+
+  .banner-icon {
+    flex-shrink: 0;
+    color: var(--color-primary, #7c3aed);
+  }
+
+  .banner-text {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text, #111827);
+  }
+
+  .banner-btn {
+    flex-shrink: 0;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-primary, #7c3aed);
+    background: rgba(124, 58, 237, 0.12);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .banner-btn:hover {
+    background: rgba(124, 58, 237, 0.18);
+    border-color: rgba(124, 58, 237, 0.5);
+  }
+
+  .banner-dismiss {
+    flex-shrink: 0;
+    padding: 0.25rem;
+    color: var(--color-text-muted, #6b7280);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .banner-dismiss:hover {
+    color: var(--color-text, #111827);
+    background: rgba(0, 0, 0, 0.05);
+  }
+
   .streaming-message {
     padding: 1rem 1.5rem;
   }
@@ -1140,21 +1303,158 @@
     color: #1f2937;
   }
 
-  /* Input area */
+  /* Input area - compact height, pulled down from bottom edge */
   .input-area {
-    padding: 1rem;
-    background: white;
-    border-top: 1px solid #e5e7eb;
+    padding: 0.3rem 1rem 0.75rem 0.35rem;
+    margin-bottom: 0.5rem;
+    background: var(--color-bg, #ffffff);
+    border-top: 1px solid var(--color-border, #e5e7eb);
     position: relative;
+  }
+
+  .session-attachments-details {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .session-attachments-summary {
+    cursor: pointer;
+    color: var(--color-text-muted, #71717a);
+    padding: 0.25rem 0;
+    list-style: none;
+  }
+
+  .session-attachments-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .session-attachments-body {
+    padding: 0.5rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .session-attachment-input {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .session-attach-btn {
+    align-self: flex-start;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8125rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 6px;
+    background: var(--color-bg-card, #fff);
+    color: var(--color-text, #18181b);
+    cursor: pointer;
+  }
+
+  .session-attach-btn:hover {
+    background: var(--color-bg-card-hover, #f3f4f6);
+  }
+
+  .session-attachments-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .session-attachment-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    background: var(--color-bg-subtle, #f4f4f5);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+  }
+
+  .session-attachment-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .session-attachment-size {
+    color: var(--color-text-muted, #71717a);
+    flex-shrink: 0;
+  }
+
+  .session-attachment-remove {
+    flex-shrink: 0;
+    padding: 0.2rem;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted, #71717a);
+    cursor: pointer;
+    border-radius: 4px;
+  }
+
+  .session-attachment-remove:hover {
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+  }
+
+  .session-attachments-hint {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #71717a);
+  }
+
+  .input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .input-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .talk-mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-muted, #6b7280);
+    background: var(--color-bg-card, #fff);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .talk-mode-btn:hover {
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.08));
+    border-color: var(--color-primary, #7c3aed);
+    color: var(--color-primary, #7c3aed);
   }
 
   .stats-bar {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1.5rem;
-    padding: 0.5rem;
-    margin-bottom: 0.75rem;
+    gap: 1.25rem;
+    padding: 0.25rem 0.5rem;
+    margin-bottom: 0.35rem;
     background: linear-gradient(90deg, rgba(16, 185, 129, 0.05), rgba(124, 58, 237, 0.05));
     border-radius: 0.5rem;
     font-size: 0.75rem;

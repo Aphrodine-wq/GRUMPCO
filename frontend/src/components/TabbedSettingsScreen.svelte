@@ -18,25 +18,26 @@
   import RecommendedExtensions from './RecommendedExtensions.svelte';
   import ScheduledAgents from './ScheduledAgents.svelte';
   import McpServersCard from './McpServersCard.svelte';
-  import IntegrationsHub from './IntegrationsHub.svelte';
   import ModelPicker from './ModelPicker.svelte';
   import { Button, Card, Badge, Tabs } from '../lib/design-system';
   import { colors } from '../lib/design-system/tokens/colors';
   import { workspaceStore } from '../stores/workspaceStore';
   import { analyzeArchitecture } from '../stores/featuresStore';
-  import { setCurrentView, showPricing } from '../stores/uiStore';
+  import { setCurrentView, showPricing, settingsInitialTab } from '../stores/uiStore';
   import { onboardingStore } from '../stores/onboardingStore';
   import { newOnboardingStore } from '../stores/newOnboardingStore';
   import { authGateStore } from '../stores/authGateStore';
-  import { preferencesStore, density, includeRagContext, gAgentCapabilities, type GAgentCapabilityKey } from '../stores/preferencesStore';
+  import { preferencesStore, density, includeRagContext, gAgentCapabilities, gAgentExternalAllowlist, type GAgentCapabilityKey } from '../stores/preferencesStore';
   import {
     wakeWordEnabled,
     setWakeWordEnabled,
     loadWakeWordEnabled,
   } from '../stores/wakeWordStore';
   import { getDockerInfo, isDockerSetupAvailable } from '../lib/dockerSetup';
-  import { Settings2, Cpu, Shield, Puzzle, CreditCard, Info, GitBranch, Sun, Moon, Monitor } from 'lucide-svelte';
+  import { Settings2, Cpu, Shield, Puzzle, CreditCard, Info, GitBranch, Sun, Moon, Monitor, Bot, Brain, Server } from 'lucide-svelte';
   import type { AppTheme } from '../stores/newOnboardingStore';
+  import { getProviderIconPath, getProviderFallbackLetter } from '../lib/aiProviderIcons.js';
+  import { AI_PROVIDER_OPTIONS } from '../stores/newOnboardingStore';
 
   interface Tier {
     id: string;
@@ -78,10 +79,13 @@
   // Tab definitions
   const settingsTabs = [
     { id: 'general', label: 'General', icon: Settings2 },
-    { id: 'models', label: 'Models', icon: Cpu },
+    { id: 'ai', label: 'AI Providers', icon: Bot },
+    { id: 'models', label: 'AI Settings', icon: Cpu },
+    { id: 'memory', label: 'Memory', icon: Brain },
     { id: 'git', label: 'Git', icon: GitBranch },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'integrations', label: 'Integrations', icon: Puzzle },
+    { id: 'mcp', label: 'MCP', icon: Server },
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'about', label: 'About', icon: Info },
   ];
@@ -99,6 +103,7 @@
   let billingMe = $state<BillingMe | null>(null);
   let billingPaymentMethods = $state<{ id: string; brand?: string; last4?: string }[]>([]);
   let billingInvoices = $state<{ id: string; date: string; amount: number; status: string }[]>([]);
+  let billingPortalLoading = $state(false);
   let workspaceRoot = $state<string | null>(null);
   let analyzingArchitecture = $state(false);
   let architectureSummary = $state<string | null>(null);
@@ -114,6 +119,58 @@
   });
   let isElectron = $state(false);
   let hasWakeWord = $state(false);
+
+  const ACCENT_STORAGE_KEY = 'g-rump-accent';
+  const FONT_SIZE_STORAGE_KEY = 'g-rump-font-size';
+  const STARTUP_VIEW_KEY = 'g-rump-startup-view';
+  const ACCENT_COLORS: Record<string, string> = { purple: '#7c3aed', blue: '#2563eb', green: '#059669', amber: '#d97706' };
+  const FONT_SCALES: Record<string, string> = { small: '13px', medium: '14px', large: '15px' };
+  let accentColor = $state('purple');
+  let uiFontSize = $state<'small' | 'medium' | 'large'>('medium');
+  let startupView = $state<'chat' | 'projects' | 'last'>('chat');
+
+  function setAccentColor(id: string) {
+    accentColor = id;
+    try {
+      localStorage.setItem(ACCENT_STORAGE_KEY, id);
+    } catch {
+      /* ignore */
+    }
+    applyAppearance();
+  }
+
+  function setUiFontSize(size: 'small' | 'medium' | 'large') {
+    uiFontSize = size;
+    try {
+      localStorage.setItem(FONT_SIZE_STORAGE_KEY, size);
+    } catch {
+      /* ignore */
+    }
+    applyAppearance();
+  }
+
+  function setStartupView(view: 'chat' | 'projects' | 'last') {
+    startupView = view;
+    try {
+      localStorage.setItem(STARTUP_VIEW_KEY, view);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function openIntegrationsTab() {
+    activeTab = 'integrations';
+  }
+
+  function applyAppearance() {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    const accent = ACCENT_COLORS[accentColor] ?? ACCENT_COLORS.purple;
+    root.style.setProperty('--color-primary', accent);
+    root.style.setProperty('--color-primary-hover', accent);
+    const scale = FONT_SCALES[uiFontSize] ?? FONT_SCALES.medium;
+    root.style.setProperty('--app-font-size', scale);
+  }
 
   /** Models list from /api/models/list for provider-first UI */
   interface ModelListItem {
@@ -132,8 +189,24 @@
   }
   let modelGroups = $state<ModelListGroup[]>([]);
   let modelGroupsLoading = $state(false);
+  /** Selected provider in AI Providers tab for model picker */
+  let selectedProviderInAiTab = $state<string | null>(null);
 
   onMount(() => {
+    // Clear initial tab after use so next open doesn't default to it
+    if (initialTab) settingsInitialTab.set(undefined);
+    // Load accent and font size from localStorage and apply
+    try {
+      const a = localStorage.getItem(ACCENT_STORAGE_KEY);
+      if (a && ACCENT_COLORS[a]) accentColor = a;
+      const f = localStorage.getItem(FONT_SIZE_STORAGE_KEY) as 'small' | 'medium' | 'large' | null;
+      if (f === 'small' || f === 'medium' || f === 'large') uiFontSize = f;
+      const sv = localStorage.getItem(STARTUP_VIEW_KEY) as 'chat' | 'projects' | 'last' | null;
+      if (sv === 'chat' || sv === 'projects' || sv === 'last') startupView = sv;
+      applyAppearance();
+    } catch {
+      /* ignore */
+    }
     // Check Electron features
     if (typeof window !== 'undefined') {
       const grump = (
@@ -306,6 +379,72 @@
     else showToast('Failed to save guard rails', 'error');
   }
 
+  async function saveMemory(memory: import('../types/settings').MemorySettings) {
+    saving = true;
+    const ok = await settingsStore.save({ memory });
+    saving = false;
+    if (ok) showToast('Memory settings saved', 'success');
+    else showToast('Failed to save memory settings', 'error');
+  }
+
+  async function saveGit(git: import('../types/settings').GitSettings) {
+    saving = true;
+    const ok = await settingsStore.save({ git });
+    saving = false;
+    if (ok) showToast('Git settings saved', 'success');
+    else showToast('Failed to save git settings', 'error');
+  }
+
+  async function saveMcp(mcp: import('../types/settings').McpSettings) {
+    saving = true;
+    const ok = await settingsStore.save({ mcp });
+    saving = false;
+    if (ok) showToast('MCP settings saved', 'success');
+    else showToast('Failed to save MCP settings', 'error');
+  }
+
+  async function savePreferences(next: import('../types/settings').SettingsPreferences) {
+    saving = true;
+    const ok = await settingsStore.save({
+      preferences: { ...settings?.preferences, ...next },
+    });
+    saving = false;
+    if (ok) showToast('Preferences saved', 'success');
+    else showToast('Failed to save preferences', 'error');
+  }
+
+  async function handleBillingPortalClick() {
+    billingPortalLoading = true;
+    try {
+      const returnUrl =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}${window.location.pathname || '/'}#settings`
+          : undefined;
+      const res = await fetchApi('/api/billing/portal-session', {
+        method: 'POST',
+        body: JSON.stringify({ returnUrl }),
+      });
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        showToast(data.error ?? 'Billing portal unavailable', 'error');
+        if (billingUrl && billingUrl !== '#') window.open(billingUrl, '_blank');
+      }
+    } catch (e) {
+      showToast((e as Error).message ?? 'Failed to open billing portal', 'error');
+      if (billingUrl && billingUrl !== '#') window.open(billingUrl, '_blank');
+    } finally {
+      billingPortalLoading = false;
+    }
+  }
+
+  function formatCredits(u: number | null | undefined): string {
+    const n = u ?? 0;
+    if (Number.isInteger(n)) return String(n);
+    return n.toFixed(4).replace(/\.?0+$/, '');
+  }
+
   function parseAllowedDirs(s: string): string[] {
     return s
       .split(/[\n,]/)
@@ -378,21 +517,22 @@
             <p class="section-desc">
               Choose light, dark, or follow your system preference. Dark mode applies across the app.
             </p>
-            <div class="theme-options-row">
+            <div class="theme-cards">
               {#each [
-                { id: 'light' as AppTheme, label: 'Light', icon: Sun },
-                { id: 'dark' as AppTheme, label: 'Dark', icon: Moon },
-                { id: 'system' as AppTheme, label: 'System', icon: Monitor },
+                { id: 'light' as AppTheme, label: 'Light', icon: Sun, desc: 'Bright backgrounds' },
+                { id: 'dark' as AppTheme, label: 'Dark', icon: Moon, desc: 'Easy on the eyes' },
+                { id: 'system' as AppTheme, label: 'System', icon: Monitor, desc: 'Follow OS setting' },
               ] as option}
                 <button
                   type="button"
-                  class="theme-option-btn"
+                  class="theme-card"
                   class:selected={$newOnboardingStore?.theme === option.id}
                   onclick={() => newOnboardingStore.setTheme(option.id)}
                   aria-pressed={$newOnboardingStore?.theme === option.id}
                 >
-                  <option.icon size={20} />
-                  <span>{option.label}</span>
+                  <span class="theme-card-icon"><option.icon size={24} /></span>
+                  <span class="theme-card-label">{option.label}</span>
+                  <span class="theme-card-desc">{option.desc}</span>
                 </button>
               {/each}
             </div>
@@ -400,7 +540,7 @@
 
           <Card title="Appearance" padding="md">
             <p class="section-desc">
-              Layout density for lists and padding. Compact uses about 20% less space.
+              Layout density, accent color, and UI font size.
             </p>
             <div class="field-group" role="group" aria-labelledby="density-label">
               <span id="density-label" class="radio-label">Density</span>
@@ -424,6 +564,89 @@
                     onchange={() => preferencesStore.setDensity('compact')}
                   />
                   <span>Compact</span>
+                </label>
+              </div>
+            </div>
+            <div class="field-group" role="group" aria-labelledby="accent-label">
+              <span id="accent-label" class="radio-label">Accent color</span>
+              <div class="accent-row">
+                {#each [
+                  { id: 'purple', color: '#7c3aed', label: 'Purple' },
+                  { id: 'blue', color: '#2563eb', label: 'Blue' },
+                  { id: 'green', color: '#059669', label: 'Green' },
+                  { id: 'amber', color: '#d97706', label: 'Amber' },
+                ] as acc}
+                  <button
+                    type="button"
+                    class="accent-swatch"
+                    class:selected={accentColor === acc.id}
+                    style="--swatch-color: {acc.color}"
+                    onclick={() => setAccentColor(acc.id)}
+                    title={acc.label}
+                    aria-pressed={accentColor === acc.id}
+                  >
+                    {#if accentColor === acc.id}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M5 12l5 5L20 7" /></svg>
+                    {/if}
+                  </button>
+                {/each}
+              </div>
+            </div>
+            <div class="field-group" role="group" aria-labelledby="font-size-label">
+              <span id="font-size-label" class="radio-label">UI font size</span>
+              <div class="radio-row">
+                {#each ['small', 'medium', 'large'] as size}
+                  <label class="radio-option">
+                    <input
+                      type="radio"
+                      name="fontSize"
+                      value={size}
+                      checked={uiFontSize === size}
+                      onchange={() => setUiFontSize(size as 'small' | 'medium' | 'large')}
+                    />
+                    <span>{size.charAt(0).toUpperCase() + size.slice(1)}</span>
+                  </label>
+                {/each}
+              </div>
+            </div>
+          </Card>
+
+          <Card title="Startup" padding="md">
+            <p class="section-desc">
+              Choose which view to show when the app opens.
+            </p>
+            <div class="field-group" role="group" aria-labelledby="startup-label">
+              <span id="startup-label" class="radio-label">Startup view</span>
+              <div class="radio-row">
+                <label class="radio-option">
+                  <input
+                    type="radio"
+                    name="startupView"
+                    value="chat"
+                    checked={startupView === 'chat'}
+                    onchange={() => setStartupView('chat')}
+                  />
+                  <span>Chat</span>
+                </label>
+                <label class="radio-option">
+                  <input
+                    type="radio"
+                    name="startupView"
+                    value="projects"
+                    checked={startupView === 'projects'}
+                    onchange={() => setStartupView('projects')}
+                  />
+                  <span>Projects</span>
+                </label>
+                <label class="radio-option">
+                  <input
+                    type="radio"
+                    name="startupView"
+                    value="last"
+                    checked={startupView === 'last'}
+                    onchange={() => setStartupView('last')}
+                  />
+                  <span>Last view</span>
                 </label>
               </div>
             </div>
@@ -516,36 +739,213 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- AI PROVIDERS TAB (provider grid + model picker, connect providers) -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+      {:else if activeTab === 'ai'}
+        <div class="tab-section models-tab ai-providers-tab">
+          <Card title="Default model by provider" padding="md" class="ai-providers-default-card">
+            <p class="field-hint models-provider-intro">Choose a provider below, then select the model for chat and code. Compare speed and quality in Model Benchmark.</p>
+            {#if modelGroupsLoading}
+              <p class="models-provider-loading">Loading model list…</p>
+            {:else if modelGroups.length === 0}
+              <p class="field-hint">No providers available. Configure API keys in AI Providers (below) or in your backend .env.</p>
+            {:else}
+              <div class="providers-grid settings-providers-grid">
+                {#each modelGroups as group}
+                  {@const iconPath = getProviderIconPath(group.provider)}
+                  {@const fallbackLetter = getProviderFallbackLetter(group.provider)}
+                  {@const isSelected = selectedProviderInAiTab === group.provider || (settings?.models?.defaultProvider === group.provider && !selectedProviderInAiTab)}
+                  <button
+                    type="button"
+                    class="provider-card settings-provider-card"
+                    class:selected={isSelected}
+                    onclick={() => { selectedProviderInAiTab = group.provider; }}
+                    aria-pressed={isSelected}
+                  >
+                    <span class="provider-icon" aria-hidden="true">
+                      {#if group.icon && group.icon.startsWith('http')}
+                        <img src={group.icon} alt="" class="provider-icon-img" onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                      {:else if iconPath}
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" role="img">
+                          <path d={iconPath} />
+                        </svg>
+                      {:else}
+                        <span class="provider-icon-fallback">{fallbackLetter}</span>
+                      {/if}
+                    </span>
+                    <span class="provider-name">{group.displayName}</span>
+                  </button>
+                {/each}
+              </div>
+              {#if selectedProviderInAiTab}
+                {@const group = modelGroups.find((g) => g.provider === selectedProviderInAiTab)}
+                {#if group}
+                  <div class="models-section provider-model-select">
+                    <label class="field-label" for="ai-provider-model">Model for {group.displayName}</label>
+                    <select
+                      id="ai-provider-model"
+                      class="custom-select"
+                      value={settings?.models?.defaultProvider === group.provider ? (settings?.models?.defaultModelId ?? '') : ''}
+                      onchange={(e) => {
+                        const modelId = (e.target as HTMLSelectElement).value;
+                        if (!modelId) return;
+                        saveModels({
+                          ...settings?.models,
+                          defaultProvider: group.provider as ModelsSettings['defaultProvider'],
+                          defaultModelId: modelId,
+                        });
+                      }}
+                      disabled={saving}
+                    >
+                      <option value="">— Select model —</option>
+                      {#each group.models as model}
+                        <option value={model.id}>
+                          {model.description ?? model.id}
+                          {#if model.contextWindow}
+                            ({model.contextWindow >= 1000 ? `${model.contextWindow / 1000}K` : model.contextWindow} ctx)
+                          {/if}
+                          {#if model.isRecommended} ★{/if}
+                        </option>
+                      {/each}
+                    </select>
+                    {#if group.provider === 'nim' || group.displayName?.toLowerCase().includes('nim')}
+                      <p class="field-hint nim-model-hint">NIM: 405B = flagship, 70B = balanced, 49B = fast. See Model Benchmark for full guide.</p>
+                    {/if}
+                  </div>
+                {/if}
+              {/if}
+            {/if}
+          </Card>
+          <Card title="Add more providers" padding="md" class="ai-providers-add-card">
+            <p class="section-desc ai-providers-add-desc">
+              Supported providers appear here once configured. Add API keys in this tab (AI Providers) or set them in your backend <code>.env</code>.
+            </p>
+            <div class="providers-grid settings-providers-grid add-more-providers-grid">
+              {#each AI_PROVIDER_OPTIONS as option}
+                {@const iconPath = getProviderIconPath(option.id)}
+                {@const fallbackLetter = getProviderFallbackLetter(option.id)}
+                {@const isConfigured = modelGroups.some((g) => g.provider === option.id || (option.id === 'nvidia-nim' && g.provider === 'nim'))}
+                <div class="provider-card settings-provider-card add-more-card" class:configured={isConfigured}>
+                  <span class="provider-icon" aria-hidden="true">
+                    {#if iconPath}
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" role="img">
+                        <path d={iconPath} />
+                      </svg>
+                    {:else}
+                      <span class="provider-icon-fallback">{fallbackLetter}</span>
+                    {/if}
+                  </span>
+                  <span class="provider-name">{option.name}</span>
+                  {#if option.description}
+                    <span class="provider-desc">{option.description}</span>
+                  {/if}
+                  {#if isConfigured}
+                    <span class="configured-badge">Configured</span>
+                  {:else}
+                    <Button variant="ghost" size="sm" onclick={openIntegrationsTab}>
+                      Configure provider
+                    </Button>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+            <div class="open-integrations-wrap">
+              <Button variant="secondary" size="sm" onclick={openIntegrationsTab}>
+                Need GitHub or OAuth? Open Integrations tab
+              </Button>
+            </div>
+          </Card>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- MEMORY TAB -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+      {:else if activeTab === 'memory'}
+        <div class="tab-section memory-tab">
+          <Card title="Memory Settings" padding="md">
+            <p class="section-desc">
+              Control what G-Agent remembers across sessions: limits, persistence, and search behavior.
+            </p>
+            <div class="field-group">
+              <span class="field-label">Persistence</span>
+              <p class="field-hint">Memories are stored locally per workspace. Clear data in Memory manager to reset.</p>
+            </div>
+            <div class="field-group">
+              <label class="guard-rail-item">
+                <input
+                  type="checkbox"
+                  checked={settings?.guardRails?.useLargeContext ?? false}
+                  onchange={(e) =>
+                    saveGuardRails({
+                      ...settings?.guardRails,
+                      useLargeContext: (e.target as HTMLInputElement).checked,
+                    })}
+                />
+                <span class="guard-rail-title">Large context (200K+) for memory search</span>
+                <span class="guard-rail-desc">Allow longer context when searching memories; uses more tokens.</span>
+              </label>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="max-memories">Max memories to keep</label>
+              <input
+                id="max-memories"
+                type="number"
+                min="0"
+                max="10000"
+                step="100"
+                value={settings?.memory?.maxMemoriesToKeep ?? ''}
+                onchange={(e) => {
+                  const v = parseInt((e.target as HTMLInputElement).value, 10);
+                  if (!Number.isNaN(v) && v >= 0) saveMemory({ ...settings?.memory, maxMemoriesToKeep: v });
+                  else if ((e.target as HTMLInputElement).value === '') saveMemory({ ...settings?.memory, maxMemoriesToKeep: undefined });
+                }}
+                placeholder="No limit"
+                class="settings-number-input"
+              />
+              <p class="field-hint">Optional cap for stored memories. Leave empty for no limit. Manage in Memory manager.</p>
+            </div>
+            <div class="field-group">
+              <span class="field-label">Default memory types</span>
+              <p class="field-hint">Fact, Preference, Task, Context, Conversation. Add and manage in Memory manager.</p>
+            </div>
+            <div class="memory-actions">
+              <Button variant="primary" size="sm" onclick={() => setCurrentView('memory')}>
+                Open Memory manager
+              </Button>
+            </div>
+          </Card>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
         <!-- MODELS TAB (redesigned: preset + model, embedding compact, custom collapsible) -->
         <!-- ═══════════════════════════════════════════════════════════════════ -->
       {:else if activeTab === 'models'}
         <div class="tab-section models-tab">
-          <Card title="Default model & preset" padding="md">
-            <div class="models-section models-preset">
-              <label class="field-label" for="model-preset">Quality vs speed</label>
-              <select
-                id="model-preset"
-                class="custom-select"
-                value={settings?.models?.modelPreset ?? 'balanced'}
-                onchange={(e) => {
-                  const v = (e.target as HTMLSelectElement).value as ModelPreset;
-                  saveModels({ ...settings?.models, modelPreset: v });
-                }}
-                disabled={saving}
-              >
-                <option value="balanced">Balanced (router default)</option>
-                <option value="fast">Fast (NIM / Kimi K2.5)</option>
-                <option value="quality">Quality (Kimi K2.6)</option>
-              </select>
-              <p class="field-hint">
-                Fast = cheaper and lower latency; Quality = best capability; Balanced = auto by task.
-              </p>
+          <Card title="Chat model" padding="md" class="chat-model-card">
+            <div class="preset-segmented">
+              <span class="preset-label">Preset</span>
+              <div class="preset-options" role="group" aria-label="Model preset">
+                {#each ['balanced', 'fast', 'quality'] as preset}
+                  {@const label = preset === 'balanced' ? 'Balanced' : preset === 'fast' ? 'Fast' : 'Quality'}
+                  {@const desc = preset === 'balanced' ? 'Auto by task' : preset === 'fast' ? 'Lower cost' : 'Best quality'}
+                  <button
+                    type="button"
+                    class="preset-option"
+                    class:selected={ (settings?.models?.modelPreset ?? 'balanced') === preset}
+                    onclick={() => saveModels({ ...settings?.models, modelPreset: preset as ModelPreset })}
+                    disabled={saving}
+                    title={desc}
+                  >
+                    {label}
+                  </button>
+                {/each}
+              </div>
             </div>
-            <div class="models-section">
-              <span class="field-label">AI model (override)</span>
+            <div class="default-model-row">
+              <span class="field-label">Default model</span>
               <ModelPicker
                 value={modelValue()}
-                compact={false}
+                compact={true}
                 showAuto={true}
                 onSelect={(provider, modelId) => {
                   saveModels({
@@ -555,14 +955,41 @@
                   });
                 }}
               />
-              <p class="field-hint">
-                Providers: NVIDIA NIM, Kimi, OpenRouter, Groq, Ollama. Configure API keys in Integrations or backend .env.
-              </p>
             </div>
-            <div class="models-section">
-              <Button variant="ghost" size="sm" onclick={() => setCurrentView('model-benchmark')}>
-                Model Benchmark (compare models)
-              </Button>
+            <p class="field-hint chat-model-hint">Override when needed. <button type="button" class="inline-link" onclick={() => setCurrentView('model-benchmark')}>Compare in Model Benchmark</button></p>
+            <div class="advanced-finetuning">
+              <span class="field-label">Advanced (finetuning)</span>
+              <div class="advanced-row">
+                <label class="advanced-field">
+                  <span>Temperature</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={settings?.models?.temperature ?? 0.7}
+                    onchange={(e) => {
+                      const v = parseFloat((e.currentTarget as HTMLInputElement).value);
+                      if (!Number.isNaN(v)) saveModels({ ...settings?.models, temperature: v });
+                    }}
+                  />
+                </label>
+                <label class="advanced-field">
+                  <span>Max tokens</span>
+                  <input
+                    type="number"
+                    min="256"
+                    max="128000"
+                    step="256"
+                    value={settings?.models?.maxTokens ?? 4096}
+                    onchange={(e) => {
+                      const v = parseInt((e.currentTarget as HTMLInputElement).value, 10);
+                      if (!Number.isNaN(v)) saveModels({ ...settings?.models, maxTokens: v });
+                    }}
+                  />
+                </label>
+              </div>
+              <p class="field-hint">Temperature: higher = more creative. Max tokens: cap per response.</p>
             </div>
           </Card>
 
@@ -571,7 +998,7 @@
             {#if modelGroupsLoading}
               <p class="models-provider-loading">Loading model list…</p>
             {:else if modelGroups.length === 0}
-              <p class="field-hint">No providers available. Configure API keys in Integrations or backend .env.</p>
+              <p class="field-hint">No providers available. Configure API keys in AI Providers (below) or in your backend .env.</p>
             {:else}
               <p class="field-hint models-provider-intro">Pick a model per provider; selecting one sets it as the default chat/code model.</p>
               <div class="models-provider-list">
@@ -716,6 +1143,16 @@
         <!-- ═══════════════════════════════════════════════════════════════════ -->
       {:else if activeTab === 'git'}
         <div class="tab-section git-tab">
+          {#if !$workspaceStore?.repoUrl}
+            <Card title="Connect GitHub" padding="md" class="git-oauth-card">
+              <p class="section-desc">
+                Connect your GitHub account with OAuth to link repos and enable push/pull from the app.
+              </p>
+              <Button variant="primary" size="md" onclick={() => setCurrentView('integrations')}>
+                Connect GitHub with OAuth
+              </Button>
+            </Card>
+          {/if}
           <Card title="Workspace & Repository" padding="md">
             <p class="section-desc">
               Current workspace and Git repository. Connect a GitHub repo in Integrations or open a folder in the app.
@@ -729,8 +1166,47 @@
               <p class="field-value monospace">{$workspaceStore?.repoUrl ?? 'None (local only)'}</p>
             </div>
             <Button variant="ghost" size="sm" onclick={() => setCurrentView('integrations')}>
-              Open Integrations to connect GitHub
+              Connect GitHub (OAuth) in Integrations
             </Button>
+          </Card>
+          <Card title="Git preferences" padding="md">
+            <p class="section-desc">
+              Default branch and auto-fetch behavior for Git operations.
+            </p>
+            <div class="field-group">
+              <label class="field-label" for="git-default-branch">Default branch</label>
+              <input
+                id="git-default-branch"
+                type="text"
+                class="settings-text-input"
+                placeholder="main"
+                value={settings?.git?.defaultBranch ?? ''}
+                onchange={(e) => {
+                  const v = (e.target as HTMLInputElement).value.trim();
+                  saveGit({ ...settings?.git, defaultBranch: v || undefined });
+                }}
+              />
+              <p class="field-hint">Branch name used when creating new repos or suggesting pushes.</p>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="git-auto-fetch">Auto-fetch interval (minutes)</label>
+              <input
+                id="git-auto-fetch"
+                type="number"
+                min="0"
+                max="1440"
+                step="1"
+                class="settings-number-input"
+                value={settings?.git?.autoFetchIntervalMinutes ?? ''}
+                onchange={(e) => {
+                  const v = parseInt((e.target as HTMLInputElement).value, 10);
+                  if (!Number.isNaN(v) && v >= 0) saveGit({ ...settings?.git, autoFetchIntervalMinutes: v });
+                  else if ((e.target as HTMLInputElement).value === '') saveGit({ ...settings?.git, autoFetchIntervalMinutes: undefined });
+                }}
+                placeholder="0 (disabled)"
+              />
+              <p class="field-hint">0 = disabled. How often to run git fetch in the background.</p>
+            </div>
           </Card>
           <Card title="G-Agent Git Capability" padding="md">
             <p class="section-desc">
@@ -895,6 +1371,30 @@
               </label>
             </div>
           </Card>
+
+          <Card title="Allowed API domains" padding="md">
+            <p class="section-desc">
+              Domains G-Agent may call (HTTP/API). One per line. Leave empty to use defaults. Example: <code>api.github.com</code>, <code>*.openai.com</code>.
+            </p>
+            <div class="field-group">
+              <textarea
+                class="custom-textarea security-textarea"
+                rows={4}
+                placeholder="api.github.com&#10;api.openai.com"
+                value={($gAgentExternalAllowlist ?? []).join('\n')}
+                oninput={(e) => {
+                  const text = (e.target as HTMLTextAreaElement).value;
+                  const list = text
+                    .split(/\n/)
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  preferencesStore.setGAgentExternalAllowlist(list);
+                }}
+                aria-describedby="api-domains-hint"
+              ></textarea>
+              <p id="api-domains-hint" class="field-hint">Used to restrict outbound API calls from G-Agent.</p>
+            </div>
+          </Card>
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -903,67 +1403,25 @@
       {:else if activeTab === 'integrations'}
         <div class="tab-section integrations-tab">
           <section class="integrations-section">
-            <h2 class="integrations-section-title">Connect services</h2>
-            <p class="integrations-section-desc">OAuth and API connections for GitHub, Slack, Notion, and more.</p>
-            <div class="integrations-section-content integrations-primary">
-              <IntegrationsHub onBack={() => {}} embedInTab={true} />
-            </div>
-          </section>
-
-          <section class="integrations-section">
-            <h2 class="integrations-section-title">Local & MCP</h2>
-            <p class="integrations-section-desc">Docker stack, MCP servers, and scheduled agents.</p>
-            <div class="integrations-section-content integrations-grid-three">
+            <h2 class="integrations-section-title">Local</h2>
+            <p class="integrations-section-desc">Docker stack and scheduled agents.</p>
+            <div class="integrations-section-content integrations-grid-two">
               <Card title="Docker" padding="md">
                 <p class="section-desc">
-                  Start or stop the G-Rump Docker stack. Use Setup Wizard for one-click GPU setup.
+                  Manage containers and stacks in Docker Desktop. Open Docker Desktop to start/stop containers and run compose.
                 </p>
-                {#if dockerLoading}
-                  <p class="status-text">Checking Docker status…</p>
-                {:else if dockerStatus}
-                  <div class="status-row">
-                    <span class="status-label">Status</span>
-                    <Badge
-                      variant={dockerStatus === 'running'
-                        ? 'success'
-                        : dockerStatus === 'error'
-                          ? 'error'
-                          : 'default'}
-                    >
-                      {dockerStatus === 'running'
-                        ? 'Running'
-                        : dockerStatus === 'error'
-                          ? 'Error'
-                          : 'Stopped'}
-                    </Badge>
-                  </div>
-                {/if}
                 <div class="docker-actions">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onclick={dockerComposeUp}
-                    disabled={dockerStartStopLoading}
-                  >
-                    Start Stack
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onclick={dockerComposeDown}
-                    disabled={dockerStartStopLoading}
-                  >
-                    Stop Stack
+                  <Button variant="primary" size="sm" onclick={() => window.open('https://app.docker.com/open-desktop', '_blank', 'noopener,noreferrer')}>
+                    Open Docker Desktop
                   </Button>
                   <Button variant="ghost" size="sm" onclick={() => setCurrentView('docker')}>
-                    Open Docker Panel
+                    Docker
                   </Button>
                   <Button variant="ghost" size="sm" onclick={() => setCurrentView('docker-setup')}>
                     Docker Setup Wizard
                   </Button>
                 </div>
               </Card>
-              <McpServersCard />
               <ScheduledAgents />
             </div>
           </section>
@@ -1014,6 +1472,9 @@
               </Card>
               <div class="integrations-grid-cell-tools">
                 <Card title="Tools & Extensions" padding="md">
+                  <p class="section-desc">
+                    Integrate into G-Rump: extensions that work with our platform and your workflow (ESLint, Prettier, GitLens, Docker, Thunder Client). We support multiple users and workspaces—install from the Marketplace or enable recommended extensions below.
+                  </p>
                   <RecommendedExtensions />
                 </Card>
               </div>
@@ -1022,61 +1483,138 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- MCP TAB -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+      {:else if activeTab === 'mcp'}
+        <div class="tab-section integrations-tab">
+          <Card title="MCP defaults" padding="md">
+            <p class="section-desc">
+              Global timeout and retry behavior for MCP server calls.
+            </p>
+            <div class="field-group">
+              <label class="field-label" for="mcp-timeout">Request timeout (seconds)</label>
+              <input
+                id="mcp-timeout"
+                type="number"
+                min="1"
+                max="300"
+                step="1"
+                class="settings-number-input"
+                value={settings?.mcp?.requestTimeoutSeconds ?? ''}
+                onchange={(e) => {
+                  const v = parseInt((e.target as HTMLInputElement).value, 10);
+                  if (!Number.isNaN(v) && v >= 1) saveMcp({ ...settings?.mcp, requestTimeoutSeconds: v });
+                  else if ((e.target as HTMLInputElement).value === '') saveMcp({ ...settings?.mcp, requestTimeoutSeconds: undefined });
+                }}
+                placeholder="30"
+              />
+              <p class="field-hint">Max time to wait for an MCP response. Leave empty for default.</p>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="mcp-retries">Max retries</label>
+              <input
+                id="mcp-retries"
+                type="number"
+                min="0"
+                max="10"
+                step="1"
+                class="settings-number-input"
+                value={settings?.mcp?.maxRetries ?? ''}
+                onchange={(e) => {
+                  const v = parseInt((e.target as HTMLInputElement).value, 10);
+                  if (!Number.isNaN(v) && v >= 0) saveMcp({ ...settings?.mcp, maxRetries: v });
+                  else if ((e.target as HTMLInputElement).value === '') saveMcp({ ...settings?.mcp, maxRetries: undefined });
+                }}
+                placeholder="2"
+              />
+              <p class="field-hint">Number of retries on failure. Leave empty for default.</p>
+            </div>
+          </Card>
+          <section class="integrations-section">
+            <h2 class="integrations-section-title">MCP Servers</h2>
+            <p class="integrations-section-desc">Model Context Protocol – configure stdio or URL-based servers so G-Agent can use their tools.</p>
+            <div class="integrations-section-content">
+              <McpServersCard />
+            </div>
+          </section>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
         <!-- BILLING TAB -->
         <!-- ═══════════════════════════════════════════════════════════════════ -->
       {:else if activeTab === 'billing'}
-        <div class="tab-section">
+        <div class="tab-section billing-tab">
           <Card title="Subscription & Usage" padding="md">
             <div class="billing-status">
               {#if billingMe?.tier}
-                <div class="status-row">
-                  <span class="status-label">Current Tier</span>
+                <div class="billing-tier-row">
+                  <span class="status-label">Current plan</span>
                   <Badge variant="primary">{billingMe.tier}</Badge>
                 </div>
-                <div class="status-row">
-                  <span class="status-label">Usage</span>
-                  <span class="status-value"
-                    >{billingMe.usage ?? 0} / {billingMe.limit ?? '∞'} calls</span
-                  >
+                <div class="billing-usage-dashboard">
+                  <div class="usage-item">
+                    <div class="usage-header">
+                      <span class="usage-label">API / AI calls</span>
+                      <span class="usage-value">{formatCredits(billingMe.usage)} / {billingMe.limit ?? '∞'}</span>
+                    </div>
+                    {#if typeof billingMe.limit === 'number' && billingMe.limit > 0}
+                      <div class="usage-bar"><div class="usage-bar-fill" style="width: {Math.min(100, ((Number(billingMe.usage) ?? 0) / billingMe.limit) * 100)}%"></div></div>
+                    {/if}
+                  </div>
+                  {#if billingMe.computeMinutesLimit != null && billingMe.computeMinutesLimit > 0}
+                    <div class="usage-item">
+                      <div class="usage-header">
+                        <span class="usage-label">Compute (min)</span>
+                        <span class="usage-value">{(billingMe.computeMinutesUsed ?? 0).toFixed(1)} / {billingMe.computeMinutesLimit}</span>
+                      </div>
+                      <div class="usage-bar"><div class="usage-bar-fill" style="width: {Math.min(100, ((billingMe.computeMinutesUsed ?? 0) / billingMe.computeMinutesLimit) * 100)}%"></div></div>
+                    </div>
+                  {/if}
+                  {#if billingMe.storageGbLimit != null && billingMe.storageGbLimit > 0}
+                    <div class="usage-item">
+                      <div class="usage-header">
+                        <span class="usage-label">Storage (GB)</span>
+                        <span class="usage-value">{(billingMe.storageGbUsed ?? 0).toFixed(2)} / {billingMe.storageGbLimit}</span>
+                      </div>
+                      <div class="usage-bar"><div class="usage-bar-fill" style="width: {Math.min(100, ((billingMe.storageGbUsed ?? 0) / billingMe.storageGbLimit) * 100)}%"></div></div>
+                    </div>
+                  {/if}
                 </div>
-                {#if billingMe.computeMinutesLimit != null}
-                  <div class="status-row">
-                    <span class="status-label">Compute</span>
-                    <span class="status-value"
-                      >{(billingMe.computeMinutesUsed ?? 0).toFixed(1)} / {billingMe.computeMinutesLimit}
-                      min</span
-                    >
-                  </div>
-                {/if}
-                {#if billingMe.storageGbLimit != null}
-                  <div class="status-row">
-                    <span class="status-label">Storage</span>
-                    <span class="status-value"
-                      >{(billingMe.storageGbUsed ?? 0).toFixed(2)} / {billingMe.storageGbLimit} GB</span
-                    >
-                  </div>
-                {/if}
                 {#if billingMe.overageRates}
-                  <div class="status-row">
-                    <span class="status-label">Overages</span>
-                    <span class="status-value">
-                      ${(billingMe.overageRates.storageGbMonthlyCents / 100).toFixed(2)}/GB • ${(
-                        billingMe.overageRates.computeMinuteCents / 100
-                      ).toFixed(2)}/min • ${(
-                        billingMe.overageRates.extraConcurrentAgentMonthlyCents / 100
-                      ).toFixed(2)}/slot
-                    </span>
+                  <div class="billing-overages">
+                    <span class="status-label">Overage rates</span>
+                    <ul class="overage-list">
+                      <li>Storage: ${(billingMe.overageRates.storageGbMonthlyCents / 100).toFixed(2)}/GB</li>
+                      <li>Compute: ${(billingMe.overageRates.computeMinuteCents / 100).toFixed(2)}/min</li>
+                      <li>Extra slot: ${(billingMe.overageRates.extraConcurrentAgentMonthlyCents / 100).toFixed(2)}/slot</li>
+                    </ul>
                   </div>
                 {/if}
-                {#if tiers.length}
-                  <div class="status-row">
-                    <span class="status-label">Available tiers</span>
-                    <span class="status-value">{tiers.length}</span>
-                  </div>
+                {#if tiers.length > 0}
+                  <p class="billing-tiers-note">{tiers.length} plan(s) available. Upgrade for more.</p>
                 {/if}
               {:else}
                 <p class="billing-empty">Sign in to view your subscription details.</p>
               {/if}
+            </div>
+            <div class="field-group billing-alert-field">
+              <label class="field-label" for="usage-alert-percent">Alert when usage exceeds % of limit</label>
+              <input
+                id="usage-alert-percent"
+                type="number"
+                min="0"
+                max="100"
+                step="5"
+                class="settings-number-input"
+                value={settings?.preferences?.usageAlertPercent ?? ''}
+                onchange={(e) => {
+                  const v = parseInt((e.target as HTMLInputElement).value, 10);
+                  if (!Number.isNaN(v) && v >= 0 && v <= 100) savePreferences({ usageAlertPercent: v });
+                  else if ((e.target as HTMLInputElement).value === '') savePreferences({ usageAlertPercent: undefined });
+                }}
+                placeholder="80"
+              />
+              <p class="field-hint">Show a warning when API/usage reaches this percent of your plan limit. Leave empty to disable.</p>
             </div>
             <div class="billing-actions">
               <Button variant="primary" size="sm" onclick={() => showPricing.set(true)}>
@@ -1104,7 +1642,7 @@
 
           <Card title="Payment methods" padding="md">
             <p class="section-desc">
-              Manage payment methods for your subscription. In-app management coming soon.
+              Manage payment methods for your subscription in the billing portal.
             </p>
             {#if billingPaymentMethods.length > 0}
               <ul class="billing-list">
@@ -1117,10 +1655,13 @@
             {:else}
               <p class="billing-empty">No payment methods on file. Add one when upgrading.</p>
             {/if}
+            <Button variant="secondary" size="sm" onclick={handleBillingPortalClick} disabled={billingPortalLoading}>
+              {billingPortalLoading ? 'Opening…' : 'Open billing portal'}
+            </Button>
           </Card>
 
           <Card title="Invoices" padding="md">
-            <p class="section-desc">Download past invoices. In-app list when billing is fully wired.</p>
+            <p class="section-desc">Download past invoices from the billing portal.</p>
             {#if billingInvoices.length > 0}
               <ul class="billing-list">
                 {#each billingInvoices as inv}
@@ -1134,6 +1675,9 @@
             {:else}
               <p class="billing-empty">No invoices yet.</p>
             {/if}
+            <Button variant="secondary" size="sm" onclick={handleBillingPortalClick} disabled={billingPortalLoading}>
+              {billingPortalLoading ? 'Opening…' : 'Open billing portal'}
+            </Button>
           </Card>
 
           <Card title="Add-On Credit Usage" padding="md">
@@ -1145,7 +1689,7 @@
                 <div class="status-row">
                   <span class="status-label">API / AI calls</span>
                   <span class="status-value"
-                    >{billingMe.usage ?? 0} / {billingMe.limit ?? '∞'} calls</span
+                    >{formatCredits(billingMe.usage)} / {billingMe.limit ?? '∞'} credits</span
                   >
                 </div>
                 {#if billingMe.computeMinutesLimit != null}
@@ -1455,6 +1999,128 @@
     max-width: 720px;
   }
 
+  .chat-model-card .preset-segmented {
+    margin-bottom: 1rem;
+  }
+
+  .preset-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #6b7280);
+    margin-bottom: 0.5rem;
+  }
+
+  .preset-options {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  .preset-option {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-muted, #6b7280);
+    background: var(--color-bg-inset, #f3f4f6);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .preset-option:hover {
+    background: var(--color-bg-secondary, #f9fafb);
+    border-color: var(--color-primary, #7c3aed);
+    color: var(--color-primary, #7c3aed);
+  }
+
+  .preset-option.selected {
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
+    border-color: var(--color-primary, #7c3aed);
+    color: var(--color-primary, #7c3aed);
+  }
+
+  .default-model-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+  }
+
+  .default-model-row .field-label {
+    flex-shrink: 0;
+  }
+
+  .chat-model-hint {
+    margin: 0;
+    font-size: 0.8125rem;
+  }
+
+  .inline-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    font-weight: 600;
+    color: var(--color-primary, #7c3aed);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .inline-link:hover {
+    color: var(--color-primary-hover, #6d28d9);
+  }
+
+  .advanced-finetuning {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .advanced-finetuning .field-label {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .advanced-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .advanced-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #6b7280);
+  }
+
+  .advanced-field input {
+    width: 100px;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+  }
+
+  .settings-number-input,
+  .settings-text-input {
+    max-width: 200px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+    background: var(--color-bg-card, #fff);
+  }
+
+  .settings-text-input {
+    width: 100%;
+    max-width: 280px;
+  }
+
   .models-tab .models-section {
     margin-bottom: 1.25rem;
   }
@@ -1479,6 +2145,131 @@
 
   .models-provider-intro {
     margin-bottom: 1rem;
+  }
+
+  .ai-providers-tab .models-provider-intro {
+    color: var(--color-text-secondary, #6b7280);
+    line-height: 1.5;
+  }
+
+  .ai-providers-tab .settings-providers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .ai-providers-tab .settings-provider-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 1.25rem 1rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 14px;
+    background: var(--color-bg-card, #ffffff);
+    box-shadow: var(--shadow-xs, 0 1px 2px rgba(0, 0, 0, 0.04));
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    text-align: center;
+  }
+
+  .ai-providers-tab .settings-provider-card:hover {
+    border-color: var(--color-primary, #7c3aed);
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.06));
+    box-shadow: var(--shadow-sm, 0 2px 6px rgba(0, 0, 0, 0.05));
+  }
+
+  .ai-providers-tab .settings-provider-card.selected {
+    border-color: var(--color-primary, #7c3aed);
+    box-shadow: 0 0 0 2px var(--color-primary-subtle, rgba(124, 58, 237, 0.25));
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
+  }
+
+  .ai-providers-tab .provider-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--color-bg-subtle, #f5f3ff);
+    color: var(--color-text-secondary, #6b7280);
+  }
+
+  .ai-providers-tab .settings-provider-card.selected .provider-icon {
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.15));
+    color: var(--color-primary, #7c3aed);
+  }
+
+  .ai-providers-tab .provider-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ai-providers-tab .provider-icon-img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+
+  .ai-providers-tab .provider-icon-fallback {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-primary, #7c3aed);
+  }
+
+  .ai-providers-tab .add-more-providers-grid {
+    margin-bottom: 1rem;
+  }
+
+  .ai-providers-tab .add-more-card {
+    cursor: default;
+    min-height: 120px;
+    background: var(--color-bg-subtle, #f9fafb);
+  }
+
+  .ai-providers-tab .add-more-card .provider-icon {
+    background: var(--color-bg-card, #ffffff);
+  }
+
+  .ai-providers-tab .add-more-card .provider-desc {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #6b7280);
+    line-height: 1.3;
+    max-width: 140px;
+  }
+
+  .ai-providers-tab .add-more-card .configured-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    background: var(--color-success-subtle, rgba(16, 185, 129, 0.15));
+    color: var(--color-success, #10b981);
+  }
+
+  .ai-providers-tab .section-desc.ai-providers-add-desc {
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+  }
+
+  .ai-providers-tab .open-integrations-wrap {
+    margin-top: 1rem;
+  }
+
+  .ai-providers-tab .provider-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text, #111827);
+    line-height: 1.2;
+  }
+
+  .ai-providers-tab .provider-model-select {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+    max-width: 360px;
   }
 
   .models-provider-list {
@@ -1608,36 +2399,84 @@
     margin-bottom: 8px;
   }
 
-  .theme-options-row {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
+  .theme-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
   }
 
-  .theme-option-btn {
-    display: inline-flex;
+  .theme-card {
+    display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    padding: 1.25rem 1rem;
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--color-text-secondary, #4a4a5a);
     background: var(--color-bg-input, #f3f4f6);
-    border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 8px;
+    border: 2px solid var(--color-border, #e5e7eb);
+    border-radius: 12px;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
+    text-align: center;
   }
 
-  .theme-option-btn:hover {
+  .theme-card:hover {
     background: var(--color-bg-card-hover, #f9fafb);
     border-color: var(--color-border-highlight, #d1d5db);
   }
 
-  .theme-option-btn.selected {
+  .theme-card.selected {
     background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
     border-color: var(--color-primary, #7c3aed);
     color: var(--color-primary, #7c3aed);
+  }
+
+  .theme-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+  }
+
+  .theme-card-label {
+    font-weight: 600;
+  }
+
+  .theme-card-desc {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--color-text-muted, #6b7280);
+  }
+
+  .accent-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .accent-swatch {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--swatch-color, #7c3aed);
+    border: 2px solid transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .accent-swatch:hover {
+    transform: scale(1.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .accent-swatch.selected {
+    border-color: var(--color-text, #111827);
+    box-shadow: 0 0 0 2px white, 0 0 0 4px var(--color-text, #111827);
   }
 
   .field-value {
@@ -1789,8 +2628,90 @@
   .billing-status {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
     margin-bottom: 20px;
+  }
+
+  .billing-tier-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  .billing-tier-row .tier-badge {
+    font-size: 0.875rem;
+  }
+
+  .billing-usage-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .usage-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .usage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .usage-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-muted, #71717a);
+  }
+
+  .usage-value {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text, #18181b);
+  }
+
+  .usage-bar {
+    height: 8px;
+    background: var(--color-bg-subtle, #f3f4f6);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .usage-bar-fill {
+    height: 100%;
+    background: var(--color-primary, #7c3aed);
+    border-radius: 4px;
+    transition: width 0.2s ease;
+  }
+
+  .billing-overages {
+    margin-top: 4px;
+  }
+
+  .billing-overages .status-label {
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .overage-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #71717a);
+  }
+
+  .overage-list li {
+    padding: 2px 0;
+  }
+
+  .billing-tiers-note {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #71717a);
+    margin: 0;
   }
 
   .status-row {
