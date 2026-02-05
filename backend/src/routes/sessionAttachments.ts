@@ -151,14 +151,12 @@ router.post("/:sessionId", (req: Request, res: Response): void => {
       return;
     }
     const list = addAttachments(sessionId, items);
-    const created = list
-      .slice(-items.length)
-      .map((a) => ({
-        id: a.id,
-        name: a.name,
-        mimeType: a.mimeType,
-        size: a.size,
-      }));
+    const created = list.slice(-items.length).map((a) => ({
+      id: a.id,
+      name: a.name,
+      mimeType: a.mimeType,
+      size: a.size,
+    }));
     res.status(201).json({ attachments: created });
   } catch (err) {
     logger.warn({ err }, "Session attachments add failed");

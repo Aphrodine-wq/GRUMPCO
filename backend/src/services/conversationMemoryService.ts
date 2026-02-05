@@ -34,7 +34,7 @@ export async function getOrCreateConversation(
   _userId?: string | null,
 ): Promise<ConversationMessage[]> {
   const key = getConversationKey(platform, platformUserId);
-  
+
   if (conversations.has(key)) {
     return conversations.get(key)!.messages;
   }
@@ -48,7 +48,7 @@ export async function getOrCreateConversation(
 
   conversations.set(key, store);
   logger.debug({ platform, platformUserId }, "Created new conversation");
-  
+
   return store.messages;
 }
 
@@ -64,14 +64,14 @@ export async function saveConversation(
 ): Promise<void> {
   const key = getConversationKey(platform, platformUserId);
   const existing = conversations.get(key);
-  
+
   const store: ConversationStore = {
     messages,
     userId: _userId ?? existing?.userId,
     createdAt: existing?.createdAt ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  
+
   conversations.set(key, store);
   logger.debug({ key, messageCount: messages.length }, "Saved conversation");
 }

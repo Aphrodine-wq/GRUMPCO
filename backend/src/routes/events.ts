@@ -17,11 +17,9 @@ const router = Router();
  */
 router.get("/stream", (req: Request, res: Response) => {
   if (isServerlessRuntime) {
-    res
-      .status(400)
-      .json({
-        error: "SSE not supported in serverless mode. Use /api/events/poll.",
-      });
+    res.status(400).json({
+      error: "SSE not supported in serverless mode. Use /api/events/poll.",
+    });
     return;
   }
   const sessionId =

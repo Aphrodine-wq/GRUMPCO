@@ -108,7 +108,9 @@ async function getBullQueue(): Promise<import("bullmq").Queue> {
   if (bullQueue) return bullQueue;
   const { Queue } = await import("bullmq");
   const conn = getRedisConnectionConfig();
-  bullQueue = new Queue(sanitizeQueueName(SHIP_QUEUE_NAME), { connection: conn });
+  bullQueue = new Queue(sanitizeQueueName(SHIP_QUEUE_NAME), {
+    connection: conn,
+  });
   logger.info("BullMQ ship queue initialized");
   return bullQueue;
 }

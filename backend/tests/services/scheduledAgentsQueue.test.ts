@@ -53,7 +53,7 @@ const mockDb = {
 };
 
 vi.mock('../../src/db/database.js', () => ({
-  getDatabase: () => mockDb,
+  getDatabase: () => mockDb, databaseSupportsRawDb: () => true,
 }));
 
 // Mock logger

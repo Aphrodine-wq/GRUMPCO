@@ -220,7 +220,7 @@ export const prdRefineRequestSchema = z.object({
 // Ship Workflow Schemas
 // ============================================================================
 
-const shipPhaseEnum = z.enum(['design', 'spec', 'plan', 'code']);
+const shipPhaseEnum = z.enum(["design", "spec", "plan", "code"]);
 
 /** Ship start request */
 export const shipStartRequestSchema = z.object({

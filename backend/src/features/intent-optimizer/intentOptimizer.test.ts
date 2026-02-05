@@ -298,12 +298,10 @@ describe("Intent Optimizer Routes", () => {
 
   beforeEach(() => {
     jsonMock = vi.fn();
-    statusMock = vi
-      .fn()
-      .mockReturnValue({
-        json: jsonMock,
-        status: statusMock,
-      } as unknown as Response);
+    statusMock = vi.fn().mockReturnValue({
+      json: jsonMock,
+      status: statusMock,
+    } as unknown as Response);
     _mockRes = {
       json: jsonMock,
       status: statusMock,
