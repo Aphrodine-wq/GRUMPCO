@@ -154,7 +154,8 @@ export async function initializeWorkers(): Promise<void> {
   logger.info("Gmail worker started");
 
   // Scheduled agents: Redis = BullMQ repeatable jobs; no Redis = node-cron
-  if (process.env.REDIS_HOST?.trim()) {
+  const { useRedis } = await import("../services/redisConnection.js");
+  if (useRedis()) {
     await startScheduledAgentsWorker();
     if (databaseSupportsRawDb()) {
       await loadRepeatableJobsFromDb();
@@ -266,7 +267,11 @@ export async function startServer(
 
   const isProduction = process.env.NODE_ENV === "production";
   const PORT = await findAvailablePort(preferredPort);
-  const host = process.env.HOST ?? (isProduction ? "127.0.0.1" : "0.0.0.0");
+  // Render/Heroku/Railway require binding to 0.0.0.0. Use 0.0.0.0 when PORT is set (PaaS)
+  // or in development. Use 127.0.0.1 only when HOST is explicitly set in production.
+  const host =
+    process.env.HOST ??
+    (process.env.PORT ? "0.0.0.0" : isProduction ? "127.0.0.1" : "0.0.0.0");
 
   return new Promise((resolve) => {
     server = app.listen(PORT, host, () => {

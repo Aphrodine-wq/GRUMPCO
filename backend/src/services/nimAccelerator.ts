@@ -371,14 +371,18 @@ export class NIMAccelerator {
 
   /**
    * Get GPU utilization metrics for specific GPU
+   * Note: /v1/metrics exists only on local/self-hosted NIM, not on cloud integrate.api.nvidia.com
    */
   public async getGpuMetrics(gpuId: number = 0): Promise<{
     utilization: number;
     memoryUsed: number;
     memoryTotal: number;
   } | null> {
+    if (isCloudNim(this.config.baseUrl ?? "")) {
+      return null;
+    }
     try {
-      // Try to get GPU metrics from NIM API
+      // Try to get GPU metrics from NIM API (local/self-hosted only)
       const response = await fetch(
         `${this.config.baseUrl}/metrics?gpu_id=${gpuId}`,
         {

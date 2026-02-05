@@ -100,7 +100,7 @@ describe('scheduledAgentsQueue', () => {
       
       const queue = await getScheduledQueue();
       
-      expect(MockQueue).toHaveBeenCalledWith('grump:scheduled', {
+      expect(MockQueue).toHaveBeenCalledWith('grump-scheduled', {
         connection: {
           host: 'localhost',
           port: 6379,
@@ -130,7 +130,7 @@ describe('scheduledAgentsQueue', () => {
       
       await getScheduledQueue();
       
-      expect(MockQueue).toHaveBeenCalledWith('grump:scheduled', {
+      expect(MockQueue).toHaveBeenCalledWith('grump-scheduled', {
         connection: expect.objectContaining({
           port: 6380,
         }),
@@ -146,7 +146,7 @@ describe('scheduledAgentsQueue', () => {
       
       await getScheduledQueue();
       
-      expect(MockQueue).toHaveBeenCalledWith('grump:scheduled', {
+      expect(MockQueue).toHaveBeenCalledWith('grump-scheduled', {
         connection: expect.objectContaining({
           password: 'my-secret-password',
         }),
@@ -285,7 +285,7 @@ describe('scheduledAgentsQueue', () => {
       await startScheduledAgentsWorker();
       
       expect(MockWorker).toHaveBeenCalledWith(
-        'grump:scheduled',
+        'grump-scheduled',
         expect.any(Function),
         {
           connection: {
@@ -573,7 +573,7 @@ describe('scheduledAgentsQueue', () => {
       
       await getScheduledQueue();
       
-      expect(MockQueue).toHaveBeenCalledWith('grump:scheduled', {
+      expect(MockQueue).toHaveBeenCalledWith('grump-scheduled', {
         connection: expect.objectContaining({
           host: 'localhost',
         }),
@@ -589,7 +589,7 @@ describe('scheduledAgentsQueue', () => {
       
       await getScheduledQueue();
       
-      expect(MockQueue).toHaveBeenCalledWith('grump:scheduled', {
+      expect(MockQueue).toHaveBeenCalledWith('grump-scheduled', {
         connection: expect.objectContaining({
           port: 6379,
         }),
@@ -605,7 +605,7 @@ describe('scheduledAgentsQueue', () => {
       
       await getScheduledQueue();
       
-      expect(MockQueue).toHaveBeenCalledWith('grump:scheduled', {
+      expect(MockQueue).toHaveBeenCalledWith('grump-scheduled', {
         connection: expect.objectContaining({
           host: 'redis.example.com',
         }),
@@ -619,7 +619,7 @@ describe('scheduledAgentsQueue', () => {
       
       await getScheduledQueue();
       
-      expect(MockQueue).toHaveBeenCalledWith('grump:scheduled', expect.any(Object));
+      expect(MockQueue).toHaveBeenCalledWith('grump-scheduled', expect.any(Object));
     });
   });
 

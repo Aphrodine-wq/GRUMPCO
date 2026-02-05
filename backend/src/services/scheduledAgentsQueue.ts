@@ -8,6 +8,12 @@ import {
   type ScheduledAgentParams,
 } from "./scheduledAgentsService.js";
 import logger from "../middleware/logger.js";
+import {
+  getRedisConnectionConfig,
+  sanitizeQueueName,
+} from "./redisConnection.js";
+
+const SCHEDULED_QUEUE_NAME = "grump-scheduled";
 
 let scheduledQueue: import("bullmq").Queue | null = null;
 let scheduledWorker: import("bullmq").Worker | null = null;
@@ -15,12 +21,10 @@ let scheduledWorker: import("bullmq").Worker | null = null;
 export async function getScheduledQueue(): Promise<import("bullmq").Queue> {
   if (scheduledQueue) return scheduledQueue;
   const { Queue } = await import("bullmq");
-  const conn = {
-    host: process.env.REDIS_HOST || "localhost",
-    port: parseInt(process.env.REDIS_PORT || "6379", 10),
-    password: process.env.REDIS_PASSWORD || undefined,
-  };
-  scheduledQueue = new Queue("grump-scheduled", { connection: conn });
+  const conn = getRedisConnectionConfig();
+  scheduledQueue = new Queue(sanitizeQueueName(SCHEDULED_QUEUE_NAME), {
+    connection: conn,
+  });
   return scheduledQueue;
 }
 
@@ -59,13 +63,9 @@ export async function removeScheduledRepeatableJob(
 export async function startScheduledAgentsWorker(): Promise<void> {
   if (scheduledWorker) return;
   const { Worker } = await import("bullmq");
-  const conn = {
-    host: process.env.REDIS_HOST || "localhost",
-    port: parseInt(process.env.REDIS_PORT || "6379", 10),
-    password: process.env.REDIS_PASSWORD || undefined,
-  };
+  const conn = getRedisConnectionConfig();
   scheduledWorker = new Worker(
-    "grump-scheduled",
+    sanitizeQueueName(SCHEDULED_QUEUE_NAME),
     async (job) => {
       const { scheduleId, action, params } = job.data as {
         scheduleId: string;
