@@ -29,7 +29,6 @@ import { applySecurityMiddleware } from "../middleware/security.js";
 import { applyRateLimiting } from "../middleware/rateLimiter.js";
 import { apiAuthMiddleware } from "../middleware/authMiddleware.js";
 import { mountLazyRoutes } from "../routes/registry.js";
-import skillsRoutes from "../routes/skills.js";
 import { env } from "../config/env.js";
 import { timingSafeEqualString } from "../utils/security.js";
 import { isServerlessRuntime } from "../config/runtime.js";
@@ -209,7 +208,6 @@ export async function applyAsyncMiddleware(app: Express): Promise<void> {
   }
 
   // Mount skills API eagerly so /api/skills is always available (avoids 404 from cold lazy-load)
-  app.use("/api/skills", skillsRoutes);
 
   // Mount all API routes via lazy-loading registry
   mountLazyRoutes(app);
