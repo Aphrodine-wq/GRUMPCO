@@ -39,3 +39,5 @@ installer/Output/
 # Optional: uncomment if you don't want to track these
 # data/
 # backend/data/
+.hyper/
+data/cache/
