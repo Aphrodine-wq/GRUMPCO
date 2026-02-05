@@ -13,7 +13,12 @@ import logger from "../middleware/logger.js";
 import { getDatabase as _getDatabase } from "../db/database.js";
 import { writeAuditLog } from "./auditLogService.js";
 import { queueAgentTask, isAgentRunning } from "./persistentAgentService.js";
-import { getCompletion } from "./llmGatewayHelper.js";
+import fs from "fs/promises";
+import path from "path";
+import { exec } from "child_process";
+import util from "util";
+
+const execAsync = util.promisify(exec);
 
 // ========== Types ==========
 
@@ -178,18 +183,27 @@ export async function calculateProjectHealth(
 ): Promise<ProjectHealthScore> {
   logger.info({ userId, workspacePath }, "Calculating project health");
 
-  // In a real implementation:
-  // - Test coverage from jest/vitest coverage reports
-  // - Docs freshness from git log of docs files
-  // - Tech debt from ESLint warnings, TODO counts, complexity metrics
-  // - Security from npm audit, dependency checks
+  // Execute checks in parallel
+  const [testCoverage, docsFreshness, techDebt, securityScore] = await Promise.all([
+    getTestCoverage(workspacePath),
+    getDocsFreshness(workspacePath),
+    getTechDebt(workspacePath),
+    getSecurityScore(workspacePath),
+  ]);
+
+  const overall = Math.round(
+    (testCoverage * 0.3) +
+    (docsFreshness * 0.2) +
+    (techDebt * 0.25) +
+    (securityScore * 0.25)
+  );
 
   const score: ProjectHealthScore = {
-    overall: 75, // Placeholder
-    testCoverage: 80,
-    docsFreshness: 70,
-    techDebt: 65,
-    securityScore: 85,
+    overall,
+    testCoverage,
+    docsFreshness,
+    techDebt,
+    securityScore,
     lastUpdated: new Date().toISOString(),
   };
 
@@ -665,3 +679,142 @@ export async function runAnticipatoryChecks(
 
 // Export for API routes
 export { createInsight };
+
+// ========== Metrics Helpers ==========
+
+/**
+ * Get test coverage from lcov.info
+ */
+async function getTestCoverage(workspacePath: string): Promise<number> {
+  try {
+    const lcovPath = path.join(workspacePath, "coverage", "lcov.info");
+    const content = await fs.readFile(lcovPath, "utf-8");
+
+    let totalLines = 0;
+    let coveredLines = 0;
+
+    const lines = content.split("\n");
+    for (const line of lines) {
+      if (line.startsWith("LF:")) {
+        totalLines += parseInt(line.substring(3), 10);
+      } else if (line.startsWith("LH:")) {
+        coveredLines += parseInt(line.substring(3), 10);
+      }
+    }
+
+    if (totalLines === 0) return 0;
+    return Math.round((coveredLines / totalLines) * 100);
+  } catch (error) {
+    // If coverage file missing, return 0
+    return 0;
+  }
+}
+
+/**
+ * Get documentation freshness score (0-100)
+ */
+async function getDocsFreshness(workspacePath: string): Promise<number> {
+  try {
+    const { stdout } = await execAsync(
+      `git log -1 --format=%ct -- docs/ README.md`,
+      { cwd: workspacePath }
+    );
+
+    if (!stdout || !stdout.trim()) {
+      return 0; // No commits found or not a git repo for docs
+    }
+
+    const lastCommitTimestamp = parseInt(stdout.trim(), 10);
+    const now = Math.floor(Date.now() / 1000);
+    const daysDiff = (now - lastCommitTimestamp) / (24 * 60 * 60);
+
+    if (daysDiff < 7) return 100;
+    if (daysDiff < 30) return 90;
+    if (daysDiff < 90) return 70;
+    if (daysDiff < 180) return 40;
+    return 20;
+  } catch (error) {
+    return 0;
+  }
+}
+
+/**
+ * Calculate tech debt score (0-100)
+ */
+async function getTechDebt(workspacePath: string): Promise<number> {
+  let score = 100;
+
+  try {
+    // 1. Count TODOs
+    // grep returns 1 if no matches found, causing exec to fail unless we catch it
+    // But pipe to wc -l usually masks grep exit code unless pipefail is set
+    const { stdout: todoCount } = await execAsync(
+      `grep -r "TODO" src --exclude-dir=node_modules --exclude-dir=dist | wc -l`,
+      { cwd: workspacePath }
+    ).catch(() => ({ stdout: "0" }));
+
+    const todos = parseInt(todoCount.trim(), 10) || 0;
+
+    // Deduct 1 point per 5 TODOs, capped at 20 points deduction
+    score -= Math.min(20, Math.floor(todos / 5));
+
+    // 2. Check lint output if available
+    const lintPath = path.join(workspacePath, "lint_output.txt");
+    try {
+      const lintContent = await fs.readFile(lintPath, "utf-8");
+      const errors = (lintContent.match(/error/gi) || []).length;
+      const warnings = (lintContent.match(/warning/gi) || []).length;
+
+      // Deduct 5 points per error, 1 per warning, capped at 40 points
+      const lintPenalty = Math.min(40, (errors * 5) + warnings);
+      score -= lintPenalty;
+    } catch (e) {
+      // lint output not found, ignore
+    }
+
+    return Math.max(0, score);
+  } catch (error) {
+    return 70; // Default if check fails
+  }
+}
+
+/**
+ * Calculate security score (0-100)
+ */
+async function getSecurityScore(workspacePath: string): Promise<number> {
+  const calculateScore = (audit: any) => {
+    const vulnCounts = audit.metadata?.vulnerabilities || {};
+    const critical = vulnCounts.critical || 0;
+    const high = vulnCounts.high || 0;
+    const moderate = vulnCounts.moderate || 0;
+    const low = vulnCounts.low || 0;
+
+    let score = 100;
+    score -= (critical * 50);
+    score -= (high * 20);
+    score -= (moderate * 5);
+    score -= (low * 1);
+
+    return Math.max(0, score);
+  };
+
+  try {
+    // pnpm audit --json --prod
+    // Increase maxBuffer for large audit outputs
+    const { stdout } = await execAsync("pnpm audit --json --prod", {
+      cwd: workspacePath,
+      maxBuffer: 1024 * 1024 * 10
+    });
+    return calculateScore(JSON.parse(stdout));
+  } catch (error: any) {
+    // pnpm audit returns exit code 1 if vulnerabilities are found
+    if (error.stdout) {
+      try {
+        return calculateScore(JSON.parse(error.stdout));
+      } catch (parseError) {
+        // failed to parse
+      }
+    }
+    return 80; // Default fallback
+  }
+}
