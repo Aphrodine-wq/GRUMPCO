@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, waitFor } from '@testing-library/svelte';
+import { render, waitFor, fireEvent } from '@testing-library/svelte';
 import ModelPicker from './ModelPicker.svelte';
 
 // Mock the API
@@ -111,5 +111,20 @@ describe('ModelPicker', () => {
     });
 
     expect(container).toBeTruthy();
+  });
+
+  it('should render group headers when open', async () => {
+    const { container, getByText } = render(ModelPicker, {
+      props: { value: 'auto' },
+    });
+
+    // Open the dropdown
+    const trigger = container.querySelector('.model-picker-trigger');
+    expect(trigger).toBeTruthy();
+    if (trigger) await fireEvent.click(trigger);
+
+    // Check for group headers
+    expect(getByText('NVIDIA NIM')).toBeTruthy();
+    expect(getByText('OpenAI')).toBeTruthy();
   });
 });

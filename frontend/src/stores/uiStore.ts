@@ -79,3 +79,6 @@ export const sidebarCollapsed = writable(false);
 export const showPricing = writable(false);
 /** When incremented, ChatInterface should focus the chat input (for keyboard shortcut Ctrl/Cmd+Shift+L). */
 export const focusChatTrigger = writable(0);
+
+export const commandPaletteOpen = writable(false);
+export const settingsInitialTab = writable<string>('general');

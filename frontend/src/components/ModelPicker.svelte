@@ -32,14 +32,21 @@
     onSelect?: (provider: string, modelId?: string) => void;
     compact?: boolean;
     showAuto?: boolean;
+    embedded?: boolean; // If true, hide trigger and show list immediately (controlled by parent)
   }
 
-  let { value = 'auto', onSelect, compact = false, showAuto = true }: Props = $props();
+  let {
+    value = 'auto',
+    onSelect,
+    compact = false,
+    showAuto = true,
+    embedded = false,
+  }: Props = $props();
 
   let groups = $state<ModelGroup[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
-  let open = $state(false);
+  let open = $state(embedded ? true : false);
 
   function formatCost(m: ModelItem): string {
     const inCost = m.costPerMillionInput ?? 0;
@@ -49,6 +56,19 @@
     if (avg < 0.1) return '$';
     if (avg < 1) return '$$';
     return '$$$';
+  }
+
+  function getCostTooltip(m: ModelItem): string {
+    const inCost = m.costPerMillionInput;
+    const outCost = m.costPerMillionOutput;
+    if (inCost === undefined && outCost === undefined) return 'Cost unknown';
+    if (inCost === 0 && outCost === 0) return 'Free';
+
+    const parts = [];
+    if (inCost !== undefined) parts.push(`Input: $${inCost}/M`);
+    if (outCost !== undefined) parts.push(`Output: $${outCost}/M`);
+
+    return parts.join(', ');
   }
 
   onMount(async () => {
@@ -67,12 +87,12 @@
 
   function selectAuto() {
     onSelect?.('nim', undefined);
-    open = false;
+    if (!embedded) open = false;
   }
 
   function selectModel(provider: string, modelId: string) {
     onSelect?.(provider, modelId);
-    open = false;
+    if (!embedded) open = false;
   }
 
   function getDisplayValue(): string {
@@ -87,31 +107,35 @@
 </script>
 
 <div class="model-picker" class:compact>
-  <button
-    type="button"
-    class="model-picker-trigger"
-    onclick={() => (open = !open)}
-    aria-expanded={open}
-    aria-haspopup="listbox"
-    aria-label="Select AI model"
-  >
-    {#if loading}
-      <span class="model-picker-value">Loading...</span>
-    {:else}
-      <span class="model-picker-value">{getDisplayValue()}</span>
-      <span class="model-picker-chevron" class:open>
-        <ChevronDown width={16} height={16} />
-      </span>
-    {/if}
-  </button>
+  {#if !embedded}
+    <button
+      type="button"
+      class="model-picker-trigger"
+      onclick={() => (open = !open)}
+      aria-expanded={open}
+      aria-haspopup="listbox"
+      aria-label="Select AI model"
+    >
+      {#if loading}
+        <span class="model-picker-value">Loading...</span>
+      {:else}
+        <span class="model-picker-value">{getDisplayValue()}</span>
+        <span class="model-picker-chevron" class:open>
+          <ChevronDown width={16} height={16} />
+        </span>
+      {/if}
+    </button>
+  {/if}
 
-  {#if open}
+  {#if open || embedded}
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
       class="model-picker-dropdown"
+      class:embedded-dropdown={embedded}
       role="listbox"
       tabindex="-1"
-      onmouseleave={() => (open = false)}
-      onkeydown={(e) => e.key === 'Escape' && (open = false)}
+      onmouseleave={() => (!embedded ? (open = false) : null)}
+      onkeydown={(e) => !embedded && e.key === 'Escape' && (open = false)}
     >
       {#if showAuto}
         <button
@@ -132,6 +156,9 @@
       {:else}
         {#each groups as group}
           <div class="model-group">
+            {#if group.displayName}
+              <div class="model-group-header">{group.displayName}</div>
+            {/if}
             {#each group.models as model}
               <button
                 type="button"
@@ -143,7 +170,13 @@
               >
                 <span class="model-option-label">{model.id}</span>
                 {#if formatCost(model)}
-                  <span class="model-option-cost">{formatCost(model)}</span>
+                  <span
+                    class="model-option-cost"
+                    title={getCostTooltip(model)}
+                    aria-label={`Cost: ${getCostTooltip(model)}`}
+                  >
+                    {formatCost(model)}
+                  </span>
                 {/if}
               </button>
             {/each}
@@ -156,7 +189,7 @@
           role="option"
           aria-selected="false"
           onclick={() => {
-            open = false;
+            if (!embedded) open = false;
             settingsInitialTab.set('ai');
             setCurrentView('settings');
           }}
@@ -237,10 +270,32 @@
     padding: 0.5rem 0;
   }
 
+  .model-picker-dropdown.embedded-dropdown {
+    position: static;
+    box-shadow: none;
+    border: none;
+    min-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
   .model-group {
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
+  }
+
+  .model-group-header {
+    padding: 0.25rem 0.85rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    background: var(--color-bg-card, #fff);
+    position: sticky;
+    top: 0;
+    z-index: 1;
   }
 
   .model-option {
@@ -260,8 +315,14 @@
     transition: background 0.15s;
   }
 
-  .model-option:hover {
+  .model-option:hover,
+  .model-option:focus-visible {
     background: var(--color-primary-subtle, rgba(124, 58, 237, 0.06));
+    outline: none;
+  }
+
+  .model-option:focus-visible {
+    box-shadow: inset 3px 0 0 0 var(--color-primary, #7c3aed);
   }
 
   .model-option.selected {
