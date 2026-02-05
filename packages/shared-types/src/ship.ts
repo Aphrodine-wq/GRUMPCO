@@ -66,6 +66,7 @@ export interface ShipSession {
   projectName?: string;
   repoOrg?: string;
   deploymentTarget?: string;
+  localPath?: string;
   phases?: ShipRunnablePhase[];
   designResult?: DesignPhaseResult;
   specResult?: SpecPhaseResult;
@@ -87,6 +88,7 @@ export interface ShipStartRequest {
   repoOrg?: string;
   /** Optional deployment target: none, vercel, aws, gcp, etc. */
   deploymentTarget?: string;
+  localPath?: string;
   /** Phases to run; default all. If set, only these phases execute. */
   phases?: ShipRunnablePhase[];
 }

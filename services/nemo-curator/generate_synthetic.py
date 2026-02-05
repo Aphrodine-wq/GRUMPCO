@@ -10,6 +10,7 @@ Usage:
 """
 
 import argparse
+import asyncio
 import json
 import os
 import random
@@ -18,7 +19,7 @@ import time
 from pathlib import Path
 
 try:
-    from openai import OpenAI
+    from openai import AsyncOpenAI
 except ImportError:
     print("Install openai: pip install openai", file=sys.stderr)
     sys.exit(1)
@@ -57,8 +58,82 @@ def is_valid_pair(
     return True
 
 
-def generate_qa_pairs(
-    client: OpenAI,
+async def generate_single_pair(
+    client: AsyncOpenAI,
+    model: str,
+    topic: str,
+    max_tokens: int,
+    temperature: float,
+    top_p: float,
+    min_question_chars: int,
+    min_answer_chars: int,
+    max_answer_chars: int,
+    max_retries: int,
+    retry_backoff_ms: int,
+    seen_questions: set,
+    semaphore: asyncio.Semaphore,
+) -> dict | None:
+    """Generate a single Q&A pair with retries."""
+    prompt = f"""Generate one concise question and answer pair about "{topic}".
+Format as JSON: {{"question": "...", "answer": "..."}}
+Keep the question focused and the answer factual (2-4 sentences)."""
+
+    async with semaphore:
+        for attempt in range(1, max_retries + 1):
+            try:
+                resp = await client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                )
+                text = resp.choices[0].message.content or ""
+                # Try to parse JSON from response
+                for line in text.strip().split("\n"):
+                    line = line.strip()
+                    if line.startswith("{"):
+                        try:
+                            obj = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+
+                        question = str(obj.get("question", "")).strip()
+                        answer = str(obj.get("answer", "")).strip()
+
+                        if not is_valid_pair(question, answer, min_question_chars, min_answer_chars, max_answer_chars):
+                            continue
+
+                        normalized = normalize_text(question)
+
+                        # Note: In a single-threaded event loop (asyncio), this check-and-add is atomic
+                        # because there are no await points in between.
+                        if normalized in seen_questions:
+                            continue
+                        seen_questions.add(normalized)
+
+                        obj["question"] = question
+                        obj["answer"] = answer
+                        obj["topic"] = topic
+                        return obj
+
+                # If we processed the response but found no valid pair, we retry immediately or sleep?
+                # The original code retried immediately if no exception, but slept if exception.
+                # We'll mimic that behavior (no sleep if logical failure).
+
+            except Exception as e:
+                if attempt >= max_retries:
+                    print(f"Warning: {e}", file=sys.stderr)
+                    break
+                sleep_ms = retry_backoff_ms * attempt + random.randint(0, 250)
+                await asyncio.sleep(sleep_ms / 1000)
+                continue
+
+    return None
+
+
+async def generate_qa_pairs_async(
+    client: AsyncOpenAI,
     model: str,
     topics: list[str],
     samples_per_topic: int,
@@ -70,56 +145,36 @@ def generate_qa_pairs(
     max_answer_chars: int,
     max_retries: int,
     retry_backoff_ms: int,
+    concurrency_limit: int,
 ) -> list[dict]:
     """Generate Q&A pairs using NIM (Nemotron) via OpenAI-compatible client."""
-    results: list[dict] = []
     seen_questions: set[str] = set()
+    semaphore = asyncio.Semaphore(concurrency_limit)
 
+    tasks = []
     for topic in topics:
         for _ in range(samples_per_topic):
-            prompt = f"""Generate one concise question and answer pair about "{topic}".
-Format as JSON: {{"question": "...", "answer": "..."}}
-Keep the question focused and the answer factual (2-4 sentences)."""
+            tasks.append(
+                generate_single_pair(
+                    client,
+                    model,
+                    topic,
+                    max_tokens,
+                    temperature,
+                    top_p,
+                    min_question_chars,
+                    min_answer_chars,
+                    max_answer_chars,
+                    max_retries,
+                    retry_backoff_ms,
+                    seen_questions,
+                    semaphore
+                )
+            )
 
-            found = False
-            for attempt in range(1, max_retries + 1):
-                try:
-                    resp = client.chat.completions.create(
-                        model=model,
-                        messages=[{"role": "user", "content": prompt}],
-                        max_tokens=max_tokens,
-                        temperature=temperature,
-                        top_p=top_p,
-                    )
-                    text = resp.choices[0].message.content or ""
-                    # Try to parse JSON from response
-                    for line in text.strip().split("\n"):
-                        line = line.strip()
-                        if line.startswith("{"):
-                            obj = json.loads(line)
-                            question = str(obj.get("question", "")).strip()
-                            answer = str(obj.get("answer", "")).strip()
-                            if not is_valid_pair(question, answer, min_question_chars, min_answer_chars, max_answer_chars):
-                                continue
-                            normalized = normalize_text(question)
-                            if normalized in seen_questions:
-                                continue
-                            seen_questions.add(normalized)
-                            obj["question"] = question
-                            obj["answer"] = answer
-                            obj["topic"] = topic
-                            results.append(obj)
-                            found = True
-                            break
-                    if found:
-                        break
-                except Exception as e:
-                    if attempt >= max_retries:
-                        print(f"Warning: {e}", file=sys.stderr)
-                        break
-                    sleep_ms = retry_backoff_ms * attempt + random.randint(0, 250)
-                    time.sleep(sleep_ms / 1000)
-                    continue
+    results_maybe = await asyncio.gather(*tasks)
+    # Filter out None values (failures)
+    results = [r for r in results_maybe if r is not None]
     return results
 
 
@@ -159,23 +214,29 @@ def main() -> None:
     max_answer_chars = gen_cfg.get("max_answer_chars", 800)
     max_retries = gen_cfg.get("max_retries", 3)
     retry_backoff_ms = gen_cfg.get("retry_backoff_ms", 500)
+    concurrency_limit = gen_cfg.get("concurrency_limit", 10)
 
-    client = OpenAI(base_url=base_url, api_key=api_key)
+    client = AsyncOpenAI(base_url=base_url, api_key=api_key)
 
     print("Generating synthetic Q&A via NVIDIA NIM (Nemotron)...")
-    pairs = generate_qa_pairs(
-        client,
-        model,
-        topics,
-        samples,
-        max_tokens,
-        temperature,
-        top_p,
-        min_question_chars,
-        min_answer_chars,
-        max_answer_chars,
-        max_retries,
-        retry_backoff_ms,
+
+    # Run async generation
+    pairs = asyncio.run(
+        generate_qa_pairs_async(
+            client,
+            model,
+            topics,
+            samples,
+            max_tokens,
+            temperature,
+            top_p,
+            min_question_chars,
+            min_answer_chars,
+            max_answer_chars,
+            max_retries,
+            retry_backoff_ms,
+            concurrency_limit,
+        )
     )
 
     out_path = args.output or out_cfg.get("path", "data/synthetic_qa.jsonl")

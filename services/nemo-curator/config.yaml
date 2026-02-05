@@ -24,3 +24,4 @@ generation:
   max_answer_chars: 800
   max_retries: 3
   retry_backoff_ms: 500
+  concurrency_limit: 10

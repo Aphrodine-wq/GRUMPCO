@@ -153,6 +153,11 @@ export async function startShipMode(
   const db = getDatabase();
   const sessionId = `ship_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+  // If localPath is provided, use it as workspaceRoot if not already set
+  if (request.localPath && request.preferences && !request.preferences.workspaceRoot) {
+    request.preferences.workspaceRoot = request.localPath;
+  }
+
   const session: ShipSession = {
     id: sessionId,
     projectDescription: request.projectDescription,
@@ -163,10 +168,14 @@ export async function startShipMode(
     userId: request.userId,
     preferences: request.preferences,
     projectId: request.projectId,
+    projectName: request.projectName,
+    repoOrg: request.repoOrg,
+    deploymentTarget: request.deploymentTarget,
+    localPath: request.localPath,
   };
 
   await db.saveShipSession(session);
-  logger.info({ sessionId }, "SHIP mode session started");
+  logger.info({ sessionId, localPath: request.localPath }, "SHIP mode session started");
 
   return session;
 }

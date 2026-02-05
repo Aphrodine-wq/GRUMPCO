@@ -13,6 +13,12 @@ import logger from "../middleware/logger.js";
 import { getDatabase as _getDatabase } from "../db/database.js";
 import { writeAuditLog } from "./auditLogService.js";
 import { queueAgentTask, isAgentRunning } from "./persistentAgentService.js";
+import fs from "fs/promises";
+import path from "path";
+import { exec } from "child_process";
+import util from "util";
+
+const execAsync = util.promisify(exec);
 
 // ========== Types ==========
 
@@ -177,18 +183,27 @@ export async function calculateProjectHealth(
 ): Promise<ProjectHealthScore> {
   logger.info({ userId, workspacePath }, "Calculating project health");
 
-  // In a real implementation:
-  // - Test coverage from jest/vitest coverage reports
-  // - Docs freshness from git log of docs files
-  // - Tech debt from ESLint warnings, TODO counts, complexity metrics
-  // - Security from npm audit, dependency checks
+  // Execute checks in parallel
+  const [testCoverage, docsFreshness, techDebt, securityScore] = await Promise.all([
+    getTestCoverage(workspacePath),
+    getDocsFreshness(workspacePath),
+    getTechDebt(workspacePath),
+    getSecurityScore(workspacePath),
+  ]);
+
+  const overall = Math.round(
+    (testCoverage * 0.3) +
+    (docsFreshness * 0.2) +
+    (techDebt * 0.25) +
+    (securityScore * 0.25)
+  );
 
   const score: ProjectHealthScore = {
-    overall: 75, // Placeholder
-    testCoverage: 80,
-    docsFreshness: 70,
-    techDebt: 65,
-    securityScore: 85,
+    overall,
+    testCoverage,
+    docsFreshness,
+    techDebt,
+    securityScore,
     lastUpdated: new Date().toISOString(),
   };
 
@@ -360,30 +375,157 @@ export async function getProactiveSuggestions(
   return suggestions;
 }
 
+
 // ========== Market Trends ==========
 
+interface RawTrendItem {
+  title: string;
+  url: string;
+  source: "dev.to" | "hacker-news";
+  summary?: string;
+  score?: number;
+  publishedAt: string;
+}
+
+async function fetchFromDevTo(tag: string): Promise<RawTrendItem[]> {
+  try {
+    const res = await fetch(`https://dev.to/api/articles?tag=${encodeURIComponent(tag)}&top=7&per_page=5`);
+    if (!res.ok) return [];
+    const json = await res.json() as any[];
+    return json.map(item => ({
+      title: item.title,
+      url: item.url,
+      source: "dev.to",
+      summary: item.description,
+      score: item.positive_reactions_count,
+      publishedAt: item.published_at
+    }));
+  } catch (e) {
+    logger.error({ error: e, tag }, "Failed to fetch from Dev.to");
+    return [];
+  }
+}
+
+async function fetchFromHN(query: string): Promise<RawTrendItem[]> {
+  try {
+    const res = await fetch(`http://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`);
+    if (!res.ok) return [];
+    const json = await res.json() as any;
+    return json.hits.map((item: any) => ({
+      title: item.title,
+      url: item.url || `https://news.ycombinator.com/item?id=${item.objectID}`,
+      source: "hacker-news",
+      score: item.points,
+      publishedAt: item.created_at
+    }));
+  } catch (e) {
+    logger.error({ error: e, query }, "Failed to fetch from HN");
+    return [];
+  }
+}
+
 /**
- * Fetch relevant tech trends (placeholder for RSS/API integration)
+ * Fetch relevant tech trends
  */
 export async function fetchTechTrends(
   _userId: string,
-  _techStack: string[],
+  techStack: string[],
 ): Promise<
   Array<{ title: string; summary: string; url?: string; relevance: number }>
 > {
-  // In a real implementation:
-  // - Fetch from RSS feeds (dev.to, Hacker News, etc.)
-  // - Filter by relevance to user's tech stack
-  // - Use LLM to summarize
+  logger.info({ techStack }, "Fetching tech trends");
 
-  return [
-    {
-      title: "New features in your tech stack",
-      summary: "Relevant updates for your technologies",
-      relevance: 0.8,
-    },
-  ];
+  if (!techStack || techStack.length === 0) {
+    return [];
+  }
+
+  // Parallel fetch for all technologies
+  const allPromises = techStack.flatMap(tech => [
+    fetchFromDevTo(tech),
+    fetchFromHN(tech)
+  ]);
+
+  const results = await Promise.allSettled(allPromises);
+  const rawItems: RawTrendItem[] = [];
+
+  for (const res of results) {
+    if (res.status === 'fulfilled') {
+      rawItems.push(...res.value);
+    }
+  }
+
+  // Deduplicate by URL
+  const uniqueItems = Array.from(new Map(rawItems.map(item => [item.url, item])).values());
+
+  if (uniqueItems.length === 0) {
+    return [];
+  }
+
+  // Limit input to LLM to top 20 items to save context
+  const topItems = uniqueItems
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .slice(0, 20);
+
+  // Construct Prompt
+  const prompt = `
+    You are a tech trend analyst. I have a list of recent articles/stories for a developer interested in: ${techStack.join(', ')}.
+
+    Here are the top stories:
+    ${JSON.stringify(topItems.map(i => ({ title: i.title, source: i.source, desc: i.summary })), null, 2)}
+
+    Please select the top 5 most relevant and interesting items.
+    For each item, provide:
+    1. The exact title (must match the input exactly so I can link it back)
+    2. A concise summary (1-2 sentences) explaining why it matters.
+    3. A relevance score (0.0 to 1.0) based on how significant this is for the tech stack.
+
+    Return ONLY a valid JSON array of objects with keys: "title", "summary", "relevance".
+    Do not include markdown formatting or code blocks. Just the raw JSON.
+  `;
+
+  // Call LLM
+  const { text, error } = await getCompletion({
+    messages: [{ role: 'user', content: prompt }],
+    model: 'nvidia/llama-3.1-nemotron-70b-instruct',
+    max_tokens: 1000,
+  }, { provider: 'nim' });
+
+  if (error || !text) {
+    logger.error({ error }, "Failed to generate trend summary with LLM");
+    // Fallback: return raw items without summary if LLM fails
+    return topItems.slice(0, 5).map(i => ({
+      title: i.title,
+      summary: i.summary || "No summary available",
+      url: i.url,
+      relevance: 0.5
+    }));
+  }
+
+  try {
+    // Clean potential markdown blocks
+    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const suggestions = JSON.parse(cleanText) as Array<{ title: string; summary: string; relevance: number }>;
+
+    // Merge back URLs
+    return suggestions.map(s => {
+      // Find original item by title (fuzzy match might be safer but trying exact first)
+      const original = topItems.find(i => i.title.includes(s.title) || s.title.includes(i.title));
+      return {
+        ...s,
+        url: original?.url
+      };
+    }).filter(s => s.url);
+  } catch (e) {
+    logger.error({ error: e, text }, "Failed to parse LLM response for trends");
+    return topItems.slice(0, 5).map(i => ({
+        title: i.title,
+        summary: i.summary || "No summary available",
+        url: i.url,
+        relevance: 0.5
+    }));
+  }
 }
+
 
 /**
  * Schedule trend check
@@ -537,3 +679,142 @@ export async function runAnticipatoryChecks(
 
 // Export for API routes
 export { createInsight };
+
+// ========== Metrics Helpers ==========
+
+/**
+ * Get test coverage from lcov.info
+ */
+async function getTestCoverage(workspacePath: string): Promise<number> {
+  try {
+    const lcovPath = path.join(workspacePath, "coverage", "lcov.info");
+    const content = await fs.readFile(lcovPath, "utf-8");
+
+    let totalLines = 0;
+    let coveredLines = 0;
+
+    const lines = content.split("\n");
+    for (const line of lines) {
+      if (line.startsWith("LF:")) {
+        totalLines += parseInt(line.substring(3), 10);
+      } else if (line.startsWith("LH:")) {
+        coveredLines += parseInt(line.substring(3), 10);
+      }
+    }
+
+    if (totalLines === 0) return 0;
+    return Math.round((coveredLines / totalLines) * 100);
+  } catch (error) {
+    // If coverage file missing, return 0
+    return 0;
+  }
+}
+
+/**
+ * Get documentation freshness score (0-100)
+ */
+async function getDocsFreshness(workspacePath: string): Promise<number> {
+  try {
+    const { stdout } = await execAsync(
+      `git log -1 --format=%ct -- docs/ README.md`,
+      { cwd: workspacePath }
+    );
+
+    if (!stdout || !stdout.trim()) {
+      return 0; // No commits found or not a git repo for docs
+    }
+
+    const lastCommitTimestamp = parseInt(stdout.trim(), 10);
+    const now = Math.floor(Date.now() / 1000);
+    const daysDiff = (now - lastCommitTimestamp) / (24 * 60 * 60);
+
+    if (daysDiff < 7) return 100;
+    if (daysDiff < 30) return 90;
+    if (daysDiff < 90) return 70;
+    if (daysDiff < 180) return 40;
+    return 20;
+  } catch (error) {
+    return 0;
+  }
+}
+
+/**
+ * Calculate tech debt score (0-100)
+ */
+async function getTechDebt(workspacePath: string): Promise<number> {
+  let score = 100;
+
+  try {
+    // 1. Count TODOs
+    // grep returns 1 if no matches found, causing exec to fail unless we catch it
+    // But pipe to wc -l usually masks grep exit code unless pipefail is set
+    const { stdout: todoCount } = await execAsync(
+      `grep -r "TODO" src --exclude-dir=node_modules --exclude-dir=dist | wc -l`,
+      { cwd: workspacePath }
+    ).catch(() => ({ stdout: "0" }));
+
+    const todos = parseInt(todoCount.trim(), 10) || 0;
+
+    // Deduct 1 point per 5 TODOs, capped at 20 points deduction
+    score -= Math.min(20, Math.floor(todos / 5));
+
+    // 2. Check lint output if available
+    const lintPath = path.join(workspacePath, "lint_output.txt");
+    try {
+      const lintContent = await fs.readFile(lintPath, "utf-8");
+      const errors = (lintContent.match(/error/gi) || []).length;
+      const warnings = (lintContent.match(/warning/gi) || []).length;
+
+      // Deduct 5 points per error, 1 per warning, capped at 40 points
+      const lintPenalty = Math.min(40, (errors * 5) + warnings);
+      score -= lintPenalty;
+    } catch (e) {
+      // lint output not found, ignore
+    }
+
+    return Math.max(0, score);
+  } catch (error) {
+    return 70; // Default if check fails
+  }
+}
+
+/**
+ * Calculate security score (0-100)
+ */
+async function getSecurityScore(workspacePath: string): Promise<number> {
+  const calculateScore = (audit: any) => {
+    const vulnCounts = audit.metadata?.vulnerabilities || {};
+    const critical = vulnCounts.critical || 0;
+    const high = vulnCounts.high || 0;
+    const moderate = vulnCounts.moderate || 0;
+    const low = vulnCounts.low || 0;
+
+    let score = 100;
+    score -= (critical * 50);
+    score -= (high * 20);
+    score -= (moderate * 5);
+    score -= (low * 1);
+
+    return Math.max(0, score);
+  };
+
+  try {
+    // pnpm audit --json --prod
+    // Increase maxBuffer for large audit outputs
+    const { stdout } = await execAsync("pnpm audit --json --prod", {
+      cwd: workspacePath,
+      maxBuffer: 1024 * 1024 * 10
+    });
+    return calculateScore(JSON.parse(stdout));
+  } catch (error: any) {
+    // pnpm audit returns exit code 1 if vulnerabilities are found
+    if (error.stdout) {
+      try {
+        return calculateScore(JSON.parse(error.stdout));
+      } catch (parseError) {
+        // failed to parse
+      }
+    }
+    return 80; // Default fallback
+  }
+}
