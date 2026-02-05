@@ -7,6 +7,7 @@
 
 import logger from "../middleware/logger.js";
 import { ClaudeServiceWithTools } from "./claudeServiceWithTools.js";
+import { runWithConcurrency } from "../utils/concurrency.js";
 import { gAgentMemoryService } from "./gAgentMemoryService.js";
 import { gAgentSelfImprovement } from "./gAgentSelfImprovement.js";
 import type { Plan, Task, TaskStatus } from "./intentCliRunner.js";
@@ -89,13 +90,10 @@ interface ExecutionState {
  * Executes a G-Agent plan task by task, batch by batch, streaming progress
  */
 export class GAgentTaskExecutor {
-  private claudeService: ClaudeServiceWithTools;
   private activeExecutions: Map<string, ExecutionState> = new Map();
 
   constructor() {
-    this.claudeService = new ClaudeServiceWithTools();
   }
-
   /**
    * Execute a plan and yield progress events
    * @param plan The plan to execute
@@ -313,37 +311,25 @@ export class GAgentTaskExecutor {
       .map((id) => state.plan.tasks.find((t) => t.id === id))
       .filter(Boolean) as Task[];
 
-    // For small batches (<=2), run in parallel. For larger, run sequentially to avoid overwhelming resources.
-    const runParallel = tasks.length <= 2;
-
-    if (runParallel) {
-      const results = await Promise.all(
-        tasks.map((task) =>
-          this.executeTask(state, task, workspaceRoot, abortSignal),
-        ),
-      );
-      for (const taskEvents of results) {
-        events.push(...taskEvents);
+    // Run with concurrency limit (e.g. 5) to balance performance and resources
+    const results = await runWithConcurrency(
+      tasks,
+      5, // Concurrency limit
+      async (task) => {
+        if (state.cancelled) return [];
+        return this.executeTask(state, task, workspaceRoot, abortSignal);
       }
-    } else {
-      for (const task of tasks) {
-        if (state.cancelled) break;
-        const taskEvents = await this.executeTask(
-          state,
-          task,
-          workspaceRoot,
-          abortSignal,
-        );
+    );
+
+    // Flatten results into events array
+    for (const taskEvents of results) {
+      if (taskEvents) {
         events.push(...taskEvents);
       }
     }
 
     return events;
   }
-
-  /**
-   * Execute a single task
-   */
   private async executeTask(
     state: ExecutionState,
     task: Task,
@@ -374,10 +360,12 @@ export class GAgentTaskExecutor {
       // Stream chat for this task
       const messages = [{ role: "user" as const, content: taskPrompt }];
 
-      let output = "";
+      // Create a fresh service instance for each task to ensure thread safety
+      // during parallel execution (ClaudeServiceWithTools is stateful)
+      const claudeService = new ClaudeServiceWithTools();
 
       // Use the Claude service to execute the task
-      for await (const event of this.claudeService.generateChatStream(
+      for await (const event of claudeService.generateChatStream(
         messages,
         abortSignal,
         workspaceRoot,
