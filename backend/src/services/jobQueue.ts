@@ -18,33 +18,18 @@ import { isServerlessRuntime } from "../config/runtime.js";
 
 const POLL_MS = 2000;
 const JOB_PREFIX = "job_";
+import {
+  getRedisConnectionConfig,
+  sanitizeQueueName,
+  useRedis,
+} from "./redisConnection.js";
+
 /** BullMQ does not allow colons in queue names; use hyphen. */
 const SHIP_QUEUE_NAME = "grump-ship";
 const EXPO_JOB_PREFIX = "job_expo_";
 
-/** Sanitize queue name for BullMQ (queue name cannot contain ':'). */
-function queueName(name: string): string {
-  return name.replace(/:/g, "-");
-}
-
 function useRedisQueue(): boolean {
-  return !!(process.env.REDIS_HOST && process.env.REDIS_HOST.trim() !== "");
-}
-
-/** Parse REDIS_HOST (may be "host" or "host:port") and REDIS_PORT into connection. */
-function getRedisConnection(): { host: string; port: number; password?: string } {
-  let host = (process.env.REDIS_HOST || "localhost").trim();
-  let port = parseInt(process.env.REDIS_PORT || "6379", 10);
-  const match = host.match(/^(.+):(\d+)$/);
-  if (match) {
-    host = match[1];
-    port = parseInt(match[2], 10);
-  }
-  return {
-    host,
-    port,
-    password: process.env.REDIS_PASSWORD || undefined,
-  };
+  return useRedis();
 }
 
 function getPublicBaseUrl(): string | null {
@@ -122,8 +107,8 @@ let bullWorker: import("bullmq").Worker | null = null;
 async function getBullQueue(): Promise<import("bullmq").Queue> {
   if (bullQueue) return bullQueue;
   const { Queue } = await import("bullmq");
-  const conn = getRedisConnection();
-  bullQueue = new Queue(queueName(SHIP_QUEUE_NAME), { connection: conn });
+  const conn = getRedisConnectionConfig();
+  bullQueue = new Queue(sanitizeQueueName(SHIP_QUEUE_NAME), { connection: conn });
   logger.info("BullMQ ship queue initialized");
   return bullQueue;
 }
@@ -360,9 +345,9 @@ export async function startJobWorker(): Promise<void> {
   if (useRedisQueue()) {
     if (bullWorker) return;
     const { Worker } = await import("bullmq");
-    const conn = getRedisConnection();
+    const conn = getRedisConnectionConfig();
     bullWorker = new Worker(
-      queueName(SHIP_QUEUE_NAME),
+      sanitizeQueueName(SHIP_QUEUE_NAME),
       async (job) => {
         const { sessionId } = job.data as { sessionId: string };
         await executeShipMode(sessionId);

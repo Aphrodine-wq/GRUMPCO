@@ -169,7 +169,8 @@ const envSchema = z
     // Database
     DB_PATH: z.string().default("./data/grump.db"),
 
-    // Redis (optional)
+    // Redis (optional; REDIS_URL or REDIS_HOST+PORT)
+    REDIS_URL: z.string().optional(),
     REDIS_HOST: z.string().optional(),
     REDIS_PORT: z.coerce.number().int().positive().default(6379),
     REDIS_PASSWORD: z.string().optional(),
@@ -615,7 +616,12 @@ if (parseResult.success) {
           ? ["MOCK"]
           : undefined,
       features: Object.keys(features).length ? features : undefined,
-      redis: env.REDIS_HOST ? `${env.REDIS_HOST}:${env.REDIS_PORT}` : undefined,
+      redis:
+        env.REDIS_URL && env.REDIS_URL.trim()
+          ? env.REDIS_URL.replace(/:[^:@]+@/, ":****@") // hide password in logs
+          : env.REDIS_HOST
+            ? `${env.REDIS_HOST}:${env.REDIS_PORT}`
+            : undefined,
       nimUrl: env.NVIDIA_NIM_URL || undefined,
     },
     "Environment validated successfully",

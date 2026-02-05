@@ -1,5 +1,10 @@
 import logger from "../middleware/logger.js";
 import { handleProcessGmailWebhook } from "./jobHandlers/gmail.js";
+import {
+  getRedisConnectionConfig,
+  sanitizeQueueName,
+  useRedis,
+} from "./redisConnection.js";
 
 const GMAIL_QUEUE_NAME = "grump-gmail";
 
@@ -7,7 +12,7 @@ let bullQueue: import("bullmq").Queue | null = null;
 let bullWorker: import("bullmq").Worker | null = null;
 
 function useRedisQueue(): boolean {
-  return !!(process.env.REDIS_HOST && process.env.REDIS_HOST.trim() !== "");
+  return useRedis();
 }
 
 async function getGmailQueue(): Promise<import("bullmq").Queue> {
@@ -16,12 +21,10 @@ async function getGmailQueue(): Promise<import("bullmq").Queue> {
     throw new Error("Redis is required for the Gmail queue.");
   }
   const { Queue } = await import("bullmq");
-  const conn = {
-    host: process.env.REDIS_HOST || "localhost",
-    port: parseInt(process.env.REDIS_PORT || "6379", 10),
-    password: process.env.REDIS_PASSWORD || undefined,
-  };
-  bullQueue = new Queue(GMAIL_QUEUE_NAME, { connection: conn });
+  const conn = getRedisConnectionConfig();
+  bullQueue = new Queue(sanitizeQueueName(GMAIL_QUEUE_NAME), {
+    connection: conn,
+  });
   logger.info("BullMQ gmail queue initialized");
   return bullQueue;
 }
@@ -43,14 +46,10 @@ export async function startGmailWorker(): Promise<void> {
   if (bullWorker) return;
 
   const { Worker } = await import("bullmq");
-  const conn = {
-    host: process.env.REDIS_HOST || "localhost",
-    port: parseInt(process.env.REDIS_PORT || "6379", 10),
-    password: process.env.REDIS_PASSWORD || undefined,
-  };
+  const conn = getRedisConnectionConfig();
 
   bullWorker = new Worker(
-    GMAIL_QUEUE_NAME,
+    sanitizeQueueName(GMAIL_QUEUE_NAME),
     async (job) => {
       if (job.name === "process-gmail-webhook") {
         await handleProcessGmailWebhook(job);
