@@ -54,6 +54,7 @@ const browserGlobals = {
   alert: 'readonly',
   prompt: 'readonly',
   URLSearchParams: 'readonly',
+  structuredClone: 'readonly',
   TouchEvent: 'readonly',
 };
 
