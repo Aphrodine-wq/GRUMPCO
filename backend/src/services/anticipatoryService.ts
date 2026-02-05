@@ -375,30 +375,157 @@ export async function getProactiveSuggestions(
   return suggestions;
 }
 
+
 // ========== Market Trends ==========
 
+interface RawTrendItem {
+  title: string;
+  url: string;
+  source: "dev.to" | "hacker-news";
+  summary?: string;
+  score?: number;
+  publishedAt: string;
+}
+
+async function fetchFromDevTo(tag: string): Promise<RawTrendItem[]> {
+  try {
+    const res = await fetch(`https://dev.to/api/articles?tag=${encodeURIComponent(tag)}&top=7&per_page=5`);
+    if (!res.ok) return [];
+    const json = await res.json() as any[];
+    return json.map(item => ({
+      title: item.title,
+      url: item.url,
+      source: "dev.to",
+      summary: item.description,
+      score: item.positive_reactions_count,
+      publishedAt: item.published_at
+    }));
+  } catch (e) {
+    logger.error({ error: e, tag }, "Failed to fetch from Dev.to");
+    return [];
+  }
+}
+
+async function fetchFromHN(query: string): Promise<RawTrendItem[]> {
+  try {
+    const res = await fetch(`http://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`);
+    if (!res.ok) return [];
+    const json = await res.json() as any;
+    return json.hits.map((item: any) => ({
+      title: item.title,
+      url: item.url || `https://news.ycombinator.com/item?id=${item.objectID}`,
+      source: "hacker-news",
+      score: item.points,
+      publishedAt: item.created_at
+    }));
+  } catch (e) {
+    logger.error({ error: e, query }, "Failed to fetch from HN");
+    return [];
+  }
+}
+
 /**
- * Fetch relevant tech trends (placeholder for RSS/API integration)
+ * Fetch relevant tech trends
  */
 export async function fetchTechTrends(
   _userId: string,
-  _techStack: string[],
+  techStack: string[],
 ): Promise<
   Array<{ title: string; summary: string; url?: string; relevance: number }>
 > {
-  // In a real implementation:
-  // - Fetch from RSS feeds (dev.to, Hacker News, etc.)
-  // - Filter by relevance to user's tech stack
-  // - Use LLM to summarize
+  logger.info({ techStack }, "Fetching tech trends");
 
-  return [
-    {
-      title: "New features in your tech stack",
-      summary: "Relevant updates for your technologies",
-      relevance: 0.8,
-    },
-  ];
+  if (!techStack || techStack.length === 0) {
+    return [];
+  }
+
+  // Parallel fetch for all technologies
+  const allPromises = techStack.flatMap(tech => [
+    fetchFromDevTo(tech),
+    fetchFromHN(tech)
+  ]);
+
+  const results = await Promise.allSettled(allPromises);
+  const rawItems: RawTrendItem[] = [];
+
+  for (const res of results) {
+    if (res.status === 'fulfilled') {
+      rawItems.push(...res.value);
+    }
+  }
+
+  // Deduplicate by URL
+  const uniqueItems = Array.from(new Map(rawItems.map(item => [item.url, item])).values());
+
+  if (uniqueItems.length === 0) {
+    return [];
+  }
+
+  // Limit input to LLM to top 20 items to save context
+  const topItems = uniqueItems
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .slice(0, 20);
+
+  // Construct Prompt
+  const prompt = `
+    You are a tech trend analyst. I have a list of recent articles/stories for a developer interested in: ${techStack.join(', ')}.
+
+    Here are the top stories:
+    ${JSON.stringify(topItems.map(i => ({ title: i.title, source: i.source, desc: i.summary })), null, 2)}
+
+    Please select the top 5 most relevant and interesting items.
+    For each item, provide:
+    1. The exact title (must match the input exactly so I can link it back)
+    2. A concise summary (1-2 sentences) explaining why it matters.
+    3. A relevance score (0.0 to 1.0) based on how significant this is for the tech stack.
+
+    Return ONLY a valid JSON array of objects with keys: "title", "summary", "relevance".
+    Do not include markdown formatting or code blocks. Just the raw JSON.
+  `;
+
+  // Call LLM
+  const { text, error } = await getCompletion({
+    messages: [{ role: 'user', content: prompt }],
+    model: 'nvidia/llama-3.1-nemotron-70b-instruct',
+    max_tokens: 1000,
+  }, { provider: 'nim' });
+
+  if (error || !text) {
+    logger.error({ error }, "Failed to generate trend summary with LLM");
+    // Fallback: return raw items without summary if LLM fails
+    return topItems.slice(0, 5).map(i => ({
+      title: i.title,
+      summary: i.summary || "No summary available",
+      url: i.url,
+      relevance: 0.5
+    }));
+  }
+
+  try {
+    // Clean potential markdown blocks
+    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const suggestions = JSON.parse(cleanText) as Array<{ title: string; summary: string; relevance: number }>;
+
+    // Merge back URLs
+    return suggestions.map(s => {
+      // Find original item by title (fuzzy match might be safer but trying exact first)
+      const original = topItems.find(i => i.title.includes(s.title) || s.title.includes(i.title));
+      return {
+        ...s,
+        url: original?.url
+      };
+    }).filter(s => s.url);
+  } catch (e) {
+    logger.error({ error: e, text }, "Failed to parse LLM response for trends");
+    return topItems.slice(0, 5).map(i => ({
+        title: i.title,
+        summary: i.summary || "No summary available",
+        url: i.url,
+        relevance: 0.5
+    }));
+  }
 }
+
 
 /**
  * Schedule trend check

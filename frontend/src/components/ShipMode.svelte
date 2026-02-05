@@ -111,13 +111,14 @@
     if (!canStart) return;
 
     try {
-      // TODO: backend to accept localPath for local runs; for now only repoOrg (Git) is sent
+
       const request: ShipStartRequest = {
         projectDescription: projectDescription.trim(),
         preferences,
         projectId: getCurrentProjectId() ?? undefined,
         projectName: projectName.trim() || undefined,
         repoOrg: repoSource === 'git' ? repoOrg.trim() || undefined : undefined,
+        localPath: repoSource === 'local' ? localPath.trim() || undefined : undefined,
         deploymentTarget: deploymentTarget === 'none' ? undefined : deploymentTarget,
         phases: selectedPhases.length < 4 ? selectedPhases : undefined,
       };
