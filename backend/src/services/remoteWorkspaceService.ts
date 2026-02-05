@@ -1,9 +1,11 @@
-import { execSync } from "child_process";
+import { exec } from "child_process";
+import { promisify } from "util";
 import { existsSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import logger from "../middleware/logger.js";
 
+const execAsync = promisify(exec);
 const WORKSPACE_CACHE_DIR = join(tmpdir(), "grump-workspaces");
 
 // Ensure cache dir exists
@@ -31,7 +33,7 @@ export async function loadRemoteWorkspace(
     // For now, let's just assume if it exists we use it, but ideally we'd git pull.
     try {
       logger.info("Updating existing cached workspace...");
-      execSync("git pull", { cwd: targetDir, stdio: "ignore" });
+      await execAsync("git pull", { cwd: targetDir });
     } catch (_e) {
       logger.warn("Failed to pull latest changes, using cached version.");
     }
@@ -44,7 +46,7 @@ export async function loadRemoteWorkspace(
     // But if we want to "work" on it, maybe full clone?
     // Let's do partial clone for now.
     logger.info("Cloning new workspace...");
-    execSync(`git clone --depth 1 ${repoUrl} ${targetDir}`);
+    await execAsync(`git clone --depth 1 ${repoUrl} ${targetDir}`);
     return { url: repoUrl, localPath: targetDir };
   } catch (error) {
     logger.error(error, "Failed to clone remote workspace");
