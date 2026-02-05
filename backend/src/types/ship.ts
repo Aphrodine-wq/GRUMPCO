@@ -29,6 +29,10 @@ export interface ShipSession {
   userId?: string;
   /** Optional project/workspace id linking chat, ship, and codegen */
   projectId?: string;
+  projectName?: string;
+  repoOrg?: string;
+  deploymentTarget?: string;
+  localPath?: string;
 
   // Phase results
   designResult?: DesignPhaseResult;
@@ -96,6 +100,7 @@ export interface ShipStartRequest {
   projectName?: string;
   repoOrg?: string;
   deploymentTarget?: string;
+  localPath?: string;
   phases?: ShipPhase[];
 }
 

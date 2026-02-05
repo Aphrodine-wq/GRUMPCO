@@ -49,6 +49,7 @@ router.post(
         projectName: body.projectName as string | undefined,
         repoOrg: body.repoOrg as string | undefined,
         deploymentTarget: body.deploymentTarget as string | undefined,
+        localPath: body.localPath as string | undefined,
         phases: body.phases as ShipStartRequest["phases"],
       };
       const session = await startShipMode(request);
