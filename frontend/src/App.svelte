@@ -57,8 +57,18 @@
   }
 
   /** Views that use full width of main content (no outer padding; view controls its own padding). */
-  const FULL_WIDTH_VIEWS = ['designToCode', 'integrations', 'credits', 'memory', 'mcp', 'heartbeats', 'auditLog'] as const;
-  const isFullWidthView = $derived(FULL_WIDTH_VIEWS.includes($currentView as (typeof FULL_WIDTH_VIEWS)[number]));
+  const FULL_WIDTH_VIEWS = [
+    'designToCode',
+    'integrations',
+    'credits',
+    'memory',
+    'mcp',
+    'heartbeats',
+    'auditLog',
+  ] as const;
+  const isFullWidthView = $derived(
+    FULL_WIDTH_VIEWS.includes($currentView as (typeof FULL_WIDTH_VIEWS)[number])
+  );
 
   let isMobile = $state(false);
   let densityValue = $state<'comfortable' | 'compact'>('comfortable');
@@ -95,10 +105,10 @@
       const theme = data?.theme ?? 'system';
       const resolved =
         theme === 'system'
-          ? (typeof window !== 'undefined' &&
+          ? typeof window !== 'undefined' &&
             window.matchMedia('(prefers-color-scheme: dark)').matches
-              ? 'dark'
-              : 'light')
+            ? 'dark'
+            : 'light'
           : theme;
       if (typeof document !== 'undefined' && document.documentElement) {
         document.documentElement.setAttribute('data-theme', resolved);
@@ -107,15 +117,30 @@
     applyTheme();
     const unsubTheme = newOnboardingStore.subscribe(() => applyTheme());
 
-    // Apply saved accent and font size from Settings
+    // Apply saved accent and font size from Settings (accent drives all purple/primary UI)
     try {
-      const accentColors: Record<string, string> = { purple: '#7c3aed', blue: '#2563eb', green: '#059669', amber: '#d97706' };
+      const accentPrimary: Record<string, string> = {
+        purple: '#7c3aed',
+        blue: '#2563eb',
+        green: '#059669',
+        amber: '#d97706',
+      };
+      const accentHover: Record<string, string> = {
+        purple: '#6d28d9',
+        blue: '#1d4ed8',
+        green: '#047857',
+        amber: '#b45309',
+      };
       const fontScales: Record<string, string> = { small: '13px', medium: '14px', large: '15px' };
       const a = localStorage.getItem('g-rump-accent');
       const f = localStorage.getItem('g-rump-font-size');
       const root = document.documentElement;
-      if (a && accentColors[a]) root.style.setProperty('--color-primary', accentColors[a]);
-      if (f === 'small' || f === 'medium' || f === 'large') root.style.setProperty('--app-font-size', fontScales[f]);
+      if (a && accentPrimary[a]) {
+        root.style.setProperty('--color-primary', accentPrimary[a]);
+        if (accentHover[a]) root.style.setProperty('--color-primary-hover', accentHover[a]);
+      }
+      if (f === 'small' || f === 'medium' || f === 'large')
+        root.style.setProperty('--app-font-size', fontScales[f]);
     } catch {
       /* ignore */
     }
@@ -272,7 +297,10 @@
       {#key $currentView}
         <div class="main-content-view" transition:fade={{ duration: 200 }}>
           {#if $currentView === 'settings'}
-            <SettingsScreen onBack={() => setCurrentView('chat')} initialTab={$settingsInitialTab} />
+            <SettingsScreen
+              onBack={() => setCurrentView('chat')}
+              initialTab={$settingsInitialTab}
+            />
           {:else if VIEW_REGISTRY[$currentView]}
             <LazyView definition={VIEW_REGISTRY[$currentView]} />
           {:else if !$isOnboardingComplete}
@@ -324,7 +352,9 @@
     </div>
   </div>
 
-  <ConnectionStatusBanner />
+  <div class="connection-banner-wrapper">
+    <ConnectionStatusBanner />
+  </div>
   <Toast />
   <QuestionModal />
   <CommandPalette open={$commandPaletteOpen} onClose={() => commandPaletteOpen.set(false)} />
@@ -411,6 +441,13 @@
     flex-direction: column;
     overflow: hidden;
     padding: var(--space-content, 20px);
+    padding-bottom: 0;
+  }
+
+  .connection-banner-wrapper {
+    flex-shrink: 0;
+    margin-top: 0;
+    line-height: 0;
   }
 
   .main-content.full-width {
@@ -455,7 +492,9 @@
     border-left: none;
     border-radius: 0 8px 8px 0;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
   }
 
   .file-explorer-tab:hover {

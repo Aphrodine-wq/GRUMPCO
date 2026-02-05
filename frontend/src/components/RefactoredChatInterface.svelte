@@ -74,7 +74,7 @@
   // Utilities
   import { processError, logError } from '../utils/errorHandler';
   import { trackMessageSent, trackError } from '../lib/analytics';
-  import { Mic, BookOpen, LayoutGrid, MessageCircle, Sparkles, FolderOpen, X } from 'lucide-svelte';
+  import { Mic, BookOpen, LayoutGrid, MessageCircle, Sparkles, FolderOpen, X, Bot } from 'lucide-svelte';
 
   import type { Message, ContentBlock } from '../types';
 
@@ -141,7 +141,9 @@
   let memoryPanelRef: GAgentMemoryPanel | null = $state(null);
 
   // Chat mode (includes 'ship' for local Ship view; store has design | code | argument)
-  let chatMode = $state<'normal' | 'plan' | 'spec' | 'ship' | 'execute' | 'design' | 'argument' | 'code'>('normal');
+  let chatMode = $state<
+    'normal' | 'plan' | 'spec' | 'ship' | 'execute' | 'design' | 'argument' | 'code'
+  >('normal');
   const shipModeActive = $derived(chatMode === 'ship');
   /** Show AI question modal before opening SHIP (user confirms first) */
   let showShipConfirmModal = $state(false);
@@ -452,7 +454,7 @@
         const r = new FileReader();
         r.onload = () => {
           const s = r.result as string;
-          resolve(s.includes(',') ? s.split(',')[1] ?? '' : s);
+          resolve(s.includes(',') ? (s.split(',')[1] ?? '') : s);
         };
         r.onerror = () => reject(r.error);
         r.readAsDataURL(file);
@@ -674,6 +676,35 @@
     });
     showModelPicker = false;
   }
+
+  // G-Agent: activate in this chat without swapping tabs; create session if needed
+  function handleUseGAgent() {
+    const session = get(currentSession);
+    if (session?.id) {
+      sessionsStore.setSessionType(session.id, 'gAgent');
+      showGAgentStatusPanel = true;
+      showToast(
+        'G-Agent mode on. Use Status and Memory in the header, or open G-Agent from the sidebar for settings.',
+        'info',
+        5000
+      );
+    } else {
+      sessionsStore.createSession([], undefined, 'gAgent');
+      showGAgentStatusPanel = true;
+      showToast('G-Agent mode on. Start a conversation or open G-Agent from the sidebar.', 'info', 5000);
+    }
+  }
+
+  // G-Agent: leave mode and stay in chat
+  function handleLeaveGAgent() {
+    const session = get(currentSession);
+    if (session?.id && isGAgentSession) {
+      sessionsStore.setSessionType(session.id, 'chat');
+      showGAgentStatusPanel = false;
+      showGAgentMemoryPanel = false;
+      showToast('Left G-Agent mode. This chat is now normal.', 'info', 3000);
+    }
+  }
 </script>
 
 <div class="chat-interface">
@@ -691,32 +722,11 @@
           showMemoryPanel={showGAgentMemoryPanel}
           modelName={modelDisplayName()}
           modelPickerOpen={showModelPicker}
-          onGAgentClick={() => {
-            const session = get(currentSession);
-            if (isGAgentSession) {
-              setCurrentView('freeAgent');
-              return;
-            }
-            if (session?.id) {
-              sessionsStore.setSessionType(session.id, 'gAgent');
-              showGAgentStatusPanel = true;
-              showToast('G-Agent mode on. Use Status and Memory in the header, or open G-Agent from the sidebar for settings.', 'info', 5000);
-            } else {
-              setCurrentView('freeAgent');
-            }
-          }}
+          onGAgentClick={() => handleUseGAgent()}
           onStatusToggle={() => (showGAgentStatusPanel = !showGAgentStatusPanel)}
           onMemoryToggle={() => (showGAgentMemoryPanel = !showGAgentMemoryPanel)}
           onModelClick={() => (showModelPicker = !showModelPicker)}
-          onLeaveGAgent={() => {
-            const session = get(currentSession);
-            if (session?.id && isGAgentSession) {
-              sessionsStore.setSessionType(session.id, 'chat');
-              showGAgentStatusPanel = false;
-              showGAgentMemoryPanel = false;
-              showToast('Left G-Agent mode. This chat is now normal.', 'info', 3000);
-            }
-          }}
+          onLeaveGAgent={() => handleLeaveGAgent()}
         />
         {#if showModelPicker}
           <div class="model-picker-dropdown">
@@ -929,7 +939,8 @@
                     multiple
                     accept="image/*,.pdf,.txt,.md,.doc,.docx"
                     class="session-attachment-input"
-                    onchange={(e) => handleAddSessionAttachments((e.target as HTMLInputElement)?.files ?? null)}
+                    onchange={(e) =>
+                      handleAddSessionAttachments((e.target as HTMLInputElement)?.files ?? null)}
                     aria-label="Attach file to session"
                   />
                   <button
@@ -944,7 +955,9 @@
                       {#each sessionAttachments as att (att.id)}
                         <li class="session-attachment-item">
                           <span class="session-attachment-name" title={att.name}>{att.name}</span>
-                          <span class="session-attachment-size">({(att.size / 1024).toFixed(1)} KB)</span>
+                          <span class="session-attachment-size"
+                            >({(att.size / 1024).toFixed(1)} KB)</span
+                          >
                           <button
                             type="button"
                             class="session-attachment-remove"
@@ -972,32 +985,32 @@
               <span>Talk</span>
             </button>
             <div class="input-main">
-            <CenteredChatInput
-            bind:value={inputText}
-            bind:inputRef
-            {streaming}
-            isNimProvider={true}
-            hasPendingImage={pendingImages.length > 0}
-            hasPendingDocuments={pendingDocuments.length > 0}
-            pendingImageCount={pendingImages.length}
-            pendingDocumentCount={pendingDocuments.length}
-            modelName={modelDisplayName()}
-            hideModelSelector={true}
-            onSubmit={handleSubmit}
-            onCancel={cancelGeneration}
-            onImageSelect={(url) => {
-              if (pendingImages.length < MAX_PENDING_IMAGES) {
-                pendingImages = [...pendingImages, url];
-                showToast('Image attached', 'success');
-              }
-            }}
-            onDocumentSelect={(file) => {
-              if (pendingDocuments.length >= MAX_PENDING_DOCUMENTS) return;
-              pendingDocuments = [...pendingDocuments, file];
-              showToast(`Document "${file.name}" attached`, 'success');
-            }}
-            onModelClick={() => (showModelPicker = !showModelPicker)}
-            />
+              <CenteredChatInput
+                bind:value={inputText}
+                bind:inputRef
+                {streaming}
+                isNimProvider={true}
+                hasPendingImage={pendingImages.length > 0}
+                hasPendingDocuments={pendingDocuments.length > 0}
+                pendingImageCount={pendingImages.length}
+                pendingDocumentCount={pendingDocuments.length}
+                modelName={modelDisplayName()}
+                hideModelSelector={true}
+                onSubmit={handleSubmit}
+                onCancel={cancelGeneration}
+                onImageSelect={(url) => {
+                  if (pendingImages.length < MAX_PENDING_IMAGES) {
+                    pendingImages = [...pendingImages, url];
+                    showToast('Image attached', 'success');
+                  }
+                }}
+                onDocumentSelect={(file) => {
+                  if (pendingDocuments.length >= MAX_PENDING_DOCUMENTS) return;
+                  pendingDocuments = [...pendingDocuments, file];
+                  showToast(`Document "${file.name}" attached`, 'success');
+                }}
+                onModelClick={() => (showModelPicker = !showModelPicker)}
+              />
             </div>
           </div>
         {/if}
@@ -1007,6 +1020,30 @@
           <div class="shortcut-hint-bottom">
             <span class="shortcut-hint-label"><kbd>Ctrl</kbd>+<kbd>K</kbd> for commands</span>
           </div>
+        </div>
+
+        <!-- G-Agent floating button: bottom-right of chat interface -->
+        <div class="g-agent-floating-wrap">
+          {#if isGAgentSession}
+            <button
+              type="button"
+              class="g-agent-floating-btn g-agent-floating-leave"
+              onclick={() => handleLeaveGAgent()}
+              title="Leave G-Agent mode and return to normal chat"
+            >
+              Leave G-Agent
+            </button>
+          {:else}
+            <button
+              type="button"
+              class="g-agent-floating-btn g-agent-floating-primary"
+              onclick={() => handleUseGAgent()}
+              title="Turn on G-Agent mode in this chat"
+            >
+              <span class="g-agent-floating-icon"><Bot size={18} /></span>
+              Use G-Agent
+            </button>
+          {/if}
         </div>
       </div>
     </div>
@@ -1063,6 +1100,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
   }
 
   .header-wrapper {
@@ -1226,6 +1264,59 @@
     border-radius: 0.25rem;
   }
 
+  /* G-Agent floating button: bottom-right of chat */
+  .g-agent-floating-wrap {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 20;
+    pointer-events: auto;
+  }
+
+  .g-agent-floating-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.06));
+    border: 1px solid transparent;
+  }
+
+  .g-agent-floating-primary {
+    background: var(--color-primary, #7c3aed);
+    color: white;
+    border-color: var(--color-primary, #7c3aed);
+  }
+
+  .g-agent-floating-primary:hover {
+    background: var(--color-primary-hover, #6d28d9);
+    border-color: var(--color-primary-hover, #6d28d9);
+    box-shadow: var(--shadow-glow, 0 6px 26px rgba(124, 58, 237, 0.35));
+  }
+
+  .g-agent-floating-leave {
+    background: var(--color-bg-card, #fff);
+    color: var(--color-text-muted, #6b7280);
+    border-color: var(--color-border, #e5e7eb);
+  }
+
+  .g-agent-floating-leave:hover {
+    background: var(--color-error-subtle, rgba(239, 68, 68, 0.1));
+    border-color: var(--color-error-border, rgba(239, 68, 68, 0.3));
+    color: var(--color-error, #ef4444);
+  }
+
+  .g-agent-floating-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   /* Streaming message */
   .add-to-project-banner {
     display: flex;
@@ -1261,7 +1352,9 @@
     border: 1px solid rgba(124, 58, 237, 0.3);
     border-radius: 8px;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
   }
 
   .banner-btn:hover {
@@ -1277,7 +1370,9 @@
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    transition: color 0.15s, background 0.15s;
+    transition:
+      color 0.15s,
+      background 0.15s;
   }
 
   .banner-dismiss:hover {
@@ -1439,7 +1534,10 @@
     border-radius: 0.5rem;
     cursor: pointer;
     flex-shrink: 0;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      color 0.15s;
   }
 
   .talk-mode-btn:hover {

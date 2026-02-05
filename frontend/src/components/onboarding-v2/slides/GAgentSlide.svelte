@@ -64,8 +64,10 @@
         <Bot size={28} />
         <div class="icon-pulse"></div>
       </div>
-      <h2 class="title">Meet G-Agent</h2>
-      <p class="subtitle">Your autonomous AI development partner</p>
+      <h2 class="title">G-Agent is the star</h2>
+      <p class="subtitle">
+        Your autonomous AI partner that executes, ships, and builds – powered by chat
+      </p>
     </div>
 
     <!-- Capabilities section -->
@@ -106,7 +108,8 @@
       {/each}
     </div>
 
-    <!-- CTA (matches SlideLayout slide-cta-button) -->
+    <!-- CTA (matches SlideLayout slide-cta-button) – pulled down for spacing -->
+    <div class="cta-spacer"></div>
     <button class="slide-cta-button" onclick={onNext}>
       <span>Continue</span>
       <svg class="slide-arrow" viewBox="0 0 20 20" fill="currentColor">
@@ -135,10 +138,12 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    max-width: 580px;
+    max-width: 720px;
     opacity: 0;
     transform: translateY(20px);
-    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .section-label {
@@ -261,14 +266,14 @@
     line-height: 1.4;
   }
 
-  /* Features grid - 3-column on desktop, 1-col on mobile */
+  /* Features grid - 3-column on desktop, 1-col on mobile; wider cards */
   .features-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 0.875rem;
     margin-bottom: 1.75rem;
     width: 100%;
-    max-width: 640px;
+    max-width: 820px;
   }
 
   .feature-card {
@@ -318,6 +323,11 @@
   }
 
   /* CTA uses global slide-cta-button / slide-arrow from SlideLayout; add margin if not already present */
+  .cta-spacer {
+    height: 2.5rem;
+    flex-shrink: 0;
+  }
+
   :global(.slide-cta-button) {
     margin-top: 0.5rem;
   }

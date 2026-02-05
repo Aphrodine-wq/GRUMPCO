@@ -27,14 +27,35 @@
   import { onboardingStore } from '../stores/onboardingStore';
   import { newOnboardingStore } from '../stores/newOnboardingStore';
   import { authGateStore } from '../stores/authGateStore';
-  import { preferencesStore, density, includeRagContext, gAgentCapabilities, gAgentExternalAllowlist, type GAgentCapabilityKey } from '../stores/preferencesStore';
+  import {
+    preferencesStore,
+    density,
+    includeRagContext,
+    gAgentCapabilities,
+    gAgentExternalAllowlist,
+    type GAgentCapabilityKey,
+  } from '../stores/preferencesStore';
   import {
     wakeWordEnabled,
     setWakeWordEnabled,
     loadWakeWordEnabled,
   } from '../stores/wakeWordStore';
   import { getDockerInfo, isDockerSetupAvailable } from '../lib/dockerSetup';
-  import { Settings2, Cpu, Shield, Puzzle, CreditCard, Info, GitBranch, Sun, Moon, Monitor, Bot, Brain, Server } from 'lucide-svelte';
+  import {
+    Settings2,
+    Cpu,
+    Shield,
+    Puzzle,
+    CreditCard,
+    Info,
+    GitBranch,
+    Sun,
+    Moon,
+    Monitor,
+    Bot,
+    Brain,
+    Server,
+  } from 'lucide-svelte';
   import type { AppTheme } from '../stores/newOnboardingStore';
   import { getProviderIconPath, getProviderFallbackLetter } from '../lib/aiProviderIcons.js';
   import { AI_PROVIDER_OPTIONS } from '../stores/newOnboardingStore';
@@ -123,7 +144,18 @@
   const ACCENT_STORAGE_KEY = 'g-rump-accent';
   const FONT_SIZE_STORAGE_KEY = 'g-rump-font-size';
   const STARTUP_VIEW_KEY = 'g-rump-startup-view';
-  const ACCENT_COLORS: Record<string, string> = { purple: '#7c3aed', blue: '#2563eb', green: '#059669', amber: '#d97706' };
+  const ACCENT_COLORS: Record<string, string> = {
+    purple: '#7c3aed',
+    blue: '#2563eb',
+    green: '#059669',
+    amber: '#d97706',
+  };
+  const ACCENT_HOVER: Record<string, string> = {
+    purple: '#6d28d9',
+    blue: '#1d4ed8',
+    green: '#047857',
+    amber: '#b45309',
+  };
   const FONT_SCALES: Record<string, string> = { small: '13px', medium: '14px', large: '15px' };
   let accentColor = $state('purple');
   let uiFontSize = $state<'small' | 'medium' | 'large'>('medium');
@@ -166,8 +198,9 @@
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
     const accent = ACCENT_COLORS[accentColor] ?? ACCENT_COLORS.purple;
+    const hover = ACCENT_HOVER[accentColor] ?? ACCENT_HOVER.purple;
     root.style.setProperty('--color-primary', accent);
-    root.style.setProperty('--color-primary-hover', accent);
+    root.style.setProperty('--color-primary-hover', hover);
     const scale = FONT_SCALES[uiFontSize] ?? FONT_SCALES.medium;
     root.style.setProperty('--app-font-size', scale);
   }
@@ -279,7 +312,7 @@
 
     modelGroupsLoading = true;
     fetchApi('/api/models/list')
-      .then((r) => r.ok ? r.json() : Promise.reject(new Error('Failed to fetch models')))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to fetch models'))))
       .then((d: { groups?: ModelListGroup[] }) => {
         modelGroups = d.groups ?? [];
       })
@@ -515,14 +548,11 @@
         <div class="tab-section">
           <Card title="Theme" padding="md">
             <p class="section-desc">
-              Choose light, dark, or follow your system preference. Dark mode applies across the app.
+              Choose light, dark, or follow your system preference. Dark mode applies across the
+              app.
             </p>
             <div class="theme-cards">
-              {#each [
-                { id: 'light' as AppTheme, label: 'Light', icon: Sun, desc: 'Bright backgrounds' },
-                { id: 'dark' as AppTheme, label: 'Dark', icon: Moon, desc: 'Easy on the eyes' },
-                { id: 'system' as AppTheme, label: 'System', icon: Monitor, desc: 'Follow OS setting' },
-              ] as option}
+              {#each [{ id: 'light' as AppTheme, label: 'Light', icon: Sun, desc: 'Bright backgrounds' }, { id: 'dark' as AppTheme, label: 'Dark', icon: Moon, desc: 'Easy on the eyes' }, { id: 'system' as AppTheme, label: 'System', icon: Monitor, desc: 'Follow OS setting' }] as option}
                 <button
                   type="button"
                   class="theme-card"
@@ -539,9 +569,7 @@
           </Card>
 
           <Card title="Appearance" padding="md">
-            <p class="section-desc">
-              Layout density, accent color, and UI font size.
-            </p>
+            <p class="section-desc">Layout density, accent color, and UI font size.</p>
             <div class="field-group" role="group" aria-labelledby="density-label">
               <span id="density-label" class="radio-label">Density</span>
               <div class="radio-row">
@@ -570,12 +598,7 @@
             <div class="field-group" role="group" aria-labelledby="accent-label">
               <span id="accent-label" class="radio-label">Accent color</span>
               <div class="accent-row">
-                {#each [
-                  { id: 'purple', color: '#7c3aed', label: 'Purple' },
-                  { id: 'blue', color: '#2563eb', label: 'Blue' },
-                  { id: 'green', color: '#059669', label: 'Green' },
-                  { id: 'amber', color: '#d97706', label: 'Amber' },
-                ] as acc}
+                {#each [{ id: 'purple', color: '#7c3aed', label: 'Purple' }, { id: 'blue', color: '#2563eb', label: 'Blue' }, { id: 'green', color: '#059669', label: 'Green' }, { id: 'amber', color: '#d97706', label: 'Amber' }] as acc}
                   <button
                     type="button"
                     class="accent-swatch"
@@ -586,7 +609,14 @@
                     aria-pressed={accentColor === acc.id}
                   >
                     {#if accentColor === acc.id}
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M5 12l5 5L20 7" /></svg>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="white"
+                        stroke-width="3"><path d="M5 12l5 5L20 7" /></svg
+                      >
                     {/if}
                   </button>
                 {/each}
@@ -612,9 +642,7 @@
           </Card>
 
           <Card title="Startup" padding="md">
-            <p class="section-desc">
-              Choose which view to show when the app opens.
-            </p>
+            <p class="section-desc">Choose which view to show when the app opens.</p>
             <div class="field-group" role="group" aria-labelledby="startup-label">
               <span id="startup-label" class="radio-label">Startup view</span>
               <div class="radio-row">
@@ -661,7 +689,8 @@
                 <input
                   type="checkbox"
                   checked={$newOnboardingStore?.telemetryOptIn ?? true}
-                  onchange={(e) => newOnboardingStore.setTelemetry((e.target as HTMLInputElement).checked)}
+                  onchange={(e) =>
+                    newOnboardingStore.setTelemetry((e.target as HTMLInputElement).checked)}
                 />
                 <span class="checkbox-label-text">Send anonymous usage analytics</span>
               </label>
@@ -744,29 +773,53 @@
       {:else if activeTab === 'ai'}
         <div class="tab-section models-tab ai-providers-tab">
           <Card title="Default model by provider" padding="md" class="ai-providers-default-card">
-            <p class="field-hint models-provider-intro">Choose a provider below, then select the model for chat and code. Compare speed and quality in Model Benchmark.</p>
+            <p class="field-hint models-provider-intro">
+              Choose a provider below, then select the model for chat and code. Compare speed and
+              quality in Model Benchmark.
+            </p>
             {#if modelGroupsLoading}
               <p class="models-provider-loading">Loading model list…</p>
             {:else if modelGroups.length === 0}
-              <p class="field-hint">No providers available. Configure API keys in AI Providers (below) or in your backend .env.</p>
+              <p class="field-hint">
+                No providers available. Configure API keys in AI Providers (below) or in your
+                backend .env.
+              </p>
             {:else}
               <div class="providers-grid settings-providers-grid">
                 {#each modelGroups as group}
                   {@const iconPath = getProviderIconPath(group.provider)}
                   {@const fallbackLetter = getProviderFallbackLetter(group.provider)}
-                  {@const isSelected = selectedProviderInAiTab === group.provider || (settings?.models?.defaultProvider === group.provider && !selectedProviderInAiTab)}
+                  {@const isSelected =
+                    selectedProviderInAiTab === group.provider ||
+                    (settings?.models?.defaultProvider === group.provider &&
+                      !selectedProviderInAiTab)}
                   <button
                     type="button"
                     class="provider-card settings-provider-card"
                     class:selected={isSelected}
-                    onclick={() => { selectedProviderInAiTab = group.provider; }}
+                    onclick={() => {
+                      selectedProviderInAiTab = group.provider;
+                    }}
                     aria-pressed={isSelected}
                   >
                     <span class="provider-icon" aria-hidden="true">
                       {#if group.icon && group.icon.startsWith('http')}
-                        <img src={group.icon} alt="" class="provider-icon-img" onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                        <img
+                          src={group.icon}
+                          alt=""
+                          class="provider-icon-img"
+                          onerror={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
                       {:else if iconPath}
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" role="img">
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          role="img"
+                        >
                           <path d={iconPath} />
                         </svg>
                       {:else}
@@ -781,11 +834,15 @@
                 {@const group = modelGroups.find((g) => g.provider === selectedProviderInAiTab)}
                 {#if group}
                   <div class="models-section provider-model-select">
-                    <label class="field-label" for="ai-provider-model">Model for {group.displayName}</label>
+                    <label class="field-label" for="ai-provider-model"
+                      >Model for {group.displayName}</label
+                    >
                     <select
                       id="ai-provider-model"
                       class="custom-select"
-                      value={settings?.models?.defaultProvider === group.provider ? (settings?.models?.defaultModelId ?? '') : ''}
+                      value={settings?.models?.defaultProvider === group.provider
+                        ? (settings?.models?.defaultModelId ?? '')
+                        : ''}
                       onchange={(e) => {
                         const modelId = (e.target as HTMLSelectElement).value;
                         if (!modelId) return;
@@ -802,14 +859,22 @@
                         <option value={model.id}>
                           {model.description ?? model.id}
                           {#if model.contextWindow}
-                            ({model.contextWindow >= 1000 ? `${model.contextWindow / 1000}K` : model.contextWindow} ctx)
+                            ({model.contextWindow >= 1000
+                              ? `${model.contextWindow / 1000}K`
+                              : model.contextWindow} ctx)
                           {/if}
-                          {#if model.isRecommended} ★{/if}
+                          {#if model.isRecommended}
+                            ★{/if}
                         </option>
                       {/each}
                     </select>
-                    {#if group.provider === 'nim' || group.displayName?.toLowerCase().includes('nim')}
-                      <p class="field-hint nim-model-hint">NIM: 405B = flagship, 70B = balanced, 49B = fast. See Model Benchmark for full guide.</p>
+                    {#if group.provider === 'nim' || group.displayName
+                        ?.toLowerCase()
+                        .includes('nim')}
+                      <p class="field-hint nim-model-hint">
+                        NIM: 405B = flagship, 70B = balanced, 49B = fast. See Model Benchmark for
+                        full guide.
+                      </p>
                     {/if}
                   </div>
                 {/if}
@@ -818,17 +883,30 @@
           </Card>
           <Card title="Add more providers" padding="md" class="ai-providers-add-card">
             <p class="section-desc ai-providers-add-desc">
-              Supported providers appear here once configured. Add API keys in this tab (AI Providers) or set them in your backend <code>.env</code>.
+              Supported providers appear here once configured. Add API keys in this tab (AI
+              Providers) or set them in your backend <code>.env</code>.
             </p>
             <div class="providers-grid settings-providers-grid add-more-providers-grid">
               {#each AI_PROVIDER_OPTIONS as option}
                 {@const iconPath = getProviderIconPath(option.id)}
                 {@const fallbackLetter = getProviderFallbackLetter(option.id)}
-                {@const isConfigured = modelGroups.some((g) => g.provider === option.id || (option.id === 'nvidia-nim' && g.provider === 'nim'))}
-                <div class="provider-card settings-provider-card add-more-card" class:configured={isConfigured}>
+                {@const isConfigured = modelGroups.some(
+                  (g) =>
+                    g.provider === option.id || (option.id === 'nvidia-nim' && g.provider === 'nim')
+                )}
+                <div
+                  class="provider-card settings-provider-card add-more-card"
+                  class:configured={isConfigured}
+                >
                   <span class="provider-icon" aria-hidden="true">
                     {#if iconPath}
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" role="img">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        role="img"
+                      >
                         <path d={iconPath} />
                       </svg>
                     {:else}
@@ -864,11 +942,14 @@
         <div class="tab-section memory-tab">
           <Card title="Memory Settings" padding="md">
             <p class="section-desc">
-              Control what G-Agent remembers across sessions: limits, persistence, and search behavior.
+              Control what G-Agent remembers across sessions: limits, persistence, and search
+              behavior.
             </p>
             <div class="field-group">
               <span class="field-label">Persistence</span>
-              <p class="field-hint">Memories are stored locally per workspace. Clear data in Memory manager to reset.</p>
+              <p class="field-hint">
+                Memories are stored locally per workspace. Clear data in Memory manager to reset.
+              </p>
             </div>
             <div class="field-group">
               <label class="guard-rail-item">
@@ -882,7 +963,9 @@
                     })}
                 />
                 <span class="guard-rail-title">Large context (200K+) for memory search</span>
-                <span class="guard-rail-desc">Allow longer context when searching memories; uses more tokens.</span>
+                <span class="guard-rail-desc"
+                  >Allow longer context when searching memories; uses more tokens.</span
+                >
               </label>
             </div>
             <div class="field-group">
@@ -896,17 +979,24 @@
                 value={settings?.memory?.maxMemoriesToKeep ?? ''}
                 onchange={(e) => {
                   const v = parseInt((e.target as HTMLInputElement).value, 10);
-                  if (!Number.isNaN(v) && v >= 0) saveMemory({ ...settings?.memory, maxMemoriesToKeep: v });
-                  else if ((e.target as HTMLInputElement).value === '') saveMemory({ ...settings?.memory, maxMemoriesToKeep: undefined });
+                  if (!Number.isNaN(v) && v >= 0)
+                    saveMemory({ ...settings?.memory, maxMemoriesToKeep: v });
+                  else if ((e.target as HTMLInputElement).value === '')
+                    saveMemory({ ...settings?.memory, maxMemoriesToKeep: undefined });
                 }}
                 placeholder="No limit"
                 class="settings-number-input"
               />
-              <p class="field-hint">Optional cap for stored memories. Leave empty for no limit. Manage in Memory manager.</p>
+              <p class="field-hint">
+                Optional cap for stored memories. Leave empty for no limit. Manage in Memory
+                manager.
+              </p>
             </div>
             <div class="field-group">
               <span class="field-label">Default memory types</span>
-              <p class="field-hint">Fact, Preference, Task, Context, Conversation. Add and manage in Memory manager.</p>
+              <p class="field-hint">
+                Fact, Preference, Task, Context, Conversation. Add and manage in Memory manager.
+              </p>
             </div>
             <div class="memory-actions">
               <Button variant="primary" size="sm" onclick={() => setCurrentView('memory')}>
@@ -926,13 +1016,20 @@
               <span class="preset-label">Preset</span>
               <div class="preset-options" role="group" aria-label="Model preset">
                 {#each ['balanced', 'fast', 'quality'] as preset}
-                  {@const label = preset === 'balanced' ? 'Balanced' : preset === 'fast' ? 'Fast' : 'Quality'}
-                  {@const desc = preset === 'balanced' ? 'Auto by task' : preset === 'fast' ? 'Lower cost' : 'Best quality'}
+                  {@const label =
+                    preset === 'balanced' ? 'Balanced' : preset === 'fast' ? 'Fast' : 'Quality'}
+                  {@const desc =
+                    preset === 'balanced'
+                      ? 'Auto by task'
+                      : preset === 'fast'
+                        ? 'Lower cost'
+                        : 'Best quality'}
                   <button
                     type="button"
                     class="preset-option"
-                    class:selected={ (settings?.models?.modelPreset ?? 'balanced') === preset}
-                    onclick={() => saveModels({ ...settings?.models, modelPreset: preset as ModelPreset })}
+                    class:selected={(settings?.models?.modelPreset ?? 'balanced') === preset}
+                    onclick={() =>
+                      saveModels({ ...settings?.models, modelPreset: preset as ModelPreset })}
                     disabled={saving}
                     title={desc}
                   >
@@ -956,7 +1053,13 @@
                 }}
               />
             </div>
-            <p class="field-hint chat-model-hint">Override when needed. <button type="button" class="inline-link" onclick={() => setCurrentView('model-benchmark')}>Compare in Model Benchmark</button></p>
+            <p class="field-hint chat-model-hint">
+              Override when needed. <button
+                type="button"
+                class="inline-link"
+                onclick={() => setCurrentView('model-benchmark')}>Compare in Model Benchmark</button
+              >
+            </p>
             <div class="advanced-finetuning">
               <span class="field-label">Advanced (finetuning)</span>
               <div class="advanced-row">
@@ -989,7 +1092,9 @@
                   />
                 </label>
               </div>
-              <p class="field-hint">Temperature: higher = more creative. Max tokens: cap per response.</p>
+              <p class="field-hint">
+                Temperature: higher = more creative. Max tokens: cap per response.
+              </p>
             </div>
           </Card>
 
@@ -998,9 +1103,14 @@
             {#if modelGroupsLoading}
               <p class="models-provider-loading">Loading model list…</p>
             {:else if modelGroups.length === 0}
-              <p class="field-hint">No providers available. Configure API keys in AI Providers (below) or in your backend .env.</p>
+              <p class="field-hint">
+                No providers available. Configure API keys in AI Providers (below) or in your
+                backend .env.
+              </p>
             {:else}
-              <p class="field-hint models-provider-intro">Pick a model per provider; selecting one sets it as the default chat/code model.</p>
+              <p class="field-hint models-provider-intro">
+                Pick a model per provider; selecting one sets it as the default chat/code model.
+              </p>
               <div class="models-provider-list">
                 {#each modelGroups as group}
                   <div class="models-provider-row">
@@ -1009,13 +1119,16 @@
                         src={group.icon}
                         alt=""
                         class="models-provider-icon"
-                        onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
+                        onerror={(e) =>
+                          ((e.currentTarget as HTMLImageElement).style.display = 'none')}
                       />
                       <span class="models-provider-name">{group.displayName}</span>
                     </div>
                     <select
                       class="custom-select models-provider-select"
-                      value={settings?.models?.defaultProvider === group.provider ? (settings?.models?.defaultModelId ?? '') : ''}
+                      value={settings?.models?.defaultProvider === group.provider
+                        ? (settings?.models?.defaultModelId ?? '')
+                        : ''}
                       onchange={(e) => {
                         const modelId = (e.target as HTMLSelectElement).value;
                         if (!modelId) return;
@@ -1033,9 +1146,12 @@
                         <option value={model.id}>
                           {model.description ?? model.id}
                           {#if model.contextWindow}
-                            ({model.contextWindow >= 1000 ? `${model.contextWindow / 1000}K` : model.contextWindow} ctx)
+                            ({model.contextWindow >= 1000
+                              ? `${model.contextWindow / 1000}K`
+                              : model.contextWindow} ctx)
                           {/if}
-                          {#if model.isRecommended} ★{/if}
+                          {#if model.isRecommended}
+                            ★{/if}
                         </option>
                       {/each}
                     </select>
@@ -1146,7 +1262,8 @@
           {#if !$workspaceStore?.repoUrl}
             <Card title="Connect GitHub" padding="md" class="git-oauth-card">
               <p class="section-desc">
-                Connect your GitHub account with OAuth to link repos and enable push/pull from the app.
+                Connect your GitHub account with OAuth to link repos and enable push/pull from the
+                app.
               </p>
               <Button variant="primary" size="md" onclick={() => setCurrentView('integrations')}>
                 Connect GitHub with OAuth
@@ -1155,7 +1272,8 @@
           {/if}
           <Card title="Workspace & Repository" padding="md">
             <p class="section-desc">
-              Current workspace and Git repository. Connect a GitHub repo in Integrations or open a folder in the app.
+              Current workspace and Git repository. Connect a GitHub repo in Integrations or open a
+              folder in the app.
             </p>
             <div class="field-group">
               <span class="field-label">Workspace root</span>
@@ -1170,9 +1288,7 @@
             </Button>
           </Card>
           <Card title="Git preferences" padding="md">
-            <p class="section-desc">
-              Default branch and auto-fetch behavior for Git operations.
-            </p>
+            <p class="section-desc">Default branch and auto-fetch behavior for Git operations.</p>
             <div class="field-group">
               <label class="field-label" for="git-default-branch">Default branch</label>
               <input
@@ -1186,7 +1302,9 @@
                   saveGit({ ...settings?.git, defaultBranch: v || undefined });
                 }}
               />
-              <p class="field-hint">Branch name used when creating new repos or suggesting pushes.</p>
+              <p class="field-hint">
+                Branch name used when creating new repos or suggesting pushes.
+              </p>
             </div>
             <div class="field-group">
               <label class="field-label" for="git-auto-fetch">Auto-fetch interval (minutes)</label>
@@ -1200,8 +1318,10 @@
                 value={settings?.git?.autoFetchIntervalMinutes ?? ''}
                 onchange={(e) => {
                   const v = parseInt((e.target as HTMLInputElement).value, 10);
-                  if (!Number.isNaN(v) && v >= 0) saveGit({ ...settings?.git, autoFetchIntervalMinutes: v });
-                  else if ((e.target as HTMLInputElement).value === '') saveGit({ ...settings?.git, autoFetchIntervalMinutes: undefined });
+                  if (!Number.isNaN(v) && v >= 0)
+                    saveGit({ ...settings?.git, autoFetchIntervalMinutes: v });
+                  else if ((e.target as HTMLInputElement).value === '')
+                    saveGit({ ...settings?.git, autoFetchIntervalMinutes: undefined });
                 }}
                 placeholder="0 (disabled)"
               />
@@ -1210,7 +1330,8 @@
           </Card>
           <Card title="G-Agent Git Capability" padding="md">
             <p class="section-desc">
-              Allow G-Agent to run Git commands (status, diff, commit, branch, push) in your workspace.
+              Allow G-Agent to run Git commands (status, diff, commit, branch, push) in your
+              workspace.
             </p>
             <div class="field-group">
               <label class="checkbox-field">
@@ -1221,7 +1342,9 @@
                     const enabled = (e.target as HTMLInputElement).checked;
                     const current: GAgentCapabilityKey[] = $gAgentCapabilities ?? [];
                     const next: GAgentCapabilityKey[] = enabled
-                      ? (current.includes('git') ? current : [...current, 'git'])
+                      ? current.includes('git')
+                        ? current
+                        : [...current, 'git']
                       : current.filter((c) => c !== 'git');
                     preferencesStore.setGAgentCapabilities(next);
                   }}
@@ -1234,7 +1357,9 @@
             <ul class="tips-list">
               <li>Use Ship mode to push generated code to a new GitHub repo.</li>
               <li>Connect GitHub in Integrations for OAuth and repo access.</li>
-              <li>G-Agent can run git status, diff, commit, and push when the capability is enabled.</li>
+              <li>
+                G-Agent can run git status, diff, commit, and push when the capability is enabled.
+              </li>
             </ul>
           </Card>
         </div>
@@ -1245,7 +1370,8 @@
         <div class="tab-section security-tab">
           <Card title="File Access Control" padding="md">
             <p class="section-desc">
-              Restrict which directories the agent can read and write. Leave empty to allow the current workspace only.
+              Restrict which directories the agent can read and write. Leave empty to allow the
+              current workspace only.
             </p>
             <div class="field-group">
               <div class="field-label-row">
@@ -1256,12 +1382,20 @@
                     size="sm"
                     disabled={saving}
                     onclick={async () => {
-                      const grump = (window as { grump?: { selectDirectory?: () => Promise<{ path?: string; canceled?: boolean }> } }).grump;
+                      const grump = (
+                        window as {
+                          grump?: {
+                            selectDirectory?: () => Promise<{ path?: string; canceled?: boolean }>;
+                          };
+                        }
+                      ).grump;
                       const result = await grump?.selectDirectory?.();
                       if (result?.canceled || !result?.path) return;
                       const trimmed = result.path.trim();
                       if (!trimmed) return;
-                      allowedDirsText = allowedDirsText.trim() ? `${allowedDirsText.trim()}\n${trimmed}` : trimmed;
+                      allowedDirsText = allowedDirsText.trim()
+                        ? `${allowedDirsText.trim()}\n${trimmed}`
+                        : trimmed;
                       const dirs = parseAllowedDirs(allowedDirsText);
                       saveGuardRails({
                         ...settings?.guardRails,
@@ -1281,13 +1415,21 @@
                 bind:value={allowedDirsText}
                 onfocus={async () => {
                   if (!isElectron || saving) return;
-                  const grump = (window as { grump?: { selectDirectory?: () => Promise<{ path?: string; canceled?: boolean }> } }).grump;
+                  const grump = (
+                    window as {
+                      grump?: {
+                        selectDirectory?: () => Promise<{ path?: string; canceled?: boolean }>;
+                      };
+                    }
+                  ).grump;
                   if (!grump?.selectDirectory) return;
                   const result = await grump.selectDirectory();
                   if (result?.canceled || !result?.path) return;
                   const trimmed = result.path.trim();
                   if (!trimmed) return;
-                  allowedDirsText = allowedDirsText.trim() ? `${allowedDirsText.trim()}\n${trimmed}` : trimmed;
+                  allowedDirsText = allowedDirsText.trim()
+                    ? `${allowedDirsText.trim()}\n${trimmed}`
+                    : trimmed;
                   const dirs = parseAllowedDirs(allowedDirsText);
                   saveGuardRails({
                     ...settings?.guardRails,
@@ -1305,11 +1447,13 @@
                 aria-describedby="allowed-dirs-hint"
               ></textarea>
               <p id="allowed-dirs-hint" class="field-hint">
-                One path per line. Example: <code>C:\projects\my-app</code> or <code>/Users/me/workspace</code>
+                One path per line. Example: <code>C:\projects\my-app</code> or
+                <code>/Users/me/workspace</code>
                 {#if isElectron}
                   Focus this field to open folder picker (Electron).
                 {:else}
-                  In the desktop app you can use <strong>Browse</strong> or focus the field to pick a folder.
+                  In the desktop app you can use <strong>Browse</strong> or focus the field to pick a
+                  folder.
                 {/if}
               </p>
             </div>
@@ -1344,7 +1488,9 @@
                     })}
                 />
                 <span class="guard-rail-title">Autonomous (YOLO) mode</span>
-                <span class="guard-rail-desc">Skip confirmations; tools run without per-step approval. Use with care.</span>
+                <span class="guard-rail-desc"
+                  >Skip confirmations; tools run without per-step approval. Use with care.</span
+                >
               </label>
               <label class="guard-rail-item">
                 <input
@@ -1357,7 +1503,8 @@
                     })}
                 />
                 <span class="guard-rail-title">Large context (200K+)</span>
-                <span class="guard-rail-desc">Allow longer messages for models that support it</span>
+                <span class="guard-rail-desc">Allow longer messages for models that support it</span
+                >
               </label>
               <label class="guard-rail-item">
                 <input
@@ -1374,7 +1521,8 @@
 
           <Card title="Allowed API domains" padding="md">
             <p class="section-desc">
-              Domains G-Agent may call (HTTP/API). One per line. Leave empty to use defaults. Example: <code>api.github.com</code>, <code>*.openai.com</code>.
+              Domains G-Agent may call (HTTP/API). One per line. Leave empty to use defaults.
+              Example: <code>api.github.com</code>, <code>*.openai.com</code>.
             </p>
             <div class="field-group">
               <textarea
@@ -1392,7 +1540,9 @@
                 }}
                 aria-describedby="api-domains-hint"
               ></textarea>
-              <p id="api-domains-hint" class="field-hint">Used to restrict outbound API calls from G-Agent.</p>
+              <p id="api-domains-hint" class="field-hint">
+                Used to restrict outbound API calls from G-Agent.
+              </p>
             </div>
           </Card>
         </div>
@@ -1408,10 +1558,20 @@
             <div class="integrations-section-content integrations-grid-two">
               <Card title="Docker" padding="md">
                 <p class="section-desc">
-                  Manage containers and stacks in Docker Desktop. Open Docker Desktop to start/stop containers and run compose.
+                  Manage containers and stacks in Docker Desktop. Open Docker Desktop to start/stop
+                  containers and run compose.
                 </p>
                 <div class="docker-actions">
-                  <Button variant="primary" size="sm" onclick={() => window.open('https://app.docker.com/open-desktop', '_blank', 'noopener,noreferrer')}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onclick={() =>
+                      window.open(
+                        'https://app.docker.com/open-desktop',
+                        '_blank',
+                        'noopener,noreferrer'
+                      )}
+                  >
                     Open Docker Desktop
                   </Button>
                   <Button variant="ghost" size="sm" onclick={() => setCurrentView('docker')}>
@@ -1428,7 +1588,9 @@
 
           <section class="integrations-section">
             <h2 class="integrations-section-title">Workspace</h2>
-            <p class="integrations-section-desc">Codebase diagram and recommended VS Code extensions.</p>
+            <p class="integrations-section-desc">
+              Codebase diagram and recommended VS Code extensions.
+            </p>
             <div class="integrations-section-content integrations-grid-two">
               <Card title="Codebase Architecture" padding="md">
                 <p class="section-desc">
@@ -1473,7 +1635,10 @@
               <div class="integrations-grid-cell-tools">
                 <Card title="Tools & Extensions" padding="md">
                   <p class="section-desc">
-                    Integrate into G-Rump: extensions that work with our platform and your workflow (ESLint, Prettier, GitLens, Docker, Thunder Client). We support multiple users and workspaces—install from the Marketplace or enable recommended extensions below.
+                    Integrate into G-Rump: extensions that work with our platform and your workflow
+                    (ESLint, Prettier, GitLens, Docker, Thunder Client). We support multiple users
+                    and workspaces—install from the Marketplace or enable recommended extensions
+                    below.
                   </p>
                   <RecommendedExtensions />
                 </Card>
@@ -1488,9 +1653,7 @@
       {:else if activeTab === 'mcp'}
         <div class="tab-section integrations-tab">
           <Card title="MCP defaults" padding="md">
-            <p class="section-desc">
-              Global timeout and retry behavior for MCP server calls.
-            </p>
+            <p class="section-desc">Global timeout and retry behavior for MCP server calls.</p>
             <div class="field-group">
               <label class="field-label" for="mcp-timeout">Request timeout (seconds)</label>
               <input
@@ -1503,12 +1666,16 @@
                 value={settings?.mcp?.requestTimeoutSeconds ?? ''}
                 onchange={(e) => {
                   const v = parseInt((e.target as HTMLInputElement).value, 10);
-                  if (!Number.isNaN(v) && v >= 1) saveMcp({ ...settings?.mcp, requestTimeoutSeconds: v });
-                  else if ((e.target as HTMLInputElement).value === '') saveMcp({ ...settings?.mcp, requestTimeoutSeconds: undefined });
+                  if (!Number.isNaN(v) && v >= 1)
+                    saveMcp({ ...settings?.mcp, requestTimeoutSeconds: v });
+                  else if ((e.target as HTMLInputElement).value === '')
+                    saveMcp({ ...settings?.mcp, requestTimeoutSeconds: undefined });
                 }}
                 placeholder="30"
               />
-              <p class="field-hint">Max time to wait for an MCP response. Leave empty for default.</p>
+              <p class="field-hint">
+                Max time to wait for an MCP response. Leave empty for default.
+              </p>
             </div>
             <div class="field-group">
               <label class="field-label" for="mcp-retries">Max retries</label>
@@ -1523,7 +1690,8 @@
                 onchange={(e) => {
                   const v = parseInt((e.target as HTMLInputElement).value, 10);
                   if (!Number.isNaN(v) && v >= 0) saveMcp({ ...settings?.mcp, maxRetries: v });
-                  else if ((e.target as HTMLInputElement).value === '') saveMcp({ ...settings?.mcp, maxRetries: undefined });
+                  else if ((e.target as HTMLInputElement).value === '')
+                    saveMcp({ ...settings?.mcp, maxRetries: undefined });
                 }}
                 placeholder="2"
               />
@@ -1532,7 +1700,10 @@
           </Card>
           <section class="integrations-section">
             <h2 class="integrations-section-title">MCP Servers</h2>
-            <p class="integrations-section-desc">Model Context Protocol – configure stdio or URL-based servers so G-Agent can use their tools.</p>
+            <p class="integrations-section-desc">
+              Model Context Protocol – configure stdio or URL-based servers so G-Agent can use their
+              tools.
+            </p>
             <div class="integrations-section-content">
               <McpServersCard />
             </div>
@@ -1555,28 +1726,59 @@
                   <div class="usage-item">
                     <div class="usage-header">
                       <span class="usage-label">API / AI calls</span>
-                      <span class="usage-value">{formatCredits(billingMe.usage)} / {billingMe.limit ?? '∞'}</span>
+                      <span class="usage-value"
+                        >{formatCredits(billingMe.usage)} / {billingMe.limit ?? '∞'}</span
+                      >
                     </div>
                     {#if typeof billingMe.limit === 'number' && billingMe.limit > 0}
-                      <div class="usage-bar"><div class="usage-bar-fill" style="width: {Math.min(100, ((Number(billingMe.usage) ?? 0) / billingMe.limit) * 100)}%"></div></div>
+                      <div class="usage-bar">
+                        <div
+                          class="usage-bar-fill"
+                          style="width: {Math.min(
+                            100,
+                            ((Number(billingMe.usage) ?? 0) / billingMe.limit) * 100
+                          )}%"
+                        ></div>
+                      </div>
                     {/if}
                   </div>
                   {#if billingMe.computeMinutesLimit != null && billingMe.computeMinutesLimit > 0}
                     <div class="usage-item">
                       <div class="usage-header">
                         <span class="usage-label">Compute (min)</span>
-                        <span class="usage-value">{(billingMe.computeMinutesUsed ?? 0).toFixed(1)} / {billingMe.computeMinutesLimit}</span>
+                        <span class="usage-value"
+                          >{(billingMe.computeMinutesUsed ?? 0).toFixed(1)} / {billingMe.computeMinutesLimit}</span
+                        >
                       </div>
-                      <div class="usage-bar"><div class="usage-bar-fill" style="width: {Math.min(100, ((billingMe.computeMinutesUsed ?? 0) / billingMe.computeMinutesLimit) * 100)}%"></div></div>
+                      <div class="usage-bar">
+                        <div
+                          class="usage-bar-fill"
+                          style="width: {Math.min(
+                            100,
+                            ((billingMe.computeMinutesUsed ?? 0) / billingMe.computeMinutesLimit) *
+                              100
+                          )}%"
+                        ></div>
+                      </div>
                     </div>
                   {/if}
                   {#if billingMe.storageGbLimit != null && billingMe.storageGbLimit > 0}
                     <div class="usage-item">
                       <div class="usage-header">
                         <span class="usage-label">Storage (GB)</span>
-                        <span class="usage-value">{(billingMe.storageGbUsed ?? 0).toFixed(2)} / {billingMe.storageGbLimit}</span>
+                        <span class="usage-value"
+                          >{(billingMe.storageGbUsed ?? 0).toFixed(2)} / {billingMe.storageGbLimit}</span
+                        >
                       </div>
-                      <div class="usage-bar"><div class="usage-bar-fill" style="width: {Math.min(100, ((billingMe.storageGbUsed ?? 0) / billingMe.storageGbLimit) * 100)}%"></div></div>
+                      <div class="usage-bar">
+                        <div
+                          class="usage-bar-fill"
+                          style="width: {Math.min(
+                            100,
+                            ((billingMe.storageGbUsed ?? 0) / billingMe.storageGbLimit) * 100
+                          )}%"
+                        ></div>
+                      </div>
                     </div>
                   {/if}
                 </div>
@@ -1584,21 +1786,35 @@
                   <div class="billing-overages">
                     <span class="status-label">Overage rates</span>
                     <ul class="overage-list">
-                      <li>Storage: ${(billingMe.overageRates.storageGbMonthlyCents / 100).toFixed(2)}/GB</li>
-                      <li>Compute: ${(billingMe.overageRates.computeMinuteCents / 100).toFixed(2)}/min</li>
-                      <li>Extra slot: ${(billingMe.overageRates.extraConcurrentAgentMonthlyCents / 100).toFixed(2)}/slot</li>
+                      <li>
+                        Storage: ${(billingMe.overageRates.storageGbMonthlyCents / 100).toFixed(
+                          2
+                        )}/GB
+                      </li>
+                      <li>
+                        Compute: ${(billingMe.overageRates.computeMinuteCents / 100).toFixed(2)}/min
+                      </li>
+                      <li>
+                        Extra slot: ${(
+                          billingMe.overageRates.extraConcurrentAgentMonthlyCents / 100
+                        ).toFixed(2)}/slot
+                      </li>
                     </ul>
                   </div>
                 {/if}
                 {#if tiers.length > 0}
-                  <p class="billing-tiers-note">{tiers.length} plan(s) available. Upgrade for more.</p>
+                  <p class="billing-tiers-note">
+                    {tiers.length} plan(s) available. Upgrade for more.
+                  </p>
                 {/if}
               {:else}
                 <p class="billing-empty">Sign in to view your subscription details.</p>
               {/if}
             </div>
             <div class="field-group billing-alert-field">
-              <label class="field-label" for="usage-alert-percent">Alert when usage exceeds % of limit</label>
+              <label class="field-label" for="usage-alert-percent"
+                >Alert when usage exceeds % of limit</label
+              >
               <input
                 id="usage-alert-percent"
                 type="number"
@@ -1609,12 +1825,17 @@
                 value={settings?.preferences?.usageAlertPercent ?? ''}
                 onchange={(e) => {
                   const v = parseInt((e.target as HTMLInputElement).value, 10);
-                  if (!Number.isNaN(v) && v >= 0 && v <= 100) savePreferences({ usageAlertPercent: v });
-                  else if ((e.target as HTMLInputElement).value === '') savePreferences({ usageAlertPercent: undefined });
+                  if (!Number.isNaN(v) && v >= 0 && v <= 100)
+                    savePreferences({ usageAlertPercent: v });
+                  else if ((e.target as HTMLInputElement).value === '')
+                    savePreferences({ usageAlertPercent: undefined });
                 }}
                 placeholder="80"
               />
-              <p class="field-hint">Show a warning when API/usage reaches this percent of your plan limit. Leave empty to disable.</p>
+              <p class="field-hint">
+                Show a warning when API/usage reaches this percent of your plan limit. Leave empty
+                to disable.
+              </p>
             </div>
             <div class="billing-actions">
               <Button variant="primary" size="sm" onclick={() => showPricing.set(true)}>
@@ -1655,7 +1876,12 @@
             {:else}
               <p class="billing-empty">No payment methods on file. Add one when upgrading.</p>
             {/if}
-            <Button variant="secondary" size="sm" onclick={handleBillingPortalClick} disabled={billingPortalLoading}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onclick={handleBillingPortalClick}
+              disabled={billingPortalLoading}
+            >
               {billingPortalLoading ? 'Opening…' : 'Open billing portal'}
             </Button>
           </Card>
@@ -1668,14 +1894,21 @@
                   <li class="billing-list-item">
                     <span>{inv.date}</span>
                     <span>${(inv.amount / 100).toFixed(2)}</span>
-                    <Badge variant={inv.status === 'paid' ? 'success' : 'default'}>{inv.status}</Badge>
+                    <Badge variant={inv.status === 'paid' ? 'success' : 'default'}
+                      >{inv.status}</Badge
+                    >
                   </li>
                 {/each}
               </ul>
             {:else}
               <p class="billing-empty">No invoices yet.</p>
             {/if}
-            <Button variant="secondary" size="sm" onclick={handleBillingPortalClick} disabled={billingPortalLoading}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onclick={handleBillingPortalClick}
+              disabled={billingPortalLoading}
+            >
               {billingPortalLoading ? 'Opening…' : 'Open billing portal'}
             </Button>
           </Card>
@@ -1866,7 +2099,9 @@
     font-size: 14px;
     font-weight: 500;
     color: #6b7280;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
   }
 
   .tabs-sidebar :global(.tab:hover) {
@@ -2026,7 +2261,10 @@
     border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 0.5rem;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      color 0.15s;
   }
 
   .preset-option:hover {
@@ -2170,7 +2408,10 @@
     background: var(--color-bg-card, #ffffff);
     box-shadow: var(--shadow-xs, 0 1px 2px rgba(0, 0, 0, 0.04));
     cursor: pointer;
-    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s,
+      background 0.2s;
     text-align: center;
   }
 
@@ -2418,7 +2659,10 @@
     border: 2px solid var(--color-border, #e5e7eb);
     border-radius: 12px;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      color 0.15s;
     text-align: center;
   }
 
@@ -2466,7 +2710,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.15s, box-shadow 0.15s;
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s;
   }
 
   .accent-swatch:hover {
@@ -2476,7 +2722,9 @@
 
   .accent-swatch.selected {
     border-color: var(--color-text, #111827);
-    box-shadow: 0 0 0 2px white, 0 0 0 4px var(--color-text, #111827);
+    box-shadow:
+      0 0 0 2px white,
+      0 0 0 4px var(--color-text, #111827);
   }
 
   .field-value {

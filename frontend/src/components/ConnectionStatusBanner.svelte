@@ -26,26 +26,26 @@
 </script>
 
 {#if $connectionStatus === 'disconnected'}
-  <div class="connection-banner disconnected" role="alert" aria-live="polite">
-    <WifiOff class="banner-icon" size={18} />
-    <span>Backend disconnected. Retrying…</span>
+  <div
+    class="connection-banner disconnected"
+    role="alert"
+    aria-live="polite"
+    title="Backend disconnected. Click to retry."
+  >
+    <span class="status-dot status-dot--disconnected"></span>
     <button
       type="button"
-      class="retry-btn"
+      class="retry-btn retry-btn--minimal"
       onclick={handleRetry}
       disabled={retrying}
       aria-label="Retry connection"
     >
-      <span class="retry-icon" class:spin={retrying}>
-        <RefreshCw size={16} />
-      </span>
-      {retrying ? 'Retrying…' : 'Retry'}
+      {retrying ? '…' : 'Retry'}
     </button>
   </div>
 {:else if $connectionStatus === 'connected'}
-  <div class="connection-banner connected" role="status" aria-live="polite">
+  <div class="connection-banner connected" role="status" aria-live="polite" title="Connected">
     <span class="status-dot"></span>
-    <span>Connected</span>
   </div>
 {/if}
 
@@ -53,29 +53,38 @@
   .connection-banner {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 2px 8px;
+    min-height: 6px;
+    font-size: 0.6875rem;
     font-weight: 500;
+    margin: 0;
   }
 
   .connection-banner.connected {
-    background: #ffffff;
-    color: #059669;
-    border-bottom: 1px solid #e5e7eb;
+    background: transparent;
+    border-top: none;
   }
 
   .connection-banner.connected .status-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: #10b981;
     flex-shrink: 0;
   }
 
   .connection-banner.disconnected {
-    background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
-    color: #92400e;
+    background: transparent;
+  }
+
+  .connection-banner.disconnected .status-dot--disconnected {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #f59e0b;
+    flex-shrink: 0;
   }
 
   .connection-banner :global(.banner-icon) {
@@ -97,6 +106,17 @@
     cursor: pointer;
   }
 
+  .retry-btn--minimal {
+    padding: 1px 4px;
+    font-size: 0.625rem;
+    background: transparent;
+    color: #92400e;
+  }
+
+  .retry-btn--minimal:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
   .retry-btn:hover:not(:disabled) {
     background: #d97706;
   }
@@ -104,23 +124,5 @@
   .retry-btn:disabled {
     opacity: 0.7;
     cursor: not-allowed;
-  }
-
-  .retry-icon {
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .retry-icon.spin {
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
   }
 </style>

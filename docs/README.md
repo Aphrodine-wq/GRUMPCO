@@ -172,4 +172,12 @@ See [CONTRIBUTING.md](./legal/CONTRIBUTING.md) for details.
 
 ---
 
+---
+
+## 🎨 UI & Customization
+
+- **Accent color** – In Settings → Appearance you can choose Purple, Blue, Green, or Amber. The accent updates primary actions, borders, and highlights app-wide (via `--color-primary` and `--color-primary-hover`).
+- **G-Agent** – Use the **Use G-Agent** button (bottom-right of the chat) to turn on agent mode in the current chat without switching tabs. **Leave G-Agent** (same corner when active) returns to normal chat.
+- **Connection status** – A slim status bar at the bottom shows backend connection; layout keeps content flush with minimal gap above it.
+
 **Last Updated:** February 2026
