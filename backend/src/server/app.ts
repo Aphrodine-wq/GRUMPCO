@@ -29,6 +29,7 @@ import { applySecurityMiddleware } from "../middleware/security.js";
 import { applyRateLimiting } from "../middleware/rateLimiter.js";
 import { apiAuthMiddleware } from "../middleware/authMiddleware.js";
 import { mountLazyRoutes } from "../routes/registry.js";
+import skillsRoutes from "../routes/skills.js";
 import { env } from "../config/env.js";
 import { timingSafeEqualString } from "../utils/security.js";
 import { isServerlessRuntime } from "../config/runtime.js";
@@ -207,6 +208,9 @@ export async function applyAsyncMiddleware(app: Express): Promise<void> {
     app.use("/api/chat", kimiPromptOptimizationMiddleware());
   }
 
+  // Mount skills API eagerly so /api/skills is always available (avoids 404 from cold lazy-load)
+  app.use("/api/skills", skillsRoutes);
+
   // Mount all API routes via lazy-loading registry
   mountLazyRoutes(app);
 }
@@ -221,11 +225,9 @@ export function applyMetricsEndpoint(app: Express): void {
     (req: Request, res: Response, next: NextFunction) => {
       if (process.env.NODE_ENV === "production") {
         if (!env.METRICS_AUTH) {
-          res
-            .status(403)
-            .json({
-              error: "Metrics disabled in production without METRICS_AUTH",
-            });
+          res.status(403).json({
+            error: "Metrics disabled in production without METRICS_AUTH",
+          });
           return;
         }
         const auth = req.headers.authorization;

@@ -3,19 +3,12 @@
  * Use getApiBase() or fetchApi() everywhere instead of inline VITE_API_URL.
  */
 
-const DEFAULT_BASE = import.meta.env?.PROD ? '' : 'http://localhost:3000';
+/** Production backend URL – set VITE_API_URL to override */
+const REMOTE_BACKEND = 'https://grump-backend.onrender.com';
+const DEFAULT_BASE = import.meta.env?.PROD ? REMOTE_BACKEND : 'http://localhost:3000';
 
 /** Normalize env to root URL (no trailing /api). */
 function normalizedBase(): string {
-  // If running in Electron (via window.grump), always use localhost:3000
-  // regardless of PROD/DEV mode, because the backend is local.
-  if (
-    typeof window !== 'undefined' &&
-    (window as { grump?: { isElectron?: boolean } }).grump?.isElectron
-  ) {
-    return 'http://localhost:3000';
-  }
-
   if (typeof import.meta === 'undefined' || !import.meta.env?.VITE_API_URL) {
     return DEFAULT_BASE;
   }
@@ -139,6 +132,37 @@ export async function generateSkillMd(description: string): Promise<string> {
   return data.content ?? '';
 }
 
+export interface CreateUserSkillPayload {
+  name: string;
+  description: string;
+  tools?: Array<{ name: string; description: string }>;
+}
+
+export async function createUserSkill(
+  payload: CreateUserSkillPayload
+): Promise<{ success: boolean; skillId?: string; error?: string }> {
+  const res = await fetchApi('/api/skills-api/create', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  const data = (await res.json()) as {
+    success?: boolean;
+    skillId?: string;
+    error?: string;
+  };
+  if (!res.ok) {
+    return {
+      success: false,
+      error: data.error ?? `Failed to create skill: ${res.status}`,
+    };
+  }
+  return {
+    success: data.success ?? true,
+    skillId: data.skillId,
+    error: data.error,
+  };
+}
+
 // --- Share API ---
 
 export interface ShareResponse {
@@ -162,4 +186,64 @@ export async function createShareLink(payload: {
   });
   if (!res.ok) throw new Error(`Failed to create share link: ${res.status}`);
   return res.json() as Promise<ShareResponse>;
+}
+
+// --- Workspace tree (file explorer) ---
+
+export interface WorkspaceTreeEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+}
+
+export interface WorkspaceTreeResponse {
+  path: string;
+  entries: WorkspaceTreeEntry[];
+}
+
+export async function getWorkspaceTree(dirPath?: string): Promise<WorkspaceTreeResponse> {
+  const query = dirPath != null && dirPath !== '' ? `?path=${encodeURIComponent(dirPath)}` : '';
+  const res = await fetchApi(`/api/workspace/tree${query}`);
+  if (!res.ok) throw new Error(`Failed to list workspace: ${res.status}`);
+  return res.json() as Promise<WorkspaceTreeResponse>;
+}
+
+// --- Session attachments ---
+
+export interface SessionAttachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+}
+
+export async function listSessionAttachments(sessionId: string): Promise<SessionAttachment[]> {
+  const res = await fetchApi(`/api/session-attachments/${encodeURIComponent(sessionId)}`);
+  if (!res.ok) throw new Error(`Failed to list attachments: ${res.status}`);
+  const data = (await res.json()) as { attachments?: SessionAttachment[] };
+  return data.attachments ?? [];
+}
+
+export async function addSessionAttachments(
+  sessionId: string,
+  items: Array<{ name: string; mimeType: string; size: number; dataBase64?: string }>
+): Promise<SessionAttachment[]> {
+  const res = await fetchApi(`/api/session-attachments/${encodeURIComponent(sessionId)}`, {
+    method: 'POST',
+    body: JSON.stringify({ attachments: items }),
+  });
+  if (!res.ok) throw new Error(`Failed to add attachments: ${res.status}`);
+  const data = (await res.json()) as { attachments?: SessionAttachment[] };
+  return data.attachments ?? [];
+}
+
+export async function removeSessionAttachment(
+  sessionId: string,
+  attachmentId: string
+): Promise<void> {
+  const res = await fetchApi(
+    `/api/session-attachments/${encodeURIComponent(sessionId)}/${encodeURIComponent(attachmentId)}`,
+    { method: 'DELETE' }
+  );
+  if (!res.ok) throw new Error(`Failed to remove attachment: ${res.status}`);
 }

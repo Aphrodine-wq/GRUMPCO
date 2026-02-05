@@ -37,6 +37,17 @@ export interface McpServerConfig {
 
 export interface McpSettings {
   servers?: McpServerConfig[];
+  requestTimeoutSeconds?: number;
+  maxRetries?: number;
+}
+
+export interface MemorySettings {
+  maxMemoriesToKeep?: number;
+}
+
+export interface GitSettings {
+  defaultBranch?: string;
+  autoFetchIntervalMinutes?: number;
 }
 
 export interface SkillsSettings {
@@ -76,6 +87,8 @@ export interface Settings {
   user?: UserSettings;
   models?: ModelsSettings;
   mcp?: McpSettings;
+  memory?: MemorySettings;
+  git?: GitSettings;
   skills?: SkillsSettings;
   accessibility?: AccessibilitySettings;
   integrations?: IntegrationsSettings;
@@ -239,4 +252,7 @@ export interface UserPreferences {
   freeAgentPersona?: GAgentPersona;
   /** @deprecated Use gAgentGoals instead */
   freeAgentGoals?: string[];
+
+  /** Alert when usage exceeds this percent of limit (0–100). */
+  usageAlertPercent?: number;
 }

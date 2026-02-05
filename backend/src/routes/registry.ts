@@ -167,8 +167,16 @@ const ROUTE_DEFINITIONS: RouteEntry[] = [
   { path: "/api/cost", module: "./costDashboard.js", priority: "cold" },
 
   // ── Skills (COLD) ────────────────────────────────────────────────────────
+  // /api/skills is mounted eagerly in server/app.ts so the Skills screen never gets 404
   { path: "/api/skills-api", module: "./skillsApi.js", priority: "cold" },
   { path: "/api/skills-store", module: "./skillsStore.js", priority: "cold" },
+
+  // ── Session attachments (COLD) ───────────────────────────────────────────
+  {
+    path: "/api/session-attachments",
+    module: "./sessionAttachments.js",
+    priority: "cold",
+  },
 
   // ── Messaging & Events (COLD) ────────────────────────────────────────────
   { path: "/api/messaging", module: "./messaging.js", priority: "cold" },
