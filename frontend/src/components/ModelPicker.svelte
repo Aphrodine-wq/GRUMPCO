@@ -4,7 +4,8 @@
    */
   import { onMount } from 'svelte';
   import { fetchApi } from '$lib/api';
-  import { ChevronDown, Sparkles } from 'lucide-svelte';
+  import { ChevronDown, Settings } from 'lucide-svelte';
+  import { setCurrentView, settingsInitialTab } from '../stores/uiStore';
 
   interface ModelItem {
     id: string;
@@ -39,12 +40,6 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
   let open = $state(false);
-
-  function formatContext(n: number): string {
-    if (n >= 1_000_000) return `${n / 1_000_000}M`;
-    if (n >= 1000) return `${n / 1000}K`;
-    return String(n);
-  }
 
   function formatCost(m: ModelItem): string {
     const inCost = m.costPerMillionInput ?? 0;
@@ -85,9 +80,7 @@
     const parts = value.split(':');
     if (parts.length >= 2) {
       const modelId = parts.slice(1).join(':');
-      const group = groups.find((g) => g.provider === parts[0]);
-      const model = group?.models.find((m) => m.id === modelId);
-      return model?.description ?? modelId ?? value;
+      return modelId ?? value;
     }
     return value;
   }
@@ -129,9 +122,7 @@
           role="option"
           aria-selected={value === 'auto' || !value}
         >
-          <Sparkles class="model-option-icon" width={18} height={18} />
           <span class="model-option-label">Auto (smart routing)</span>
-          <span class="model-option-badge">Recommended</span>
         </button>
         <div class="model-picker-divider"></div>
       {/if}
@@ -141,15 +132,6 @@
       {:else}
         {#each groups as group}
           <div class="model-group">
-            <div class="model-group-header">
-              <img
-                src={group.icon}
-                alt=""
-                class="model-group-icon"
-                onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
-              />
-              <span class="model-group-name">{group.displayName}</span>
-            </div>
             {#each group.models as model}
               <button
                 type="button"
@@ -159,31 +141,29 @@
                 role="option"
                 aria-selected={value === `${group.provider}:${model.id}`}
               >
-                <img
-                  src={group.icon}
-                  alt=""
-                  class="model-option-icon"
-                  onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
-                />
-                <div class="model-option-content">
-                  <span class="model-option-label">{model.description ?? model.id}</span>
-                  <span class="model-option-meta">
-                    {formatContext(model.contextWindow)} ctx
-                    {#if model.parameters}
-                      · {model.parameters}
-                    {/if}
-                    {#if formatCost(model)}
-                      · {formatCost(model)}
-                    {/if}
-                  </span>
-                </div>
-                {#if model.isRecommended}
-                  <span class="model-option-badge">Default</span>
+                <span class="model-option-label">{model.id}</span>
+                {#if formatCost(model)}
+                  <span class="model-option-cost">{formatCost(model)}</span>
                 {/if}
               </button>
             {/each}
           </div>
         {/each}
+        <div class="model-picker-divider"></div>
+        <button
+          type="button"
+          class="model-option model-option-connect"
+          role="option"
+          aria-selected="false"
+          onclick={() => {
+            open = false;
+            settingsInitialTab.set('ai');
+            setCurrentView('settings');
+          }}
+        >
+          <Settings size={14} />
+          <span class="model-option-label">Connect more models…</span>
+        </button>
       {/if}
     </div>
   {/if}
@@ -197,20 +177,24 @@
   .model-picker-trigger {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.4rem 0.6rem;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
     font-size: 0.8125rem;
+    font-weight: 500;
     font-family: inherit;
     color: var(--color-text, #111);
     background: var(--color-bg-card, #fff);
     border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 6px;
+    border-radius: 10px;
     cursor: pointer;
-    min-width: 160px;
+    min-width: 180px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
 
   .model-picker-trigger:hover {
-    border-color: var(--color-border-highlight, #d1d5db);
+    border-color: var(--color-primary, #7c3aed);
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.1);
   }
 
   .model-picker.compact .model-picker-trigger {
@@ -239,7 +223,7 @@
 
   .model-picker-dropdown {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 6px);
     left: 0;
     right: 0;
     min-width: 320px;
@@ -247,14 +231,16 @@
     overflow-y: auto;
     background: var(--color-bg-card, #fff);
     border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 8px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
     z-index: 1000;
     padding: 0.5rem 0;
   }
 
-  .model-group .model-option {
-    padding-left: 1rem;
+  .model-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
   }
 
   .model-option {
@@ -262,8 +248,9 @@
     align-items: center;
     gap: 0.5rem;
     width: 100%;
-    padding: 0.5rem 0.75rem;
+    padding: 0.55rem 0.85rem;
     font-size: 0.8125rem;
+    font-weight: 500;
     font-family: inherit;
     color: var(--color-text, #111);
     background: transparent;
@@ -274,75 +261,40 @@
   }
 
   .model-option:hover {
-    background: var(--color-bg-subtle, #f5f5f5);
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.06));
   }
 
   .model-option.selected {
-    background: rgba(124, 58, 237, 0.1);
-    color: #7c3aed;
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.12));
+    color: var(--color-primary, #7c3aed);
+    font-weight: 600;
   }
 
   .model-option-auto {
     font-weight: 500;
   }
 
-  .model-option-icon {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    border-radius: 4px;
+  .model-option-connect {
+    color: var(--color-primary, #7c3aed);
+    font-weight: 500;
   }
 
-  .model-option-content {
-    flex: 1;
-    min-width: 0;
+  .model-option-connect:hover {
+    background: rgba(124, 58, 237, 0.08);
   }
 
   .model-option-label {
-    display: block;
+    flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: left;
   }
 
-  .model-option-meta {
-    display: block;
-    font-size: 0.6875rem;
-    color: var(--color-text-muted, #6b7280);
-    margin-top: 0.1rem;
-  }
-
-  .model-option-badge {
-    font-size: 0.625rem;
-    font-weight: 600;
-    padding: 0.15rem 0.4rem;
-    background: #7c3aed;
-    color: white;
-    border-radius: 4px;
+  .model-option-cost {
     flex-shrink: 0;
-  }
-
-  .model-group-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.6rem 0.75rem 0.35rem;
-    margin-top: 0.25rem;
-    font-size: 0.8125rem;
-    font-weight: 700;
-    color: var(--color-text, #111827);
-    letter-spacing: 0.02em;
-    border-bottom: 1px solid var(--color-border, #e5e7eb);
-  }
-
-  .model-group-header:first-child {
-    margin-top: 0;
-  }
-
-  .model-group-icon {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #6b7280);
   }
 
   .model-picker-divider {
