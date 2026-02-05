@@ -78,11 +78,9 @@ router.post("/query", async (req: Request, res: Response) => {
       typeof structuredSchema === "string" &&
       structuredSchema.length > MAX_SCHEMA_LENGTH
     ) {
-      return res
-        .status(413)
-        .json({
-          error: `structuredSchema exceeds ${MAX_SCHEMA_LENGTH} characters`,
-        });
+      return res.status(413).json({
+        error: `structuredSchema exceeds ${MAX_SCHEMA_LENGTH} characters`,
+      });
     }
     if (types !== undefined) {
       const arr = Array.isArray(types) ? types : [types];

@@ -107,9 +107,7 @@ export async function sessionsList(options?: {
 /**
  * sessions_history: Fetch transcript/logs for a session
  */
-export async function sessionsHistory(
-  sessionId: string,
-): Promise<{
+export async function sessionsHistory(sessionId: string): Promise<{
   sessionId: string;
   messages: SessionMessage[];
   meta?: AgentSessionMeta;

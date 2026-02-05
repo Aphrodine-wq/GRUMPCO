@@ -28,11 +28,9 @@ router.post("/design-to-code", async (req: Request, res: Response) => {
         .json({ error: "image (base64) or figmaUrl is required" });
     }
     if (typeof description !== "string" || !description.trim()) {
-      return res
-        .status(400)
-        .json({
-          error: "description is required and must be a non-empty string",
-        });
+      return res.status(400).json({
+        error: "description is required and must be a non-empty string",
+      });
     }
     const validFrameworks: DesignToCodeFramework[] = [
       "svelte",

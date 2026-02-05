@@ -2,6 +2,7 @@
  * Scheduled agents with Redis: BullMQ repeatable jobs.
  */
 
+import type { Queue, Worker } from "bullmq";
 import {
   runScheduledAgent,
   type ScheduledAction,
@@ -15,10 +16,10 @@ import {
 
 const SCHEDULED_QUEUE_NAME = "grump-scheduled";
 
-let scheduledQueue: import("bullmq").Queue | null = null;
-let scheduledWorker: import("bullmq").Worker | null = null;
+let scheduledQueue: Queue | null = null;
+let scheduledWorker: Worker | null = null;
 
-export async function getScheduledQueue(): Promise<import("bullmq").Queue> {
+export async function getScheduledQueue(): Promise<Queue> {
   if (scheduledQueue) return scheduledQueue;
   const { Queue } = await import("bullmq");
   const conn = getRedisConnectionConfig();
@@ -123,19 +124,21 @@ export async function loadRepeatableJobsFromDb(): Promise<void> {
     paramsJson: string;
   }[];
   const q = await getScheduledQueue();
-  for (const r of rows) {
-    const params = (
-      r.paramsJson ? JSON.parse(r.paramsJson) : {}
-    ) as ScheduledAgentParams;
-    const action = r.action as ScheduledAction;
-    await q.add(
-      "run",
-      { scheduleId: r.id, action, params },
-      { jobId: r.id, repeat: { pattern: r.cronExpression } },
-    );
-    logger.info(
-      { scheduleId: r.id, cronExpression: r.cronExpression },
-      "Scheduled repeatable job loaded from DB",
-    );
-  }
+  await Promise.all(
+    rows.map(async (r) => {
+      const params = (
+        r.paramsJson ? JSON.parse(r.paramsJson) : {}
+      ) as ScheduledAgentParams;
+      const action = r.action as ScheduledAction;
+      await q.add(
+        "run",
+        { scheduleId: r.id, action, params },
+        { jobId: r.id, repeat: { pattern: r.cronExpression } },
+      );
+      logger.info(
+        { scheduleId: r.id, cronExpression: r.cronExpression },
+        "Scheduled repeatable job loaded from DB",
+      );
+    }),
+  );
 }
