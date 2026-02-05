@@ -9,6 +9,7 @@
  */
 
 import fs from "fs";
+import { promises as fsPromises } from "fs";
 import path from "path";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
@@ -81,7 +82,7 @@ type _RemoteWorkspaceBody = z.infer<typeof remoteWorkspaceSchema>;
  * @param {string} [req.query.path] - Directory path to list (relative to base or absolute if under base)
  * @returns {Object} { path, entries: [{ name, path, isDirectory }] }
  */
-router.get("/tree", (req: Request, res: Response): void => {
+router.get("/tree", async (req: Request, res: Response): Promise<void> => {
   try {
     const rawPath = (req.query.path as string)?.trim();
     const base = process.env.WORKSPACE_BASE
@@ -105,17 +106,22 @@ router.get("/tree", (req: Request, res: Response): void => {
       return;
     }
 
-    if (!fs.existsSync(normalized)) {
-      sendErrorResponse(
-        res,
-        ErrorCode.RESOURCE_NOT_FOUND,
-        "Directory not found",
-        {},
-      );
-      return;
+    let stat;
+    try {
+      stat = await fsPromises.stat(normalized);
+    } catch (err: any) {
+      if (err.code === "ENOENT") {
+        sendErrorResponse(
+          res,
+          ErrorCode.RESOURCE_NOT_FOUND,
+          "Directory not found",
+          {},
+        );
+        return;
+      }
+      throw err;
     }
 
-    const stat = fs.statSync(normalized);
     if (!stat.isDirectory()) {
       sendErrorResponse(
         res,
@@ -126,8 +132,11 @@ router.get("/tree", (req: Request, res: Response): void => {
       return;
     }
 
-    const entries = fs
-      .readdirSync(normalized, { withFileTypes: true })
+    const dirents = await fsPromises.readdir(normalized, {
+      withFileTypes: true,
+    });
+
+    const entries = dirents
       .filter((d) => !d.name.startsWith(".") && !SKIP_DIRS.has(d.name))
       .map((d) => {
         const fullPath = path.join(normalized, d.name);
