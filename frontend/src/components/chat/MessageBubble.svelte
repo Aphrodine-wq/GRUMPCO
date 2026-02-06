@@ -19,7 +19,7 @@
   import PlanResult from './PlanResult.svelte';
   import CodeResult from './CodeResult.svelte';
   import { Badge, Button, Tooltip } from '../../lib/design-system';
-  import { flattenTextContent } from '../../utils/contentParser';
+  import { parseMessageContent as parseContentBlocks } from '../../utils/contentParser';
   import { showToast } from '../../stores/toastStore';
   import { chatPhaseStore } from '../../stores/chatPhaseStore';
   import { approveDesignPhase } from '../../lib/api';
@@ -110,7 +110,8 @@
 
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
     if (Array.isArray(content)) return content;
-    return flattenTextContent(content) as unknown as ContentBlock[];
+    // Use proper parser for structured content blocks
+    return parseContentBlocks(content);
   }
 
   function getPlainTextContent(): string {
@@ -290,25 +291,25 @@
             <ToolResultCard toolResult={block} />
           {:else if block.type === 'phase_result'}
             {#if block.phase === 'architecture' && block.data}
-              <ArchitectureResult 
-                data={block.data} 
+              <ArchitectureResult
+                data={block.data}
                 onApprove={() => handlePhaseApprove('architecture')}
                 onRequestChanges={(feedback) => handlePhaseRequestChanges('architecture', feedback)}
               />
             {:else if block.phase === 'prd' && block.data}
-              <PRDResult 
+              <PRDResult
                 data={block.data}
                 onApprove={() => handlePhaseApprove('prd')}
                 onRequestChanges={(feedback) => handlePhaseRequestChanges('prd', feedback)}
               />
             {:else if block.phase === 'plan' && block.data}
-              <PlanResult 
+              <PlanResult
                 data={block.data}
                 onApprove={() => handlePhaseApprove('plan')}
                 onRequestChanges={(feedback) => handlePhaseRequestChanges('plan', feedback)}
               />
             {:else if block.phase === 'code' && block.data}
-              <CodeResult 
+              <CodeResult
                 data={block.data}
                 onApprove={() => handlePhaseApprove('code')}
                 onRequestChanges={(feedback) => handlePhaseRequestChanges('code', feedback)}

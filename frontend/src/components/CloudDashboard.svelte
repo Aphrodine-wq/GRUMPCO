@@ -887,6 +887,10 @@
 
   .empty-state {
     grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     padding: 2rem;
     text-align: center;
     color: var(--color-text-muted, #6b7280);

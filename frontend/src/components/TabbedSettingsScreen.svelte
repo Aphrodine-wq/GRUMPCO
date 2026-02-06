@@ -258,11 +258,44 @@
     configuringTestState = 'testing';
     configuringErrorMessage = '';
     try {
-      // Simulate API test; backend may validate in future
-      await new Promise((r) => setTimeout(r, 800));
-      newOnboardingStore.setAiProvider(configuringProvider, needsKey ? configuringApiKey : undefined);
+      // For Ollama, test connection to local instance
+      if (configuringProvider === 'ollama') {
+        try {
+          const ollamaRes = await fetchApi('/api/ollama/status');
+          const ollamaData = await ollamaRes.json();
+          if (!ollamaData.detected) {
+            throw new Error('Ollama not detected - make sure Ollama is running');
+          }
+        } catch (e) {
+          configuringTestState = 'error';
+          configuringErrorMessage = e instanceof Error ? e.message : 'Cannot connect to Ollama';
+          return;
+        }
+      } else {
+        // Simulate API test for other providers; backend may validate in future
+        await new Promise((r) => setTimeout(r, 800));
+      }
+
+      // Save to onboarding store (localStorage)
+      newOnboardingStore.setAiProvider(
+        configuringProvider,
+        needsKey ? configuringApiKey : undefined
+      );
+
+      // Also save to backend settings so models API can detect provider
+      await settingsStore.save({
+        models: {
+          defaultProvider: configuringProvider as 'nim' | 'ollama' | 'mock',
+        },
+      });
+
       configuringTestState = 'success';
-      showToast(`${AI_PROVIDER_OPTIONS.find((p) => p.id === configuringProvider)?.name ?? configuringProvider} configured`, 'success');
+      showToast(
+        `${AI_PROVIDER_OPTIONS.find((p) => p.id === configuringProvider)?.name ?? configuringProvider} configured`,
+        'success'
+      );
+
+      // Refresh models list
       fetchApi('/api/models/list')
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to fetch'))))
         .then((d: { groups?: ModelListGroup[] }) => {
@@ -830,7 +863,8 @@
       {:else if activeTab === 'ai'}
         <div class="tab-section models-tab ai-providers-tab">
           <p class="ai-tab-quick-start">
-            Pick a provider below and add an API key to get started. Then choose your default model for chat and code.
+            Pick a provider below and add an API key to get started. Then choose your default model
+            for chat and code.
           </p>
           <Card title="Default model" padding="md" class="ai-providers-default-card">
             <p class="field-hint models-provider-intro">
@@ -852,10 +886,7 @@
                     selectedProviderInAiTab === group.provider ||
                     (settings?.models?.defaultProvider === group.provider &&
                       !selectedProviderInAiTab)}
-                  <div
-                    class="provider-card-wrap"
-                    class:selected={isSelected}
-                  >
+                  <div class="provider-card-wrap" class:selected={isSelected}>
                     <button
                       type="button"
                       class="provider-card settings-provider-card"
@@ -1003,7 +1034,11 @@
                   {#if isConfigured}
                     <span class="configured-badge">Configured</span>
                   {:else}
-                    <Button variant="ghost" size="sm" onclick={() => startConfiguringProvider(option.id)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onclick={() => startConfiguringProvider(option.id)}
+                    >
                       Configure provider
                     </Button>
                   {/if}
@@ -1038,7 +1073,8 @@
                         variant="secondary"
                         size="sm"
                         onclick={testAndSaveAiProvider}
-                        disabled={configuringTestState === 'testing' || (configuringProvider !== 'ollama' && !configuringApiKey.trim())}
+                        disabled={configuringTestState === 'testing' ||
+                          (configuringProvider !== 'ollama' && !configuringApiKey.trim())}
                       >
                         {#if configuringTestState === 'testing'}
                           <span class="inline-spinner"></span>
@@ -1206,9 +1242,7 @@
                 }}
               />
             </div>
-            <p class="field-hint chat-model-hint">
-              Override when needed.
-            </p>
+            <p class="field-hint chat-model-hint">Override when needed.</p>
             <div class="advanced-finetuning">
               <span class="field-label">Advanced (finetuning)</span>
               <div class="advanced-row">

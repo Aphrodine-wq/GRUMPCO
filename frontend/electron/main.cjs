@@ -10,6 +10,8 @@
  * 6. Memory-optimized window creation
  */
 
+console.log('[G-Rump] ===== ELECTRON MAIN PROCESS STARTING =====');
+
 const { app, BrowserWindow, shell, ipcMain, nativeImage, nativeTheme, Tray, Menu, Notification, globalShortcut, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -25,6 +27,15 @@ app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
+
+// CRITICAL: Disable ALL Chrome extensions to prevent webcomponents conflicts (Video Highlight extension)
+app.commandLine.appendSwitch('disable-extensions');
+app.commandLine.appendSwitch('disable-component-extensions-with-background-pages');
+app.commandLine.appendSwitch('disable-default-apps');
+app.commandLine.appendSwitch('no-default-browser-check');
+// Force a completely isolated user data dir to avoid any extension interference
+const isolatedUserDataPath = path.join(app.getPath('temp'), 'grump-electron-isolated');
+app.setPath('userData', isolatedUserDataPath);
 
 let mainWindow = null;
 let splashWindow = null;
@@ -245,7 +256,10 @@ function createMainWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       backgroundThrottling: false,
       enableWebSQL: false,
-      webSecurity: !isDev  // Disable webSecurity in dev to allow scripts to load
+      webSecurity: !isDev,  // Disable webSecurity in dev to allow scripts to load
+      // Prevent browser extensions from injecting scripts
+      sandbox: true,
+      allowRunningInsecureContent: false,
     },
     backgroundColor: '#0f0a1e',
     show: false,
@@ -293,14 +307,31 @@ function createMainWindow() {
   // Window is shown when renderer sends IPC 'close-splash-show-main', or on
   // did-fail-load / final dev failure / fallback. In dev only: also show after
   // 2s on did-finish-load so user can see the page and Console if IPC never comes.
+
+  // DEBUG: Track page load events
+  mainWindow.webContents.on('did-start-loading', () => {
+    console.log('[G-Rump] DEBUG: Page started loading');
+  });
+
+  mainWindow.webContents.on('dom-ready', () => {
+    console.log('[G-Rump] DEBUG: DOM ready');
+  });
+
+  // FORCE DevTools open immediately in dev mode
+  if (!app.isPackaged) {
+    console.log('[G-Rump] DEBUG: Opening DevTools immediately');
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
+    mainWindow.show(); // Force show window too
+  }
+
   if (isDev) {
     mainWindow.webContents.once('did-finish-load', () => {
-      setTimeout(() => {
-        showMainWindow();
-        if (!app.isPackaged && mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.openDevTools({ mode: 'detach' });
-        }
-      }, 2000);
+      console.log('[G-Rump] DEBUG: Page finished loading');
+      // Force show window and devtools immediately in dev
+      showMainWindow();
+      if (!app.isPackaged && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.openDevTools({ mode: 'detach' });
+      }
     });
   }
 
@@ -661,7 +692,7 @@ function sendProtocolUrlToRenderer(url) {
 app.whenReady().then(() => {
   // Register Docker IPC handlers (containers, images, volumes, Free Agent)
   registerDockerHandlers();
-  
+
   // Single instance lock (Windows): second launch forwards URL to first instance
   const gotLock = app.requestSingleInstanceLock();
   if (!gotLock) {
