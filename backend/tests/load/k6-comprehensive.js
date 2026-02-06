@@ -284,7 +284,7 @@ export function codegenSession() {
   // Step 1: Create session
   const startPayload = JSON.stringify({
     prd: {
-      id: `prd_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      id: `prd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       title: 'Load Test PRD',
       description: pick(intents),
       features: [],

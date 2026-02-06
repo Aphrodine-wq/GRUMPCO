@@ -34,7 +34,7 @@ interface GrumpConfig {
 
 // Default configuration
 const defaultConfig: GrumpConfig = {
-  apiUrl: process.env.GRUMP_API_URL || 'http://localhost:3000',
+  apiUrl: process.env.GRUMP_API_URL || 'https://grump-backend.onrender.com',
   apiKey: process.env.GRUMP_API_KEY || null,
   theme: (process.env.GRUMP_THEME as GrumpConfig['theme']) || 'dark',
   defaultOutputDir: './output',
@@ -250,7 +250,7 @@ class ConfigManager {
     }
 
     const initialConfig = {
-      apiUrl: 'http://localhost:3000',
+      apiUrl: 'https://grump-backend.onrender.com',
       apiKey: null,
       theme: 'dark',
       defaultOutputDir: './output',

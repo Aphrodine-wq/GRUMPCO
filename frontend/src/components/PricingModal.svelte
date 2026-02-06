@@ -148,7 +148,7 @@
   }
 
   .modal-content {
-    background: white;
+    background: var(--color-bg-card);
     border-radius: 24px;
     max-width: 1000px;
     width: 100%;
@@ -178,8 +178,8 @@
     height: 40px;
     border-radius: 50%;
     border: none;
-    background: #f4f4f5;
-    color: #71717a;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-muted);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -188,8 +188,8 @@
   }
 
   .close-btn:hover {
-    background: #e4e4e7;
-    color: #18181b;
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
   }
 
   .modal-header {
@@ -200,14 +200,14 @@
   .modal-header h2 {
     font-size: 32px;
     font-weight: 800;
-    color: #18181b;
+    color: var(--color-text);
     margin-bottom: 12px;
     letter-spacing: -0.02em;
   }
 
   .modal-header p {
     font-size: 16px;
-    color: #71717a;
+    color: var(--color-text-muted);
   }
 
   .plans-grid {
@@ -218,8 +218,8 @@
   }
 
   .plan-card {
-    background: white;
-    border: 2px solid #e4e4e7;
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-border);
     border-radius: 16px;
     padding: 32px 24px;
     display: flex;
@@ -229,7 +229,7 @@
   }
 
   .plan-card:hover {
-    border-color: #18181b;
+    border-color: var(--color-text);
     transform: translateY(-4px);
     box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.15);
   }
@@ -261,7 +261,7 @@
   .plan-name {
     font-size: 20px;
     font-weight: 700;
-    color: #18181b;
+    color: var(--color-text);
     margin-bottom: 12px;
   }
 
@@ -272,13 +272,13 @@
   .price {
     font-size: 40px;
     font-weight: 800;
-    color: #18181b;
+    color: var(--color-text);
     letter-spacing: -0.02em;
   }
 
   .period {
     font-size: 14px;
-    color: #71717a;
+    color: var(--color-text-muted);
     margin-left: 4px;
   }
 
@@ -294,7 +294,7 @@
     align-items: center;
     gap: 12px;
     font-size: 14px;
-    color: #3f3f46;
+    color: var(--color-text-secondary);
     margin-bottom: 12px;
     line-height: 1.5;
   }
@@ -311,12 +311,12 @@
   .modal-footer {
     text-align: center;
     padding-top: 24px;
-    border-top: 1px solid #e4e4e7;
+    border-top: 1px solid var(--color-border);
   }
 
   .modal-footer p {
     font-size: 14px;
-    color: #71717a;
+    color: var(--color-text-muted);
   }
 
   /* Mobile responsive */

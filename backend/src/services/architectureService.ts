@@ -334,7 +334,7 @@ async function _generateArchitecture(
     const complexity = (data.complexity as string) || "standard";
 
     const architecture: SystemArchitecture = {
-      id: `arch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `arch_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       projectName: (data.projectName as string) || "Unnamed Project",
       projectDescription:
         (data.projectDescription as string) || request.projectDescription,
@@ -555,7 +555,7 @@ export async function* generateArchitectureStream(
 
     const architectureData = JSON.parse(jsonText);
     const architecture: SystemArchitecture = {
-      id: `arch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `arch_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       projectName: architectureData.projectName || "Unnamed Project",
       projectDescription:
         architectureData.projectDescription ||

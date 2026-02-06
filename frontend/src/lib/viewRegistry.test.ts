@@ -48,7 +48,7 @@ describe('viewRegistry', () => {
     });
 
     it('should contain settings sub-screens', () => {
-      const settingsScreens = ['model-benchmark', 'troubleshooting', 'reset'];
+      const settingsScreens = ['troubleshooting', 'reset'];
 
       settingsScreens.forEach((screen) => {
         expect(VIEW_REGISTRY[screen as keyof typeof VIEW_REGISTRY]).toBeDefined();
@@ -98,10 +98,6 @@ describe('viewRegistry', () => {
         expect(VIEW_REGISTRY['docker-setup']?.backTo).toBe('settings');
       });
 
-      it('model-benchmark should navigate back to settings', () => {
-        expect(VIEW_REGISTRY['model-benchmark']?.backTo).toBe('settings');
-      });
-
       it('troubleshooting should navigate back to settings', () => {
         expect(VIEW_REGISTRY.troubleshooting?.backTo).toBe('settings');
       });
@@ -113,7 +109,6 @@ describe('viewRegistry', () => {
       it('all other screens should navigate back to chat', () => {
         const settingsScreens = new Set([
           'docker-setup',
-          'model-benchmark',
           'troubleshooting',
           'reset',
         ]);

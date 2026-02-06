@@ -30,7 +30,6 @@
   import BudgetWidget from './BudgetWidget.svelte';
   import CompilerStatsWidget from './CompilerStatsWidget.svelte';
   import ApprovalDialog from './ApprovalDialog.svelte';
-  import ConfidenceIndicator from './ConfidenceIndicator.svelte';
 
   // Props
   export let sessionId: string = 'default';
@@ -79,43 +78,31 @@
   }
 </script>
 
-<div
-  class="gagent-status-panel site-style rounded-xl overflow-hidden {compact
-    ? 'p-3'
-    : 'p-4'}"
->
-  <!-- Header -->
-  <div class="flex items-center justify-between mb-4">
-    <div class="flex items-center gap-3">
-      <span class="panel-icon"><Bot size={24} /></span>
-      <div>
-        <h2 class="panel-title">G-Agent Control</h2>
-        <div class="flex items-center gap-2 text-xs panel-meta">
-          <!-- Connection status -->
-          <span class="flex items-center gap-1 {$isConnected ? 'status-connected' : 'status-disconnected'}">
-            <span
-              class="w-2 h-2 rounded-full status-dot {$isConnected ? 'animate-pulse' : ''}"
-            ></span>
-            {$isConnected ? 'Connected' : 'Disconnected'}
-          </span>
-
-          <!-- Global stop status -->
-          {#if $isGlobalStopActive}
-            <span class="status-stopped">• STOPPED</span>
-          {/if}
-
-          <!-- Pending approvals -->
-          {#if $pendingApprovalCount > 0}
-            <span class="badge-pending">
-              {$pendingApprovalCount} pending
-            </span>
-          {/if}
-        </div>
-      </div>
+<div class="gagent-status-panel site-style rounded-xl overflow-hidden {compact ? 'p-3' : 'p-4'}">
+  <!-- Header: one clear status line + emergency stop -->
+  <div class="panel-header-simple">
+    <div class="panel-header-top">
+      <span class="panel-icon"><Bot size={20} /></span>
+      <h2 class="panel-title">G-Agent</h2>
     </div>
-
-    <!-- Kill Switch - Always visible -->
-    <KillSwitchButton size="md" showLabel={!compact} />
+    <div class="panel-status-line">
+      <span
+        class="status-dot {$isConnected ? 'status-connected animate-pulse' : 'status-disconnected'}"
+      ></span>
+      <span class="status-text">{$isConnected ? 'Connected' : 'Disconnected'}</span>
+      {#if $isGlobalStopActive}
+        <span class="status-stopped">· Stopped</span>
+      {/if}
+      {#if $pendingApprovalCount > 0}
+        <span class="badge-pending">{$pendingApprovalCount} approval(s)</span>
+      {/if}
+    </div>
+    <div class="panel-emergency">
+      <KillSwitchButton size="md" showLabel={!compact} />
+      {#if !compact}
+        <span class="emergency-hint">Emergency stop: Ctrl+Shift+K</span>
+      {/if}
+    </div>
   </div>
 
   <!-- Tab navigation -->
@@ -149,53 +136,18 @@
   <!-- Tab content -->
   <div class="space-y-4">
     {#if activeTab === 'overview' || compact}
-      <!-- Quick stats grid -->
-      <div class="grid {compact ? 'grid-cols-2' : 'grid-cols-3'} gap-3">
-        <!-- Queue stats -->
+      <!-- Simple one-line stats -->
+      <div class="stats-row-simple">
         {#if $gAgentStatus?.queue}
-          <div class="stat-card">
-            <div class="stat-label">Active Goals</div>
-            <div class="stat-value stat-value-blue">
-              {$gAgentStatus.queue.running}
-            </div>
-            <div class="stat-sublabel">
-              {$gAgentStatus.queue.pending} pending
-            </div>
-          </div>
+          <span class="stat-inline"
+            >Goals: {$gAgentStatus.queue.running} active, {$gAgentStatus.queue.pending} pending</span
+          >
         {/if}
-
-        <!-- Compiler compression -->
         {#if $compilerStats && showCompiler}
-          <div class="stat-card">
-            <div class="stat-label">Compression</div>
-            <div class="stat-value stat-value-green">
-              {Math.round($compilerStats.compressionEfficiency * 100)}x
-            </div>
-            <div class="stat-sublabel">
-              {($compilerStats.tokensSaved / 1000).toFixed(1)}K saved
-            </div>
-          </div>
+          <span class="stat-inline"
+            >Compression: {Math.round($compilerStats.compressionEfficiency * 100)}x</span
+          >
         {/if}
-
-        <!-- Capabilities -->
-        {#if $gAgentStatus?.capabilities}
-          <div class="stat-card">
-            <div class="stat-label">Capabilities</div>
-            <div class="flex flex-wrap gap-1 mt-1">
-              {#each Object.entries($gAgentStatus.capabilities).filter(([_, v]) => v) as [cap]}
-                <span class="cap-tag">
-                  {cap.replace(/_/g, ' ')}
-                </span>
-              {/each}
-            </div>
-          </div>
-        {/if}
-      </div>
-
-      <!-- Optional stack/frameworks line (placeholder until session/store provides it) -->
-      <div class="stat-card stack-line">
-        <div class="stat-label">Stack</div>
-        <div class="stat-sublabel">—</div>
       </div>
 
       <!-- Mini widgets in compact mode -->
@@ -220,26 +172,11 @@
     {/if}
   </div>
 
-  <!-- Footer with confidence and autonomy -->
+  <!-- Footer: minimal session id; details in tabs -->
   {#if !compact}
-    <div class="panel-footer">
-      <div class="flex items-center gap-4">
-        <ConfidenceIndicator
-          confidence={0.75}
-          size="sm"
-          showLabel
-          factors={[
-            { name: 'Pattern Match', value: 0.85, weight: 0.3 },
-            { name: 'Context Quality', value: 0.7, weight: 0.25 },
-            { name: 'History', value: 0.6, weight: 0.2 },
-            { name: 'Risk Assessment', value: 0.8, weight: 0.25 },
-          ]}
-        />
-      </div>
-
-      <div class="footer-session">
-        Session: {sessionId}
-      </div>
+    <div class="panel-footer panel-footer-simple">
+      <span class="footer-session">Session: {sessionId}</span>
+      <span class="footer-details-hint">Budget &amp; compiler details in tabs above.</span>
     </div>
   {/if}
 </div>
@@ -263,23 +200,90 @@
 
   /* Site style: neutral palette #f9fafb, #ffffff, #e5e7eb, #111827, #374151 */
   .gagent-status-panel.site-style {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
 
   .gagent-status-panel.site-style .panel-icon {
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .gagent-status-panel.site-style .panel-title {
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  .panel-header-simple {
+    margin-bottom: 0.75rem;
+  }
+
+  .panel-header-top {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .panel-status-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .panel-status-line .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .panel-status-line .status-text {
+    font-weight: 500;
+  }
+
+  .panel-emergency {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .emergency-hint {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+  }
+
+  .stats-row-simple {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  .stat-inline {
+    white-space: nowrap;
+  }
+
+  .panel-footer-simple {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .footer-details-hint {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
   }
 
   .gagent-status-panel.site-style .panel-meta {
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .gagent-status-panel.site-style .status-connected {
@@ -290,12 +294,20 @@
     color: #dc2626;
   }
 
-  .gagent-status-panel.site-style span.status-connected .status-dot {
+  .gagent-status-panel.site-style .status-dot.status-connected {
     background: #059669;
   }
 
-  .gagent-status-panel.site-style span.status-disconnected .status-dot {
+  .gagent-status-panel.site-style .status-dot.status-disconnected {
     background: #dc2626;
+  }
+
+  .gagent-status-panel.site-style .panel-status-line .status-connected {
+    color: #059669;
+  }
+
+  .gagent-status-panel.site-style .panel-status-line .status-disconnected {
+    color: #dc2626;
   }
 
   .gagent-status-panel.site-style .status-stopped {
@@ -315,8 +327,8 @@
     display: flex;
     gap: 4px;
     margin-bottom: 1rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 4px;
   }
@@ -327,41 +339,43 @@
     border-radius: 6px;
     font-size: 0.875rem;
     font-weight: 500;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
     background: transparent;
     border: none;
-    color: #6b7280;
+    color: var(--color-text-muted);
     cursor: pointer;
   }
 
   .gagent-status-panel.site-style .tab-btn:hover {
-    color: #374151;
-    background: #f3f4f6;
+    color: var(--color-text-secondary);
+    background: var(--color-bg-secondary);
   }
 
   .gagent-status-panel.site-style .tab-btn.tab-active {
-    background: #ffffff;
-    color: #111827;
+    background: var(--color-bg-card);
+    color: var(--color-text);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 
   .gagent-status-panel.site-style .stat-card {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 12px;
   }
 
   .gagent-status-panel.site-style .stat-label {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin-bottom: 4px;
   }
 
   .gagent-status-panel.site-style .stat-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--color-text);
   }
 
   .gagent-status-panel.site-style .stat-value-blue {
@@ -374,13 +388,13 @@
 
   .gagent-status-panel.site-style .stat-sublabel {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .gagent-status-panel.site-style .cap-tag {
     font-size: 0.75rem;
     background: #e5e7eb;
-    color: #374151;
+    color: var(--color-text-secondary);
     padding: 2px 6px;
     border-radius: 4px;
   }
@@ -388,7 +402,7 @@
   .gagent-status-panel.site-style .panel-footer {
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--color-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -396,7 +410,7 @@
 
   .gagent-status-panel.site-style .footer-session {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   @keyframes pulse {

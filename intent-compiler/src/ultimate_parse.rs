@@ -59,7 +59,7 @@ pub fn ultimate_parse_intent(text: &str, constraints: serde_json::Value) -> Inte
     let zero_copy_text = ZeroCopyStr::new(text);
 
     // Step 4: Try GPU acceleration first (if available)
-    if let Some(gpu) = GPU_ACCELERATOR.lock().unwrap().as_ref() {
+    if let Some(gpu) = GPU_ACCELERATOR.lock().unwrap().as_mut() {
         if let Ok(gpu_result) = gpu.stream_process(zero_copy_text.as_str()) {
             // GPU-accelerated path (10-100x faster!)
             return gpu_enhanced_parse(gpu_result, constraints);
@@ -85,9 +85,8 @@ pub fn ultimate_parse_intent(text: &str, constraints: serde_json::Value) -> Inte
     let lowercase_str = String::from_utf8_lossy(&lowercase_text);
 
     // Step 8: Core parsing with JIT optimization
-    let output = JIT_ENGINE.profile_and_execute(3, || {
-        crate::parse_intent(&lowercase_str, constraints)
-    });
+    let output =
+        JIT_ENGINE.profile_and_execute(3, || crate::parse_intent(&lowercase_str, constraints));
 
     // Step 9: Enhance with ALL advanced features
     let enhanced_output = enhance_with_all_features(output, quantum_result, pattern_recognition);
@@ -104,7 +103,7 @@ pub fn ultimate_batch_parse(
     constraints: serde_json::Value,
 ) -> Vec<IntentOutput> {
     // Try GPU batch processing first
-    if let Some(gpu) = GPU_ACCELERATOR.lock().unwrap().as_ref() {
+    if let Some(gpu) = GPU_ACCELERATOR.lock().unwrap().as_mut() {
         if texts.len() >= 100 {
             // Large batch - use GPU
             if let Ok(gpu_results) = gpu.batch_process_gpu(&texts) {
@@ -118,7 +117,9 @@ pub fn ultimate_batch_parse(
 
     // Fall back to ultra-parallel CPU processing
     PARALLEL_ENGINE
-        .process_adaptive(texts, |text| ultimate_parse_intent(text, constraints.clone()))
+        .process_adaptive(texts, move |text| {
+            ultimate_parse_intent(text, constraints.clone())
+        })
         .into_iter()
         .map(|r| r.result)
         .collect()
@@ -129,7 +130,7 @@ pub fn ultimate_stream_parse(
     text_stream: impl Iterator<Item = String>,
 ) -> impl Iterator<Item = IntentOutput> {
     // Use lock-free ring buffer for zero-copy streaming
-    let buffer = Arc::new(LockFreeRingBuffer::new(1000));
+    let buffer = Arc::new(LockFreeRingBuffer::<IntentOutput>::new(1000));
 
     text_stream.map(move |text| ultimate_parse_intent(&text, serde_json::json!({})))
 }
@@ -151,7 +152,10 @@ fn gpu_enhanced_parse(
         project_type: "web".to_string(),
         architecture_pattern: "microservices".to_string(),
         complexity_score: 0.5,
-        confidence: gpu_result.confidence,
+        confidence: crate::types::ConfidenceReport {
+            overall: gpu_result.confidence,
+            ..Default::default()
+        },
         dependency_graph: vec![],
         sentences: vec![],
         verification: None,
@@ -174,7 +178,7 @@ fn enhance_with_all_features(
     let neural_confidence = pattern_recognition.confidence;
 
     // Ultimate confidence calculation (weighted ensemble)
-    output.confidence = (output.confidence * 0.4
+    output.confidence.overall = (output.confidence.overall * 0.4
         + quantum_confidence as f32 * 0.3
         + neural_confidence as f32 * 0.3)
         .min(1.0)
@@ -312,7 +316,7 @@ mod tests {
         let output = ultimate_parse_intent(text, serde_json::json!({}));
 
         assert!(!output.features.is_empty());
-        assert!(output.confidence > 0.0);
+        assert!(output.confidence.overall > 0.0);
     }
 
     #[test]

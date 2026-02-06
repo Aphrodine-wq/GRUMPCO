@@ -9,9 +9,8 @@ CREATE TABLE IF NOT EXISTS usage_records (
   output_tokens INTEGER,
   latency_ms INTEGER,
   success BOOLEAN NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-
-  FOREIGN KEY (user_id) REFERENCES auth_users(id)
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  -- Note: Foreign key to auth_users removed - user validation is at app level
 );
 
 -- Index for user_id and created_at for efficient time-range queries

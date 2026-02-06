@@ -4,6 +4,7 @@
  */
 
 import logger from "../middleware/logger.js";
+import { runWithConcurrency } from "../utils/concurrency.js";
 import {
   getAccessToken,
   isTokenExpired,
@@ -816,12 +817,7 @@ export async function bulkCreateIssues(
   userId: string,
   inputs: CreateIssueInput[],
 ): Promise<Array<JiraIssue | null>> {
-  const results: Array<JiraIssue | null> = [];
-  for (const input of inputs) {
-    const issue = await createIssue(userId, input);
-    results.push(issue);
-  }
-  return results;
+  return runWithConcurrency(inputs, 5, (input) => createIssue(userId, input));
 }
 
 /**

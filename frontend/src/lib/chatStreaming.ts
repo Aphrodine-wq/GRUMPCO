@@ -27,6 +27,8 @@ export type ChatStreamEventType =
  */
 export interface ChatStreamEvent {
   type: ChatStreamEventType;
+  /** Optional suggestion for chat mode (e.g. backend detects diagram intent) */
+  suggestChatMode?: 'design' | 'code';
   /** Text content for 'text' events */
   text?: string;
   /** Tool call details for 'tool_call' events */
@@ -69,6 +71,8 @@ export interface ChatStreamOptions {
   signal?: AbortSignal;
   /** Callback for each event */
   onEvent?: (event: ChatStreamEvent) => void;
+  /** Base64 or data URL of image attached to the last user message (e.g. for NIM vision) */
+  lastUserMessageImage?: string | null;
 }
 
 /**
@@ -147,9 +151,10 @@ export async function streamChat(
     modelId,
     signal,
     onEvent,
+    lastUserMessageImage,
   } = options;
 
-  const apiMessages = prepareMessagesForApi(messages, { provider });
+  const apiMessages = prepareMessagesForApi(messages, { provider, lastUserMessageImage });
   if (apiMessages.length === 0) {
     throw new Error('No messages to send');
   }

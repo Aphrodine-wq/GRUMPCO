@@ -26,7 +26,6 @@ pub enum PlanStatus {
     Cancelled,
 }
 
-
 /// Overall risk assessment for a plan
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlanRiskAssessment {
