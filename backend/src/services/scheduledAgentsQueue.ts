@@ -141,11 +141,11 @@ export async function loadRepeatableJobsFromDb(): Promise<void> {
 
     await q.addBulk(jobs);
 
-    batch.forEach((r) => {
+    for (const r of batch) {
       logger.info(
         { scheduleId: r.id, cronExpression: r.cronExpression },
         "Scheduled repeatable job loaded from DB",
       );
-    });
+    }
   }
 }
