@@ -19,6 +19,7 @@ import fs from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
 import util from "util";
+import { getCompletion } from "./llmGatewayHelper.js";
 
 const execAsync = util.promisify(exec);
 
@@ -221,49 +222,55 @@ export async function scanForCodeIssues(
   };
 
   try {
-    const pm = await detectPackageManager(workspacePath);
-    if (!pm) {
-      logger.warn({ userId, workspacePath }, "No supported package manager found (npm/pnpm/yarn)");
-      result.codeSmells.push({
-          file: 'package.json',
-          type: 'setup',
-          message: 'No lockfile found. Run npm/pnpm install to generate one for accurate scanning.'
+    // 1. Run pnpm audit
+    // Note: Using pnpm because the project is a pnpm monorepo and getSecurityScore also uses pnpm.
+    try {
+      const { stdout } = await execAsync("pnpm audit --json --prod", {
+        cwd: workspacePath,
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       });
-      return result;
+      if (stdout) {
+         try {
+            processAuditOutput(JSON.parse(stdout), result);
+         } catch (parseError) {
+            logger.error({ userId, parseError }, "Failed to parse pnpm audit output (stdout)");
+         }
+      }
+    } catch (error: any) {
+      if (error.stdout) {
+        try {
+          processAuditOutput(JSON.parse(error.stdout), result);
+        } catch (parseError) {
+          logger.error({ userId, parseError }, "Failed to parse pnpm audit output (error.stdout)");
+        }
+      } else {
+        logger.warn({ userId, error }, "pnpm audit command failed execution");
+      }
     }
 
-    logger.info({ userId, pm }, `Detected package manager: ${pm}`);
-
-    let auditCmd = '';
-    let outdatedCmd = '';
-
-    if (pm === 'npm') {
-        auditCmd = 'npm audit --json';
-        outdatedCmd = 'npm outdated --json';
-    } else if (pm === 'pnpm') {
-        auditCmd = 'pnpm audit --json';
-        outdatedCmd = 'pnpm outdated --json';
-    } else if (pm === 'yarn') {
-        auditCmd = 'yarn audit --json';
-        outdatedCmd = 'yarn outdated --json';
-    }
-
-    // Run in parallel
-    const [auditRes, outdatedRes] = await Promise.allSettled([
-        runCommand(auditCmd, workspacePath),
-        runCommand(outdatedCmd, workspacePath)
-    ]);
-
-    if (auditRes.status === 'fulfilled') {
-        result.vulnerabilities = parseAuditOutput(auditRes.value);
-    } else {
-        logger.warn({ error: auditRes.reason }, "Audit command failed");
-    }
-
-    if (outdatedRes.status === 'fulfilled') {
-        result.outdatedDeps = parseOutdatedOutput(outdatedRes.value);
-    } else {
-        logger.warn({ error: outdatedRes.reason }, "Outdated command failed");
+    // 2. Run pnpm outdated
+    try {
+       const { stdout } = await execAsync("pnpm outdated --json", {
+        cwd: workspacePath,
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      if (stdout) {
+        try {
+            processOutdatedOutput(JSON.parse(stdout), result);
+        } catch (parseError) {
+            logger.error({ userId, parseError }, "Failed to parse pnpm outdated output (stdout)");
+        }
+      }
+    } catch (error: any) {
+       if (error.stdout) {
+          try {
+             processOutdatedOutput(JSON.parse(error.stdout), result);
+          } catch (parseError) {
+              logger.error({ userId, parseError }, "Failed to parse pnpm outdated output (error.stdout)");
+          }
+       } else {
+           logger.warn({ userId, error }, "pnpm outdated command failed execution");
+       }
     }
 
     // Generate insights from scan results
@@ -310,6 +317,58 @@ export async function scanForCodeIssues(
   }
 
   return result;
+}
+
+function processAuditOutput(auditOutput: any, result: CodeScanResult) {
+  if (auditOutput.advisories) {
+    Object.values(auditOutput.advisories).forEach((advisory: any) => {
+      result.vulnerabilities.push({
+        severity: advisory.severity,
+        file: advisory.module_name,
+        message: advisory.title,
+        cwe: advisory.cwe && advisory.cwe.length > 0 ? advisory.cwe[0] : undefined,
+      });
+    });
+  }
+}
+
+function processOutdatedOutput(outdatedOutput: any, result: CodeScanResult) {
+    Object.entries(outdatedOutput).forEach(([name, info]: [string, any]) => {
+         if (info.latest !== info.wanted) {
+             result.outdatedDeps.push({
+                 name: name,
+                 current: info.current || info.wanted,
+                 latest: info.latest,
+                 breaking: isBreakingChange(info.current || info.wanted, info.latest),
+             });
+         }
+    });
+}
+
+function isBreakingChange(current: string, latest: string): boolean {
+  if (!current || !latest) return false;
+  // Simple check: different major version
+  // Clean versions (remove ^, ~)
+  const clean = (v: string) => v.replace(/^[^\d]+/, '');
+  const currentParts = clean(current).split('.');
+  const latestParts = clean(latest).split('.');
+
+  const currentMajor = parseInt(currentParts[0], 10);
+  const latestMajor = parseInt(latestParts[0], 10);
+
+  if (isNaN(currentMajor) || isNaN(latestMajor)) return false;
+
+  if (currentMajor !== latestMajor) return true;
+
+  // For 0.x, minor changes are breaking
+  if (currentMajor === 0) {
+      const currentMinor = parseInt(currentParts[1], 10);
+      const latestMinor = parseInt(latestParts[1], 10);
+      if (isNaN(currentMinor) || isNaN(latestMinor)) return false;
+      return currentMinor !== latestMinor;
+  }
+
+  return false;
 }
 
 /**
