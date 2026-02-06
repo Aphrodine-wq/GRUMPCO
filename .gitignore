@@ -45,3 +45,6 @@ intent-compiler/target/
 
 # Temporary backup dirs
 .backup-untracked/
+
+# Electron app builds (too large for GitHub)
+grump-app/
