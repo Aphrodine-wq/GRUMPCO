@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:fast": "concurrently \"vite\" \"wait-on http://localhost:5173 -t 3000 && electron .\"",
-    "electron:build": "vite build && electron-builder",
+    "build:icon": "node scripts/build-icon.mjs",
+    "electron:build": "npm run build:icon && vite build && electron-builder -c.npmRebuild=false",
     "electron:pack": "electron-builder --dir",
     "type-check": "svelte-check --tsconfig ./tsconfig.json",
     "lint": "eslint \"src/**/*.ts\" \"src/**/*.js\"",
@@ -36,7 +37,6 @@
     "@grump/shared-types": "workspace:*",
     "@supabase/supabase-js": "^2.91.1",
     "posthog-js": "^1.100.0",
-    "@types/dompurify": "^3.0.5",
     "diff": "^8.0.3",
     "dockerode": "^4.0.2",
     "dompurify": "^3.3.1",
@@ -53,6 +53,7 @@
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/svelte": "^5.3.1",
+    "@types/dompurify": "^3.0.5",
     "@types/node": "^20.19.30",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
@@ -84,7 +85,9 @@
     "@chromatic-com/storybook": "^5.0.0",
     "@storybook/addon-a11y": "^10.2.3",
     "@storybook/addon-docs": "^10.2.3",
-    "eslint-plugin-storybook": "^10.2.3"
+    "eslint-plugin-storybook": "^10.2.3",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.33.5"
   },
   "build": {
     "appId": "com.grump.app",
@@ -95,14 +98,15 @@
     },
     "files": [
       "dist/**/*",
-      "electron/**/*.cjs"
+      "electron/**/*.cjs",
+      "public/favicon.ico"
     ],
     "win": {
       "target": "portable",
-      "icon": "public/favicon.ico"
+      "icon": "build/icon.png"
     },
     "portable": {
-      "artifactName": "G-Rump.exe"
+      "artifactName": "grump.exe"
     },
     "extraMetadata": {
       "main": "electron/main.cjs"

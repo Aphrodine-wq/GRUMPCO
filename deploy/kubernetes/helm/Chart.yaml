@@ -1,0 +1,33 @@
+apiVersion: v2
+name: g-rump
+description: G-Rump AI Development Platform - Helm Chart
+type: application
+version: 2.1.0
+appVersion: "2.1.0"
+
+keywords:
+  - ai
+  - code-generation
+  - development
+  - llm
+  - nvidia
+
+home: https://g-rump.com
+sources:
+  - https://github.com/Aphrodine-wq/GRUMPCO
+
+maintainers:
+  - name: G-Rump Team
+    email: support@g-rump.com
+
+icon: https://g-rump.com/assets/logo.png
+
+dependencies:
+  - name: postgresql
+    version: "12.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  - name: redis
+    version: "17.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled

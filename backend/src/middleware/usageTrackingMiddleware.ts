@@ -1,6 +1,9 @@
 /**
  * Usage Tracking Middleware
  * Automatically records API usage for all requests
+ *
+ * NOTE: Local AI models (Ollama, etc.) are automatically excluded from
+ * billing/credit tracking via isLocalModel check in usageTracker.
  */
 
 import { type Request, type Response, type NextFunction } from "express";
@@ -21,11 +24,15 @@ interface TrackingRequest extends Request {
   estimatedInputTokens?: number;
   estimatedOutputTokens?: number;
   model?: string;
+  provider?: string;
 }
 
 /**
  * Middleware to track API usage for billing and analytics
  * Must be placed after apiAuthMiddleware to have access to userId
+ *
+ * Local AI models (Ollama, local LLMs) are automatically excluded from
+ * credit tracking via the isLocalModel check in usageTracker.
  */
 export function usageTrackingMiddleware(
   req: TrackingRequest,
@@ -79,25 +86,26 @@ export function usageTrackingMiddleware(
 
       const usage =
         responseBody &&
-        typeof responseBody === "object" &&
-        "usage" in responseBody
+          typeof responseBody === "object" &&
+          "usage" in responseBody
           ? (
-              responseBody as {
-                usage?: { input_tokens?: number; output_tokens?: number };
-              }
-            ).usage
+            responseBody as {
+              usage?: { input_tokens?: number; output_tokens?: number };
+            }
+          ).usage
           : undefined;
       if (usage) {
         estimatedInputTokens = usage.input_tokens;
         estimatedOutputTokens = usage.output_tokens;
       }
 
-      // Record the API call
+      // Record the API call (local models are auto-excluded in recordApiCall)
       await recordApiCall({
         userId: req.userId ?? "anonymous",
         endpoint: req.path,
         method: req.method ?? "GET",
         model: req.model,
+        provider: req.provider,
         inputTokens: estimatedInputTokens,
         outputTokens: estimatedOutputTokens,
         latencyMs,
@@ -122,16 +130,26 @@ export function usageTrackingMiddleware(
 /**
  * Helper to set token information on request for later tracking
  * Call this in route handlers that have token information
+ *
+ * @param req - The tracking request
+ * @param inputTokens - Number of input tokens used
+ * @param outputTokens - Number of output tokens generated
+ * @param model - Optional model identifier
+ * @param provider - Optional provider (e.g. "ollama", "nim", "anthropic")
  */
 export function setTokenInfo(
   req: TrackingRequest,
   inputTokens: number,
   outputTokens: number,
   model?: string,
+  provider?: string,
 ) {
   req.estimatedInputTokens = inputTokens;
   req.estimatedOutputTokens = outputTokens;
   if (model) {
     req.model = model;
+  }
+  if (provider) {
+    req.provider = provider;
   }
 }

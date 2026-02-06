@@ -33,7 +33,7 @@ describe('sessionsStore', () => {
       const session = sessionsStore.createSession([]);
 
       expect(session.id).toMatch(/^session-\d+-[a-z0-9]+$/);
-      expect(session.name).toBe('New Session');
+      expect(session.name).toBe('New Chat');
       expect(session.messages).toEqual([]);
     });
 
@@ -88,7 +88,7 @@ describe('sessionsStore', () => {
 
     it('should update session name from default', () => {
       const session = sessionsStore.createSession([]);
-      expect(session.name).toBe('New Session');
+      expect(session.name).toBe('New Chat');
 
       sessionsStore.updateSession(session.id, [
         { role: 'user' as const, content: 'My first message' },

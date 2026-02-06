@@ -296,7 +296,7 @@
           >
             <option value="balanced">Balanced (router default)</option>
             <option value="fast">Fast (NIM / Kimi)</option>
-            <option value="quality">Quality (Kimi K2.6)</option>
+            <option value="quality">Quality (Claude / GPT-4)</option>
           </select>
           <p class="field-hint">
             Fast = cheaper and lower latency; Quality = best capability; Balanced = auto by task.
@@ -334,11 +334,6 @@
             <option value="">Default (backend)</option>
           </select>
           <p class="field-hint">Used for RAG and semantic search. Test connection in backend.</p>
-        </div>
-        <div class="field-group">
-          <Button variant="ghost" size="sm" onclick={() => setCurrentView('model-benchmark')}>
-            Model Benchmark (compare models)
-          </Button>
         </div>
         <div class="field-group">
           <span class="field-label">Custom / fine-tuned models</span>
