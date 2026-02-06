@@ -77,6 +77,38 @@ export interface GenerationSession {
     fix: string;
     status: "applied" | "failed";
   }>;
+  /** Design workflow state for inline Architecture → PRD → Plan → Code */
+  designWorkflow?: {
+    currentPhase: "architecture" | "prd" | "plan" | "code" | "completed";
+    phaseData: {
+      architecture?: {
+        mermaidCode: string;
+        description: string;
+      };
+      prd?: {
+        content: string;
+        summary: string;
+      };
+      plan?: {
+        tasks: Array<{
+          id: string;
+          title: string;
+          description: string;
+          status: "pending" | "in-progress" | "completed";
+        }>;
+      };
+      code?: {
+        files: Array<{
+          path: string;
+          content: string;
+          language: string;
+        }>;
+      };
+    };
+    userApprovals: Record<string, boolean>;
+    isActive: boolean;
+    projectDescription?: string;
+  };
 }
 
 export interface GenerationPreferences {

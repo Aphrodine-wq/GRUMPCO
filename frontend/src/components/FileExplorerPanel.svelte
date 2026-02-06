@@ -88,7 +88,9 @@
   <div class="panel-header">
     <span class="panel-title">Files</span>
     {#if onClose}
-      <button type="button" class="panel-close" onclick={onClose} aria-label="Close file explorer">×</button>
+      <button type="button" class="panel-close" onclick={onClose} aria-label="Close file explorer"
+        >×</button
+      >
     {/if}
   </div>
   <div class="panel-body">
@@ -103,7 +105,12 @@
         {#each entries as entry (entry.path)}
           <div class="tree-item" class:directory={entry.isDirectory}>
             {#if entry.isDirectory}
-              <button type="button" class="tree-row" onclick={() => toggleDir(entry)} aria-expanded={expanded.has(entry.path)}>
+              <button
+                type="button"
+                class="tree-row"
+                onclick={() => toggleDir(entry)}
+                aria-expanded={expanded.has(entry.path)}
+              >
                 <span class="tree-icon">{expanded.has(entry.path) ? '−' : '+'}</span>
                 <span class="tree-name">{entry.name}</span>
               </button>

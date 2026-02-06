@@ -20,7 +20,7 @@
   let { isGAgentSession = false, showMemoryPanel = false, onMemoryToggle }: Props = $props();
 
   function openGAgent() {
-    setCurrentView('freeAgent');
+    setCurrentView('gAgent');
   }
 </script>
 

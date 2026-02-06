@@ -8,12 +8,12 @@ const MAX_DIAGRAM_VERSIONS = 20;
 
 // Generate unique ID
 function generateId(): string {
-  return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 // Generate diagram version ID
 function generateVersionId(): string {
-  return `diagram-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `diagram-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 // Generate session name from first user message
@@ -147,7 +147,7 @@ export const sessionsStore = {
   ): Session {
     const session: Session = {
       id: generateId(),
-      name: messages.length > 0 ? generateSessionName(messages) : 'New Session',
+      name: messages.length > 0 ? generateSessionName(messages) : 'New Chat',
       messages,
       timestamp: Date.now(),
       updatedAt: Date.now(),
@@ -175,8 +175,8 @@ export const sessionsStore = {
         session.messages = messages;
         session.updatedAt = Date.now();
 
-        // Update name if it was default
-        if (session.name === 'New Session' && messages.length > 0) {
+        // Update name if it was default (user has said something → name from first message)
+        if (session.name === 'New Chat' && messages.length > 0) {
           session.name = generateSessionName(messages);
         }
       }
@@ -213,6 +213,29 @@ export const sessionsStore = {
       const session = s.find((sess) => sess.id === id);
       if (session) {
         session.name = name.trim() || 'Untitled Session';
+      }
+      return [...s];
+    });
+  },
+
+  /** Update session metadata: name, description, sessionType. */
+  updateSessionMetadata(
+    id: string,
+    updates: { name?: string; description?: string; sessionType?: Session['sessionType'] }
+  ): void {
+    sessions.update((s) => {
+      const session = s.find((sess) => sess.id === id);
+      if (session) {
+        if (updates.name !== undefined) {
+          session.name = updates.name.trim() || 'Untitled Session';
+        }
+        if (updates.description !== undefined) {
+          session.description = updates.description || undefined;
+        }
+        if (updates.sessionType !== undefined) {
+          session.sessionType = updates.sessionType;
+        }
+        session.updatedAt = Date.now();
       }
       return [...s];
     });

@@ -140,48 +140,48 @@ export type ChatStreamEvent =
   | { type: "thinking"; content: string }
   | { type: "intent"; value: Record<string, unknown> }
   | {
-      type: "context";
-      value: { mode: string; capabilities?: string[]; toolCount?: number };
-    }
+    type: "context";
+    value: { mode: string; capabilities?: string[]; toolCount?: number };
+  }
   | { type: "tool_planning"; tools: string[] }
   | { type: "tool_progress"; id: string; percent: number; message?: string }
   | {
-      type: "tool_call";
-      id: string;
-      name: string;
-      input: Record<string, unknown>;
-    }
+    type: "tool_call";
+    id: string;
+    name: string;
+    input: Record<string, unknown>;
+  }
   | {
-      type: "tool_result";
-      id: string;
-      toolName: string;
-      output: string;
-      success: boolean;
-      executionTime: number;
-      diff?: {
-        filePath: string;
-        beforeContent: string;
-        afterContent: string;
-        changeType: "created" | "modified" | "deleted";
-        operations?: Array<{
-          type: string;
-          lineStart: number;
-          lineEnd?: number;
-        }>;
-      };
-    }
+    type: "tool_result";
+    id: string;
+    toolName: string;
+    output: string;
+    success: boolean;
+    executionTime: number;
+    diff?: {
+      filePath: string;
+      beforeContent: string;
+      afterContent: string;
+      changeType: "created" | "modified" | "deleted";
+      operations?: Array<{
+        type: string;
+        lineStart: number;
+        lineEnd?: number;
+      }>;
+    };
+  }
   | { type: "skill_activated"; skillId: string; skillName: string }
   | { type: "autonomous"; value: boolean }
   | { type: "done" }
   | {
-      type: "error";
-      message: string;
-      toolId?: string;
-      errorType?: string;
-      retryable?: boolean;
-      retryAfter?: number;
-      metadata?: Record<string, unknown>;
-    };
+    type: "error";
+    message: string;
+    toolId?: string;
+    errorType?: string;
+    retryable?: boolean;
+    retryAfter?: number;
+    metadata?: Record<string, unknown>;
+  };
 
 // ============================================================================
 // CLAUDE SERVICE WITH TOOLS
@@ -351,20 +351,20 @@ export class ClaudeServiceWithTools {
         mode === "execute" ? "execute" : (mode as ChatModeName);
       const specialist: CodeSpecialist | undefined =
         agentProfile &&
-        agentProfile !== "general" &&
-        /^(router|frontend|backend|devops|test)$/.test(agentProfile)
+          agentProfile !== "general" &&
+          /^(router|frontend|backend|devops|test)$/.test(agentProfile)
           ? (agentProfile as CodeSpecialist)
           : undefined;
       const headPrompt = getHeadSystemPrompt({ tier: tierOverride });
       const modePrompt =
         sessionType === "gAgent" || sessionType === "freeAgent"
           ? getGAgentModePrompt({
-              workspaceRoot,
-              specialist,
-              enabledCapabilities: gAgentCapabilities,
-              allowlistDomains: gAgentExternalAllowlist,
-              runInDocker: undefined,
-            })
+            workspaceRoot,
+            specialist,
+            enabledCapabilities: gAgentCapabilities,
+            allowlistDomains: gAgentExternalAllowlist,
+            runInDocker: undefined,
+          })
           : getChatModePrompt(chatMode, { workspaceRoot, specialist });
       let systemPrompt = `${headPrompt}\n\n${wrapModeContext(modePrompt)}`;
       const ragContextEnabled =
@@ -399,11 +399,11 @@ export class ClaudeServiceWithTools {
       let allTools =
         mode !== "plan"
           ? [
-              ...AVAILABLE_TOOLS,
-              ...getUserToolDefinitions(),
-              ...getMcpTools(),
-              ...skillRegistry.getAllTools(),
-            ]
+            ...AVAILABLE_TOOLS,
+            ...getUserToolDefinitions(),
+            ...getMcpTools(),
+            ...skillRegistry.getAllTools(),
+          ]
           : [];
       if (
         (sessionType === "gAgent" || sessionType === "freeAgent") &&
@@ -538,21 +538,21 @@ export class ClaudeServiceWithTools {
       const mappedTools =
         allTools.length > 0
           ? allTools.map((t: unknown) => {
-              const tool = t as {
-                name: string;
-                description?: string;
-                input_schema?: {
-                  type: "object";
-                  properties?: Record<string, unknown>;
-                  required?: string[];
-                };
+            const tool = t as {
+              name: string;
+              description?: string;
+              input_schema?: {
+                type: "object";
+                properties?: Record<string, unknown>;
+                required?: string[];
               };
-              return {
-                name: tool.name,
-                description: tool.description ?? "",
-                input_schema: tool.input_schema ?? _DEFAULT_TOOL_INPUT_SCHEMA,
-              };
-            })
+            };
+            return {
+              name: tool.name,
+              description: tool.description ?? "",
+              input_schema: tool.input_schema ?? _DEFAULT_TOOL_INPUT_SCHEMA,
+            };
+          })
           : undefined;
 
       const response = getStream(
@@ -641,8 +641,16 @@ export class ClaudeServiceWithTools {
 
       yield { type: "done" };
     } catch (error: unknown) {
+      const errObj = error as Error;
       logger.error(
-        { error, workspaceRoot, mode, agentProfile },
+        {
+          error,
+          errorMessage: errObj?.message,
+          errorStack: errObj?.stack,
+          workspaceRoot,
+          mode,
+          agentProfile
+        },
         "Chat stream error",
       );
 
@@ -1547,8 +1555,8 @@ export class ClaudeServiceWithTools {
       );
       const output = result.migrations.length
         ? result.migrations
-            .map((m, i) => `-- Migration ${i + 1}\n${m}`)
-            .join("\n\n")
+          .map((m, i) => `-- Migration ${i + 1}\n${m}`)
+          .join("\n\n")
         : "No migrations generated.";
       return {
         success: true,

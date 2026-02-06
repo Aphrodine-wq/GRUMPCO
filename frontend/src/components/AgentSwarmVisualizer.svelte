@@ -2,7 +2,7 @@
   import { Button, Card } from '../lib/design-system';
   import { getApiBase } from '../lib/api.js';
   import { showToast } from '../stores/toastStore.js';
-  import { colors } from '../lib/design-system/tokens/colors.js';
+  import { Users } from 'lucide-svelte';
 
   interface Props {
     onBack?: () => void;
@@ -104,7 +104,7 @@
   }
 </script>
 
-<div class="swarm-screen" style:--bg-primary={colors.background.primary}>
+<div class="swarm-screen">
   <header class="swarm-header">
     <div class="header-left">
       {#if onBack}
@@ -123,15 +123,27 @@
           Back
         </Button>
       {/if}
-      <h1 class="swarm-title">Agent swarm</h1>
+      <div class="hero-section">
+        <div class="hero-icon">
+          <Users size={28} strokeWidth={2} />
+        </div>
+        <div>
+          <h1 class="swarm-title">Agent Swarm</h1>
+          <p class="swarm-subtitle">
+            Enter a prompt → Run swarm → See decomposition, agent status, and summary. Specialist
+            agents (arch, frontend, backend, test, docs) work in parallel.
+          </p>
+        </div>
+      </div>
     </div>
   </header>
 
   <div class="swarm-container">
-    <Card title="Prompt" padding="md">
+    <Card padding="md" variant="outlined" class="prompt-card">
+      <h2 class="card-title">Prompt</h2>
       <p class="section-desc">
-        Describe what you want. Kimi will decompose it into subtasks and run specialist agents
-        (arch, frontend, backend, test, docs, etc.) in parallel.
+        Describe what you want. The system decomposes it into subtasks and runs specialist agents in
+        parallel.
       </p>
       <textarea
         class="prompt-input"
@@ -162,18 +174,19 @@
     </Card>
 
     {#if error}
-      <div class="result-card error">
+      <Card padding="md" variant="outlined" class="result-card error">
         <p class="result-label">Error</p>
         <p class="result-text">{error}</p>
         <p class="error-hint">
           Check your prompt and try again. Ensure the backend is running and API keys are
           configured.
         </p>
-      </div>
+      </Card>
     {/if}
 
     {#if tasks.length > 0}
-      <Card title="Tasks" padding="md">
+      <Card padding="md" variant="outlined">
+        <h3 class="card-title">Decomposition & Agent Status</h3>
         <ul class="task-list">
           {#each tasks as t}
             <li
@@ -197,9 +210,16 @@
     {/if}
 
     {#if summary !== null}
-      <Card title="Summary" padding="md">
+      <Card padding="md" variant="outlined" class="summary-card">
+        <h3 class="card-title">Summary</h3>
         <div class="result-text markdown-ish">{summary}</div>
       </Card>
+    {/if}
+
+    {#if !loading && !error && tasks.length === 0 && summary === null && prompt.trim() === ''}
+      <div class="empty-state">
+        <p>Enter a prompt above and click <strong>Run swarm</strong> to start.</p>
+      </div>
     {/if}
   </div>
 </div>
@@ -208,15 +228,17 @@
   .swarm-screen {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    background-color: var(--bg-primary);
+    flex: 1;
+    min-height: 0;
+    background: var(--color-bg-subtle, #f9fafb);
     overflow: hidden;
   }
 
   .swarm-header {
-    background-color: white;
-    border-bottom: 1px solid var(--border-color, #e4e4e7);
-    padding: 12px 24px;
+    flex-shrink: 0;
+    background: var(--color-bg-card, #ffffff);
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    padding: 1rem 1.5rem;
     display: flex;
     align-items: center;
   }
@@ -224,75 +246,113 @@
   .header-left {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 1rem;
+  }
+
+  .hero-section {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .hero-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(124, 58, 237, 0.06));
+    color: var(--color-primary, #7c3aed);
+    border-radius: 12px;
   }
 
   .swarm-title {
-    font-size: 18px;
+    font-size: 1.25rem;
     font-weight: 700;
+    margin: 0 0 0.25rem;
+    color: var(--color-text, #111827);
+  }
+
+  .swarm-subtitle {
+    font-size: 0.875rem;
+    color: var(--color-text-muted, #6b7280);
     margin: 0;
+    line-height: 1.5;
   }
 
   .swarm-container {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    padding: 24px;
+    padding: 1.25rem 1.5rem;
     max-width: 720px;
     margin: 0 auto;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .card-title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-text, #111827);
+    margin: 0 0 0.5rem;
   }
 
   .section-desc {
-    font-size: 14px;
-    color: #71717a;
-    margin-bottom: 16px;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #6b7280);
+    margin: 0 0 1rem;
   }
 
   .prompt-input {
     width: 100%;
-    padding: 12px;
-    border: 1px solid #e4e4e7;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 0.875rem;
     resize: vertical;
-    margin-bottom: 12px;
+    margin-bottom: 1rem;
+    background: var(--color-bg-card, #fff);
+    color: var(--color-text, #111827);
+  }
+
+  .prompt-input:focus {
+    outline: none;
+    border-color: var(--color-primary, #7c3aed);
   }
 
   .actions {
-    margin-top: 8px;
-  }
-
-  .result-card {
-    margin-top: 24px;
-    padding: 20px;
-    background: #fafafa;
-    border: 1px solid #e4e4e7;
-    border-radius: 8px;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
   .result-card.error {
-    background: #fef2f2;
-    border-color: #fecaca;
+    background: var(--color-error-subtle, rgba(239, 68, 68, 0.06));
+    border-color: var(--color-error, #ef4444);
   }
 
   .result-label {
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: #71717a;
-    margin: 0 0 8px;
+    color: var(--color-error, #dc2626);
+    margin: 0 0 0.5rem;
     text-transform: uppercase;
   }
 
   .error-hint {
-    font-size: 13px;
-    color: #6b7280;
-    margin-top: 12px;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #6b7280);
+    margin-top: 0.75rem;
   }
 
   .result-text {
-    font-size: 14px;
+    font-size: 0.875rem;
     line-height: 1.6;
-    color: #18181b;
+    color: var(--color-text, #18181b);
     margin: 0;
     white-space: pre-wrap;
   }
@@ -306,9 +366,9 @@
   .task-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid #f4f4f5;
+    gap: 0.75rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid var(--color-border-light, #f4f4f5);
   }
 
   .task-item:last-child {
@@ -317,35 +377,44 @@
 
   .agent-id {
     font-weight: 600;
-    color: #52525b;
+    color: var(--color-text-muted, #52525b);
     min-width: 80px;
+    font-size: 0.8125rem;
   }
 
   .task-desc {
     flex: 1;
-    font-size: 13px;
-    color: #18181b;
+    font-size: 0.8125rem;
+    color: var(--color-text, #18181b);
   }
 
   .status-badge {
-    font-size: 11px;
-    padding: 2px 8px;
+    font-size: 0.6875rem;
+    padding: 0.125rem 0.5rem;
     border-radius: 4px;
     text-transform: uppercase;
+    font-weight: 600;
   }
 
   .status-badge.pending {
-    background: #f4f4f5;
-    color: #71717a;
+    background: var(--color-bg-subtle, #f4f4f5);
+    color: var(--color-text-muted, #71717a);
   }
 
   .status-badge.running {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--color-primary, #1d4ed8);
   }
 
   .status-badge.done {
-    background: #dcfce7;
+    background: rgba(34, 197, 94, 0.15);
     color: #15803d;
+  }
+
+  .empty-state {
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-text-muted, #6b7280);
+    font-size: 0.875rem;
   }
 </style>

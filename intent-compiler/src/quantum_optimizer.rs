@@ -144,7 +144,8 @@ impl QuantumOptimizer {
 
                 if correlation > 0.7 {
                     // Strong correlation - entangle the qubits
-                    let avg_amplitude = (qubits[i].state.amplitude + qubits[j].state.amplitude) / 2.0;
+                    let avg_amplitude =
+                        (qubits[i].state.amplitude + qubits[j].state.amplitude) / 2.0;
                     qubits[i].state.entanglement_score = correlation;
                     qubits[j].state.entanglement_score = correlation;
                     qubits[i].state.amplitude = avg_amplitude;
@@ -233,11 +234,7 @@ impl QuantumOptimizer {
     }
 
     /// Quantum interference pattern analysis for semantic similarity
-    pub fn analyze_interference_pattern(
-        &self,
-        token1: &str,
-        token2: &str,
-    ) -> f64 {
+    pub fn analyze_interference_pattern(&self, token1: &str, token2: &str) -> f64 {
         let phase_diff = (token1.len() as f64 - token2.len() as f64).abs();
         let interference = (phase_diff * PI / 10.0).cos();
 
@@ -274,11 +271,7 @@ mod tests {
     #[test]
     fn test_quantum_optimizer() {
         let mut optimizer = QuantumOptimizer::default();
-        let tokens = vec![
-            "build".to_string(),
-            "auth".to_string(),
-            "api".to_string(),
-        ];
+        let tokens = vec!["build".to_string(), "auth".to_string(), "api".to_string()];
         let context = FxHashMap::default();
 
         let qubits = optimizer.optimize_parse_path(&tokens, &context);

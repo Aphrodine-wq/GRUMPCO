@@ -11,16 +11,31 @@ const router = Router();
 
 /**
  * POST /api/vision/design-to-code
- * Body: { image: base64 string, figmaUrl?: string, description: string, targetFramework: 'svelte' | 'react' | 'vue' | 'flutter' }
+ * Body: { image, figmaUrl?, description, targetFramework, styling?, theme?, outputLang?, layoutPreset?, componentStyle? }
  * Returns: { code: string, explanation?: string }
  */
 router.post("/design-to-code", async (req: Request, res: Response) => {
   try {
-    const { image, figmaUrl, description, targetFramework } = req.body as {
+    const {
+      image,
+      figmaUrl,
+      description,
+      targetFramework,
+      styling,
+      theme,
+      outputLang,
+      layoutPreset,
+      componentStyle,
+    } = req.body as {
       image?: string;
       figmaUrl?: string;
       description?: string;
       targetFramework?: string;
+      styling?: string;
+      theme?: string;
+      outputLang?: string;
+      layoutPreset?: string;
+      componentStyle?: string;
     };
     if (!image && !figmaUrl) {
       return res
@@ -37,6 +52,11 @@ router.post("/design-to-code", async (req: Request, res: Response) => {
       "react",
       "vue",
       "flutter",
+      "angular",
+      "nextjs",
+      "nuxt",
+      "solid",
+      "qwik",
     ];
     const framework = (
       validFrameworks.includes(targetFramework as DesignToCodeFramework)
@@ -54,6 +74,16 @@ router.post("/design-to-code", async (req: Request, res: Response) => {
       ...(imageData && { image: imageData }),
       ...(typeof figmaUrl === "string" &&
         figmaUrl.trim() && { figmaUrl: figmaUrl.trim() }),
+      ...(typeof styling === "string" &&
+        styling.trim() && { styling: styling.trim() }),
+      ...(typeof theme === "string" && theme.trim() && { theme: theme.trim() }),
+      ...(typeof outputLang === "string" &&
+        outputLang.trim() && { outputLang: outputLang.trim() }),
+      ...(typeof layoutPreset === "string" &&
+        layoutPreset.trim() &&
+        layoutPreset !== "none" && { layoutPreset: layoutPreset.trim() }),
+      ...(typeof componentStyle === "string" &&
+        componentStyle.trim() && { componentStyle: componentStyle.trim() }),
     };
     const result = await designToCode(
       input as import("../services/kimiVisionService.js").DesignToCodeInput,

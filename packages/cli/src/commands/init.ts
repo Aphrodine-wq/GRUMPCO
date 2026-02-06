@@ -142,7 +142,7 @@ async function legacyInteractiveSetup(configPath: string): Promise<void> {
       type: 'input',
       name: 'apiUrl',
       message: 'API URL:',
-      default: 'http://localhost:3000'
+      default: 'https://grump-backend.onrender.com'
     },
     {
       type: 'password',

@@ -1,0 +1,273 @@
+{
+    "id": "g-rump-overview",
+    "uid": "g-rump-overview-dashboard",
+    "title": "G-Rump - System Overview",
+    "tags": [
+        "g-rump",
+        "overview"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+        {
+            "id": 1,
+            "gridPos": {
+                "h": 6,
+                "w": 6,
+                "x": 0,
+                "y": 0
+            },
+            "type": "stat",
+            "title": "Requests/sec",
+            "targets": [
+                {
+                    "expr": "sum(rate(http_requests_total[1m]))",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "value": null,
+                                "color": "green"
+                            },
+                            {
+                                "value": 100,
+                                "color": "yellow"
+                            },
+                            {
+                                "value": 500,
+                                "color": "red"
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 2,
+            "gridPos": {
+                "h": 6,
+                "w": 6,
+                "x": 6,
+                "y": 0
+            },
+            "type": "stat",
+            "title": "Avg Response Time",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "value": null,
+                                "color": "green"
+                            },
+                            {
+                                "value": 1,
+                                "color": "yellow"
+                            },
+                            {
+                                "value": 2,
+                                "color": "red"
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 3,
+            "gridPos": {
+                "h": 6,
+                "w": 6,
+                "x": 12,
+                "y": 0
+            },
+            "type": "stat",
+            "title": "Error Rate",
+            "targets": [
+                {
+                    "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "value": null,
+                                "color": "green"
+                            },
+                            {
+                                "value": 1,
+                                "color": "yellow"
+                            },
+                            {
+                                "value": 5,
+                                "color": "red"
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 4,
+            "gridPos": {
+                "h": 6,
+                "w": 6,
+                "x": 18,
+                "y": 0
+            },
+            "type": "stat",
+            "title": "Active Connections",
+            "targets": [
+                {
+                    "expr": "sum(active_connections)",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 5,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 6
+            },
+            "type": "graph",
+            "title": "Request Rate by Endpoint",
+            "targets": [
+                {
+                    "expr": "sum by (route) (rate(http_requests_total[5m]))",
+                    "legendFormat": "{{route}}",
+                    "refId": "A"
+                }
+            ],
+            "yaxes": [
+                {
+                    "format": "reqps",
+                    "label": "Requests/sec"
+                }
+            ]
+        },
+        {
+            "id": 6,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 6
+            },
+            "type": "graph",
+            "title": "Response Time Percentiles",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+                    "legendFormat": "p50",
+                    "refId": "A"
+                },
+                {
+                    "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+                    "legendFormat": "p95",
+                    "refId": "B"
+                },
+                {
+                    "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))",
+                    "legendFormat": "p99",
+                    "refId": "C"
+                }
+            ]
+        },
+        {
+            "id": 7,
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 14
+            },
+            "type": "graph",
+            "title": "AI Provider Response Times",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum by (provider, le) (rate(ai_request_duration_seconds_bucket[5m])))",
+                    "legendFormat": "{{provider}}",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 8,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 22
+            },
+            "type": "graph",
+            "title": "Memory Usage",
+            "targets": [
+                {
+                    "expr": "process_resident_memory_bytes",
+                    "legendFormat": "RSS",
+                    "refId": "A"
+                },
+                {
+                    "expr": "nodejs_heap_size_used_bytes",
+                    "legendFormat": "Heap Used",
+                    "refId": "B"
+                }
+            ],
+            "yaxes": [
+                {
+                    "format": "bytes"
+                }
+            ]
+        },
+        {
+            "id": 9,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 22
+            },
+            "type": "graph",
+            "title": "CPU Usage",
+            "targets": [
+                {
+                    "expr": "rate(process_cpu_user_seconds_total[1m])",
+                    "legendFormat": "User",
+                    "refId": "A"
+                },
+                {
+                    "expr": "rate(process_cpu_system_seconds_total[1m])",
+                    "legendFormat": "System",
+                    "refId": "B"
+                }
+            ]
+        }
+    ]
+}

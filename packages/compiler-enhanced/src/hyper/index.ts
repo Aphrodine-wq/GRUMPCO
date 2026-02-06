@@ -43,6 +43,7 @@ import { QuantumOptimizer, createQuantumOptimizer } from './quantum.js';
 import { ProbabilisticCacheManager, createProbabilisticCache } from './probabilistic.js';
 import { SpeculativeExecutionEngine, createSpeculativeEngine } from './speculative.js';
 import { MemoryMappedManager, createMemoryMappedManager } from './mmap.js';
+import { CodeSplittingEngine, createCodeSplittingEngine } from './splitting.js';
 
 // ============================================================================
 // PERFORMANCE TIER PRESETS
@@ -1061,6 +1062,7 @@ export class HyperCompiler extends EventEmitter {
   private probabilistic: ProbabilisticCacheManager | null = null;
   private speculative: SpeculativeExecutionEngine | null = null;
   private mmap: MemoryMappedManager | null = null;
+  private splitting: CodeSplittingEngine | null = null;
 
   // Metrics
   private compilationCount = 0;
@@ -1156,6 +1158,14 @@ export class HyperCompiler extends EventEmitter {
         this.mmap.start();
       }
 
+      // Code Splitting Engine
+      if (this.config.codeSplitting.enabled) {
+        this.splitting = createCodeSplittingEngine(this.config.codeSplitting);
+        this.splitting.on('split:start', (data) => this.emit('splitting:start', data));
+        this.splitting.on('split:end', (data) => this.emit('splitting:end', data));
+        this.splitting.on('phase:start', (data) => this.emit('splitting:phase', data));
+      }
+
       await Promise.all(initPromises);
 
       this.isInitialized = true;
@@ -1199,6 +1209,28 @@ export class HyperCompiler extends EventEmitter {
   private async initDistributed(): Promise<void> {
     try {
       this.distributed = createDistributedCompiler(this.config.distributed);
+
+      // Inject the JIT compilation pipeline so distributed workers
+      // route through real optimization passes instead of returning content unchanged.
+      if (this.jit) {
+        const jit = this.jit;
+        this.distributed.setCompileFn(async (content, payload) => {
+          const hash = payload.contentHash || '';
+          const id = payload.filePath || hash;
+          const output = await jit.compileSource(id, hash, content);
+          return {
+            output,
+            metadata: {
+              inputHash: hash,
+              compiledAt: Date.now(),
+              inputSize: content.length,
+              outputSize: output.length,
+              usedFallback: false,
+            },
+          };
+        });
+      }
+
       await this.distributed.initialize();
       this.distributed.on('worker:spawn', (data: unknown) => this.emit('worker:spawn', data));
       this.distributed.on('worker:complete', (data: unknown) => this.emit('worker:complete', data));
@@ -1223,6 +1255,7 @@ export class HyperCompiler extends EventEmitter {
       probabilistic: this.probabilistic ? 'active' : 'disabled',
       speculative: this.speculative ? 'active' : 'disabled',
       mmap: this.mmap ? 'active' : 'disabled',
+      splitting: this.splitting ? 'active' : 'disabled',
     };
 
     this.log('debug', `Subsystem status: ${JSON.stringify(status)}`);
@@ -1650,8 +1683,17 @@ export class HyperCompiler extends EventEmitter {
         }
       }
 
-      // Process content (basic transformation placeholder)
-      let processedContent = content.toString('utf-8');
+      // Process content through JIT compilation pipeline
+      let processedContent: string;
+      if (this.jit) {
+        // Route through JIT engine which applies tiered optimizations
+        // (basic opts at tier 1, full pipeline at tier 2+, speculative at tier 3)
+        processedContent = await this.jit.compileSource(filePath, hash, content.toString('utf-8'));
+        this.jit.recordExecution(filePath, performance.now());
+      } else {
+        // Fallback: pass through unchanged
+        processedContent = content.toString('utf-8');
+      }
       
       // GPU-accelerated processing for bulk operations
       if (this.gpu) {
@@ -1758,14 +1800,37 @@ export class HyperCompiler extends EventEmitter {
   }
 
   /**
-   * Apply code splitting
+   * Apply code splitting using the CodeSplittingEngine.
+   * Builds a module graph from compiled outputs, applies configured splitting
+   * strategies (route, vendor, common, dynamic, layer), tree-shakes, and
+   * produces optimized chunks.
    */
   private async applyCodeSplitting(outputs: HyperOutputFile[]): Promise<{
     chunks: ChunkInfo[];
   }> {
-    // Placeholder for code splitting logic
-    // Would integrate with splitting.ts
-    return { chunks: [] };
+    if (!this.splitting || outputs.length === 0) {
+      return { chunks: [] };
+    }
+
+    try {
+      const splitResult = await this.splitting.split(outputs);
+
+      this.emit('splitting:complete', {
+        totalChunks: splitResult.stats.totalChunks,
+        totalSize: splitResult.stats.totalSize,
+        treeShakenBytes: splitResult.stats.treeShakenBytes,
+        duration: splitResult.stats.splitDuration,
+      });
+
+      return { chunks: splitResult.chunks };
+    } catch (error) {
+      this.emit('error', {
+        phase: 'codeSplitting',
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Graceful fallback: return empty chunks on failure
+      return { chunks: [] };
+    }
   }
 
   /**

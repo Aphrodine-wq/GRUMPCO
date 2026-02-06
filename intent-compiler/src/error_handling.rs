@@ -17,10 +17,7 @@ pub enum CompilerError {
     },
 
     /// Cache errors
-    CacheError {
-        operation: String,
-        reason: String,
-    },
+    CacheError { operation: String, reason: String },
 
     /// GPU errors
     GpuError {
@@ -44,10 +41,7 @@ pub enum CompilerError {
     },
 
     /// Model compression errors
-    CompressionError {
-        method: String,
-        reason: String,
-    },
+    CompressionError { method: String, reason: String },
 
     /// Parallel processing errors
     ParallelError {
@@ -64,16 +58,10 @@ pub enum CompilerError {
     },
 
     /// Timeout errors
-    TimeoutError {
-        operation: String,
-        timeout_ms: u64,
-    },
+    TimeoutError { operation: String, timeout_ms: u64 },
 
     /// Resource exhaustion
-    ResourceExhausted {
-        resource: String,
-        limit: usize,
-    },
+    ResourceExhausted { resource: String, limit: usize },
 
     /// Invalid input
     InvalidInput {
@@ -199,7 +187,7 @@ impl fmt::Display for CompilerError {
                 )
             }
 
-            CompilerError::InternalError {message, backtrace } => {
+            CompilerError::InternalError { message, backtrace } => {
                 write!(f, "Internal compiler error: {}", message)?;
                 if let Some(bt) = backtrace {
                     write!(f, "\nBacktrace:\n{}", bt)?;
@@ -343,11 +331,7 @@ where
 }
 
 /// Safe wrapper for fallible operations
-pub fn safe_execute<F, T>(
-    operation: &str,
-    f: F,
-    fallback: T,
-) -> T
+pub fn safe_execute<F, T>(operation: &str, f: F, fallback: T) -> T
 where
     F: FnOnce() -> CompilerResult<T>,
 {
@@ -404,10 +388,12 @@ mod tests {
     fn test_safe_execute() {
         let result = safe_execute(
             "test_op",
-            || Err(CompilerError::InternalError {
-                message: "error".to_string(),
-                backtrace: None,
-            }),
+            || {
+                Err(CompilerError::InternalError {
+                    message: "error".to_string(),
+                    backtrace: None,
+                })
+            },
             42,
         );
 
