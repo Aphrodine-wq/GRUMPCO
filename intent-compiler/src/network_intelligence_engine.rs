@@ -45,10 +45,10 @@ pub struct NetworkEdge {
     pub source_id: String,
     pub target_id: String,
     pub relationship_type: RelationshipType,
-    pub strength: f32,               // 0-1, how strong is the relationship?
-    pub interaction_count: i32,      // Times they've interacted
+    pub strength: f32,          // 0-1, how strong is the relationship?
+    pub interaction_count: i32, // Times they've interacted
     pub last_interaction: String,
-    pub mutual_success: bool,        // Did they both succeed?
+    pub mutual_success: bool, // Did they both succeed?
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,11 +89,16 @@ impl FounderNetwork {
     }
 
     pub fn add_edge(&mut self, edge: NetworkEdge) {
+        let edge_clone = edge.clone();
         self.edges.push(edge);
         // Update node connections
-        if let Some(node) = self.nodes.iter_mut().find(|n| n.node_id == edge.source_id) {
-            if !node.connections.contains(&edge.target_id) {
-                node.connections.push(edge.target_id.clone());
+        if let Some(node) = self
+            .nodes
+            .iter_mut()
+            .find(|n| n.node_id == edge_clone.source_id)
+        {
+            if !node.connections.contains(&edge_clone.target_id) {
+                node.connections.push(edge_clone.target_id.clone());
             }
         }
     }
@@ -143,9 +148,9 @@ impl FounderNetwork {
     }
 
     fn has_edge(&self, a: &str, b: &str) -> bool {
-        self.edges
-            .iter()
-            .any(|e| (e.source_id == a && e.target_id == b) || (e.source_id == b && e.target_id == a))
+        self.edges.iter().any(|e| {
+            (e.source_id == a && e.target_id == b) || (e.source_id == b && e.target_id == a)
+        })
     }
 }
 
@@ -188,8 +193,8 @@ impl NetworkIntelligenceAnalyzer {
             return 0.2; // No mentors is a risk
         }
 
-        let avg_strength = mentor_edges.iter().map(|e| e.strength).sum::<f32>()
-            / mentor_edges.len() as f32;
+        let avg_strength =
+            mentor_edges.iter().map(|e| e.strength).sum::<f32>() / mentor_edges.len() as f32;
         let mentor_count_score = (mentor_edges.len() as f32 / 3.0).min(1.0); // 3+ mentors is ideal
 
         (avg_strength + mentor_count_score) / 2.0
@@ -256,8 +261,8 @@ impl NetworkIntelligenceAnalyzer {
             .count();
 
         let success_rate = successful_peers as f32 / peer_nodes.len() as f32;
-        (success_rate + peer_edges.iter().map(|e| e.strength).sum::<f32>()
-            / peer_edges.len() as f32)
+        (success_rate
+            + peer_edges.iter().map(|e| e.strength).sum::<f32>() / peer_edges.len() as f32)
             / 2.0
     }
 
@@ -319,7 +324,7 @@ impl NetworkIntelligenceAnalyzer {
     /// How resilient is the network to founder departure?
     fn calculate_resilience(network: &FounderNetwork) -> f32 {
         // Does the network have multiple strong nodes, or is it centered on one person?
-        let influential_nodes: Vec<_> = network
+        let influential_nodes = network
             .nodes
             .iter()
             .filter(|n| n.influence_score > 0.6)
@@ -371,9 +376,9 @@ pub struct NetworkIntelligenceSignals {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollectiveIntelligence {
     pub peer_group_id: String,
-    pub peer_success_rate: f32,  // What % of this peer group succeeded?
-    pub peer_funding_rate: f32,  // What % raised funding?
-    pub avg_time_to_exit: i32,   // Days
+    pub peer_success_rate: f32, // What % of this peer group succeeded?
+    pub peer_funding_rate: f32, // What % raised funding?
+    pub avg_time_to_exit: i32,  // Days
     pub consensus_verdict: String,
     pub consensus_confidence: f32,
     pub collective_wisdom: Vec<String>, // Patterns observed by group
@@ -411,7 +416,10 @@ pub fn assess_collective_intelligence(
         .count() as f32;
 
     let avg_time = if !peer_group_outcomes.is_empty() {
-        peer_group_outcomes.iter().map(|(_, _, days)| *days).sum::<i32>()
+        peer_group_outcomes
+            .iter()
+            .map(|(_, _, days)| *days)
+            .sum::<i32>()
             / peer_group_outcomes.len() as i32
     } else {
         365

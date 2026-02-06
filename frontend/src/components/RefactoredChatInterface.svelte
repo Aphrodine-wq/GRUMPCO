@@ -11,7 +11,6 @@
    * - G-Agent integration with status/memory panels
    */
   import { onMount, tick } from 'svelte';
-  import { createEventDispatcher } from 'svelte';
   import { get } from 'svelte/store';
 
   // Chat components
@@ -21,14 +20,13 @@
     MessageBubble,
     ScrollNavigation,
     StreamingIndicator,
-    // SuggestedModesCard,
+    PhaseProgressBar,
   } from './chat';
 
   // Existing components
   import FrownyFace from './FrownyFace.svelte';
   import ToolCallCard from './ToolCallCard.svelte';
   import ToolResultCard from './ToolResultCard.svelte';
-  import ShipMode from './ShipMode.svelte';
   import SettingsScreen from './TabbedSettingsScreen.svelte';
   import FreeAgentLocalConfirmModal from './FreeAgentLocalConfirmModal.svelte';
   import QuestionModal from './QuestionModal.svelte';
@@ -40,7 +38,7 @@
   import GAgentStatusPanel from './gAgent/GAgentStatusPanel.svelte';
 
   // Streaming service
-  import { streamChat } from '../lib/chatStreaming';
+  import { streamChat, flattenMessageContent } from '../lib/chatStreaming';
   import type { ChatStreamEvent } from '../lib/chatStreaming';
   import {
     fetchApi,
@@ -58,6 +56,7 @@
   import { sessionsStore, currentSession } from '../stores/sessionsStore';
   import { runMode as runModeStore } from '../stores/runModeStore';
   import { chatModeStore } from '../stores/chatModeStore';
+  import { chatPhaseStore } from '../stores/chatPhaseStore';
   import { settingsStore } from '../stores/settingsStore';
   import { workspaceStore } from '../stores/workspaceStore';
   import { showSettings, focusChatTrigger, setCurrentView, currentView } from '../stores/uiStore';
@@ -74,7 +73,16 @@
   // Utilities
   import { processError, logError } from '../utils/errorHandler';
   import { trackMessageSent, trackError } from '../lib/analytics';
-  import { Mic, BookOpen, LayoutGrid, MessageCircle, Sparkles, FolderOpen, X, Bot } from 'lucide-svelte';
+  import {
+    Mic,
+    BookOpen,
+    LayoutGrid,
+    MessageCircle,
+    Sparkles,
+    FolderOpen,
+    X,
+    Bot,
+  } from 'lucide-svelte';
 
   import type { Message, ContentBlock } from '../types';
 
@@ -108,6 +116,7 @@
   let messagesRef: HTMLElement | null = $state(null);
   let inputRef: HTMLTextAreaElement | null = $state(null);
   let streaming = $state(false);
+  let streamingStatus = $state('Thinking...');
   let streamingBlocks = $state<ContentBlock[]>([]);
   let activeController: AbortController | null = $state(null);
   let lastUserMessage = $state('');
@@ -208,9 +217,7 @@
     $currentSession?.name && $currentSession.name !== 'New Chat' ? $currentSession.name : ''
   );
 
-  // Event dispatcher
-  const dispatch = createEventDispatcher<{ 'messages-updated': Message[] }>();
-
+  // Event dispatcher removed — using callback props (Svelte 5 pattern)
   // Sync messages to parent
   let lastSyncedMessages: Message[] | null = null;
   $effect(() => {
@@ -278,13 +285,30 @@
   });
 
   // Mode button handlers (Architecture, Code, Ship) – toggle off when clicking active mode
-  function setModeArchitecture() {
+  import { startDesignWorkflow } from '../lib/api';
+
+  async function setModeArchitecture() {
     if ($chatModeStore === 'design') {
       chatModeStore.clearMode();
       chatMode = 'normal';
+      chatPhaseStore.reset();
     } else {
       chatModeStore.setMode('design');
       chatMode = 'design';
+      // Start design workflow if not already active
+      if (!$chatPhaseStore.isActive && $currentSession) {
+        try {
+          const result = await startDesignWorkflow(
+            $currentSession.description || 'New Project',
+            $currentSession.id
+          );
+          chatPhaseStore.startWorkflow(result.workflowState.projectDescription || 'New Project');
+          showToast('Design workflow started! Describe your project to begin.', 'success');
+        } catch (err) {
+          console.error('Failed to start design workflow:', err);
+          // Continue without workflow - will work in fallback mode
+        }
+      }
     }
   }
   function setModeCode() {
@@ -351,13 +375,6 @@
       isNimProvider = (settings?.models?.defaultProvider ?? '') === 'nim';
     });
 
-    const onOpenShipMode = () => {
-      showShipConfirmModal = true;
-    };
-    const onCloseShipMode = () => {
-      const storeMode = get(chatModeStore);
-      chatMode = storeMode === 'design' ? 'design' : storeMode === 'code' ? 'code' : 'normal';
-    };
     const onSwitchPlanMode = () => {
       chatModeStore.setMode('code');
       chatMode = 'plan';
@@ -385,8 +402,6 @@
         showToast('Failed to save prompt', 'error');
       }
     };
-    window.addEventListener('open-ship-mode', onOpenShipMode);
-    window.addEventListener('close-ship-mode', onCloseShipMode);
     window.addEventListener('switch-plan-mode', onSwitchPlanMode);
     window.addEventListener('switch-spec-mode', onSwitchSpecMode);
     window.addEventListener('insert-saved-prompt', onInsertSavedPrompt as EventListener);
@@ -397,8 +412,6 @@
 
     return () => {
       unsub();
-      window.removeEventListener('open-ship-mode', onOpenShipMode);
-      window.removeEventListener('close-ship-mode', onCloseShipMode);
       window.removeEventListener('switch-plan-mode', onSwitchPlanMode);
       window.removeEventListener('switch-spec-mode', onSwitchSpecMode);
       window.removeEventListener('insert-saved-prompt', onInsertSavedPrompt as EventListener);
@@ -546,7 +559,6 @@
         } else {
           sessionsStore.createSession(messages);
         }
-        dispatch('messages-updated', messages);
       });
     } catch (err: unknown) {
       console.warn('Verdict middleware error:', err);
@@ -604,7 +616,21 @@
 
     // Handle stream events
     const handleEvent = async (event: ChatStreamEvent) => {
-      if (event.type === 'text' || event.type === 'tool_call' || event.type === 'tool_result') {
+      if (event.type === 'text') {
+        streamingStatus = 'Speaking...';
+        streamingBlocks = [...event.blocks];
+        await tick();
+        scrollToBottom();
+      } else if (event.type === 'tool_call') {
+        const lastBlock = event.blocks[event.blocks.length - 1];
+        if (lastBlock?.type === 'tool_call') {
+          streamingStatus = `Running ${lastBlock.name}...`;
+        }
+        streamingBlocks = [...event.blocks];
+        await tick();
+        scrollToBottom();
+      } else if (event.type === 'tool_result') {
+        streamingStatus = 'Analyzing results...';
         streamingBlocks = [...event.blocks];
         await tick();
         scrollToBottom();
@@ -635,7 +661,6 @@
     } else {
       sessionsStore.createSession(messages);
     }
-    dispatch('messages-updated', messages);
   }
 
   function cancelGeneration() {
@@ -691,7 +716,11 @@
     } else {
       sessionsStore.createSession([], undefined, 'gAgent');
       showGAgentStatusPanel = true;
-      showToast('G-Agent mode on. Start a conversation or open G-Agent from the sidebar.', 'info', 5000);
+      showToast(
+        'G-Agent mode on. Start a conversation or open G-Agent from the sidebar.',
+        'info',
+        5000
+      );
     }
   }
 
@@ -742,166 +771,192 @@
       </div>
 
       <!-- Main content area -->
-      {#if chatMode === 'ship'}
-        <div class="ship-mode-container">
-          <ShipMode />
-        </div>
-      {:else}
-        <div class="chat-main" class:with-sidebar={showGAgentMemoryPanel}>
-          <!-- Status panel: only mount when G-Agent is in use (panel open, plan, or executing) to avoid backend connect on every load -->
-          {#if isGAgentSession && (showGAgentStatusPanel || hasGAgentPlan || isGAgentExecuting)}
-            <aside class="status-sidebar">
-              <GAgentStatusPanel
-                sessionId={gAgentSessionId}
+      <div class="chat-main" class:with-sidebar={showGAgentMemoryPanel}>
+        <!-- Design Workflow Progress Bar -->
+        {#if $chatPhaseStore.isActive}
+          <PhaseProgressBar />
+        {/if}
+        <!-- Status panel: only mount when G-Agent is in use (panel open, plan, or executing) to avoid backend connect on every load -->
+        {#if isGAgentSession && (showGAgentStatusPanel || hasGAgentPlan || isGAgentExecuting)}
+          <aside class="status-sidebar">
+            <GAgentStatusPanel
+              sessionId={gAgentSessionId}
+              compact={false}
+              showCompiler={true}
+              showBudget={true}
+            />
+          </aside>
+        {/if}
+
+        <!-- Chat content -->
+        <div class="chat-content">
+          <!-- G-Agent Plan Viewer -->
+          {#if isGAgentSession && hasGAgentPlan}
+            <div class="plan-panel">
+              <GAgentPlanViewer
                 compact={false}
-                showCompiler={true}
-                showBudget={true}
+                workspaceRoot={$workspaceStore.root ?? undefined}
+                onApprove={() => {
+                  showGAgentPlanApproval = false;
+                }}
+                onCancel={() => {
+                  gAgentPlanStore.clearPlan();
+                }}
               />
-            </aside>
+            </div>
           {/if}
 
-          <!-- Chat content -->
-          <div class="chat-content">
-            <!-- G-Agent Plan Viewer -->
-            {#if isGAgentSession && hasGAgentPlan}
-              <div class="plan-panel">
-                <GAgentPlanViewer
-                  compact={false}
-                  workspaceRoot={$workspaceStore.root ?? undefined}
-                  onApprove={() => {
-                    showGAgentPlanApproval = false;
-                  }}
-                  onCancel={() => {
-                    gAgentPlanStore.clearPlan();
-                  }}
-                />
-              </div>
-            {/if}
+          <!-- Live Output -->
+          {#if isGAgentSession && (showGAgentLiveOutput || isGAgentExecuting)}
+            <div class="live-output-panel">
+              <GAgentLiveOutput
+                bind:this={liveOutputRef}
+                isExecuting={isGAgentExecuting}
+                currentTaskId={$gAgentCurrentPlan?.tasks.find((t) => t.status === 'in_progress')
+                  ?.id ?? ''}
+                onClose={() => {
+                  showGAgentLiveOutput = false;
+                }}
+              />
+            </div>
+          {/if}
 
-            <!-- Live Output -->
-            {#if isGAgentSession && (showGAgentLiveOutput || isGAgentExecuting)}
-              <div class="live-output-panel">
-                <GAgentLiveOutput
-                  bind:this={liveOutputRef}
-                  isExecuting={isGAgentExecuting}
-                  currentTaskId={$gAgentCurrentPlan?.tasks.find((t) => t.status === 'in_progress')
-                    ?.id ?? ''}
-                  onClose={() => {
-                    showGAgentLiveOutput = false;
-                  }}
-                />
-              </div>
-            {/if}
+          <!-- Messages -->
+          <div class="messages-container" bind:this={messagesRef}>
+            <div class="messages-inner" class:is-empty={messages.length <= 1 && !streaming}>
+              {#if messages.length <= 1 && !streaming}
+                <div class="empty-state">
+                  <FrownyFace size="lg" state="idle" animated={false} />
+                  <h1 class="empty-title">What are we building?</h1>
+                  <p class="empty-subtitle">
+                    Describe your project and I'll help design the architecture
+                  </p>
+                </div>
+              {:else}
+                {#each messages as msg, index}
+                  <MessageBubble
+                    message={msg}
+                    {index}
+                    isLastAssistant={index === messages.length - 1 && msg.role === 'assistant'}
+                    isModelExpanded={expandedModelIndex === index}
+                    {streaming}
+                    onToggleModelDetails={() =>
+                      (expandedModelIndex = expandedModelIndex === index ? null : index)}
+                    onEdit={handleEditMessage}
+                    onRegenerate={handleRegenerateMessage}
+                    onCopy={handleCopyMessage}
+                    onFeedback={$currentSession
+                      ? (idx, rating) => {
+                          fetchApi('/api/gagent/feedback', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              messageId: `${$currentSession.id}-${idx}`,
+                              rating,
+                            }),
+                          }).catch(() => {});
+                        }
+                      : undefined}
+                  />
+                {/each}
 
-            <!-- Messages -->
-            <div class="messages-container" bind:this={messagesRef}>
-              <div class="messages-inner" class:is-empty={messages.length <= 1 && !streaming}>
-                {#if messages.length <= 1 && !streaming}
-                  <div class="empty-state">
-                    <FrownyFace size="lg" state="idle" animated={true} />
-                    <h1 class="empty-title">What are we building?</h1>
-                    <p class="empty-subtitle">
-                      Describe your project and I'll help design the architecture
-                    </p>
+                {#if showAddToProjectBanner}
+                  <div class="add-to-project-banner">
+                    <span class="banner-icon"><FolderOpen size={18} strokeWidth={2} /></span>
+                    <span class="banner-text">Add this conversation to a project?</span>
+                    <button
+                      type="button"
+                      class="banner-btn"
+                      onclick={() => setCurrentView('projects')}
+                    >
+                      View Projects
+                    </button>
+                    <button
+                      type="button"
+                      class="banner-dismiss"
+                      onclick={() => (addToProjectBannerDismissed = true)}
+                      aria-label="Dismiss"
+                    >
+                      <X size={14} strokeWidth={2} />
+                    </button>
                   </div>
-                {:else}
-                  {#each messages as msg, index}
-                    <MessageBubble
-                      message={msg}
-                      {index}
-                      isLastAssistant={index === messages.length - 1 && msg.role === 'assistant'}
-                      isModelExpanded={expandedModelIndex === index}
-                      {streaming}
-                      onToggleModelDetails={() =>
-                        (expandedModelIndex = expandedModelIndex === index ? null : index)}
-                      onEdit={handleEditMessage}
-                      onRegenerate={handleRegenerateMessage}
-                      onCopy={handleCopyMessage}
-                      onFeedback={$currentSession
-                        ? (idx, rating) => {
-                            fetchApi('/api/gagent/feedback', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                messageId: `${$currentSession.id}-${idx}`,
-                                rating,
-                              }),
-                            }).catch(() => {});
-                          }
-                        : undefined}
-                    />
-                  {/each}
+                {/if}
 
-                  {#if showAddToProjectBanner}
-                    <div class="add-to-project-banner">
-                      <span class="banner-icon"><FolderOpen size={18} strokeWidth={2} /></span>
-                      <span class="banner-text">Add this conversation to a project?</span>
+                {#if streaming}
+                  <div class="streaming-message">
+                    <StreamingIndicator streaming={true} status={streamingStatus} />
+                    {#if streamingBlocks.length > 0}
+                      <div class="streaming-content">
+                        {#each streamingBlocks as block}
+                          {#if block.type === 'text'}
+                            <div class="text-block">{block.content}</div>
+                          {:else if block.type === 'tool_call'}
+                            <ToolCallCard toolCall={block} />
+                          {:else if block.type === 'tool_result'}
+                            <ToolResultCard toolResult={block} />
+                          {/if}
+                        {/each}
+                      </div>
+                    {/if}
+                  </div>
+                {:else if messages.length >= 2 && messages[messages.length - 1]?.role === 'assistant'}
+                  {@const lastMsg = messages[messages.length - 1]}
+                  {@const lastContent =
+                    typeof lastMsg?.content === 'string'
+                      ? lastMsg.content
+                      : flattenMessageContent(lastMsg?.content ?? [])}
+                  {@const suggestDesignMode =
+                    lastContent && /mermaid|diagram|architecture\s*(diagram)?/i.test(lastContent)}
+                  {#if suggestDesignMode}
+                    <p class="design-mode-suggestion">
                       <button
                         type="button"
-                        class="banner-btn"
-                        onclick={() => setCurrentView('projects')}
+                        class="inline-design-mode-btn"
+                        onclick={() => {
+                          chatModeStore.setMode('design');
+                          setCurrentView('chat');
+                          focusChatTrigger.update((n) => n + 1);
+                        }}
                       >
-                        View Projects
+                        Use Design mode for diagrams
                       </button>
-                      <button
-                        type="button"
-                        class="banner-dismiss"
-                        onclick={() => (addToProjectBannerDismissed = true)}
-                        aria-label="Dismiss"
-                      >
-                        <X size={14} strokeWidth={2} />
-                      </button>
-                    </div>
+                    </p>
                   {/if}
-
-                  {#if streaming}
-                    <div class="streaming-message">
-                      <StreamingIndicator streaming={true} />
-                      {#if streamingBlocks.length > 0}
-                        <div class="streaming-content">
-                          {#each streamingBlocks as block}
-                            {#if block.type === 'text'}
-                              <div class="text-block">{block.content}</div>
-                            {:else if block.type === 'tool_call'}
-                              <ToolCallCard toolCall={block} />
-                            {:else if block.type === 'tool_result'}
-                              <ToolResultCard toolResult={block} />
-                            {/if}
-                          {/each}
-                        </div>
-                      {/if}
-                    </div>
-                  {:else if messages.length >= 2 && messages[messages.length - 1]?.role === 'assistant'}
-                    <!-- <SuggestedModesCard
+                  <!-- <SuggestedModesCard
                       onSelectMode={(view) => {
                         if (view === 'chat') return;
+                        if (view === 'designMode') {
+                          chatModeStore.setMode('design');
+                          setCurrentView('chat');
+                          focusChatTrigger.update((n) => n + 1);
+                          return;
+                        }
                         setCurrentView(view);
                       }}
                     /> -->
-                  {/if}
                 {/if}
-              </div>
+              {/if}
             </div>
-
-            <!-- Scroll navigation -->
-            <ScrollNavigation scrollContainer={messagesRef} />
           </div>
 
-          <!-- Memory sidebar -->
-          {#if isGAgentSession && showGAgentMemoryPanel}
-            <aside class="memory-sidebar">
-              <!-- svelte-ignore state_referenced_locally -->
-              <GAgentMemoryPanel
-                bind:this={memoryPanelRef}
-                compact={true}
-                onPatternSelect={(pattern) => {
-                  showToast(`Pattern: ${pattern.name}`, 'info');
-                }}
-              />
-            </aside>
-          {/if}
+          <!-- Scroll navigation -->
+          <ScrollNavigation scrollContainer={messagesRef} />
         </div>
-      {/if}
+
+        <!-- Memory sidebar -->
+        {#if isGAgentSession && showGAgentMemoryPanel}
+          <aside class="memory-sidebar">
+            <!-- svelte-ignore state_referenced_locally -->
+            <GAgentMemoryPanel
+              bind:this={memoryPanelRef}
+              compact={true}
+              onPatternSelect={(pattern) => {
+                showToast(`Pattern: ${pattern.name}`, 'info');
+              }}
+            />
+          </aside>
+        {/if}
+      </div>
 
       <!-- Input area -->
       <div class="input-area">
@@ -1396,7 +1451,7 @@
     white-space: pre-wrap;
     word-break: break-word;
     line-height: 1.6;
-    color: #1f2937;
+    color: var(--color-text);
   }
 
   /* Input area - compact height, pulled down from bottom edge */
@@ -1404,7 +1459,6 @@
     padding: 0.3rem 1rem 0.75rem 0.35rem;
     margin-bottom: 0.5rem;
     background: var(--color-bg, #ffffff);
-    border-top: 1px solid var(--color-border, #e5e7eb);
     position: relative;
   }
 
@@ -1566,7 +1620,7 @@
   }
 
   .stat-label {
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .stat-value {
@@ -1576,7 +1630,7 @@
 
   .stat.connection {
     margin-left: auto;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .conn-dot {
@@ -1597,8 +1651,8 @@
     margin-top: 0.25rem;
     min-width: 360px;
     max-width: 420px;
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 0.75rem;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     z-index: 100;
@@ -1612,6 +1666,27 @@
   .model-picker-dropdown :global(.model-picker-dropdown) {
     min-width: 100%;
     max-height: 420px;
+  }
+
+  .design-mode-suggestion {
+    margin: 0.5rem 0 0;
+    padding: 0;
+  }
+
+  .inline-design-mode-btn {
+    background: none;
+    border: none;
+    color: var(--color-primary, #7c3aed);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .inline-design-mode-btn:hover {
+    color: var(--color-primary-hover, #6d28d9);
   }
 
   @media (prefers-reduced-motion: reduce) {

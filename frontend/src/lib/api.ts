@@ -247,3 +247,87 @@ export async function removeSessionAttachment(
   );
   if (!res.ok) throw new Error(`Failed to remove attachment: ${res.status}`);
 }
+
+// --- Design Workflow API ---
+
+export interface DesignWorkflowState {
+  currentPhase: 'architecture' | 'prd' | 'plan' | 'code' | 'completed';
+  phaseData: {
+    architecture?: {
+      mermaidCode: string;
+      description: string;
+    };
+    prd?: {
+      content: string;
+      summary: string;
+    };
+    plan?: {
+      tasks: Array<{
+        id: string;
+        title: string;
+        description: string;
+        status: 'pending' | 'in-progress' | 'completed';
+      }>;
+    };
+    code?: {
+      files: Array<{
+        path: string;
+        content: string;
+        language: string;
+      }>;
+    };
+  };
+  userApprovals: Record<string, boolean>;
+  isActive: boolean;
+  projectDescription?: string;
+}
+
+export async function startDesignWorkflow(
+  projectDescription: string,
+  sessionId?: string
+): Promise<{ success: boolean; workflowState: DesignWorkflowState; message: string }> {
+  const res = await fetchApi('/api/chat/design/start', {
+    method: 'POST',
+    body: JSON.stringify({ projectDescription, sessionId }),
+  });
+  if (!res.ok) throw new Error(`Failed to start design workflow: ${res.status}`);
+  return res.json();
+}
+
+export async function executeDesignPhase(
+  sessionId: string,
+  phase: 'architecture' | 'prd' | 'plan' | 'code',
+  feedback?: string,
+  existingProject?: boolean
+): Promise<{ success: boolean; phase: string; result: unknown; message: string }> {
+  const res = await fetchApi('/api/chat/design/execute', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId, phase, feedback, existingProject }),
+  });
+  if (!res.ok) throw new Error(`Failed to execute design phase: ${res.status}`);
+  return res.json();
+}
+
+export async function approveDesignPhase(
+  sessionId: string,
+  approved: boolean,
+  feedback?: string
+): Promise<{ success: boolean; message: string; workflowState: DesignWorkflowState; nextPhase?: string }> {
+  const res = await fetchApi('/api/chat/design/approve', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId, approved, feedback }),
+  });
+  if (!res.ok) throw new Error(`Failed to approve design phase: ${res.status}`);
+  return res.json();
+}
+
+export async function completeDesignWorkflow(
+  sessionId: string
+): Promise<{ success: boolean; message: string; workflowState: DesignWorkflowState }> {
+  const res = await fetchApi('/api/chat/design/complete', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
+  });
+  if (!res.ok) throw new Error(`Failed to complete design workflow: ${res.status}`);
+  return res.json();
+}

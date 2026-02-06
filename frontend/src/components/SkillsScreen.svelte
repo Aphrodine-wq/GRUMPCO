@@ -1,7 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Button } from '../lib/design-system';
-  import { getSkills, getSkill, generateSkillMd, createUserSkill, type SkillSummary } from '../lib/api';
+  import {
+    getSkills,
+    getSkill,
+    generateSkillMd,
+    createUserSkill,
+    type SkillSummary,
+  } from '../lib/api';
   import { settingsStore } from '../stores/settingsStore';
   import { showToast } from '../stores/toastStore';
 
@@ -193,7 +199,8 @@
     <div class="error-state">
       <p class="error-message">{error}</p>
       <p class="error-hint">
-        Skills API unavailable. Ensure backend URL is correct (VITE_API_URL for Electron) and backend is running. If using a remote backend, ensure you're authenticated.
+        Skills API unavailable. Ensure backend URL is correct (VITE_API_URL for Electron) and
+        backend is running. If using a remote backend, ensure you're authenticated.
       </p>
       <Button variant="secondary" onclick={load}>Retry</Button>
     </div>
@@ -316,7 +323,8 @@
       <section class="section create-in-house-section">
         <h2>Create in-house skill</h2>
         <p class="section-desc">
-          Add a custom skill that lives on the backend and appears in the list above. Use it for team-specific workflows.
+          Add a custom skill that lives on the backend and appears in the list above. Use it for
+          team-specific workflows.
         </p>
         {#if !showCreateInHouse}
           <Button variant="secondary" onclick={() => (showCreateInHouse = true)}
@@ -362,7 +370,8 @@
       <section class="section assignment-section">
         <h2>Assignment</h2>
         <p class="section-desc">
-          Enabled skills apply to all chats by default. Per-session or per-model assignment will be available in a future update.
+          Enabled skills apply to all chats by default. Per-session or per-model assignment will be
+          available in a future update.
         </p>
         <div class="assignment-note">
           <span class="note-icon">ℹ</span>

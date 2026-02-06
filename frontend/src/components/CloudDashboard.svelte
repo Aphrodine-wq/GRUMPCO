@@ -6,6 +6,8 @@
   import { onMount } from 'svelte';
   import { fade, fly, slide } from 'svelte/transition';
   import { writable, derived } from 'svelte/store';
+  import { fetchApi } from '$lib/api.js';
+  import { setCurrentView } from '../stores/uiStore';
 
   // Props
   interface Props {
@@ -70,7 +72,7 @@
   async function loadDashboardData() {
     isLoading.set(true);
     try {
-      const response = await fetch('/api/cloud/dashboard');
+      const response = await fetchApi('/api/cloud/dashboard');
       if (!response.ok) throw new Error(`API error: ${response.status}`);
       const json = await response.json();
       const payload = json.data ?? {};
@@ -343,6 +345,13 @@
                   <div class="status-dot {integration.status}"></div>
                 {/if}
               </div>
+            {:else}
+              <div class="empty-state">
+                <p>No integrations connected</p>
+                <button class="action-btn primary" onclick={() => setCurrentView('integrations')}>
+                  Connect integration
+                </button>
+              </div>
             {/each}
           </div>
         </section>
@@ -401,6 +410,16 @@
                   {/if}
                 </div>
               </div>
+            {:else}
+              <div class="empty-state">
+                <p>No deployments yet</p>
+                <p class="empty-state-hint">
+                  Connect a provider (e.g. Vercel, Netlify) to see deployments here.
+                </p>
+                <button class="action-btn primary" onclick={() => setCurrentView('integrations')}>
+                  Connect to see data
+                </button>
+              </div>
             {/each}
           </div>
         </section>
@@ -436,6 +455,14 @@
                   {/if}
                   <span>{cost.trendPercent}%</span>
                 </div>
+              </div>
+            {:else}
+              <div class="empty-state">
+                <p>No cost data</p>
+                <p class="empty-state-hint">Connect cloud providers to see usage and costs.</p>
+                <button class="action-btn primary" onclick={() => setCurrentView('integrations')}>
+                  Connect to see data
+                </button>
               </div>
             {/each}
           </div>
@@ -521,6 +548,14 @@
               {#if resource.cost}
                 <div class="resource-cost">{formatCurrency(resource.cost)}/mo</div>
               {/if}
+            </div>
+          {:else}
+            <div class="empty-state">
+              <p>No resources</p>
+              <p class="empty-state-hint">Connect a cloud provider to see resources here.</p>
+              <button class="action-btn primary" onclick={() => setCurrentView('integrations')}>
+                Connect to see data
+              </button>
             </div>
           {/each}
         </div>
@@ -848,6 +883,28 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 0.75rem;
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-text-muted, #6b7280);
+    font-size: 0.875rem;
+  }
+
+  .empty-state p {
+    margin: 0 0 0.75rem;
+  }
+
+  .empty-state .empty-state-hint {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #9ca3af);
+    margin-bottom: 1rem;
+  }
+
+  .empty-state .action-btn {
+    margin-top: 0.5rem;
   }
 
   .integration-card {

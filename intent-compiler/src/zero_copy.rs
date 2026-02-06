@@ -115,12 +115,7 @@ impl<T> LockFreeStack<T> {
 
             if self
                 .head
-                .compare_exchange(
-                    current_head,
-                    new_node,
-                    Ordering::Release,
-                    Ordering::Acquire,
-                )
+                .compare_exchange(current_head, new_node, Ordering::Release, Ordering::Acquire)
                 .is_ok()
             {
                 break;
@@ -212,7 +207,12 @@ impl Arena {
 
         if self
             .offset
-            .compare_exchange(current_offset, new_offset, Ordering::Release, Ordering::Acquire)
+            .compare_exchange(
+                current_offset,
+                new_offset,
+                Ordering::Release,
+                Ordering::Acquire,
+            )
             .is_ok()
         {
             let ptr = unsafe { self.buffer.as_ptr().add(aligned_offset) as *mut T };

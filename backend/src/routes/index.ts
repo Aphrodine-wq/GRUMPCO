@@ -18,6 +18,7 @@ import planRoutes from "./plan.js";
 import specRoutes from "./spec.js";
 import shipRoutes from "./ship.js";
 import advancedAiRoutes from "./advanced-ai.js";
+import builderRoutes from "./builder.js";
 
 // Authentication routes
 import authRoutes from "./auth.js";
@@ -89,6 +90,7 @@ export function createCoreAiRouter(): Router {
   router.use("/spec", specRoutes);
   router.use("/ship", shipRoutes);
   router.use("/advanced-ai", advancedAiRoutes);
+  router.use("/builder", builderRoutes);
   // Note: intentOptimizerRoutes already mounted above - removed duplicate
 
   return router;

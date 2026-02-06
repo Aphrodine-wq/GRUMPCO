@@ -88,18 +88,18 @@ pub struct VerdictAccuracyMeasurement {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AccuracyClassification {
-    CorrectPositive,    // Predicted success → succeeded
-    CorrectNegative,    // Predicted failure → failed
-    FalsePositive,      // Predicted success → failed
-    FalseNegative,      // Predicted failure → succeeded
-    PartiallyCorrect,   // Right direction, wrong magnitude
-    TooOptimistic,      // Overestimated success likelihood
-    TooConservative,    // Underestimated success likelihood
+    CorrectPositive,  // Predicted success → succeeded
+    CorrectNegative,  // Predicted failure → failed
+    FalsePositive,    // Predicted success → failed
+    FalseNegative,    // Predicted failure → succeeded
+    PartiallyCorrect, // Right direction, wrong magnitude
+    TooOptimistic,    // Overestimated success likelihood
+    TooConservative,  // Underestimated success likelihood
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LearningSignal {
-    pub signal_strength: f32,      // How clear is the signal?
+    pub signal_strength: f32, // How clear is the signal?
     pub affected_features: Vec<String>,
     pub suggested_adjustments: Vec<FeatureAdjustment>,
     pub new_mental_models: Vec<String>,
@@ -128,11 +128,8 @@ pub fn measure_verdict_accuracy(
     let accuracy_classification =
         classify_accuracy_result(original_verdict, original_confidence, outcome);
 
-    let learning_signal = generate_learning_signal(
-        original_verdict,
-        outcome,
-        &accuracy_classification,
-    );
+    let learning_signal =
+        generate_learning_signal(original_verdict, outcome, &accuracy_classification);
 
     VerdictAccuracyMeasurement {
         founder_id: String::new(),
@@ -336,9 +333,7 @@ pub struct TimeToOutcomeDistribution {
 }
 
 /// Calculate aggregate accuracy metrics
-pub fn calculate_accuracy_metrics(
-    measurements: &[VerdictAccuracyMeasurement],
-) -> AccuracyMetrics {
+pub fn calculate_accuracy_metrics(measurements: &[VerdictAccuracyMeasurement]) -> AccuracyMetrics {
     let total = measurements.len() as f32;
     let mut correct = 0;
     let mut verdict_groups: HashMap<String, Vec<&VerdictAccuracyMeasurement>> = HashMap::new();
@@ -399,16 +394,16 @@ pub fn calculate_accuracy_metrics(
             .filter(|m| {
                 matches!(
                     m.accuracy_classification,
-                    AccuracyClassification::CorrectPositive | AccuracyClassification::CorrectNegative
+                    AccuracyClassification::CorrectPositive
+                        | AccuracyClassification::CorrectNegative
                 )
             })
             .count();
 
-        let group_accuracy =
-            group_correct as f32 / group.len() as f32;
+        let group_accuracy = group_correct as f32 / group.len() as f32;
 
-        let avg_confidence = group.iter().map(|m| m.original_confidence).sum::<f32>()
-            / group.len() as f32;
+        let avg_confidence =
+            group.iter().map(|m| m.original_confidence).sum::<f32>() / group.len() as f32;
 
         let avg_days = group.iter().map(|m| m.days_to_outcome).sum::<i32>() / group.len() as i32;
 
@@ -553,7 +548,8 @@ pub fn aggregate_learning_signals(
             .filter(|m| {
                 matches!(
                     m.accuracy_classification,
-                    AccuracyClassification::CorrectPositive | AccuracyClassification::CorrectNegative
+                    AccuracyClassification::CorrectPositive
+                        | AccuracyClassification::CorrectNegative
                 )
             })
             .count() as f32

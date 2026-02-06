@@ -29,8 +29,22 @@ aux
 
 # IDE / Editor
 .idea/
+.vscode/
 *.swp
 *.swo
+
+# Coverage
+coverage/
+
+# Backup files
+*.bak
+*.vsix
+
+# Rust
+target/
+
+# JIT cache
+.grump/
 
 # Installer staging and output
 installer/stage/

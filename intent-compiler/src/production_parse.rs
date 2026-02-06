@@ -2,7 +2,7 @@
 //! Uses ONLY features that actually work and are tested
 //! No placeholders, no simulations - 100% functional code
 
-use crate::error_handling::{CompilerResult, validation};
+use crate::error_handling::{validation, CompilerResult};
 use crate::hyper_cache::{CacheConfig, HyperCache};
 use crate::hyper_simd;
 use crate::parallel_engine::ParallelEngine;
@@ -21,7 +21,10 @@ static AI_OPTIMIZER: Lazy<Arc<RealAIOptimizer>> =
 static PARALLEL_ENGINE: Lazy<ParallelEngine> = Lazy::new(|| ParallelEngine::default());
 
 /// Production-ready parse function with comprehensive error handling
-pub fn production_parse_intent(text: &str, constraints: serde_json::Value) -> CompilerResult<IntentOutput> {
+pub fn production_parse_intent(
+    text: &str,
+    constraints: serde_json::Value,
+) -> CompilerResult<IntentOutput> {
     // Step 1: Validate input
     validation::validate_text_input(text)?;
 
@@ -45,7 +48,7 @@ pub fn production_parse_intent(text: &str, constraints: serde_json::Value) -> Co
 
     // Step 7: Enhance with AI optimizer results
     output.features.extend(pattern.features);
-    output.confidence = (output.confidence + pattern.confidence) / 2.0;
+    output.confidence.overall = (output.confidence.overall + pattern.confidence) / 2.0;
 
     // Step 8: Cache the result
     PRODUCTION_CACHE.put(cache_key, output.clone());
@@ -62,7 +65,7 @@ pub fn production_batch_parse(
     validation::validate_batch_size(texts.len())?;
 
     // Use parallel engine for batch processing
-    let results = PARALLEL_ENGINE.process_adaptive(texts, |text| {
+    let results = PARALLEL_ENGINE.process_adaptive(texts, move |text| {
         production_parse_intent(text, constraints.clone())
             .unwrap_or_else(|_| create_fallback_output(text))
     });
@@ -84,7 +87,7 @@ fn create_fallback_output(text: &str) -> IntentOutput {
         project_type: "unknown".to_string(),
         architecture_pattern: "unknown".to_string(),
         complexity_score: 0.0,
-        confidence: 0.0,
+        confidence: crate::types::ConfidenceReport::default(),
         dependency_graph: vec![],
         sentences: vec![],
         verification: None,
@@ -103,7 +106,7 @@ pub fn get_production_stats() -> ProductionStats {
         ai_vocab_size: ai_stats.vocab_size,
         ai_pattern_cache_size: ai_stats.pattern_cache_size,
         parallel_success_rate: parallel_stats.success_rate(),
-        parallel_total_tasks: parallel_stats.total_tasks,
+        parallel_total_tasks: parallel_stats.completed + parallel_stats.failed,
     }
 }
 
@@ -259,7 +262,7 @@ mod tests {
         assert!(result.is_ok());
         let output = result.unwrap();
         assert!(!output.features.is_empty());
-        assert!(output.confidence > 0.0);
+        assert!(output.confidence.overall > 0.0);
     }
 
     #[test]

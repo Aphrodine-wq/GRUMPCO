@@ -18,12 +18,15 @@
     ChevronLeft,
     ChevronRight,
     Search,
-    Layout,
     Plug,
     Server,
     LogOut,
     BookOpen,
     Brain,
+    FolderOpen,
+    Clock,
+    Cloud,
+    Hammer,
   } from 'lucide-svelte';
   import { sessionsStore, sortedSessions, currentSession } from '../../stores/sessionsStore';
   import { setCurrentView, sidebarCollapsed, currentView } from '../../stores/uiStore';
@@ -33,6 +36,7 @@
   import type { Session } from '../../types';
   import Modal from '../../lib/design-system/components/Modal/Modal.svelte';
   import GoogleAuthGate from '../GoogleAuthGate.svelte';
+  import CreditUsageWidget from '../CreditUsageWidget.svelte';
 
   // Sidebar state
   let collapsed = $derived($sidebarCollapsed);
@@ -46,21 +50,34 @@
   // Effective collapsed state (collapsed but can expand on hover)
   const effectiveCollapsed = $derived(collapsed && !hoverExpanded);
 
-  // Nav: Chat, Architecture, Integrations, Approvals, Skills, Memory, MCP (Settings in account menu)
+  // Nav: Chat, Projects, Builder, Integrations, Tasks, Skills, Memory, MCP, Cloud (Settings in account menu)
   interface NavItem {
     id: ViewType;
     label: string;
-    icon: 'chat' | 'architecture' | 'integrations' | 'skills' | 'memory' | 'mcp' | 'settings';
+    icon:
+      | 'chat'
+      | 'projects'
+      | 'builder'
+      | 'integrations'
+      | 'tasks'
+      | 'skills'
+      | 'memory'
+      | 'mcp'
+      | 'cloud'
+      | 'settings';
     badge?: string;
   }
 
   const primaryNav: NavItem[] = [
     { id: 'chat', label: 'Chat', icon: 'chat' },
-    { id: 'designToCode', label: 'Architecture', icon: 'architecture' },
+    { id: 'projects', label: 'Projects', icon: 'projects' },
+    { id: 'builder', label: 'Builder', icon: 'builder' },
     { id: 'integrations', label: 'Integrations', icon: 'integrations' },
+    { id: 'heartbeats', label: 'Tasks', icon: 'tasks' },
     { id: 'skills', label: 'Skills', icon: 'skills' },
     { id: 'memory', label: 'Memory', icon: 'memory' },
     { id: 'mcp', label: 'MCP', icon: 'mcp' },
+    { id: 'cloud', label: 'Cloud', icon: 'cloud' },
   ];
 
   const secondaryNav: NavItem[] = [];
@@ -242,17 +259,23 @@
         title={item.label}
       >
         {#if item.icon === 'chat'}
-          <MessageSquare size={18} />
-        {:else if item.icon === 'architecture'}
-          <Layout size={18} />
+          <MessageSquare size={16} />
+        {:else if item.icon === 'projects'}
+          <FolderOpen size={16} />
+        {:else if item.icon === 'builder'}
+          <Hammer size={16} />
         {:else if item.icon === 'integrations'}
-          <Plug size={18} />
+          <Plug size={16} />
+        {:else if item.icon === 'tasks'}
+          <Clock size={16} />
         {:else if item.icon === 'skills'}
-          <BookOpen size={18} />
+          <BookOpen size={16} />
         {:else if item.icon === 'memory'}
-          <Brain size={18} />
+          <Brain size={16} />
         {:else if item.icon === 'mcp'}
-          <Server size={18} />
+          <Server size={16} />
+        {:else if item.icon === 'cloud'}
+          <Cloud size={16} />
         {:else}
           <Settings size={18} />
         {/if}
@@ -478,8 +501,11 @@
   <!-- Spacer -->
   <div class="sidebar-spacer"></div>
 
-  <!-- Footer: User (Settings moved to Account menu) -->
+  <!-- Footer: Credit usage + User (Settings moved to Account menu) -->
   <div class="sidebar-footer">
+    {#if !effectiveCollapsed}
+      <CreditUsageWidget />
+    {/if}
     {#each secondaryNav as item}
       <button
         class="nav-item"
@@ -538,7 +564,9 @@
         >
           {#if $isAuthenticated && $currentUser}
             <div class="account-menu-header">
-              <span class="account-menu-name">{$currentUser.name || $currentUser.email?.split('@')[0]}</span>
+              <span class="account-menu-name"
+                >{$currentUser.name || $currentUser.email?.split('@')[0]}</span
+              >
               <span class="account-menu-email">{$currentUser.email}</span>
             </div>
             <div class="account-menu-divider"></div>
@@ -585,11 +613,7 @@
 </aside>
 
 <!-- Auth modal -->
-<Modal
-  bind:open={showAuthModal}
-  title="Sign in"
-  size="sm"
->
+<Modal bind:open={showAuthModal} title="Sign in" size="sm">
   <GoogleAuthGate onComplete={handleAuthComplete} onSkip={handleAuthSkip} />
 </Modal>
 
@@ -721,21 +745,21 @@
   .primary-nav {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 6px;
+    gap: 1px;
+    padding: 2px 4px;
   }
 
   .nav-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
     width: 100%;
-    height: 40px;
-    padding: 0 10px;
+    height: 32px;
+    padding: 0 8px;
     background: transparent;
     border: none;
-    border-radius: 10px;
-    font-size: 14px;
+    border-radius: 6px;
+    font-size: 0.8125rem;
     font-weight: 500;
     color: var(--color-text, #1f1147);
     cursor: pointer;
@@ -977,7 +1001,7 @@
     left: 0;
     right: 0;
     margin-bottom: 4px;
-    background: white;
+    background: var(--color-bg-card);
     border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
@@ -1037,7 +1061,7 @@
 
   .account-menu-item.danger:hover {
     background: rgba(239, 68, 68, 0.08);
-    color: #dc2626;
+    color: var(--color-error);
   }
 
   .user-btn {

@@ -180,6 +180,38 @@ export async function getMonthlyCallCount(userId: string): Promise<number> {
   }
 }
 
+/** Credits per 1M input/output tokens (NIM-style; use smallest decimals for accuracy) */
+const CREDITS_PER_1M_INPUT = 0.15;
+const CREDITS_PER_1M_OUTPUT = 0.6;
+
+/**
+ * Get monthly credits used from token usage (for NIM/API cost tracking).
+ * Returns a decimal with up to 6 decimal places for accurate display.
+ */
+export async function getMonthlyCreditsFromTokens(
+  userId: string,
+): Promise<number> {
+  try {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const records = await getUsageForUser(userId, start, now);
+    let total = 0;
+    for (const r of records) {
+      const inT = r.inputTokens ?? 0;
+      const outT = r.outputTokens ?? 0;
+      total += (inT / 1_000_000) * CREDITS_PER_1M_INPUT;
+      total += (outT / 1_000_000) * CREDITS_PER_1M_OUTPUT;
+    }
+    return Math.round(total * 1_000_000) / 1_000_000;
+  } catch (error) {
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error), userId },
+      "Failed to get monthly credits from tokens",
+    );
+    return 0;
+  }
+}
+
 /**
  * Get usage summary for a user
  */
@@ -207,6 +239,54 @@ export async function getUsageSummary(userId: string): Promise<{
       monthlyOutputTokens: 0,
       avgLatencyMs: 0,
     };
+  }
+}
+
+/**
+ * Map endpoint to operation type for usage breakdown
+ */
+const ENDPOINT_TO_OPERATION: Record<string, string> = {
+  "/api/chat/stream": "chat",
+  "/api/chat": "chat",
+  "/api/architecture": "architecture",
+  "/api/intent": "intent",
+  "/api/prd": "prd",
+  "/api/plan": "plan",
+  "/api/ship": "ship",
+  "/api/codegen": "codegen",
+  "/api/advanced-ai": "swarm_run",
+  "/api/gagent": "swarm_run",
+};
+
+function endpointToOperation(endpoint: string): string {
+  for (const [path, op] of Object.entries(ENDPOINT_TO_OPERATION)) {
+    if (endpoint.startsWith(path)) return op;
+  }
+  return "other";
+}
+
+/**
+ * Get usage count by operation type for the current month
+ */
+export async function getUsageByOperation(
+  userId: string,
+): Promise<Record<string, number>> {
+  try {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const records = await getUsageForUser(userId, start, now);
+    const byOp: Record<string, number> = {};
+    for (const r of records) {
+      const op = endpointToOperation(r.endpoint);
+      byOp[op] = (byOp[op] ?? 0) + 1;
+    }
+    return byOp;
+  } catch (error) {
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error), userId },
+      "Failed to get usage by operation",
+    );
+    return {};
   }
 }
 

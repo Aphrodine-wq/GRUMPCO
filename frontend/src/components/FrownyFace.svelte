@@ -12,15 +12,12 @@
     state?: FaceState;
     size?: FaceSize;
     animated?: boolean;
+    class?: string;
   }
 
   const IDLE_BORED_MS = 3 * 60 * 1000; // 3 minutes
 
-  let {
-    state: faceState = $bindable('idle'),
-    size = $bindable('md'),
-    animated = $bindable(true),
-  }: Props = $props();
+  let { state: faceState = 'idle', size = 'md', animated = true }: Props = $props();
 
   let idleVariant = $state<'normal' | 'bored'>('normal');
   let idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -181,7 +178,6 @@
       opacity: 0.96;
     }
   }
-
 
   @keyframes idle-explore {
     0%,

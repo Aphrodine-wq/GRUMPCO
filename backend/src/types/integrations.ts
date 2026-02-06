@@ -38,7 +38,10 @@ export type IntegrationProviderId =
   | "bitbucket"
   | "linear"
   | "stripe"
-  | "figma";
+  | "figma"
+  | "sentry"
+  | "datadog"
+  | "postman";
 
 export type IntegrationStatus = "active" | "disabled" | "error" | "pending";
 

@@ -7,7 +7,16 @@ import logger from "../middleware/logger.js";
 import { getNimChatUrl } from "../config/nim.js";
 const NIM_MODEL = "moonshotai/kimi-k2.5";
 
-export type DesignToCodeFramework = "svelte" | "react" | "vue" | "flutter";
+export type DesignToCodeFramework =
+  | "svelte"
+  | "react"
+  | "vue"
+  | "flutter"
+  | "angular"
+  | "nextjs"
+  | "nuxt"
+  | "solid"
+  | "qwik";
 
 export interface DesignToCodeInput {
   /** Image as base64 string (no data URL prefix) or Buffer. */
@@ -17,14 +26,16 @@ export interface DesignToCodeInput {
   /** Description of what to build or requirements. */
   description: string;
   targetFramework: DesignToCodeFramework;
-  /** Styling approach: tailwind, css-modules, vanilla-css, sass. */
+  /** Styling: tailwind, css-modules, vanilla-css, sass, styled-components, emotion, unocss, panda-css, shadcn-ui. */
   styling?: string;
   /** Theme: light, dark, system. */
   theme?: string;
-  /** Output language: ts, js. */
+  /** Output language: ts, js, python, go, rust. */
   outputLang?: string;
   /** Vue only: composition, options. */
   componentStyle?: string;
+  /** Layout structure preset, e.g. header-hero-2col-footer. */
+  layoutPreset?: string;
 }
 
 export interface DesignToCodeResult {
@@ -64,15 +75,24 @@ export async function designToCode(
   const langHint =
     input.outputLang === "js"
       ? " Output JavaScript (no TypeScript)."
-      : " Output TypeScript where applicable.";
+      : input.outputLang === "python"
+        ? " Output Python."
+        : input.outputLang === "go"
+          ? " Output Go."
+          : input.outputLang === "rust"
+            ? " Output Rust."
+            : " Output TypeScript where applicable.";
   const vueHint =
     input.targetFramework === "vue" && input.componentStyle
       ? ` Use Vue ${input.componentStyle} API.`
       : "";
+  const layoutHint = input.layoutPreset
+    ? ` Use layout structure: ${input.layoutPreset}.`
+    : "";
 
   const systemPrompt = `You are an expert front-end developer. Convert the provided design (screenshot or image) into production-ready, accessible, responsive code.
 Output ONLY the code in a single markdown code block (e.g. \`\`\`svelte or \`\`\`tsx). No extra explanation before or after unless the user asked for it.
-Framework: ${input.targetFramework}. Follow best practices for that framework.${stylingHint}${themeHint}${langHint}${vueHint}`;
+Framework: ${input.targetFramework}. Follow best practices for that framework.${stylingHint}${themeHint}${langHint}${vueHint}${layoutHint}`;
 
   const userContent = [
     { type: "image_url" as const, image_url: { url: imageUrl } },
