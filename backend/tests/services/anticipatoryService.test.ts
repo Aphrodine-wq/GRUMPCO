@@ -8,6 +8,7 @@ const {
   mockIsAgentRunning,
   mockFs,
   mockExec,
+  mockGetCompletion,
 } = vi.hoisted(() => ({
   mockLogger: {
     error: vi.fn(),
@@ -19,8 +20,9 @@ const {
   mockWriteAuditLog: vi.fn().mockResolvedValue(undefined),
   mockQueueAgentTask: vi.fn().mockResolvedValue({ id: 'task_123' }),
   mockIsAgentRunning: vi.fn().mockReturnValue(true),
-  mockFs: { readFile: vi.fn() },
+  mockFs: { readFile: vi.fn(), readdir: vi.fn() },
   mockExec: vi.fn(),
+  mockGetCompletion: vi.fn().mockResolvedValue({ text: "{}", error: null }),
 }));
 
 vi.mock('../../src/middleware/logger.js', () => ({ default: mockLogger }));
@@ -31,6 +33,7 @@ vi.mock('../../src/services/persistentAgentService.js', () => ({
   isAgentRunning: (id: string) => mockIsAgentRunning(id),
 }));
 vi.mock('fs/promises', () => ({ default: mockFs }));
+vi.mock('../../src/services/llmGatewayHelper.js', () => ({ getCompletion: (...args: any[]) => mockGetCompletion(...args) }));
 vi.mock('child_process', () => ({
   exec: (cmd: string, opts: any, cb: any) => {
     if (typeof opts === 'function') { cb = opts; opts = {}; }
@@ -65,6 +68,7 @@ describe('Anticipatory Service', () => {
     clearOldInsights(testUserId, 0);
     mockExec.mockImplementation((cmd, opts, cb) => cb(null, { stdout: '' }));
     mockFs.readFile.mockRejectedValue(new Error('File not found'));
+    mockFs.readdir.mockResolvedValue([]);
   });
 
   describe('calculateProjectHealth', () => {
@@ -106,9 +110,80 @@ describe('Anticipatory Service', () => {
   });
 
   describe('scanForCodeIssues', () => {
-    it('should return empty scan result', async () => {
+    it('should return empty result if no lockfile found', async () => {
+      mockFs.readdir.mockResolvedValue(['package.json']);
       const result = await scanForCodeIssues(testUserId, testWorkspacePath);
-      expect(result.vulnerabilities).toEqual([]);
+      expect(result.codeSmells).toHaveLength(1);
+      expect(result.codeSmells[0].message).toContain('No lockfile found');
+    });
+
+    it('should scan npm project correctly (npm v7+ style)', async () => {
+      mockFs.readdir.mockResolvedValue(['package-lock.json']);
+      const auditOutput = JSON.stringify({
+        vulnerabilities: {
+          "vulnerable-pkg": {
+             severity: "high",
+             via: [{ title: "High Severity Vuln", severity: "high", cwe: ["CWE-123"] }]
+          }
+        }
+      });
+      const outdatedOutput = JSON.stringify({
+        "old-pkg": { current: "1.0.0", latest: "2.0.0" }
+      });
+
+      mockExec.mockImplementation((cmd, opts, cb) => {
+        if (cmd.includes('npm audit')) cb(null, { stdout: auditOutput });
+        else if (cmd.includes('npm outdated')) cb(null, { stdout: outdatedOutput });
+        else cb(null, { stdout: '' });
+      });
+
+      const result = await scanForCodeIssues(testUserId, testWorkspacePath);
+
+      expect(result.vulnerabilities).toHaveLength(1);
+      expect(result.vulnerabilities[0].severity).toBe('high');
+      expect(result.outdatedDeps).toHaveLength(1);
+      expect(result.outdatedDeps[0].breaking).toBe(true);
+    });
+
+    it('should scan pnpm project correctly', async () => {
+        mockFs.readdir.mockResolvedValue(['pnpm-lock.yaml']);
+        const auditOutput = JSON.stringify({
+            advisories: {
+                "123": {
+                    severity: "moderate",
+                    title: "Moderate Vuln",
+                    cwe: "CWE-456",
+                    findings: [{ paths: ["pkg > subpkg"] }]
+                }
+            }
+        });
+        const outdatedOutput = JSON.stringify({
+            "old-pkg": { wanted: "1.0.0", latest: "1.1.0" }
+        });
+
+        mockExec.mockImplementation((cmd, opts, cb) => {
+            if (cmd.includes('pnpm audit')) cb(null, { stdout: auditOutput });
+            else if (cmd.includes('pnpm outdated')) cb(null, { stdout: outdatedOutput });
+            else cb(null, { stdout: '' });
+        });
+
+        const result = await scanForCodeIssues(testUserId, testWorkspacePath);
+
+        expect(result.vulnerabilities).toHaveLength(1);
+        expect(result.vulnerabilities[0].severity).toBe('moderate');
+        expect(result.outdatedDeps).toHaveLength(1);
+        expect(result.outdatedDeps[0].breaking).toBe(false); // 1.0.0 -> 1.1.0 is not breaking
+    });
+
+    it('should handle scan errors gracefully', async () => {
+         mockFs.readdir.mockResolvedValue(['package-lock.json']);
+         mockExec.mockImplementation((cmd, opts, cb) => {
+             cb(new Error('Command failed'), { stdout: '' });
+         });
+
+         const result = await scanForCodeIssues(testUserId, testWorkspacePath);
+         expect(result.vulnerabilities).toEqual([]);
+         expect(mockLogger.warn).toHaveBeenCalledWith(expect.anything(), expect.stringContaining('Audit command failed'));
     });
   });
 

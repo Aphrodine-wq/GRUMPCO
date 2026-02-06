@@ -12,6 +12,7 @@
 import logger from "../middleware/logger.js";
 import { getDatabase as _getDatabase } from "../db/database.js";
 import { writeAuditLog } from "./auditLogService.js";
+import { getCompletion } from "./llmGatewayHelper.js";
 import { queueAgentTask, isAgentRunning } from "./persistentAgentService.js";
 import fs from "fs/promises";
 import path from "path";
@@ -79,7 +80,129 @@ const userInsights = new Map<string, AnticipatoryInsight[]>();
 const projectHealthCache = new Map<string, ProjectHealthScore>();
 const userPatternHistory = new Map<string, string[]>();
 
+
+// ========== Helper Functions ==========
+
+async function detectPackageManager(workspacePath: string): Promise<"npm" | "pnpm" | "yarn" | null> {
+  try {
+    const files = await fs.readdir(workspacePath);
+    if (files.includes("pnpm-lock.yaml")) return "pnpm";
+    if (files.includes("yarn.lock")) return "yarn";
+    if (files.includes("package-lock.json")) return "npm";
+    return null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function runCommand(cmd: string, cwd: string): Promise<string> {
+  try {
+    const { stdout } = await execAsync(cmd, { cwd, maxBuffer: 10 * 1024 * 1024 });
+    return stdout;
+  } catch (error: any) {
+    // npm/pnpm audit return non-zero exit code if vulns found
+    if (error.stdout) return error.stdout;
+    throw error;
+  }
+}
+
+function parseAuditOutput(jsonOutput: string): CodeScanResult["vulnerabilities"] {
+  const vulnerabilities: CodeScanResult["vulnerabilities"] = [];
+  try {
+    const data = JSON.parse(jsonOutput);
+
+    // npm 7+ "vulnerabilities" object
+    if (data.vulnerabilities && !data.advisories) {
+      for (const [pkgName, vuln] of Object.entries(data.vulnerabilities) as [string, any][]) {
+        if (Array.isArray(vuln.via)) {
+          for (const via of vuln.via) {
+            if (typeof via === "object") {
+              vulnerabilities.push({
+                severity: via.severity || vuln.severity || "low",
+                file: `package.json > ${pkgName}`,
+                message: via.title || "Vulnerability detected",
+                cwe: Array.isArray(via.cwe) ? via.cwe.join(", ") : via.cwe,
+              });
+            }
+          }
+        }
+      }
+    }
+    // npm 6 / pnpm "advisories" object
+    else if (data.advisories) {
+      for (const advisory of Object.values(data.advisories) as any[]) {
+        const severity = advisory.severity || "low";
+        const message = advisory.title || "Vulnerability detected";
+        const cwe = Array.isArray(advisory.cwe) ? advisory.cwe.join(", ") : advisory.cwe;
+
+        if (advisory.findings && Array.isArray(advisory.findings)) {
+          for (const finding of advisory.findings) {
+            const paths = finding.paths || [];
+            for (const p of paths) {
+              vulnerabilities.push({
+                severity,
+                file: `package.json > ${p}`,
+                message,
+                cwe,
+              });
+            }
+            if (paths.length === 0) {
+              vulnerabilities.push({
+                severity,
+                file: `package.json > ${advisory.module_name}`,
+                message,
+                cwe,
+              });
+            }
+          }
+        } else {
+           vulnerabilities.push({
+              severity,
+              file: `package.json > ${advisory.module_name}`,
+              message,
+              cwe,
+           });
+        }
+      }
+    }
+  } catch (e) {
+    logger.error({ error: e }, "Failed to parse audit output");
+  }
+  return vulnerabilities;
+}
+
+function parseOutdatedOutput(jsonOutput: string): CodeScanResult["outdatedDeps"] {
+  const outdated: CodeScanResult["outdatedDeps"] = [];
+  try {
+    const data = JSON.parse(jsonOutput);
+    for (const [name, info] of Object.entries(data) as [string, any][]) {
+      const current = info.current || info.wanted || "unknown";
+      const latest = info.latest || "unknown";
+
+      let breaking = false;
+      if (current !== "unknown" && latest !== "unknown") {
+          const currentMajor = parseInt(current.split('.')[0]);
+          const latestMajor = parseInt(latest.split('.')[0]);
+          if (!isNaN(currentMajor) && !isNaN(latestMajor) && latestMajor > currentMajor) {
+              breaking = true;
+          }
+      }
+
+      outdated.push({
+        name,
+        current,
+        latest,
+        breaking,
+      });
+    }
+  } catch (e) {
+    logger.error({ error: e }, "Failed to parse outdated output");
+  }
+  return outdated;
+}
+
 // ========== Code Issues Detection ==========
+
 
 /**
  * Scan for code issues in a workspace
@@ -90,11 +213,6 @@ export async function scanForCodeIssues(
 ): Promise<CodeScanResult> {
   logger.info({ userId, workspacePath }, "Starting code issue scan");
 
-  // In a real implementation, this would:
-  // 1. Run npm audit / yarn audit for deps
-  // 2. Run static analysis (ESLint, semgrep)
-  // 3. Check for known vulnerability patterns
-
   const result: CodeScanResult = {
     vulnerabilities: [],
     outdatedDeps: [],
@@ -102,34 +220,80 @@ export async function scanForCodeIssues(
   };
 
   try {
-    // Check package.json for outdated deps (placeholder)
-    // In production, would run `npm outdated --json`
+    const pm = await detectPackageManager(workspacePath);
+    if (!pm) {
+      logger.warn({ userId, workspacePath }, "No supported package manager found (npm/pnpm/yarn)");
+      result.codeSmells.push({
+          file: 'package.json',
+          type: 'setup',
+          message: 'No lockfile found. Run npm/pnpm install to generate one for accurate scanning.'
+      });
+      return result;
+    }
+
+    logger.info({ userId, pm }, `Detected package manager: ${pm}`);
+
+    let auditCmd = '';
+    let outdatedCmd = '';
+
+    if (pm === 'npm') {
+        auditCmd = 'npm audit --json';
+        outdatedCmd = 'npm outdated --json';
+    } else if (pm === 'pnpm') {
+        auditCmd = 'pnpm audit --json';
+        outdatedCmd = 'pnpm outdated --json';
+    } else if (pm === 'yarn') {
+        auditCmd = 'yarn audit --json';
+        outdatedCmd = 'yarn outdated --json';
+    }
+
+    // Run in parallel
+    const [auditRes, outdatedRes] = await Promise.allSettled([
+        runCommand(auditCmd, workspacePath),
+        runCommand(outdatedCmd, workspacePath)
+    ]);
+
+    if (auditRes.status === 'fulfilled') {
+        result.vulnerabilities = parseAuditOutput(auditRes.value);
+    } else {
+        logger.warn({ error: auditRes.reason }, "Audit command failed");
+    }
+
+    if (outdatedRes.status === 'fulfilled') {
+        result.outdatedDeps = parseOutdatedOutput(outdatedRes.value);
+    } else {
+        logger.warn({ error: outdatedRes.reason }, "Outdated command failed");
+    }
 
     // Generate insights from scan results
     if (result.vulnerabilities.length > 0) {
+      const highSeverity = result.vulnerabilities.filter(v => ['high', 'critical'].includes(v.severity)).length;
       await createInsight({
         userId,
         category: "code_issue",
-        severity: "critical",
+        severity: highSeverity > 0 ? "critical" : "warning",
         title: `${result.vulnerabilities.length} security vulnerabilities detected`,
         description:
-          "Security scan found potential vulnerabilities in your dependencies.",
+          `Security scan found ${result.vulnerabilities.length} potential vulnerabilities (${highSeverity} high/critical).`,
         suggestedAction:
-          "Run `npm audit fix` to resolve automatically fixable issues.",
-        metadata: { vulnerabilities: result.vulnerabilities },
+          `Run \`${pm} audit fix\` to resolve automatically fixable issues.`,
+        metadata: { vulnerabilities: result.vulnerabilities.slice(0, 50) },
       });
     }
 
     if (result.outdatedDeps.length > 0) {
-      await createInsight({
-        userId,
-        category: "code_issue",
-        severity: "warning",
-        title: `${result.outdatedDeps.length} outdated dependencies`,
-        description: "Some dependencies have newer versions available.",
-        suggestedAction: "Review and update dependencies with `npm update`.",
-        metadata: { outdatedDeps: result.outdatedDeps },
-      });
+      const breaking = result.outdatedDeps.filter(d => d.breaking).length;
+      if (breaking > 0 || result.outdatedDeps.length > 5) {
+          await createInsight({
+            userId,
+            category: "code_issue",
+            severity: breaking > 0 ? "warning" : "info",
+            title: `${result.outdatedDeps.length} outdated dependencies`,
+            description: `${result.outdatedDeps.length} dependencies can be updated (${breaking} breaking changes).`,
+            suggestedAction: `Review and update dependencies with \`${pm} update\`.`,
+            metadata: { outdatedDeps: result.outdatedDeps.slice(0, 50) },
+          });
+      }
     }
 
     logger.info(
@@ -704,7 +868,7 @@ async function getTestCoverage(workspacePath: string): Promise<number> {
 
     if (totalLines === 0) return 0;
     return Math.round((coveredLines / totalLines) * 100);
-  } catch (error) {
+  } catch (_error) {
     // If coverage file missing, return 0
     return 0;
   }
@@ -733,7 +897,7 @@ async function getDocsFreshness(workspacePath: string): Promise<number> {
     if (daysDiff < 90) return 70;
     if (daysDiff < 180) return 40;
     return 20;
-  } catch (error) {
+  } catch (_error) {
     return 0;
   }
 }
@@ -773,7 +937,7 @@ async function getTechDebt(workspacePath: string): Promise<number> {
     }
 
     return Math.max(0, score);
-  } catch (error) {
+  } catch (_error) {
     return 70; // Default if check fails
   }
 }
