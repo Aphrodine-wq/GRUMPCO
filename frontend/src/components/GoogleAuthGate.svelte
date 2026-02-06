@@ -26,7 +26,7 @@
 
     if (!grump?.auth?.openGoogleSignIn) {
       // Fallback: open OAuth URL in same window (web or Electron without IPC)
-      await startOAuthInCurrentWindow();
+      await startOAuthInCurrentWindow('google');
       return;
     }
 
@@ -44,25 +44,39 @@
     }
   }
 
-  function startOAuthInCurrentWindow(): void {
+  async function startOAuthInCurrentWindow(
+    provider: 'google' | 'github' | 'discord'
+  ): Promise<void> {
     isSigningIn = true;
     authError = null;
     clearError();
-    window.location.href = `${getApiBase()}/auth/google`;
+
+    try {
+      // First check if the backend is reachable
+      const healthCheck = await fetch(`${getApiBase()}/health/quick`, {
+        signal: AbortSignal.timeout(5000),
+      }).catch(() => null);
+
+      if (!healthCheck?.ok) {
+        authError = 'Backend server is not reachable. Please ensure the server is running.';
+        isSigningIn = false;
+        return;
+      }
+
+      // Redirect to OAuth endpoint
+      window.location.href = `${getApiBase()}/auth/${provider}`;
+    } catch (e) {
+      authError = (e as Error).message || 'Failed to start sign-in';
+      isSigningIn = false;
+    }
   }
 
   function handleGitHubSignIn(): void {
-    isSigningIn = true;
-    authError = null;
-    clearError();
-    window.location.href = `${getApiBase()}/auth/github`;
+    startOAuthInCurrentWindow('github');
   }
 
   function handleDiscordSignIn(): void {
-    isSigningIn = true;
-    authError = null;
-    clearError();
-    window.location.href = `${getApiBase()}/auth/discord`;
+    startOAuthInCurrentWindow('discord');
   }
 
   onMount(() => {

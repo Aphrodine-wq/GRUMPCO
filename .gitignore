@@ -62,3 +62,4 @@ intent-compiler/target/
 
 # Electron app builds (too large for GitHub)
 grump-app/
+frontend/electron-dist/

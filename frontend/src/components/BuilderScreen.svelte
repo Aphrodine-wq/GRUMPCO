@@ -26,7 +26,15 @@
   import { initializeMermaid, renderDiagram } from '../lib/mermaid';
   import FrownyFace from './FrownyFace.svelte';
   import { showToast } from '../stores/toastStore';
-  import { ArrowLeft, FolderPlus, GitBranch, Lock, CheckCircle2, FolderOpen, Loader2 } from 'lucide-svelte';
+  import {
+    ArrowLeft,
+    FolderPlus,
+    GitBranch,
+    Lock,
+    CheckCircle2,
+    FolderOpen,
+    Loader2,
+  } from 'lucide-svelte';
   import { Button, Input } from '../lib/design-system';
   import { fetchApi } from '../lib/api.js';
 
@@ -100,8 +108,12 @@
       .then((d: { groups?: ModelListGroup[] }) => {
         modelGroups = d.groups ?? [];
       })
-      .catch(() => { modelGroups = []; })
-      .finally(() => { modelGroupsLoading = false; });
+      .catch(() => {
+        modelGroups = [];
+      })
+      .finally(() => {
+        modelGroupsLoading = false;
+      });
   });
 
   async function handleCreateSession() {
@@ -186,9 +198,14 @@
     const modelId = sectionOverrideModelId || session.defaultModelId;
     const opts = provider && modelId ? { provider, modelId } : undefined;
     try {
-      await buildBuilderSection(session.id, sectionId, (event) => {
-        buildEvents = [...buildEvents, event];
-      }, opts);
+      await buildBuilderSection(
+        session.id,
+        sectionId,
+        (event) => {
+          buildEvents = [...buildEvents, event];
+        },
+        opts
+      );
       building = false;
       buildDone = true;
       showToast('Section built', 'success');
@@ -266,12 +283,19 @@
   }
 
   const completedIds = $derived(session?.completedSectionIds ?? []);
-  const allSectionsCompleted = $derived(sections.length > 0 && sections.every((s) => completedIds.includes(s.id)));
+  const allSectionsCompleted = $derived(
+    sections.length > 0 && sections.every((s) => completedIds.includes(s.id))
+  );
 </script>
 
 <div class="builder-screen">
   <header class="builder-header">
-    <Button variant="ghost" size="sm" onclick={step === 'list' ? handleBack : goToList} title="Back">
+    <Button
+      variant="ghost"
+      size="sm"
+      onclick={step === 'list' ? handleBack : goToList}
+      title="Back"
+    >
       <ArrowLeft size={16} />
       Back
     </Button>
@@ -322,11 +346,12 @@
           <p class="empty-hint">No Builder projects yet. Create one to get started.</p>
         {/if}
       </div>
-
     {:else if step === 'landing'}
       <div class="builder-landing">
         {#if !workspaceRoot}
-          <p class="workspace-warn">Set a workspace folder first (e.g. in Settings) so we can create your project there.</p>
+          <p class="workspace-warn">
+            Set a workspace folder first (e.g. in Settings) so we can create your project there.
+          </p>
         {/if}
         <div class="landing-form">
           <Input
@@ -366,7 +391,9 @@
           </div>
           {#if !modelGroupsLoading && modelGroups.length > 0}
             <div class="field-group model-picker-group">
-              <label class="field-label" for="builder-project-provider">Model for this project</label>
+              <label class="field-label" for="builder-project-provider"
+                >Model for this project</label
+              >
               <div class="model-picker-row">
                 <select
                   id="builder-project-provider"
@@ -386,7 +413,7 @@
                     bind:value={projectModelId}
                   >
                     <option value="">— Select model —</option>
-                    {#each (modelGroups.find((g) => g.provider === projectProvider))?.models ?? [] as model}
+                    {#each modelGroups.find((g) => g.provider === projectProvider)?.models ?? [] as model}
                       <option value={model.id}>{model.description ?? model.id}</option>
                     {/each}
                   </select>
@@ -395,10 +422,7 @@
               <p class="field-hint">Only providers you have configured (API keys) are shown.</p>
             </div>
           {/if}
-          <Button
-            onclick={handleCreateSession}
-            disabled={!workspaceRoot || $builderLoading}
-          >
+          <Button onclick={handleCreateSession} disabled={!workspaceRoot || $builderLoading}>
             {#if $builderLoading}
               <span class="spin"><Loader2 size={16} /></span>
               Creating…
@@ -408,10 +432,12 @@
           </Button>
         </div>
       </div>
-
     {:else if step === 'prompt'}
       <div class="builder-prompt">
-        <p class="prompt-desc">Describe your system or product in one detailed prompt. We will generate a Mermaid architecture diagram (senior-engineer / CEO mindset).</p>
+        <p class="prompt-desc">
+          Describe your system or product in one detailed prompt. We will generate a Mermaid
+          architecture diagram (senior-engineer / CEO mindset).
+        </p>
         <textarea
           class="prompt-input"
           placeholder="e.g. E-commerce platform with user auth, product catalog, cart, checkout, and admin dashboard. Microservices: auth, catalog, orders, payments."
@@ -435,7 +461,12 @@
               label="Refine diagram (optional)"
               fullWidth
             />
-            <Button variant="secondary" size="sm" onclick={handleAddRefinement} disabled={!refinementInput.trim() || $builderLoading}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onclick={handleAddRefinement}
+              disabled={!refinementInput.trim() || $builderLoading}
+            >
               Add refinement
             </Button>
           </div>
@@ -457,7 +488,6 @@
           </Button>
         </div>
       </div>
-
     {:else if step === 'mermaid'}
       <div class="builder-mermaid-view">
         {#if mermaidSvg}
@@ -467,7 +497,9 @@
         {/if}
         {#if modelGroups.length > 0}
           <div class="section-model-override">
-            <label class="field-label" for="builder-section-provider">Override model for next section (optional)</label>
+            <label class="field-label" for="builder-section-provider"
+              >Override model for next section (optional)</label
+            >
             <div class="model-picker-row">
               <select
                 id="builder-section-provider"
@@ -487,7 +519,7 @@
                   bind:value={sectionOverrideModelId}
                 >
                   <option value="">— Select model —</option>
-                  {#each (modelGroups.find((g) => g.provider === sectionOverrideProvider))?.models ?? [] as model}
+                  {#each modelGroups.find((g) => g.provider === sectionOverrideProvider)?.models ?? [] as model}
                     <option value={model.id}>{model.description ?? model.id}</option>
                   {/each}
                 </select>
@@ -519,7 +551,6 @@
           </div>
         {/if}
       </div>
-
     {:else if step === 'build'}
       <div class="builder-build-view">
         <div class="build-frowny">
@@ -546,7 +577,6 @@
           </div>
         {/if}
       </div>
-
     {:else if step === 'done'}
       <div class="builder-done">
         <p class="done-summary">Files have been saved to your project folder after each section.</p>
@@ -581,7 +611,11 @@
           {/if}
         </div>
         {#if gitResult?.repoUrl}
-          <p class="git-result">Repo: <a href={gitResult.repoUrl} target="_blank" rel="noopener noreferrer">{gitResult.repoUrl}</a></p>
+          <p class="git-result">
+            Repo: <a href={gitResult.repoUrl} target="_blank" rel="noopener noreferrer"
+              >{gitResult.repoUrl}</a
+            >
+          </p>
         {/if}
       </div>
     {/if}
@@ -625,12 +659,19 @@
     flex: 1;
     overflow: auto;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
   }
   .builder-list {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 16px;
+    text-align: center;
+    min-height: 300px;
   }
   .builder-actions {
     display: flex;
@@ -770,7 +811,9 @@
     background: var(--color-bg, #fff);
     cursor: pointer;
     font-size: 0.875rem;
-    transition: border-color 0.15s, background 0.15s;
+    transition:
+      border-color 0.15s,
+      background 0.15s;
   }
   .dest-btn:hover {
     border-color: var(--color-primary, #7c3aed);
@@ -862,7 +905,9 @@
     cursor: pointer;
     text-align: left;
     font-size: 0.875rem;
-    transition: border-color 0.15s, background 0.15s;
+    transition:
+      border-color 0.15s,
+      background 0.15s;
   }
   .section-card:not(.completed):hover {
     border-color: var(--color-primary, #7c3aed);

@@ -280,35 +280,67 @@
 
       <!-- Plans -->
       {#if tiers.length > 0}
-        <Card padding="md">
-          <h3 class="card-title">Plans</h3>
+        <section class="plans-section">
+          <h3 class="section-title">Plans</h3>
           <div class="tier-grid">
             {#each tiers.filter((t) => t.id !== 'enterprise') as tier}
               <div
                 class="tier-card"
                 class:current={billingMe?.tier?.toLowerCase() === tier.name.toLowerCase()}
+                class:recommended={tier.id === 'pro'}
               >
-                <div class="tier-name">{tier.name}</div>
-                <div class="tier-price">
-                  {#if tier.priceMonthlyCents === 0}
-                    Free
-                  {:else}
-                    ${(tier.priceMonthlyCents / 100).toFixed(2)}/mo
-                  {/if}
+                {#if tier.id === 'pro'}
+                  <span class="tier-badge">Most Popular</span>
+                {/if}
+                <div class="tier-header">
+                  <div class="tier-name">{tier.name}</div>
+                  <div class="tier-price">
+                    {#if tier.priceMonthlyCents === 0}
+                      <span class="price-amount">Free</span>
+                    {:else}
+                      <span class="price-amount">${(tier.priceMonthlyCents / 100).toFixed(0)}</span>
+                      <span class="price-period">/mo</span>
+                    {/if}
+                  </div>
+                  <div class="tier-credits">{tier.creditsPerMonth.toLocaleString()} credits/mo</div>
                 </div>
-                <div class="tier-credits">{tier.creditsPerMonth} credits/mo</div>
                 <ul class="tier-features">
-                  {#each (tier.features ?? []).slice(0, 4) as feat}
-                    <li>{feat}</li>
+                  {#each (tier.features ?? []).slice(0, 5) as feat}
+                    <li>
+                      <svg
+                        class="check-icon"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      {feat}
+                    </li>
                   {/each}
                 </ul>
-                {#if tier.id !== 'free'}
-                  <Button variant="primary" size="sm" onclick={handleBuyCredits}>Upgrade</Button>
-                {/if}
+                <div class="tier-action">
+                  {#if billingMe?.tier?.toLowerCase() === tier.name.toLowerCase()}
+                    <Button variant="secondary" size="md" disabled>Current Plan</Button>
+                  {:else if tier.id === 'free'}
+                    <Button variant="ghost" size="md" disabled>Free Forever</Button>
+                  {:else}
+                    <Button
+                      variant={tier.id === 'pro' ? 'primary' : 'secondary'}
+                      size="md"
+                      onclick={handleBuyCredits}>Upgrade</Button
+                    >
+                  {/if}
+                </div>
               </div>
             {/each}
           </div>
-        </Card>
+        </section>
       {/if}
     </main>
 
@@ -587,52 +619,155 @@
     color: var(--color-primary, #7c3aed);
   }
 
+  .plans-section {
+    background: var(--color-bg-card, #fff);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+
+  .section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text, #111827);
+    margin: 0 0 1.25rem;
+    text-align: center;
+  }
+
   .tier-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.25rem;
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
   }
 
   .tier-card {
-    padding: 1.25rem;
-    border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 8px;
+    position: relative;
+    width: 280px;
+    padding: 1.75rem 1.5rem;
+    border: 2px solid var(--color-border, #e5e7eb);
+    border-radius: 16px;
+    background: var(--color-bg, #fff);
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s,
+      transform 0.2s;
+  }
+
+  .tier-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   }
 
   .tier-card.current {
     border-color: var(--color-primary, #7c3aed);
-    background: rgba(124, 58, 237, 0.06);
+    background: rgba(124, 58, 237, 0.02);
+  }
+
+  .tier-card.recommended {
+    border-color: var(--color-primary, #7c3aed);
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.15);
+  }
+
+  .tier-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.35rem 1rem;
+    background: linear-gradient(135deg, var(--color-primary, #7c3aed), #a855f7);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .tier-header {
+    text-align: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
   }
 
   .tier-name {
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 1.125rem;
     color: var(--color-text, #111827);
+    margin-bottom: 0.75rem;
   }
 
   .tier-price {
-    font-size: 1.25rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .price-amount {
+    font-size: 2.25rem;
     font-weight: 700;
     color: var(--color-primary, #7c3aed);
+    line-height: 1;
+  }
+
+  .price-period {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-text-muted, #6b7280);
   }
 
   .tier-credits {
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
+    font-weight: 500;
     color: var(--color-text-muted, #6b7280);
   }
 
   .tier-features {
-    font-size: 0.75rem;
-    color: var(--color-text-muted, #6b7280);
-    margin: 0.5rem 0 0;
-    padding-left: 1rem;
-    list-style: disc;
+    flex: 1;
+    font-size: 0.875rem;
+    color: var(--color-text, #374151);
+    margin: 0 0 1.25rem;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
   }
 
   .tier-features li {
-    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    line-height: 1.4;
+  }
+
+  .tier-features .check-icon {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+    color: var(--color-success, #059669);
+  }
+
+  .tier-action {
+    margin-top: auto;
+  }
+
+  .tier-action :global(button) {
+    width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    .tier-grid {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .tier-card {
+      width: 100%;
+      max-width: 320px;
+    }
   }
 </style>

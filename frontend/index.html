@@ -2,6 +2,23 @@
 <html lang="en">
 
 <head>
+  <!-- CRITICAL: Catch browser extension errors FIRST, before any other scripts -->
+  <script>
+    window.addEventListener('error', function(e) {
+      var msg = e.message || '';
+      var src = e.filename || '';
+      if (msg.indexOf('custom element') !== -1 || 
+          msg.indexOf('already been defined') !== -1 ||
+          src.indexOf('overlay_bundle') !== -1 ||
+          src.indexOf('webcomponents-ce') !== -1 ||
+          src.indexOf('extension') !== -1) {
+        console.warn('[G-Rump] Suppressing browser extension error:', msg);
+        e.preventDefault();
+        e.stopPropagation();
+        return true;
+      }
+    }, true);
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>G-Rump Desktop App | AI-Powered Development Environment</title>

@@ -133,7 +133,7 @@ const chatStreamRequestSchema = z.object({
   agentProfile: z
     .enum(["general", "router", "frontend", "backend", "devops", "test"])
     .optional(),
-  provider: z.enum(["nim", "mock"]).optional(),
+  provider: z.enum(["nim", "ollama", "mock"]).optional(),
   modelId: z.string().optional(),
   modelKey: z.string().optional(),
   guardRailOptions: guardRailOptionsSchema,
@@ -246,7 +246,7 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
   }
 
   // Resolve provider for validation (multimodal allowed for nim)
-  let providerForValidation: "nim" | "mock" | undefined = provider;
+  let providerForValidation: "nim" | "ollama" | "mock" | undefined = provider;
   if (modelKey && typeof modelKey === "string") {
     const [prefix, rest] = modelKey.split(":");
     if (prefix === "nim" && rest) providerForValidation = "nim";
@@ -344,12 +344,15 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
         ? agentProfile
         : undefined;
     // Model: provider + modelId, or modelKey (e.g. nim:meta/llama-3.1-70b-instruct), or model router when none set
-    let reqProvider: "nim" | "mock" | undefined = provider;
+    let reqProvider: "nim" | "ollama" | "mock" | undefined = provider;
     let reqModelId: string | undefined = modelId;
     if (modelKey && typeof modelKey === "string") {
       const [prefix, rest] = modelKey.split(":");
       if (prefix === "nim" && rest) {
         reqProvider = "nim";
+        reqModelId = rest;
+      } else if (prefix === "ollama" && rest) {
+        reqProvider = "ollama";
         reqModelId = rest;
       } else {
         reqModelId = modelKey;
@@ -438,7 +441,7 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
         sessionType,
         modelPreference,
       });
-      reqProvider = routed.provider as "nim" | "mock";
+      reqProvider = routed.provider as "nim" | "ollama" | "mock";
       reqModelId = routed.modelId;
       recordLlmRouterSelection(routed.provider, routed.modelId);
     }
@@ -548,8 +551,9 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
 
     // Stream events to client; collect full text for plan-mode cache
     let collectedText = "";
-    const batchMs = Number(process.env.STREAM_BATCH_MS ?? 50);
-    const batchMax = Number(process.env.STREAM_BATCH_MAX ?? 10);
+    // Use minimal buffering for real-time streaming (5ms delay, 3 chunks max)
+    const batchMs = Number(process.env.STREAM_BATCH_MS ?? 5);
+    const batchMax = Number(process.env.STREAM_BATCH_MAX ?? 3);
     const textBuffer = new StreamBuffer(
       (chunk) => {
         try {

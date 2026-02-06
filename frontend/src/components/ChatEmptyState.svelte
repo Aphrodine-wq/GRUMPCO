@@ -2,7 +2,6 @@
   import FrownyFace from './FrownyFace.svelte';
   import QuickStartModal from './QuickStartModal.svelte';
   import { tutorialStore, type QuickStartTemplate } from '../stores/tutorialStore';
-  import { demoStore } from '../stores/demoStore';
   import { chatModeStore } from '../stores/chatModeStore';
   import { setCurrentView } from '../stores/uiStore';
   import { showToast } from '../stores/toastStore';
@@ -10,7 +9,6 @@
     Rocket,
     Zap,
     GraduationCap,
-    Play,
     Lightbulb,
     Building2,
     Code2,
@@ -33,7 +31,6 @@
 
   let showQuickStart = $state(false);
   let showExamples = $state(false);
-  let demoStarting = $state(false);
 
   const examplePrompts = [
     {
@@ -82,19 +79,6 @@
       mode: 'design',
       tags: [],
     });
-  }
-
-  async function handleTryDemo() {
-    if (demoStarting) return;
-    demoStarting = true;
-    const result = await demoStore.startDemo();
-    demoStarting = false;
-    if (!result.ok) {
-      showToast(result.error ?? 'Failed to start demo', 'error');
-      return;
-    }
-    chatModeStore.setMode('code');
-    showToast('Demo workspace ready. Follow the steps to try Code mode.', 'success');
   }
 
   function handleArgument() {
@@ -179,17 +163,6 @@
         <div class="action-icon"><GraduationCap strokeWidth={1.5} /></div>
         <h3 class="action-title">Take a Tour</h3>
         <p class="action-desc">Learn how to use G-Rump</p>
-      </button>
-
-      <button
-        type="button"
-        class="action-card action-card-demo"
-        onclick={handleTryDemo}
-        disabled={demoStarting}
-      >
-        <div class="action-icon"><Play strokeWidth={1.5} /></div>
-        <h3 class="action-title">Try Demo</h3>
-        <p class="action-desc">Sample project + guided walkthrough</p>
       </button>
 
       <button type="button" class="action-card" onclick={() => (showExamples = !showExamples)}>

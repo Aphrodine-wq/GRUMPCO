@@ -73,16 +73,7 @@
   // Utilities
   import { processError, logError } from '../utils/errorHandler';
   import { trackMessageSent, trackError } from '../lib/analytics';
-  import {
-    Mic,
-    BookOpen,
-    LayoutGrid,
-    MessageCircle,
-    Sparkles,
-    FolderOpen,
-    X,
-    Bot,
-  } from 'lucide-svelte';
+  import { Mic, BookOpen, LayoutGrid, MessageCircle, Sparkles, FolderOpen, X } from 'lucide-svelte';
 
   import type { Message, ContentBlock } from '../types';
 
@@ -980,66 +971,7 @@
         {/if}
 
         {#if chatMode !== 'ship'}
-          {#if $currentSession?.id}
-            <details class="session-attachments-details">
-              <summary class="session-attachments-summary">
-                Attachments ({sessionAttachments.length})
-              </summary>
-              <div class="session-attachments-body">
-                {#if sessionAttachmentsLoading}
-                  <p class="session-attachments-hint">Loading…</p>
-                {:else}
-                  <input
-                    type="file"
-                    bind:this={sessionAttachmentInputEl}
-                    multiple
-                    accept="image/*,.pdf,.txt,.md,.doc,.docx"
-                    class="session-attachment-input"
-                    onchange={(e) =>
-                      handleAddSessionAttachments((e.target as HTMLInputElement)?.files ?? null)}
-                    aria-label="Attach file to session"
-                  />
-                  <button
-                    type="button"
-                    class="session-attach-btn"
-                    onclick={() => sessionAttachmentInputEl?.click()}
-                  >
-                    Attach file
-                  </button>
-                  {#if sessionAttachments.length > 0}
-                    <ul class="session-attachments-list">
-                      {#each sessionAttachments as att (att.id)}
-                        <li class="session-attachment-item">
-                          <span class="session-attachment-name" title={att.name}>{att.name}</span>
-                          <span class="session-attachment-size"
-                            >({(att.size / 1024).toFixed(1)} KB)</span
-                          >
-                          <button
-                            type="button"
-                            class="session-attachment-remove"
-                            onclick={() => handleRemoveSessionAttachment(att.id)}
-                            aria-label="Remove {att.name}"
-                          >
-                            <X size={12} strokeWidth={2} />
-                          </button>
-                        </li>
-                      {/each}
-                    </ul>
-                  {/if}
-                {/if}
-              </div>
-            </details>
-          {/if}
           <div class="input-row">
-            <button
-              type="button"
-              class="talk-mode-btn"
-              onclick={() => setCurrentView('talkMode')}
-              title="Talk Mode – live talking chat with the AI"
-            >
-              <MessageCircle size={18} strokeWidth={2} />
-              <span>Talk</span>
-            </button>
             <div class="input-main">
               <CenteredChatInput
                 bind:value={inputText}
@@ -1076,30 +1008,6 @@
           <div class="shortcut-hint-bottom">
             <span class="shortcut-hint-label"><kbd>Ctrl</kbd>+<kbd>K</kbd> for commands</span>
           </div>
-        </div>
-
-        <!-- G-Agent floating button: bottom-right of chat interface -->
-        <div class="g-agent-floating-wrap">
-          {#if isGAgentSession}
-            <button
-              type="button"
-              class="g-agent-floating-btn g-agent-floating-leave"
-              onclick={() => handleLeaveGAgent()}
-              title="Leave G-Agent mode and return to normal chat"
-            >
-              Leave G-Agent
-            </button>
-          {:else}
-            <button
-              type="button"
-              class="g-agent-floating-btn g-agent-floating-primary"
-              onclick={() => handleUseGAgent()}
-              title="Turn on G-Agent mode in this chat"
-            >
-              <span class="g-agent-floating-icon"><Bot size={18} /></span>
-              Use G-Agent
-            </button>
-          {/if}
         </div>
       </div>
     </div>
@@ -1171,7 +1079,6 @@
     justify-content: center;
     padding: 0.25rem 1rem 0.5rem;
     flex-shrink: 0;
-    border-top: 1px solid var(--color-border, #f3f4f6);
     background: var(--color-bg-subtle, #fafafa);
   }
 

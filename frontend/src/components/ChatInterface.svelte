@@ -39,7 +39,7 @@
   import { workspaceStore } from '../stores/workspaceStore';
   import { openModal } from '../stores/clarificationStore';
   import { parseAssistantResponse } from '../utils/responseParser';
-  import { flattenTextContent } from '../utils/contentParser';
+  import { flattenTextContent, parseMessageContent as parseContentBlocks } from '../utils/contentParser';
   import { generatePlan } from '../stores/planStore';
   import { startSpecSession } from '../stores/specStore';
   import { fetchApi } from '../lib/api.js';
@@ -225,8 +225,8 @@
 
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
     if (Array.isArray(content)) return content;
-    // Basic text content might contain mermaid code blocks
-    return flattenTextContent(content) as unknown as ContentBlock[];
+    // Use proper parser for structured content blocks
+    return parseContentBlocks(content);
   }
 
   function flattenMessagesForChatApi(
@@ -472,6 +472,19 @@
     }
 
     if (mode === 'design') {
+      // Add user message immediately so it's visible
+      if (editingMessageIndex != null && editingMessageIndex >= 0) {
+        const updated = [...messages];
+        updated[editingMessageIndex] = { role: 'user', content: text, timestamp: Date.now() };
+        messages = updated;
+        editingMessageIndex = null;
+      } else {
+        messages = [...messages, { role: 'user', content: text, timestamp: Date.now() }];
+      }
+      inputText = '';
+      streamingContent = '';
+      await tick();
+      scrollToBottom();
       await runDesignModeStream(controller.signal);
       return;
     }

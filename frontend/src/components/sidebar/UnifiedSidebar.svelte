@@ -27,6 +27,7 @@
     Clock,
     Cloud,
     Hammer,
+    Bot,
   } from 'lucide-svelte';
   import { sessionsStore, sortedSessions, currentSession } from '../../stores/sessionsStore';
   import { setCurrentView, sidebarCollapsed, currentView } from '../../stores/uiStore';
@@ -56,6 +57,7 @@
     label: string;
     icon:
       | 'chat'
+      | 'agent'
       | 'projects'
       | 'builder'
       | 'integrations'
@@ -70,6 +72,7 @@
 
   const primaryNav: NavItem[] = [
     { id: 'chat', label: 'Chat', icon: 'chat' },
+    { id: 'gAgent', label: 'Agent', icon: 'agent' },
     { id: 'projects', label: 'Projects', icon: 'projects' },
     { id: 'builder', label: 'Builder', icon: 'builder' },
     { id: 'integrations', label: 'Integrations', icon: 'integrations' },
@@ -260,6 +263,8 @@
       >
         {#if item.icon === 'chat'}
           <MessageSquare size={16} />
+        {:else if item.icon === 'agent'}
+          <Bot size={16} />
         {:else if item.icon === 'projects'}
           <FolderOpen size={16} />
         {:else if item.icon === 'builder'}
