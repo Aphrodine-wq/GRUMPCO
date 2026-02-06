@@ -68,7 +68,7 @@ export async function generateArchitectureForChat(
   systemPromptPrefix?: string
 ): Promise<ArchitectureResult> {
   const log = logger.child({ component: "DesignWorkflowService", phase: "architecture" });
-  
+
   log.info({ existingProject }, "Generating architecture");
 
   try {
@@ -96,7 +96,7 @@ export async function generateArchitectureForChat(
     }
 
     const architecture = archResponse.architecture;
-    
+
     // Generate Mermaid diagram from architecture
     const mermaidCode = generateMermaidFromArchitecture(architecture);
     const description = generateArchitectureDescription(architecture);
@@ -123,7 +123,7 @@ export async function generatePRDForChat(
   architecture: ArchitectureResult
 ): Promise<PRDResult> {
   const log = logger.child({ component: "DesignWorkflowService", phase: "prd" });
-  
+
   log.info("Generating PRD");
 
   try {
@@ -169,13 +169,13 @@ export async function generatePlanForChat(
   prd: PRDResult
 ): Promise<PlanResult> {
   const log = logger.child({ component: "DesignWorkflowService", phase: "plan" });
-  
+
   log.info("Generating implementation plan");
 
   try {
     // Generate plan from PRD sections
     const tasks: PlanResult['tasks'] = [];
-    
+
     if (prd.prd?.sections?.features) {
       prd.prd.sections.features.forEach((feature, index) => {
         tasks.push({
@@ -193,7 +193,7 @@ export async function generatePlanForChat(
         tasks.push({
           id: `story-${index + 1}`,
           title: story.title || `User Story ${index + 1}`,
-          description: story.description || '',
+          description: `As ${story.asA}, I want ${story.iWant}, so that ${story.soThat}`,
           status: 'pending',
         });
       });
@@ -219,7 +219,7 @@ export async function generateCodeForChat(
   plan: PlanResult
 ): Promise<CodeResult> {
   const log = logger.child({ component: "DesignWorkflowService", phase: "code" });
-  
+
   log.info("Generating code");
 
   try {
@@ -255,13 +255,13 @@ export async function iteratePhase(
   projectDescription: string
 ): Promise<PhaseData[typeof phase]> {
   const log = logger.child({ component: "DesignWorkflowService", phase, action: "iterate" });
-  
+
   log.info({ feedback }, "Iterating phase");
 
   // In a real implementation, this would call the AI again with the feedback
   // For now, we'll just log it and return the current data
   // The actual iteration would be handled by the chat system with appropriate prompts
-  
+
   return currentData;
 }
 
@@ -271,21 +271,21 @@ function generateMermaidFromArchitecture(arch: SystemArchitecture): string {
   // Generate a flowchart diagram from architecture metadata
   const components = arch.metadata?.components || [];
   const integrations = arch.metadata?.integrations || [];
-  
+
   let mermaid = "flowchart TD\n";
-  
+
   // Add components as nodes
   components.forEach((comp, index) => {
     mermaid += `  C${index}["${comp}"]\n`;
   });
-  
+
   // Add integrations as connections
   integrations.forEach((integ, index) => {
     if (index < components.length - 1) {
       mermaid += `  C${index} --> C${index + 1}\n`;
     }
   });
-  
+
   return mermaid;
 }
 
@@ -295,15 +295,15 @@ function generateArchitectureDescription(arch: SystemArchitecture): string {
     `**Type:** ${arch.projectType}`,
     `**Complexity:** ${arch.complexity}`,
   ];
-  
+
   if (arch.techStack?.length) {
     parts.push(`**Tech Stack:** ${arch.techStack.join(', ')}`);
   }
-  
+
   if (arch.metadata?.components?.length) {
     parts.push(`**Components:** ${arch.metadata.components.join(', ')}`);
   }
-  
+
   return parts.join('\n');
 }
 
@@ -313,10 +313,10 @@ function generatePRDSummary(prd: PRD): string {
     `**Features:** ${prd.sections?.features?.length || 0}`,
     `**User Stories:** ${prd.sections?.userStories?.length || 0}`,
   ];
-  
+
   if (prd.sections?.overview?.vision) {
     parts.push(`**Vision:** ${prd.sections.overview.vision.substring(0, 100)}...`);
   }
-  
+
   return parts.join('\n');
 }

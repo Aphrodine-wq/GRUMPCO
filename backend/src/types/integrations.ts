@@ -41,7 +41,8 @@ export type IntegrationProviderId =
   | "figma"
   | "sentry"
   | "datadog"
-  | "postman";
+  | "postman"
+  | "sendgrid";
 
 export type IntegrationStatus = "active" | "disabled" | "error" | "pending";
 

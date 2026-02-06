@@ -807,7 +807,8 @@ router.post("/design/execute", async (req: Request, res: Response) => {
     }
 
     // Store result
-    workflow.phaseData[phase] = result;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any  
+    (workflow.phaseData as any)[phase] = result;
     await db.saveSession(session);
 
     res.json({

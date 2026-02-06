@@ -13,6 +13,7 @@ import logger from "../middleware/logger.js";
 import { getDatabase as _getDatabase } from "../db/database.js";
 import { writeAuditLog } from "./auditLogService.js";
 import { queueAgentTask, isAgentRunning } from "./persistentAgentService.js";
+import { getCompletion } from "./llmGatewayHelper.js";
 import fs from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
@@ -194,9 +195,9 @@ export async function calculateProjectHealth(
 
   const overall = Math.round(
     testCoverage * 0.3 +
-      docsFreshness * 0.2 +
-      techDebt * 0.25 +
-      securityScore * 0.25,
+    docsFreshness * 0.2 +
+    techDebt * 0.25 +
+    securityScore * 0.25,
   );
 
   const score: ProjectHealthScore = {
@@ -478,14 +479,14 @@ export async function fetchTechTrends(
 
     Here are the top stories:
     ${JSON.stringify(
-      topItems.map((i) => ({
-        title: i.title,
-        source: i.source,
-        desc: i.summary,
-      })),
-      null,
-      2,
-    )}
+    topItems.map((i) => ({
+      title: i.title,
+      source: i.source,
+      desc: i.summary,
+    })),
+    null,
+    2,
+  )}
 
     Please select the top 5 most relevant and interesting items.
     For each item, provide:
@@ -500,6 +501,7 @@ export async function fetchTechTrends(
   // Call LLM
   const { text, error } = await getCompletion(
     {
+      system: "You are a tech trend analyst assistant.",
       messages: [{ role: "user", content: prompt }],
       model: "nvidia/llama-3.1-nemotron-70b-instruct",
       max_tokens: 1000,

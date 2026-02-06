@@ -24,7 +24,7 @@ export function initializeSentry(app?: Express): void {
             // Express integration
             ...(app ? [
                 Sentry.httpIntegration(),
-                Sentry.expressIntegration({ app }),
+                Sentry.expressIntegration(),
             ] : []),
 
             // Performance profiling

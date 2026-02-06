@@ -248,7 +248,7 @@ Implement only the section: ${sectionTitle} (id: ${sectionId}). Output NARRATIVE
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],
     },
-    { provider, modelId }
+    { provider: provider as any, modelId }
   );
 
   let buffer = "";
