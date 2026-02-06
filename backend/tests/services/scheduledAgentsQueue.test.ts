@@ -10,6 +10,7 @@ const originalEnv = { ...process.env };
 
 // Mock BullMQ
 const mockQueueAdd = vi.fn();
+const mockQueueAddBulk = vi.fn();
 const mockQueueClose = vi.fn();
 const mockQueueGetRepeatableJobs = vi.fn();
 const mockQueueRemoveRepeatableByKey = vi.fn();
@@ -23,6 +24,7 @@ const mockWorkerInstance = {
 
 const MockQueue = vi.fn().mockImplementation(() => ({
   add: mockQueueAdd,
+  addBulk: mockQueueAddBulk,
   close: mockQueueClose,
   getRepeatableJobs: mockQueueGetRepeatableJobs,
   removeRepeatableByKey: mockQueueRemoveRepeatableByKey,
@@ -407,20 +409,33 @@ describe('scheduledAgentsQueue', () => {
       
       await loadRepeatableJobsFromDb();
       
-      expect(mockQueueAdd).toHaveBeenCalledTimes(2);
-      expect(mockQueueAdd).toHaveBeenNthCalledWith(
-        1,
-        'run',
+      expect(mockQueueAddBulk).toHaveBeenCalledTimes(1);
+      expect(mockQueueAddBulk).toHaveBeenCalledWith(expect.arrayContaining([
         expect.objectContaining({
-          scheduleId: 'sched-1',
-          action: 'ship',
-          params: { projectDescription: 'Build 1' },
+          name: 'run',
+          data: expect.objectContaining({
+            scheduleId: 'sched-1',
+            action: 'ship',
+            params: { projectDescription: 'Build 1' },
+          }),
+          opts: expect.objectContaining({
+            jobId: 'sched-1',
+            repeat: { pattern: '0 9 * * *' },
+          })
         }),
         expect.objectContaining({
-          jobId: 'sched-1',
-          repeat: { pattern: '0 9 * * *' },
+          name: 'run',
+          data: expect.objectContaining({
+            scheduleId: 'sched-2',
+            action: 'ship',
+            params: { projectDescription: 'Build 2' },
+          }),
+          opts: expect.objectContaining({
+            jobId: 'sched-2',
+            repeat: { pattern: '0 0 * * 0' },
+          })
         })
-      );
+      ]));
     });
 
     it('should handle empty database', async () => {
@@ -430,7 +445,7 @@ describe('scheduledAgentsQueue', () => {
       
       await loadRepeatableJobsFromDb();
       
-      expect(mockQueueAdd).not.toHaveBeenCalled();
+      expect(mockQueueAddBulk).not.toHaveBeenCalled();
     });
 
     it('should handle null paramsJson', async () => {
@@ -448,16 +463,17 @@ describe('scheduledAgentsQueue', () => {
       
       await loadRepeatableJobsFromDb();
       
-      expect(mockQueueAdd).toHaveBeenCalledWith(
-        'run',
+      expect(mockQueueAddBulk).toHaveBeenCalledWith(expect.arrayContaining([
         expect.objectContaining({
-          params: {},
-        }),
-        expect.any(Object)
-      );
+          name: 'run',
+          data: expect.objectContaining({
+            params: {},
+          }),
+        })
+      ]));
     });
 
-    it('should log each job loaded', async () => {
+    it('should log batch loaded', async () => {
       const mockRows = [
         {
           id: 'sched-1',
@@ -474,8 +490,8 @@ describe('scheduledAgentsQueue', () => {
       await loadRepeatableJobsFromDb();
       
       expect(logger.info).toHaveBeenCalledWith(
-        { scheduleId: 'sched-1', cronExpression: '0 9 * * *' },
-        'Scheduled repeatable job loaded from DB'
+        expect.objectContaining({ count: 1 }),
+        'Scheduled repeatable jobs batch loaded from DB'
       );
     });
 
