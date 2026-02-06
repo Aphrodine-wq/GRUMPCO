@@ -92,8 +92,7 @@ interface ExecutionState {
 export class GAgentTaskExecutor {
   private activeExecutions: Map<string, ExecutionState> = new Map();
 
-  constructor() {
-  }
+  constructor() {}
   /**
    * Execute a plan and yield progress events
    * @param plan The plan to execute
@@ -318,7 +317,7 @@ export class GAgentTaskExecutor {
       async (task) => {
         if (state.cancelled) return [];
         return this.executeTask(state, task, workspaceRoot, abortSignal);
-      }
+      },
     );
 
     // Flatten results into events array
