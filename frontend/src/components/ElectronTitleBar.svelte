@@ -180,7 +180,6 @@
 
 <style>
   .electron-title-bar {
-    -webkit-app-region: drag;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -192,11 +191,19 @@
     flex-shrink: 0;
   }
 
+  /* Left block: single contiguous drag region so window can be dragged */
   .title-bar-drag {
+    -webkit-app-region: drag;
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
+    flex: 1;
+  }
+
+  .title-bar-drag .title-bar-logo,
+  .title-bar-drag .title-bar-title {
+    pointer-events: none;
   }
 
   .title-bar-logo {
@@ -212,10 +219,14 @@
     color: var(--color-text, #1d1d1f);
   }
 
+  /* Right block: no-drag so buttons receive clicks */
   .title-bar-controls {
+    -webkit-app-region: no-drag;
     display: flex;
     align-items: center;
     gap: 2px;
+    flex-shrink: 0;
+    overflow: visible;
   }
 
   .title-bar-btn {
@@ -223,11 +234,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 28px;
+    min-width: 36px;
+    min-height: 36px;
     padding: 0;
     border: none;
-    border-radius: 8px;
+    border-radius: 0;
     background: transparent;
     color: var(--color-text-secondary, #6e6e73);
     cursor: pointer;

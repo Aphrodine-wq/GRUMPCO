@@ -112,7 +112,8 @@
   function validateContent(): string {
     const t = newContent.trim();
     if (!t) return 'Content is required';
-    if (t.length > MAX_CONTENT_LENGTH) return `Content must be at most ${MAX_CONTENT_LENGTH.toLocaleString()} characters`;
+    if (t.length > MAX_CONTENT_LENGTH)
+      return `Content must be at most ${MAX_CONTENT_LENGTH.toLocaleString()} characters`;
     return '';
   }
 
@@ -195,12 +196,15 @@
     try {
       const metadata: Record<string, unknown> = newTags.length ? { tags: newTags } : {};
       if (attachmentFiles.length > 0) {
-        const attachments: Array<{ name: string; mimeType: string; size: number; dataBase64?: string }> = [];
+        const attachments: Array<{
+          name: string;
+          mimeType: string;
+          size: number;
+          dataBase64?: string;
+        }> = [];
         for (const { file } of attachmentFiles) {
           const dataBase64 =
-            file.size <= MAX_ATTACHMENT_SIZE
-              ? await readFileAsBase64(file)
-              : undefined;
+            file.size <= MAX_ATTACHMENT_SIZE ? await readFileAsBase64(file) : undefined;
           attachments.push({
             name: file.name,
             mimeType: file.type || 'application/octet-stream',
@@ -210,7 +214,12 @@
         }
         metadata.attachments = attachments;
       }
-      await createMemory(newType, newContent.trim(), newImportance, Object.keys(metadata).length ? metadata : undefined);
+      await createMemory(
+        newType,
+        newContent.trim(),
+        newImportance,
+        Object.keys(metadata).length ? metadata : undefined
+      );
       showToast('Memory saved', 'success');
       closeAddModal();
       await loadMemories();
@@ -432,132 +441,150 @@
   footer={addMemoryModalFooter}
 >
   <div class="add-memory-form">
-        <!-- Section: Type -->
-        <section class="form-section" role="group" aria-labelledby="memory-type-label">
-          <span id="memory-type-label" class="form-section-label">Type</span>
-          <div class="type-selector">
-            {#each memoryTypes as type}
-              <button
-                class="type-option"
-                class:selected={newType === type.value}
-                style="--color: {type.color}"
-                onclick={() => (newType = type.value)}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d={type.icon} />
-                </svg>
-                {type.label}
-              </button>
-            {/each}
-          </div>
-        </section>
-
-        <!-- Section: Content -->
-        <section class="form-section" role="group" aria-labelledby="content-label">
-          <label id="content-label" class="form-section-label" for="content">Content</label>
-          <textarea
-            id="content"
-            bind:value={newContent}
-            onblur={onContentBlur}
-            rows="4"
-            placeholder="What should the AI remember?"
-            class:has-error={contentTouched && contentError}
-            aria-invalid={contentTouched && !!contentError}
-            aria-describedby={contentTouched && contentError ? 'content-error' : undefined}
-          ></textarea>
-          {#if contentTouched && contentError}
-            <p id="content-error" class="field-error" role="alert">{contentError}</p>
-          {/if}
-          <p class="hint">Required. Max {MAX_CONTENT_LENGTH.toLocaleString()} characters.</p>
-        </section>
-
-        <!-- Section: Importance -->
-        <section class="form-section" role="group" aria-labelledby="importance-label">
-          <label id="importance-label" class="form-section-label" for="importance">Importance: {Math.round(newImportance * 100)}%</label>
-          <input type="range" id="importance" bind:value={newImportance} min="0" max="1" step="0.1" />
-          <p class="hint">Higher importance = more likely to be recalled</p>
-        </section>
-
-        <!-- Section: Attachments (optional) -->
-        <section class="form-section" role="group" aria-labelledby="attachments-label">
-          <span id="attachments-label" class="form-section-label">Attachments (optional)</span>
-          <p class="hint">Documents or images for AI to consider with this memory. Max 500KB per file, 2MB total.</p>
-          <input
-            type="file"
-            bind:this={attachmentInputEl}
-            accept={ACCEPT_ATTACHMENTS}
-            multiple
-            class="attachment-input"
-            onchange={(e) => addAttachmentFiles((e.target as HTMLInputElement)?.files ?? null)}
-            aria-label="Add documents or images"
-          />
-          {#if attachmentError}
-            <p class="field-error" role="alert">{attachmentError}</p>
-          {/if}
-          {#if attachmentFiles.length > 0}
-            <ul class="attachment-list">
-              {#each attachmentFiles as { file, id }}
-                <li class="attachment-item">
-                  <span class="attachment-name" title={file.name}>{file.name}</span>
-                  <span class="attachment-size">({(file.size / 1024).toFixed(1)} KB)</span>
-                  <button type="button" class="attachment-remove" onclick={() => removeAttachment(id)} aria-label="Remove {file.name}">×</button>
-                </li>
-              {/each}
-            </ul>
-          {/if}
-        </section>
-
-        <!-- Section: Tags -->
-        <section class="form-section" role="group" aria-labelledby="tags-label">
-          <span id="tags-label" class="form-section-label">Tags</span>
-          <div class="tags-row">
-            <select
-              class="tags-select"
-              onchange={(e) => {
-                const el = e.currentTarget as HTMLSelectElement;
-                const v = el.value;
-                el.value = '';
-                if (v && v !== '__custom__') addTag(v);
-                else if (v === '__custom__') document.getElementById('custom-tag-input')?.focus();
-              }}
-              aria-label="Add predefined tag"
+    <!-- Section: Type -->
+    <section class="form-section" role="group" aria-labelledby="memory-type-label">
+      <span id="memory-type-label" class="form-section-label">Type</span>
+      <div class="type-selector">
+        {#each memoryTypes as type}
+          <button
+            class="type-option"
+            class:selected={newType === type.value}
+            style="--color: {type.color}"
+            onclick={() => (newType = type.value)}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
             >
-              <option value="">Add tag…</option>
-              {#each PREDEFINED_TAGS as tag}
-                <option value={tag} disabled={newTags.includes(tag)}>{tag}</option>
-              {/each}
-              <option value="__custom__">Custom…</option>
-            </select>
-            <div class="custom-tag-row">
-              <input
-                id="custom-tag-input"
-                type="text"
-                class="custom-tag-input"
-                placeholder="Custom tag"
-                bind:value={customTagInput}
-                onkeydown={(e) => e.key === 'Enter' && (addTag(customTagInput), (customTagInput = ''))}
-              />
-              <button type="button" class="tag-add-btn" onclick={() => (addTag(customTagInput), (customTagInput = ''))}>Add</button>
-            </div>
-          </div>
-          {#if newTags.length > 0}
-            <div class="tag-pills">
-              {#each newTags as tag}
-                <span class="tag-pill">
-                  {tag}
-                  <button type="button" class="tag-remove" onclick={() => removeTag(tag)} aria-label="Remove {tag}">×</button>
-                </span>
-              {/each}
-            </div>
-          {/if}
-        </section>
+              <path d={type.icon} />
+            </svg>
+            {type.label}
+          </button>
+        {/each}
+      </div>
+    </section>
+
+    <!-- Section: Content -->
+    <section class="form-section" role="group" aria-labelledby="content-label">
+      <label id="content-label" class="form-section-label" for="content">Content</label>
+      <textarea
+        id="content"
+        bind:value={newContent}
+        onblur={onContentBlur}
+        rows="4"
+        placeholder="What should the AI remember?"
+        class:has-error={contentTouched && contentError}
+        aria-invalid={contentTouched && !!contentError}
+        aria-describedby={contentTouched && contentError ? 'content-error' : undefined}
+      ></textarea>
+      {#if contentTouched && contentError}
+        <p id="content-error" class="field-error" role="alert">{contentError}</p>
+      {/if}
+      <p class="hint">Required. Max {MAX_CONTENT_LENGTH.toLocaleString()} characters.</p>
+    </section>
+
+    <!-- Section: Importance -->
+    <section class="form-section" role="group" aria-labelledby="importance-label">
+      <label id="importance-label" class="form-section-label" for="importance"
+        >Importance: {Math.round(newImportance * 100)}%</label
+      >
+      <input type="range" id="importance" bind:value={newImportance} min="0" max="1" step="0.1" />
+      <p class="hint">Higher importance = more likely to be recalled</p>
+    </section>
+
+    <!-- Section: Attachments (optional) -->
+    <section class="form-section" role="group" aria-labelledby="attachments-label">
+      <span id="attachments-label" class="form-section-label">Attachments (optional)</span>
+      <p class="hint">
+        Documents or images for AI to consider with this memory. Max 500KB per file, 2MB total.
+      </p>
+      <input
+        type="file"
+        bind:this={attachmentInputEl}
+        accept={ACCEPT_ATTACHMENTS}
+        multiple
+        class="attachment-input"
+        onchange={(e) => addAttachmentFiles((e.target as HTMLInputElement)?.files ?? null)}
+        aria-label="Add documents or images"
+      />
+      {#if attachmentError}
+        <p class="field-error" role="alert">{attachmentError}</p>
+      {/if}
+      {#if attachmentFiles.length > 0}
+        <ul class="attachment-list">
+          {#each attachmentFiles as { file, id }}
+            <li class="attachment-item">
+              <span class="attachment-name" title={file.name}>{file.name}</span>
+              <span class="attachment-size">({(file.size / 1024).toFixed(1)} KB)</span>
+              <button
+                type="button"
+                class="attachment-remove"
+                onclick={() => removeAttachment(id)}
+                aria-label="Remove {file.name}">×</button
+              >
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
+
+    <!-- Section: Tags -->
+    <section class="form-section" role="group" aria-labelledby="tags-label">
+      <span id="tags-label" class="form-section-label">Tags</span>
+      <div class="tags-row">
+        <select
+          class="tags-select"
+          onchange={(e) => {
+            const el = e.currentTarget as HTMLSelectElement;
+            const v = el.value;
+            el.value = '';
+            if (v && v !== '__custom__') addTag(v);
+            else if (v === '__custom__') document.getElementById('custom-tag-input')?.focus();
+          }}
+          aria-label="Add predefined tag"
+        >
+          <option value="">Add tag…</option>
+          {#each PREDEFINED_TAGS as tag}
+            <option value={tag} disabled={newTags.includes(tag)}>{tag}</option>
+          {/each}
+          <option value="__custom__">Custom…</option>
+        </select>
+        <div class="custom-tag-row">
+          <input
+            id="custom-tag-input"
+            type="text"
+            class="custom-tag-input"
+            placeholder="Custom tag"
+            bind:value={customTagInput}
+            onkeydown={(e) => e.key === 'Enter' && (addTag(customTagInput), (customTagInput = ''))}
+          />
+          <button
+            type="button"
+            class="tag-add-btn"
+            onclick={() => (addTag(customTagInput), (customTagInput = ''))}>Add</button
+          >
+        </div>
+      </div>
+      {#if newTags.length > 0}
+        <div class="tag-pills">
+          {#each newTags as tag}
+            <span class="tag-pill">
+              {tag}
+              <button
+                type="button"
+                class="tag-remove"
+                onclick={() => removeTag(tag)}
+                aria-label="Remove {tag}">×</button
+              >
+            </span>
+          {/each}
+        </div>
+      {/if}
+    </section>
   </div>
 </Modal>
 
@@ -594,15 +621,15 @@
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     background: transparent;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    color: #374151;
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .back-btn:hover {
-    background: #f9fafb;
+    background: var(--color-bg-secondary);
   }
 
   .header-content {
@@ -612,12 +639,12 @@
   h1 {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--color-text);
     margin: 0 0 0.25rem;
   }
 
   .subtitle {
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin: 0;
   }
 
@@ -654,8 +681,8 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.625rem 1rem;
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
   }
 
@@ -670,12 +697,12 @@
     padding: 0.25rem;
     background: transparent;
     border: none;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     cursor: pointer;
   }
 
   .clear-btn:hover {
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .type-filter {
@@ -688,16 +715,16 @@
     padding: 0.5rem 0.75rem;
     font-size: 0.75rem;
     font-weight: 500;
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
-    color: #6b7280;
+    color: var(--color-text-muted);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .filter-btn:hover {
-    border-color: #d1d5db;
+    border-color: var(--color-border);
   }
 
   .filter-btn.active {
@@ -719,7 +746,7 @@
   .spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid #e5e7eb;
+    border: 3px solid var(--color-border);
     border-top-color: #6366f1;
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -735,7 +762,7 @@
     display: flex;
     gap: 0.75rem;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin-bottom: 1rem;
   }
 
@@ -746,15 +773,15 @@
   }
 
   .memory-card {
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     padding: 1rem;
     transition: all 0.2s;
   }
 
   .memory-card:hover {
-    border-color: #d1d5db;
+    border-color: var(--color-border);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   }
 
@@ -779,7 +806,7 @@
     padding: 0.375rem;
     background: transparent;
     border: none;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     cursor: pointer;
     border-radius: 4px;
     transition: all 0.2s;
@@ -793,7 +820,7 @@
   .content {
     margin: 0 0 0.75rem;
     font-size: 0.875rem;
-    color: #374151;
+    color: var(--color-text-secondary);
     line-height: 1.5;
   }
 
@@ -811,13 +838,13 @@
 
   .importance .label {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .importance .bar {
     width: 60px;
     height: 6px;
-    background: #e5e7eb;
+    background: var(--color-bg-secondary);
     border-radius: 3px;
     overflow: hidden;
   }
@@ -830,7 +857,7 @@
 
   .date {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   /* Modal */
@@ -850,7 +877,7 @@
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .type-selector {
@@ -865,17 +892,17 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.75rem;
-    background: #f9fafb;
+    background: var(--color-bg-secondary);
     border: 2px solid transparent;
     border-radius: 8px;
-    color: #6b7280;
+    color: var(--color-text-muted);
     cursor: pointer;
     font-size: 0.75rem;
     transition: all 0.2s;
   }
 
   .type-option:hover {
-    background: #f3f4f6;
+    background: var(--color-bg-secondary);
   }
 
   .type-option:focus-visible {
@@ -892,12 +919,14 @@
   .form-section textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     font-size: 0.875rem;
     font-family: inherit;
     resize: vertical;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
 
   .form-section textarea:focus {
@@ -981,7 +1010,7 @@
 
   .hint {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     margin: 0.25rem 0 0;
   }
 
@@ -995,10 +1024,10 @@
   .tags-select {
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    background: white;
-    color: #374151;
+    background: var(--color-bg-card);
+    color: var(--color-text-secondary);
     cursor: pointer;
   }
 
@@ -1016,7 +1045,7 @@
     width: 120px;
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
   }
 
@@ -1029,15 +1058,15 @@
     padding: 0.5rem 0.75rem;
     font-size: 0.8125rem;
     font-weight: 500;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    background: #f9fafb;
-    color: #374151;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
     cursor: pointer;
   }
 
   .tag-add-btn:hover {
-    background: #f3f4f6;
+    background: var(--color-bg-secondary);
   }
 
   .tag-pills {

@@ -71,10 +71,10 @@ export const TIERS: Record<TierId, Tier> = {
     id: "free",
     name: "Free",
     priceMonthlyCents: 0,
-    creditsPerMonth: 100,
-    apiCallsPerMonth: 100,
+    creditsPerMonth: 10,
+    apiCallsPerMonth: 10,
     features: [
-      "100 credits/month (platform usage)",
+      "10 credits/month (1 credit = 1 message)",
       "BYOK for model costs",
       "1 seat",
       "1 GB storage",

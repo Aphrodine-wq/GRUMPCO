@@ -61,7 +61,9 @@
 
       if (summaryRes.ok) {
         const data = await summaryRes.json();
-        summary = data.data;
+        summary = data.data ?? null;
+      } else if (summaryRes.status === 404 || summaryRes.status >= 500) {
+        error = `Cost API unavailable (${summaryRes.status}). Ensure backend has cost routes.`;
       }
 
       if (budgetRes.ok) {
@@ -134,6 +136,13 @@
     <div class="error-banner">
       <strong>Error:</strong>
       {error}
+      <button class="retry-btn" onclick={fetchData} disabled={loading}>Retry</button>
+    </div>
+  {/if}
+
+  {#if !loading && !summary && !error}
+    <div class="empty-state">
+      <p>No cost data yet. Usage will appear here once you make requests.</p>
     </div>
   {/if}
 
@@ -391,15 +400,15 @@
   }
 
   .metric-card {
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 1.5rem;
   }
 
   .metric-card h3 {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--color-text-secondary);
     margin: 0 0 0.5rem 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -408,7 +417,7 @@
   .metric-value {
     font-size: 2rem;
     font-weight: 700;
-    color: #333;
+    color: var(--color-text);
     margin-bottom: 0.25rem;
   }
 
@@ -418,7 +427,7 @@
 
   .metric-label {
     font-size: 0.85rem;
-    color: #888;
+    color: var(--color-text-muted);
   }
 
   .budget-section,
@@ -440,11 +449,11 @@
   }
 
   .gpu-placeholder {
-    background: #f8f9fa;
-    border: 1px dashed #dee2e6;
+    background: var(--color-bg-secondary);
+    border: 1px dashed var(--color-border);
     border-radius: 8px;
     padding: 1.5rem;
-    color: #6c757d;
+    color: var(--color-text-muted);
     font-size: 0.9rem;
   }
 
@@ -458,7 +467,7 @@
   }
 
   .gpu-hint code {
-    background: #e9ecef;
+    background: var(--color-bg-secondary);
     padding: 0.15rem 0.4rem;
     border-radius: 4px;
     font-size: 0.8rem;
@@ -477,8 +486,8 @@
   }
 
   .budget-card {
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 1.5rem;
   }
@@ -498,7 +507,7 @@
 
   .budget-bar {
     height: 8px;
-    background: #f0f0f0;
+    background: var(--color-bg-secondary);
     border-radius: 4px;
     overflow: hidden;
     margin-bottom: 0.5rem;
@@ -512,7 +521,7 @@
 
   .budget-text {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--color-text-secondary);
   }
 
   .alert {
@@ -540,8 +549,8 @@
   }
 
   .breakdown-card {
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 1.5rem;
   }
@@ -562,13 +571,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem;
-    background: #f8f9fa;
+    background: var(--color-bg-secondary);
     border-radius: 4px;
   }
 
   .breakdown-label {
     font-size: 0.9rem;
-    color: #333;
+    color: var(--color-text);
   }
 
   .breakdown-value {
@@ -582,8 +591,8 @@
     gap: 0.5rem;
     height: 200px;
     padding: 1rem;
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
   }
 
@@ -605,12 +614,12 @@
 
   .bar-label {
     font-size: 0.75rem;
-    color: #666;
+    color: var(--color-text-secondary);
   }
 
   .bar-value {
     font-size: 0.7rem;
-    color: #999;
+    color: var(--color-text-muted);
   }
 
   .recommendations-list {
@@ -624,8 +633,8 @@
     align-items: flex-start;
     gap: 1rem;
     padding: 1rem;
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-left: 4px solid #ffc107;
     border-radius: 4px;
   }
@@ -637,7 +646,7 @@
   .recommendation-text {
     flex: 1;
     font-size: 0.95rem;
-    color: #333;
+    color: var(--color-text);
     line-height: 1.5;
   }
 
@@ -648,8 +657,8 @@
   }
 
   .savings-card {
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 1.5rem;
   }
@@ -657,13 +666,13 @@
   .savings-card h4 {
     margin: 0 0 1rem 0;
     font-size: 1rem;
-    color: #666;
+    color: var(--color-text-secondary);
   }
 
   .savings-value {
     font-size: 2rem;
     font-weight: 700;
-    color: #333;
+    color: var(--color-text);
     margin-bottom: 0.25rem;
   }
 
@@ -673,22 +682,47 @@
 
   .savings-label {
     font-size: 0.85rem;
-    color: #888;
+    color: var(--color-text-muted);
   }
 
   .loading {
     text-align: center;
     padding: 4rem;
-    color: #666;
+    color: var(--color-text-secondary);
   }
 
   .error-banner {
-    background: #f8d7da;
-    border: 1px solid #dc3545;
-    color: #721c24;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: var(--color-error-subtle, #f8d7da);
+    border: 1px solid var(--color-error, #dc3545);
+    color: var(--color-error, #721c24);
     padding: 1rem;
-    border-radius: 4px;
+    border-radius: 8px;
     margin-bottom: 1rem;
+  }
+
+  .retry-btn {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid currentColor;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    color: inherit;
+  }
+
+  .retry-btn:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  .empty-state {
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-text-muted, #6b7280);
+    font-size: 0.875rem;
   }
 
   @media (prefers-reduced-motion: reduce) {

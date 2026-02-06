@@ -59,6 +59,7 @@
   /** Views that use full width of main content (no outer padding; view controls its own padding). */
   const FULL_WIDTH_VIEWS = [
     'designToCode',
+    'builder',
     'integrations',
     'credits',
     'memory',

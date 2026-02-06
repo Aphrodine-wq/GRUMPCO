@@ -1,75 +1,33 @@
-import { execSync } from "child_process";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
+import { writeFileSync, mkdirSync, rmSync, existsSync } from "fs";
+import { execSync } from "child_process";
+import { loadRemoteWorkspace, clearWorkspaceCache } from "../src/services/remoteWorkspaceService";
 
-// MOCK LOGGER
-const logger = {
-  info: (msg: string) => console.log(`[INFO] ${msg}`),
-  warn: (msg: string) => console.log(`[WARN] ${msg}`),
-  error: (err: any, msg: string) => console.error(`[ERROR] ${msg}`, err),
-};
+// Mock logger to avoid clutter
+import logger from "../src/middleware/logger";
+logger.level = 'silent';
 
-const WORKSPACE_CACHE_DIR = join(tmpdir(), "grump-workspaces");
-
-if (!existsSync(WORKSPACE_CACHE_DIR)) {
-  mkdirSync(WORKSPACE_CACHE_DIR, { recursive: true });
-}
-
-interface RemoteWorkspace {
-  url: string;
-  localPath: string;
-}
-
-// COPIED FROM src/services/remoteWorkspaceService.ts
-async function loadRemoteWorkspace(
-  repoUrl: string,
-): Promise<RemoteWorkspace> {
-  const safeName = repoUrl.replace(/[^a-zA-Z0-9-]/g, "_");
-  const targetDir = join(WORKSPACE_CACHE_DIR, safeName);
-
-  logger.info(`Requested remote workspace: ${repoUrl} -> ${targetDir}`);
-
-  if (existsSync(targetDir)) {
-    try {
-      logger.info("Updating existing cached workspace...");
-      execSync("git pull", { cwd: targetDir, stdio: "ignore" });
-    } catch (_e) {
-      logger.warn("Failed to pull latest changes, using cached version.");
-    }
-    return { url: repoUrl, localPath: targetDir };
-  }
-
-  try {
-    logger.info("Cloning new workspace...");
-    execSync(`git clone --depth 1 ${repoUrl} ${targetDir}`);
-    return { url: repoUrl, localPath: targetDir };
-  } catch (error) {
-    logger.error(error, "Failed to clone remote workspace");
-    throw new Error("Failed to clone repository. Check URL and public access.");
-  }
-}
-
-function clearWorkspaceCache(): void {
-  if (existsSync(WORKSPACE_CACHE_DIR)) {
-    rmSync(WORKSPACE_CACHE_DIR, { recursive: true, force: true });
-    mkdirSync(WORKSPACE_CACHE_DIR);
-  }
-}
-
-// BENCHMARK CODE
 const BENCH_REPO_DIR = join(tmpdir(), "grump-bench-repo");
 
 function setupRepo() {
   try {
-    rmSync(BENCH_REPO_DIR, { recursive: true, force: true });
+    if (existsSync(BENCH_REPO_DIR)) {
+        rmSync(BENCH_REPO_DIR, { recursive: true, force: true });
+    }
     mkdirSync(BENCH_REPO_DIR, { recursive: true });
     execSync("git init", { cwd: BENCH_REPO_DIR, stdio: 'ignore' });
     execSync("git config user.email 'bench@example.com'", { cwd: BENCH_REPO_DIR, stdio: 'ignore' });
     execSync("git config user.name 'Bench User'", { cwd: BENCH_REPO_DIR, stdio: 'ignore' });
-    writeFileSync(join(BENCH_REPO_DIR, "README.md"), "# Bench Repo");
-    const largeContent = "a".repeat(1024 * 1024 * 5); // 5MB
-    writeFileSync(join(BENCH_REPO_DIR, "large.txt"), largeContent);
+
+    // Create MANY files to stress rmSync
+    console.log("Generating 5000 dummy files...");
+    const subDir = join(BENCH_REPO_DIR, "subdir");
+    mkdirSync(subDir);
+    for (let i = 0; i < 5000; i++) {
+        writeFileSync(join(subDir, `file-${i}.txt`), "x");
+    }
+
     execSync("git add .", { cwd: BENCH_REPO_DIR, stdio: 'ignore' });
     execSync("git commit -m 'Initial commit'", { cwd: BENCH_REPO_DIR, stdio: 'ignore' });
   } catch (e) {
@@ -77,52 +35,54 @@ function setupRepo() {
   }
 }
 
-function cleanup() {
-   try {
-     rmSync(BENCH_REPO_DIR, { recursive: true, force: true });
-     clearWorkspaceCache();
-   } catch (e) {
-     // ignore
-   }
+async function measureLag(name: string, fn: () => Promise<void> | void) {
+    let maxGap = 0;
+    let last = Date.now();
+    const timer = setInterval(() => {
+        const now = Date.now();
+        const diff = now - last;
+        // Expected diff is ~10ms. If significantly larger, loop was blocked.
+        // We track the gap BEYOND the interval.
+        if (diff > maxGap) maxGap = diff;
+        last = now;
+    }, 5); // Check every 5ms
+
+    const start = Date.now();
+    try {
+        await fn();
+    } finally {
+        clearInterval(timer);
+    }
+    const duration = Date.now() - start;
+
+    // Report max gap. If > 20ms, meaningful blocking occurred.
+    console.log(`[${name}] Duration: ${duration}ms, Max Loop Gap: ${maxGap}ms (Target: ~5ms)`);
+    return maxGap;
 }
 
-async function runBenchmark() {
-  console.log("Setting up benchmark...");
-  setupRepo();
-  clearWorkspaceCache();
+async function run() {
+    console.log("Setting up benchmark repo...");
+    setupRepo();
 
-  let lastInterval = Date.now();
-  let maxGap = 0;
-  const intervalTimer = setInterval(() => {
-    const now = Date.now();
-    const diff = now - lastInterval;
-    if (diff > maxGap) maxGap = diff;
-    lastInterval = now;
-  }, 10);
+    // Clear cache first just in case
+    await clearWorkspaceCache();
 
-  console.log("Starting loadRemoteWorkspace (Clone)...");
-  const start = Date.now();
-  try {
-    await loadRemoteWorkspace(`file://${BENCH_REPO_DIR}`);
-  } catch (e) {
-    console.error("loadRemoteWorkspace failed:", e);
-  }
-  const duration = Date.now() - start;
+    // 1. Measure loadRemoteWorkspace (should be fast/non-blocking)
+    console.log("Running loadRemoteWorkspace...");
+    await measureLag("loadRemoteWorkspace", async () => {
+        await loadRemoteWorkspace(`file://${BENCH_REPO_DIR}`);
+    });
 
-  clearInterval(intervalTimer);
+    // 2. Measure clearWorkspaceCache (using rmSync)
+    console.log("Running clearWorkspaceCache...");
+    await measureLag("clearWorkspaceCache", async () => {
+        await clearWorkspaceCache();
+    });
 
-  console.log("---------------------------------------------------");
-  console.log(`Operation Duration: ${duration}ms`);
-  console.log(`Max Event Loop Gap: ${maxGap}ms (Target: ~10ms)`);
-  console.log("---------------------------------------------------");
-
-  if (maxGap > 50) {
-     console.log("CONCLUSION: Event loop WAS BLOCKED.");
-  } else {
-     console.log("CONCLUSION: Event loop was NOT blocked.");
-  }
-
-  cleanup();
+    // Clean up bench repo
+    if (existsSync(BENCH_REPO_DIR)) {
+        rmSync(BENCH_REPO_DIR, { recursive: true, force: true });
+    }
 }
 
-runBenchmark().catch(console.error);
+run().catch(console.error);

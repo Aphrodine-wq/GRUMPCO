@@ -1,0 +1,17 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grump-frowny-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6B46C1"/>
+      <stop offset="50%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle - purple gradient (G-Rump brand) -->
+  <circle cx="128" cy="128" r="118" fill="url(#grump-frowny-bg)"/>
+  <!-- Frowny face: left eye (dot) -->
+  <circle cx="96" cy="100" r="12" fill="white"/>
+  <!-- Frowny face: right eye (dot) -->
+  <circle cx="160" cy="100" r="12" fill="white"/>
+  <!-- Frowny face: curved frown -->
+  <path d="M 88 160 Q 128 200 168 160" stroke="white" stroke-width="14" stroke-linecap="round" fill="none"/>
+</svg>

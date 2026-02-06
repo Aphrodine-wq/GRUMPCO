@@ -99,7 +99,7 @@
   {#if modelName !== undefined && onModelClick}
     <div
       class="model-block"
-      title="Current model. Open Model Benchmark (sidebar or Ctrl+K) to compare speed and quality."
+      title="Current model. Click to change."
     >
       <span class="model-label-heading">Model</span>
       <button
@@ -107,7 +107,7 @@
         class="model-trigger"
         class:active={modelPickerOpen}
         onclick={() => onModelClick()}
-        title="Change model · Compare in Model Benchmark"
+        title="Change model"
       >
         <span class="model-value">{modelName}</span>
         <span class="model-change-label">Change</span>
@@ -256,7 +256,7 @@
   }
 
   .project-name-label {
-    font-size: 0.625rem;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--color-text-muted, #6b7280);
     text-transform: uppercase;
@@ -264,7 +264,7 @@
   }
 
   .project-name-value {
-    font-size: 0.875rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--color-text, #1f2937);
   }

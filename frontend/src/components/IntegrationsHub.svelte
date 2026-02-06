@@ -23,7 +23,15 @@
   import { settingsStore } from '../stores/settingsStore';
   import { get } from 'svelte/store';
   import { Button, Card, Badge, Modal, Spinner } from '../lib/design-system';
-  import { ArrowLeft, ExternalLink, Settings, Trash2, Power, AlertCircle } from 'lucide-svelte';
+  import {
+    ArrowLeft,
+    ExternalLink,
+    Settings,
+    Trash2,
+    Power,
+    AlertCircle,
+    Plug2,
+  } from 'lucide-svelte';
   import type { McpServerConfig } from '../types/settings';
 
   interface Props {
@@ -50,13 +58,14 @@
 
   // Group providers by category (matches backend IntegrationProviderId where applicable)
   const providerCategories = {
+    'For developers': ['sentry', 'datadog', 'postman'],
     'Development Tools': ['github', 'gitlab', 'bitbucket', 'jira', 'linear', 'atlassian'],
     Communication: ['slack', 'discord', 'telegram'],
     'Deploy & Cloud': ['vercel', 'netlify', 'aws', 'gcp', 'azure'],
     'Backend as a Service': ['supabase', 'firebase'],
     'Productivity & Design': ['notion', 'figma', 'gmail', 'google_calendar', 'twitter', 'obsidian'],
     'Voice & Messaging': ['elevenlabs', 'twilio', 'sendgrid'],
-    'Other': ['home_assistant', 'stripe', 'custom'],
+    Other: ['home_assistant', 'stripe', 'custom'],
   };
 
   onMount(async () => {
@@ -148,8 +157,8 @@
         return;
       }
       oauthRedirecting = provider;
-      const { authUrl } = await getOAuthUrl(provider);
-      window.location.href = authUrl;
+      const { url } = await getOAuthUrl(provider);
+      window.location.href = url;
     } catch (e) {
       oauthRedirecting = null;
       showToast('Failed to start OAuth flow', 'error');
@@ -239,6 +248,27 @@
       (p) => providers.includes(p as IntegrationProvider) && !isConnected(p as IntegrationProvider)
     ) as IntegrationProvider[];
   }
+
+  const hasAnyAvailable = $derived(providers.some((p) => !isConnected(p)));
+
+  const QUICK_CONNECT = [
+    'github',
+    'slack',
+    'figma',
+    'linear',
+    'notion',
+    'discord',
+    'vercel',
+    'netlify',
+    'jira',
+    'gitlab',
+    'bitbucket',
+    'supabase',
+    'gmail',
+  ] as IntegrationProvider[];
+  const quickConnectAvailable = $derived(
+    QUICK_CONNECT.filter((p) => providers.includes(p) && !isConnected(p))
+  );
 </script>
 
 <div class="integrations-hub" class:embed={embedInTab}>
@@ -248,10 +278,52 @@
         <ArrowLeft size={16} />
         Back
       </Button>
-      <div class="header-text">
-        <h1>Integrations Hub</h1>
-        <p class="subtitle">Connect your favorite tools and services to supercharge your workflow</p>
+      <div class="hero">
+        <div class="hero-icon">
+          <Plug2 size={32} strokeWidth={2} />
+        </div>
+        <div class="hero-text">
+          <h1>Integrations</h1>
+          <p class="hero-subtitle">
+            Connect your favorite tools and supercharge your workflow. One click to connect GitHub,
+            Slack, Figma, and more.
+          </p>
+        </div>
       </div>
+      {#if quickConnectAvailable.length > 0}
+        <section class="quick-connect">
+          <h2 class="quick-connect-title">Quick connect</h2>
+          <div class="quick-connect-buttons">
+            {#each quickConnectAvailable as provider}
+              {@const meta = getProviderMeta(provider)}
+              {#if meta.authType === 'oauth'}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onclick={() => runOAuthFlow(provider)}
+                  disabled={oauthRedirecting === provider}
+                >
+                  <span class="quick-icon" style="background: {meta.color}20; color: {meta.color}">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                      <path d={meta.icon} />
+                    </svg>
+                  </span>
+                  {meta.name}
+                </Button>
+              {:else}
+                <Button variant="secondary" size="sm" onclick={() => openAddModal(provider)}>
+                  <span class="quick-icon" style="background: {meta.color}20; color: {meta.color}">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                      <path d={meta.icon} />
+                    </svg>
+                  </span>
+                  {meta.name}
+                </Button>
+              {/if}
+            {/each}
+          </div>
+        </section>
+      {/if}
     </header>
   {/if}
 
@@ -264,113 +336,142 @@
     <div class="two-column-layout">
       <!-- Left: Connected Integrations -->
       <aside class="column-left">
-    {#if integrations.length > 0}
-      <section class="section">
-        <div class="section-header">
-          <h2>Connected Integrations</h2>
-          <Badge variant="success"
-            >{integrations.filter((i) => i.status === 'active').length} active</Badge
-          >
-        </div>
-        <div class="integrations-grid">
-          {#each integrations as integration}
-            {@const meta = getProviderMeta(integration.provider as IntegrationProvider)}
-            <Card padding="sm">
-              <div class="card-content connected">
-                <div class="card-top">
-                  <div
-                    class="provider-icon"
-                    style="background: {meta.color}15; color: {meta.color}"
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                      <path d={meta.icon} />
-                    </svg>
+        {#if integrations.length > 0}
+          <section class="section">
+            <div class="section-header">
+              <h2>Connected Integrations</h2>
+              <Badge variant="success"
+                >{integrations.filter((i) => i.status === 'active').length} active</Badge
+              >
+            </div>
+            <div class="integrations-grid">
+              {#each integrations as integration}
+                {@const meta = getProviderMeta(integration.provider as IntegrationProvider)}
+                <Card padding="sm">
+                  <div class="card-content connected">
+                    <div class="card-top">
+                      <div
+                        class="provider-icon"
+                        style="background: {meta.color}15; color: {meta.color}"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                          <path d={meta.icon} />
+                        </svg>
+                      </div>
+                      <Badge variant={getStatusVariant(integration.status)}>
+                        {integration.status}
+                      </Badge>
+                    </div>
+                    <h3>{integration.displayName || meta.name}</h3>
+                    <p class="description">{meta.description}</p>
+                    <div class="card-actions">
+                      <Button
+                        variant={integration.status === 'active' ? 'secondary' : 'primary'}
+                        size="sm"
+                        onclick={() => toggleIntegration(integration)}
+                      >
+                        <Power size={14} />
+                        {integration.status === 'active' ? 'Disable' : 'Enable'}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onclick={() => removeIntegration(integration)}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
                   </div>
-                  <Badge variant={getStatusVariant(integration.status)}>
-                    {integration.status}
-                  </Badge>
-                </div>
-                <h3>{integration.displayName || meta.name}</h3>
-                <p class="description">{meta.description}</p>
-                <div class="card-actions">
-                  <Button
-                    variant={integration.status === 'active' ? 'secondary' : 'primary'}
-                    size="sm"
-                    onclick={() => toggleIntegration(integration)}
-                  >
-                    <Power size={14} />
-                    {integration.status === 'active' ? 'Disable' : 'Enable'}
-                  </Button>
-                  <Button variant="ghost" size="sm" onclick={() => removeIntegration(integration)}>
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
+                </Card>
+              {/each}
+            </div>
+          </section>
+        {:else}
+          <section class="section">
+            <div class="section-header">
+              <h2>Connected</h2>
+            </div>
+            <div class="empty-state">
+              <div class="empty-state-icon">
+                <Plug2 size={48} strokeWidth={1.5} />
               </div>
-            </Card>
-          {/each}
-        </div>
-      </section>
-    {:else}
-      <section class="section">
-        <h2>Connected</h2>
-        <p class="empty-column-text">No integrations connected yet.</p>
-      </section>
-    {/if}
+              <h3 class="empty-state-title">No integrations yet</h3>
+              <p class="empty-state-hint">
+                Use Quick connect above or browse available integrations on the right to get
+                started.
+              </p>
+            </div>
+          </section>
+        {/if}
       </aside>
 
       <!-- Right: Available Integrations by Category -->
       <main class="column-right">
-    {#each Object.keys(providerCategories) as category}
-      {@const availableInCategory = getAvailableProvidersByCategory(category)}
-      {#if availableInCategory.length > 0}
-        <section class="section">
-          <h2>{category}</h2>
-          <div class="integrations-grid">
-            {#each availableInCategory as provider}
-              {@const meta = getProviderMeta(provider)}
-              <Card padding="sm">
-                <div class="card-content available">
-                  <div class="card-top card-top-centered">
-                    <div
-                      class="provider-icon"
-                      style="background: {meta.color}15; color: {meta.color}"
-                    >
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                        <path d={meta.icon} />
-                      </svg>
-                    </div>
-                    <span class="auth-type">{meta.authType.replace('_', ' ')}</span>
-                  </div>
-                  <h3>{meta.name}</h3>
-                  <p class="description">{meta.description}</p>
-                  {#if meta.authType === 'oauth'}
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onclick={() => runOAuthFlow(provider)}
-                      disabled={oauthRedirecting === provider}
-                      fullWidth
-                    >
-                      <ExternalLink size={14} />
-                      {oauthRedirecting === provider ? 'Redirecting…' : 'Sign in'}
-                    </Button>
-                  {:else}
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onclick={() => openAddModal(provider)}
-                      fullWidth
-                    >
-                      Connect
-                    </Button>
-                  {/if}
+        {#if hasAnyAvailable}
+          {#each Object.keys(providerCategories) as category}
+            {#if getAvailableProvidersByCategory(category).length > 0}
+              <section class="section">
+                <h2>{category}</h2>
+                <div class="integrations-grid">
+                  {#each getAvailableProvidersByCategory(category) as provider}
+                    {@const meta = getProviderMeta(provider)}
+                    <Card padding="sm">
+                      <div class="card-content available">
+                        <div class="card-top card-top-centered">
+                          <div
+                            class="provider-icon"
+                            style="background: {meta.color}15; color: {meta.color}"
+                          >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                              <path d={meta.icon} />
+                            </svg>
+                          </div>
+                          <span class="auth-type">{meta.authType.replace('_', ' ')}</span>
+                        </div>
+                        <h3>{meta.name}</h3>
+                        <p class="description">{meta.description}</p>
+                        {#if meta.authType === 'oauth'}
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onclick={() => runOAuthFlow(provider)}
+                            disabled={oauthRedirecting === provider}
+                            fullWidth
+                          >
+                            <ExternalLink size={14} />
+                            {oauthRedirecting === provider ? 'Redirecting…' : 'Sign in'}
+                          </Button>
+                        {:else}
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onclick={() => openAddModal(provider)}
+                            fullWidth
+                          >
+                            Connect
+                          </Button>
+                        {/if}
+                      </div>
+                    </Card>
+                  {/each}
                 </div>
-              </Card>
-            {/each}
-          </div>
-        </section>
-      {/if}
-    {/each}
+              </section>
+            {/if}
+          {/each}
+        {:else}
+          <section class="section">
+            <h2>All connected</h2>
+            <div class="empty-state empty-state-right">
+              <div class="empty-state-icon">
+                <Plug2 size={40} strokeWidth={1.5} />
+              </div>
+              <h3 class="empty-state-title">You're all set</h3>
+              <p class="empty-state-text">
+                All available integrations are connected. Manage them in the Connected column.
+              </p>
+            </div>
+          </section>
+        {/if}
       </main>
     </div>
   {/if}
@@ -495,67 +596,173 @@
 
 <style>
   .integrations-hub {
-    padding: 32px;
+    padding: var(--space-content, 24px);
     max-width: none;
     width: 100%;
     height: 100%;
     overflow-y: auto;
     box-sizing: border-box;
+    background: var(--color-bg-app, #fafafa);
   }
 
   .integrations-hub.embed {
     padding: 0;
     max-width: none;
     margin: 0;
+    background: transparent;
   }
 
   .two-column-layout {
-    display: grid;
-    grid-template-columns: 340px 1fr;
-    gap: 24px;
-    align-items: start;
-  }
-
-  @media (max-width: 900px) {
-    .two-column-layout {
-      grid-template-columns: 1fr;
-    }
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-content, 24px);
   }
 
   .column-left {
-    position: sticky;
-    top: 0;
+    padding: var(--space-content, 24px);
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--color-border, #e9d5ff);
+    border-radius: 12px;
+    min-height: 200px;
+    box-shadow: var(--shadow-sm, 0 2px 6px rgba(0, 0, 0, 0.05));
   }
 
   .column-right {
     min-width: 0;
+    padding: 0 var(--space-content, 24px) var(--space-content, 24px);
   }
 
-  .empty-column-text {
-    color: #a1a1aa;
-    font-size: 14px;
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-content, 24px);
+    text-align: center;
+    border-radius: 12px;
+    background: var(--color-bg-subtle, #f5f3ff);
+    border: 1px dashed var(--color-border, #e9d5ff);
+  }
+
+  .empty-state-icon {
+    color: var(--color-text-muted, #6b7280);
+    opacity: 0.7;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text, #1f1147);
+    margin: 0 0 0.5rem;
+  }
+
+  .empty-state-hint {
+    font-size: 0.875rem;
+    color: var(--color-text-muted, #6b7280);
     margin: 0;
+    max-width: 320px;
+  }
+
+  .empty-state-text {
+    font-size: 0.875rem;
+    color: var(--color-text-muted, #6b7280);
+    line-height: 1.5;
+    margin: 0;
+    max-width: 280px;
+  }
+
+  .empty-state-right {
+    background: var(--color-bg-subtle, #f5f3ff);
+    margin-top: 0;
   }
 
   .hub-header {
-    margin-bottom: 32px;
+    margin-bottom: var(--space-content, 24px);
   }
 
-  .header-text {
-    margin-top: 16px;
+  .hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.25rem;
+    margin-top: 1rem;
   }
 
-  h1 {
-    font-size: 24px;
+  .hero-icon {
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(124, 58, 237, 0.06));
+    color: var(--color-primary, #7c3aed);
+    border-radius: 14px;
+  }
+
+  .hero-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .hero-text h1 {
+    font-size: 1.5rem;
     font-weight: 700;
-    color: #18181b;
-    margin: 0 0 8px;
+    color: var(--color-text, #111827);
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.02em;
   }
 
-  .subtitle {
-    color: #71717a;
+  .hero-subtitle {
+    color: var(--color-text-muted, #6b7280);
     margin: 0;
-    font-size: 15px;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+
+  .quick-connect {
+    margin-top: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--color-bg-card, #fff);
+    border: 1px solid var(--color-border, #e9d5ff);
+    border-radius: 12px;
+  }
+
+  .quick-connect-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.75rem;
+  }
+
+  .quick-connect-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .quick-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .quick-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .empty-state-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 1rem;
   }
 
   .loading-state {
@@ -563,47 +770,59 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 80px;
-    gap: 16px;
-    color: #71717a;
+    padding: 5rem;
+    gap: 1rem;
+    color: var(--color-text-muted, #6b7280);
   }
 
   .section {
-    margin-bottom: 24px;
+    margin-bottom: var(--space-content, 24px);
+  }
+
+  .section:last-child {
+    margin-bottom: 0;
   }
 
   .section-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    text-align: center;
   }
 
   .section h2 {
-    font-size: 16px;
-    font-weight: 600;
-    color: #3f3f46;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text, #1f1147);
     text-align: center;
     width: 100%;
     margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .column-left .section h2,
+  .column-right .section h2 {
+    text-align: center;
   }
 
   .column-left .integrations-grid {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0.75rem;
   }
 
   .column-right .integrations-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 12px;
+    gap: 1rem;
   }
 
   .integrations-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
+    gap: 1rem;
   }
 
   .card-content {
@@ -653,28 +872,28 @@
   }
 
   .auth-type {
-    font-size: 11px;
-    padding: 4px 8px;
-    background: #f4f4f5;
-    border-radius: 4px;
-    color: #71717a;
+    font-size: 0.6875rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--color-bg-subtle, #f3f4f6);
+    border-radius: 6px;
+    color: var(--color-text-muted, #6b7280);
     text-transform: uppercase;
     font-weight: 500;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.05em;
   }
 
   .card-content h3 {
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
-    color: #18181b;
+    color: var(--color-text, #111827);
     margin: 0;
   }
 
   .description {
-    font-size: 12px;
-    color: #71717a;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #6b7280);
     margin: 0;
-    line-height: 1.45;
+    line-height: 1.5;
     flex: 1;
   }
 
@@ -734,25 +953,25 @@
 
   .text-input {
     width: 100%;
-    padding: 10px 14px;
-    font-size: 14px;
-    border: 1px solid #e4e4e7;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 8px;
     transition:
       border-color 150ms,
       box-shadow 150ms;
-    background: white;
+    background: var(--color-bg, #fff);
   }
 
   .text-input:focus {
     outline: none;
-    border-color: #7c3aed;
+    border-color: var(--color-primary, #7c3aed);
     box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
   }
 
   .hint {
-    font-size: 12px;
-    color: #a1a1aa;
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #9ca3af);
     margin: 0;
   }
 

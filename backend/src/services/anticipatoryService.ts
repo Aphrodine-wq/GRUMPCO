@@ -11,12 +11,16 @@
 
 import logger from "../middleware/logger.js";
 import { getDatabase as _getDatabase } from "../db/database.js";
+import { getCompletion } from "./llmGatewayHelper.js";
 import { writeAuditLog } from "./auditLogService.js";
+import { getCompletion } from "./llmGatewayHelper.js";
 import { queueAgentTask, isAgentRunning } from "./persistentAgentService.js";
+import { getCompletion } from "./llmGatewayHelper.js";
 import fs from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
 import util from "util";
+import { getCompletion } from "./llmGatewayHelper.js";
 
 const execAsync = util.promisify(exec);
 
@@ -79,7 +83,129 @@ const userInsights = new Map<string, AnticipatoryInsight[]>();
 const projectHealthCache = new Map<string, ProjectHealthScore>();
 const userPatternHistory = new Map<string, string[]>();
 
+
+// ========== Helper Functions ==========
+
+async function detectPackageManager(workspacePath: string): Promise<"npm" | "pnpm" | "yarn" | null> {
+  try {
+    const files = await fs.readdir(workspacePath);
+    if (files.includes("pnpm-lock.yaml")) return "pnpm";
+    if (files.includes("yarn.lock")) return "yarn";
+    if (files.includes("package-lock.json")) return "npm";
+    return null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function runCommand(cmd: string, cwd: string): Promise<string> {
+  try {
+    const { stdout } = await execAsync(cmd, { cwd, maxBuffer: 10 * 1024 * 1024 });
+    return stdout;
+  } catch (error: any) {
+    // npm/pnpm audit return non-zero exit code if vulns found
+    if (error.stdout) return error.stdout;
+    throw error;
+  }
+}
+
+function parseAuditOutput(jsonOutput: string): CodeScanResult["vulnerabilities"] {
+  const vulnerabilities: CodeScanResult["vulnerabilities"] = [];
+  try {
+    const data = JSON.parse(jsonOutput);
+
+    // npm 7+ "vulnerabilities" object
+    if (data.vulnerabilities && !data.advisories) {
+      for (const [pkgName, vuln] of Object.entries(data.vulnerabilities) as [string, any][]) {
+        if (Array.isArray(vuln.via)) {
+          for (const via of vuln.via) {
+            if (typeof via === "object") {
+              vulnerabilities.push({
+                severity: via.severity || vuln.severity || "low",
+                file: `package.json > ${pkgName}`,
+                message: via.title || "Vulnerability detected",
+                cwe: Array.isArray(via.cwe) ? via.cwe.join(", ") : via.cwe,
+              });
+            }
+          }
+        }
+      }
+    }
+    // npm 6 / pnpm "advisories" object
+    else if (data.advisories) {
+      for (const advisory of Object.values(data.advisories) as any[]) {
+        const severity = advisory.severity || "low";
+        const message = advisory.title || "Vulnerability detected";
+        const cwe = Array.isArray(advisory.cwe) ? advisory.cwe.join(", ") : advisory.cwe;
+
+        if (advisory.findings && Array.isArray(advisory.findings)) {
+          for (const finding of advisory.findings) {
+            const paths = finding.paths || [];
+            for (const p of paths) {
+              vulnerabilities.push({
+                severity,
+                file: `package.json > ${p}`,
+                message,
+                cwe,
+              });
+            }
+            if (paths.length === 0) {
+              vulnerabilities.push({
+                severity,
+                file: `package.json > ${advisory.module_name}`,
+                message,
+                cwe,
+              });
+            }
+          }
+        } else {
+           vulnerabilities.push({
+              severity,
+              file: `package.json > ${advisory.module_name}`,
+              message,
+              cwe,
+           });
+        }
+      }
+    }
+  } catch (e) {
+    logger.error({ error: e }, "Failed to parse audit output");
+  }
+  return vulnerabilities;
+}
+
+function parseOutdatedOutput(jsonOutput: string): CodeScanResult["outdatedDeps"] {
+  const outdated: CodeScanResult["outdatedDeps"] = [];
+  try {
+    const data = JSON.parse(jsonOutput);
+    for (const [name, info] of Object.entries(data) as [string, any][]) {
+      const current = info.current || info.wanted || "unknown";
+      const latest = info.latest || "unknown";
+
+      let breaking = false;
+      if (current !== "unknown" && latest !== "unknown") {
+          const currentMajor = parseInt(current.split('.')[0]);
+          const latestMajor = parseInt(latest.split('.')[0]);
+          if (!isNaN(currentMajor) && !isNaN(latestMajor) && latestMajor > currentMajor) {
+              breaking = true;
+          }
+      }
+
+      outdated.push({
+        name,
+        current,
+        latest,
+        breaking,
+      });
+    }
+  } catch (e) {
+    logger.error({ error: e }, "Failed to parse outdated output");
+  }
+  return outdated;
+}
+
 // ========== Code Issues Detection ==========
+
 
 /**
  * Scan for code issues in a workspace
@@ -90,11 +216,6 @@ export async function scanForCodeIssues(
 ): Promise<CodeScanResult> {
   logger.info({ userId, workspacePath }, "Starting code issue scan");
 
-  // In a real implementation, this would:
-  // 1. Run npm audit / yarn audit for deps
-  // 2. Run static analysis (ESLint, semgrep)
-  // 3. Check for known vulnerability patterns
-
   const result: CodeScanResult = {
     vulnerabilities: [],
     outdatedDeps: [],
@@ -102,34 +223,80 @@ export async function scanForCodeIssues(
   };
 
   try {
-    // Check package.json for outdated deps (placeholder)
-    // In production, would run `npm outdated --json`
+    const pm = await detectPackageManager(workspacePath);
+    if (!pm) {
+      logger.warn({ userId, workspacePath }, "No supported package manager found (npm/pnpm/yarn)");
+      result.codeSmells.push({
+          file: 'package.json',
+          type: 'setup',
+          message: 'No lockfile found. Run npm/pnpm install to generate one for accurate scanning.'
+      });
+      return result;
+    }
+
+    logger.info({ userId, pm }, `Detected package manager: ${pm}`);
+
+    let auditCmd = '';
+    let outdatedCmd = '';
+
+    if (pm === 'npm') {
+        auditCmd = 'npm audit --json';
+        outdatedCmd = 'npm outdated --json';
+    } else if (pm === 'pnpm') {
+        auditCmd = 'pnpm audit --json';
+        outdatedCmd = 'pnpm outdated --json';
+    } else if (pm === 'yarn') {
+        auditCmd = 'yarn audit --json';
+        outdatedCmd = 'yarn outdated --json';
+    }
+
+    // Run in parallel
+    const [auditRes, outdatedRes] = await Promise.allSettled([
+        runCommand(auditCmd, workspacePath),
+        runCommand(outdatedCmd, workspacePath)
+    ]);
+
+    if (auditRes.status === 'fulfilled') {
+        result.vulnerabilities = parseAuditOutput(auditRes.value);
+    } else {
+        logger.warn({ error: auditRes.reason }, "Audit command failed");
+    }
+
+    if (outdatedRes.status === 'fulfilled') {
+        result.outdatedDeps = parseOutdatedOutput(outdatedRes.value);
+    } else {
+        logger.warn({ error: outdatedRes.reason }, "Outdated command failed");
+    }
 
     // Generate insights from scan results
     if (result.vulnerabilities.length > 0) {
+      const highSeverity = result.vulnerabilities.filter(v => ['high', 'critical'].includes(v.severity)).length;
       await createInsight({
         userId,
         category: "code_issue",
-        severity: "critical",
+        severity: highSeverity > 0 ? "critical" : "warning",
         title: `${result.vulnerabilities.length} security vulnerabilities detected`,
         description:
-          "Security scan found potential vulnerabilities in your dependencies.",
+          `Security scan found ${result.vulnerabilities.length} potential vulnerabilities (${highSeverity} high/critical).`,
         suggestedAction:
-          "Run `npm audit fix` to resolve automatically fixable issues.",
-        metadata: { vulnerabilities: result.vulnerabilities },
+          `Run \`${pm} audit fix\` to resolve automatically fixable issues.`,
+        metadata: { vulnerabilities: result.vulnerabilities.slice(0, 50) },
       });
     }
 
     if (result.outdatedDeps.length > 0) {
-      await createInsight({
-        userId,
-        category: "code_issue",
-        severity: "warning",
-        title: `${result.outdatedDeps.length} outdated dependencies`,
-        description: "Some dependencies have newer versions available.",
-        suggestedAction: "Review and update dependencies with `npm update`.",
-        metadata: { outdatedDeps: result.outdatedDeps },
-      });
+      const breaking = result.outdatedDeps.filter(d => d.breaking).length;
+      if (breaking > 0 || result.outdatedDeps.length > 5) {
+          await createInsight({
+            userId,
+            category: "code_issue",
+            severity: breaking > 0 ? "warning" : "info",
+            title: `${result.outdatedDeps.length} outdated dependencies`,
+            description: `${result.outdatedDeps.length} dependencies can be updated (${breaking} breaking changes).`,
+            suggestedAction: `Review and update dependencies with \`${pm} update\`.`,
+            metadata: { outdatedDeps: result.outdatedDeps.slice(0, 50) },
+          });
+      }
     }
 
     logger.info(
@@ -145,6 +312,58 @@ export async function scanForCodeIssues(
   }
 
   return result;
+}
+
+function processAuditOutput(auditOutput: any, result: CodeScanResult) {
+  if (auditOutput.advisories) {
+    Object.values(auditOutput.advisories).forEach((advisory: any) => {
+      result.vulnerabilities.push({
+        severity: advisory.severity,
+        file: advisory.module_name,
+        message: advisory.title,
+        cwe: advisory.cwe && advisory.cwe.length > 0 ? advisory.cwe[0] : undefined,
+      });
+    });
+  }
+}
+
+function processOutdatedOutput(outdatedOutput: any, result: CodeScanResult) {
+    Object.entries(outdatedOutput).forEach(([name, info]: [string, any]) => {
+         if (info.latest !== info.wanted) {
+             result.outdatedDeps.push({
+                 name: name,
+                 current: info.current || info.wanted,
+                 latest: info.latest,
+                 breaking: isBreakingChange(info.current || info.wanted, info.latest),
+             });
+         }
+    });
+}
+
+function isBreakingChange(current: string, latest: string): boolean {
+  if (!current || !latest) return false;
+  // Simple check: different major version
+  // Clean versions (remove ^, ~)
+  const clean = (v: string) => v.replace(/^[^\d]+/, '');
+  const currentParts = clean(current).split('.');
+  const latestParts = clean(latest).split('.');
+
+  const currentMajor = parseInt(currentParts[0], 10);
+  const latestMajor = parseInt(latestParts[0], 10);
+
+  if (isNaN(currentMajor) || isNaN(latestMajor)) return false;
+
+  if (currentMajor !== latestMajor) return true;
+
+  // For 0.x, minor changes are breaking
+  if (currentMajor === 0) {
+      const currentMinor = parseInt(currentParts[1], 10);
+      const latestMinor = parseInt(latestParts[1], 10);
+      if (isNaN(currentMinor) || isNaN(latestMinor)) return false;
+      return currentMinor !== latestMinor;
+  }
+
+  return false;
 }
 
 /**
@@ -184,18 +403,19 @@ export async function calculateProjectHealth(
   logger.info({ userId, workspacePath }, "Calculating project health");
 
   // Execute checks in parallel
-  const [testCoverage, docsFreshness, techDebt, securityScore] = await Promise.all([
-    getTestCoverage(workspacePath),
-    getDocsFreshness(workspacePath),
-    getTechDebt(workspacePath),
-    getSecurityScore(workspacePath),
-  ]);
+  const [testCoverage, docsFreshness, techDebt, securityScore] =
+    await Promise.all([
+      getTestCoverage(workspacePath),
+      getDocsFreshness(workspacePath),
+      getTechDebt(workspacePath),
+      getSecurityScore(workspacePath),
+    ]);
 
   const overall = Math.round(
-    (testCoverage * 0.3) +
-    (docsFreshness * 0.2) +
-    (techDebt * 0.25) +
-    (securityScore * 0.25)
+    testCoverage * 0.3 +
+    docsFreshness * 0.2 +
+    techDebt * 0.25 +
+    securityScore * 0.25,
   );
 
   const score: ProjectHealthScore = {
@@ -375,7 +595,6 @@ export async function getProactiveSuggestions(
   return suggestions;
 }
 
-
 // ========== Market Trends ==========
 
 interface RawTrendItem {
@@ -389,16 +608,19 @@ interface RawTrendItem {
 
 async function fetchFromDevTo(tag: string): Promise<RawTrendItem[]> {
   try {
-    const res = await fetch(`https://dev.to/api/articles?tag=${encodeURIComponent(tag)}&top=7&per_page=5`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`https://dev.to/api/articles?tag=${encodeURIComponent(tag)}&top=7&per_page=5`, { signal: controller.signal });
+    clearTimeout(timeout);
     if (!res.ok) return [];
-    const json = await res.json() as any[];
-    return json.map(item => ({
+    const json = (await res.json()) as any[];
+    return json.map((item) => ({
       title: item.title,
       url: item.url,
       source: "dev.to",
       summary: item.description,
       score: item.positive_reactions_count,
-      publishedAt: item.published_at
+      publishedAt: item.published_at,
     }));
   } catch (e) {
     logger.error({ error: e, tag }, "Failed to fetch from Dev.to");
@@ -408,15 +630,18 @@ async function fetchFromDevTo(tag: string): Promise<RawTrendItem[]> {
 
 async function fetchFromHN(query: string): Promise<RawTrendItem[]> {
   try {
-    const res = await fetch(`http://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`http://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`, { signal: controller.signal });
+    clearTimeout(timeout);
     if (!res.ok) return [];
-    const json = await res.json() as any;
+    const json = (await res.json()) as any;
     return json.hits.map((item: any) => ({
       title: item.title,
       url: item.url || `https://news.ycombinator.com/item?id=${item.objectID}`,
       source: "hacker-news",
       score: item.points,
-      publishedAt: item.created_at
+      publishedAt: item.created_at,
     }));
   } catch (e) {
     logger.error({ error: e, query }, "Failed to fetch from HN");
@@ -440,22 +665,24 @@ export async function fetchTechTrends(
   }
 
   // Parallel fetch for all technologies
-  const allPromises = techStack.flatMap(tech => [
+  const allPromises = techStack.flatMap((tech) => [
     fetchFromDevTo(tech),
-    fetchFromHN(tech)
+    fetchFromHN(tech),
   ]);
 
   const results = await Promise.allSettled(allPromises);
   const rawItems: RawTrendItem[] = [];
 
   for (const res of results) {
-    if (res.status === 'fulfilled') {
+    if (res.status === "fulfilled") {
       rawItems.push(...res.value);
     }
   }
 
   // Deduplicate by URL
-  const uniqueItems = Array.from(new Map(rawItems.map(item => [item.url, item])).values());
+  const uniqueItems = Array.from(
+    new Map(rawItems.map((item) => [item.url, item])).values(),
+  );
 
   if (uniqueItems.length === 0) {
     return [];
@@ -468,10 +695,18 @@ export async function fetchTechTrends(
 
   // Construct Prompt
   const prompt = `
-    You are a tech trend analyst. I have a list of recent articles/stories for a developer interested in: ${techStack.join(', ')}.
+    You are a tech trend analyst. I have a list of recent articles/stories for a developer interested in: ${techStack.join(", ")}.
 
     Here are the top stories:
-    ${JSON.stringify(topItems.map(i => ({ title: i.title, source: i.source, desc: i.summary })), null, 2)}
+    ${JSON.stringify(
+    topItems.map((i) => ({
+      title: i.title,
+      source: i.source,
+      desc: i.summary,
+    })),
+    null,
+    2,
+  )}
 
     Please select the top 5 most relevant and interesting items.
     For each item, provide:
@@ -485,7 +720,7 @@ export async function fetchTechTrends(
 
   // Call LLM
   const { text, error } = await getCompletion({
-    messages: [{ role: 'user', content: prompt }],
+    system: "You are a helpful tech trend analyst.", messages: [{ role: "user", content: prompt }],
     model: 'nvidia/llama-3.1-nemotron-70b-instruct',
     max_tokens: 1000,
   }, { provider: 'nim' });
@@ -493,39 +728,49 @@ export async function fetchTechTrends(
   if (error || !text) {
     logger.error({ error }, "Failed to generate trend summary with LLM");
     // Fallback: return raw items without summary if LLM fails
-    return topItems.slice(0, 5).map(i => ({
+    return topItems.slice(0, 5).map((i) => ({
       title: i.title,
       summary: i.summary || "No summary available",
       url: i.url,
-      relevance: 0.5
+      relevance: 0.5,
     }));
   }
 
   try {
     // Clean potential markdown blocks
-    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Try to find array bracket start/end
+    const start = cleanText.indexOf('[');
+    const end = cleanText.lastIndexOf(']');
+    if (start !== -1 && end !== -1) {
+        cleanText = cleanText.substring(start, end + 1);
+    }
+
     const suggestions = JSON.parse(cleanText) as Array<{ title: string; summary: string; relevance: number }>;
 
     // Merge back URLs
-    return suggestions.map(s => {
-      // Find original item by title (fuzzy match might be safer but trying exact first)
-      const original = topItems.find(i => i.title.includes(s.title) || s.title.includes(i.title));
-      return {
-        ...s,
-        url: original?.url
-      };
-    }).filter(s => s.url);
+    return suggestions
+      .map((s) => {
+        // Find original item by title (fuzzy match might be safer but trying exact first)
+        const original = topItems.find(
+          (i) => i.title.includes(s.title) || s.title.includes(i.title),
+        );
+        return {
+          ...s,
+          url: original?.url,
+        };
+      })
+      .filter((s) => s.url);
   } catch (e) {
     logger.error({ error: e, text }, "Failed to parse LLM response for trends");
-    return topItems.slice(0, 5).map(i => ({
-        title: i.title,
-        summary: i.summary || "No summary available",
-        url: i.url,
-        relevance: 0.5
+    return topItems.slice(0, 5).map((i) => ({
+      title: i.title,
+      summary: i.summary || "No summary available",
+      url: i.url,
+      relevance: 0.5,
     }));
   }
 }
-
 
 /**
  * Schedule trend check
@@ -704,7 +949,7 @@ async function getTestCoverage(workspacePath: string): Promise<number> {
 
     if (totalLines === 0) return 0;
     return Math.round((coveredLines / totalLines) * 100);
-  } catch (error) {
+  } catch (_error) {
     // If coverage file missing, return 0
     return 0;
   }
@@ -717,7 +962,7 @@ async function getDocsFreshness(workspacePath: string): Promise<number> {
   try {
     const { stdout } = await execAsync(
       `git log -1 --format=%ct -- docs/ README.md`,
-      { cwd: workspacePath }
+      { cwd: workspacePath },
     );
 
     if (!stdout || !stdout.trim()) {
@@ -733,7 +978,7 @@ async function getDocsFreshness(workspacePath: string): Promise<number> {
     if (daysDiff < 90) return 70;
     if (daysDiff < 180) return 40;
     return 20;
-  } catch (error) {
+  } catch (_error) {
     return 0;
   }
 }
@@ -750,7 +995,7 @@ async function getTechDebt(workspacePath: string): Promise<number> {
     // But pipe to wc -l usually masks grep exit code unless pipefail is set
     const { stdout: todoCount } = await execAsync(
       `grep -r "TODO" src --exclude-dir=node_modules --exclude-dir=dist | wc -l`,
-      { cwd: workspacePath }
+      { cwd: workspacePath },
     ).catch(() => ({ stdout: "0" }));
 
     const todos = parseInt(todoCount.trim(), 10) || 0;
@@ -766,14 +1011,14 @@ async function getTechDebt(workspacePath: string): Promise<number> {
       const warnings = (lintContent.match(/warning/gi) || []).length;
 
       // Deduct 5 points per error, 1 per warning, capped at 40 points
-      const lintPenalty = Math.min(40, (errors * 5) + warnings);
+      const lintPenalty = Math.min(40, errors * 5 + warnings);
       score -= lintPenalty;
     } catch (e) {
       // lint output not found, ignore
     }
 
     return Math.max(0, score);
-  } catch (error) {
+  } catch (_error) {
     return 70; // Default if check fails
   }
 }
@@ -790,10 +1035,10 @@ async function getSecurityScore(workspacePath: string): Promise<number> {
     const low = vulnCounts.low || 0;
 
     let score = 100;
-    score -= (critical * 50);
-    score -= (high * 20);
-    score -= (moderate * 5);
-    score -= (low * 1);
+    score -= critical * 50;
+    score -= high * 20;
+    score -= moderate * 5;
+    score -= low * 1;
 
     return Math.max(0, score);
   };
@@ -803,7 +1048,7 @@ async function getSecurityScore(workspacePath: string): Promise<number> {
     // Increase maxBuffer for large audit outputs
     const { stdout } = await execAsync("pnpm audit --json --prod", {
       cwd: workspacePath,
-      maxBuffer: 1024 * 1024 * 10
+      maxBuffer: 1024 * 1024 * 10,
     });
     return calculateScore(JSON.parse(stdout));
   } catch (error: any) {

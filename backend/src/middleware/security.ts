@@ -139,10 +139,19 @@ export function createCorsMiddleware() {
 
   return cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (health checks, server-to-server, mobile apps, curl)
-      // This is safe because CORS only protects browser-based requests
+      // Allow requests with no origin header (health checks, server-to-server, mobile apps, curl, Electron)
+      // This is safe because CORS only protects browser-based requests.
+      // NOTE: We intentionally reject origin === "null" (the string literal "null").
+      // Browsers send this from sandboxed iframes, data: URIs, and file: origins — all of which
+      // can be attacker-controlled. Only the truly absent origin header (!origin / undefined) is safe.
       if (!origin) {
         callback(null, true);
+        return;
+      }
+
+      if (origin === "null") {
+        logger.warn("Rejected CORS request with origin 'null' (possible sandboxed iframe or data: URI)");
+        callback(new Error("Null origin not allowed by CORS"));
         return;
       }
 

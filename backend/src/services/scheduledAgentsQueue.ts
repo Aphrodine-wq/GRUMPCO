@@ -103,13 +103,10 @@ export async function stopScheduledAgentsWorker(): Promise<void> {
 
 /** Load enabled scheduled agents from DB and add as repeatable jobs (call after worker started). No-op in Supabase mode. */
 export async function loadRepeatableJobsFromDb(): Promise<void> {
-  const { getDatabase, databaseSupportsRawDb } = await import(
-    "../db/database.js"
-  );
+  const { getDatabase, databaseSupportsRawDb } =
+    await import("../db/database.js");
   if (!databaseSupportsRawDb()) {
-    logger.debug(
-      "loadRepeatableJobsFromDb skipped (Supabase mode, no raw DB)",
-    );
+    logger.debug("loadRepeatableJobsFromDb skipped (Supabase mode, no raw DB)");
     return;
   }
   const db = getDatabase().getDb();

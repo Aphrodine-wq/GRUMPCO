@@ -31,8 +31,16 @@
     onSubmit?: () => void;
     /** Called when cancel is requested during streaming */
     onCancel?: () => void;
-    /** Called when image is selected */
+    /** Called when image is selected (max 3) */
     onImageSelect?: (dataUrl: string) => void;
+    /** Called when document is selected (max 3; file passed for backend) */
+    onDocumentSelect?: (file: File) => void;
+    /** Whether documents are pending */
+    hasPendingDocuments?: boolean;
+    /** Pending image count (0–3) for badge */
+    pendingImageCount?: number;
+    /** Pending document count (0–3) for badge */
+    pendingDocumentCount?: number;
     /** Called when model picker should open */
     onModelClick?: () => void;
     /** Hide model selector (when moved to header) */
@@ -41,24 +49,33 @@
     inputRef?: HTMLTextAreaElement | null;
   }
 
+  const MAX_IMAGES = 3;
+  const MAX_DOCUMENTS = 3;
+
   let {
     value = $bindable(''),
     streaming = false,
     isNimProvider = false,
     hasPendingImage = false,
+    hasPendingDocuments = false,
+    pendingImageCount = 0,
+    pendingDocumentCount = 0,
     placeholder = 'Message G-Rump...',
     modelName = 'Auto',
     onInput,
     onSubmit,
     onCancel,
     onImageSelect,
+    onDocumentSelect,
     onModelClick,
     hideModelSelector = false,
     inputRef = $bindable(null),
   }: Props = $props();
 
   let imageInputRef = $state<HTMLInputElement | null>(null);
-  let textareaHeight = $state(52); // Initial height, updated on resize
+  let documentInputRef = $state<HTMLInputElement | null>(null);
+  let attachMenuOpen = $state(false);
+  let textareaHeight = $state(44); // Initial height, updated on resize
 
   function handleFormSubmit(e: Event) {
     e.preventDefault();
@@ -96,27 +113,43 @@
   }
 
   function triggerImageUpload() {
+    attachMenuOpen = false;
     imageInputRef?.click();
+  }
+
+  function triggerDocumentUpload() {
+    attachMenuOpen = false;
+    documentInputRef?.click();
   }
 
   async function handleImageFileChange(e: Event) {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
-
     if (!file || !file.type.startsWith('image/')) return;
-
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-
     onImageSelect?.(dataUrl);
   }
 
-  const canSend = $derived((value.trim() || (isNimProvider && hasPendingImage)) && !streaming);
+  function handleDocumentFileChange(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    onDocumentSelect?.(file);
+  }
+
+  const canAddImage = $derived(pendingImageCount < MAX_IMAGES);
+  const canAddDocument = $derived(pendingDocumentCount < MAX_DOCUMENTS);
+  const totalAttachments = $derived(pendingImageCount + pendingDocumentCount);
+  const canSend = $derived(
+    (value.trim() || hasPendingImage || hasPendingDocuments || totalAttachments > 0) && !streaming
+  );
 </script>
 
 <div class="centered-input-wrapper">
@@ -174,22 +207,32 @@
 
     <!-- Action buttons (right side) -->
     <div class="action-buttons">
-      {#if isNimProvider}
-        <input
-          type="file"
-          accept="image/*"
-          class="hidden-file-input"
-          bind:this={imageInputRef}
-          onchange={handleImageFileChange}
-          aria-label="Attach image"
-        />
-        <Tooltip content="Attach image" position="top">
+      <input
+        type="file"
+        accept="image/*"
+        class="hidden-file-input"
+        bind:this={imageInputRef}
+        onchange={handleImageFileChange}
+        aria-label="Attach image"
+      />
+      <input
+        type="file"
+        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        class="hidden-file-input"
+        bind:this={documentInputRef}
+        onchange={handleDocumentFileChange}
+        aria-label="Attach document"
+      />
+      <div class="attach-wrapper">
+        <Tooltip content="Attach image or document (up to 3 each)" position="top">
           <button
             type="button"
             class="action-btn attach-btn"
-            onclick={triggerImageUpload}
+            onclick={() => (attachMenuOpen = !attachMenuOpen)}
             disabled={streaming}
-            aria-label="Attach image"
+            aria-label="Attach"
+            aria-expanded={attachMenuOpen}
+            aria-haspopup="true"
           >
             <svg
               width="18"
@@ -199,16 +242,40 @@
               stroke="currentColor"
               stroke-width="2"
             >
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21 15 16 10 5 21" />
+              <path
+                d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
+              />
             </svg>
-            {#if hasPendingImage}
-              <span class="attach-badge">1</span>
+            {#if totalAttachments > 0}
+              <span class="attach-badge">{totalAttachments}</span>
             {/if}
           </button>
         </Tooltip>
-      {/if}
+        {#if attachMenuOpen}
+          <div class="attach-menu" role="menu">
+            <button
+              type="button"
+              class="attach-menu-item"
+              role="menuitem"
+              disabled={!canAddImage}
+              onclick={triggerImageUpload}
+            >
+              <span class="attach-menu-label">Image</span>
+              <span class="attach-menu-count">{pendingImageCount}/{MAX_IMAGES}</span>
+            </button>
+            <button
+              type="button"
+              class="attach-menu-item"
+              role="menuitem"
+              disabled={!canAddDocument}
+              onclick={triggerDocumentUpload}
+            >
+              <span class="attach-menu-label">Document</span>
+              <span class="attach-menu-count">{pendingDocumentCount}/{MAX_DOCUMENTS}</span>
+            </button>
+          </div>
+        {/if}
+      </div>
 
       <!-- Send/Cancel button -->
       <Tooltip content={streaming ? 'Stop generating' : 'Send message'} position="top">
@@ -256,24 +323,18 @@
   .input-container {
     display: flex;
     align-items: flex-end;
-    gap: 0.5rem;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 1.5rem;
-    padding: 0.5rem 0.75rem;
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.04),
-      0 4px 12px rgba(0, 0, 0, 0.05);
+    gap: 0.4rem;
+    background: var(--color-bg-card, #ffffff);
+    border: none;
+    border-radius: 1.25rem;
+    padding: 0.35rem 0.6rem;
+    box-shadow: var(--shadow-sm, 0 2px 6px rgba(0, 0, 0, 0.05));
     transition:
-      border-color 0.2s,
       box-shadow 0.2s;
   }
 
   .input-container:focus-within {
-    border-color: var(--color-primary, #7c3aed);
-    box-shadow:
-      0 0 0 3px rgba(124, 58, 237, 0.1),
-      0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--focus-ring, 0 0 0 2px rgba(124, 58, 237, 0.3));
   }
 
   /* Model selector button */
@@ -282,10 +343,10 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.5rem 0.75rem;
-    background: #f3f4f6;
+    background: var(--color-bg-input, #f3f4f6);
     border: 1px solid transparent;
     border-radius: 1rem;
-    color: #4b5563;
+    color: var(--color-text-secondary, #4b5563);
     font-size: 0.8125rem;
     font-weight: 500;
     cursor: pointer;
@@ -295,8 +356,8 @@
   }
 
   .model-button:hover {
-    background: #e5e7eb;
-    border-color: #d1d5db;
+    background: var(--color-bg-inset, #e5e7eb);
+    border-color: var(--color-border-light, #d1d5db);
   }
 
   .model-button:focus {
@@ -320,22 +381,22 @@
 
   .message-input {
     width: 100%;
-    min-height: 24px;
+    min-height: 20px;
     max-height: 200px;
-    padding: 0.5rem 0;
+    padding: 0.35rem 0;
     border: none;
     background: transparent;
     font-family: inherit;
     font-size: 0.9375rem;
     line-height: 1.5;
-    color: #111827;
+    color: var(--color-text, #111827);
     resize: none;
     outline: none;
     overflow-y: auto;
   }
 
   .message-input::placeholder {
-    color: #9ca3af;
+    color: var(--color-text-muted, #9ca3af);
   }
 
   .message-input:disabled {
@@ -383,20 +444,72 @@
     background: transparent;
     border: none;
     border-radius: 0.5rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     cursor: pointer;
     transition: all 0.15s;
     position: relative;
   }
 
   .action-btn:hover:not(:disabled) {
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
   }
 
   .action-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .attach-wrapper {
+    position: relative;
+  }
+
+  .attach-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 0.25rem;
+    min-width: 140px;
+    background: var(--color-bg-card, #fff);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
+    padding: 0.25rem;
+    z-index: 20;
+  }
+
+  .attach-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-text, #374151);
+    background: none;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .attach-menu-item:hover:not(:disabled) {
+    background: var(--color-bg-subtle, #f3f4f6);
+  }
+
+  .attach-menu-item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .attach-menu-label {
+    font-weight: 500;
+  }
+
+  .attach-menu-count {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #6b7280);
+    margin-left: 0.5rem;
   }
 
   .attach-badge {

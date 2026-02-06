@@ -1,13 +1,10 @@
 import logger from "../middleware/logger.js";
+import { GOOGLE_APIS } from "../config/externalApis.js";
 import {
   getAccessToken,
   isTokenExpired,
   refreshOAuthTokens,
 } from "./integrationService.js";
-
-// TODO: These should probably come from a central place
-const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GMAIL_API_BASE_URL = "https://www.googleapis.com/gmail/v1";
 
 export class GmailService {
   private userId: string;
@@ -44,7 +41,7 @@ export class GmailService {
     }
 
     const response = await fetch(
-      `${GMAIL_API_BASE_URL}/users/me/history?startHistoryId=${historyId}`,
+      `${GOOGLE_APIS.GMAIL_BASE}/users/me/history?startHistoryId=${historyId}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -61,7 +58,7 @@ export class GmailService {
       return [];
     }
 
-    const data = await response.json();
+    const data = await response.json() as { history?: any[] };
     return data.history || [];
   }
 
@@ -72,7 +69,7 @@ export class GmailService {
     }
 
     const response = await fetch(
-      `${GMAIL_API_BASE_URL}/users/me/messages/${messageId}`,
+      `${GOOGLE_APIS.GMAIL_BASE}/users/me/messages/${messageId}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

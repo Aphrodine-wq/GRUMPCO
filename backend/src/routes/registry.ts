@@ -97,6 +97,8 @@ const ROUTE_DEFINITIONS: RouteEntry[] = [
   // ── Auth & Users (WARM) ──────────────────────────────────────────────────
   { path: "/auth", module: "./auth.js", priority: "warm" },
   { path: "/auth/google", module: "./authGoogle.js", priority: "warm" },
+  { path: "/auth/github", module: "./authGithub.js", priority: "warm" },
+  { path: "/auth/discord", module: "./authDiscord.js", priority: "warm" },
   { path: "/api/settings", module: "./settings.js", priority: "warm" },
   { path: "/api/approvals", module: "./approvals.js", priority: "cold" },
 
@@ -237,6 +239,10 @@ const ROUTE_DEFINITIONS: RouteEntry[] = [
   // ── Misc (COLD) ──────────────────────────────────────────────────────────
   { path: "/api/expo-test", module: "./expoTest.js", priority: "cold" },
   { path: "/api/demo", module: "./demo.js", priority: "cold" },
+  { path: "/api/skills", module: "./skills.js", priority: "warm" },
+  { path: "/api/builder", module: "./builder.js", priority: "cold" },
+  { path: "/api/auto-deploy", module: "./autoDeploy.js", priority: "cold" },
+  { path: "/api/docs", module: "./swagger.js", priority: "cold" },
 ];
 
 // ---------------------------------------------------------------------------

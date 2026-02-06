@@ -2,6 +2,9 @@
   "name": "grump-monorepo",
   "version": "2.1.0",
   "private": true,
+  "bin": {
+    "grump": "./bin/grump.js"
+  },
   "workspaces": [
     "frontend",
     "backend",
@@ -19,7 +22,10 @@
   ],
   "description": "G-Rump AI development platform monorepo",
   "license": "MIT",
+  "engines": { "node": ">=18.0.0" },
   "scripts": {
+    "grump": "node bin/grump.js",
+    "build:exe": "npm run electron:build --prefix frontend",
     "setup": "node scripts/setup.js",
     "setup:interactive": "node scripts/setup-interactive.js",
     "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
@@ -64,6 +70,7 @@
     ]
   },
   "dependencies": {
+    "tsx": "^4.21.0",
     "uuid": "^13.0.0"
   },
   "pnpm": {

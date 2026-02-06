@@ -264,7 +264,7 @@
 
 <style>
   .plan-viewer {
-    background: #ffffff;
+    background: var(--color-bg-card);
     border-radius: 8px;
     padding: 1.5rem;
     max-width: 900px;
@@ -274,18 +274,18 @@
   .plan-header {
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #e5e5e5;
+    border-bottom: 1px solid var(--color-border);
   }
 
   .plan-title {
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0 0 0.5rem 0;
-    color: #000000;
+    color: var(--color-text);
   }
 
   .plan-description {
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin: 0 0 1rem 0;
   }
 
@@ -293,7 +293,7 @@
     display: flex;
     gap: 1rem;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .meta-item {
@@ -303,14 +303,14 @@
   }
 
   .meta-item strong {
-    color: #000000;
+    color: var(--color-text);
     font-weight: 600;
   }
 
   .status {
     padding: 0.25rem 0.75rem;
     border-radius: 4px;
-    background: #f5f5f5;
+    background: var(--color-bg-secondary);
     text-transform: capitalize;
   }
 
@@ -350,12 +350,12 @@
   }
 
   .btn-secondary {
-    background: #f5f5f5;
-    color: #000000;
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
   }
 
   .btn-secondary:hover {
-    background: #e5e5e5;
+    background: var(--color-bg-secondary);
   }
 
   .phases {
@@ -365,7 +365,7 @@
   }
 
   .phase {
-    border: 1px solid #e5e5e5;
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     overflow: hidden;
   }
@@ -375,13 +375,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    background: #f9fafb;
+    background: var(--color-bg-secondary);
     cursor: pointer;
     transition: background 0.2s;
   }
 
   .phase-header:hover {
-    background: #f3f4f6;
+    background: var(--color-bg-secondary);
   }
 
   .phase-info {
@@ -392,13 +392,13 @@
 
   .phase-name {
     font-weight: 600;
-    color: #000000;
+    color: var(--color-text);
   }
 
   .phase-status {
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
-    background: #f5f5f5;
+    background: var(--color-bg-secondary);
     font-size: 0.75rem;
     text-transform: capitalize;
   }
@@ -415,7 +415,7 @@
 
   .expand-icon {
     transition: transform 0.2s;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .expand-icon.expanded {
@@ -430,7 +430,7 @@
   }
 
   .step {
-    border: 1px solid #e5e5e5;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
     overflow: hidden;
   }
@@ -440,7 +440,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
-    background: #ffffff;
+    background: var(--color-bg-card);
     cursor: pointer;
     transition: background 0.2s;
   }

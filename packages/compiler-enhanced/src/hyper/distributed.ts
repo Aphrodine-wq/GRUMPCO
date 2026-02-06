@@ -49,6 +49,15 @@ async function loadBullMQ(): Promise<boolean> {
 // ============================================================================
 
 /**
+ * Compilation function type that workers delegate to for actual code transformation.
+ * Receives source content and job payload, returns transformed output + metadata.
+ */
+export type CompileFn = (
+  content: string,
+  payload: DistributedJobPayload
+) => Promise<{ output: string; metadata: Record<string, unknown> }>;
+
+/**
  * Distributed Compiler Manager
  * 
  * Manages a fleet of workers across processes/machines for parallel compilation.
@@ -62,11 +71,20 @@ export class DistributedCompiler extends EventEmitter {
   private isInitialized = false;
   private nodeId: string;
   private jobResults: Map<string, { resolve: Function; reject: Function; timeout: NodeJS.Timeout }> = new Map();
+  private compileFn: CompileFn | null = null;
 
   constructor(config: DistributedConfig) {
     super();
     this.config = config;
     this.nodeId = `${hostname()}-${process.pid}`;
+  }
+
+  /**
+   * Set the compilation function that workers will use.
+   * Called by HyperCompiler during initialization to inject the JIT pipeline.
+   */
+  setCompileFn(fn: CompileFn): void {
+    this.compileFn = fn;
   }
 
   /**
@@ -251,20 +269,34 @@ export class DistributedCompiler extends EventEmitter {
   }
 
   /**
-   * Compile content (placeholder for actual compilation)
+   * Compile content using the injected compile function, or fall back to
+   * a lightweight built-in transformation (basic whitespace/semicolon cleanup).
    */
   private async compileContent(
     content: string,
     payload: DistributedJobPayload
   ): Promise<{ output: string; metadata: Record<string, unknown> }> {
-    // Simulate compilation work
-    // In reality, this would call the actual compiler
+    // Use injected compile function if available (routes through JIT pipeline)
+    if (this.compileFn) {
+      return this.compileFn(content, payload);
+    }
+
+    // Fallback: lightweight built-in transformations when no JIT pipeline is set
+    let output = content;
+
+    // Basic whitespace cleanup
+    output = output.replace(/[ \t]+$/gm, '');   // trailing whitespace
+    output = output.replace(/\n{3,}/g, '\n\n'); // excessive blank lines
+    output = output.replace(/;{2,}/g, ';');     // consecutive semicolons
+
     return {
-      output: content, // Would be transformed content
+      output,
       metadata: {
         inputHash: payload.contentHash,
         compiledAt: Date.now(),
-        size: content.length,
+        inputSize: content.length,
+        outputSize: output.length,
+        usedFallback: true,
       },
     };
   }

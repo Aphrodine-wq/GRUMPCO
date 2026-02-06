@@ -1,0 +1,105 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:base"
+    ],
+    "enabled": true,
+    "timezone": "UTC",
+    "schedule": [
+        "before 3am on Monday"
+    ],
+    "labels": [
+        "dependencies"
+    ],
+    "assignees": [
+        "@Aphrodine-wq"
+    ],
+    "reviewers": [
+        "@Aphrodine-wq"
+    ],
+    "packageRules": [
+        {
+            "description": "Auto-merge patch updates",
+            "matchUpdateTypes": [
+                "patch"
+            ],
+            "automerge": true,
+            "automergeType": "pr",
+            "platformAutomerge": true
+        },
+        {
+            "description": "Group TypeScript updates",
+            "matchPackagePatterns": [
+                "^@types/",
+                "typescript"
+            ],
+            "groupName": "TypeScript"
+        },
+        {
+            "description": "Group ESLint updates",
+            "matchPackagePatterns": [
+                "eslint"
+            ],
+            "groupName": "ESLint"
+        },
+        {
+            "description": "Group testing packages",
+            "matchPackagePatterns": [
+                "vitest",
+                "playwright",
+                "@testing-library"
+            ],
+            "groupName": "Testing"
+        },
+        {
+            "description": "Pin Electron major versions",
+            "matchPackageNames": [
+                "electron",
+                "electron-builder"
+            ],
+            "rangeStrategy": "pin"
+        },
+        {
+            "description": "Separate major updates",
+            "matchUpdateTypes": [
+                "major"
+            ],
+            "dependencyDashboardApproval": true
+        },
+        {
+            "description": "High priority security updates",
+            "matchDatasources": [
+                "npm"
+            ],
+            "vulnerabilityAlerts": {
+                "enabled": true
+            },
+            "prPriority": 10
+        }
+    ],
+    "vulnerabilityAlerts": {
+        "enabled": true,
+        "labels": [
+            "security"
+        ],
+        "assignees": [
+            "@Aphrodine-wq"
+        ]
+    },
+    "dependencyDashboard": true,
+    "dependencyDashboardTitle": "🔧 Dependency Updates Dashboard",
+    "dependencyDashboardLabels": [
+        "dependencies"
+    ],
+    "prConcurrentLimit": 5,
+    "prHourlyLimit": 2,
+    "semanticCommits": "enabled",
+    "semanticCommitType": "chore",
+    "semanticCommitScope": "deps",
+    "lockFileMaintenance": {
+        "enabled": true,
+        "schedule": [
+            "before 3am on the first day of the month"
+        ]
+    }
+}

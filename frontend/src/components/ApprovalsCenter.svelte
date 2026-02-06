@@ -387,22 +387,22 @@
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     background: transparent;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    color: #374151;
+    color: var(--color-text-secondary);
     cursor: pointer;
     margin-bottom: 1rem;
     transition: all 0.2s;
   }
 
   .back-btn:hover {
-    background: #f9fafb;
+    background: var(--color-bg-secondary);
   }
 
   h1 {
     font-size: 1.375rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--color-text);
     margin: 0 0 0.25rem;
     display: flex;
     align-items: center;
@@ -420,7 +420,7 @@
 
   .subtitle {
     font-size: 0.8125rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin: 0;
   }
 
@@ -428,7 +428,7 @@
     display: flex;
     gap: 0.375rem;
     margin-bottom: 1rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--color-border);
     padding-bottom: 0.375rem;
   }
 
@@ -438,7 +438,7 @@
     background: transparent;
     border: none;
     border-radius: 6px;
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
@@ -448,8 +448,8 @@
   }
 
   .tab:hover {
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
   }
 
   .tab.active {
@@ -477,7 +477,7 @@
   .spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid #e5e7eb;
+    border: 3px solid var(--color-border);
     border-top-color: #6366f1;
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -496,8 +496,8 @@
   }
 
   .approval-card {
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 0.875rem 1rem;
     transition: all 0.2s;
@@ -534,7 +534,7 @@
     margin: 0;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--color-text);
   }
 
   .status-time {
@@ -550,11 +550,11 @@
 
   .time {
     font-size: 0.6875rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .reason {
-    color: #4b5563;
+    color: var(--color-text-secondary);
     font-size: 0.8125rem;
     line-height: 1.45;
     margin: 0 0 0.75rem;
@@ -574,11 +574,11 @@
   .payload-details pre {
     margin: 0.375rem 0 0;
     padding: 0.75rem;
-    background: #f9fafb;
+    background: var(--color-bg-secondary);
     border-radius: 6px;
     font-size: 0.6875rem;
     overflow-x: auto;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .card-footer {
@@ -586,12 +586,12 @@
     justify-content: space-between;
     align-items: center;
     padding-top: 0.75rem;
-    border-top: 1px solid #f3f4f6;
+    border-top: 1px solid var(--color-border);
   }
 
   .expiry {
     font-size: 0.6875rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .expiry.warning {
@@ -640,9 +640,9 @@
 
   .resolution-info {
     padding-top: 0.75rem;
-    border-top: 1px solid #f3f4f6;
+    border-top: 1px solid var(--color-border);
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   /* Modal */
@@ -658,7 +658,7 @@
   }
 
   .modal {
-    background: white;
+    background: var(--color-bg-card);
     border-radius: 16px;
     padding: 1.5rem;
     width: 100%;
@@ -668,11 +668,11 @@
   .modal h2 {
     margin: 0 0 0.5rem;
     font-size: 1.25rem;
-    color: #111827;
+    color: var(--color-text);
   }
 
   .modal-desc {
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin: 0 0 1.25rem;
   }
 
@@ -684,14 +684,14 @@
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text-secondary);
     margin-bottom: 0.5rem;
   }
 
   .form-group textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     font-size: 0.875rem;
     resize: vertical;
@@ -721,12 +721,12 @@
   }
 
   .cancel-btn {
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
   }
 
   .cancel-btn:hover {
-    background: #e5e7eb;
+    background: var(--color-bg-secondary);
   }
 
   .confirm-reject-btn {

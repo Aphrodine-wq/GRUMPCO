@@ -1,0 +1,16 @@
+{
+  "name": "grump-backend-bundle",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "ioredis": "^5.3.2"
+  },
+  "optionalDependencies": {
+    "@opentelemetry/auto-instrumentations-node": "^0.57.0"
+  }
+}
