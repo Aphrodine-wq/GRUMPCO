@@ -48,8 +48,17 @@
 
   const tips = [
     { icon: Lightbulb, text: 'Type', kbd: '/ship', suffix: 'to start the SHIP workflow' },
-    { icon: Bot, text: 'Use G-Agent for autonomous coding tasks' },
-    { icon: Settings, text: 'Access settings anytime from the sidebar' },
+    { icon: Bot, text: "Click 'Use G-Agent' in chat to turn on agent mode in this session" },
+    { icon: Settings, text: 'Access settings and AI providers from the sidebar' },
+  ];
+
+  const newFeatures = [
+    {
+      label: 'G-Agent in chat',
+      desc: 'Use G-Agent button in the chat header to enable agent mode without leaving the conversation.',
+    },
+    { label: 'Credits & billing', desc: 'Buy credits and manage billing from the Credits view.' },
+    { label: 'Dark mode & themes', desc: 'Appearance and density in Settings → General.' },
   ];
 </script>
 
@@ -75,6 +84,19 @@
       </div>
       <h2 class="title">You're All Set!</h2>
       <p class="subtitle">Welcome to the grumpiest AI development platform</p>
+    </div>
+
+    <!-- What's new -->
+    <div class="new-features-card">
+      <h3 class="new-features-title">What's new</h3>
+      <div class="new-features-grid">
+        {#each newFeatures as f}
+          <div class="new-feature-item">
+            <span class="new-feature-label">{f.label}</span>
+            <span class="new-feature-desc">{f.desc}</span>
+          </div>
+        {/each}
+      </div>
     </div>
 
     <!-- Quick tips -->
@@ -237,13 +259,56 @@
   .title {
     font-size: 2rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--color-text);
     margin-bottom: 0.5rem;
   }
 
   .subtitle {
     font-size: 1rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
+  }
+
+  /* What's new */
+  .new-features-card {
+    width: 100%;
+    padding: 1.25rem;
+    background: var(--color-bg-card, rgba(255, 255, 255, 0.6));
+    border: 1px solid var(--color-border, rgba(124, 58, 237, 0.15));
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .new-features-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-primary, #7c3aed);
+    margin-bottom: 0.75rem;
+    text-align: left;
+  }
+
+  .new-features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem 1rem;
+  }
+
+  .new-feature-item {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .new-feature-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text, #1f2937);
+  }
+
+  .new-feature-desc {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #6b7280);
+    line-height: 1.3;
   }
 
   /* Tips card */
@@ -278,7 +343,7 @@
     align-items: center;
     gap: 0.75rem;
     font-size: 0.875rem;
-    color: #374151;
+    color: var(--color-text-secondary);
     text-align: left;
   }
 
@@ -310,7 +375,7 @@
   .resources-title {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-secondary);
     margin-bottom: 0.75rem;
     text-align: left;
   }
@@ -326,8 +391,8 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.875rem 1rem;
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
     text-decoration: none;
     transition: all 0.2s;
@@ -361,16 +426,16 @@
   .resource-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .resource-desc {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .resource-card :global(.external-icon) {
-    color: #9ca3af;
+    color: var(--color-text-muted);
     flex-shrink: 0;
   }
 

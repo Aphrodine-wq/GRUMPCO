@@ -19,7 +19,6 @@ pub enum VerbAction {
     Test,
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[derive(Default)]
@@ -33,7 +32,6 @@ pub enum ProjectType {
     #[default]
     Unknown,
 }
-
 
 impl ProjectType {
     pub fn as_str(&self) -> &'static str {
@@ -61,7 +59,6 @@ pub enum ArchitecturePattern {
     #[default]
     Unknown,
 }
-
 
 impl ArchitecturePattern {
     pub fn as_str(&self) -> &'static str {
@@ -107,7 +104,6 @@ pub enum ExtractionSource {
     #[default]
     Default,
 }
-
 
 /// A field extracted from natural language with confidence metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -289,4 +285,24 @@ pub struct IntentOutput {
     /// Formal semantics verification (well-formedness check)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verification: Option<IntentVerification>,
+}
+
+// ============================================================================
+// Full Analysis (composes intent + market + context + NLP)
+// ============================================================================
+
+/// Combined analysis composing all engines: intent parsing, market intelligence,
+/// context analysis, and advanced NLP. This is the "one-call" API for full analysis.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FullAnalysis {
+    /// Parsed intent output
+    pub intent: IntentOutput,
+    /// Market intelligence analysis
+    pub market: crate::market_engine::MarketAnalysis,
+    /// Unified context analysis (market + technical + product + execution)
+    pub context: crate::context_engine::ContextAnalysis,
+    /// Advanced linguistic analysis
+    pub linguistic: crate::nlp_engine::LinguisticAnalysis,
+    /// Contextual interpretation
+    pub interpretation: crate::nlp_engine::ContextualInterpretation,
 }

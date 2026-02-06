@@ -5,11 +5,14 @@
     getDockerInfo,
     getNvidiaToolkitVersion,
     detectGpu,
+    isDockerSetupAvailable,
     type DockerVersionResult,
     type DockerInfoResult,
     type GpuDetectResult,
   } from '$lib/dockerSetup';
   import { fetchApi } from '$lib/api';
+  import { Button, Card, Radio, Checkbox } from '$lib/design-system';
+  import { Box, ArrowLeft } from 'lucide-svelte';
 
   interface Props {
     onComplete?: () => void;
@@ -219,17 +222,52 @@
 
 <div class="wizard">
   <header class="wizard-header">
-    {#if onBack}
-      <button type="button" class="back-btn" onclick={goBack}>Back</button>
-    {/if}
-    <h2>Docker & GPU Setup</h2>
-    <div class="step-dots">
-      {#each steps as _, i}
-        <span class="dot" class:active={i === currentStep} class:done={i < currentStep}
-          >{i + 1}</span
-        >
-      {/each}
+    <div class="hero-section">
+      {#if onBack}
+        <Button variant="ghost" size="sm" onclick={goBack} class="back-btn">
+          <ArrowLeft size={16} />
+          Back
+        </Button>
+      {/if}
+      <div class="hero-content">
+        <div class="hero-icon">
+          <Box size={28} strokeWidth={2} />
+        </div>
+        <div class="hero-text">
+          <h1 class="hero-title">Docker & GPU Setup</h1>
+          <p class="hero-subtitle">Configure Docker and GPU acceleration for local AI inference.</p>
+        </div>
+      </div>
     </div>
+    {#if !isDockerSetupAvailable()}
+      <div class="remote-message" role="alert">
+        <p>
+          Docker setup requires the desktop app. Install G-Rump for Windows/Mac to configure Docker
+          and GPU.
+        </p>
+      </div>
+    {:else}
+      <div class="step-progress" role="navigation" aria-label="Setup steps">
+        <div class="step-progress-track">
+          {#each steps as step, i}
+            <div class="step-progress-item">
+              <span
+                class="step-dot"
+                class:active={i === currentStep}
+                class:done={i < currentStep}
+                aria-hidden="true"
+              >
+                {i + 1}
+              </span>
+              <span class="step-label">{step}</span>
+              {#if i < steps.length - 1}
+                <span class="step-connector" aria-hidden="true"></span>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
   </header>
 
   <div class="wizard-body">
@@ -250,7 +288,7 @@
         </div>
         {#if startError}
           <p class="status error">{startError}</p>
-          <button type="button" class="btn primary" onclick={handleOneClick}>Retry</button>
+          <Button variant="primary" onclick={handleOneClick}>Retry</Button>
         {/if}
       </div>
     {:else if currentStep === 0}
@@ -259,25 +297,21 @@
 
         <!-- Mode selector -->
         <div class="mode-selector">
-          <button
-            type="button"
-            class="mode-btn"
-            class:active={deployMode === 'guided'}
+          <Button
+            variant={deployMode === 'guided' ? 'primary' : 'secondary'}
+            size="sm"
             onclick={() => (deployMode = 'guided')}
           >
             Guided Setup
-          </button>
-          <button
-            type="button"
-            class="mode-btn"
-            class:active={deployMode === 'power'}
+          </Button>
+          <Button
+            variant={deployMode === 'power' ? 'primary' : 'secondary'}
+            size="sm"
             onclick={() => (deployMode = 'power')}
           >
             Power User
-          </button>
-          <button type="button" class="mode-btn oneclick-btn" onclick={handleOneClick}>
-            One-Click Deploy
-          </button>
+          </Button>
+          <Button variant="primary" size="sm" onclick={handleOneClick}>One-Click Deploy</Button>
         </div>
 
         {#if dockerVersion?.installed}
@@ -338,11 +372,22 @@
             <h4>GPU Overlay</h4>
             <div class="preset-grid">
               {#each overlayOptions as opt}
-                <label class="preset-card" class:selected={selectedOverlay === opt.id}>
-                  <input type="radio" name="overlay" bind:group={selectedOverlay} value={opt.id} />
-                  <span class="preset-label">{opt.label}</span>
-                  <span class="preset-desc">{opt.desc}</span>
-                </label>
+                <Card
+                  variant="outlined"
+                  padding="md"
+                  interactive
+                  onclick={() => (selectedOverlay = opt.id)}
+                  class="preset-card {selectedOverlay === opt.id ? 'selected' : ''}"
+                >
+                  <Radio
+                    name="overlay"
+                    value={opt.id}
+                    checked={selectedOverlay === opt.id}
+                    label={opt.label}
+                    description={opt.desc}
+                    onchange={(v) => (selectedOverlay = v)}
+                  />
+                </Card>
               {/each}
             </div>
           </div>
@@ -350,21 +395,21 @@
           <div class="config-section">
             <h4>Advanced Services (Optional)</h4>
             <div class="checkbox-grid">
-              <label class="checkbox-card">
-                <input type="checkbox" bind:checked={includeTriton} />
-                <span class="checkbox-label">Triton Inference Server</span>
-                <span class="checkbox-desc">Local model serving with GPU</span>
-              </label>
-              <label class="checkbox-card">
-                <input type="checkbox" bind:checked={includeRiva} />
-                <span class="checkbox-label">NVIDIA Riva</span>
-                <span class="checkbox-desc">Speech-to-text & text-to-speech</span>
-              </label>
-              <label class="checkbox-card">
-                <input type="checkbox" bind:checked={includeGuardrails} />
-                <span class="checkbox-label">NeMo Guardrails</span>
-                <span class="checkbox-desc">AI safety filtering</span>
-              </label>
+              <Checkbox
+                bind:checked={includeTriton}
+                label="Triton Inference Server"
+                description="Local model serving with GPU"
+              />
+              <Checkbox
+                bind:checked={includeRiva}
+                label="NVIDIA Riva"
+                description="Speech-to-text & text-to-speech"
+              />
+              <Checkbox
+                bind:checked={includeGuardrails}
+                label="NeMo Guardrails"
+                description="AI safety filtering"
+              />
             </div>
           </div>
         {:else}
@@ -372,11 +417,22 @@
           <h3>Step 3: Hardware Preset</h3>
           <div class="preset-grid">
             {#each presets as preset}
-              <label class="preset-card" class:selected={selectedPreset === preset.id}>
-                <input type="radio" name="preset" bind:group={selectedPreset} value={preset.id} />
-                <span class="preset-label">{preset.label}</span>
-                <span class="preset-desc">{preset.desc}</span>
-              </label>
+              <Card
+                variant="outlined"
+                padding="md"
+                interactive
+                onclick={() => (selectedPreset = preset.id)}
+                class="preset-card {selectedPreset === preset.id ? 'selected' : ''}"
+              >
+                <Radio
+                  name="preset"
+                  value={preset.id}
+                  label={preset.label}
+                  description={preset.desc}
+                  checked={selectedPreset === preset.id}
+                  onchange={(v) => (selectedPreset = v)}
+                />
+              </Card>
             {/each}
           </div>
         {/if}
@@ -396,9 +452,7 @@
           </div>
         {:else if startError}
           <p class="status error">{startError}</p>
-          <button type="button" class="btn secondary" onclick={() => (startError = null)}
-            >Try Again</button
-          >
+          <Button variant="secondary" onclick={() => (startError = null)}>Try Again</Button>
         {:else}
           <div class="summary">
             {#if deployMode === 'power'}
@@ -432,22 +486,16 @@
   </div>
 
   <footer class="wizard-footer">
-    <button
-      type="button"
-      class="btn secondary"
-      onclick={goBack}
-      disabled={currentStep === 0 && !onBack}
-    >
+    <Button variant="secondary" onclick={goBack} disabled={currentStep === 0 && !onBack}>
       {currentStep === 0 && onBack ? 'Back' : 'Previous'}
-    </button>
-    <button
-      type="button"
-      class="btn primary"
+    </Button>
+    <Button
+      variant="primary"
       onclick={goNext}
       disabled={currentStep === 0 && !dockerVersion?.installed}
     >
       {currentStep === steps.length - 1 ? 'Start' : 'Next'}
-    </button>
+    </Button>
   </footer>
 </div>
 
@@ -456,148 +504,224 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: var(--bg-primary, #1a1a2e);
-    color: var(--text-primary, #e8e8e8);
+    background: var(--color-bg-app, #fafafa);
+    color: var(--color-text, #1f1147);
     font-family:
       system-ui,
       -apple-system,
       sans-serif;
   }
+
   .wizard-header {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 1rem;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border, #333);
+    border-bottom: 1px solid var(--color-border-light, #e9d5ff);
+    flex-shrink: 0;
   }
-  .back-btn {
-    background: transparent;
-    border: 1px solid var(--border, #333);
-    color: var(--text-secondary, #888);
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-  }
-  .back-btn:hover {
-    background: var(--bg-hover, #222);
-  }
-  .wizard-header h2 {
-    margin: 0;
-    font-size: 1.25rem;
-  }
-  .step-dots {
+
+  .hero-section {
     display: flex;
-    gap: 0.5rem;
-    margin-left: auto;
+    flex-direction: column;
+    gap: 1rem;
   }
-  .dot {
+
+  .hero-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .hero-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
+    color: var(--color-primary, #7c3aed);
+    border-radius: 12px;
+  }
+
+  .hero-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .hero-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text, #1f1147);
+  }
+
+  .hero-subtitle {
+    margin: 0.25rem 0 0;
+    font-size: 0.9rem;
+    color: var(--color-text-muted, #6b7280);
+  }
+
+  .remote-message {
+    padding: 1rem;
+    background: var(--color-warning-subtle, rgba(234, 179, 8, 0.1));
+    border: 1px solid var(--color-warning-border, rgba(234, 179, 8, 0.3));
+    border-radius: 8px;
+  }
+
+  .remote-message p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-text, #1f1147);
+  }
+
+  .step-progress {
+    width: 100%;
+  }
+
+  .step-progress-track {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .step-progress-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .step-dot {
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 50%;
-    background: var(--bg-hover, #222);
-    color: var(--text-secondary, #888);
+    background: var(--color-bg-input, #f3e8ff);
+    color: var(--color-text-muted, #6b7280);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 0.75rem;
+    font-weight: 600;
   }
-  .dot.active {
-    background: #0db7ed;
-    color: #fff;
+
+  .step-dot.active {
+    background: var(--color-primary, #7c3aed);
+    color: var(--color-text-inverse, #fff);
   }
-  .dot.done {
-    background: #22c55e;
-    color: #fff;
+
+  .step-dot.done {
+    background: var(--color-success, #22c55e);
+    color: var(--color-text-inverse, #fff);
+  }
+
+  .step-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--color-text-secondary, #4a4a5a);
+  }
+
+  .step-connector {
+    width: 24px;
+    height: 2px;
+    background: var(--color-border-light, #f3e8ff);
+  }
+
+  .back-btn {
+    align-self: flex-start;
   }
   .wizard-body {
     flex: 1;
     overflow: auto;
     padding: 1.5rem;
   }
+
   .step-content h3 {
     margin: 0 0 1rem;
     font-size: 1.1rem;
+    color: var(--color-text, #1f1147);
   }
+
   .status {
     margin: 0.5rem 0;
     padding: 0.5rem;
     border-radius: 0.375rem;
   }
+
   .status.ok {
-    background: rgba(34, 197, 94, 0.15);
-    color: #22c55e;
+    background: var(--color-success-subtle, rgba(34, 197, 94, 0.1));
+    color: var(--color-success, #22c55e);
   }
+
   .status.warn {
-    background: rgba(234, 179, 8, 0.15);
-    color: #eab308;
+    background: var(--color-warning-subtle, rgba(234, 179, 8, 0.1));
+    color: var(--color-warning, #eab308);
   }
+
   .status.error {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
+    background: var(--color-error-subtle, rgba(239, 68, 68, 0.1));
+    color: var(--color-error, #ef4444);
   }
+
   .status.info {
-    background: rgba(59, 130, 246, 0.15);
-    color: #3b82f6;
+    background: var(--color-info-subtle, rgba(59, 130, 246, 0.1));
+    color: var(--color-info, #3b82f6);
   }
-  .install-link {
-    display: inline-block;
-    margin-top: 0.5rem;
-    color: #0db7ed;
-  }
+
   .gpu-line {
     font-family: monospace;
     font-size: 0.875rem;
     margin: 0.25rem 0;
+    color: var(--color-text-secondary, #4a4a5a);
   }
+
   .gpu-line :global(code) {
-    background: var(--bg-hover, #222);
+    background: var(--color-bg-input, #f3e8ff);
     padding: 0.125rem 0.25rem;
     border-radius: 0.25rem;
   }
+
+  .mode-selector {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
   .preset-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 1rem;
   }
+
   .preset-card {
-    display: flex;
-    flex-direction: column;
-    padding: 1rem;
-    border: 2px solid var(--border, #333);
-    border-radius: 0.5rem;
     cursor: pointer;
   }
+
   .preset-card.selected {
-    border-color: #0db7ed;
-    background: rgba(13, 183, 237, 0.1);
+    border-color: var(--color-primary, #7c3aed) !important;
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1)) !important;
   }
-  .preset-label {
-    font-weight: 600;
-  }
-  .preset-desc {
-    font-size: 0.8rem;
-    color: var(--text-secondary, #888);
-    margin-top: 0.25rem;
-  }
-  .preset-card input {
-    margin-bottom: 0.5rem;
-  }
+
   .progress-wrap {
     margin-top: 1rem;
     position: relative;
     height: 2rem;
-    background: var(--bg-hover, #222);
+    background: var(--color-bg-input, #f3e8ff);
     border-radius: 0.5rem;
     overflow: hidden;
   }
+
   .progress-bar {
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    background: #0db7ed;
+    background: var(--color-primary, #7c3aed);
     transition: width 0.2s;
   }
+
   .progress-wrap span {
     position: relative;
     z-index: 1;
@@ -606,142 +730,83 @@
     justify-content: center;
     height: 100%;
     font-size: 0.875rem;
+    color: var(--color-text, #1f1147);
   }
+
   .wizard-footer {
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
     padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border, #333);
-  }
-  .btn {
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    cursor: pointer;
-    border: 1px solid var(--border, #333);
-  }
-  .btn.secondary {
-    background: transparent;
-    color: var(--text-primary, #e8e8e8);
-  }
-  .btn.primary {
-    background: #0db7ed;
-    color: #fff;
-    border-color: #0db7ed;
-  }
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  :global(code) {
-    font-size: 0.8rem;
-    word-break: break-all;
+    border-top: 1px solid var(--color-border-light, #e9d5ff);
   }
 
-  /* Mode selector */
-  .mode-selector {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-  }
-  .mode-btn {
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--border, #333);
-    border-radius: 0.5rem;
-    background: transparent;
-    color: var(--text-primary, #e8e8e8);
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-  .mode-btn:hover {
-    background: var(--bg-hover, #222);
-  }
-  .mode-btn.active {
-    border-color: #0db7ed;
-    background: rgba(13, 183, 237, 0.1);
-  }
-  .mode-btn.oneclick-btn {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    border-color: #22c55e;
-    color: #fff;
-  }
-  .mode-btn.oneclick-btn:hover {
-    background: linear-gradient(135deg, #16a34a, #15803d);
-  }
-
-  /* Logs box */
   .logs-box {
     margin-top: 1rem;
     padding: 0.75rem;
-    background: var(--bg-hover, #111);
+    background: var(--color-bg-inset, #ede9fe);
     border-radius: 0.5rem;
     max-height: 200px;
     overflow-y: auto;
     font-family: monospace;
     font-size: 0.8rem;
   }
+
   .log-line {
     margin: 0.25rem 0;
-    color: var(--text-secondary, #888);
-  }
-  .log-line:last-child {
-    color: var(--text-primary, #e8e8e8);
+    color: var(--color-text-secondary, #4a4a5a);
   }
 
-  /* Config section */
+  .log-line:last-child {
+    color: var(--color-text, #1f1147);
+  }
+
   .config-section {
     margin-bottom: 1.5rem;
   }
+
   .config-section h4 {
     margin: 0 0 0.75rem;
     font-size: 0.95rem;
-    color: var(--text-secondary, #aaa);
+    color: var(--color-text-secondary, #4a4a5a);
   }
 
-  /* Checkbox grid */
   .checkbox-grid {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
   }
-  .checkbox-card {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    border: 1px solid var(--border, #333);
-    border-radius: 0.5rem;
-    cursor: pointer;
-  }
-  .checkbox-card:hover {
-    background: var(--bg-hover, #222);
-  }
-  .checkbox-card input {
-    margin-top: 0.2rem;
-  }
-  .checkbox-label {
-    font-weight: 500;
-  }
-  .checkbox-desc {
-    display: block;
-    font-size: 0.8rem;
-    color: var(--text-secondary, #888);
-  }
 
-  /* Summary */
   .summary {
     padding: 1rem;
-    background: var(--bg-hover, #222);
+    background: var(--color-bg-subtle, #f5f3ff);
     border-radius: 0.5rem;
   }
+
   .summary p {
     margin: 0.5rem 0;
+    color: var(--color-text, #1f1147);
   }
+
   .hint {
-    color: var(--text-secondary, #888);
+    color: var(--color-text-muted, #6b7280);
     font-size: 0.875rem;
     margin-top: 1rem !important;
+  }
+
+  .install-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: var(--color-primary, #7c3aed);
+    text-decoration: underline;
+  }
+
+  .install-link:hover {
+    color: var(--color-primary-hover, #6d28d9);
+  }
+
+  :global(code) {
+    font-size: 0.8rem;
+    word-break: break-all;
   }
 </style>

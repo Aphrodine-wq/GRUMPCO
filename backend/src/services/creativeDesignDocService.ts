@@ -77,7 +77,7 @@ export async function generateCreativeDesignDoc(
     const cdd: CreativeDesignDoc = {
       id:
         data.id ||
-        `cdd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        `cdd_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       layout: {
         regions: Array.isArray(data.layout?.regions) ? data.layout.regions : [],
         breakpoints: Array.isArray(data.layout?.breakpoints)

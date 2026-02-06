@@ -41,11 +41,11 @@
   // Nav items: Design to Code, Integrations, Advanced AI, Model Benchmark, Troubleshooting, Reset moved to chat context / Settings
   const navItems: NavItem[] = [
     {
-      view: 'freeAgent',
+      view: 'gAgent',
       label: 'G-Agent',
       keywords: ['g-agent', 'gagent', 'agent', 'autonomous'],
       group: 'build',
-      icon: 'free-agent',
+      icon: 'g-agent',
     },
     {
       view: 'voiceCode',
@@ -144,7 +144,7 @@
 
   const iconMap: Record<string, typeof Bot> = {
     canvas: LayoutGrid,
-    'free-agent': Bot,
+    'g-agent': Bot,
     design: LayoutGrid,
     voice: Mic,
     docs: BookOpen,

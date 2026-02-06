@@ -40,6 +40,9 @@ vi.mock('child_process', () => ({
     mockExec(cmd, opts, cb);
   },
 }));
+vi.mock('../../src/services/llmGatewayHelper.js', () => ({
+  getCompletion: (...args: any[]) => mockGetCompletion(...args)
+}));
 
 import {
   scanForCodeIssues,
@@ -242,6 +245,29 @@ describe('Anticipatory Service', () => {
 
   describe('fetchTechTrends', () => {
     it('should return trends', async () => {
+      (global.fetch as any).mockResolvedValue({
+         ok: true,
+         json: async () => ([{
+            title: 'React 19',
+            url: 'http://react.com',
+            description: 'New features',
+            positive_reactions_count: 100,
+            published_at: '2024-01-01'
+         },
+         {
+             title: 'React 19 beta',
+             url: 'http://react.com',
+             description: 'New features',
+             points: 100,
+             created_at: '2024-01-01',
+             objectID: '123'
+         }])
+      });
+      mockGetCompletion.mockResolvedValue({
+        text: JSON.stringify([{ title: 'React 19', summary: 'Good stuff', relevance: 0.9 }]),
+        error: null
+      });
+
       const result = await fetchTechTrends(testUserId, ['react']);
       expect(result.length).toBeGreaterThan(0);
     });

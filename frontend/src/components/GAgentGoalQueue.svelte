@@ -5,6 +5,7 @@
    */
   import { onMount, onDestroy } from 'svelte';
   import type { ComponentType } from 'svelte';
+  import { getApiBase } from '../lib/api.js';
   import {
     Target,
     Clock,
@@ -82,7 +83,7 @@
   let error = $state<string | null>(null);
   let refreshInterval: ReturnType<typeof setInterval> | null = null;
 
-  const API_BASE = '/api/gagent';
+  const API_BASE = `${getApiBase()}/api/gagent`;
 
   const statusConfig: Record<string, { icon: ComponentType; color: string; label: string }> = {
     pending: { icon: Clock, color: '#f59e0b', label: 'Pending' },
@@ -497,10 +498,10 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #ffffff;
+    background: var(--color-bg-card);
     border-radius: 12px;
     overflow: hidden;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
   }
 
   .panel-header {
@@ -508,8 +509,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .header-left {
@@ -520,14 +521,14 @@
 
   .panel-icon {
     font-size: 24px;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .panel-header h3 {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
-    color: #111827;
+    color: var(--color-text);
   }
 
   .queue-toggle {
@@ -541,7 +542,7 @@
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    color: #374151;
+    color: var(--color-text-secondary);
     transition: all 0.2s;
   }
 
@@ -603,14 +604,14 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    border-bottom: 1px solid #e5e7eb;
-    background: #ffffff;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-card);
   }
 
   .filter-tabs {
     display: flex;
     gap: 4px;
-    background: #f3f4f6;
+    background: var(--color-bg-secondary);
     padding: 3px;
     border-radius: 8px;
   }
@@ -619,7 +620,7 @@
     padding: 6px 14px;
     background: transparent;
     border: none;
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-size: 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -627,8 +628,8 @@
   }
 
   .filter-tabs button.active {
-    background: #ffffff;
-    color: #111827;
+    background: var(--color-bg-card);
+    color: var(--color-text);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 
@@ -652,8 +653,8 @@
 
   .new-goal-form {
     padding: 16px;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .form-header {
@@ -665,14 +666,14 @@
 
   .form-header h4 {
     margin: 0;
-    color: #111827;
+    color: var(--color-text);
     font-size: 14px;
   }
 
   .close-btn {
     background: transparent;
     border: none;
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-size: 18px;
     cursor: pointer;
   }
@@ -680,10 +681,10 @@
   .new-goal-form textarea {
     width: 100%;
     padding: 12px;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    color: #111827;
+    color: var(--color-text);
     font-size: 13px;
     resize: none;
     margin-bottom: 12px;
@@ -705,17 +706,17 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #374151;
+    color: var(--color-text-secondary);
     font-size: 13px;
   }
 
   .form-row select,
   .form-row input[type='datetime-local'] {
     padding: 6px 12px;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
-    color: #111827;
+    color: var(--color-text);
     font-size: 12px;
   }
 
@@ -737,9 +738,9 @@
 
   .cancel-btn {
     padding: 8px 16px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    color: #6b7280;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
     font-size: 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -772,7 +773,7 @@
     align-items: center;
     justify-content: center;
     height: 200px;
-    color: #6b7280;
+    color: var(--color-text-muted);
     gap: 12px;
   }
 
@@ -798,21 +799,21 @@
 
   .hint {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .goal-card {
     padding: 14px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .goal-card:hover {
-    background: #f3f4f6;
-    border-color: #d1d5db;
+    background: var(--color-bg-secondary);
+    border-color: var(--color-border);
   }
 
   .goal-card.executing {
@@ -869,13 +870,13 @@
 
   .timestamp {
     margin-left: auto;
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-size: 11px;
   }
 
   .goal-description {
     margin: 0 0 10px;
-    color: #374151;
+    color: var(--color-text-secondary);
     font-size: 13px;
     line-height: 1.4;
   }
@@ -900,10 +901,10 @@
   }
 
   .cron-info code {
-    background: #e5e7eb;
+    background: var(--color-bg-secondary);
     padding: 2px 6px;
     border-radius: 4px;
-    color: #111827;
+    color: var(--color-text);
   }
 
   .error-info {
@@ -933,9 +934,9 @@
 
   .action-btn {
     padding: 4px 12px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    color: #6b7280;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
     font-size: 11px;
     border-radius: 4px;
     cursor: pointer;
@@ -943,8 +944,8 @@
   }
 
   .action-btn:hover {
-    background: #e5e7eb;
-    color: #374151;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
   }
 
   .action-btn.retry {

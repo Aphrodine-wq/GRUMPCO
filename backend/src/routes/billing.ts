@@ -5,7 +5,11 @@
 
 import { Router, type Request, type Response } from "express";
 import { TIERS, OVERAGE_RATES, type TierId } from "../config/pricing.js";
-import { getMonthlyCallCount } from "../services/usageTracker.js";
+import {
+  getMonthlyCallCount,
+  getMonthlyCreditsFromTokens,
+  getUsageByOperation,
+} from "../services/usageTracker.js";
 import logger from "../middleware/logger.js";
 
 const router = Router();
@@ -21,14 +25,19 @@ router.get("/me", async (req: Request, res: Response) => {
     const tierId = (process.env.TIER_DEFAULT as TierId) || "free";
     const tier = TIERS[tierId] ?? TIERS.free;
     let usage = 0;
+    let tokenCredits = 0;
     try {
       usage = await getMonthlyCallCount(userId);
+      tokenCredits = await getMonthlyCreditsFromTokens(userId);
     } catch (e) {
       logger.debug({ err: e }, "Usage tracker not available for billing/me");
     }
+    const displayUsage = tokenCredits > 0 ? tokenCredits : usage;
     res.json({
       tier: tier.name,
-      usage,
+      usage: displayUsage,
+      usageCalls: usage,
+      tokenCredits,
       limit: tier.creditsPerMonth ?? tier.apiCallsPerMonth ?? null,
       computeMinutesUsed: 0,
       computeMinutesLimit: tier.includedComputeMinutes ?? null,
@@ -47,6 +56,24 @@ router.get("/me", async (req: Request, res: Response) => {
       limit: null,
       message: "Failed to load billing",
     });
+  }
+});
+
+/**
+ * GET /api/billing/usage
+ * Usage breakdown by operation type (chat, architecture, ship, etc.)
+ */
+router.get("/usage", async (req: Request, res: Response) => {
+  try {
+    const userId = (req.query.userId as string) || DEFAULT_USER;
+    const byOperation = await getUsageByOperation(userId);
+    res.json({ byOperation });
+  } catch (error) {
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Failed to get billing/usage",
+    );
+    res.status(500).json({ byOperation: {} });
   }
 });
 
@@ -140,6 +167,72 @@ router.get("/invoices", (_req: Request, res: Response) => {
       "Failed to get billing/invoices",
     );
     res.status(500).json({ invoices: [] });
+  }
+});
+
+/**
+ * POST /api/billing/portal-session
+ * Create Stripe Customer Portal session. Returns { url } to redirect user.
+ * Requires STRIPE_SECRET_KEY and customer ID (from auth/user_metadata).
+ * Most secure: no card data in-app; Stripe handles everything on their domain.
+ */
+router.post("/portal-session", async (req: Request, res: Response) => {
+  try {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey || !secretKey.startsWith("sk_")) {
+      res.status(501).json({
+        error: "Billing portal not configured. Set STRIPE_SECRET_KEY.",
+      });
+      return;
+    }
+
+    const customerId =
+      (
+        req as Request & {
+          user?: { user_metadata?: { stripe_customer_id?: string } };
+        }
+      ).user?.user_metadata?.stripe_customer_id ??
+      (req.body as { customerId?: string })?.customerId;
+
+    if (!customerId) {
+      res.status(400).json({
+        error:
+          "No billing account found. Subscribe first to manage your subscription.",
+      });
+      return;
+    }
+
+    const returnUrl =
+      (req.body as { returnUrl?: string })?.returnUrl ??
+      process.env.FRONTEND_URL ??
+      process.env.PUBLIC_BASE_URL ??
+      "http://localhost:5173";
+
+    const Stripe = (await import("stripe")).default;
+    const stripe = new Stripe(secretKey);
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl,
+    });
+
+    if (!session.url) {
+      res.status(500).json({ error: "Stripe did not return a portal URL" });
+      return;
+    }
+
+    res.json({ url: session.url });
+  } catch (error) {
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Failed to create billing portal session",
+    );
+    res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to open billing portal",
+    });
   }
 });
 

@@ -57,8 +57,21 @@ export class JITCompilationEngine extends EventEmitter {
   private profileSamples: ProfileSample[] = [];
   private profilingInterval: NodeJS.Timeout | null = null;
   private codeCache: Map<string, Buffer> = new Map();
+  private sourceStore: Map<string, string> = new Map(); // id -> source text
   private isInitialized = false;
   private codeCachePath: string;
+
+  // Regex patterns compiled once for optimization passes
+  private static readonly CONST_ARITH = /(?<!\w)(\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)(?!\w)/g;
+  private static readonly DEAD_RETURN = /\b(return|throw)\b[^;]*;[^\n}]*\n([ \t]+[^}\s][^\n]*\n)+/g;
+  private static readonly IF_FALSE = /if\s*\(\s*false\s*\)\s*\{[^}]*\}/g;
+  private static readonly IF_TRUE = /if\s*\(\s*true\s*\)\s*\{([^}]*)\}/g;
+  private static readonly EMPTY_BLOCKS = /\{\s*\}/g;
+  private static readonly MULTI_SEMICOLONS = /;{2,}/g;
+  private static readonly MULTI_NEWLINES = /\n{3,}/g;
+  private static readonly TRAILING_WHITESPACE = /[ \t]+$/gm;
+  private static readonly INLINE_ARROW = /(?:const|let|var)\s+(\w+)\s*=\s*\(([^)]*)\)\s*=>\s*([^;{][^;\n]*);/g;
+  private static readonly TYPEOF_GUARD = /typeof\s+(\w+)\s*===?\s*['"](\w+)['"]/g;
 
   constructor(config: JITConfig) {
     super();
@@ -346,67 +359,267 @@ export class JITCompilationEngine extends EventEmitter {
   }
 
   /**
-   * Generate bytecode from compilation unit
+   * Generate bytecode from compilation unit.
+   * Uses stored source content if available, falls back to hash-derived placeholder.
    */
   private generateBytecode(unit: JITCompilationUnit): Uint8Array {
-    // Simplified bytecode generation
-    // In reality, this would parse and generate actual bytecode
+    const source = this.sourceStore.get(unit.id);
+    if (source) {
+      return new TextEncoder().encode(source);
+    }
+    // Fallback: hash-derived bytecode for units without stored source
     const hash = createHash('md5').update(unit.sourceHash).digest();
     return new Uint8Array(hash);
   }
 
   /**
    * Apply basic optimizations (Tier 1+)
+   * - Trailing whitespace removal
+   * - Consecutive semicolons collapse
+   * - Excessive blank line reduction  
+   * - Empty block annotation
    */
   private applyBasicOptimizations(bytecode: Uint8Array): Uint8Array {
-    // Simplified: in reality would do:
-    // - Constant propagation
-    // - Copy propagation
-    // - Common subexpression elimination
-    return bytecode;
+    let code = new TextDecoder().decode(bytecode);
+
+    // Remove trailing whitespace on each line
+    code = code.replace(JITCompilationEngine.TRAILING_WHITESPACE, '');
+
+    // Collapse consecutive semicolons (e.g. `;;` -> `;`)
+    code = code.replace(JITCompilationEngine.MULTI_SEMICOLONS, ';');
+
+    // Reduce 3+ consecutive newlines to 2
+    code = code.replace(JITCompilationEngine.MULTI_NEWLINES, '\n\n');
+
+    // Annotate empty blocks with /* empty */ for clarity (helps later passes skip them)
+    code = code.replace(JITCompilationEngine.EMPTY_BLOCKS, (match) => {
+      // Don't annotate if already annotated
+      return '{ /* empty */ }';
+    });
+
+    return new TextEncoder().encode(code);
   }
 
   /**
    * Apply function inlining (Tier 2+)
+   * Inlines small arrow functions at their call sites.
+   * Only inlines single-expression arrow functions (no block body).
    */
   private applyInlining(bytecode: Uint8Array, unit: JITCompilationUnit): Uint8Array {
-    // Inline small, frequently called functions
-    return bytecode;
+    let code = new TextDecoder().decode(bytecode);
+
+    // Collect inline candidates: const/let/var name = (params) => expr;
+    const candidates = new Map<string, { params: string[]; body: string }>();
+    const declPattern = /(?:const|let|var)\s+(\w+)\s*=\s*\(([^)]*)\)\s*=>\s*([^;{][^;\n]*);/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = declPattern.exec(code)) !== null) {
+      const [, name, paramStr, body] = match;
+      const params = paramStr.split(',').map(p => p.trim()).filter(Boolean);
+      // Only inline small functions (body < 80 chars, no nested function calls with dots)
+      if (body.length < 80 && !body.includes('=>')) {
+        candidates.set(name, { params, body });
+      }
+    }
+
+    // For each candidate, find call sites and inline
+    for (const [name, { params, body }] of candidates) {
+      // Match call sites: name(arg1, arg2, ...)
+      // Only inline if called with exact number of args
+      const callPattern = new RegExp(`\\b${name}\\s*\\(([^)]*)\\)`, 'g');
+      code = code.replace(callPattern, (fullMatch: string, argStr: string) => {
+        const args = argStr.split(',').map((a: string) => a.trim());
+        if (args.length !== params.length && !(params.length === 0 && args.length === 1 && args[0] === '')) {
+          return fullMatch; // Arity mismatch — don't inline
+        }
+
+        // Substitute params with args in the body
+        let inlined = body;
+        for (let i = 0; i < params.length; i++) {
+          const paramName = params[i].replace(/:\s*\w+/, '').trim(); // Strip type annotations
+          // Use word-boundary replacement to avoid partial matches
+          inlined = inlined.replace(new RegExp(`\\b${paramName}\\b`, 'g'), args[i]);
+        }
+        return `(${inlined})`;
+      });
+    }
+
+    return new TextEncoder().encode(code);
   }
 
   /**
    * Apply constant folding (Tier 2+)
+   * Evaluates constant arithmetic expressions at compile time:
+   *   2 + 3 -> 5, 10 * 4 -> 40, 100 / 5 -> 20, 50 - 7 -> 43
+   * Only folds when both operands are numeric literals with no adjacent identifiers.
    */
   private applyConstantFolding(bytecode: Uint8Array): Uint8Array {
-    // Evaluate constant expressions at compile time
-    return bytecode;
+    let code = new TextDecoder().decode(bytecode);
+    let prevCode: string;
+    
+    // Iterate because folding can create new constant expressions
+    // e.g., (2 + 3) * 4 -> after first pass: 5 * 4 -> second pass: 20
+    let iterations = 0;
+    do {
+      prevCode = code;
+      code = code.replace(JITCompilationEngine.CONST_ARITH, (_match: string, leftStr: string, op: string, rightStr: string) => {
+        const left = parseFloat(leftStr);
+        const right = parseFloat(rightStr);
+        
+        if (isNaN(left) || isNaN(right)) return _match;
+        
+        let result: number;
+        switch (op) {
+          case '+': result = left + right; break;
+          case '-': result = left - right; break;
+          case '*': result = left * right; break;
+          case '/':
+            if (right === 0) return _match; // Don't fold division by zero
+            result = left / right;
+            break;
+          default: return _match;
+        }
+
+        // Keep result clean: integer if no fractional part
+        const resultStr = Number.isInteger(result) ? result.toString() : result.toFixed(10).replace(/0+$/, '').replace(/\.$/, '');
+        return resultStr;
+      });
+      iterations++;
+    } while (code !== prevCode && iterations < 5);
+
+    return new TextEncoder().encode(code);
   }
 
   /**
    * Apply dead code elimination (Tier 2+)
+   * - Remove code after return/throw statements within the same block
+   * - Remove if(false) blocks entirely
+   * - Replace if(true) blocks with just the body
    */
   private applyDeadCodeElimination(bytecode: Uint8Array): Uint8Array {
-    // Remove unreachable code
-    return bytecode;
+    let code = new TextDecoder().decode(bytecode);
+
+    // Remove if(false) { ... } blocks
+    code = code.replace(JITCompilationEngine.IF_FALSE, '');
+
+    // Replace if(true) { body } with just body (unwrap the block)
+    code = code.replace(JITCompilationEngine.IF_TRUE, (_match: string, body: string) => {
+      return body.trim();
+    });
+
+    // Remove unreachable code after return/throw within block scopes.
+    // We process line by line, tracking brace depth per function.
+    const lines = code.split('\n');
+    const result: string[] = [];
+    let deadUntilBraceDepth = -1; // -1 means not in dead zone
+    let braceDepth = 0;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Count brace changes
+      const opens = (trimmed.match(/\{/g) || []).length;
+      const closes = (trimmed.match(/\}/g) || []).length;
+
+      if (deadUntilBraceDepth >= 0) {
+        // We're in a dead zone — skip lines until we close back to the target depth
+        braceDepth += opens;
+        braceDepth -= closes;
+        
+        if (braceDepth <= deadUntilBraceDepth) {
+          // We've exited the dead zone — include this closing brace line
+          deadUntilBraceDepth = -1;
+          if (trimmed === '}' || trimmed.startsWith('}')) {
+            result.push(line);
+          }
+        }
+        continue;
+      }
+
+      result.push(line);
+      braceDepth += opens;
+      braceDepth -= closes;
+
+      // Detect terminal statements (return/throw/break/continue followed by ;)
+      // Only enter dead zone if there's a block to eliminate (braceDepth > 0)
+      if (braceDepth > 0 && /^\s*(return\b[^;]*;|throw\b[^;]*;|break\s*;|continue\s*;)\s*$/.test(line)) {
+        deadUntilBraceDepth = braceDepth - 1;
+      }
+    }
+
+    code = result.join('\n');
+
+    // Clean up resulting empty lines
+    code = code.replace(JITCompilationEngine.MULTI_NEWLINES, '\n\n');
+
+    return new TextEncoder().encode(code);
   }
 
   /**
    * Apply loop optimizations (Tier 2+)
+   * - Loop invariant code motion: hoist `.length` property accesses out of for-loops
+   * - Small constant loop unrolling hints via comment annotations
    */
   private applyLoopOptimizations(bytecode: Uint8Array): Uint8Array {
-    // Loop unrolling, loop invariant code motion, etc.
-    return bytecode;
+    let code = new TextDecoder().decode(bytecode);
+
+    // Loop invariant code motion: hoist .length out of for-loop conditions
+    // for (let i = 0; i < arr.length; i++) -> const __len_arr = arr.length; for (let i = 0; i < __len_arr; i++)
+    const forLoopPattern = /for\s*\(\s*(let|var|const)\s+(\w+)\s*=\s*0\s*;\s*\2\s*<\s*(\w+)\.length\s*;\s*\2\+\+\s*\)/g;
+    code = code.replace(forLoopPattern, (_match: string, decl: string, varName: string, arrName: string) => {
+      const lenVar = `__len_${arrName}`;
+      return `const ${lenVar} = ${arrName}.length; for (${decl} ${varName} = 0; ${varName} < ${lenVar}; ${varName}++)`;
+    });
+
+    // Small constant loop unrolling annotation:
+    // for loops with known small bounds (< 8) get an unroll hint comment
+    const constLoopPattern = /for\s*\(\s*(?:let|var|const)\s+(\w+)\s*=\s*0\s*;\s*\1\s*<\s*(\d+)\s*;\s*\1\+\+\s*\)/g;
+    code = code.replace(constLoopPattern, (match: string, _varName: string, boundStr: string) => {
+      const bound = parseInt(boundStr, 10);
+      if (bound > 0 && bound <= 8) {
+        return `/* @jit-unroll(${bound}) */ ${match}`;
+      }
+      return match;
+    });
+
+    return new TextEncoder().encode(code);
   }
 
   /**
    * Apply speculative optimizations (Tier 3 only)
+   * Based on profiling data from the hot spot:
+   * - High invocation count -> add inline hint comments
+   * - Type guard specialization annotations
+   * - Branch weight annotations based on execution profile
    */
   private applySpeculativeOptimizations(bytecode: Uint8Array, hotSpot: HotSpot): Uint8Array {
-    // Speculative optimizations based on profiling:
-    // - Type specialization
-    // - Branch prediction optimization
-    // - Devirtualization
-    return bytecode;
+    let code = new TextDecoder().decode(bytecode);
+
+    // If the function is extremely hot, add optimization hints
+    if (hotSpot.invocationCount > 1000) {
+      // Add monomorphic call site hints for typeof guards
+      code = code.replace(JITCompilationEngine.TYPEOF_GUARD, (match: string, varName: string, typeName: string) => {
+        return `/* @jit-specialize(${varName}:${typeName}) */ ${match}`;
+      });
+    }
+
+    // Add branch prediction hints based on execution profile
+    // If avg time is low, the happy path is likely dominant
+    if (hotSpot.avgTime < 1) {
+      // Fast function — annotate first branch of if/else as likely
+      code = code.replace(
+        /if\s*\(([^)]+)\)\s*\{/g,
+        (match: string) => `/* @jit-likely */ ${match}`
+      );
+    }
+
+    // For functions with many deopts, add guard checks
+    if (hotSpot.deoptCount > 0) {
+      // Prefix with deopt tracking comment so runtime can install OSR points
+      code = `/* @jit-osr-entry deopt_count=${hotSpot.deoptCount} */ \n${code}`;
+    }
+
+    return new TextEncoder().encode(code);
   }
 
   /**
@@ -500,7 +713,7 @@ export class JITCompilationEngine extends EventEmitter {
   /**
    * Create or get a compilation unit
    */
-  getOrCreateUnit(id: string, sourceHash: string): JITCompilationUnit {
+  getOrCreateUnit(id: string, sourceHash: string, sourceContent?: string): JITCompilationUnit {
     let unit = this.compilationUnits.get(id);
     
     if (!unit || unit.sourceHash !== sourceHash) {
@@ -524,7 +737,31 @@ export class JITCompilationEngine extends EventEmitter {
       this.compilationUnits.set(id, unit);
     }
 
+    // Store source content for compilation passes
+    if (sourceContent !== undefined) {
+      this.sourceStore.set(id, sourceContent);
+    }
+
     return unit;
+  }
+
+  /**
+   * Compile source content through the JIT pipeline.
+   * Called by HyperCompiler.compileFile() with actual file contents.
+   * Returns the optimized source as a string.
+   */
+  async compileSource(id: string, sourceHash: string, sourceContent: string, requestedTier?: 0 | 1 | 2 | 3): Promise<string> {
+    const unit = this.getOrCreateUnit(id, sourceHash, sourceContent);
+    
+    // Determine tier: use requested tier, or the hot-spot promoted tier
+    const hotSpot = this.hotSpots.get(id);
+    const tier = requestedTier ?? (hotSpot ? hotSpot.tier : unit.tier);
+
+    const compiled = await this.compileAtTier(unit, tier as 0 | 1 | 2 | 3);
+    if (compiled) {
+      return compiled.toString('utf-8');
+    }
+    return sourceContent;
   }
 
   /**
@@ -566,6 +803,7 @@ export class JITCompilationEngine extends EventEmitter {
     this.hotSpots.clear();
     this.compilationUnits.clear();
     this.codeCache.clear();
+    this.sourceStore.clear();
     this.profileSamples = [];
   }
 }

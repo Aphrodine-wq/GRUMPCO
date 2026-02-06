@@ -1,0 +1,241 @@
+{
+    "id": "g-rump-costs",
+    "uid": "g-rump-costs-dashboard",
+    "title": "G-Rump - AI Costs & Usage",
+    "tags": [
+        "g-rump",
+        "costs",
+        "ai"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+        {
+            "id": 1,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 0
+            },
+            "type": "graph",
+            "title": " Total AI Cost (Last 24h)",
+            "targets": [
+                {
+                    "expr": "increase(ai_cost_estimate_dollars[24h])",
+                    "legendFormat": "{{provider}} - {{model}}",
+                    "refId": "A"
+                }
+            ],
+            "yaxes": [
+                {
+                    "format": "currencyUSD",
+                    "label": "Cost",
+                    "logBase": 1,
+                    "show": true
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 0
+            },
+            "type": "stat",
+            "title": "Total Cost Today",
+            "targets": [
+                {
+                    "expr": "sum(increase(ai_cost_estimate_dollars[1d]))",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "currencyUSD",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "value": null,
+                                "color": "green"
+                            },
+                            {
+                                "value": 10,
+                                "color": "yellow"
+                            },
+                            {
+                                "value": 50,
+                                "color": "red"
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 3,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 8
+            },
+            "type": "graph",
+            "title": "Token Usage by Provider",
+            "targets": [
+                {
+                    "expr": "sum by (provider) (rate(ai_tokens_used_total[5m]))",
+                    "legendFormat": "{{provider}}",
+                    "refId": "A"
+                }
+            ],
+            "yaxes": [
+                {
+                    "format": "short",
+                    "label": "Tokens/sec",
+                    "logBase": 1,
+                    "show": true
+                }
+            ]
+        },
+        {
+            "id": 4,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 8
+            },
+            "type": "piechart",
+            "title": "Cost Distribution by Provider",
+            "targets": [
+                {
+                    "expr": "sum by (provider) (increase(ai_cost_estimate_dollars[24h]))",
+                    "legendFormat": "{{provider}}",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 5,
+            "gridPos": {
+                "h": 6,
+                "w": 8,
+                "x": 0,
+                "y": 16
+            },
+            "type": "stat",
+            "title": "Requests (Last Hour)",
+            "targets": [
+                {
+                    "expr": "sum(increase(ai_requests_total[1h]))",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 6,
+            "gridPos": {
+                "h": 6,
+                "w": 8,
+                "x": 8,
+                "y": 16
+            },
+            "type": "stat",
+            "title": "Avg Cost per Request",
+            "targets": [
+                {
+                    "expr": "sum(increase(ai_cost_estimate_dollars[1h])) / sum(increase(ai_requests_total[1h]))",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "currencyUSD",
+                    "decimals": 4
+                }
+            }
+        },
+        {
+            "id": 7,
+            "gridPos": {
+                "h": 6,
+                "w": 8,
+                "x": 16,
+                "y": 16
+            },
+            "type": "stat",
+            "title": "Cache Hit Rate",
+            "targets": [
+                {
+                    "expr": "sum(rate(cache_operations_total{operation=\"hit\"}[5m])) / sum(rate(cache_operations_total[5m])) * 100",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "value": null,
+                                "color": "red"
+                            },
+                            {
+                                "value": 50,
+                                "color": "yellow"
+                            },
+                            {
+                                "value": 80,
+                                "color": "green"
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 8,
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 22
+            },
+            "type": "table",
+            "title": "Cost Breakdown by Model",
+            "targets": [
+                {
+                    "expr": "sort_desc(sum by (provider, model) (increase(ai_cost_estimate_dollars[24h])))",
+                    "format": "table",
+                    "instant": true,
+                    "refId": "A"
+                },
+                {
+                    "expr": "sort_desc(sum by (provider, model) (increase(ai_requests_total[24h])))",
+                    "format": "table",
+                    "instant": true,
+                    "refId": "B"
+                },
+                {
+                    "expr": "sort_desc(sum by (provider, model) (increase(ai_tokens_used_total[24h])))",
+                    "format": "table",
+                    "instant": true,
+                    "refId": "C"
+                }
+            ],
+            "transformations": [
+                {
+                    "id": "merge",
+                    "options": {}
+                }
+            ]
+        }
+    ]
+}

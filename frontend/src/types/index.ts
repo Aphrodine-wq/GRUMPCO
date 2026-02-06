@@ -62,6 +62,12 @@ export interface ContextBlock {
   content: { mode: string; capabilities?: string[]; toolCount?: number };
 }
 
+export interface PhaseResultBlock {
+  type: 'phase_result';
+  phase: 'architecture' | 'prd' | 'plan' | 'code';
+  data: unknown;
+}
+
 export type ContentBlock =
   | TextBlock
   | CodeBlockType
@@ -69,7 +75,8 @@ export type ContentBlock =
   | ToolCallBlock
   | ToolResultBlock
   | IntentBlock
-  | ContextBlock;
+  | ContextBlock
+  | PhaseResultBlock;
 
 // Routing decision (transparent model selection)
 export interface RoutingDecision {
@@ -122,6 +129,10 @@ export interface Session {
   projectId?: string | null;
   /** Optional session type; when 'gAgent' or 'freeAgent', session uses G-Agent capabilities and is shown with a badge. */
   sessionType?: SessionType;
+  /** Optional project description. */
+  description?: string;
+  /** Design workflow state for inline Architecture → PRD → Plan → Code workflow. */
+  designWorkflow?: DesignWorkflowState;
 }
 
 // Legacy session type for migration
@@ -160,6 +171,43 @@ export interface MermaidConfig {
     htmlLabels: boolean;
   };
   themeVariables: MermaidThemeVariables;
+}
+
+// Design Workflow Types (re-exported from store)
+export type DesignPhase = 'architecture' | 'prd' | 'plan' | 'code' | 'completed';
+
+export interface PhaseData {
+  architecture?: {
+    mermaidCode: string;
+    description: string;
+  };
+  prd?: {
+    content: string;
+    summary: string;
+  };
+  plan?: {
+    tasks: Array<{
+      id: string;
+      title: string;
+      description: string;
+      status: 'pending' | 'in-progress' | 'completed';
+    }>;
+  };
+  code?: {
+    files: Array<{
+      path: string;
+      content: string;
+      language: string;
+    }>;
+  };
+}
+
+export interface DesignWorkflowState {
+  currentPhase: DesignPhase;
+  phaseData: PhaseData;
+  userApprovals: Record<DesignPhase, boolean>;
+  isActive: boolean;
+  projectDescription?: string;
 }
 
 // API types

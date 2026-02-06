@@ -112,10 +112,11 @@ class SkillRegistry {
       const skillModule = await import(pathToFileURL(indexPath).href);
       const skillExport = skillModule.default || skillModule;
 
-      // Construct skill object
+      // Construct skill object - manifest MUST come after spread to ensure 
+      // it's never overwritten by a stale/undefined manifest from the export
       const skill: Skill = {
-        manifest,
         ...skillExport,
+        manifest,
       };
 
       // Register
@@ -269,12 +270,12 @@ class SkillRegistry {
    */
   getToolHandler(toolName: string):
     | {
-        skill: Skill;
-        handler: (
-          input: Record<string, unknown>,
-          context: SkillContext,
-        ) => Promise<ToolExecutionResult>;
-      }
+      skill: Skill;
+      handler: (
+        input: Record<string, unknown>,
+        context: SkillContext,
+      ) => Promise<ToolExecutionResult>;
+    }
     | undefined {
     // Parse skill_<skillId>_<toolName> format
     const match = toolName.match(/^skill_([^_]+)_(.+)$/);
