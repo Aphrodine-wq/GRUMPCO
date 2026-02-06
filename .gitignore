@@ -39,3 +39,9 @@ installer/Output/
 # Optional: uncomment if you don't want to track these
 # data/
 # backend/data/
+
+# Rust build artifacts
+intent-compiler/target/
+
+# Temporary backup dirs
+.backup-untracked/
