@@ -17,20 +17,25 @@ const CSRF_ENABLED = isProduction
 const CSRF_SECRET = process.env.CSRF_SECRET || "grump-csrf-secret-change-in-production";
 
 const {
-  generateToken,
+  generateCsrfToken,
   doubleCsrfProtection,
 } = doubleCsrf({
   getSecret: () => CSRF_SECRET,
+  getSessionIdentifier: (req: Request) => {
+    // Use session ID if available, otherwise use a hash of IP + User-Agent
+    const sessionId = (req as { sessionID?: string }).sessionID;
+    if (sessionId) return sessionId;
+    // Fallback for stateless: IP + User-Agent (less secure but works without sessions)
+    const ip = req.ip || req.socket?.remoteAddress || "unknown";
+    const ua = req.headers["user-agent"] || "unknown";
+    return `${ip}-${ua}`.substring(0, 64);
+  },
   cookieName: "XSRF-TOKEN",
   cookieOptions: {
     httpOnly: false, // Cookie must be readable by frontend JavaScript
     secure: isProduction, // HTTPS only in production
     sameSite: "strict", // Strict same-site policy
     path: "/",
-  },
-  getTokenFromRequest: (req: Request) => {
-    // Check header (preferred) or body (fallback)
-    return (req.headers["x-xsrf-token"] as string) || req.body?._csrf;
   },
 });
 
@@ -79,7 +84,7 @@ export function createCsrfMiddleware() {
     // But still generate token for them so the cookie is set
     if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
       try {
-        generateToken(req, res);
+        generateCsrfToken(req, res);
       } catch {
         logger.debug("CSRF token generation failed for safe method");
       }
@@ -117,7 +122,7 @@ export function createCsrfMiddleware() {
  * Useful for non-browser clients or debugging
  */
 export function getCsrfToken(req: Request, res: Response): void {
-  const token = generateToken(req, res);
+  const token = generateCsrfToken(req, res);
   res.json({
     csrfToken: token,
   });

@@ -127,13 +127,13 @@ export function trackAICost(provider: string, model: string, promptTokens: numbe
     aiTokensUsed.inc({ provider, model, type: 'completion' }, completionTokens);
     aiCostEstimate.inc({ provider, model }, cost);
 
-    logger.debug('AI cost tracked', {
+    logger.debug({
         provider,
         model,
         promptTokens,
         completionTokens,
         cost: cost.toFixed(4),
-    });
+    }, 'AI cost tracked');
 }
 
 // Middleware for HTTP metrics
