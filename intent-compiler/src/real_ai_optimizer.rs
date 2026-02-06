@@ -72,18 +72,52 @@ impl RealAIOptimizer {
 
         let terms = vec![
             // Frameworks
-            "react", "vue", "angular", "svelte", "next", "nuxt",
+            "react",
+            "vue",
+            "angular",
+            "svelte",
+            "next",
+            "nuxt",
             // Backend
-            "node", "express", "fastapi", "django", "flask", "spring",
+            "node",
+            "express",
+            "fastapi",
+            "django",
+            "flask",
+            "spring",
             // Databases
-            "postgres", "mysql", "mongodb", "redis", "sqlite",
+            "postgres",
+            "mysql",
+            "mongodb",
+            "redis",
+            "sqlite",
             // Features
-            "auth", "authentication", "login", "signup", "api", "rest", "graphql",
-            "realtime", "websocket", "chat", "notification", "email",
+            "auth",
+            "authentication",
+            "login",
+            "signup",
+            "api",
+            "rest",
+            "graphql",
+            "realtime",
+            "websocket",
+            "chat",
+            "notification",
+            "email",
             // Actions
-            "build", "create", "make", "develop", "implement", "add",
+            "build",
+            "create",
+            "make",
+            "develop",
+            "implement",
+            "add",
             // Types
-            "app", "application", "website", "dashboard", "admin", "portal",
+            "app",
+            "application",
+            "website",
+            "dashboard",
+            "admin",
+            "portal",
         ];
 
         for (idx, term) in terms.iter().enumerate() {
@@ -241,7 +275,7 @@ impl RealAIOptimizer {
 
         // Extract features based on vocabulary
         let mut features = Vec::new();
-        let mut confidence = 0.0;
+        let mut confidence: f64 = 0.0;
 
         for token in &ngrams {
             if self.vocab.contains_key(token) {
@@ -255,7 +289,7 @@ impl RealAIOptimizer {
         let pattern = PatternMatch {
             pattern: text.to_string(),
             features,
-            confidence,
+            confidence: confidence as f32,
             hit_count: 1,
         };
 

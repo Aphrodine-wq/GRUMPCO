@@ -4,10 +4,11 @@ import * as child_process from 'child_process';
 import * as fs from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { EventEmitter } from 'events';
 
 // Mock child_process
 vi.mock('child_process', () => ({
-  exec: vi.fn(),
+  spawn: vi.fn(),
 }));
 
 // Mock logger
@@ -32,28 +33,25 @@ describe('remoteWorkspaceService', () => {
     }
     fs.mkdirSync(workspaceCacheDir, { recursive: true });
 
-    // Mock exec implementation to call callback (success)
-    // util.promisify wraps exec. It calls exec(command, options, callback) or exec(command, callback)
-    vi.mocked(child_process.exec).mockImplementation(((cmd: string, options: any, callback: any) => {
-       let cb = callback;
-       if (typeof options === 'function') {
-         cb = options;
-       }
-       // Simulate success async (use setTimeout to be real async if needed, but synchronous callback is fine for promisify usually, though promisify guarantees async resolution)
-       if (cb) {
-         cb(null, { stdout: '', stderr: '' });
-       }
-       return {} as any;
-    }) as any);
+    // Default mock implementation: success
+    vi.mocked(child_process.spawn).mockImplementation(() => {
+      const cp: any = new EventEmitter();
+      cp.stdout = new EventEmitter();
+      cp.stderr = new EventEmitter();
+      // Simulate async close
+      setTimeout(() => cp.emit('close', 0), 10);
+      return cp;
+    });
   });
 
-  it('should clone a new repository using exec', async () => {
+  it('should clone a new repository using spawn', async () => {
     await loadRemoteWorkspace(repoUrl);
 
-    // expect exec to be called
-    expect(child_process.exec).toHaveBeenCalledWith(
-      `git clone --depth 1 ${repoUrl} ${targetDir}`,
-      expect.any(Function)
+    // expect spawn to be called with correct args
+    expect(child_process.spawn).toHaveBeenCalledWith(
+      'git',
+      ['clone', '--depth', '1', '--', repoUrl, targetDir],
+      expect.anything()
     );
   });
 
@@ -62,21 +60,27 @@ describe('remoteWorkspaceService', () => {
 
     await loadRemoteWorkspace(repoUrl);
 
-    expect(child_process.exec).toHaveBeenCalledWith(
-      "git pull",
-      expect.objectContaining({ cwd: targetDir }),
-      expect.any(Function)
+    expect(child_process.spawn).toHaveBeenCalledWith(
+      'git',
+      ['pull'],
+      expect.objectContaining({ cwd: targetDir })
     );
   });
 
   it('should throw error if clone fails', async () => {
-    vi.mocked(child_process.exec).mockImplementation(((cmd: string, options: any, callback: any) => {
-       let cb = callback;
-       if (typeof options === 'function') cb = options;
-       // Simulate error
-       if (cb) cb(new Error("Clone failed"), { stdout: '', stderr: '' });
-       return {} as any;
-    }) as any);
+    vi.mocked(child_process.spawn).mockImplementation(() => {
+      const cp: any = new EventEmitter();
+      cp.stdout = new EventEmitter();
+      cp.stderr = new EventEmitter();
+      setTimeout(() => {
+         // Emit some error data
+         if (cp.stderr.listenerCount('data') > 0) {
+            cp.stderr.emit('data', Buffer.from('fatal: repository not found'));
+         }
+         cp.emit('close', 128);
+      }, 10);
+      return cp;
+    });
 
     await expect(loadRemoteWorkspace(repoUrl)).rejects.toThrow("Failed to clone repository");
   });

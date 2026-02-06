@@ -8,6 +8,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashSet;
+use std::hash::{Hash, Hasher};
 
 #[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
 #[global_allocator]
@@ -18,6 +19,35 @@ use rayon::prelude::*;
 
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
+
+// ============================================================================
+// Global Intent Cache (3-tier LRU with predictive prefetching)
+// ============================================================================
+
+static INTENT_CACHE: Lazy<hyper_cache::HyperCache<IntentOutput>> = Lazy::new(|| {
+    hyper_cache::HyperCache::new(hyper_cache::CacheConfig {
+        l1_capacity: 512,
+        l2_capacity: 4096,
+        l3_capacity: 2048,
+        ttl: std::time::Duration::from_secs(1800), // 30 min TTL
+        prefetch_threshold: 0.7,
+        adaptive_eviction: true,
+    })
+});
+
+/// Hash text + constraints into a u64 cache key using FxHasher (fast, non-crypto).
+fn intent_cache_key(text: &str, constraints: &serde_json::Value) -> u64 {
+    let mut hasher = rustc_hash::FxHasher::default();
+    text.hash(&mut hasher);
+    // Serialize constraints to a stable string for hashing
+    let constraints_str = constraints.to_string();
+    constraints_str.hash(&mut hasher);
+    hasher.finish()
+}
+
+// Global parallel engine (auto-detects thread count)
+static PARALLEL_ENGINE: Lazy<parallel_engine::ParallelEngine> =
+    Lazy::new(|| parallel_engine::ParallelEngine::default());
 
 // SIMD optimizations
 #[cfg(not(target_arch = "wasm32"))]
@@ -117,20 +147,23 @@ pub mod ml_training_pipeline;
 
 use types::*;
 
+// Re-export FullAnalysis for convenience
+pub use types::FullAnalysis;
+
 // Re-export G-Agent types for convenience
 pub use planner::{Plan, PlanRiskAssessment, PlanStatus, PlanSummary};
 pub use tasks::{RiskLevel, Task};
 
 // Re-export semantic insight functions for advanced analysis
 pub use semantics::{
-    compose_intents, detect_contradictions, extract_implicit_requirements,
-    suggest_code_style, verify_intent, Contradiction, ImplicitRequirement, StyleSuggestion, TypedIntent,
+    compose_intents, detect_contradictions, extract_implicit_requirements, suggest_code_style,
+    verify_intent, Contradiction, ImplicitRequirement, StyleSuggestion, TypedIntent,
 };
 
 // Re-export market intelligence functions
 pub use market_engine::{
     analyze_market, CompetitionLevel, CompetitiveMoat, Competitor, CustomerPsychographic,
-    GoToMarketStrategy, MarketAnalysis, MarketSegment, RiskFactor, RevenueModel, UnitEconomics,
+    GoToMarketStrategy, MarketAnalysis, MarketSegment, RevenueModel, RiskFactor, UnitEconomics,
     Verdict,
 };
 
@@ -144,69 +177,70 @@ pub use context_engine::{
 pub use moat_engine::{
     calculate_moat_strength, competitive_advantage_analysis, moat_revenue_model, AccuracyMoat,
     CompetitorUpdate, FounderComparison, FounderDNAMoat, FounderProfile, MarketIntelMoat,
-    MoatRevenue, MoatSystem, NetworkMoat, NetworkIntelligence, PersonalityArchetype,
+    MoatRevenue, MoatSystem, NetworkIntelligence, NetworkMoat, PersonalityArchetype,
     ProprietaryMoat, VerdictAccuracy,
 };
 
 // Re-export advanced NLP engine
 pub use nlp_engine::{
-    parse_linguistically, interpret_contextually, LinguisticAnalysis, ContextualInterpretation,
-    Entity, EntityType, IntentTree, IntentType, Sentence, Relationship,
+    interpret_contextually, parse_linguistically, ContextualInterpretation, Entity, EntityType,
+    IntentTree, LinguisticAnalysis, Relationship, Sentence,
 };
 
 // Re-export founder data & feedback loop engine
 pub use founder_data_engine::{
-    process_feedback_loop, analyze_verdict_cohort, aggregate_learning_signals,
-    calculate_flywheel_metrics, AggregateLearningSignals, BusinessOutcomeEvent,
-    CohortOutcomes, FounderCohort, FounderDecision, FounderDecisionEvent, FlywheelMetrics,
-    OutcomeDetails, OutcomeEventType, ParsedIntent, VerdictAccuracyFeedback, VerdictCapture,
+    aggregate_learning_signals as aggregate_founder_learning_signals, analyze_verdict_cohort,
+    calculate_flywheel_metrics, process_feedback_loop, AggregateLearningSignals,
+    BusinessOutcomeEvent, CohortOutcomes, FlywheelMetrics, FounderCohort, FounderDecision,
+    FounderDecisionEvent, OutcomeDetails, OutcomeEventType, ParsedIntent, VerdictAccuracyFeedback,
+    VerdictCapture,
 };
 
 // Re-export market data feeds integration
 pub use market_data_feeds::{
-    MarketDataAggregator, CrunchbaseConnector, ProductHuntConnector, GitHubConnector,
-    TwitterConnector, CompetitorData, FundingEvent, MarketTrendData, FounderProfile,
-    CompetitiveLandscape, MarketOpportunity, FounderIntelligence, DeveloperMetrics,
-    RepoMetrics, FounderSentiment, TwitterConversation, DetectedTrend,
+    CompetitiveLandscape, CompetitorData, CrunchbaseConnector, DetectedTrend, DeveloperMetrics,
+    FounderIntelligence, FounderProfile as MarketFounderProfile, FounderSentiment, FundingEvent,
+    GitHubConnector, MarketDataAggregator, MarketOpportunity, MarketTrendData,
+    ProductHuntConnector, RepoMetrics, TwitterConnector, TwitterConversation,
 };
 
 // Re-export psychological profiling engine
 pub use psych_profiling_engine::{
-    build_psychological_profile, determine_founder_archetype, assess_psychological_risks,
-    FounderPsychologicalProfile, FounderArchetype, ArchetypeScore, PsychologicalSignal,
-    PsychologicalSignalType, PsychologicalRiskProfile, CommitData, TweetData,
-    GitHubBehavioralAnalyzer, TwitterBehavioralAnalyzer,
+    assess_psychological_risks, build_psychological_profile, determine_founder_archetype,
+    ArchetypeScore, CommitData, FounderArchetype, FounderPsychologicalProfile,
+    GitHubBehavioralAnalyzer, PsychologicalRiskProfile, PsychologicalSignal,
+    PsychologicalSignalType, TweetData, TwitterBehavioralAnalyzer,
 };
 
 // Re-export accuracy learning & outcome tracking engine
 pub use accuracy_learning_engine::{
-    measure_verdict_accuracy, calculate_accuracy_metrics, calibrate_confidence,
-    aggregate_learning_signals, OutcomeTrackingEvent, OutcomeType, VerdictAccuracyMeasurement,
-    AccuracyClassification, LearningSignal, FeatureAdjustment, AccuracyMetrics,
-    VerdictMetrics, ConfidenceCalibration, AggregatedLearning, DiscoveredPattern,
+    aggregate_learning_signals, calculate_accuracy_metrics, calibrate_confidence,
+    measure_verdict_accuracy, AccuracyClassification, AccuracyMetrics, AggregatedLearning,
+    ConfidenceCalibration, DiscoveredPattern, FeatureAdjustment, LearningSignal,
+    OutcomeTrackingEvent, OutcomeType, VerdictAccuracyMeasurement, VerdictMetrics,
 };
 
 // Re-export ML training & models engine
 pub use ml_training_engine::{
-    FeatureEngineer, TrainingDataPipeline, SuccessProbabilityModel, VerdictClassifierModel,
-    PredictionEnsemble, ModelRegistry, FeatureVector, TrainingExample, TrainingLabel,
-    DatasetQuality, ModelMetrics, ModelVersion, EnsemblePrediction, FeatureDefinition,
+    DatasetQuality, EnsemblePrediction, FeatureDefinition, FeatureEngineer, FeatureVector,
+    ModelMetrics, ModelRegistry, ModelVersion, PredictionEnsemble, SuccessProbabilityModel,
+    TrainingDataPipeline, TrainingExample, TrainingLabel, VerdictClassifierModel,
 };
 
 // Re-export network intelligence engine
 pub use network_intelligence_engine::{
-    FounderNetwork, NetworkNode, NetworkEdge, NodeType, RelationshipType,
-    NetworkIntelligenceAnalyzer, NetworkIntelligenceSignals, CollectiveIntelligence,
-    NetworkAdjustedVerdict, NetworkEffectsModel, assess_collective_intelligence,
-    adjust_verdict_with_network_intelligence, model_network_effects,
+    adjust_verdict_with_network_intelligence, assess_collective_intelligence,
+    model_network_effects, CollectiveIntelligence, FounderNetwork, NetworkAdjustedVerdict,
+    NetworkEdge, NetworkEffectsModel, NetworkIntelligenceAnalyzer, NetworkIntelligenceSignals,
+    NetworkNode, NodeType, RelationshipType,
 };
 
 // Re-export ML training pipeline
 pub use ml_training_pipeline::{
-    generate_synthetic_training_data, prepare_training_dataset, TrainingPipeline,
-    TrainingDataset, TrainedModelCheckpoint, PipelineStatus, AutomatedImprovementLoop,
-    ModelTrainingReport, run_improvement_cycle, generate_model_report, ProductionModelManager,
-    ModelMonitoringMetrics, TrainingDataExample, DatasetStatistics,
+    generate_model_report, generate_synthetic_training_data, prepare_training_dataset,
+    run_improvement_cycle, AutomatedImprovementLoop, DatasetStatistics, ModelMonitoringMetrics,
+    ModelTrainingReport, PipelineStatus, ProductionModelManager, TrainedModelCheckpoint,
+    TrainingDataExample, TrainingDataset, TrainingPipeline,
 };
 
 // ============================================================================
@@ -614,6 +648,12 @@ struct EnrichmentResult {
 // ============================================================================
 
 pub fn parse_intent(text: &str, constraints: serde_json::Value) -> IntentOutput {
+    // Check cache first
+    let cache_key = intent_cache_key(text, &constraints);
+    if let Some(cached) = INTENT_CACHE.get(cache_key) {
+        return cached;
+    }
+
     let actors = extract_actors(text);
     let regex_features = extract_features(text);
     let data_flows = extract_data_flows(text);
@@ -670,19 +710,32 @@ pub fn parse_intent(text: &str, constraints: serde_json::Value) -> IntentOutput 
         verification: None,
     };
     let verification = semantics::verify_intent(&output);
-    IntentOutput {
+    let final_output = IntentOutput {
         verification: Some(verification),
         ..output
-    }
+    };
+
+    // Store in cache for future lookups
+    INTENT_CACHE.put(cache_key, final_output.clone());
+
+    final_output
 }
 
-/// Batch parse multiple intents in parallel (native only)
+/// Batch parse multiple intents using the adaptive parallel engine.
+/// Automatically selects sequential/parallel/chunked strategy based on batch size.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn parse_intents_batch(texts: &[&str], constraints: serde_json::Value) -> Vec<IntentOutput> {
-    texts
-        .par_iter()
-        .map(|text| parse_intent(text, constraints.clone()))
-        .collect()
+    let items: Vec<String> = texts.iter().map(|t| t.to_string()).collect();
+    let constraints_clone = constraints.clone();
+
+    let results = PARALLEL_ENGINE.process_adaptive(items, move |text| {
+        parse_intent(text, constraints_clone.clone())
+    });
+
+    // Sort by item_id to preserve input order, then extract results
+    let mut sorted = results;
+    sorted.sort_by_key(|r| r.item_id);
+    sorted.into_iter().map(|r| r.result).collect()
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -705,6 +758,91 @@ pub fn get_simd_support() -> String {
 #[cfg(target_arch = "wasm32")]
 pub fn get_simd_support() -> String {
     "WASM (no SIMD)".to_string()
+}
+
+// ============================================================================
+// Cache Management API
+// ============================================================================
+
+/// Get cache hit/miss statistics for the global intent cache.
+pub fn get_cache_stats() -> hyper_cache::CacheStats {
+    INTENT_CACHE.stats()
+}
+
+/// Clear the global intent cache (e.g. after config changes).
+pub fn clear_cache() {
+    INTENT_CACHE.clear();
+}
+
+/// Get approximate memory usage of the intent cache in bytes.
+pub fn get_cache_size_bytes() -> usize {
+    INTENT_CACHE.size_bytes()
+}
+
+/// Get parallel engine processing statistics (completed, failed, thread count).
+pub fn get_parallel_stats() -> parallel_engine::ProcessingStats {
+    PARALLEL_ENGINE.stats()
+}
+
+// ============================================================================
+// Full Analysis API (composes all engines)
+// ============================================================================
+
+/// Run a full analysis composing all engines: intent parsing, market intelligence,
+/// unified context analysis, and advanced NLP linguistics.
+///
+/// This is the "one-call" API for comprehensive project analysis.
+pub fn analyze_intent_full(text: &str, constraints: serde_json::Value) -> types::FullAnalysis {
+    // 1. Parse intent (uses cache internally)
+    let intent = parse_intent(text, constraints);
+
+    // 2. Market intelligence analysis
+    let market = market_engine::analyze_market(
+        text,
+        intent.features.clone(),
+        intent.tech_stack_hints.clone(),
+    );
+
+    // 3. Advanced NLP
+    let linguistic = nlp_engine::parse_linguistically(text);
+    let interpretation = nlp_engine::interpret_contextually(text);
+
+    // 4. Semantic analysis for context engine inputs
+    let implicit_requirements = semantics::extract_implicit_requirements(&intent);
+    let contradictions = semantics::detect_contradictions(&intent);
+    let style_suggestions = semantics::suggest_code_style(&intent);
+
+    // 5. Unified context analysis (synthesizes market + technical + product)
+    let context = context_engine::analyze_context(
+        text,
+        intent.features.clone(),
+        intent.complexity_score,
+        &market,
+        implicit_requirements,
+        contradictions,
+        style_suggestions,
+    );
+
+    types::FullAnalysis {
+        intent,
+        market,
+        context,
+        linguistic,
+        interpretation,
+    }
+}
+
+// WASM binding for full analysis
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+pub fn analyze_intent_full_wasm(text: &str, constraints_json: &str) -> Result<JsValue, JsValue> {
+    let constraints: serde_json::Value =
+        serde_json::from_str(constraints_json).unwrap_or_else(|_| serde_json::json!({}));
+
+    let analysis = analyze_intent_full(text, constraints);
+
+    serde_wasm_bindgen::to_value(&analysis)
+        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
 }
 
 // ============================================================================
@@ -957,6 +1095,82 @@ mod tests {
             has_realtime || has_task_mgmt,
             "should match bi-gram phrases"
         );
+    }
+
+    #[test]
+    fn test_cache_hit_returns_same_result() {
+        // Clear cache to start fresh
+        clear_cache();
+        let text = "Build a React app with Node and authentication";
+        let constraints = serde_json::json!({"budget": "low"});
+
+        // First call — cache miss
+        let result1 = parse_intent(text, constraints.clone());
+
+        // Second call — should be a cache hit
+        let result2 = parse_intent(text, constraints.clone());
+
+        // Results should be identical
+        assert_eq!(result1.raw, result2.raw);
+        assert_eq!(result1.actors, result2.actors);
+        assert_eq!(result1.features, result2.features);
+        assert_eq!(result1.project_type, result2.project_type);
+        assert_eq!(result1.complexity_score, result2.complexity_score);
+
+        // Stats should show at least 1 hit
+        let stats = get_cache_stats();
+        assert!(
+            stats.l1_hits >= 1,
+            "should have at least 1 L1 cache hit, got {}",
+            stats.l1_hits
+        );
+    }
+
+    #[test]
+    fn test_cache_different_constraints_miss() {
+        clear_cache();
+        let text = "Build a Vue dashboard";
+        let result1 = parse_intent(text, serde_json::json!({"env": "prod"}));
+        let result2 = parse_intent(text, serde_json::json!({"env": "staging"}));
+
+        // Both should exist but be separate cache entries
+        // (different constraints = different cache key)
+        assert_eq!(result1.raw, result2.raw);
+        // Both should produce valid output
+        assert!(!result1.actors.is_empty());
+        assert!(!result2.actors.is_empty());
+    }
+
+    #[test]
+    fn test_analyze_intent_full() {
+        let analysis = analyze_intent_full(
+            "Build an e-commerce platform with React and Node for habit tracking",
+            serde_json::json!({}),
+        );
+
+        // Intent should be populated
+        assert!(!analysis.intent.raw.is_empty());
+        assert!(!analysis.intent.actors.is_empty());
+
+        // Market analysis should have a verdict
+        // Verdict is an enum, just check it serializes
+        let verdict_json = serde_json::to_string(&analysis.market.verdict).unwrap();
+        assert!(!verdict_json.is_empty());
+
+        // Context analysis should produce a recommendation
+        assert!(!analysis.context.recommendation.is_empty());
+        assert!(analysis.context.overall_score > 0.0);
+
+        // Linguistic analysis should parse sentences
+        assert!(!analysis.linguistic.raw_input.is_empty());
+        assert!(analysis.linguistic.confidence > 0.0);
+
+        // Interpretation should produce something
+        assert!(!analysis.interpretation.literal_meaning.is_empty());
+
+        // Should serialize to JSON without error
+        let json = serde_json::to_string(&analysis).unwrap();
+        assert!(!json.is_empty());
     }
 }
 

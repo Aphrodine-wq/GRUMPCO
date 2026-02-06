@@ -48,9 +48,9 @@ export interface ShipSession {
 }
 
 export interface ShipPreferences {
-  frontendFramework?: "vue" | "react";
-  backendRuntime?: "node" | "python" | "go";
-  database?: "postgres" | "mongodb";
+  frontendFramework?: "svelte" | "next" | "angular" | "vue" | "react";
+  backendRuntime?: "node" | "bun" | "deno" | "python" | "go";
+  database?: "postgres" | "mongodb" | "sqlite";
   includeTests?: boolean;
   includeDocs?: boolean;
   workspaceRoot?: string;

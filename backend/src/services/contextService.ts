@@ -278,7 +278,7 @@ export async function generateMasterContext(
       const masterContextData = unifiedData.masterContext;
 
       const masterContext: MasterContext = {
-        id: `context_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `context_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
         projectDescription: request.projectDescription,
         enrichedIntent,
         architecture,
@@ -459,7 +459,7 @@ export async function generateMasterContext(
       [];
 
     const masterContext: MasterContext = {
-      id: `context_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `context_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       projectDescription: request.projectDescription,
       enrichedIntent,
       architecture,

@@ -20,8 +20,11 @@
       Back
     </Button>
     <div class="header-text">
-      <h1>MCP</h1>
-      <p class="subtitle">Model Context Protocol servers – configure tools and data sources for G-Agent</p>
+      <h1>MCP Servers</h1>
+      <p class="subtitle">
+        Model Context Protocol – configure stdio or URL-based servers so G-Agent can use their
+        tools.
+      </p>
     </div>
   </header>
   <main class="mcp-main">
@@ -31,33 +34,33 @@
 
 <style>
   .mcp-screen {
-    padding: 32px;
-    max-width: 800px;
-    margin: 0 auto;
+    padding: var(--space-content, 24px);
     height: 100%;
     overflow-y: auto;
     box-sizing: border-box;
+    background: var(--color-bg-app, #ffffff);
   }
 
   .mcp-header {
-    margin-bottom: 24px;
+    margin-bottom: var(--space-content, 24px);
   }
 
   .header-text {
-    margin-top: 16px;
+    margin-top: 1rem;
   }
 
   .mcp-header h1 {
-    font-size: 24px;
+    font-size: 1.5rem;
     font-weight: 700;
-    color: #18181b;
-    margin: 0 0 8px;
+    color: var(--color-text, #1f1147);
+    margin: 0 0 0.5rem;
   }
 
   .subtitle {
-    color: #71717a;
+    color: var(--color-text-muted, #6b7280);
     margin: 0;
-    font-size: 15px;
+    font-size: 0.9375rem;
+    line-height: 1.5;
   }
 
   .mcp-main {

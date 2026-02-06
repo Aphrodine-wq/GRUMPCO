@@ -1,10 +1,15 @@
 /**
- * Diff Utilities
+ * Diff Utilities - Optimized for lazy loading
  */
 
-import * as Diff from 'diff';
+// Type definitions for diff library
+interface DiffChange {
+  value: string | string[];
+  added?: boolean;
+  removed?: boolean;
+}
 
-export type Change = Diff.Change;
+export type Change = DiffChange;
 
 export interface DiffLine {
   lineNumber: number;
@@ -22,21 +27,34 @@ export interface FileDiff {
   operations?: Array<{ type: string; lineStart: number; lineEnd?: number }>;
 }
 
-export function computeLineDiff(before: string, after: string): DiffLine[] {
+// Lazy-loaded diff module
+let diffModule: any = null;
+
+/**
+ * Gets or loads the diff module lazily
+ */
+async function getDiffModule(): Promise<any> {
+  if (!diffModule) {
+    diffModule = await import('diff');
+  }
+  return diffModule;
+}
+
+export async function computeLineDiff(before: string, after: string): Promise<DiffLine[]> {
+  const Diff = await getDiffModule();
+  
   // Use diffArrays on split lines for newline-insensitive line comparison.
   // diffLines includes newlines in tokens, causing line2 vs line2\n to differ.
   const oldLines = before.split(/\r?\n/);
   const newLines = after.split(/\r?\n/);
-  const changes = (
-    Diff as unknown as { diffArrays: (a: string[], b: string[]) => Diff.Change[] }
-  ).diffArrays(oldLines, newLines);
+  const changes = Diff.diffArrays(oldLines, newLines);
 
   const result: DiffLine[] = [];
   let oldLineNum = 1;
   let newLineNum = 1;
 
   for (const change of changes) {
-    const lines = change.value as unknown as string[];
+    const lines = change.value as string[];
 
     if (change.added) {
       // Added lines
@@ -82,20 +100,21 @@ export function computeLineDiff(before: string, after: string): DiffLine[] {
 /**
  * Compute word-level diff for inline highlighting
  */
-export function computeWordDiff(before: string, after: string): Change[] {
+export async function computeWordDiff(before: string, after: string): Promise<Change[]> {
+  const Diff = await getDiffModule();
   return Diff.diffWords(before, after);
 }
 
 /**
  * Get summary statistics for a diff
  */
-export function getDiffSummary(diff: FileDiff): {
+export async function getDiffSummary(diff: FileDiff): Promise<{
   added: number;
   removed: number;
   modified: number;
   total: number;
-} {
-  const lines = computeLineDiff(diff.beforeContent, diff.afterContent);
+}> {
+  const lines = await computeLineDiff(diff.beforeContent, diff.afterContent);
   let added = 0;
   let removed = 0;
   let modified = 0;
@@ -133,8 +152,8 @@ export function detectLanguage(filePath: string): string {
   return map[ext] || 'plaintext';
 }
 
-export function formatDiffSummary(diff: FileDiff): string {
-  const { added, removed } = getDiffSummary(diff);
+export async function formatDiffSummary(diff: FileDiff): Promise<string> {
+  const { added, removed } = await getDiffSummary(diff);
   const parts = [];
   if (added > 0) parts.push(`+${added}`);
   if (removed > 0) parts.push(`-${removed}`);

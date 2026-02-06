@@ -131,11 +131,11 @@ export function getUserFriendlyMessage(error: unknown, type: ErrorType): string 
         return error.message;
 
       default:
-        return 'An unexpected error occurred. Please try again.';
+        return 'Something went wrong. Check your connection and try again.';
     }
   }
 
-  return 'An unexpected error occurred. Please try again.';
+  return 'Something went wrong. Check your connection and try again.';
 }
 
 /**

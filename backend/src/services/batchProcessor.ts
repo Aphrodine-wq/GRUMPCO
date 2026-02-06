@@ -63,7 +63,7 @@ export class BatchProcessor<T = unknown, R = unknown> {
       }
 
       const request: BatchRequest<T, R> = {
-        id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `req_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
         data,
         resolve,
         reject,

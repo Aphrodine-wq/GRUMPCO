@@ -52,11 +52,8 @@ pub fn hyper_parse_intent(text: &str, constraints: serde_json::Value) -> IntentO
     let output = crate::parse_intent(&lowercase_str, constraints);
 
     // Step 7: Enhance output with quantum and neural insights
-    let enhanced_output = enhance_with_advanced_features(
-        output,
-        optimized_tokens,
-        pattern_recognition,
-    );
+    let enhanced_output =
+        enhance_with_advanced_features(output, optimized_tokens, pattern_recognition);
 
     // Step 8: Cache the result
     INTENT_CACHE.put(cache_key, enhanced_output.clone());
@@ -65,12 +62,9 @@ pub fn hyper_parse_intent(text: &str, constraints: serde_json::Value) -> IntentO
 }
 
 /// Batch parsing with ultra-parallel processing
-pub fn hyper_parse_batch(
-    texts: Vec<String>,
-    constraints: serde_json::Value,
-) -> Vec<IntentOutput> {
+pub fn hyper_parse_batch(texts: Vec<String>, constraints: serde_json::Value) -> Vec<IntentOutput> {
     // Use adaptive parallel processing
-    let results = PARALLEL_ENGINE.process_adaptive(texts, |text| {
+    let results = PARALLEL_ENGINE.process_adaptive(texts, move |text| {
         hyper_parse_intent(text, constraints.clone())
     });
 
@@ -101,7 +95,7 @@ fn enhance_with_advanced_features(
     let neural_confidence = pattern_recognition.confidence;
 
     // Weighted average with original confidence
-    output.confidence = (output.confidence * 0.5
+    output.confidence.overall = (output.confidence.overall * 0.5
         + quantum_confidence as f32 * 0.25
         + neural_confidence as f32 * 0.25)
         .min(1.0)
@@ -195,7 +189,7 @@ mod tests {
         let output = hyper_parse_intent(text, serde_json::json!({}));
 
         assert!(!output.features.is_empty());
-        assert!(output.confidence > 0.0);
+        assert!(output.confidence.overall > 0.0);
     }
 
     #[test]

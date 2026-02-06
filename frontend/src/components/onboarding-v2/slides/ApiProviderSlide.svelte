@@ -82,7 +82,10 @@
         <Key size={28} />
       </div>
       <h2 class="title">Connect AI Provider</h2>
-      <p class="subtitle">G-Rump uses NVIDIA NIM by default. Add a second provider for more models or skip to use NIM only.</p>
+      <p class="subtitle">
+        G-Rump uses NVIDIA NIM by default. Add a second provider for more models or skip to use NIM
+        only.
+      </p>
     </div>
 
     <!-- Provider selection -->
@@ -229,7 +232,9 @@
     width: 100%;
     opacity: 0;
     transform: translateY(20px);
-    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .content.mounted {
@@ -258,7 +263,7 @@
   .title {
     font-size: 2rem;
     font-weight: 800;
-    color: #111827;
+    color: var(--color-text);
     margin-bottom: 0.5rem;
     letter-spacing: -0.02em;
     line-height: 1.2;
@@ -266,7 +271,7 @@
 
   .subtitle {
     font-size: 1.0625rem;
-    color: #374151;
+    color: var(--color-text-secondary);
     line-height: 1.4;
   }
 
@@ -292,8 +297,8 @@
     align-items: center;
     gap: 0.375rem;
     padding: 1rem 0.5rem;
-    background: white;
-    border: 2px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-border);
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease-out;
@@ -338,7 +343,7 @@
     width: 40px;
     height: 40px;
     flex-shrink: 0;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .provider-icon svg {
@@ -356,18 +361,18 @@
     background: #f3f4f6;
     font-size: 1rem;
     font-weight: 700;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .provider-name {
     font-size: 0.8125rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .provider-desc {
     font-size: 0.6875rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     text-align: center;
     line-height: 1.3;
   }
@@ -386,7 +391,7 @@
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text-secondary);
     margin-bottom: 0.5rem;
     text-align: left;
   }
@@ -399,7 +404,7 @@
   .api-input {
     flex: 1;
     padding: 0.75rem 1rem;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--color-border);
     border-radius: 8px;
     font-size: 0.9375rem;
     transition: all 0.2s;
@@ -421,11 +426,11 @@
     justify-content: center;
     padding: 0.75rem 1.25rem;
     background: #f3f4f6;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--color-border);
     border-radius: 8px;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.2s;
     min-width: 80px;
@@ -566,7 +571,7 @@
     padding: 0.5rem 1rem;
     background: transparent;
     border: none;
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-size: 0.875rem;
     cursor: pointer;
     text-decoration: underline;
@@ -574,7 +579,7 @@
   }
 
   .skip-button:hover {
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   /* Reduced motion */
