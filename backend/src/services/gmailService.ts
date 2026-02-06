@@ -1,10 +1,10 @@
 import logger from "../middleware/logger.js";
+import { GOOGLE_APIS } from "../config/externalApis.js";
 import {
   getAccessToken,
   isTokenExpired,
   refreshOAuthTokens,
 } from "./integrationService.js";
-import { GOOGLE_APIS } from "../config/externalApis.js";
 
 export class GmailService {
   private userId: string;

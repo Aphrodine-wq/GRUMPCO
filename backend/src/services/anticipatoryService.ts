@@ -11,6 +11,7 @@
 
 import logger from "../middleware/logger.js";
 import { getDatabase as _getDatabase } from "../db/database.js";
+import { getCompletion } from "./llmGatewayHelper.js";
 import { writeAuditLog } from "./auditLogService.js";
 import { getCompletion } from "./llmGatewayHelper.js";
 import { queueAgentTask, isAgentRunning } from "./persistentAgentService.js";
@@ -607,9 +608,10 @@ interface RawTrendItem {
 
 async function fetchFromDevTo(tag: string): Promise<RawTrendItem[]> {
   try {
-    const res = await fetch(
-      `https://dev.to/api/articles?tag=${encodeURIComponent(tag)}&top=7&per_page=5`,
-    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`https://dev.to/api/articles?tag=${encodeURIComponent(tag)}&top=7&per_page=5`, { signal: controller.signal });
+    clearTimeout(timeout);
     if (!res.ok) return [];
     const json = (await res.json()) as any[];
     return json.map((item) => ({
@@ -628,9 +630,10 @@ async function fetchFromDevTo(tag: string): Promise<RawTrendItem[]> {
 
 async function fetchFromHN(query: string): Promise<RawTrendItem[]> {
   try {
-    const res = await fetch(
-      `http://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`,
-    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`http://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`, { signal: controller.signal });
+    clearTimeout(timeout);
     if (!res.ok) return [];
     const json = (await res.json()) as any;
     return json.hits.map((item: any) => ({
@@ -716,15 +719,11 @@ export async function fetchTechTrends(
   `;
 
   // Call LLM
-  const { text, error } = await getCompletion(
-    {
-      system: "You are a tech trend analyst assistant.",
-      messages: [{ role: "user", content: prompt }],
-      model: "nvidia/llama-3.1-nemotron-70b-instruct",
-      max_tokens: 1000,
-    },
-    { provider: "nim" },
-  );
+  const { text, error } = await getCompletion({
+    system: "You are a helpful tech trend analyst.", messages: [{ role: "user", content: prompt }],
+    model: 'nvidia/llama-3.1-nemotron-70b-instruct',
+    max_tokens: 1000,
+  }, { provider: 'nim' });
 
   if (error || !text) {
     logger.error({ error }, "Failed to generate trend summary with LLM");
@@ -739,15 +738,15 @@ export async function fetchTechTrends(
 
   try {
     // Clean potential markdown blocks
-    const cleanText = text
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-    const suggestions = JSON.parse(cleanText) as Array<{
-      title: string;
-      summary: string;
-      relevance: number;
-    }>;
+    let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Try to find array bracket start/end
+    const start = cleanText.indexOf('[');
+    const end = cleanText.lastIndexOf(']');
+    if (start !== -1 && end !== -1) {
+        cleanText = cleanText.substring(start, end + 1);
+    }
+
+    const suggestions = JSON.parse(cleanText) as Array<{ title: string; summary: string; relevance: number }>;
 
     // Merge back URLs
     return suggestions
