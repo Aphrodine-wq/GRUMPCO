@@ -11,6 +11,7 @@ import { runWithConcurrency } from "../utils/concurrency.js";
 import { gAgentMemoryService } from "./gAgentMemoryService.js";
 import { gAgentSelfImprovement } from "./gAgentSelfImprovement.js";
 import type { Plan, Task, TaskStatus } from "./intentCliRunner.js";
+import { configManager } from "../gAgent/config.js";
 
 // ============================================================================
 // SSE EVENT TYPES
@@ -311,10 +312,10 @@ export class GAgentTaskExecutor {
       .map((id) => state.plan.tasks.find((t) => t.id === id))
       .filter(Boolean) as Task[];
 
-    // Run with concurrency limit (e.g. 5) to balance performance and resources
+    // Run with concurrency limit from config to balance performance and resources
     const results = await runWithConcurrency(
       tasks,
-      5, // Concurrency limit
+      configManager.getConfig().performance.batchSize || 5,
       async (task) => {
         if (state.cancelled) return [];
         return this.executeTask(state, task, workspaceRoot, abortSignal);
