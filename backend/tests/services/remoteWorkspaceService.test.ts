@@ -9,6 +9,7 @@ import { EventEmitter } from 'events';
 // Mock child_process
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
+  exec: vi.fn(),
 }));
 
 // Mock logger
@@ -33,25 +34,28 @@ describe('remoteWorkspaceService', () => {
     }
     fs.mkdirSync(workspaceCacheDir, { recursive: true });
 
-    // Default mock implementation: success
-    vi.mocked(child_process.spawn).mockImplementation(() => {
-      const cp: any = new EventEmitter();
-      cp.stdout = new EventEmitter();
-      cp.stderr = new EventEmitter();
-      // Simulate async close
-      setTimeout(() => cp.emit('close', 0), 10);
-      return cp;
-    });
+    // Mock spawn implementation
+    vi.mocked(child_process.spawn).mockImplementation((() => {
+       const mockProcess = new EventEmitter() as any;
+       mockProcess.stdout = new EventEmitter();
+       mockProcess.stderr = new EventEmitter();
+
+       // Emit close asynchronously
+       setTimeout(() => {
+         mockProcess.emit('close', 0);
+       }, 10);
+
+       return mockProcess;
+    }) as any);
   });
 
   it('should clone a new repository using spawn', async () => {
     await loadRemoteWorkspace(repoUrl);
 
-    // expect spawn to be called with correct args
     expect(child_process.spawn).toHaveBeenCalledWith(
-      'git',
-      ['clone', '--depth', '1', '--', repoUrl, targetDir],
-      expect.anything()
+      "git",
+      ["clone", "--depth", "1", repoUrl, targetDir],
+      expect.objectContaining({ stdio: "inherit" })
     );
   });
 
@@ -61,26 +65,20 @@ describe('remoteWorkspaceService', () => {
     await loadRemoteWorkspace(repoUrl);
 
     expect(child_process.spawn).toHaveBeenCalledWith(
-      'git',
-      ['pull'],
-      expect.objectContaining({ cwd: targetDir })
+      "git",
+      ["pull"],
+      expect.objectContaining({ cwd: targetDir, stdio: "inherit" })
     );
   });
 
   it('should throw error if clone fails', async () => {
-    vi.mocked(child_process.spawn).mockImplementation(() => {
-      const cp: any = new EventEmitter();
-      cp.stdout = new EventEmitter();
-      cp.stderr = new EventEmitter();
-      setTimeout(() => {
-         // Emit some error data
-         if (cp.stderr.listenerCount('data') > 0) {
-            cp.stderr.emit('data', Buffer.from('fatal: repository not found'));
-         }
-         cp.emit('close', 128);
-      }, 10);
-      return cp;
-    });
+    vi.mocked(child_process.spawn).mockImplementation((() => {
+       const mockProcess = new EventEmitter() as any;
+       setTimeout(() => {
+         mockProcess.emit('close', 1); // Non-zero exit code
+       }, 10);
+       return mockProcess;
+    }) as any);
 
     await expect(loadRemoteWorkspace(repoUrl)).rejects.toThrow("Failed to clone repository");
   });

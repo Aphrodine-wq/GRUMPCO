@@ -3,14 +3,12 @@
  * Uses fetch + child_process for git. Env: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET.
  */
 
-import { execSync } from "child_process";
+import { spawn } from "child_process";
 import {
   existsSync,
-  mkdirSync,
-  mkdtempSync,
   readFileSync,
-  rmSync,
   writeFileSync,
+  promises as fs,
 } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
@@ -137,18 +135,32 @@ export async function createRepo(
 }
 
 /**
+ * Helper to spawn a child process as a promise.
+ */
+function spawnAsync(command: string, args: string[], options: { cwd?: string } = {}): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { ...options, stdio: "inherit" });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`${command} ${args.join(" ")} failed with code ${code}`));
+    });
+  });
+}
+
+/**
  * Write generated files to dir, git init, add, commit, remote add, push.
  */
-function pushToRepo(dir: string, cloneUrl: string, token: string): void {
+async function pushToRepo(dir: string, cloneUrl: string, token: string): Promise<void> {
   const authUrl = cloneUrl.replace("https://", `https://${token}@`);
-  execSync("git init", { cwd: dir });
-  execSync('git config user.email "grump@local"', { cwd: dir });
-  execSync('git config user.name "G-Rump"', { cwd: dir });
-  execSync("git add -A", { cwd: dir });
-  execSync('git commit -m "Initial commit from G-Rump"', { cwd: dir });
-  execSync(`git remote add origin ${authUrl}`, { cwd: dir });
-  execSync("git branch -M main", { cwd: dir });
-  execSync("git push -u origin main", { cwd: dir });
+  await spawnAsync("git", ["init"], { cwd: dir });
+  await spawnAsync("git", ["config", "user.email", "grump@local"], { cwd: dir });
+  await spawnAsync("git", ["config", "user.name", "G-Rump"], { cwd: dir });
+  await spawnAsync("git", ["add", "-A"], { cwd: dir });
+  await spawnAsync("git", ["commit", "-m", "Initial commit from G-Rump"], { cwd: dir });
+  await spawnAsync("git", ["remote", "add", "origin", authUrl], { cwd: dir });
+  await spawnAsync("git", ["branch", "-M", "main"], { cwd: dir });
+  await spawnAsync("git", ["push", "-u", "origin", "main"], { cwd: dir });
 }
 
 /**
@@ -177,20 +189,20 @@ export async function createAndPush(
     session.architecture?.projectName ?? session.prdId ?? "generated-project";
   const cloneUrl = await createRepo(repoName, token);
 
-  const tmp = mkdtempSync(join(tmpdir(), "grump-"));
+  const tmp = await fs.mkdtemp(join(tmpdir(), "grump-"));
   try {
     for (const f of session.generatedFiles) {
       const full = join(tmp, projectName, f.path);
-      mkdirSync(dirname(full), { recursive: true });
-      writeFileSync(full, f.content, "utf8");
+      await fs.mkdir(dirname(full), { recursive: true });
+      await fs.writeFile(full, f.content, "utf8");
     }
     const projectDir = join(tmp, projectName);
-    pushToRepo(projectDir, cloneUrl, token);
+    await pushToRepo(projectDir, cloneUrl, token);
     log.info({ sessionId, repoName, cloneUrl }, "Pushed to GitHub");
     return { repoUrl: cloneUrl.replace(/\.git$/, ""), pushed: true };
   } finally {
     try {
-      rmSync(tmp, { recursive: true });
+      await fs.rm(tmp, { recursive: true, force: true });
     } catch {
       /* ignore */
     }

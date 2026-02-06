@@ -1,5 +1,5 @@
 import { spawn } from "child_process";
-import { existsSync, mkdirSync, rmSync } from "fs";
+import { promises as fs } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import logger from "../middleware/logger.js";
@@ -7,8 +7,12 @@ import logger from "../middleware/logger.js";
 const WORKSPACE_CACHE_DIR = join(tmpdir(), "grump-workspaces");
 
 // Ensure cache dir exists
-if (!existsSync(WORKSPACE_CACHE_DIR)) {
-  mkdirSync(WORKSPACE_CACHE_DIR, { recursive: true });
+async function ensureCacheDir() {
+  try {
+    await fs.mkdir(WORKSPACE_CACHE_DIR, { recursive: true });
+  } catch (_e) {
+    // Ignore if exists
+  }
 }
 
 export interface RemoteWorkspace {
@@ -17,32 +21,23 @@ export interface RemoteWorkspace {
 }
 
 /**
- * Executes a git command using spawn for better stream handling and security (no shell).
+ * Helper to spawn a child process as a promise.
+ * Avoids maxBuffer issues of exec and handles output streams.
  */
-function runGitCommand(args: string[], cwd?: string): Promise<void> {
+function spawnAsync(command: string, args: string[], options: { cwd?: string } = {}): Promise<void> {
   return new Promise((resolve, reject) => {
-    const proc = spawn("git", args, { cwd });
+    const child = spawn(command, args, { ...options, stdio: "inherit" });
 
-    let stderr = "";
+    child.on("error", (err) => {
+      reject(err);
+    });
 
-    // Capture stderr for debugging if needed
-    if (proc.stderr) {
-      proc.stderr.on("data", (data) => {
-        stderr += data.toString();
-      });
-    }
-
-    proc.on("close", (code) => {
+    child.on("close", (code) => {
       if (code === 0) {
         resolve();
       } else {
-        // Include stderr in error message for context
-        reject(new Error(`Git command failed with code ${code}. Error: ${stderr}`));
+        reject(new Error(`${command} ${args.join(" ")} failed with code ${code}`));
       }
-    });
-
-    proc.on("error", (err) => {
-      reject(err);
     });
   });
 }
@@ -50,17 +45,28 @@ function runGitCommand(args: string[], cwd?: string): Promise<void> {
 export async function loadRemoteWorkspace(
   repoUrl: string,
 ): Promise<RemoteWorkspace> {
+  await ensureCacheDir();
+
   // 1. Sanitize URL to create a folder name
   const safeName = repoUrl.replace(/[^a-zA-Z0-9-]/g, "_");
   const targetDir = join(WORKSPACE_CACHE_DIR, safeName);
 
   logger.info(`Requested remote workspace: ${repoUrl} -> ${targetDir}`);
 
-  if (existsSync(targetDir)) {
+  // Check if exists
+  let exists = false;
+  try {
+    await fs.access(targetDir);
+    exists = true;
+  } catch {
+    exists = false;
+  }
+
+  if (exists) {
     // Already cached. Try to pull?
     try {
       logger.info("Updating existing cached workspace...");
-      await runGitCommand(["pull"], targetDir);
+      await spawnAsync("git", ["pull"], { cwd: targetDir });
     } catch (_e) {
       logger.warn("Failed to pull latest changes, using cached version.");
     }
@@ -71,8 +77,7 @@ export async function loadRemoteWorkspace(
   try {
     // Clone depth 1 for speed if we just want to read.
     logger.info("Cloning new workspace...");
-    // Use spawn with array arguments to avoid shell injection
-    await runGitCommand(["clone", "--depth", "1", "--", repoUrl, targetDir]);
+    await spawnAsync("git", ["clone", "--depth", "1", repoUrl, targetDir]);
     return { url: repoUrl, localPath: targetDir };
   } catch (error) {
     logger.error(error, "Failed to clone remote workspace");
@@ -80,9 +85,11 @@ export async function loadRemoteWorkspace(
   }
 }
 
-export function clearWorkspaceCache(): void {
-  if (existsSync(WORKSPACE_CACHE_DIR)) {
-    rmSync(WORKSPACE_CACHE_DIR, { recursive: true, force: true });
-    mkdirSync(WORKSPACE_CACHE_DIR);
+export async function clearWorkspaceCache(): Promise<void> {
+  try {
+    await fs.rm(WORKSPACE_CACHE_DIR, { recursive: true, force: true });
+    await fs.mkdir(WORKSPACE_CACHE_DIR, { recursive: true });
+  } catch (_e) {
+    logger.error(e, "Failed to clear workspace cache");
   }
 }
