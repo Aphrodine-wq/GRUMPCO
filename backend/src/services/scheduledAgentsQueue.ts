@@ -129,7 +129,9 @@ export async function loadRepeatableJobsFromDb(): Promise<void> {
   const BATCH_SIZE = 50;
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
-    const jobs = batch.map((r) => {
+
+    // Performance optimization: use addBulk to reduce network round trips
+    const jobs = batch.map(r => {
       const params = (
         r.paramsJson ? JSON.parse(r.paramsJson) : {}
       ) as ScheduledAgentParams;
@@ -137,14 +139,18 @@ export async function loadRepeatableJobsFromDb(): Promise<void> {
       return {
         name: "run",
         data: { scheduleId: r.id, action, params },
-        opts: { jobId: r.id, repeat: { pattern: r.cronExpression } },
+        opts: { jobId: r.id, repeat: { pattern: r.cronExpression } }
       };
     });
 
     await q.addBulk(jobs);
-    logger.info(
-      { count: jobs.length, batchIndex: Math.floor(i / BATCH_SIZE) },
-      "Scheduled repeatable jobs batch loaded from DB",
-    );
+
+    // Logging preserved
+    for (const r of batch) {
+      logger.info(
+        { scheduleId: r.id, cronExpression: r.cronExpression },
+        "Scheduled repeatable job loaded from DB",
+      );
+    }
   }
 }
