@@ -264,11 +264,17 @@
     <!-- Card 1: Record -->
     <Card title="Record" padding="md" class="voice-card voice-card-record">
       <p class="section-desc">
-        Describe what you want in code. Your voice is transcribed, then RAG + chat generate code and a spoken summary.
+        Describe what you want in code. Your voice is transcribed, then RAG + chat generate code and
+        a spoken summary.
       </p>
       <div class="language-row">
         <label class="label" for="voice-lang">Language</label>
-        <select id="voice-lang" class="select" bind:value={language} disabled={loading || recording}>
+        <select
+          id="voice-lang"
+          class="select"
+          bind:value={language}
+          disabled={loading || recording}
+        >
           {#each LANGUAGE_OPTIONS as opt}
             <option value={opt.id}>{opt.label}</option>
           {/each}
@@ -276,7 +282,8 @@
       </div>
       {#if recording}
         <div class="waveform-container">
-          <canvas bind:this={waveformCanvas} class="waveform-canvas" width="300" height="60"></canvas>
+          <canvas bind:this={waveformCanvas} class="waveform-canvas" width="300" height="60"
+          ></canvas>
         </div>
       {/if}
       <div class="record-row">
@@ -346,11 +353,7 @@
         <ul class="history-list">
           {#each history as entry (entry.id)}
             <li>
-              <button
-                type="button"
-                class="history-item"
-                onclick={() => selectHistoryEntry(entry)}
-              >
+              <button type="button" class="history-item" onclick={() => selectHistoryEntry(entry)}>
                 <span class="history-time">{new Date(entry.timestamp).toLocaleString()}</span>
                 <span class="history-preview">{entry.transcriptPreview}</span>
               </button>

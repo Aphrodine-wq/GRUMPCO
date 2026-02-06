@@ -25,7 +25,7 @@ import { getIntentGuidedRagContext } from "./ragService.js";
 export async function startSpecSession(
   request: SpecStartRequest,
 ): Promise<SpecSession> {
-  const sessionId = `spec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const sessionId = `spec_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
   logger.info(
     { sessionId, workspaceRoot: request.workspaceRoot },
@@ -494,7 +494,7 @@ Generate a comprehensive specification based on these answers.`;
     const specData = JSON.parse(jsonText);
 
     const specification: Specification = {
-      id: `spec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `spec_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       title: specData.title || "Specification",
       description: specData.description || "",
       sections: {

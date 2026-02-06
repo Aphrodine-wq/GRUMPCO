@@ -32,40 +32,40 @@ pub struct PsychologicalSignal {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PsychologicalSignalType {
     // Resilience signals
-    Resilience,             // Ability to bounce back from setbacks
-    OwnershipMindset,       // Takes responsibility vs blames external
-    LearningOrientation,    // Seeks feedback and learns from mistakes
-    AdaptabilityScore,      // Ability to pivot and adjust course
+    Resilience,          // Ability to bounce back from setbacks
+    OwnershipMindset,    // Takes responsibility vs blames external
+    LearningOrientation, // Seeks feedback and learns from mistakes
+    AdaptabilityScore,   // Ability to pivot and adjust course
 
     // Discipline signals
-    FollowThrough,          // Completes what they start
-    ConsistencyScore,       // Regular, predictable action
-    ProcessOrientation,     // Values systems over individual brilliance
-    AtomicHabits,           // Makes small progress consistently
+    FollowThrough,      // Completes what they start
+    ConsistencyScore,   // Regular, predictable action
+    ProcessOrientation, // Values systems over individual brilliance
+    AtomicHabits,       // Makes small progress consistently
 
     // Intelligence signals
-    SystemThinking,         // Can see patterns and complex systems
-    ProblemSolving,         // Approaches problems methodically
-    LearningVelocity,       // Speed at which they master new domains
-    ConceptualAbstraction,  // Can generalize from specific to broader patterns
+    SystemThinking,        // Can see patterns and complex systems
+    ProblemSolving,        // Approaches problems methodically
+    LearningVelocity,      // Speed at which they master new domains
+    ConceptualAbstraction, // Can generalize from specific to broader patterns
 
     // Communication signals
-    Transparency,           // Open about failures and challenges
-    AskingForHelp,         // Willing to seek input from others
-    CommunicationClarity,   // Articulate in explaining ideas
-    DebateCreativity,       // Engages in intellectual debate constructively
+    Transparency,         // Open about failures and challenges
+    AskingForHelp,        // Willing to seek input from others
+    CommunicationClarity, // Articulate in explaining ideas
+    DebateCreativity,     // Engages in intellectual debate constructively
 
     // Risk signals (negative indicators)
-    Overconfidence,         // Overestimates abilities/market size
-    BiasBlindness,          // Unaware of own cognitive biases
-    BurnoutRisk,            // Signs of exhaustion or stress
-    SinglePointFailure,     // Too dependent on one person
+    Overconfidence,     // Overestimates abilities/market size
+    BiasBlindness,      // Unaware of own cognitive biases
+    BurnoutRisk,        // Signs of exhaustion or stress
+    SinglePointFailure, // Too dependent on one person
 
     // Social signals
-    NetworkQuality,         // Strength of founder network
-    InfluenceRadius,        // How many people pay attention to them
-    CollaborationStyle,     // Works well with others vs solo operator
-    MentorRelationships,    // Seeks guidance from experienced founders
+    NetworkQuality,      // Strength of founder network
+    InfluenceRadius,     // How many people pay attention to them
+    CollaborationStyle,  // Works well with others vs solo operator
+    MentorRelationships, // Seeks guidance from experienced founders
 }
 
 // ============================================================================
@@ -76,9 +76,7 @@ pub struct GitHubBehavioralAnalyzer;
 
 impl GitHubBehavioralAnalyzer {
     /// Analyze commit history for psychological markers
-    pub fn analyze_commit_patterns(
-        commits: &[CommitData],
-    ) -> Vec<PsychologicalSignal> {
+    pub fn analyze_commit_patterns(commits: &[CommitData]) -> Vec<PsychologicalSignal> {
         let mut signals = Vec::new();
 
         // 1. Consistency: do they commit regularly?
@@ -171,7 +169,14 @@ impl GitHubBehavioralAnalyzer {
 
     fn analyze_commit_messages(commits: &[CommitData]) -> f32 {
         let learning_keywords = [
-            "refactor", "improve", "optimize", "learn", "discovered", "mistake", "bug", "fix",
+            "refactor",
+            "improve",
+            "optimize",
+            "learn",
+            "discovered",
+            "mistake",
+            "bug",
+            "fix",
         ];
 
         let total = commits.len() as f32;
@@ -214,10 +219,7 @@ impl GitHubBehavioralAnalyzer {
     fn trend_direction(commits: &[CommitData], days: i32) -> String {
         // Simplified: compare recent vs older commits
         let recent_threshold = 1; // Last X days
-        let recent_count = commits
-            .iter()
-            .filter(|c| c.date.contains("recent"))
-            .count();
+        let recent_count = commits.iter().filter(|c| c.date.contains("recent")).count();
 
         if recent_count > (commits.len() / 10) {
             "improving".to_string()
@@ -248,9 +250,7 @@ pub struct TwitterBehavioralAnalyzer;
 
 impl TwitterBehavioralAnalyzer {
     /// Analyze tweet history for psychological markers
-    pub fn analyze_tweet_patterns(
-        tweets: &[TweetData],
-    ) -> Vec<PsychologicalSignal> {
+    pub fn analyze_tweet_patterns(tweets: &[TweetData]) -> Vec<PsychologicalSignal> {
         let mut signals = Vec::new();
 
         // 1. Transparency: do they share failures?
@@ -301,12 +301,23 @@ impl TwitterBehavioralAnalyzer {
     }
 
     fn calculate_transparency(tweets: &[TweetData]) -> f32 {
-        let failure_keywords = ["failed", "mistake", "learned", "wrong", "struggle", "challenge"];
+        let failure_keywords = [
+            "failed",
+            "mistake",
+            "learned",
+            "wrong",
+            "struggle",
+            "challenge",
+        ];
 
         let total = tweets.len() as f32;
         let transparent_tweets = tweets
             .iter()
-            .filter(|t| failure_keywords.iter().any(|kw| t.text.to_lowercase().contains(kw)))
+            .filter(|t| {
+                failure_keywords
+                    .iter()
+                    .any(|kw| t.text.to_lowercase().contains(kw))
+            })
             .count() as f32;
 
         if total == 0.0 {
@@ -319,12 +330,14 @@ impl TwitterBehavioralAnalyzer {
     fn analyze_response_to_criticism(tweets: &[TweetData]) -> f32 {
         // Check replies to critical tweets - are they defensive or learning-oriented?
         let defensive_keywords = ["actually", "wrong", "disagree", "nonsense"];
-        let learning_keywords = ["thanks", "good point", "hadn't considered", "great feedback"];
+        let learning_keywords = [
+            "thanks",
+            "good point",
+            "hadn't considered",
+            "great feedback",
+        ];
 
-        let responses = tweets
-            .iter()
-            .filter(|t| t.is_reply)
-            .collect::<Vec<_>>();
+        let responses = tweets.iter().filter(|t| t.is_reply).collect::<Vec<_>>();
 
         if responses.is_empty() {
             return 0.5;
@@ -332,25 +345,45 @@ impl TwitterBehavioralAnalyzer {
 
         let defensive_responses = responses
             .iter()
-            .filter(|t| defensive_keywords.iter().any(|kw| t.text.to_lowercase().contains(kw)))
+            .filter(|t| {
+                defensive_keywords
+                    .iter()
+                    .any(|kw| t.text.to_lowercase().contains(kw))
+            })
             .count();
 
         let learning_responses = responses
             .iter()
-            .filter(|t| learning_keywords.iter().any(|kw| t.text.to_lowercase().contains(kw)))
+            .filter(|t| {
+                learning_keywords
+                    .iter()
+                    .any(|kw| t.text.to_lowercase().contains(kw))
+            })
             .count();
 
         let total = responses.len() as f32;
-        ((learning_responses as f32 - defensive_responses as f32) / total).max(-1.0).min(1.0)
+        ((learning_responses as f32 - defensive_responses as f32) / total)
+            .max(-1.0)
+            .min(1.0)
     }
 
     fn calculate_learning_signals(tweets: &[TweetData]) -> f32 {
-        let learning_keywords = ["learning", "discovered", "realized", "how do", "anyone know"];
+        let learning_keywords = [
+            "learning",
+            "discovered",
+            "realized",
+            "how do",
+            "anyone know",
+        ];
 
         let total = tweets.len() as f32;
         let learning_tweets = tweets
             .iter()
-            .filter(|t| learning_keywords.iter().any(|kw| t.text.to_lowercase().contains(kw)))
+            .filter(|t| {
+                learning_keywords
+                    .iter()
+                    .any(|kw| t.text.to_lowercase().contains(kw))
+            })
             .count() as f32;
 
         if total == 0.0 {
@@ -362,13 +395,23 @@ impl TwitterBehavioralAnalyzer {
 
     fn detect_burnout_signals(tweets: &[TweetData]) -> f32 {
         let burnout_keywords = [
-            "exhausted", "tired", "burned out", "struggling", "overwhelmed", "help", "stuck",
+            "exhausted",
+            "tired",
+            "burned out",
+            "struggling",
+            "overwhelmed",
+            "help",
+            "stuck",
         ];
 
         let total = tweets.len() as f32;
         let burnout_tweets = tweets
             .iter()
-            .filter(|t| burnout_keywords.iter().any(|kw| t.text.to_lowercase().contains(kw)))
+            .filter(|t| {
+                burnout_keywords
+                    .iter()
+                    .any(|kw| t.text.to_lowercase().contains(kw))
+            })
             .count() as f32;
 
         if total == 0.0 {
@@ -380,7 +423,8 @@ impl TwitterBehavioralAnalyzer {
 
     fn sentiment_trend(tweets: &[TweetData]) -> String {
         let recent = tweets.iter().take(10).collect::<Vec<_>>();
-        let avg_sentiment: f32 = recent.iter().map(|t| t.sentiment).sum::<f32>() / recent.len() as f32;
+        let avg_sentiment: f32 =
+            recent.iter().map(|t| t.sentiment).sum::<f32>() / recent.len() as f32;
 
         if avg_sentiment > 0.6 {
             "improving".to_string()
@@ -397,7 +441,7 @@ pub struct TweetData {
     pub id: String,
     pub text: String,
     pub date: String,
-    pub sentiment: f32,     // -1.0 to 1.0
+    pub sentiment: f32, // -1.0 to 1.0
     pub engagement: i32,
     pub is_reply: bool,
     pub is_quote: bool,
@@ -407,31 +451,29 @@ pub struct TweetData {
 // Founder Archetype Mapping
 // ============================================================================
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum FounderArchetype {
-    Visionary,      // Big picture thinker, sees opportunities others miss
-    Builder,        // Loves shipping, execution-oriented, bias toward action
-    Operator,       // Systems thinker, process-oriented, scales organizations
-    Evangelist,     // Network builder, charismatic, social connector
-    Scientist,      // Data-driven, hypothesis testing, methodical
-    Connector,      // Relationship builder, mediates between groups
-    Disruptor,      // Challenges status quo, risk-taking, radical vision
-    Pragmatist,     // Grounded, practical, risk-aware
+    Visionary,  // Big picture thinker, sees opportunities others miss
+    Builder,    // Loves shipping, execution-oriented, bias toward action
+    Operator,   // Systems thinker, process-oriented, scales organizations
+    Evangelist, // Network builder, charismatic, social connector
+    Scientist,  // Data-driven, hypothesis testing, methodical
+    Connector,  // Relationship builder, mediates between groups
+    Disruptor,  // Challenges status quo, risk-taking, radical vision
+    Pragmatist, // Grounded, practical, risk-aware
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArchetypeScore {
     pub archetype: FounderArchetype,
-    pub score: f32,           // 0.0 to 1.0
+    pub score: f32, // 0.0 to 1.0
     pub primary_indicators: Vec<String>,
     pub secondary_traits: Vec<String>,
     pub risk_profile: String, // "high_risk", "measured", "conservative"
 }
 
 /// Map psychological signals to founder archetype
-pub fn determine_founder_archetype(
-    signals: &[PsychologicalSignal],
-) -> Vec<ArchetypeScore> {
+pub fn determine_founder_archetype(signals: &[PsychologicalSignal]) -> Vec<ArchetypeScore> {
     let mut scores: HashMap<FounderArchetype, f32> = HashMap::new();
 
     for signal in signals {
@@ -479,17 +521,15 @@ pub fn determine_founder_archetype(
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PsychologicalRiskProfile {
     pub founder_id: String,
-    pub burnout_risk: f32,          // 0.0 = safe, 1.0 = imminent
-    pub overconfidence_risk: f32,   // Tendency to overestimate
-    pub bias_blindness_risk: f32,   // Unaware of own biases
-    pub single_point_failure: f32,  // Over-dependent on one person
+    pub burnout_risk: f32,             // 0.0 = safe, 1.0 = imminent
+    pub overconfidence_risk: f32,      // Tendency to overestimate
+    pub bias_blindness_risk: f32,      // Unaware of own biases
+    pub single_point_failure: f32,     // Over-dependent on one person
     pub founder_exit_probability: f32, // Likelihood to quit in next year
     pub overall_risk_score: f32,
 }
 
-pub fn assess_psychological_risks(
-    signals: &[PsychologicalSignal],
-) -> PsychologicalRiskProfile {
+pub fn assess_psychological_risks(signals: &[PsychologicalSignal]) -> PsychologicalRiskProfile {
     let mut risk_profile = PsychologicalRiskProfile {
         founder_id: String::new(),
         burnout_risk: 0.0,
@@ -573,11 +613,7 @@ pub fn build_psychological_profile(
 
     // Calculate success probability (inverse of risk + archetype fit for success)
     let success_probability = 0.7 * (1.0 - risk_profile.overall_risk_score)
-        + 0.3
-            * archetype_scores
-                .first()
-                .map(|a| a.score)
-                .unwrap_or(0.5);
+        + 0.3 * archetype_scores.first().map(|a| a.score).unwrap_or(0.5);
 
     FounderPsychologicalProfile {
         founder_id: founder_id.to_string(),

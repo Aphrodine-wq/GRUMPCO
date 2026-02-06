@@ -48,7 +48,6 @@ export async function loadRemoteWorkspace(
   await ensureCacheDir();
 
   // 1. Sanitize URL to create a folder name
-  // simplified: user/repo or just hash it
   const safeName = repoUrl.replace(/[^a-zA-Z0-9-]/g, "_");
   const targetDir = join(WORKSPACE_CACHE_DIR, safeName);
 

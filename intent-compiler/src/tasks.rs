@@ -10,12 +10,11 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 #[derive(Default)]
 pub enum RiskLevel {
-    Safe,     // Read-only, no external effects
+    Safe, // Read-only, no external effects
     #[default]
     Moderate, // Reversible writes
-    Risky,    // External effects, hard to reverse
+    Risky, // External effects, hard to reverse
 }
-
 
 /// A single atomic task that G-Agent can execute
 #[derive(Debug, Clone, Serialize, Deserialize)]

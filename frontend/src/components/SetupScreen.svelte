@@ -117,8 +117,9 @@
   async function testConnection() {
     connectionStatus = 'checking';
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const res = await fetch(`${apiUrl.replace(/\/$/, '')}/health/quick`, { method: 'GET' });
+      const { getApiBase } = await import('$lib/api.js');
+      const base = getApiBase();
+      const res = await fetch(`${base.replace(/\/$/, '')}/health/quick`, { method: 'GET' });
       const data = (await res.json()) as { status?: string };
       connectionStatus = data?.status === 'healthy' ? 'ok' : 'error';
     } catch {

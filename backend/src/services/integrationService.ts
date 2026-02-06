@@ -446,6 +446,13 @@ export const OAUTH_PROVIDERS: Record<
     scopes: ["file_read"],
     supportsOAuth: true,
   },
+  // Monitoring/observability (API keys typically)
+  sentry: null,
+  datadog: null,
+  // API testing (API keys)
+  postman: null,
+  // Email service (API key)
+  sendgrid: null,
 };
 
 /**

@@ -2,6 +2,8 @@
   import { sortedSessions, sessionsStore } from '../stores/sessionsStore';
   import { Button } from '../lib/design-system';
   import FrownyFace from './FrownyFace.svelte';
+  import ProjectEditorModal from './ProjectEditorModal.svelte';
+  import type { Session } from '../types';
 
   let { onSelectProject, onNewProject, onUpgrade } = $props<{
     onSelectProject: (id: string) => void;
@@ -23,13 +25,27 @@
       sessionsStore.deleteSession(id);
     }
   }
+
+  let showEditorModal = $state(false);
+  let editingSession = $state<Session | null>(null);
+
+  function editProject(e: Event, session: Session) {
+    e.stopPropagation();
+    editingSession = session;
+    showEditorModal = true;
+  }
+
+  function closeEditorModal() {
+    showEditorModal = false;
+    editingSession = null;
+  }
 </script>
 
 <div class="dashboard">
   <header class="header">
     <div class="header-content">
       <div class="logo-area">
-        <FrownyFace size="md" state="idle" animated={true} />
+        <FrownyFace size="md" state="idle" animated={false} />
         <h1>G-Rump</h1>
       </div>
       <div style="display: flex; gap: 12px;">
@@ -63,7 +79,7 @@
 
     {#if $sortedSessions.length === 0}
       <div class="empty-state">
-        <FrownyFace size="lg" state="idle" animated={true} />
+        <FrownyFace size="lg" state="idle" animated={false} />
         <h3>What are we building?</h3>
         <p>Tell me your idea and I'll help design and build it.</p>
         <Button onclick={onNewProject} variant="secondary">Create your first project</Button>
@@ -85,11 +101,30 @@
           >
             <div class="card-header">
               <span class="date">{formatDate(session.updatedAt)}</span>
-              <button
-                class="delete-btn"
-                onclick={(e) => deleteProject(e, session.id)}
-                aria-label="Delete project"
-              >
+              <div class="card-actions">
+                <button
+                  class="edit-btn"
+                  onclick={(e) => editProject(e, session)}
+                  aria-label="Edit project"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                  </svg>
+                </button>
+                <button
+                  class="delete-btn"
+                  onclick={(e) => deleteProject(e, session.id)}
+                  aria-label="Delete project"
+                >
                 <svg
                   width="14"
                   height="14"
@@ -104,7 +139,8 @@
                   <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
                   <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
                 </svg>
-              </button>
+                </button>
+              </div>
             </div>
             <h3 class="title">{session.name}</h3>
             <div class="card-footer">
@@ -130,6 +166,12 @@
       </div>
     {/if}
   </main>
+
+  <ProjectEditorModal
+    bind:open={showEditorModal}
+    session={editingSession}
+    onClose={closeEditorModal}
+  />
 </div>
 
 <style>
@@ -232,6 +274,32 @@
     align-items: center;
   }
 
+  .card-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .project-card:hover .card-actions {
+    opacity: 1;
+  }
+
+  .edit-btn {
+    color: #a1a1aa;
+    padding: 4px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
+
+  .edit-btn:hover {
+    color: var(--color-primary, #7c3aed);
+    background: #f5f3ff;
+  }
+
   .date {
     font-size: 12px;
     font-weight: 500;
@@ -250,6 +318,10 @@
   }
 
   .project-card:hover .delete-btn {
+    opacity: 1;
+  }
+
+  .project-card:hover .card-actions .delete-btn {
     opacity: 1;
   }
 

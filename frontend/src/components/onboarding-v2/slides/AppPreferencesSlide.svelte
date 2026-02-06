@@ -169,13 +169,13 @@
   .title {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--color-text);
     margin-bottom: 0.5rem;
   }
 
   .subtitle {
     font-size: 1rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   /* Preference sections */
@@ -187,7 +187,7 @@
   .section-title {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-secondary);
     text-align: left;
     margin-bottom: 0.75rem;
     text-transform: uppercase;
@@ -207,8 +207,8 @@
     align-items: center;
     gap: 0.5rem;
     padding: 1rem;
-    background: white;
-    border: 2px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-border);
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease-out;
@@ -236,9 +236,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f3f4f6;
+    background: var(--color-bg-secondary);
     border-radius: 12px;
-    color: #6b7280;
+    color: var(--color-text-muted);
     transition: all 0.2s;
   }
 
@@ -250,12 +250,12 @@
   .theme-label {
     font-size: 0.9375rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .theme-desc {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   /* Toggle row */
@@ -264,8 +264,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 1rem;
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     margin-bottom: 0.75rem;
   }
@@ -282,9 +282,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f3f4f6;
+    background: var(--color-bg-secondary);
     border-radius: 10px;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .toggle-text {
@@ -296,12 +296,12 @@
   .toggle-label {
     font-size: 0.9375rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .toggle-desc {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .toggle-switch {
@@ -330,7 +330,7 @@
     left: 2px;
     width: 24px;
     height: 24px;
-    background: white;
+    background: var(--color-bg-card);
     border-radius: 50%;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s;
@@ -342,7 +342,7 @@
 
   .privacy-note {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     text-align: left;
   }
 

@@ -91,7 +91,7 @@ export async function execute(options: DoctorOptions): Promise<void> {
   console.log(branding.format('G-Rump System Diagnostic', 'subtitle'));
   console.log(branding.getDivider());
 
-  const apiUrl = config.get('apiUrl') ?? process.env.GRUMP_API_URL ?? 'http://localhost:3000';
+  const apiUrl = config.get('apiUrl') ?? process.env.GRUMP_API_URL ?? 'https://grump-backend.onrender.com';
 
   const node = await checkNode();
   const docker = await checkDocker();

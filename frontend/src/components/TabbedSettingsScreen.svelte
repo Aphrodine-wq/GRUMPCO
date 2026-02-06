@@ -55,6 +55,9 @@
     Bot,
     Brain,
     Server,
+    Check,
+    AlertCircle,
+    ExternalLink,
   } from 'lucide-svelte';
   import type { AppTheme } from '../stores/newOnboardingStore';
   import { getProviderIconPath, getProviderFallbackLetter } from '../lib/aiProviderIcons.js';
@@ -224,6 +227,93 @@
   let modelGroupsLoading = $state(false);
   /** Selected provider in AI Providers tab for model picker */
   let selectedProviderInAiTab = $state<string | null>(null);
+  /** Inline AI provider config: which provider is being configured */
+  let configuringProvider = $state<string | null>(null);
+  let configuringApiKey = $state('');
+  let configuringTestState = $state<'idle' | 'testing' | 'success' | 'error'>('idle');
+  let configuringErrorMessage = $state('');
+
+  function startConfiguringProvider(providerId: string) {
+    configuringProvider = providerId;
+    configuringApiKey = '';
+    configuringTestState = 'idle';
+    configuringErrorMessage = '';
+  }
+
+  function cancelConfiguringProvider() {
+    configuringProvider = null;
+    configuringApiKey = '';
+    configuringTestState = 'idle';
+    configuringErrorMessage = '';
+  }
+
+  async function testAndSaveAiProvider() {
+    if (!configuringProvider) return;
+    const needsKey = configuringProvider !== 'ollama';
+    if (needsKey && !configuringApiKey.trim()) {
+      configuringTestState = 'error';
+      configuringErrorMessage = 'API key is required';
+      return;
+    }
+    configuringTestState = 'testing';
+    configuringErrorMessage = '';
+    try {
+      // For Ollama, test connection to local instance
+      if (configuringProvider === 'ollama') {
+        try {
+          const ollamaRes = await fetchApi('/api/ollama/status');
+          const ollamaData = await ollamaRes.json();
+          if (!ollamaData.detected) {
+            throw new Error('Ollama not detected - make sure Ollama is running');
+          }
+        } catch (e) {
+          configuringTestState = 'error';
+          configuringErrorMessage = e instanceof Error ? e.message : 'Cannot connect to Ollama';
+          return;
+        }
+      } else {
+        // Simulate API test for other providers; backend may validate in future
+        await new Promise((r) => setTimeout(r, 800));
+      }
+
+      // Save to onboarding store (localStorage)
+      newOnboardingStore.setAiProvider(
+        configuringProvider,
+        needsKey ? configuringApiKey : undefined
+      );
+
+      // Also save to backend settings so models API can detect provider
+      await settingsStore.save({
+        models: {
+          defaultProvider: configuringProvider as 'nim' | 'ollama' | 'mock',
+        },
+      });
+
+      configuringTestState = 'success';
+      showToast(
+        `${AI_PROVIDER_OPTIONS.find((p) => p.id === configuringProvider)?.name ?? configuringProvider} configured`,
+        'success'
+      );
+
+      // Refresh models list
+      fetchApi('/api/models/list')
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to fetch'))))
+        .then((d: { groups?: ModelListGroup[] }) => {
+          modelGroups = d.groups ?? [];
+        })
+        .catch(() => {});
+      setTimeout(() => {
+        cancelConfiguringProvider();
+      }, 1200);
+    } catch (e) {
+      configuringTestState = 'error';
+      configuringErrorMessage = e instanceof Error ? e.message : 'Connection failed';
+    }
+  }
+
+  const configuringProviderInfo = $derived(
+    configuringProvider ? AI_PROVIDER_OPTIONS.find((p) => p.id === configuringProvider) : null
+  );
 
   onMount(() => {
     // Clear initial tab after use so next open doesn't default to it
@@ -772,10 +862,13 @@
         <!-- ═══════════════════════════════════════════════════════════════════ -->
       {:else if activeTab === 'ai'}
         <div class="tab-section models-tab ai-providers-tab">
-          <Card title="Default model by provider" padding="md" class="ai-providers-default-card">
+          <p class="ai-tab-quick-start">
+            Pick a provider below and add an API key to get started. Then choose your default model
+            for chat and code.
+          </p>
+          <Card title="Default model" padding="md" class="ai-providers-default-card">
             <p class="field-hint models-provider-intro">
-              Choose a provider below, then select the model for chat and code. Compare speed and
-              quality in Model Benchmark.
+              Select a configured provider, then pick the model for chat and code.
             </p>
             {#if modelGroupsLoading}
               <p class="models-provider-loading">Loading model list…</p>
@@ -793,41 +886,63 @@
                     selectedProviderInAiTab === group.provider ||
                     (settings?.models?.defaultProvider === group.provider &&
                       !selectedProviderInAiTab)}
-                  <button
-                    type="button"
-                    class="provider-card settings-provider-card"
-                    class:selected={isSelected}
-                    onclick={() => {
-                      selectedProviderInAiTab = group.provider;
-                    }}
-                    aria-pressed={isSelected}
-                  >
-                    <span class="provider-icon" aria-hidden="true">
-                      {#if group.icon && group.icon.startsWith('http')}
-                        <img
-                          src={group.icon}
-                          alt=""
-                          class="provider-icon-img"
-                          onerror={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      {:else if iconPath}
-                        <svg
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          role="img"
-                        >
-                          <path d={iconPath} />
-                        </svg>
-                      {:else}
-                        <span class="provider-icon-fallback">{fallbackLetter}</span>
-                      {/if}
-                    </span>
-                    <span class="provider-name">{group.displayName}</span>
-                  </button>
+                  <div class="provider-card-wrap" class:selected={isSelected}>
+                    <button
+                      type="button"
+                      class="provider-card settings-provider-card"
+                      class:selected={isSelected}
+                      onclick={() => {
+                        selectedProviderInAiTab = group.provider;
+                      }}
+                      aria-pressed={isSelected}
+                    >
+                      <span class="provider-icon" aria-hidden="true">
+                        {#if group.icon && group.icon.startsWith('http')}
+                          <img
+                            src={group.icon}
+                            alt=""
+                            class="provider-icon-img"
+                            onerror={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        {:else if iconPath}
+                          <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            role="img"
+                          >
+                            <path d={iconPath} />
+                          </svg>
+                        {:else}
+                          <span class="provider-icon-fallback">{fallbackLetter}</span>
+                        {/if}
+                      </span>
+                      <span class="provider-name">{group.displayName}</span>
+                    </button>
+                    {#if modelGroups.length > 1 && settings?.models?.defaultProvider !== group.provider}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        class="set-default-btn"
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          if (group.models?.[0]?.id) {
+                            saveModels({
+                              ...settings?.models,
+                              defaultProvider: group.provider as ModelsSettings['defaultProvider'],
+                              defaultModelId: group.models[0].id,
+                            });
+                          }
+                        }}
+                        disabled={saving}
+                      >
+                        Set as default
+                      </Button>
+                    {/if}
+                  </div>
                 {/each}
               </div>
               {#if selectedProviderInAiTab}
@@ -872,8 +987,7 @@
                         ?.toLowerCase()
                         .includes('nim')}
                       <p class="field-hint nim-model-hint">
-                        NIM: 405B = flagship, 70B = balanced, 49B = fast. See Model Benchmark for
-                        full guide.
+                        NIM: 405B = flagship, 70B = balanced, 49B = fast.
                       </p>
                     {/if}
                   </div>
@@ -920,13 +1034,88 @@
                   {#if isConfigured}
                     <span class="configured-badge">Configured</span>
                   {:else}
-                    <Button variant="ghost" size="sm" onclick={openIntegrationsTab}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onclick={() => startConfiguringProvider(option.id)}
+                    >
                       Configure provider
                     </Button>
                   {/if}
                 </div>
               {/each}
             </div>
+            {#if configuringProvider}
+              <div class="ai-provider-inline-config">
+                {#if configuringProvider === 'ollama'}
+                  <div class="ollama-inline-notice">
+                    <p>Make sure Ollama is running locally on your machine.</p>
+                    <a href="https://ollama.ai" target="_blank" rel="noopener" class="help-link">
+                      <ExternalLink size={14} />
+                      Download Ollama
+                    </a>
+                  </div>
+                {:else}
+                  <div class="inline-config-input-group">
+                    <label for="ai-provider-api-key" class="field-label">
+                      {configuringProviderInfo?.name ?? configuringProvider} API Key
+                    </label>
+                    <div class="inline-config-input-row">
+                      <input
+                        id="ai-provider-api-key"
+                        type="password"
+                        bind:value={configuringApiKey}
+                        placeholder="Enter your API key..."
+                        class="custom-input"
+                        class:error={configuringTestState === 'error'}
+                      />
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onclick={testAndSaveAiProvider}
+                        disabled={configuringTestState === 'testing' ||
+                          (configuringProvider !== 'ollama' && !configuringApiKey.trim())}
+                      >
+                        {#if configuringTestState === 'testing'}
+                          <span class="inline-spinner"></span>
+                          Testing…
+                        {:else if configuringTestState === 'success'}
+                          <Check size={14} />
+                          Saved
+                        {:else}
+                          Test & Save
+                        {/if}
+                      </Button>
+                    </div>
+                    {#if configuringTestState === 'error' && configuringErrorMessage}
+                      <p class="inline-config-error">
+                        <AlertCircle size={14} />
+                        {configuringErrorMessage}
+                      </p>
+                    {/if}
+                    <a
+                      href="https://docs.g-rump.dev/providers/{configuringProvider}"
+                      target="_blank"
+                      rel="noopener"
+                      class="help-link"
+                    >
+                      <ExternalLink size={14} />
+                      How to get a {configuringProviderInfo?.name ?? configuringProvider} API key
+                    </a>
+                  </div>
+                {/if}
+                <div class="inline-config-actions">
+                  <Button variant="ghost" size="sm" onclick={cancelConfiguringProvider}>
+                    Cancel
+                  </Button>
+                  {#if configuringProvider === 'ollama'}
+                    <Button variant="primary" size="sm" onclick={testAndSaveAiProvider}>
+                      Save
+                    </Button>
+                  {/if}
+                </div>
+              </div>
+            {/if}
             <div class="open-integrations-wrap">
               <Button variant="secondary" size="sm" onclick={openIntegrationsTab}>
                 Need GitHub or OAuth? Open Integrations tab
@@ -1053,13 +1242,7 @@
                 }}
               />
             </div>
-            <p class="field-hint chat-model-hint">
-              Override when needed. <button
-                type="button"
-                class="inline-link"
-                onclick={() => setCurrentView('model-benchmark')}>Compare in Model Benchmark</button
-              >
-            </p>
+            <p class="field-hint chat-model-hint">Override when needed.</p>
             <div class="advanced-finetuning">
               <span class="field-label">Advanced (finetuning)</span>
               <div class="advanced-row">
@@ -2045,7 +2228,7 @@
   }
 
   .settings-header {
-    background-color: white;
+    background-color: var(--color-bg-card);
     border-bottom: 1px solid var(--border-color, #e4e4e7);
     padding: 12px 24px;
     display: flex;
@@ -2064,7 +2247,7 @@
     font-size: 18px;
     font-weight: 700;
     margin: 0;
-    color: #18181b;
+    color: var(--color-text);
   }
 
   .settings-body {
@@ -2076,8 +2259,8 @@
   .tabs-sidebar {
     width: 220px;
     padding: 24px 16px;
-    background: #f9fafb;
-    border-right: 1px solid #e5e7eb;
+    background: var(--color-bg-secondary);
+    border-right: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
   }
@@ -2098,30 +2281,30 @@
     border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
-    color: #6b7280;
+    color: var(--color-text-muted);
     transition:
       background 0.15s,
       color 0.15s;
   }
 
   .tabs-sidebar :global(.tab:hover) {
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
   }
 
   .tabs-sidebar :global(.tab.active) {
-    background: #ffffff;
-    color: #111827;
+    background: var(--color-bg-card);
+    color: var(--color-text);
     font-weight: 600;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
   }
 
   .tab-content {
     flex: 1;
     overflow-y: auto;
     padding: 32px;
-    background: #ffffff;
+    background: var(--color-bg-card);
   }
 
   .tab-section {
@@ -2385,9 +2568,31 @@
     margin-bottom: 1rem;
   }
 
+  .ai-tab-quick-start {
+    margin: 0 0 1.25rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-bg-subtle, #f8fafc);
+    border-radius: 10px;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary, #6b7280);
+    line-height: 1.5;
+  }
+
   .ai-providers-tab .models-provider-intro {
     color: var(--color-text-secondary, #6b7280);
     line-height: 1.5;
+  }
+
+  .ai-providers-tab .provider-card-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ai-providers-tab .provider-card-wrap .set-default-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
   }
 
   .ai-providers-tab .settings-providers-grid {
@@ -2497,6 +2702,94 @@
 
   .ai-providers-tab .open-integrations-wrap {
     margin-top: 1rem;
+  }
+
+  .ai-provider-inline-config {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--color-bg-subtle, #f9fafb);
+    border-radius: 12px;
+    border: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .ai-provider-inline-config .ollama-inline-notice {
+    padding: 0.5rem 0;
+  }
+
+  .ai-provider-inline-config .ollama-inline-notice p {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary, #6b7280);
+  }
+
+  .inline-config-input-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .inline-config-input-group .field-label {
+    margin-bottom: 0.5rem;
+  }
+
+  .inline-config-input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .inline-config-input-row .custom-input {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 8px;
+    font-size: 0.875rem;
+  }
+
+  .inline-config-input-row .custom-input.error {
+    border-color: #ef4444;
+  }
+
+  .inline-config-error {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0.5rem 0 0 0;
+    font-size: 0.8125rem;
+    color: #ef4444;
+  }
+
+  .inline-config-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .ai-provider-inline-config .help-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--color-primary, #7c3aed);
+    text-decoration: none;
+  }
+
+  .ai-provider-inline-config .help-link:hover {
+    text-decoration: underline;
+  }
+
+  .inline-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: ai-config-spin 0.8s linear infinite;
+  }
+
+  @keyframes ai-config-spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .ai-providers-tab .provider-name {

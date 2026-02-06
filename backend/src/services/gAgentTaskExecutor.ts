@@ -11,6 +11,7 @@ import { runWithConcurrency } from "../utils/concurrency.js";
 import { gAgentMemoryService } from "./gAgentMemoryService.js";
 import { gAgentSelfImprovement } from "./gAgentSelfImprovement.js";
 import type { Plan, Task, TaskStatus } from "./intentCliRunner.js";
+import { configManager } from "../gAgent/config.js";
 
 // ============================================================================
 // SSE EVENT TYPES
@@ -19,51 +20,51 @@ import type { Plan, Task, TaskStatus } from "./intentCliRunner.js";
 export type TaskExecutionEvent =
   | { type: "plan_started"; planId: string; goal: string; taskCount: number }
   | {
-      type: "batch_started";
-      batchIndex: number;
-      batchSize: number;
-      taskIds: string[];
-    }
+    type: "batch_started";
+    batchIndex: number;
+    batchSize: number;
+    taskIds: string[];
+  }
   | {
-      type: "task_started";
-      taskId: string;
-      description: string;
-      tools: string[];
-    }
+    type: "task_started";
+    taskId: string;
+    description: string;
+    tools: string[];
+  }
   | { type: "task_progress"; taskId: string; percent: number; message: string }
   | {
-      type: "task_tool_call";
-      taskId: string;
-      toolName: string;
-      toolInput: Record<string, unknown>;
-    }
+    type: "task_tool_call";
+    taskId: string;
+    toolName: string;
+    toolInput: Record<string, unknown>;
+  }
   | {
-      type: "task_tool_result";
-      taskId: string;
-      toolName: string;
-      success: boolean;
-      output: string;
-    }
+    type: "task_tool_result";
+    taskId: string;
+    toolName: string;
+    success: boolean;
+    output: string;
+  }
   | {
-      type: "task_completed";
-      taskId: string;
-      output: string;
-      durationMs: number;
-    }
+    type: "task_completed";
+    taskId: string;
+    output: string;
+    durationMs: number;
+  }
   | { type: "task_failed"; taskId: string; error: string; durationMs: number }
   | { type: "task_skipped"; taskId: string; reason: string }
   | {
-      type: "batch_completed";
-      batchIndex: number;
-      completedCount: number;
-      failedCount: number;
-    }
+    type: "batch_completed";
+    batchIndex: number;
+    completedCount: number;
+    failedCount: number;
+  }
   | {
-      type: "plan_completed";
-      planId: string;
-      status: "completed" | "failed" | "cancelled";
-      durationMs: number;
-    }
+    type: "plan_completed";
+    planId: string;
+    status: "completed" | "failed" | "cancelled";
+    durationMs: number;
+  }
   | { type: "error"; message: string; planId?: string; taskId?: string }
   | { type: "done" };
 
@@ -92,8 +93,7 @@ interface ExecutionState {
 export class GAgentTaskExecutor {
   private activeExecutions: Map<string, ExecutionState> = new Map();
 
-  constructor() {
-  }
+  constructor() { }
   /**
    * Execute a plan and yield progress events
    * @param plan The plan to execute
@@ -310,15 +310,18 @@ export class GAgentTaskExecutor {
     const tasks = taskIds
       .map((id) => state.plan.tasks.find((t) => t.id === id))
       .filter(Boolean) as Task[];
+    // Run with concurrency limit (default 20) to balance performance and resources
+    const concurrencyLimit =
+      parseInt(process.env.G_AGENT_TASK_CONCURRENCY || "", 10) || 20;
 
-    // Run with concurrency limit (e.g. 5) to balance performance and resources
+    // Run with concurrency limit from config to balance performance and resources
     const results = await runWithConcurrency(
       tasks,
-      5, // Concurrency limit
+      configManager.getConfig().performance.batchSize || 5,
       async (task) => {
         if (state.cancelled) return [];
         return this.executeTask(state, task, workspaceRoot, abortSignal);
-      }
+      },
     );
 
     // Flatten results into events array
@@ -359,6 +362,9 @@ export class GAgentTaskExecutor {
 
       // Stream chat for this task
       const messages = [{ role: "user" as const, content: taskPrompt }];
+
+      // Accumulate output from text events
+      let output = "";
 
       // Create a fresh service instance for each task to ensure thread safety
       // during parallel execution (ClaudeServiceWithTools is stateful)
@@ -473,11 +479,10 @@ ${plan.goal}
 You have access to: ${task.tools.join(", ")}
 
 ## Dependencies
-${
-  task.depends_on.length > 0
-    ? `This task depends on: ${task.depends_on.join(", ")} (already completed)`
-    : "This task has no dependencies."
-}
+${task.depends_on.length > 0
+        ? `This task depends on: ${task.depends_on.join(", ")} (already completed)`
+        : "This task has no dependencies."
+      }
 
 ## Instructions
 1. Complete this specific task using the available tools

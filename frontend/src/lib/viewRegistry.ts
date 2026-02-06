@@ -32,13 +32,13 @@ export const VIEW_REGISTRY = {
     backTo: 'chat',
   },
   voiceCode: {
-    loader: () => import('../components/VoiceCodeScreen.svelte'),
-    loadingLabel: 'Loading Voice code…',
+    loader: () => import('../components/TalkScreen.svelte'),
+    loadingLabel: 'Loading Talk…',
     backTo: 'chat',
   },
   talkMode: {
-    loader: () => import('../components/TalkModeScreen.svelte'),
-    loadingLabel: 'Loading Talk Mode…',
+    loader: () => import('../components/TalkScreen.svelte'),
+    loadingLabel: 'Loading Talk…',
     backTo: 'chat',
   },
   canvas: {
@@ -61,6 +61,16 @@ export const VIEW_REGISTRY = {
     loadingLabel: 'Loading Design to code…',
     backTo: 'chat',
   },
+  projects: {
+    loader: () => import('../components/ProjectsScreen.svelte'),
+    loadingLabel: 'Loading Projects…',
+    backTo: 'chat',
+  },
+  builder: {
+    loader: () => import('../components/BuilderScreen.svelte'),
+    loadingLabel: 'Loading Builder…',
+    backTo: 'chat',
+  },
   // G-Agent: Both 'freeAgent' and 'gAgent' route to the same consolidated screen
   freeAgent: {
     loader: () => import('../components/GAgentScreen.svelte'),
@@ -79,6 +89,11 @@ export const VIEW_REGISTRY = {
   },
 
   // ── Cost & Billing ─────────────────────────────────────────────────────
+  credits: {
+    loader: () => import('../components/CreditMenuScreen.svelte'),
+    loadingLabel: 'Loading Credits…',
+    backTo: 'chat',
+  },
   cost: {
     loader: () => import('../components/LazyCostDashboard.svelte'),
     loadingLabel: 'Loading Cost dashboard…',
@@ -87,10 +102,9 @@ export const VIEW_REGISTRY = {
 
   // ── Integrations & Platform ────────────────────────────────────────────
   integrations: {
-    loader: () => import('../components/TabbedSettingsScreen.svelte'),
+    loader: () => import('../components/IntegrationsScreen.svelte'),
     loadingLabel: 'Loading Integrations…',
     backTo: 'chat',
-    extraProps: { initialTab: 'integrations' },
   },
   heartbeats: {
     loader: () => import('../components/HeartbeatsManager.svelte'),
@@ -131,11 +145,6 @@ export const VIEW_REGISTRY = {
   },
 
   // ── Settings sub-screens ───────────────────────────────────────────────
-  'model-benchmark': {
-    loader: () => import('../components/ModelBenchmark.svelte'),
-    loadingLabel: 'Loading Model benchmark…',
-    backTo: 'settings',
-  },
   troubleshooting: {
     loader: () => import('../components/TroubleshootingWizard.svelte'),
     loadingLabel: 'Loading Troubleshooting…',

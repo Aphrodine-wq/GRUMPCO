@@ -104,15 +104,15 @@ export interface FirestoreCollection {
 export interface FirestoreField {
   name: string;
   type:
-    | "string"
-    | "number"
-    | "boolean"
-    | "timestamp"
-    | "geopoint"
-    | "reference"
-    | "array"
-    | "map"
-    | "null";
+  | "string"
+  | "number"
+  | "boolean"
+  | "timestamp"
+  | "geopoint"
+  | "reference"
+  | "array"
+  | "map"
+  | "null";
 }
 
 export interface FirebaseFunction {
@@ -148,16 +148,16 @@ export interface TableDefinition {
 export interface ColumnDefinition {
   name: string;
   type:
-    | "text"
-    | "int"
-    | "bigint"
-    | "boolean"
-    | "timestamp"
-    | "uuid"
-    | "json"
-    | "jsonb"
-    | "float"
-    | "decimal";
+  | "text"
+  | "int"
+  | "bigint"
+  | "boolean"
+  | "timestamp"
+  | "uuid"
+  | "json"
+  | "jsonb"
+  | "float"
+  | "decimal";
   nullable?: boolean;
   defaultValue?: string;
   unique?: boolean;
@@ -371,7 +371,8 @@ class SupabaseClient {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": contentType,
         },
-        body: file as BodyInit,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        body: file as any,
       });
 
       if (!res.ok) {
@@ -834,7 +835,8 @@ class FirebaseAdminClient {
           Authorization: `Bearer ${this.accessToken}`,
           "Content-Type": contentType,
         },
-        body: file as BodyInit,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        body: file as any,
       });
 
       if (!res.ok) {

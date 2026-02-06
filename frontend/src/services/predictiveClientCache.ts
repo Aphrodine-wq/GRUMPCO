@@ -226,11 +226,14 @@ class PredictiveClientCache {
 
   private markForPreload(query: string): void {
     // Send to server for pre-computation
-    fetch('/api/preload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
-    }).catch(() => {}); // Silent fail
+    import('$lib/api.js')
+      .then(({ fetchApi }) =>
+        fetchApi('/api/preload', {
+          method: 'POST',
+          body: JSON.stringify({ query }),
+        })
+      )
+      .catch(() => {}); // Silent fail
   }
 
   private async getFromIndexedDB(queryHash: string): Promise<CacheEntry | null> {

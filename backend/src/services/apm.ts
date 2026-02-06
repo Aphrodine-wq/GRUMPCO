@@ -71,7 +71,7 @@ export class APMService {
     operation: string,
     metadata?: Record<string, string | number | boolean>,
   ): string {
-    const traceId = `${operation}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const traceId = `${operation}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
     this.traces.set(traceId, {
       operation,

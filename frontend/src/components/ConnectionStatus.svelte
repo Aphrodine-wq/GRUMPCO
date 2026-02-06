@@ -11,6 +11,7 @@
    */
   import { connectionStore } from '../stores/connectionStore.js';
   import { onMount, onDestroy } from 'svelte';
+  import { fetchApi } from '$lib/api.js';
 
   // State
   let latency = $state(0);
@@ -71,7 +72,7 @@
     const start = performance.now();
 
     try {
-      const response = await fetch('/api/health', {
+      const response = await fetchApi('/api/health', {
         method: 'HEAD',
         cache: 'no-cache',
       });
