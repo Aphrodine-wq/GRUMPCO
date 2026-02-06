@@ -17,6 +17,7 @@ import fs from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
 import util from "util";
+import { getCompletion } from "./llmGatewayHelper.js";
 
 const execAsync = util.promisify(exec);
 
@@ -90,11 +91,6 @@ export async function scanForCodeIssues(
 ): Promise<CodeScanResult> {
   logger.info({ userId, workspacePath }, "Starting code issue scan");
 
-  // In a real implementation, this would:
-  // 1. Run npm audit / yarn audit for deps
-  // 2. Run static analysis (ESLint, semgrep)
-  // 3. Check for known vulnerability patterns
-
   const result: CodeScanResult = {
     vulnerabilities: [],
     outdatedDeps: [],
@@ -102,8 +98,56 @@ export async function scanForCodeIssues(
   };
 
   try {
-    // Check package.json for outdated deps (placeholder)
-    // In production, would run `npm outdated --json`
+    // 1. Run pnpm audit
+    // Note: Using pnpm because the project is a pnpm monorepo and getSecurityScore also uses pnpm.
+    try {
+      const { stdout } = await execAsync("pnpm audit --json --prod", {
+        cwd: workspacePath,
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      });
+      if (stdout) {
+         try {
+            processAuditOutput(JSON.parse(stdout), result);
+         } catch (parseError) {
+            logger.error({ userId, parseError }, "Failed to parse pnpm audit output (stdout)");
+         }
+      }
+    } catch (error: any) {
+      if (error.stdout) {
+        try {
+          processAuditOutput(JSON.parse(error.stdout), result);
+        } catch (parseError) {
+          logger.error({ userId, parseError }, "Failed to parse pnpm audit output (error.stdout)");
+        }
+      } else {
+        logger.warn({ userId, error }, "pnpm audit command failed execution");
+      }
+    }
+
+    // 2. Run pnpm outdated
+    try {
+       const { stdout } = await execAsync("pnpm outdated --json", {
+        cwd: workspacePath,
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      if (stdout) {
+        try {
+            processOutdatedOutput(JSON.parse(stdout), result);
+        } catch (parseError) {
+            logger.error({ userId, parseError }, "Failed to parse pnpm outdated output (stdout)");
+        }
+      }
+    } catch (error: any) {
+       if (error.stdout) {
+          try {
+             processOutdatedOutput(JSON.parse(error.stdout), result);
+          } catch (parseError) {
+              logger.error({ userId, parseError }, "Failed to parse pnpm outdated output (error.stdout)");
+          }
+       } else {
+           logger.warn({ userId, error }, "pnpm outdated command failed execution");
+       }
+    }
 
     // Generate insights from scan results
     if (result.vulnerabilities.length > 0) {
@@ -145,6 +189,58 @@ export async function scanForCodeIssues(
   }
 
   return result;
+}
+
+function processAuditOutput(auditOutput: any, result: CodeScanResult) {
+  if (auditOutput.advisories) {
+    Object.values(auditOutput.advisories).forEach((advisory: any) => {
+      result.vulnerabilities.push({
+        severity: advisory.severity,
+        file: advisory.module_name,
+        message: advisory.title,
+        cwe: advisory.cwe && advisory.cwe.length > 0 ? advisory.cwe[0] : undefined,
+      });
+    });
+  }
+}
+
+function processOutdatedOutput(outdatedOutput: any, result: CodeScanResult) {
+    Object.entries(outdatedOutput).forEach(([name, info]: [string, any]) => {
+         if (info.latest !== info.wanted) {
+             result.outdatedDeps.push({
+                 name: name,
+                 current: info.current || info.wanted,
+                 latest: info.latest,
+                 breaking: isBreakingChange(info.current || info.wanted, info.latest),
+             });
+         }
+    });
+}
+
+function isBreakingChange(current: string, latest: string): boolean {
+  if (!current || !latest) return false;
+  // Simple check: different major version
+  // Clean versions (remove ^, ~)
+  const clean = (v: string) => v.replace(/^[^\d]+/, '');
+  const currentParts = clean(current).split('.');
+  const latestParts = clean(latest).split('.');
+
+  const currentMajor = parseInt(currentParts[0], 10);
+  const latestMajor = parseInt(latestParts[0], 10);
+
+  if (isNaN(currentMajor) || isNaN(latestMajor)) return false;
+
+  if (currentMajor !== latestMajor) return true;
+
+  // For 0.x, minor changes are breaking
+  if (currentMajor === 0) {
+      const currentMinor = parseInt(currentParts[1], 10);
+      const latestMinor = parseInt(latestParts[1], 10);
+      if (isNaN(currentMinor) || isNaN(latestMinor)) return false;
+      return currentMinor !== latestMinor;
+  }
+
+  return false;
 }
 
 /**
