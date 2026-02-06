@@ -1,6 +1,9 @@
 /**
  * Usage tracker – records API calls for billing and analytics.
  * Persists to database with optional in-memory cache for performance.
+ *
+ * NOTE: Local AI models (Ollama, local LLMs) are excluded from credit tracking
+ * since they run on user's hardware and don't incur API costs.
  */
 
 import logger from "../middleware/logger.js";
@@ -12,6 +15,7 @@ export interface UsageRecord {
   endpoint: string;
   method: string;
   model?: string;
+  provider?: string;
   inputTokens?: number;
   outputTokens?: number;
   latencyMs?: number;
@@ -25,12 +29,72 @@ const recentUsageCache: UsageRecord[] = [];
 const CACHE_LIMIT = 1000;
 
 /**
+ * Local AI providers that don't incur API costs and shouldn't be tracked for billing.
+ * These run on user's hardware (Electron desktop, local server, etc.)
+ */
+const LOCAL_AI_PROVIDERS = [
+  "ollama",
+  "local",
+  "localhost",
+  "lm-studio",
+  "llama.cpp",
+  "llamafile",
+  "textgen",
+  "oobabooga",
+  "koboldcpp",
+];
+
+/**
+ * Check if a provider or model represents a local AI (free, no API cost)
+ */
+export function isLocalModel(provider?: string, model?: string): boolean {
+  // Check provider first
+  if (provider) {
+    const providerLower = provider.toLowerCase();
+    if (LOCAL_AI_PROVIDERS.some((p) => providerLower.includes(p))) {
+      return true;
+    }
+  }
+
+  // Check model name for local indicators
+  if (model) {
+    const modelLower = model.toLowerCase();
+    // Ollama-style model names are typically just the model name without provider prefix
+    // e.g., "llama3.1", "mistral", "codellama" vs "openai/gpt-4", "anthropic/claude"
+    if (
+      LOCAL_AI_PROVIDERS.some((p) => modelLower.includes(p)) ||
+      modelLower.startsWith("ollama:")
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Record an API call with automatic database persistence
  * Fails silently to avoid breaking the request if analytics fails
+ *
+ * NOTE: Skips recording for local AI models (Ollama, etc.) since they don't
+ * incur API costs and shouldn't count against user's credit limits.
  */
 export async function recordApiCall(
   record: Omit<UsageRecord, "createdAt">,
 ): Promise<void> {
+  // Skip tracking for local AI models - they don't cost credits
+  if (isLocalModel(record.provider, record.model)) {
+    logger.debug(
+      {
+        userId: record.userId,
+        model: record.model,
+        provider: record.provider,
+      },
+      "Skipping usage tracking for local AI model (no credit cost)",
+    );
+    return;
+  }
+
   const full: UsageRecord = { ...record, createdAt: new Date() };
 
   try {
@@ -128,11 +192,8 @@ export async function getUsageForUser(
   toDate: Date,
 ): Promise<UsageRecord[]> {
   try {
-    // Check cache first (reserved for future cache-first path)
-    const _cachedRecords = recentUsageCache.filter(
-      (r) =>
-        r.userId === userId && r.createdAt >= fromDate && r.createdAt <= toDate,
-    );
+    // Note: recentUsageCache could be used for cache-first optimization in future
+    // Currently we always query database for complete results
 
     // Query database for complete results
     const db = getDatabase();
