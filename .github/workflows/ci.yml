@@ -1,562 +1,221 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
+  pull_request:
+    branches: [main, develop]
   push:
     branches: [main, develop]
-  pull_request:
-    branches: [main]
 
-env:
-  NODE_VERSION: '20'
-  CARGO_TERM_COLOR: always
-
-# Optimize concurrency
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  # Job 1: Lint and Type Check (runs in parallel)
-  lint-backend:
-    name: Lint Backend
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-      
-      - name: Cache node_modules
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.4
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "store=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
         uses: actions/cache@v4
         with:
-          path: backend/node_modules
-          key: ${{ runner.os }}-backend-node-${{ hashFiles('backend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-backend-node-
-      
-      - name: Install dependencies
-        working-directory: backend
-        run: npm ci --prefer-offline
-      
-      - name: Lint
-        working-directory: backend
-        run: npm run lint
-      
-      - name: Type check
-        working-directory: backend
-        run: npm run type-check
-      
-      - name: Check formatting
-        working-directory: backend
-        run: npm run format:check
-        continue-on-error: true
+          path: ${{ steps.pnpm-cache.outputs.store }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
 
-  lint-frontend:
-    name: Lint Frontend
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+  typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      
-      - name: Cache node_modules
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.4
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "store=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
         uses: actions/cache@v4
         with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-frontend-node-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-frontend-node-
-      
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci --prefer-offline
-      
-      - name: Lint
-        working-directory: frontend
-        run: npm run lint
-      
-      - name: Type check
-        working-directory: frontend
-        run: npm run type-check
-      
-      - name: Check formatting
-        working-directory: frontend
-        run: npm run format:check
-        continue-on-error: true
+          path: ${{ steps.pnpm-cache.outputs.store }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
 
-  # Job 2: Security Audit (runs in parallel)
-  security-audit:
-    name: Security Audit
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm run build:packages
+
+      - name: Type check
+        run: pnpm run type-check
+
+  test-backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-      
-      - name: Run backend audit
-        working-directory: backend
-        run: npm audit --audit-level=high
-        continue-on-error: false
-      
-      - name: Run frontend audit
-        working-directory: frontend
-        run: npm audit --audit-level=high
-        continue-on-error: false
+          node-version: '20'
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
+          version: 8.15.4
 
-  lint-and-audit:
-    name: Lint and Audit Gate
-    runs-on: ubuntu-latest
-    needs: [lint-backend, lint-frontend, security-audit]
-    steps:
-      - run: echo "Lint and audit passed"
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "store=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-  docker-compose-gpu-config:
-    name: Validate Docker Compose GPU
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Validate docker-compose + GPU override
-        run: |
-          docker compose -f docker-compose.yml -f docker-compose.gpu.yml config > /dev/null
-          echo "GPU compose config valid"
-
-  # Job 3: Build Rust (runs in parallel)
-  build-rust:
-    name: Build Rust Intent Compiler
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+      - name: Cache pnpm store
+        uses: actions/cache@v4
         with:
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-      
-      - name: Cache Rust dependencies
+          path: ${{ steps.pnpm-cache.outputs.store }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm run build:packages
+
+      - name: Run backend tests
+        run: npm test --prefix backend
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.4
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "store=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.store }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm run build:packages
+
+      - name: Run frontend tests
+        run: npm run test:run --prefix frontend
+
+  test-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            intent-compiler/target/
+            ~/.cargo/registry
+            ~/.cargo/git
+            intent-compiler/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('intent-compiler/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-      
-      - name: Check Rust formatting
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Run Rust tests
         working-directory: intent-compiler
-        run: cargo fmt -- --check
-      
-      - name: Run Clippy
-        working-directory: intent-compiler
-        run: cargo clippy -- -D warnings
-      
-      - name: Build release
-        working-directory: intent-compiler
-        run: cargo build --release
-      
-      - name: Build SIMD (x86_64)
-        working-directory: intent-compiler
-        run: |
-          if [ -f build-simd.sh ]; then
-            chmod +x build-simd.sh && ./build-simd.sh
-          else
-            echo "build-simd.sh not found, skipping SIMD build"
-          fi
-        continue-on-error: true
-      
-      - name: Run tests
-        working-directory: intent-compiler
-        run: cargo test --release
-      
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: grump-intent-linux
-          path: intent-compiler/target/release/grump-intent
+        run: cargo test --lib
 
-  # Job 4: Build Backend (runs after lint)
-  build-backend:
-    name: Build Backend
+  build:
+    needs: [lint, typecheck, test-backend, test-frontend]
     runs-on: ubuntu-latest
-    needs: [lint-backend]
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-      
-      - name: Cache node_modules
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.4
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "store=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
         uses: actions/cache@v4
         with:
-          path: backend/node_modules
-          key: ${{ runner.os }}-backend-node-${{ hashFiles('backend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-backend-node-
-      
-      - name: Cache SWC
-        uses: actions/cache@v4
-        with:
-          path: backend/.swc
-          key: ${{ runner.os }}-swc-${{ hashFiles('backend/src/**/*.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-swc-
-      
+          path: ${{ steps.pnpm-cache.outputs.store }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
       - name: Install dependencies
-        working-directory: backend
-        run: npm ci --prefer-offline
-      
-      - name: Build with SWC
-        working-directory: backend
-        run: npm run build
-      
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-dist
-          path: backend/dist/
+        run: pnpm install --frozen-lockfile
 
-  # Job 5: Build Frontend (runs after lint)
-  build-frontend:
-    name: Build Frontend
-    runs-on: ubuntu-latest
-    needs: [lint-frontend]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-frontend-node-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-frontend-node-
-      
-      - name: Cache Vite
-        uses: actions/cache@v4
-        with:
-          path: frontend/node_modules/.vite
-          key: ${{ runner.os }}-vite-${{ hashFiles('frontend/src/**/*') }}
-          restore-keys: |
-            ${{ runner.os }}-vite-
-      
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci --prefer-offline
-      
-      - name: Build
-        working-directory: frontend
-        run: npm run build
-      
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
+      - name: Build shared packages
+        run: pnpm run build:packages
 
-  # Job 6: Test Backend (runs after build)
-  test-backend:
-    name: Test Backend
-    runs-on: ubuntu-latest
-    needs: [build-backend]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-      
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: backend/node_modules
-          key: ${{ runner.os }}-backend-node-${{ hashFiles('backend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-backend-node-
-      
-      - name: Install dependencies
-        working-directory: backend
-        run: npm ci --prefer-offline
-      
-      - name: Run tests
-        working-directory: backend
-        run: npm test
-      
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          directory: backend/coverage
-          flags: backend
-
-  # Job 7: Test Frontend (runs after build)
-  test-frontend:
-    name: Test Frontend
-    runs-on: ubuntu-latest
-    needs: [build-frontend]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-frontend-node-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-frontend-node-
-      
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci --prefer-offline
-      
-      - name: Run tests
-        working-directory: frontend
-        run: npm run test:run
-      
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          directory: frontend/coverage
-          flags: frontend
-
-  # Job 8: Docker Build (runs after all tests + e2e pass)
-  docker-build:
-    name: Build Docker Images
-    runs-on: ubuntu-latest
-    needs: [test-backend, test-frontend, test-e2e, build-rust, security-audit]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-      
-      - name: Build backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: false
-          tags: grump-backend:latest
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-      
-      - name: Build frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          push: false
-          tags: grump-frontend:latest
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-      
-      # Temp fix for cache growth
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-  test-e2e:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    needs: [test-backend, test-frontend]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-      
-      - name: Install Playwright browsers
-        working-directory: frontend
-        run: npx playwright install --with-deps
-      
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
-
-      - name: Build backend
-        working-directory: backend
-        run: npm run build
-        env:
-          ANTHROPIC_API_KEY: test_key_for_e2e_tests
-
-      - name: Start backend server
-        working-directory: backend
-        run: |
-          nohup npm run start:prod > ../backend.log 2>&1 &
-          for i in $(seq 1 60); do curl -sf http://localhost:3000/health/quick && break; sleep 1; done
-        env:
-          ANTHROPIC_API_KEY: test_key_for_e2e_tests
-          PORT: 3000
-
-      - name: Run E2E tests
-        working-directory: frontend
-        run: npm run test:e2e:ci
-        env:
-          VITE_API_URL: http://localhost:3000
-      
-      - name: Upload E2E test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-results
-          path: frontend/test-results/
-          retention-days: 7
-
-  agent-evals:
-    name: Agent Evals
-    runs-on: ubuntu-latest
-    needs: test-backend
-    if: secrets.ANTHROPIC_API_KEY != ''
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
-
-      - name: Build backend
-        working-directory: backend
-        run: npm run build
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
-      - name: Start backend server
-        working-directory: backend
-        run: |
-          nohup npm run start:prod > ../backend-evals.log 2>&1 &
-          for i in $(seq 1 60); do curl -sf http://localhost:3000/health/quick && break; sleep 1; done
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          PORT: 3000
-
-      - name: Run agent evals
-        working-directory: backend
-        run: npm run evals
-        env:
-          EVAL_BASE_URL: http://localhost:3000
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
-      - name: Publish eval score summary
-        if: success()
-        run: node backend/tests/evals/parseEvalsSummary.mjs
-        env:
-          GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
-
-      - name: Upload agent evals results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: agent-evals
-          path: frontend/test-results/
-          retention-days: 7
-
-  rag-index:
-    name: RAG Index
-    runs-on: ubuntu-latest
-    needs: lint-and-audit
-    if: secrets.NVIDIA_NIM_API_KEY != ''
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install backend dependencies
-        run: npm ci
-
-      - name: Run RAG indexer
-        run: npm run rag:index
-        env:
-          NVIDIA_NIM_API_KEY: ${{ secrets.NVIDIA_NIM_API_KEY }}
-          RAG_INDEX_PATH: ${{ github.workspace }}/backend/data/rag-index.json
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
-      - name: Upload RAG index artifact
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: rag-index
-          path: backend/data/rag-index.json
-          retention-days: 7
-
+      - name: Build frontend
+        run: pnpm run build

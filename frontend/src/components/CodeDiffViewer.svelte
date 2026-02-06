@@ -16,16 +16,35 @@
   let { diff }: Props = $props();
 
   let viewMode: 'side-by-side' | 'unified' = $state('side-by-side');
-  let diffLines = $derived(computeLineDiff(diff.beforeContent, diff.afterContent));
+  let diffLines = $state<Array<import('../utils/diffUtils').DiffLine>>([]);
   let isCollapsed = $state(false);
   let language = $derived(detectLanguage(diff.filePath));
-  let summary = $derived(formatDiffSummary(diff));
+  let summary = $state('');
   let changeLocations = $state<
     Array<{ index: number; lineNumber: number; type: 'added' | 'removed' }>
   >([]);
   let currentChangeIndex = $state(0);
   let lineRefs: Record<number, HTMLElement> = $state({});
   let jumpNavVisible = $state(false);
+  let isLoading = $state(true);
+
+  // Load diff data asynchronously
+  async function loadDiffData() {
+    isLoading = true;
+    try {
+      const [lines, diffSummary] = await Promise.all([
+        computeLineDiff(diff.beforeContent, diff.afterContent),
+        formatDiffSummary(diff)
+      ]);
+      diffLines = lines;
+      summary = diffSummary;
+      findChangeLocations();
+    } catch (error) {
+      console.error('Failed to load diff data:', error);
+    } finally {
+      isLoading = false;
+    }
+  }
 
   async function loadHighlights() {
     try {
@@ -205,9 +224,15 @@
     };
   }
 
+  // Watch for diff changes and reload
+  $effect(() => {
+    if (diff) {
+      loadDiffData();
+    }
+  });
+
   onMount(() => {
     loadHighlights();
-    findChangeLocations();
     document.addEventListener('keydown', handleKeydown);
 
     return () => {
@@ -425,7 +450,7 @@
 <style>
   /* Light Theme CodeDiffViewer - Using Design System Tokens */
   .diff-viewer {
-    background: white;
+    background: var(--color-bg-card);
     border: 0;
     border-radius: 8px;
     overflow: hidden;
@@ -441,8 +466,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: white;
-    border-bottom: 1px solid #f0f0f0;
+    background: var(--color-bg-card);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .diff-header-left {
@@ -499,7 +524,7 @@
   .view-toggle {
     display: flex;
     gap: 0.25rem;
-    background: #f5f5f5;
+    background: var(--color-bg-secondary);
     border-radius: 6px;
     padding: 0.25rem;
   }

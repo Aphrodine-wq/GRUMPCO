@@ -151,7 +151,7 @@ export async function startShipMode(
   request: ShipStartRequest,
 ): Promise<ShipSession> {
   const db = getDatabase();
-  const sessionId = `ship_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const sessionId = `ship_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
   // If localPath is provided, use it as workspaceRoot if not already set
   if (

@@ -12,6 +12,7 @@
     type HeartbeatTemplate,
   } from '../lib/integrationsApi';
   import { showToast } from '../stores/toastStore';
+  import { sortedSessions } from '../stores/sessionsStore';
   import EmptyState from './EmptyState.svelte';
 
   interface Props {
@@ -30,6 +31,8 @@
   let name = $state('');
   let cronExpression = $state('0 9 * * *'); // Default: 9 AM daily
   let payload = $state('{}');
+  /** Optional project (session) to assign task to; stored in payload.projectId / payload.projectName */
+  let projectId = $state('');
 
   // Common cron presets
   const cronPresets = [
@@ -69,6 +72,7 @@
     name = '';
     cronExpression = '0 9 * * *';
     payload = '{}';
+    projectId = '';
     showAddModal = true;
   }
 
@@ -80,14 +84,22 @@
     if (!name.trim() || !cronExpression.trim()) return;
     processing = true;
     try {
-      let payloadObj = {};
+      let payloadObj: Record<string, unknown> = {};
       if (payload.trim()) {
         try {
-          payloadObj = JSON.parse(payload);
+          payloadObj = JSON.parse(payload) as Record<string, unknown>;
         } catch {
           showToast('Invalid JSON payload', 'error');
           return;
         }
+      }
+      if (projectId.trim()) {
+        const session = $sortedSessions.find((s) => s.id === projectId.trim());
+        payloadObj = {
+          ...payloadObj,
+          projectId: projectId.trim(),
+          projectName: session?.name ?? projectId.trim(),
+        };
       }
       await createHeartbeat(name.trim(), cronExpression.trim(), payloadObj);
       showToast('Scheduled task created', 'success');
@@ -278,6 +290,12 @@
               <span class="meta-label">Last Run</span>
               <span>{formatLastRun(heartbeat.lastRunAt)}</span>
             </div>
+            {#if heartbeat.payload?.projectName ?? heartbeat.payload?.projectId}
+              <div class="meta-item">
+                <span class="meta-label">Project</span>
+                <span>{heartbeat.payload?.projectName ?? heartbeat.payload?.projectId ?? '—'}</span>
+              </div>
+            {/if}
           </div>
 
           <div class="task-actions">
@@ -337,6 +355,17 @@
       <div class="form-group">
         <label for="name">Task Name</label>
         <input type="text" id="name" bind:value={name} placeholder="e.g., Daily standup summary" />
+      </div>
+
+      <div class="form-group">
+        <label for="project">Project (optional)</label>
+        <select id="project" bind:value={projectId}>
+          <option value="">— No project —</option>
+          {#each $sortedSessions as session (session.id)}
+            <option value={session.id}>{session.name}</option>
+          {/each}
+        </select>
+        <p class="hint">Assign this task to a chat/project session</p>
       </div>
 
       <div class="form-group">
@@ -422,8 +451,6 @@
 <style>
   .heartbeats-manager {
     padding: 2rem;
-    max-width: 900px;
-    margin: 0 auto;
     height: 100%;
     overflow-y: auto;
   }
@@ -442,15 +469,15 @@
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     background: transparent;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    color: #374151;
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .back-btn:hover {
-    background: #f9fafb;
+    background: var(--color-bg-secondary);
   }
 
   .header-content {
@@ -460,12 +487,12 @@
   h1 {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--color-text);
     margin: 0 0 0.25rem;
   }
 
   .subtitle {
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin: 0;
   }
 
@@ -489,22 +516,22 @@
   }
 
   .primary-btn {
-    background: #6366f1;
+    background: var(--color-primary, #7c3aed);
     color: white;
   }
 
   .primary-btn:hover {
-    background: #4f46e5;
+    background: var(--color-primary-hover, #6d28d9);
   }
 
   .secondary-btn {
-    background: white;
-    border: 1px solid #e5e7eb;
-    color: #374151;
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--color-border, #e5e7eb);
+    color: var(--color-text, #374151);
   }
 
   .secondary-btn:hover {
-    background: #f9fafb;
+    background: var(--color-bg-card-hover, #f9fafb);
   }
 
   .loading-state {
@@ -520,7 +547,7 @@
   .spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid #e5e7eb;
+    border: 3px solid var(--color-border);
     border-top-color: #6366f1;
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -539,8 +566,8 @@
   }
 
   .task-card {
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     padding: 1.25rem;
     transition: all 0.2s;
@@ -548,7 +575,7 @@
 
   .task-card.disabled {
     opacity: 0.6;
-    background: #f9fafb;
+    background: var(--color-bg-secondary);
   }
 
   .task-header {
@@ -568,7 +595,7 @@
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--color-text);
   }
 
   .cron-badge {
@@ -599,7 +626,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #e5e7eb;
+    background-color: var(--color-bg-secondary);
     transition: 0.3s;
     border-radius: 24px;
   }
@@ -611,7 +638,7 @@
     width: 18px;
     left: 3px;
     bottom: 3px;
-    background-color: white;
+    background-color: var(--color-bg-card);
     transition: 0.3s;
     border-radius: 50%;
   }
@@ -630,7 +657,7 @@
     gap: 1rem;
     margin-bottom: 1rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border);
   }
 
   .meta-item {
@@ -641,12 +668,12 @@
 
   .meta-label {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .meta-item code {
     font-size: 0.75rem;
-    background: #f3f4f6;
+    background: var(--color-bg-secondary);
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
   }
@@ -664,16 +691,16 @@
   .icon-btn {
     padding: 0.5rem;
     background: transparent;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 6px;
-    color: #6b7280;
+    color: var(--color-text-muted);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .icon-btn:hover:not(:disabled) {
-    background: #f9fafb;
-    color: #374151;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
   }
 
   .icon-btn.danger:hover:not(:disabled) {
@@ -700,7 +727,7 @@
   }
 
   .modal {
-    background: white;
+    background: var(--color-bg-card);
     border-radius: 16px;
     padding: 1.5rem;
     width: 100%;
@@ -716,11 +743,11 @@
   .modal h2 {
     margin: 0 0 1rem;
     font-size: 1.25rem;
-    color: #111827;
+    color: var(--color-text);
   }
 
   .modal-desc {
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin: -0.5rem 0 1.25rem;
   }
 
@@ -732,7 +759,7 @@
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text-secondary);
     margin-bottom: 0.5rem;
   }
 
@@ -741,7 +768,7 @@
   .form-group textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     font-size: 0.875rem;
     font-family: inherit;
@@ -761,7 +788,7 @@
 
   .hint {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     margin: 0.5rem 0 0;
   }
 
@@ -783,12 +810,12 @@
   }
 
   .cancel-btn {
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
   }
 
   .cancel-btn:hover {
-    background: #e5e7eb;
+    background: var(--color-bg-secondary);
   }
 
   .cancel-btn.full-width {
@@ -818,21 +845,21 @@
   }
 
   .template-card {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 1rem;
   }
 
   .template-card h4 {
     margin: 0 0 0.5rem;
-    color: #111827;
+    color: var(--color-text);
   }
 
   .template-card p {
     margin: 0 0 0.75rem;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .template-meta {
@@ -841,7 +868,7 @@
 
   .template-meta code {
     font-size: 0.75rem;
-    background: #e5e7eb;
+    background: var(--color-bg-secondary);
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
   }
@@ -850,7 +877,7 @@
     width: 100%;
     padding: 0.5rem;
     font-size: 0.875rem;
-    background: white;
+    background: var(--color-bg-card);
     border: 1px solid #6366f1;
     color: #6366f1;
     border-radius: 6px;

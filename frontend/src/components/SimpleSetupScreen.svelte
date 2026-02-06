@@ -259,7 +259,7 @@
   }
 
   .setup-card {
-    background: #ffffff;
+    background: var(--color-bg-card);
     border-radius: 1.5rem;
     padding: 3rem;
     max-width: 480px;
@@ -317,7 +317,7 @@
 
   .subtitle {
     font-size: 1rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin: 0 0 2rem;
   }
 
@@ -343,7 +343,7 @@
 
   .features-label {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin: 0 0 0.75rem;
   }
 
@@ -373,7 +373,7 @@
   .text-btn {
     background: none;
     border: none;
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-size: 0.875rem;
     cursor: pointer;
     padding: 0.5rem;
@@ -400,7 +400,7 @@
 
   .suggestion {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin: 0.25rem 0;
   }
 
@@ -466,7 +466,7 @@
 
   .template-info p {
     font-size: 0.8125rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin: 0;
   }
 
@@ -496,7 +496,7 @@
   .help-text {
     margin-top: 1rem;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .help-text a {

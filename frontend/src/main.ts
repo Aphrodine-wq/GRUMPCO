@@ -5,6 +5,24 @@ import AuthGoogleStart from './components/AuthGoogleStart.svelte';
 import AuthDone from './components/AuthDone.svelte';
 import './style.css';
 
+// Apply theme immediately from localStorage (before first paint) so dark mode works
+(function applyInitialTheme() {
+  try {
+    const stored = localStorage.getItem('g-rump-onboarding-v2');
+    const data = stored ? JSON.parse(stored) : null;
+    const theme = data?.theme ?? 'system';
+    const resolved =
+      theme === 'system'
+        ? typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : theme;
+    document.documentElement.setAttribute('data-theme', resolved);
+  } catch (_) {
+    /* ignore */
+  }
+})();
+
 const target = document.getElementById('app')!;
 const path = window.location.pathname;
 const params = new URLSearchParams(window.location.search);

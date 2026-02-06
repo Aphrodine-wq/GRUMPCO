@@ -3,9 +3,10 @@
 </script>
 
 <div class="recommended-extensions">
-  <h2 class="section-title">Recommended VS Code extensions</h2>
+  <h2 class="section-title">Recommended extensions</h2>
   <p class="section-desc">
-    Useful extensions when working with G-Rump–generated code. Open in Marketplace to install.
+    Install these in VS Code or Cursor for better linting, formatting, Git, and API testing. Each
+    link opens the Marketplace; click Install there.
   </p>
   <ul class="ext-list">
     {#each RECOMMENDED_EXTENSIONS as ext}

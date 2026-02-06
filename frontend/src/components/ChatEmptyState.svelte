@@ -116,8 +116,8 @@
     onShipMode?.();
   }
 
-  function handleFreeAgent() {
-    setCurrentView('freeAgent');
+  function handleGAgent() {
+    setCurrentView('gAgent');
   }
 
   function handleAskDocs() {
@@ -130,7 +130,7 @@
     <!-- Hero Section -->
     <div class="hero">
       <div class="hero-icon">
-        <FrownyFace size="lg" state="idle" />
+        <FrownyFace size="lg" state="idle" animated={false} />
       </div>
       <h1 class="hero-title">Welcome to G-Rump</h1>
       <p class="hero-desc">
@@ -160,7 +160,7 @@
         <h3 class="mode-title">SHIP</h3>
         <p class="mode-desc">Design → Spec → Plan → Code in one run</p>
       </button>
-      <button type="button" class="mode-card mode-card-highlight" onclick={handleFreeAgent}>
+      <button type="button" class="mode-card mode-card-highlight" onclick={handleGAgent}>
         <div class="mode-icon"><Bot strokeWidth={1.5} /></div>
         <h3 class="mode-title">G-Agent</h3>
         <p class="mode-desc">Full capabilities (Docker recommended)</p>

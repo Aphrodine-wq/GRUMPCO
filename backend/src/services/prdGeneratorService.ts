@@ -138,7 +138,7 @@ async function _generatePRD(
 
     // Construct PRD object
     const prd: PRD = {
-      id: `prd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `prd_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       projectName: prdData.projectName || request.projectName,
       projectDescription:
         prdData.projectDescription || request.projectDescription,
@@ -301,7 +301,7 @@ export async function* generatePRDStream(
 
     const prdData = JSON.parse(jsonText);
     const prd: PRD = {
-      id: `prd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `prd_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       projectName: prdData.projectName || request.projectName,
       projectDescription:
         prdData.projectDescription || request.projectDescription,

@@ -8,7 +8,6 @@
   import FrownyFace from './FrownyFace.svelte';
   import ToolCallCard from './ToolCallCard.svelte';
   import ToolResultCard from './ToolResultCard.svelte';
-  import ShipMode from './ShipMode.svelte';
   import SettingsScreen from './SettingsScreen.svelte';
   import { Badge, Button, Card } from '../lib/design-system';
   import { exportAsSvg, downloadFile } from '../lib/mermaid';
@@ -836,16 +835,6 @@
     const unsubSettings = settingsStore.subscribe((s) => {
       isNimProvider = (s?.models?.defaultProvider ?? '') === 'nim';
     });
-    const handleOpenShipMode = () => {
-      chatMode = 'ship';
-    };
-    window.addEventListener('open-ship-mode', handleOpenShipMode);
-
-    const handleCloseShipMode = () => {
-      chatMode = 'normal';
-    };
-    window.addEventListener('close-ship-mode', handleCloseShipMode);
-
     const handleSwitchPlanMode = () => {
       chatModeStore.setMode('code');
       chatMode = 'plan';
@@ -860,8 +849,6 @@
     return () => {
       unsubSettings();
       document.removeEventListener('keydown', handleGlobalKeydown);
-      window.removeEventListener('open-ship-mode', handleOpenShipMode);
-      window.removeEventListener('close-ship-mode', handleCloseShipMode);
       window.removeEventListener('switch-plan-mode', handleSwitchPlanMode);
       window.removeEventListener('switch-spec-mode', handleSwitchSpecMode);
     };
@@ -883,7 +870,7 @@
           <button
             type="button"
             class="mode-pill g-agent-btn"
-            onclick={() => setCurrentView('freeAgent')}
+            onclick={() => setCurrentView('gAgent')}
             title="G-Agent"
           >
             <span class="g-agent-icon"><Bot size={16} /></span> G-Agent
@@ -925,12 +912,7 @@
           {/if}
           <span class="mode-header-hint"><kbd>Ctrl</kbd>+<kbd>K</kbd> to search</span>
         </header>
-        {#if chatMode === 'ship'}
-          <div class="ship-mode-viewport">
-            <ShipMode />
-          </div>
-        {:else}
-          <div class="chat-main-area" class:with-sidebar={showGAgentMemoryPanel}>
+        <div class="chat-main-area" class:with-sidebar={showGAgentMemoryPanel}>
             <!-- G-Agent Status Panel (floating or docked) -->
             {#if isGAgentSession && showGAgentStatusPanel}
               <div class="gagent-status-sidebar">
@@ -1555,13 +1537,13 @@
   .empty-title {
     font-size: 2.5rem; /* Slightly larger */
     font-weight: 700;
-    color: #111827;
+    color: var(--color-text);
     margin: 0;
   }
 
   .empty-text {
     font-size: 1.1rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     max-width: 500px;
     line-height: 1.6;
     margin: 0;
@@ -1569,7 +1551,7 @@
 
   .empty-tip {
     font-size: 0.9rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     max-width: 500px;
     line-height: 1.5;
     margin: 0;
@@ -1577,7 +1559,7 @@
 
   .empty-shortcut {
     font-size: 0.85rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     margin: 0.5rem 0 0;
   }
 
@@ -1609,7 +1591,7 @@
   }
 
   .message-wrapper:hover {
-    background-color: #f9fafb;
+    background-color: var(--color-bg-secondary);
   }
 
   .message-wrapper.user {
@@ -1660,7 +1642,7 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .model-badge {
@@ -1709,7 +1691,7 @@
 
   .message-role {
     font-weight: 600;
-    color: #4b5563;
+    color: var(--color-text-secondary);
   }
 
   .thinking-indicator {
@@ -1735,7 +1717,7 @@
   .message-bubble {
     font-size: 1rem;
     line-height: 1.6;
-    color: #1f2937;
+    color: var(--color-text);
     white-space: pre-wrap;
     word-break: break-word;
     display: flex;
@@ -1762,7 +1744,7 @@
 
   /* Diagram Card */
   .diagram-card {
-    background: white;
+    background: var(--color-bg-card);
     border: 1px solid #e5e7eb;
     border-radius: 0.75rem;
     overflow: hidden;
@@ -1777,8 +1759,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid #f3f4f6;
-    background-color: #f9fafb;
+    border-bottom: 1px solid var(--color-border-light);
+    background-color: var(--color-bg-secondary);
   }
 
   /* Chat Mode Header (simplified: G-Agent + Status) */
@@ -1854,7 +1836,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: white;
+    background: var(--color-bg-card);
     padding: 1rem;
     border-top: 1px solid #e5e7eb;
     box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -1887,7 +1869,7 @@
 
   .gagent-quick-stats .stat-label {
     font-size: 0.7rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.025em;
   }
@@ -1895,7 +1877,7 @@
   .gagent-quick-stats .stat-value {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--color-text);
   }
 
   .gagent-quick-stats .stat-value.compression {
@@ -1948,7 +1930,7 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    background-color: #f3f4f6;
+    background-color: var(--color-bg-secondary);
     border-radius: 0.75rem;
     padding: 0.75rem 1rem;
     border: 1px solid transparent;
@@ -1960,13 +1942,13 @@
   .input-container:focus-within {
     border-color: #3b82f6;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-    background-color: white;
+    background-color: var(--color-bg-card);
   }
 
   .input-prompt {
     font-family: 'Fira Code', monospace;
     font-weight: 700;
-    color: #6b7280;
+    color: var(--color-text-muted);
     user-select: none;
   }
 
@@ -1980,13 +1962,13 @@
     border: none;
     background: transparent;
     font-size: 1rem;
-    color: #111827;
+    color: var(--color-text);
     outline: none;
     padding: 0;
   }
 
   .message-input::placeholder {
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .send-button {
@@ -2026,8 +2008,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #e5e7eb;
-    color: #4b5563;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
     border: none;
     border-radius: 0.5rem;
     width: 2rem;
@@ -2068,8 +2050,8 @@
     padding: 0.5rem 1rem;
     border-radius: 9999px;
     border: 1px solid #e5e7eb;
-    background: white;
-    color: #4b5563;
+    background: var(--color-bg-card);
+    color: var(--color-text-secondary);
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
@@ -2077,7 +2059,7 @@
   }
 
   .mode-btn:hover {
-    background: #f3f4f6;
+    background: var(--color-bg-secondary);
     border-color: #d1d5db;
   }
 
@@ -2140,7 +2122,7 @@
   .intent-content {
     margin: 0.5rem 0 0;
     padding: 0.5rem;
-    background: #fff;
+    background: var(--color-bg-card);
     border-radius: 4px;
     font-size: 0.6875rem;
     overflow-x: auto;

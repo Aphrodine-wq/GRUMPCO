@@ -26,6 +26,7 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
+        project: './tsconfig.json',
       },
       globals: {
         ...globals.node,
@@ -40,7 +41,7 @@ export default [
       ...tseslint.configs.recommended.rules,
       
       // TypeScript strict rules - aligned with root config
-      '@typescript-eslint/no-explicit-any': 'warn', // Changed from 'error' to 'warn' for consistency
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['warn', {
         argsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_',
@@ -48,7 +49,7 @@ export default [
       }],
       '@typescript-eslint/no-empty-object-type': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/no-require-imports': 'off',
       
       // Consistent type imports
@@ -66,7 +67,7 @@ export default [
       // Best practices
       'eqeqeq': ['error', 'always', { null: 'ignore' }],
       'no-var': 'error',
-      'prefer-const': 'warn',
+      'prefer-const': 'error',
       'no-duplicate-imports': 'warn',
       'no-case-declarations': 'warn',
       'no-control-regex': 'warn',
@@ -75,6 +76,12 @@ export default [
       'no-eval': 'error',
       'no-implied-eval': 'error',
       'no-new-func': 'error',
+      
+      // Async safety
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/require-await': 'warn',
     },
   },
   

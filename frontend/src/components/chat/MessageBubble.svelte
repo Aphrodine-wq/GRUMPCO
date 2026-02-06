@@ -14,9 +14,16 @@
   import DiagramRenderer from '../DiagramRenderer.svelte';
   import ToolCallCard from '../ToolCallCard.svelte';
   import ToolResultCard from '../ToolResultCard.svelte';
+  import ArchitectureResult from './ArchitectureResult.svelte';
+  import PRDResult from './PRDResult.svelte';
+  import PlanResult from './PlanResult.svelte';
+  import CodeResult from './CodeResult.svelte';
   import { Badge, Button, Tooltip } from '../../lib/design-system';
   import { flattenTextContent } from '../../utils/contentParser';
   import { showToast } from '../../stores/toastStore';
+  import { chatPhaseStore } from '../../stores/chatPhaseStore';
+  import { approveDesignPhase } from '../../lib/api';
+  import type { PhaseResultBlock } from '../../types';
 
   interface Props {
     /** The message to render */
@@ -45,6 +52,8 @@
     onCopy?: (content: string) => void;
     /** Callback when thumbs up/down is clicked on a generation result */
     onFeedback?: (index: number, rating: 'up' | 'down') => void;
+    /** Session ID for design workflow */
+    sessionId?: string;
   }
 
   let {
@@ -61,12 +70,43 @@
     onRegenerate,
     onCopy,
     onFeedback,
+    sessionId,
   }: Props = $props();
 
   let feedbackSent = $state<'up' | 'down' | null>(null);
 
   let isHovered = $state(false);
   let showActions = $derived(isHovered && !streaming);
+
+  type PhaseWithData = 'architecture' | 'prd' | 'plan' | 'code';
+
+  async function handlePhaseApprove(phase: PhaseWithData) {
+    if (!sessionId) return;
+    try {
+      const result = await approveDesignPhase(sessionId, true);
+      if (result.success) {
+        chatPhaseStore.approvePhase(phase);
+        showToast(`${phase} approved! Moving to next phase.`, 'success');
+      }
+    } catch (err) {
+      console.error('Failed to approve phase:', err);
+      showToast('Failed to approve phase. Please try again.', 'error');
+    }
+  }
+
+  async function handlePhaseRequestChanges(phase: PhaseWithData, feedback: string) {
+    if (!sessionId) return;
+    try {
+      const result = await approveDesignPhase(sessionId, false, feedback);
+      if (result.success) {
+        chatPhaseStore.requestChanges(phase, feedback);
+        showToast('Feedback submitted. The AI will iterate on this phase.', 'info');
+      }
+    } catch (err) {
+      console.error('Failed to submit feedback:', err);
+      showToast('Failed to submit feedback. Please try again.', 'error');
+    }
+  }
 
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
     if (Array.isArray(content)) return content;
@@ -136,24 +176,12 @@
   role="article"
   aria-label={message.role === 'user' ? 'Your message' : 'Assistant message'}
 >
-  <!-- Avatar -->
-  <div class="message-avatar">
-    {#if message.role === 'user'}
-      <div class="avatar-circle user">
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
+  <!-- Avatar (user: none for personal/clean look; assistant: Frowny with glow) -->
+  <div class="message-avatar" class:assistant-only={message.role === 'assistant'}>
+    {#if message.role === 'assistant'}
+      <div class="frowny-avatar-wrap">
+        <FrownyFace size="md" state="idle" animated={true} />
       </div>
-    {:else}
-      <FrownyFace size="sm" state="idle" animated={false} />
     {/if}
   </div>
 
@@ -260,6 +288,32 @@
             <ToolCallCard toolCall={block} />
           {:else if block.type === 'tool_result'}
             <ToolResultCard toolResult={block} />
+          {:else if block.type === 'phase_result'}
+            {#if block.phase === 'architecture' && block.data}
+              <ArchitectureResult 
+                data={block.data} 
+                onApprove={() => handlePhaseApprove('architecture')}
+                onRequestChanges={(feedback) => handlePhaseRequestChanges('architecture', feedback)}
+              />
+            {:else if block.phase === 'prd' && block.data}
+              <PRDResult 
+                data={block.data}
+                onApprove={() => handlePhaseApprove('prd')}
+                onRequestChanges={(feedback) => handlePhaseRequestChanges('prd', feedback)}
+              />
+            {:else if block.phase === 'plan' && block.data}
+              <PlanResult 
+                data={block.data}
+                onApprove={() => handlePhaseApprove('plan')}
+                onRequestChanges={(feedback) => handlePhaseRequestChanges('plan', feedback)}
+              />
+            {:else if block.phase === 'code' && block.data}
+              <CodeResult 
+                data={block.data}
+                onApprove={() => handlePhaseApprove('code')}
+                onRequestChanges={(feedback) => handlePhaseRequestChanges('code', feedback)}
+              />
+            {/if}
           {/if}
         {/each}
       {/if}
@@ -416,22 +470,45 @@
   .message-avatar {
     flex-shrink: 0;
     margin-top: 0.125rem;
+    min-width: 0;
   }
 
-  .avatar-circle {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
+  .message-avatar.assistant-only {
+    min-width: 2.5rem;
+  }
+
+  .frowny-avatar-wrap {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
-    font-size: 0.75rem;
   }
 
-  .avatar-circle.user {
-    background: linear-gradient(135deg, var(--color-primary, #7c3aed), #a78bfa);
-    color: white;
+  .frowny-avatar-wrap::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      rgba(124, 58, 237, 0.2) 0%,
+      rgba(124, 58, 237, 0.05) 50%,
+      transparent 70%
+    );
+    animation: frowny-glow 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes frowny-glow {
+    0%,
+    100% {
+      opacity: 0.8;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.05);
+    }
   }
 
   /* Content wrapper */
@@ -462,11 +539,11 @@
 
   .message-role {
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .message-time {
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .model-badge {
@@ -503,7 +580,7 @@
     gap: 0.75rem;
     padding: 0.5rem 0.75rem;
     margin: 0.25rem 0;
-    background: #f9fafb;
+    background: var(--color-bg-secondary);
     border-radius: 0.5rem;
     font-size: 0.6875rem;
   }
@@ -514,11 +591,11 @@
   }
 
   .detail-label {
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .detail-value {
-    color: #374151;
+    color: var(--color-text-secondary);
     font-weight: 500;
   }
 
@@ -526,7 +603,7 @@
   .message-bubble {
     font-size: 0.9375rem;
     line-height: 1.6;
-    color: #1f2937;
+    color: var(--color-text);
     white-space: pre-wrap;
     word-break: break-word;
     display: flex;
@@ -553,8 +630,8 @@
 
   /* Diagram card */
   .diagram-card {
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 0.75rem;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -566,8 +643,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid #f3f4f6;
-    background-color: #f9fafb;
+    border-bottom: 1px solid var(--color-border-light);
+    background-color: var(--color-bg-secondary);
   }
 
   /* Context and intent blocks */
@@ -575,7 +652,7 @@
   .intent-block {
     margin: 0.25rem 0;
     padding: 0.5rem 0.75rem;
-    background: #f5f5f5;
+    background: var(--color-bg-secondary);
     border-radius: 0.5rem;
     font-size: 0.8125rem;
   }
@@ -584,19 +661,19 @@
   .intent-block summary {
     cursor: pointer;
     font-weight: 500;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   .context-capabilities {
     margin: 0.5rem 0 0;
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .intent-content {
     margin: 0.5rem 0 0;
     padding: 0.5rem;
-    background: #fff;
+    background: var(--color-bg-card);
     border-radius: 0.25rem;
     font-size: 0.6875rem;
     overflow-x: auto;
@@ -633,18 +710,18 @@
     width: 1.75rem;
     height: 1.75rem;
     padding: 0;
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 0.375rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     cursor: pointer;
     transition: all 0.15s;
   }
 
   .action-btn:hover {
-    background: #f3f4f6;
+    background: var(--color-bg-secondary);
     border-color: #d1d5db;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .action-btn:active {

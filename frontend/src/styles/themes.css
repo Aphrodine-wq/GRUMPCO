@@ -4,13 +4,15 @@
  */
 
 /* ============================================
-   Light Theme (Default - Only Theme)
+   Light Theme (Default)
    ============================================ */
 :root,
 [data-theme='light'] {
+  --app-font-size: 14px;
   /* Backgrounds */
   --color-bg-app: #ffffff;
   --color-bg-subtle: #f5f3ff;
+  --color-bg-secondary: #f9fafb;
   --color-bg-card: #ffffff;
   --color-bg-card-hover: #f8f5ff;
   --color-bg-input: #f3e8ff;
@@ -99,20 +101,21 @@
    Dark Theme
    ============================================ */
 [data-theme='dark'] {
-  /* Backgrounds */
-  --color-bg-app: #0f0f14;
-  --color-bg-subtle: #18181f;
-  --color-bg-card: #1a1a24;
-  --color-bg-card-hover: #22222e;
-  --color-bg-input: #252532;
-  --color-bg-overlay: rgba(0, 0, 0, 0.7);
-  --color-bg-elevated: #1e1e2a;
-  --color-bg-inset: #252532;
+  /* Backgrounds – black for full dark mode */
+  --color-bg-app: #000000;
+  --color-bg-subtle: #0a0a0a;
+  --color-bg-secondary: #0f0f0f;
+  --color-bg-card: #0f0f0f;
+  --color-bg-card-hover: #141414;
+  --color-bg-input: #1a1a1a;
+  --color-bg-overlay: rgba(0, 0, 0, 0.8);
+  --color-bg-elevated: #141414;
+  --color-bg-inset: #1a1a1a;
 
-  /* Text */
-  --color-text: #e4e4f0;
-  --color-text-secondary: #a1a1b5;
-  --color-text-muted: #71717a;
+  /* Text – white and light grays */
+  --color-text: #ffffff;
+  --color-text-secondary: #c4c4d4;
+  --color-text-muted: #a1a1b5;
   --color-text-inverse: #0f0f14;
   --color-text-disabled: #6b6b7b;
 
@@ -312,4 +315,15 @@
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Focus visible for keyboard users (a11y) */
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }

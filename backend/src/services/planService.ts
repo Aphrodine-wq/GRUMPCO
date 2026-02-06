@@ -22,7 +22,7 @@ import { getDatabase } from "../db/database.js";
 export async function generatePlan(
   request: PlanGenerationRequest,
 ): Promise<Plan> {
-  const planId = `plan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const planId = `plan_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
   logger.info(
     { planId, workspaceRoot: request.workspaceRoot },

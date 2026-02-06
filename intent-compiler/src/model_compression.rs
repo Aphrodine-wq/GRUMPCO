@@ -7,7 +7,7 @@ use rustc_hash::FxHashMap;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum QuantizationType {
     INT8,    // 8-bit integer quantization
-    INT4,    // 4-bit integer quantization  
+    INT4,    // 4-bit integer quantization
     FP16,    // 16-bit floating point
     BINARY,  // 1-bit binary quantization
     TERNARY, // 2-bit ternary quantization
@@ -61,7 +61,7 @@ impl ModelCompressor {
             .iter()
             .map(|&w| {
                 let scaled = (w - min) / scale;
-                (scaled as i32).clamp(0, 255) as i8 - 128
+                ((scaled as i32).clamp(0, 255) - 128) as i8
             })
             .collect();
 
@@ -216,7 +216,7 @@ impl ModelCompressor {
             .data
             .iter()
             .map(|&x| {
-                let value = (x as i8 + 128) as f32;
+                let value = (x as i8 as i32 + 128) as f32;
                 value * compressed.scale + compressed.zero_point
             })
             .collect()
@@ -244,11 +244,7 @@ impl ModelCompressor {
                 let exp = ((fp16 >> 10) & 0x1F) as i32;
                 let mantissa = (fp16 & 0x3FF) as u32;
 
-                let exp32 = if exp == 0 {
-                    0
-                } else {
-                    exp - 15 + 127
-                };
+                let exp32 = if exp == 0 { 0 } else { exp - 15 + 127 };
 
                 let bits = (sign as u32) << 31 | (exp32 as u32) << 23 | (mantissa << 13);
                 f32::from_bits(bits)
@@ -340,7 +336,10 @@ impl KnowledgeDistiller {
     }
 
     fn softmax_with_temperature(&self, logits: &[f32]) -> Vec<f32> {
-        let scaled: Vec<f32> = logits.iter().map(|&x| (x / self.temperature).exp()).collect();
+        let scaled: Vec<f32> = logits
+            .iter()
+            .map(|&x| (x / self.temperature).exp())
+            .collect();
         let sum: f32 = scaled.iter().sum();
         scaled.iter().map(|&x| x / sum).collect()
     }

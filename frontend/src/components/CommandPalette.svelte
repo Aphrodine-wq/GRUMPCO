@@ -27,7 +27,6 @@
     Plug,
     DollarSign,
     Settings,
-    BarChart2,
     Wrench,
     RefreshCw,
     Trash2,
@@ -60,7 +59,7 @@
     onClose?: () => void;
   }
 
-  let { open = $bindable(false), onClose }: Props = $props();
+  let { open = false, onClose }: Props = $props();
 
   let searchQuery = $state('');
   let selectedIndex = $state(0);
@@ -153,12 +152,12 @@
       },
       // Build
       {
-        id: 'view-freeAgent',
+        id: 'view-gAgent',
         label: 'G-Agent',
         category: 'build',
         icon: Bot,
         action: () => {
-          setCurrentView('freeAgent');
+          setCurrentView('gAgent');
           close();
         },
       },
@@ -306,16 +305,6 @@
           close();
         },
       },
-      {
-        id: 'view-advancedAI',
-        label: 'Advanced AI',
-        category: 'manage',
-        icon: Brain,
-        action: () => {
-          setCurrentView('advancedAI');
-          close();
-        },
-      },
       // Settings
       {
         id: 'view-settings',
@@ -325,16 +314,6 @@
         shortcut: 'Ctrl+,',
         action: () => {
           setCurrentView('settings');
-          close();
-        },
-      },
-      {
-        id: 'view-model-benchmark',
-        label: 'Model benchmark',
-        category: 'settings',
-        icon: BarChart2,
-        action: () => {
-          setCurrentView('model-benchmark');
           close();
         },
       },
@@ -424,7 +403,9 @@
         category: 'actions',
         icon: FileText,
         action: () => {
-          window.dispatchEvent(new CustomEvent('insert-saved-prompt', { detail: { text: p.text } }));
+          window.dispatchEvent(
+            new CustomEvent('insert-saved-prompt', { detail: { text: p.text } })
+          );
           setCurrentView('chat');
           focusChatTrigger.update((n) => n + 1);
           close();
@@ -486,7 +467,6 @@
   });
 
   function close() {
-    open = false;
     searchQuery = '';
     selectedIndex = 0;
     onClose?.();
@@ -531,9 +511,14 @@
     }
   });
 
+  // Only initialize when opening (avoids effect_update_depth from reactive loops)
+  let prevOpen = false;
   $effect(() => {
-    if (open) {
+    if (open && !prevOpen) {
       initializeCommands();
+      prevOpen = true;
+    } else if (!open) {
+      prevOpen = false;
     }
   });
 
@@ -648,9 +633,9 @@
   .command-palette {
     width: 100%;
     max-width: 600px;
-    background: #1a1a1a;
+    background: var(--color-bg-card);
     border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 32px rgba(124, 58, 237, 0.15);
     overflow: hidden;
     animation: slideDown 0.2s ease-out;
   }
@@ -673,20 +658,21 @@
   .command-palette-input {
     width: 100%;
     padding: 0.75rem 1rem;
-    background: #f0f0f0;
+    background: var(--color-bg-subtle);
     border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: inherit;
     font-size: 0.875rem;
-    color: #000;
+    color: var(--color-text);
     outline: none;
+    border: 1px solid rgba(124, 58, 237, 0.2);
   }
 
   .command-palette-input:focus {
-    box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.35);
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.35);
   }
 
   .command-palette-input::placeholder {
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .command-palette-list {
@@ -698,8 +684,7 @@
   .command-palette-empty {
     padding: 2rem;
     text-align: center;
-    color: #6b7280;
-    font-family: 'JetBrains Mono', monospace;
+    color: var(--color-text-muted);
     font-size: 0.875rem;
   }
 
@@ -709,8 +694,8 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #9ca3af;
-    background: #262626;
+    color: var(--color-primary-hover);
+    background: var(--color-bg-subtle);
     margin-top: 4px;
   }
 
@@ -726,8 +711,7 @@
     padding: 0.75rem 1rem;
     background: transparent;
     border: none;
-    color: #e5e5e5;
-    font-family: 'JetBrains Mono', monospace;
+    color: var(--color-text);
     font-size: 0.875rem;
     cursor: pointer;
     text-align: left;
@@ -736,7 +720,11 @@
 
   .command-item:hover,
   .command-item.selected {
-    background: #262626;
+    background: var(--color-bg-subtle);
+  }
+
+  .command-item .command-icon {
+    color: var(--color-primary, #7c3aed);
   }
 
   .command-icon {
@@ -749,10 +737,10 @@
   }
 
   .command-shortcut {
-    color: #6b7280;
+    color: var(--color-primary-hover);
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
-    background: #262626;
+    background: var(--color-bg-inset);
     border-radius: 4px;
   }
 
@@ -760,12 +748,12 @@
     display: flex;
     gap: 1rem;
     padding: 0.75rem 1rem;
-    background: #0d0d0d;
+    background: var(--color-bg-subtle);
+    border-top: 1px solid rgba(124, 58, 237, 0.15);
   }
 
   .command-hint {
-    color: #6b7280;
-    font-family: 'JetBrains Mono', monospace;
+    color: var(--color-primary-hover);
     font-size: 0.75rem;
   }
 </style>

@@ -17,7 +17,7 @@
 
 <div class="empty-state" class:compact={variant === 'compact'} role="status">
   <div class="empty-state-illustration">
-    <FrownyFace state="idle" size={variant === 'compact' ? 'md' : 'lg'} />
+    <FrownyFace state="idle" size={variant === 'compact' ? 'md' : 'lg'} animated={false} />
   </div>
   <h2 class="empty-state-headline">{headline}</h2>
   {#if description}
