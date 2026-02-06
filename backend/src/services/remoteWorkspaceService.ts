@@ -1,11 +1,9 @@
-import { exec } from "child_process";
-import { promisify } from "util";
+import { spawn } from "child_process";
 import { existsSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import logger from "../middleware/logger.js";
 
-const execAsync = promisify(exec);
 const WORKSPACE_CACHE_DIR = join(tmpdir(), "grump-workspaces");
 
 // Ensure cache dir exists
@@ -18,11 +16,41 @@ export interface RemoteWorkspace {
   localPath: string;
 }
 
+/**
+ * Executes a git command using spawn for better stream handling and security (no shell).
+ */
+function runGitCommand(args: string[], cwd?: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn("git", args, { cwd });
+
+    let stderr = "";
+
+    // Capture stderr for debugging if needed
+    if (proc.stderr) {
+      proc.stderr.on("data", (data) => {
+        stderr += data.toString();
+      });
+    }
+
+    proc.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        // Include stderr in error message for context
+        reject(new Error(`Git command failed with code ${code}. Error: ${stderr}`));
+      }
+    });
+
+    proc.on("error", (err) => {
+      reject(err);
+    });
+  });
+}
+
 export async function loadRemoteWorkspace(
   repoUrl: string,
 ): Promise<RemoteWorkspace> {
   // 1. Sanitize URL to create a folder name
-  // simplified: user/repo or just hash it
   const safeName = repoUrl.replace(/[^a-zA-Z0-9-]/g, "_");
   const targetDir = join(WORKSPACE_CACHE_DIR, safeName);
 
@@ -30,10 +58,9 @@ export async function loadRemoteWorkspace(
 
   if (existsSync(targetDir)) {
     // Already cached. Try to pull?
-    // For now, let's just assume if it exists we use it, but ideally we'd git pull.
     try {
       logger.info("Updating existing cached workspace...");
-      await execAsync("git pull", { cwd: targetDir });
+      await runGitCommand(["pull"], targetDir);
     } catch (_e) {
       logger.warn("Failed to pull latest changes, using cached version.");
     }
@@ -43,10 +70,9 @@ export async function loadRemoteWorkspace(
   // 2. Clone
   try {
     // Clone depth 1 for speed if we just want to read.
-    // But if we want to "work" on it, maybe full clone?
-    // Let's do partial clone for now.
     logger.info("Cloning new workspace...");
-    await execAsync(`git clone --depth 1 ${repoUrl} ${targetDir}`);
+    // Use spawn with array arguments to avoid shell injection
+    await runGitCommand(["clone", "--depth", "1", "--", repoUrl, targetDir]);
     return { url: repoUrl, localPath: targetDir };
   } catch (error) {
     logger.error(error, "Failed to clone remote workspace");
