@@ -8,6 +8,7 @@ const {
   mockIsAgentRunning,
   mockFs,
   mockExec,
+  mockGetCompletion,
 } = vi.hoisted(() => ({
   mockLogger: {
     error: vi.fn(),
@@ -21,6 +22,7 @@ const {
   mockIsAgentRunning: vi.fn().mockReturnValue(true),
   mockFs: { readFile: vi.fn() },
   mockExec: vi.fn(),
+  mockGetCompletion: vi.fn(),
 }));
 
 vi.mock('../../src/middleware/logger.js', () => ({ default: mockLogger }));
@@ -37,6 +39,12 @@ vi.mock('child_process', () => ({
     mockExec(cmd, opts, cb);
   },
 }));
+vi.mock('../../src/services/llmGatewayHelper.js', () => ({
+  getCompletion: (...args: any[]) => mockGetCompletion(...args),
+}));
+
+// Mock global fetch
+global.fetch = vi.fn();
 
 import {
   scanForCodeIssues,
@@ -62,9 +70,14 @@ describe('Anticipatory Service', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    clearOldInsights(testUserId, 0);
+    // Default mocks
     mockExec.mockImplementation((cmd, opts, cb) => cb(null, { stdout: '' }));
     mockFs.readFile.mockRejectedValue(new Error('File not found'));
+    mockGetCompletion.mockResolvedValue({ text: '[]' });
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    });
   });
 
   describe('calculateProjectHealth', () => {
@@ -167,8 +180,57 @@ describe('Anticipatory Service', () => {
 
   describe('fetchTechTrends', () => {
     it('should return trends', async () => {
+      // Mock fetch responses for Dev.to and HN
+      (global.fetch as any).mockImplementation((url: string) => {
+        if (url.includes('dev.to')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => [{ title: 'DevTo Trend', url: 'http://dev.to/1', description: 'Desc', positive_reactions_count: 10, published_at: '2023-01-01' }]
+          });
+        }
+        if (url.includes('hn.algolia')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ hits: [{ title: 'HN Trend', url: 'http://hn.com/1', objectID: '123', points: 100, created_at: '2023-01-01' }] })
+          });
+        }
+        return Promise.resolve({ ok: false });
+      });
+
+      // Mock LLM response
+      mockGetCompletion.mockResolvedValue({
+        text: JSON.stringify([{ title: 'DevTo Trend', summary: 'Summary', relevance: 0.9 }])
+      });
+
       const result = await fetchTechTrends(testUserId, ['react']);
       expect(result.length).toBeGreaterThan(0);
+      expect(result[0].title).toBe('DevTo Trend');
+    });
+
+    it('should handle API errors and return empty', async () => {
+      (global.fetch as any).mockResolvedValue({ ok: false });
+      const result = await fetchTechTrends(testUserId, ['react']);
+      expect(result).toEqual([]);
+    });
+
+    it('should handle LLM failure by falling back', async () => {
+       // Mock fetch responses for Dev.to and HN
+       (global.fetch as any).mockImplementation((url: string) => {
+        if (url.includes('dev.to')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => [{ title: 'DevTo Trend', url: 'http://dev.to/1', description: 'Desc', positive_reactions_count: 10, published_at: '2023-01-01' }]
+          });
+        }
+        return Promise.resolve({ ok: false });
+      });
+
+      // LLM fails
+      mockGetCompletion.mockResolvedValue({ error: 'LLM Error' });
+
+      const result = await fetchTechTrends(testUserId, ['react']);
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].summary).toBe('Desc'); // Fallback uses description
     });
   });
 
