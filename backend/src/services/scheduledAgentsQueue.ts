@@ -103,13 +103,10 @@ export async function stopScheduledAgentsWorker(): Promise<void> {
 
 /** Load enabled scheduled agents from DB and add as repeatable jobs (call after worker started). No-op in Supabase mode. */
 export async function loadRepeatableJobsFromDb(): Promise<void> {
-  const { getDatabase, databaseSupportsRawDb } = await import(
-    "../db/database.js"
-  );
+  const { getDatabase, databaseSupportsRawDb } =
+    await import("../db/database.js");
   if (!databaseSupportsRawDb()) {
-    logger.debug(
-      "loadRepeatableJobsFromDb skipped (Supabase mode, no raw DB)",
-    );
+    logger.debug("loadRepeatableJobsFromDb skipped (Supabase mode, no raw DB)");
     return;
   }
   const db = getDatabase().getDb();
@@ -130,8 +127,7 @@ export async function loadRepeatableJobsFromDb(): Promise<void> {
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
 
-    // Performance optimization: use addBulk to reduce network round trips
-    const jobs = batch.map(r => {
+    const jobs = batch.map((r) => {
       const params = (
         r.paramsJson ? JSON.parse(r.paramsJson) : {}
       ) as ScheduledAgentParams;
@@ -139,18 +135,17 @@ export async function loadRepeatableJobsFromDb(): Promise<void> {
       return {
         name: "run",
         data: { scheduleId: r.id, action, params },
-        opts: { jobId: r.id, repeat: { pattern: r.cronExpression } }
+        opts: { jobId: r.id, repeat: { pattern: r.cronExpression } },
       };
     });
 
     await q.addBulk(jobs);
 
-    // Logging preserved
-    for (const r of batch) {
+    batch.forEach((r) => {
       logger.info(
         { scheduleId: r.id, cronExpression: r.cronExpression },
         "Scheduled repeatable job loaded from DB",
       );
-    }
+    });
   }
 }

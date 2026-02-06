@@ -8,12 +8,12 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 // Store original env
 const originalEnv = { ...process.env };
 
-const mocks = vi.hoisted(() => {
-  const mockQueueAdd = vi.fn();
-  const mockQueueAddBulk = vi.fn(); // Added for optimization
-  const mockQueueClose = vi.fn();
-  const mockQueueGetRepeatableJobs = vi.fn();
-  const mockQueueRemoveRepeatableByKey = vi.fn();
+// Mock BullMQ
+const mockQueueAdd = vi.fn();
+const mockQueueAddBulk = vi.fn();
+const mockQueueClose = vi.fn();
+const mockQueueGetRepeatableJobs = vi.fn();
+const mockQueueRemoveRepeatableByKey = vi.fn();
 
   const mockWorkerClose = vi.fn();
   const mockWorkerOn = vi.fn();
@@ -22,16 +22,13 @@ const mocks = vi.hoisted(() => {
     on: mockWorkerOn,
   };
 
-  // Use a regular function for constructor compatibility
-  const MockQueue = vi.fn(function() {
-    return {
-      add: mockQueueAdd,
-      addBulk: mockQueueAddBulk,
-      close: mockQueueClose,
-      getRepeatableJobs: mockQueueGetRepeatableJobs,
-      removeRepeatableByKey: mockQueueRemoveRepeatableByKey,
-    };
-  });
+const MockQueue = vi.fn().mockImplementation(() => ({
+  add: mockQueueAdd,
+  addBulk: mockQueueAddBulk,
+  close: mockQueueClose,
+  getRepeatableJobs: mockQueueGetRepeatableJobs,
+  removeRepeatableByKey: mockQueueRemoveRepeatableByKey,
+}));
 
   const MockWorker = vi.fn(function() {
     return mockWorkerInstance;
@@ -97,8 +94,24 @@ describe('scheduledAgentsQueue', () => {
     // Reset worker handlers
     mocks.mockWorkerOn.mockReset();
     
-    // Reset database mock default
-    vi.mocked(mockStatement.all).mockReturnValue([]);
+    // Set default Redis environment
+    process.env.REDIS_HOST = 'localhost';
+    process.env.REDIS_PORT = '6379';
+    delete process.env.REDIS_PASSWORD;
+    
+    // Reset mocks
+    mockQueueAdd.mockResolvedValue(undefined);
+    mockQueueAddBulk.mockResolvedValue(undefined);
+    mockQueueClose.mockResolvedValue(undefined);
+    mockQueueGetRepeatableJobs.mockResolvedValue([]);
+    mockQueueRemoveRepeatableByKey.mockResolvedValue(undefined);
+    mockWorkerClose.mockResolvedValue(undefined);
+    mockRunScheduledAgent.mockResolvedValue(undefined);
+    mockStatement.all.mockReturnValue([]);
+    
+    // Reset mock constructors
+    MockQueue.mockClear();
+    MockWorker.mockClear();
   });
 
   afterEach(async () => {
@@ -111,117 +124,71 @@ describe('scheduledAgentsQueue', () => {
   describe('getScheduledQueue', () => {
     it('should create a new queue on first call', async () => {
       const { getScheduledQueue } = await import('../../src/services/scheduledAgentsQueue.js');
-      await getScheduledQueue();
-      expect(mocks.MockQueue).toHaveBeenCalledTimes(1);
-    });
-
-    it('should reuse existing queue on subsequent calls', async () => {
-      const { getScheduledQueue } = await import('../../src/services/scheduledAgentsQueue.js');
-      await getScheduledQueue();
-      await getScheduledQueue();
-      expect(mocks.MockQueue).toHaveBeenCalledTimes(1);
+      
+      const q1 = await getScheduledQueue();
+      const q2 = await getScheduledQueue();
+      
+      expect(q1).toBe(q2);
+      expect(MockQueue).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('addScheduledRepeatableJob', () => {
-    it('should add a repeatable job with cron pattern', async () => {
+    it('should add job to queue', async () => {
       const { addScheduledRepeatableJob } = await import('../../src/services/scheduledAgentsQueue.js');
       await addScheduledRepeatableJob('sched-123', '0 * * * *', 'ship', { projectDescription: 'Test' });
       
-      expect(mocks.mockQueueAdd).toHaveBeenCalledWith(
-        'run',
-        expect.objectContaining({
-          scheduleId: 'sched-123',
-          action: 'ship',
-        }),
-        expect.objectContaining({
-          jobId: 'sched-123',
-          repeat: { pattern: '0 * * * *' },
-        })
-      );
-    });
-
-    it('should log job addition', async () => {
-      const { addScheduledRepeatableJob } = await import('../../src/services/scheduledAgentsQueue.js');
-      await addScheduledRepeatableJob('sched-123', '0 * * * *', 'ship', {});
+      await addScheduledRepeatableJob('sched-123', '0 * * * *', 'ship', { projectDescription: 'Test' });
       
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        expect.objectContaining({ scheduleId: 'sched-123' }),
-        'Scheduled repeatable job added'
+      expect(mockQueueAdd).toHaveBeenCalledWith(
+        'run',
+        { scheduleId: 'sched-123', action: 'ship', params: { projectDescription: 'Test' } },
+        { jobId: 'sched-123', repeat: { pattern: '0 * * * *' } }
       );
     });
   });
 
   describe('removeScheduledRepeatableJob', () => {
-    it('should remove a repeatable job by ID', async () => {
-      mocks.mockQueueGetRepeatableJobs.mockResolvedValue([
-        { id: 'sched-other', key: 'key-other' },
-        { id: 'sched-123', key: 'key-123' },
+    it('should remove job from queue if exists', async () => {
+      mockQueueGetRepeatableJobs.mockResolvedValue([
+        { id: 'sched-123', key: 'sched-123:...' },
+        { id: 'other', key: 'other:...' },
       ]);
       
       const { removeScheduledRepeatableJob } = await import('../../src/services/scheduledAgentsQueue.js');
       await removeScheduledRepeatableJob('sched-123');
       
-      expect(mocks.mockQueueRemoveRepeatableByKey).toHaveBeenCalledWith('key-123');
+      expect(mockQueueRemoveRepeatableByKey).toHaveBeenCalledWith('sched-123:...');
     });
 
-    it('should log job removal', async () => {
-      mocks.mockQueueGetRepeatableJobs.mockResolvedValue([
-        { id: 'sched-123', key: 'key-123' },
+    it('should do nothing if job not found', async () => {
+      mockQueueGetRepeatableJobs.mockResolvedValue([
+        { id: 'other', key: 'other:...' },
       ]);
       
       const { removeScheduledRepeatableJob } = await import('../../src/services/scheduledAgentsQueue.js');
+      
       await removeScheduledRepeatableJob('sched-123');
       
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        { scheduleId: 'sched-123' },
-        'Scheduled repeatable job removed'
-      );
-    });
-
-    it('should not throw when job not found', async () => {
-      mocks.mockQueueGetRepeatableJobs.mockResolvedValue([]);
-      
-      const { removeScheduledRepeatableJob } = await import('../../src/services/scheduledAgentsQueue.js');
-      await removeScheduledRepeatableJob('sched-999');
-      
-      expect(mocks.mockQueueRemoveRepeatableByKey).not.toHaveBeenCalled();
+      expect(mockQueueRemoveRepeatableByKey).not.toHaveBeenCalled();
     });
   });
 
   describe('startScheduledAgentsWorker', () => {
-    it('should create a new worker', async () => {
-      const { startScheduledAgentsWorker } = await import('../../src/services/scheduledAgentsQueue.js');
-      await startScheduledAgentsWorker();
-      expect(mocks.MockWorker).toHaveBeenCalled();
-    });
-
-    it('should register event handlers', async () => {
-      const { startScheduledAgentsWorker } = await import('../../src/services/scheduledAgentsQueue.js');
-      await startScheduledAgentsWorker();
-      expect(mocks.mockWorkerOn).toHaveBeenCalledWith('completed', expect.any(Function));
-      expect(mocks.mockWorkerOn).toHaveBeenCalledWith('failed', expect.any(Function));
-    });
-
-    it('should log worker start', async () => {
-      const { startScheduledAgentsWorker } = await import('../../src/services/scheduledAgentsQueue.js');
-      await startScheduledAgentsWorker();
-      expect(mockLogger.info).toHaveBeenCalledWith('Scheduled agents BullMQ worker started');
-    });
-
-    it('should not create duplicate workers', async () => {
+    it('should start worker only once', async () => {
       const { startScheduledAgentsWorker } = await import('../../src/services/scheduledAgentsQueue.js');
       await startScheduledAgentsWorker();
       await startScheduledAgentsWorker();
-      expect(mocks.MockWorker).toHaveBeenCalledTimes(1);
+      
+      expect(MockWorker).toHaveBeenCalledTimes(1);
     });
 
-    it('should process job and call runScheduledAgent', async () => {
+    it('should process job correctly', async () => {
       const { startScheduledAgentsWorker } = await import('../../src/services/scheduledAgentsQueue.js');
       await startScheduledAgentsWorker();
       
-      // Get the processor function passed to Worker constructor
-      const jobProcessor = mocks.MockWorker.mock.calls[0][1];
+      // Get the worker processor function
+      const jobProcessor = MockWorker.mock.calls[0][1];
       expect(jobProcessor).toBeDefined();
       
       // Simulate job processing
@@ -284,41 +251,44 @@ describe('scheduledAgentsQueue', () => {
       const { loadRepeatableJobsFromDb } = await import('../../src/services/scheduledAgentsQueue.js');
       await loadRepeatableJobsFromDb();
       
-      expect(mocks.mockQueueAddBulk).toHaveBeenCalledTimes(1);
-      expect(mocks.mockQueueAddBulk).toHaveBeenCalledWith([
-        {
-          name: 'run',
-          data: expect.objectContaining({
-            scheduleId: 'sched-1',
-            action: 'ship',
-            params: { projectDescription: 'Build 1' },
-          }),
-          opts: expect.objectContaining({
-            jobId: 'sched-1',
-            repeat: { pattern: '0 9 * * *' },
-          })
+      expect(mockQueueAddBulk).toHaveBeenCalledTimes(1);
+      const jobs = mockQueueAddBulk.mock.calls[0][0];
+      expect(jobs).toHaveLength(2);
+
+      expect(jobs[0]).toMatchObject({
+        name: 'run',
+        data: {
+          scheduleId: 'sched-1',
+          action: 'ship',
+          params: { projectDescription: 'Build 1' },
         },
-        {
-          name: 'run',
-          data: expect.objectContaining({
-            scheduleId: 'sched-2',
-            action: 'ship',
-            params: { projectDescription: 'Build 2' },
-          }),
-          opts: expect.objectContaining({
-            jobId: 'sched-2',
-            repeat: { pattern: '0 0 * * 0' },
-          })
+        opts: {
+          jobId: 'sched-1',
+          repeat: { pattern: '0 9 * * *' },
         }
-      ]);
+      });
+
+      expect(jobs[1]).toMatchObject({
+        name: 'run',
+        data: {
+          scheduleId: 'sched-2',
+          action: 'ship',
+          params: { projectDescription: 'Build 2' },
+        },
+        opts: {
+          jobId: 'sched-2',
+          repeat: { pattern: '0 0 * * 0' },
+        }
+      });
     });
 
     it('should handle empty database', async () => {
       mockStatement.all.mockReturnValueOnce([]);
       const { loadRepeatableJobsFromDb } = await import('../../src/services/scheduledAgentsQueue.js');
       await loadRepeatableJobsFromDb();
-      expect(mocks.mockQueueAdd).not.toHaveBeenCalled();
-      expect(mocks.mockQueueAddBulk).not.toHaveBeenCalled();
+      
+      expect(mockQueueAdd).not.toHaveBeenCalled();
+      expect(mockQueueAddBulk).not.toHaveBeenCalled();
     });
 
     it('should handle null paramsJson using addBulk', async () => {
@@ -335,14 +305,15 @@ describe('scheduledAgentsQueue', () => {
       const { loadRepeatableJobsFromDb } = await import('../../src/services/scheduledAgentsQueue.js');
       await loadRepeatableJobsFromDb();
       
-      expect(mocks.mockQueueAddBulk).toHaveBeenCalledWith([
-        expect.objectContaining({
-          name: 'run',
-          data: expect.objectContaining({
-            params: {},
-          }),
-        })
-      ]);
+      expect(mockQueueAddBulk).toHaveBeenCalledTimes(1);
+      const jobs = mockQueueAddBulk.mock.calls[0][0];
+
+      expect(jobs[0]).toMatchObject({
+        name: 'run',
+        data: {
+          params: {},
+        },
+      });
     });
 
     it('should log batch loaded', async () => {

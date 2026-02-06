@@ -154,7 +154,11 @@ export async function startShipMode(
   const sessionId = `ship_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   // If localPath is provided, use it as workspaceRoot if not already set
-  if (request.localPath && request.preferences && !request.preferences.workspaceRoot) {
+  if (
+    request.localPath &&
+    request.preferences &&
+    !request.preferences.workspaceRoot
+  ) {
     request.preferences.workspaceRoot = request.localPath;
   }
 
@@ -175,7 +179,10 @@ export async function startShipMode(
   };
 
   await db.saveShipSession(session);
-  logger.info({ sessionId, localPath: request.localPath }, "SHIP mode session started");
+  logger.info(
+    { sessionId, localPath: request.localPath },
+    "SHIP mode session started",
+  );
 
   return session;
 }
