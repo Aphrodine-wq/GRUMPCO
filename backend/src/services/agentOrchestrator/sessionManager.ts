@@ -98,7 +98,7 @@ export async function initializeSession(
   request: CodeGenRequest,
 ): Promise<GenerationSession> {
   const db = getDatabase();
-  const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
   const session: GenerationSession = {
     sessionId,
@@ -252,7 +252,7 @@ export async function breakPrdIntoSubTasks(prd: PRD): Promise<SubTask[]> {
 export async function initializeSessionMulti(
   request: CodeGenRequestMulti,
 ): Promise<GenerationSession> {
-  const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   const prds = request.prds.map((x) => x.prd);
   const subTasksByPrdId: Record<string, SubTask[]> = {};
   for (const { prd } of request.prds) {

@@ -1,0 +1,269 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Extract version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Generate changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v4
+        with:
+          configuration: ".github/changelog-config.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref }}
+          name: G-Rump v${{ steps.version.outputs.version }}
+          body: |
+            # G-Rump v${{ steps.version.outputs.version }}
+            
+            ## What's Changed
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## Installation
+            
+            ### Desktop App (Recommended)
+            Download the executable for your platform below.
+            
+            ### CLI
+            ```bash
+            npm install -g @g-rump/cli@${{ steps.version.outputs.version }}
+            ```
+            
+            ### Docker
+            ```bash
+            docker pull ghcr.io/aphrodine-wq/g-rump:${{ steps.version.outputs.version }}
+            ```
+            
+            ### Helm
+            ```bash
+            helm install g-rump oci://ghcr.io/aphrodine-wq/helm/g-rump --version ${{ steps.version.outputs.version }}
+            ```
+            
+            ## Documentation
+            - [Full Documentation](https://github.com/Aphrodine-wq/GRUMPCO/blob/v${{ steps.version.outputs.version }}/README.md)
+            - [Getting Started](https://github.com/Aphrodine-wq/GRUMPCO/blob/v${{ steps.version.outputs.version }}/docs/GETTING_STARTED.md)
+            - [API Reference](https://github.com/Aphrodine-wq/GRUMPCO/blob/v${{ steps.version.outputs.version }}/docs/API.md)
+            
+            ---
+            **Full Changelog**: https://github.com/Aphrodine-wq/GRUMPCO/compare/v${{ steps.version.outputs.version }}...HEAD
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'alpha') }}
+
+  build-desktop:
+    needs: create-release
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.4
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Build packages
+        run: pnpm run build:packages
+      
+      - name: Build Electron app
+        run: |
+          cd frontend
+          pnpm run electron:build
+      
+      - name: Upload Windows artifact
+        if: matrix.os == 'windows-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./frontend/electron-dist/grump.exe
+      
+      - name: Upload macOS artifact
+        if: matrix.os == 'macos-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./frontend/electron-dist/G-Rump.dmg
+      
+      - name: Upload Linux artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./frontend/electron-dist/grump.AppImage
+
+  publish-docker:
+    needs: create-release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/aphrodine-wq/g-rump:${{ needs.create-release.outputs.version }}
+            ghcr.io/aphrodine-wq/g-rump:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish-helm:
+    needs: create-release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.13.0'
+      
+      - name: Login to GitHub Container Registry
+        run: echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+      
+      - name: Package Helm chart
+        run: |
+          helm package deploy/kubernetes/helm \
+            --version ${{ needs.create-release.outputs.version }} \
+            --app-version ${{ needs.create-release.outputs.version }}
+      
+      - name: Push Helm chart
+        run: |
+          helm push g-rump-${{ needs.create-release.outputs.version }}.tgz \
+            oci://ghcr.io/aphrodine-wq/helm
+
+  publish-npm:
+    needs: create-release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.4
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Build packages
+        run: pnpm run build:packages
+      
+      - name: Publish CLI to npm
+        run: |
+          cd packages/cli
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  notify:
+    needs: [create-release, build-desktop, publish-docker, publish-helm, publish-npm]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Send Discord notification
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "G-Rump v${{ needs.create-release.outputs.version }} Released!",
+                "description": "New version has been successfully released and published.",
+                "color": 3066993,
+                "fields": [
+                  {
+                    "name": "Version",
+                    "value": "v${{ needs.create-release.outputs.version }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "Platforms",
+                    "value": "Windows, macOS, Linux",
+                    "inline": true
+                  },
+                  {
+                    "name": "Docker",
+                    "value": "✅ Published",
+                    "inline": true
+                  },
+                  {
+                    "name": "Helm",
+                    "value": "✅ Published",
+                    "inline": true
+                  },
+                  {
+                    "name": "NPM",
+                    "value": "✅ Published",
+                    "inline": true
+                  }
+                ],
+                "url": "https://github.com/Aphrodine-wq/GRUMPCO/releases/tag/v${{ needs.create-release.outputs.version }}"
+              }]
+            }'

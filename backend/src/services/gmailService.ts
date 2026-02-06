@@ -58,7 +58,7 @@ export class GmailService {
       return [];
     }
 
-    const data = await response.json();
+    const data = await response.json() as { history?: any[] };
     return data.history || [];
   }
 

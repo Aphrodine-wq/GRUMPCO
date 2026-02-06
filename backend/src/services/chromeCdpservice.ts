@@ -107,7 +107,8 @@ export async function browserSnapshot(
           children,
         };
       }
-      return nodeToObj(document.body) ?? {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return nodeToObj((globalThis as any).document.body) ?? {};
     });
     return { ok: true, snapshot: JSON.stringify(tree, null, 2) };
   } catch (e) {
@@ -182,7 +183,7 @@ export async function shutdown(): Promise<void> {
   }
   profileContexts.clear();
   if (browserInstance) {
-    await browserInstance.close().catch(() => {});
+    await browserInstance.close().catch(() => { });
     browserInstance = null;
   }
 }

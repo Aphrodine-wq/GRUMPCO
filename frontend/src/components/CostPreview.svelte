@@ -1,5 +1,6 @@
 <script lang="ts">
   import Card from '$lib/design-system/components/Card/Card.svelte';
+  import { fetchApi } from '$lib/api.js';
 
   interface CostEstimate {
     estimatedCost: number;
@@ -32,9 +33,8 @@
 
     loading = true;
     try {
-      const response = await fetch('/api/cost/estimate', {
+      const response = await fetchApi('/api/cost/estimate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages, model }),
       });
 

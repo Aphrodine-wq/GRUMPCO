@@ -21,6 +21,7 @@ pub unsafe fn avx512_pattern_match(text: &[u8], pattern: &[u8]) -> Vec<usize> {
     let first_byte = pattern[0];
     let chunks = text.chunks_exact(64);
     let remainder = chunks.remainder();
+    let num_chunks = text.len() / 64;
 
     // Create broadcast vector of first pattern byte
     let pattern_vec = _mm512_set1_epi8(first_byte as i8);
@@ -37,9 +38,7 @@ pub unsafe fn avx512_pattern_match(text: &[u8], pattern: &[u8]) -> Vec<usize> {
             for bit_pos in 0..64 {
                 if (cmp_mask & (1 << bit_pos)) != 0 {
                     let pos = chunk_idx * 64 + bit_pos;
-                    if pos + pattern_len <= text.len()
-                        && &text[pos..pos + pattern_len] == pattern
-                    {
+                    if pos + pattern_len <= text.len() && &text[pos..pos + pattern_len] == pattern {
                         matches.push(pos);
                     }
                 }
@@ -49,7 +48,7 @@ pub unsafe fn avx512_pattern_match(text: &[u8], pattern: &[u8]) -> Vec<usize> {
 
     // Process remainder
     for (i, &byte) in remainder.iter().enumerate() {
-        let pos = chunks.len() * 64 + i;
+        let pos = num_chunks * 64 + i;
         if byte == first_byte
             && pos + pattern_len <= text.len()
             && &text[pos..pos + pattern_len] == pattern

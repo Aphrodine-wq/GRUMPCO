@@ -346,7 +346,13 @@ router.get("/:provider/callback", async (req: Request, res: Response) => {
       return;
     }
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = await tokenResponse.json() as {
+      access_token: string;
+      refresh_token?: string;
+      token_type?: string;
+      scope?: string;
+      expires_in?: number;
+    };
 
     // Store tokens in database
     const db = getDatabase();

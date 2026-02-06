@@ -11,6 +11,7 @@
     copyToClipboard,
   } from '../lib/mermaid';
   import { showToast } from '../stores/toastStore';
+  import { fetchApi, getApiBase } from '$lib/api.js';
 
   interface Props {
     diagramId: string;
@@ -90,9 +91,8 @@
       const element = document.getElementById(diagramId);
       const mermaidCode = element?.querySelector('pre')?.textContent || '';
 
-      const response = await fetch('/api/share', {
+      const response = await fetchApi('/api/share', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'diagram',
           content: element?.innerHTML || '',
@@ -108,7 +108,10 @@
       }
 
       const data = await response.json();
-      shareableLink = `${window.location.origin}${data.shareUrl}`;
+      const base = getApiBase();
+      shareableLink = data.shareUrl?.startsWith('http')
+        ? data.shareUrl
+        : `${base}${data.shareUrl?.startsWith('/') ? '' : '/'}${data.shareUrl || ''}`;
       showToast('Shareable link generated', 'success');
     } catch (error) {
       console.error('Failed to generate link:', error);

@@ -410,8 +410,8 @@
       <div class="section">
         <h2>Holographic Memory - HoloKV</h2>
         <p class="section-desc">
-          Traditional KV cache: O(sequence_length). HoloKV: O(1) fixed memory regardless of context
-          length. Uses FFT-based circular convolution for binding and correlation for retrieval.
+          O(1) fixed memory for context. Uses FFT-based circular convolution for binding and
+          correlation. Requires backend support.
         </p>
 
         {#if holographicStats}
@@ -802,6 +802,11 @@
               </div>
             {/if}
           </div>
+        {:else}
+          <p class="coming-soon">
+            Predictive Preloader requires backend support. Use the Cost Dashboard and model settings
+            for now.
+          </p>
         {/if}
       </div>
     {:else if activeTab === 'distill'}
@@ -1133,6 +1138,13 @@
   .memory-item .highlight {
     color: var(--accent-color, #3b82f6);
     font-weight: bold;
+  }
+
+  .coming-soon {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--color-text-muted, #6b7280);
+    font-size: 0.875rem;
   }
 
   .empty {

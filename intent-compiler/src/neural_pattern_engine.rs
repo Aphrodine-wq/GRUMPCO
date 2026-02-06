@@ -96,15 +96,18 @@ impl NeuralPatternEngine {
 
         // Hidden layers with ReLU activation
         for layer in &mut self.hidden_layers {
-            activations = self.activate_layer(layer, &activations, ActivationFunction::ReLU);
+            activations = Self::activate_layer(layer, &activations, ActivationFunction::ReLU);
         }
 
         // Output layer with softmax
-        self.activate_layer(&mut self.output_layer, &activations, ActivationFunction::Softmax)
+        Self::activate_layer(
+            &mut self.output_layer,
+            &activations,
+            ActivationFunction::Softmax,
+        )
     }
 
     fn activate_layer(
-        &self,
         layer: &mut [Neuron],
         input: &[f64],
         activation_fn: ActivationFunction,
@@ -177,7 +180,11 @@ impl NeuralPatternEngine {
                 .collect();
 
             // Softmax normalization
-            let max_score = head.attention_scores.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let max_score = head
+                .attention_scores
+                .iter()
+                .cloned()
+                .fold(f64::NEG_INFINITY, f64::max);
             let exp_scores: Vec<f64> = head
                 .attention_scores
                 .iter()
@@ -237,7 +244,8 @@ impl NeuralPatternEngine {
         for (i, &byte) in bytes.iter().enumerate().take(128) {
             let pos = i as f64;
             // Sinusoidal positional encoding
-            embedding[i] = (byte as f64 / 255.0) * (pos / 10000.0_f64.powf(2.0 * i as f64 / 128.0)).sin();
+            embedding[i] =
+                (byte as f64 / 255.0) * (pos / 10000.0_f64.powf(2.0 * i as f64 / 128.0)).sin();
         }
 
         embedding
@@ -314,12 +322,8 @@ impl NeuralPatternEngine {
         // LRU-style eviction if cache is too large
         if self.pattern_memory.len() > 10000 {
             // Remove random 10% of entries
-            let keys_to_remove: Vec<String> = self
-                .pattern_memory
-                .keys()
-                .take(1000)
-                .cloned()
-                .collect();
+            let keys_to_remove: Vec<String> =
+                self.pattern_memory.keys().take(1000).cloned().collect();
 
             for key in keys_to_remove {
                 self.pattern_memory.remove(&key);

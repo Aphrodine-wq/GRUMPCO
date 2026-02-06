@@ -209,7 +209,6 @@ export const AI_PROVIDER_OPTIONS: TechOption[] = [
     icon: 'anthropic',
     description: 'Advanced reasoning',
   },
-  { id: 'openai', name: 'OpenAI', icon: 'openai', description: 'GPT models' },
   { id: 'mistral', name: 'Mistral AI', icon: 'mistral', description: 'Efficient open models' },
   { id: 'groq', name: 'Groq', icon: 'groq', description: 'Ultra-fast inference' },
   { id: 'cohere', name: 'Cohere', icon: 'cohere', description: 'Command and embed models' },
@@ -217,7 +216,6 @@ export const AI_PROVIDER_OPTIONS: TechOption[] = [
   { id: 'replicate', name: 'Replicate', icon: 'replicate', description: 'Run open-source models' },
   { id: 'anyscale', name: 'Anyscale', icon: 'anyscale', description: 'Ray and LLM inference' },
   { id: 'gemini', name: 'Google AI (Gemini)', icon: 'gemini', description: 'Gemini models' },
-  { id: 'azure-openai', name: 'Azure OpenAI', icon: 'azure-openai', description: 'OpenAI on Azure' },
   { id: 'ollama', name: 'Ollama (Local)', icon: 'ollama', description: 'Run models locally' },
 ];
 
@@ -287,11 +285,11 @@ const DEFAULT_ONBOARDING_DATA: OnboardingData = {
   skipped: false,
 };
 
-// Step order for navigation (tech stack removed - AI chooses best fit)
+// Step order for navigation (g-agent early – right after welcome; tech stack removed – AI chooses best fit)
 export const STEP_ORDER: OnboardingStep[] = [
   'welcome',
-  'ship-workflow',
   'g-agent',
+  'ship-workflow',
   'auth',
   'api-provider',
   'app-preferences',
