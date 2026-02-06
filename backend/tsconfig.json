@@ -4,13 +4,12 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": [
-      "ES2022",
-      "DOM"
+      "ES2022"
     ],
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
-    "noEmitOnError": false,
+    "noEmitOnError": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -42,16 +41,36 @@
     "useUnknownInCatchVariables": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@middleware/*": ["./src/middleware/*"],
-      "@services/*": ["./src/services/*"],
-      "@routes/*": ["./src/routes/*"],
-      "@db/*": ["./src/db/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@types/*": ["./src/types/*"],
-      "@config/*": ["./src/config/*"],
-      "@skills/*": ["./src/skills/*"],
-      "@features/*": ["./src/features/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@middleware/*": [
+        "./src/middleware/*"
+      ],
+      "@services/*": [
+        "./src/services/*"
+      ],
+      "@routes/*": [
+        "./src/routes/*"
+      ],
+      "@db/*": [
+        "./src/db/*"
+      ],
+      "@utils/*": [
+        "./src/utils/*"
+      ],
+      "@types/*": [
+        "./src/types/*"
+      ],
+      "@config/*": [
+        "./src/config/*"
+      ],
+      "@skills/*": [
+        "./src/skills/*"
+      ],
+      "@features/*": [
+        "./src/features/*"
+      ]
     }
   },
   "include": [

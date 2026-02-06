@@ -108,10 +108,10 @@ pub enum OutcomeEventType {
     TargetMarketShift,
 
     // Revenue events
-    MRRMilestone,       // Hit revenue milestone
-    RevenueDecline,     // Significant drop
-    CustomDeal,        // Large deal closed
-    ContractLost,      // Major contract lost
+    MRRMilestone,   // Hit revenue milestone
+    RevenueDecline, // Significant drop
+    CustomDeal,     // Large deal closed
+    ContractLost,   // Major contract lost
 
     // Team events
     CofounderLeft,
@@ -134,7 +134,7 @@ pub enum OutcomeEventType {
     // Psychological events
     FounderDoubts,
     FounderConfidence,
-    FounderBurnout,
+    FounderMentalBurnout,
     FounderPivot,
 }
 
@@ -233,7 +233,8 @@ pub fn process_feedback_loop(
     let predictive_factors = extract_predictive_signals(event, outcome);
     let missed_signals = extract_missed_signals(event, outcome);
 
-    let accuracy_classification = classify_accuracy(&event.initial_verdict, outcome, &was_correct);
+    let accuracy_classification =
+        classify_accuracy(&event.initial_verdict.verdict, outcome, &was_correct);
 
     VerdictAccuracyFeedback {
         founder_id: event.founder_id.clone(),
@@ -249,10 +250,7 @@ pub fn process_feedback_loop(
 }
 
 /// Assess if verdict matched actual outcome
-fn assess_verdict_accuracy(
-    verdict: &VerdictCapture,
-    outcome: &BusinessOutcomeEvent,
-) -> bool {
+fn assess_verdict_accuracy(verdict: &VerdictCapture, outcome: &BusinessOutcomeEvent) -> bool {
     match verdict.verdict.as_str() {
         "BuildNow" => {
             // BuildNow correct if: product launched, found customers, raised funding, or hit revenue
@@ -306,14 +304,13 @@ fn extract_missed_signals(
 ) -> Vec<String> {
     // Identify what wasn't captured in the initial analysis
     // but proved important for the outcome
-    vec!["founder_psychology".to_string(), "network_strength".to_string()]
+    vec![
+        "founder_psychology".to_string(),
+        "network_strength".to_string(),
+    ]
 }
 
-fn classify_accuracy(
-    verdict: &str,
-    outcome: &BusinessOutcomeEvent,
-    was_correct: &bool,
-) -> String {
+fn classify_accuracy(verdict: &str, outcome: &BusinessOutcomeEvent, was_correct: &bool) -> String {
     if *was_correct {
         "correct".to_string()
     } else if verdict == "BuildNow" && outcome.impact_on_trajectory > 0.5 {
@@ -327,17 +324,17 @@ fn classify_accuracy(
     }
 }
 
-fn calculate_days_to_confirmation(event: &FounderDecisionEvent, outcome: &BusinessOutcomeEvent) -> i32 {
+fn calculate_days_to_confirmation(
+    event: &FounderDecisionEvent,
+    outcome: &BusinessOutcomeEvent,
+) -> i32 {
     // Simple calculation: parse timestamps and get difference in days
     // In production, use proper datetime parsing
     30 // Placeholder
 }
 
 /// Suggest weight updates based on feedback
-fn suggest_weight_updates(
-    _intent: &ParsedIntent,
-    was_correct: &bool,
-) -> Vec<WeightUpdate> {
+fn suggest_weight_updates(_intent: &ParsedIntent, was_correct: &bool) -> Vec<WeightUpdate> {
     if *was_correct {
         vec![WeightUpdate {
             feature_name: "complexity_score".to_string(),
@@ -431,7 +428,8 @@ pub fn analyze_verdict_cohort(
         .iter()
         .filter(|e| {
             e.initial_verdict.verdict == verdict_type
-                && e.timestamp.starts_with(&format!("{:04}-{:02}", cohort_year, cohort_month))
+                && e.timestamp
+                    .starts_with(&format!("{:04}-{:02}", cohort_year, cohort_month))
         })
         .collect();
 
@@ -517,10 +515,7 @@ pub fn calculate_flywheel_metrics(
     let mut outcomes_with_feedback = 0;
 
     for decision in decisions {
-        if outcomes
-            .iter()
-            .any(|o| o.founder_id == decision.founder_id)
-        {
+        if outcomes.iter().any(|o| o.founder_id == decision.founder_id) {
             outcomes_with_feedback += 1;
         }
     }

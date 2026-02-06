@@ -44,7 +44,11 @@ impl ParallelEngine {
     }
 
     /// Process items in parallel with work-stealing
-    pub fn process_parallel<T, F>(&self, items: Vec<String>, processor: F) -> Vec<ProcessingResult<T>>
+    pub fn process_parallel<T, F>(
+        &self,
+        items: Vec<String>,
+        processor: F,
+    ) -> Vec<ProcessingResult<T>>
     where
         T: Send + Clone + 'static,
         F: Fn(&str) -> T + Send + Sync + 'static,
@@ -112,7 +116,11 @@ impl ParallelEngine {
     }
 
     /// Adaptive parallel processing with automatic optimization
-    pub fn process_adaptive<T, F>(&self, items: Vec<String>, processor: F) -> Vec<ProcessingResult<T>>
+    pub fn process_adaptive<T, F>(
+        &self,
+        items: Vec<String>,
+        processor: F,
+    ) -> Vec<ProcessingResult<T>>
     where
         T: Send + Clone + 'static,
         F: Fn(&str) -> T + Send + Sync + 'static,
@@ -275,8 +283,8 @@ pub fn detect_optimal_threads(sample_size: usize, workload_complexity: f64) -> u
 // Placeholder for num_cpus
 mod num_cpus {
     pub fn get() -> usize {
-        thread::available_parallelism()
-            .map(|n| n.get())
+        std::thread::available_parallelism()
+            .map(|n: std::num::NonZeroUsize| n.get())
             .unwrap_or(4)
     }
 }
@@ -288,7 +296,11 @@ mod tests {
     #[test]
     fn test_parallel_engine() {
         let engine = ParallelEngine::default();
-        let items = vec!["item1".to_string(), "item2".to_string(), "item3".to_string()];
+        let items = vec![
+            "item1".to_string(),
+            "item2".to_string(),
+            "item3".to_string(),
+        ];
 
         let results = engine.process_parallel(items, |s| s.to_uppercase());
 

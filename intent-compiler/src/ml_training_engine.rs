@@ -111,7 +111,7 @@ impl FeatureEngineer {
 
         // Log market size (normalize from billions to 0-1)
         let log_size = (market_size / 1_000_000_000.0).log10().max(0.0) / 3.0; // Assuming max 1T
-        features.insert("market_size_log".to_string(), log_size.min(1.0));
+        features.insert("market_size_log".to_string(), log_size.min(1.0) as f32);
 
         features.insert("market_growth_rate".to_string(), growth_rate.min(1.0));
 
@@ -122,7 +122,9 @@ impl FeatureEngineer {
         features.insert("market_maturity".to_string(), market_maturity);
 
         // Opportunity score: large + growing + immature + low competition
-        let opportunity = (log_size + growth_rate * 0.5 + (1.0 - market_maturity) * 0.5
+        let opportunity = (log_size as f32
+            + growth_rate * 0.5
+            + (1.0 - market_maturity) * 0.5
             + (1.0 - competition_intensity) * 0.5)
             / 3.0;
         features.insert("market_opportunity".to_string(), opportunity.min(1.0));
@@ -146,7 +148,8 @@ impl FeatureEngineer {
         features.insert("product_differentiation".to_string(), differentiation);
 
         // Execution difficulty
-        let exec_difficulty = complexity_score * 0.6 + (1.0 - market_fit_signals as f32 / 10.0) * 0.4;
+        let exec_difficulty =
+            complexity_score * 0.6 + (1.0 - market_fit_signals as f32 / 10.0) * 0.4;
         features.insert("execution_difficulty".to_string(), exec_difficulty.min(1.0));
 
         features
@@ -239,7 +242,10 @@ impl TrainingDataPipeline {
     /// Validate training data quality
     pub fn validate_dataset(examples: &[TrainingExample]) -> DatasetQuality {
         let total = examples.len() as f32;
-        let positive = examples.iter().filter(|e| e.label.success_label == 1).count() as f32;
+        let positive = examples
+            .iter()
+            .filter(|e| e.label.success_label == 1)
+            .count() as f32;
         let negative = total - positive;
 
         let class_balance = if positive > 0.0 && negative > 0.0 {
@@ -252,16 +258,12 @@ impl TrainingDataPipeline {
         let mut feature_coverage = HashMap::new();
         for example in examples {
             for (feature, _) in &example.feature_vector.features {
-                *feature_coverage
-                    .entry(feature.clone())
-                    .or_insert(0)
-                    += 1;
+                *feature_coverage.entry(feature.clone()).or_insert(0) += 1;
             }
         }
 
         let avg_coverage = if !feature_coverage.is_empty() {
-            feature_coverage.values().sum::<i32>() as f32
-                / (total * feature_coverage.len() as f32)
+            feature_coverage.values().sum::<i32>() as f32 / (total * feature_coverage.len() as f32)
         } else {
             0.0
         };
@@ -433,9 +435,14 @@ impl PredictionEnsemble {
         let success_prob = self.success_model.predict_probability(features);
         let (verdict, verdict_conf) = self.verdict_model.predict_verdict(features);
 
-        let success_weight = self.model_weights.get("success_model").copied().unwrap_or(0.6);
+        let success_weight = self
+            .model_weights
+            .get("success_model")
+            .copied()
+            .unwrap_or(0.6);
 
-        let combined_confidence = success_weight * success_prob + (1.0 - success_weight) * verdict_conf;
+        let combined_confidence =
+            success_weight * success_prob + (1.0 - success_weight) * verdict_conf;
 
         EnsemblePrediction {
             verdict,
@@ -517,25 +524,5 @@ impl ModelRegistry {
 impl Default for ModelRegistry {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-// ============================================================================
-// Helper imports (would normally use chrono crate)
-// ============================================================================
-
-mod chrono {
-    pub struct Local;
-    impl Local {
-        pub fn now() -> LocalDateTime {
-            LocalDateTime
-        }
-    }
-
-    pub struct LocalDateTime;
-    impl LocalDateTime {
-        pub fn to_rfc3339(&self) -> String {
-            "2024-02-03T00:00:00Z".to_string()
-        }
     }
 }

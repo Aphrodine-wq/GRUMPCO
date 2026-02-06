@@ -61,7 +61,7 @@ export class CostAnalytics {
   ): Promise<void> {
     const fullRecord: CostRecord = {
       ...record,
-      id: `cost_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `cost_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       timestamp: new Date(),
     };
 

@@ -108,11 +108,9 @@ async function sendToBackend(event: AnalyticsEvent): Promise<void> {
     // Only send if we have a backend to send to
     if (typeof window === 'undefined') return;
 
-    const response = await fetch('/api/analytics/events', {
+    const { fetchApi } = await import('./api.js');
+    const response = await fetchApi('/api/analytics/events', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(event),
     });
 

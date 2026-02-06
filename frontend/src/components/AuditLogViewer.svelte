@@ -238,8 +238,6 @@
 <style>
   .audit-log-viewer {
     padding: 2rem;
-    max-width: 1400px;
-    margin: 0 auto;
     height: 100%;
     overflow-y: auto;
   }
@@ -258,15 +256,15 @@
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     background: transparent;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    color: #374151;
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .back-btn:hover {
-    background: #f9fafb;
+    background: var(--color-bg-secondary);
   }
 
   .header-content {
@@ -276,12 +274,12 @@
   h1 {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--color-text);
     margin: 0 0 0.25rem;
   }
 
   .subtitle {
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin: 0;
   }
 
@@ -299,16 +297,16 @@
     padding: 0.5rem 0.75rem;
     font-size: 0.75rem;
     font-weight: 500;
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
-    color: #6b7280;
+    color: var(--color-text-muted);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .filter-btn:hover {
-    border-color: #d1d5db;
+    border-color: var(--color-border);
   }
 
   .filter-btn.active {
@@ -330,7 +328,7 @@
   .spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid #e5e7eb;
+    border: 3px solid var(--color-border);
     border-top-color: #6366f1;
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -339,7 +337,7 @@
   .spinner-small {
     width: 16px;
     height: 16px;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--color-border);
     border-top-color: #6366f1;
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -355,13 +353,13 @@
     display: flex;
     gap: 0.75rem;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     margin-bottom: 1rem;
   }
 
   .log-table {
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     overflow: hidden;
   }
@@ -371,11 +369,11 @@
     grid-template-columns: 180px 120px 1fr 150px 200px;
     gap: 1rem;
     padding: 0.75rem 1rem;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border);
     font-size: 0.75rem;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -385,7 +383,7 @@
     grid-template-columns: 180px 120px 1fr 150px 200px;
     gap: 1rem;
     padding: 0.875rem 1rem;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border);
     align-items: center;
   }
 
@@ -394,12 +392,12 @@
   }
 
   .log-row:hover {
-    background: #f9fafb;
+    background: var(--color-bg-secondary);
   }
 
   .time-value {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-family: ui-monospace, monospace;
   }
 
@@ -415,18 +413,18 @@
 
   .action-text {
     font-size: 0.875rem;
-    color: #111827;
+    color: var(--color-text);
     font-weight: 500;
   }
 
   .actor-text {
     font-size: 0.875rem;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   .target-text {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-family: ui-monospace, monospace;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -446,17 +444,17 @@
     padding: 0.625rem 1.5rem;
     font-size: 0.875rem;
     font-weight: 500;
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    color: #374151;
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .load-more-btn:hover:not(:disabled) {
-    background: #f9fafb;
-    border-color: #d1d5db;
+    background: var(--color-bg-secondary);
+    border-color: var(--color-border);
   }
 
   .load-more-btn:disabled {

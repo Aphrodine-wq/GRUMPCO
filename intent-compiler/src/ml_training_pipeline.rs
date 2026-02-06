@@ -17,9 +17,9 @@ pub fn generate_synthetic_training_data(count: usize) -> Vec<SyntheticTrainingEx
     // Simulate different founder profiles
     let profiles = vec![
         ("technical_builder", 0.85, 0.72, 0.68, 1), // high tech, high consistency, success
-        ("business_operator", 0.65, 0.88, 0.82, 1),  // lower tech, high ops, success
-        ("unfocused_dreamer", 0.55, 0.35, 0.42, 0),  // low consistency, failure
-        ("resilient_pivot", 0.70, 0.78, 0.85, 1),    // good fundamentals, success
+        ("business_operator", 0.65, 0.88, 0.82, 1), // lower tech, high ops, success
+        ("unfocused_dreamer", 0.55, 0.35, 0.42, 0), // low consistency, failure
+        ("resilient_pivot", 0.70, 0.78, 0.85, 1),   // good fundamentals, success
         ("overconfident_novice", 0.45, 0.42, 0.25, 0), // risk factors, failure
     ];
 
@@ -34,16 +34,27 @@ pub fn generate_synthetic_training_data(count: usize) -> Vec<SyntheticTrainingEx
             founder_id: format!("synthetic-{:04}", i),
             profile_type: name.to_string(),
             features: vec![
-                ("tech_ability", (tech_score + noise).min(1.0).max(0.0)),
-                ("consistency", (consistency + noise).min(1.0).max(0.0)),
-                ("resilience", (resilience + noise).min(1.0).max(0.0)),
                 (
-                    "network_strength",
+                    "tech_ability".to_string(),
+                    (tech_score + noise).min(1.0).max(0.0),
+                ),
+                (
+                    "consistency".to_string(),
+                    (consistency + noise).min(1.0).max(0.0),
+                ),
+                (
+                    "resilience".to_string(),
+                    (resilience + noise).min(1.0).max(0.0),
+                ),
+                (
+                    "network_strength".to_string(),
                     ((tech_score + consistency) / 2.0 + noise).min(1.0).max(0.0),
                 ),
                 (
-                    "market_timing",
-                    ((0.5 + i as f32 / count as f32 * 0.5) + noise).min(1.0).max(0.0),
+                    "market_timing".to_string(),
+                    ((0.5 + i as f32 / count as f32 * 0.5) + noise)
+                        .min(1.0)
+                        .max(0.0),
                 ),
             ],
             outcome,
@@ -58,7 +69,7 @@ pub fn generate_synthetic_training_data(count: usize) -> Vec<SyntheticTrainingEx
 pub struct SyntheticTrainingExample {
     pub founder_id: String,
     pub profile_type: String,
-    pub features: Vec<(&'static str, f32)>,
+    pub features: Vec<(String, f32)>,
     pub outcome: i32, // 0 = failed, 1 = succeeded
     pub confidence: f32,
 }
@@ -102,9 +113,7 @@ pub struct DatasetStatistics {
     pub feature_std_dev: f32,
 }
 
-pub fn prepare_training_dataset(
-    examples: &[SyntheticTrainingExample],
-) -> TrainingDataset {
+pub fn prepare_training_dataset(examples: &[SyntheticTrainingExample]) -> TrainingDataset {
     let total = examples.len();
     let train_size = (total as f32 * 0.7) as usize;
     let validation_size = (total as f32 * 0.15) as usize;

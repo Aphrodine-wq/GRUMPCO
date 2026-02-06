@@ -28,6 +28,8 @@ bumpalo = { version = "3.14", features = ["collections"] }
 smallvec = { version = "1.11", features = ["union", "const_generics"] }
 # LRU cache for intent parsing
 lru = "0.12"
+# Datetime support
+chrono = "0.4"
 # WASM support
 wasm-bindgen = { version = "0.2", optional = true }
 serde-wasm-bindgen = { version = "0.6", optional = true }

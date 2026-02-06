@@ -124,7 +124,9 @@
     /* Start slightly lower and invisible */
     opacity: 0;
     transform: translateY(20px);
-    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     /* Auto margin for vertical centering if content is short */
     margin: auto 0;
   }
@@ -158,14 +160,14 @@
   :global(.slide-title) {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--color-text);
     margin-bottom: 0.5rem;
     line-height: 1.2;
   }
 
   :global(.slide-subtitle) {
     font-size: 1rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   :global(.slide-cta-button) {

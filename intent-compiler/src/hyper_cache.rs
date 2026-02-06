@@ -61,7 +61,7 @@ impl Default for CacheConfig {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct CacheStats {
     pub l1_hits: usize,
     pub l1_misses: usize,

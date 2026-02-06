@@ -18,7 +18,9 @@
     if (err) {
       document.body.innerHTML = `<div style="padding:2rem;font-family:system-ui;text-align:center">
         <p style="color:#dc2626">Sign-in failed: ${err}</p>
-        <p><button onclick="window.close()" style="margin-top:1rem;padding:0.5rem 1rem;cursor:pointer">Close</button></p>
+        <p style="margin-top:1rem">
+          <a href="/" style="color:#7c3aed;text-decoration:underline;cursor:pointer">Return to app</a>
+        </p>
       </div>`;
       return;
     }
@@ -93,7 +95,9 @@
         .catch((e: Error) => {
           document.body.innerHTML = `<div style="padding:2rem;font-family:system-ui;text-align:center">
             <p style="color:#dc2626">Sign-in failed: ${e.message}</p>
-            <p><button onclick="window.close()" style="margin-top:1rem;padding:0.5rem 1rem;cursor:pointer">Close</button></p>
+            <p style="margin-top:1rem">
+              <a href="/" style="color:#7c3aed;text-decoration:underline;cursor:pointer">Return to app</a>
+            </p>
           </div>`;
         });
       return;
@@ -101,7 +105,9 @@
 
     document.body.innerHTML = `<div style="padding:2rem;font-family:system-ui;text-align:center">
       <p style="color:#dc2626">Missing auth data. Please try again.</p>
-      <p><button onclick="window.close()" style="margin-top:1rem;padding:0.5rem 1rem;cursor:pointer">Close</button></p>
+      <p style="margin-top:1rem">
+        <a href="/" style="color:#7c3aed;text-decoration:underline;cursor:pointer">Return to app</a>
+      </p>
     </div>`;
   });
 </script>

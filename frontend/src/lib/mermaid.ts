@@ -23,7 +23,7 @@
  * import { initializeMermaid, renderDiagram, exportAsPng } from './mermaid';
  *
  * // Initialize once at app startup
- * initializeMermaid({ theme: 'dark' });
+ * await initializeMermaid({ theme: 'dark' });
  *
  * // Render a diagram
  * const { svg } = await renderDiagram('my-diagram', 'graph TD; A-->B;');
@@ -35,12 +35,23 @@
  * @module lib/mermaid
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mermaid theme type not in @types (Phase 1.1; see docs/KNOWN_ISSUES.md) */
-import mermaid from 'mermaid';
 import type { MermaidConfig } from '../types';
+
+/** Lazy-loaded mermaid instance */
+let mermaidInstance: any = null;
 
 /** Tracks whether Mermaid has been initialized to prevent duplicate init calls. */
 let isInitialized = false;
+
+/**
+ * Gets or creates the mermaid instance (lazy loaded)
+ */
+async function getMermaid(): Promise<any> {
+  if (!mermaidInstance) {
+    mermaidInstance = await import('mermaid');
+  }
+  return mermaidInstance;
+}
 
 /**
  * Initializes the Mermaid library with the given configuration.
@@ -52,20 +63,21 @@ let isInitialized = false;
  * @example
  * ```typescript
  * // Initialize with dark theme
- * initializeMermaid({ theme: 'dark' });
+ * await initializeMermaid({ theme: 'dark' });
  *
  * // Initialize with default settings
- * initializeMermaid();
+ * await initializeMermaid();
  * ```
  */
-export function initializeMermaid(config?: MermaidConfig): void {
+export async function initializeMermaid(config?: MermaidConfig): Promise<void> {
   if (isInitialized) return;
 
+  const mermaid = await getMermaid();
   const theme = config?.theme || 'base';
 
   mermaid.initialize({
     startOnLoad: false,
-    theme: theme as any,
+    theme: theme as string,
     securityLevel: 'strict',
     fontFamily: 'Inter, sans-serif',
     ...config,
@@ -98,7 +110,9 @@ export function initializeMermaid(config?: MermaidConfig): void {
  * ```
  */
 export async function renderDiagram(id: string, code: string): Promise<{ svg: string }> {
-  if (!isInitialized) initializeMermaid();
+  if (!isInitialized) await initializeMermaid();
+
+  const mermaid = await getMermaid();
 
   try {
     const { svg } = await mermaid.render(id, code);

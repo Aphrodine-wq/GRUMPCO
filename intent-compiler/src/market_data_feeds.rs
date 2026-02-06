@@ -48,45 +48,34 @@ impl CrunchbaseConnector {
     }
 
     /// Search for companies in a specific domain/market
-    pub fn search_companies(
-        &self,
-        domain: &str,
-        market_cap_min: f64,
-    ) -> Vec<CompetitorData> {
+    pub fn search_companies(&self, domain: &str, market_cap_min: f64) -> Vec<CompetitorData> {
         // Simulated API call - would use reqwest in production
-        vec![
-            CompetitorData {
-                id: "cb-001".to_string(),
-                source: "crunchbase".to_string(),
-                name: format!("Competitor in {}", domain),
-                founded_year: 2020,
-                headquarters: "San Francisco".to_string(),
-                raised_total: market_cap_min * 2.0,
-                last_funding_date: "2024-01-15".to_string(),
-                employee_count: 45,
-                website: "https://example.com".to_string(),
-                description: "A company in the target market".to_string(),
-                tags: vec!["B2B".to_string(), "SaaS".to_string()],
-                momentum_score: 0.72,
-            }
-        ]
+        vec![CompetitorData {
+            id: "cb-001".to_string(),
+            source: "crunchbase".to_string(),
+            name: format!("Competitor in {}", domain),
+            founded_year: 2020,
+            headquarters: "San Francisco".to_string(),
+            raised_total: market_cap_min * 2.0,
+            last_funding_date: "2024-01-15".to_string(),
+            employee_count: 45,
+            website: "https://example.com".to_string(),
+            description: "A company in the target market".to_string(),
+            tags: vec!["B2B".to_string(), "SaaS".to_string()],
+            momentum_score: 0.72,
+        }]
     }
 
     /// Get funding news for a company
-    pub fn get_funding_news(
-        &self,
-        company_id: &str,
-    ) -> Vec<FundingEvent> {
-        vec![
-            FundingEvent {
-                date: "2024-01-15".to_string(),
-                round: "Series B".to_string(),
-                amount_usd: 15_000_000.0,
-                investors: vec!["Sequoia Capital".to_string()],
-                valuation_usd: Some(100_000_000.0),
-                significance: 0.85,
-            }
-        ]
+    pub fn get_funding_news(&self, company_id: &str) -> Vec<FundingEvent> {
+        vec![FundingEvent {
+            date: "2024-01-15".to_string(),
+            round: "Series B".to_string(),
+            amount_usd: 15_000_000.0,
+            investors: vec!["Sequoia Capital".to_string()],
+            valuation_usd: Some(100_000_000.0),
+            significance: 0.85,
+        }]
     }
 }
 
@@ -109,29 +98,21 @@ impl ProductHuntConnector {
     }
 
     /// Get top products in a category (last 30 days)
-    pub fn get_category_trends(
-        &self,
-        category: &str,
-    ) -> Vec<ProductTrend> {
-        vec![
-            ProductTrend {
-                rank: 1,
-                name: "Trending Product".to_string(),
-                upvotes: 2847,
-                user_count: 1230,
-                discussion_sentiment: 0.88,
-                tags: vec!["AI".to_string(), "Productivity".to_string()],
-                price_category: "freemium".to_string(),
-                growth_rate: 0.45,
-            }
-        ]
+    pub fn get_category_trends(&self, category: &str) -> Vec<ProductTrend> {
+        vec![ProductTrend {
+            rank: 1,
+            name: "Trending Product".to_string(),
+            upvotes: 2847,
+            user_count: 1230,
+            discussion_sentiment: 0.88,
+            tags: vec!["AI".to_string(), "Productivity".to_string()],
+            price_category: "freemium".to_string(),
+            growth_rate: 0.45,
+        }]
     }
 
     /// Track momentum of a product
-    pub fn get_product_momentum(
-        &self,
-        product_slug: &str,
-    ) -> ProductMomentum {
+    pub fn get_product_momentum(&self, product_slug: &str) -> ProductMomentum {
         ProductMomentum {
             product: product_slug.to_string(),
             current_rank: 15,
@@ -186,11 +167,7 @@ impl GitHubConnector {
     }
 
     /// Get repository trending metrics
-    pub fn get_repo_metrics(
-        &self,
-        owner: &str,
-        repo: &str,
-    ) -> RepoMetrics {
+    pub fn get_repo_metrics(&self, owner: &str, repo: &str) -> RepoMetrics {
         RepoMetrics {
             stars: 5420,
             stars_30d: 820,
@@ -207,10 +184,7 @@ impl GitHubConnector {
     }
 
     /// Analyze founder development activity
-    pub fn get_founder_dev_metrics(
-        &self,
-        github_username: &str,
-    ) -> DeveloperMetrics {
+    pub fn get_founder_dev_metrics(&self, github_username: &str) -> DeveloperMetrics {
         DeveloperMetrics {
             username: github_username.to_string(),
             public_repos: 12,
@@ -224,26 +198,20 @@ impl GitHubConnector {
     }
 
     /// Find trending repos in a tech category
-    pub fn search_trending_repos(
-        &self,
-        topic: &str,
-        min_stars: i32,
-    ) -> Vec<RepoMetrics> {
-        vec![
-            RepoMetrics {
-                stars: 8900,
-                stars_30d: 1200,
-                forks: 2100,
-                open_issues: 67,
-                open_prs: 34,
-                contributors: 156,
-                commits_30d: 512,
-                last_commit_date: "2024-02-02".to_string(),
-                license: "Apache-2.0".to_string(),
-                primary_language: "Rust".to_string(),
-                community_health: 0.91,
-            }
-        ]
+    pub fn search_trending_repos(&self, topic: &str, min_stars: i32) -> Vec<RepoMetrics> {
+        vec![RepoMetrics {
+            stars: 8900,
+            stars_30d: 1200,
+            forks: 2100,
+            open_issues: 67,
+            open_prs: 34,
+            contributors: 156,
+            commits_30d: 512,
+            last_commit_date: "2024-02-02".to_string(),
+            license: "Apache-2.0".to_string(),
+            primary_language: "Rust".to_string(),
+            community_health: 0.91,
+        }]
     }
 }
 
@@ -300,21 +268,19 @@ impl TwitterConnector {
         query: &str,
         hours_lookback: i32,
     ) -> Vec<TwitterConversation> {
-        vec![
-            TwitterConversation {
-                tweet_id: "1742548290".to_string(),
-                author: "founder_name".to_string(),
-                author_followers: 8900,
-                text: "Building the next generation of X...".to_string(),
-                engagement_score: 0.78,
-                sentiment: "positive".to_string(),
-                mentions_funding: true,
-                mentions_pivoting: false,
-                mentions_market_trend: true,
-                conversation_depth: 28,
-                virality_score: 0.45,
-            }
-        ]
+        vec![TwitterConversation {
+            tweet_id: "1742548290".to_string(),
+            author: "founder_name".to_string(),
+            author_followers: 8900,
+            text: "Building the next generation of X...".to_string(),
+            engagement_score: 0.78,
+            sentiment: "positive".to_string(),
+            mentions_funding: true,
+            mentions_pivoting: false,
+            mentions_market_trend: true,
+            conversation_depth: 28,
+            virality_score: 0.45,
+        }]
     }
 
     /// Monitor founder activity and sentiment
@@ -338,21 +304,17 @@ impl TwitterConnector {
     }
 
     /// Detect market trends from startup conversations
-    pub fn detect_market_trends(
-        &self,
-    ) -> Vec<DetectedTrend> {
-        vec![
-            DetectedTrend {
-                trend: "AI-powered developer tools".to_string(),
-                emergence_date: "2024-01-15".to_string(),
-                current_buzz_score: 0.89,
-                trajectory: "accelerating".to_string(),
-                founders_discussing: 234,
-                tweets_last_week: 8934,
-                sentiment: 0.76,
-                funding_signals: 12,
-            }
-        ]
+    pub fn detect_market_trends(&self) -> Vec<DetectedTrend> {
+        vec![DetectedTrend {
+            trend: "AI-powered developer tools".to_string(),
+            emergence_date: "2024-01-15".to_string(),
+            current_buzz_score: 0.89,
+            trajectory: "accelerating".to_string(),
+            founders_discussing: 234,
+            tweets_last_week: 8934,
+            sentiment: 0.76,
+            funding_signals: 12,
+        }]
     }
 }
 
@@ -538,19 +500,16 @@ impl MarketDataAggregator {
         CompetitiveLandscape {
             market: market.to_string(),
             total_competitors: competitors.len(),
-            competitors,
-            market_trends,
             market_saturation: (competitors.len() as f32 / 100.0).min(1.0),
             new_entrant_barrier: calculate_barrier_to_entry(&competitors),
             fastest_growing: identify_fastest_growing(&competitors),
+            competitors,
+            market_trends,
         }
     }
 
     /// Get current market opportunity assessment
-    pub fn assess_market_opportunity(
-        &self,
-        market: &str,
-    ) -> MarketOpportunity {
+    pub fn assess_market_opportunity(&self, market: &str) -> MarketOpportunity {
         MarketOpportunity {
             market: market.to_string(),
             estimated_tam: 50_000_000_000.0, // $50B
@@ -636,16 +595,19 @@ fn calculate_barrier_to_entry(competitors: &[CompetitorData]) -> f32 {
         return 0.3; // Low barrier for new market
     }
 
-    let avg_raised = competitors.iter().map(|c| c.raised_total).sum::<f64>()
-        / competitors.len() as f64;
-    let avg_employees = competitors.iter().map(|c| c.employee_count as f64).sum::<f64>()
+    let avg_raised =
+        competitors.iter().map(|c| c.raised_total).sum::<f64>() / competitors.len() as f64;
+    let avg_employees = competitors
+        .iter()
+        .map(|c| c.employee_count as f64)
+        .sum::<f64>()
         / competitors.len() as f64;
 
     // Higher capital requirements = higher barrier
     let capital_barrier = (avg_raised / 100_000_000.0).min(1.0) * 0.5;
     let team_barrier = (avg_employees / 100.0).min(1.0) * 0.5;
 
-    capital_barrier + team_barrier
+    (capital_barrier + team_barrier) as f32
 }
 
 fn identify_fastest_growing(competitors: &[CompetitorData]) -> Option<String> {

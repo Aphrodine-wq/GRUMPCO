@@ -1,178 +1,203 @@
 /**
- * Mermaid Parser Utilities
- * Extracts node information from Mermaid diagram code
+ * Mermaid diagram parser for Builder section cards.
+ * Extracts subgraphs and top-level nodes to build { id, title }[] for section cards.
+ * Uses stable ids (sanitized) so backend and frontend agree on section identity.
  */
 
-export interface ParsedNode {
+export interface MermaidSection {
+  id: string;
+  title: string;
+}
+
+/**
+ * Sanitize a string to a stable id: alphanumeric and hyphens only, lowercase.
+ */
+function toStableId(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || 'section';
+}
+
+/**
+ * Parse Mermaid diagram code into sections for Builder cards.
+ * - Prefer subgraph blocks: id and/or title become section id and title.
+ * - Fallback: top-level node definitions (id or id[label]) become sections.
+ * Order is preserved (subgraphs first in document order, then nodes).
+ */
+export function parseMermaidSections(mermaidCode: string): MermaidSection[] {
+  const sections: MermaidSection[] = [];
+  const seenIds = new Set<string>();
+
+  if (!mermaidCode || typeof mermaidCode !== 'string') return sections;
+
+  const code = mermaidCode.trim();
+  // Strip leading diagram type (flowchart, graph, etc.) for consistent parsing
+  const body = code.replace(/^\s*(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram)\s+/i, '');
+
+  // 1) Subgraphs: subgraph id["label"] or subgraph id or subgraph label
+  const subgraphRe = /subgraph\s+([^\n[\]]+)(?:\[([^\]]*)\])?\s*[\n\s]*([\s\S]*?)end/g;
+  let m: RegExpExecArray | null;
+  while ((m = subgraphRe.exec(body)) !== null) {
+    const rawId = m[1].trim();
+    const bracketLabel = m[2]?.trim();
+    const id = toStableId(rawId);
+    const title = bracketLabel || rawId;
+    if (id && !seenIds.has(id)) {
+      seenIds.add(id);
+      sections.push({ id, title });
+    }
+  }
+
+  // 2) If we have subgraphs, return them only (don't mix with top-level nodes to avoid duplication)
+  if (sections.length > 0) return sections;
+
+  // 3) Fallback: top-level node definitions (id or id["label"] or id(label))
+  // Match: word or quoted id, optional [label] or (label), optional --> or ---
+  const nodeRe = /(\w+|"[^"]*"|'[^']*')\s*(?:\[([^\]]*)\])?\s*(?:\(([^)]*)\))?/g;
+  const used = new Set<string>();
+  while ((m = nodeRe.exec(body)) !== null) {
+    let rawId = m[1].trim();
+    if (rawId.startsWith('"') && rawId.endsWith('"')) rawId = rawId.slice(1, -1);
+    if (rawId.startsWith("'") && rawId.endsWith("'")) rawId = rawId.slice(1, -1);
+    const bracketLabel = m[2]?.trim();
+    const parenLabel = m[3]?.trim();
+    const title = bracketLabel || parenLabel || rawId;
+    const id = toStableId(rawId);
+    if (id && id !== 'end' && id !== 'subgraph' && !used.has(id)) {
+      used.add(id);
+      sections.push({ id, title });
+    }
+  }
+
+  return sections;
+}
+
+// ─── Existing API for DiagramRenderer and tests ─────────────────────────────
+
+export interface MermaidNode {
   id: string;
   label: string;
   type?: string;
 }
 
-export interface NodeMap {
-  [nodeId: string]: ParsedNode;
-}
-
 /**
- * Extract node IDs and labels from Mermaid flowchart/graph code
+ * Parse Mermaid code into a map of node id -> { id, label, type? }.
+ * Supports flowchart/graph node definitions and C4 syntax.
  */
-export function parseMermaidNodes(code: string): NodeMap {
-  const nodes: NodeMap = {};
+export function parseMermaidNodes(mermaidCode: string): Record<string, MermaidNode> {
+  const nodes: Record<string, MermaidNode> = {};
+  if (!mermaidCode || typeof mermaidCode !== 'string') return nodes;
+  const code = mermaidCode.trim();
+  if (!code) return nodes;
 
-  if (!code || !code.trim()) {
-    return nodes;
+  const body = code.replace(/^\s*(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram)\s+/i, '');
+
+  function setNode(id: string, label: string, type?: string) {
+    const key = id.trim();
+    if (!key) return;
+    nodes[key] = { id: key, label: label.trim() || key, type };
   }
 
-  // Remove diagram type declaration
-  const content = code.replace(/^(flowchart|graph)\s+(?:TD|TB|BT|LR|RL|[\s\S]*?)\n/i, '').trim();
-
-  // Pattern 1: Node definitions with labels: A[Label] or A("Label") or A{Label}
-  const nodeDefPattern = /(\w+)(?:\[([^\]]+)\]|\(([^)]+)\)|\{([^}]+)\})?/g;
-  let match;
-
-  while ((match = nodeDefPattern.exec(content)) !== null) {
-    const nodeId = match[1];
-    const label = match[2] || match[3] || match[4] || nodeId;
-
-    if (!nodes[nodeId]) {
-      nodes[nodeId] = {
-        id: nodeId,
-        label: label.trim(),
-      };
-    } else if (label && label !== nodeId) {
-      // Update label if provided
-      nodes[nodeId].label = label.trim();
-    }
+  // C4: C4Container(id, "Label") or C4Context, etc.
+  const c4Re = /C4(?:Context|Container|Component|Deployment|Dynamic)\s*\(\s*([^,)]+)\s*,\s*["']([^"']*)["']\s*\)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = c4Re.exec(code)) !== null) {
+    const id = m[1].trim();
+    const label = (m[2] || id).trim();
+    setNode(id, label, 'c4');
   }
 
-  // Pattern 2: C4 diagram syntax
-  // C4Context, C4Container, C4Component, etc.
-  if (/C4/i.test(code)) {
-    const c4Pattern =
-      /(?:C4Context|C4Container|C4Component|C4Deployment|C4Dynamic)\s*\(\s*(\w+)\s*,\s*"([^"]+)"[^)]*\)/gi;
-    while ((match = c4Pattern.exec(code)) !== null) {
-      const nodeId = match[1];
-      const label = match[2];
-
-      if (!nodes[nodeId]) {
-        nodes[nodeId] = {
-          id: nodeId,
-          label: label.trim(),
-          type: 'c4',
-        };
-      }
-    }
+  // Edges first so edge-only nodes get created: A --> B, A[Start] --> UndefinedTarget, etc.
+  const edgeRe = /(\w+)(?:\s*\[[^\]]*\])?(?:\s*\([^)]*\))?(?:\s*\{[^}]*\})?\s*[-=.]*>\s*(\w+)|(\w+)\s*---\s*(\w+)/g;
+  while ((m = edgeRe.exec(body)) !== null) {
+    const a = m[1] ?? m[3];
+    const b = m[2] ?? m[4];
+    if (a && !nodes[a]) setNode(a, a);
+    if (b && !nodes[b]) setNode(b, b);
   }
 
-  // Pattern 3: Extract from edges (nodes mentioned in connections)
-  const edgePattern = /(\w+)\s*(?:-->|--|==>|==|-\.->|-\.-|==>|==)\s*(\w+)/g;
-  while ((match = edgePattern.exec(content)) !== null) {
-    const fromId = match[1];
-    const toId = match[2];
+  // Node definitions: id[label], id(label), id{label}
+  const defRe = /(\w+)\s*(\[[^\]]*\]|\([^)]*\)|\{[^}]*\})/g;
+  while ((m = defRe.exec(body)) !== null) {
+    const id = m[1].trim();
+    const inner = m[2].slice(1, -1).trim();
+    setNode(id, inner);
+  }
 
-    if (!nodes[fromId]) {
-      nodes[fromId] = {
-        id: fromId,
-        label: fromId,
-      };
-    }
-
-    if (!nodes[toId]) {
-      nodes[toId] = {
-        id: toId,
-        label: toId,
-      };
-    }
+  // Standalone node id (e.g. "MyNode" on its own line)
+  const standaloneRe = /^\s*(\w+)\s*(?:\n|$)/gm;
+  while ((m = standaloneRe.exec(body)) !== null) {
+    const id = m[1].trim();
+    const skip = /^(TD|TB|BT|LR|RL|end|subgraph)$/i.test(id);
+    if (id && !skip && !nodes[id]) setNode(id, id);
   }
 
   return nodes;
 }
 
+export interface ComponentLike {
+  id: string;
+  name: string;
+}
+
 /**
- * Find component in metadata by matching node ID or label
+ * Find a component by node id or label (exact and partial match).
  */
 export function findComponentByNodeId(
   nodeId: string,
-  nodeLabel: string,
-  components: Array<{ id: string; name: string }>
-): { id: string; name: string } | null {
-  if (!components || components.length === 0) {
-    return null;
-  }
+  label: string,
+  components: ComponentLike[]
+): ComponentLike | null {
+  if (!components.length) return null;
+  const nid = nodeId.toLowerCase();
+  const nlabel = (label || '').toLowerCase();
 
-  // Exact ID match (case-insensitive)
-  const exactMatch = components.find((c) => c.id.toLowerCase() === nodeId.toLowerCase());
-  if (exactMatch) {
-    return exactMatch;
-  }
+  const byExactId = components.find((c) => c.id.toLowerCase() === nid);
+  if (byExactId) return byExactId;
 
-  // Label/name match (case-insensitive, partial)
-  const labelMatch = components.find((c) => {
-    const nameLower = c.name.toLowerCase();
-    const labelLower = nodeLabel.toLowerCase();
-    return (
-      nameLower === labelLower || nameLower.includes(labelLower) || labelLower.includes(nameLower)
-    );
-  });
-  if (labelMatch) {
-    return labelMatch;
-  }
+  const byLabel = components.find((c) => c.name.toLowerCase() === nlabel);
+  if (byLabel) return byLabel;
 
-  // Partial ID match
-  const partialMatch = components.find((c) => {
-    const idLower = c.id.toLowerCase();
-    return idLower.includes(nodeId.toLowerCase()) || nodeId.toLowerCase().includes(idLower);
-  });
-  if (partialMatch) {
-    return partialMatch;
-  }
+  const byPartialLabel = components.find((c) => c.name.toLowerCase().includes(nlabel) || nlabel.includes(c.name.toLowerCase()));
+  if (byPartialLabel) return byPartialLabel;
+
+  const byPartialId = components.find((c) => c.id.toLowerCase().includes(nid) || nid.includes(c.id.toLowerCase()));
+  if (byPartialId) return byPartialId;
 
   return null;
 }
 
 /**
- * Get SVG element that represents a Mermaid node
- * Mermaid typically uses classes like "node", "nodeLabel", and IDs based on node IDs
+ * Find an SVG element that represents a Mermaid node by id or label.
  */
-export function findSvgNodeElement(svg: SVGElement, nodeId: string): SVGElement | null {
-  if (!svg || !nodeId) {
-    return null;
-  }
+export function findSvgNodeElement(svg: SVGElement | null, nodeId: string): Element | null {
+  if (!svg || !nodeId || !nodeId.trim()) return null;
+  const id = nodeId.trim();
 
-  // Try multiple strategies to find the node
-  // Strategy 1: Find by class containing nodeId
-  const nodeClass = svg.querySelector(`.node-${nodeId}, [class*="${nodeId}"]`);
-  if (nodeClass instanceof SVGElement) {
-    return nodeClass;
-  }
+  const byClass = svg.querySelector(`g.node-${id}, g[class*="node-${id}"]`);
+  if (byClass) return byClass;
 
-  // Strategy 2: Find by ID
-  const nodeById = svg.querySelector(`#${nodeId}, #node-${nodeId}`);
-  if (nodeById instanceof SVGElement) {
-    return nodeById;
-  }
+  const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : id.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+  const byId = svg.querySelector(`#${escapedId}`);
+  if (byId) return byId;
 
-  // Strategy 3: Find by text content (for labels)
-  const allTextElements = svg.querySelectorAll('text');
-  for (const textEl of Array.from(allTextElements)) {
-    if (textEl.textContent?.trim().toLowerCase() === nodeId.toLowerCase()) {
-      // Find parent group or node
-      let parent: Element | null = textEl.parentElement;
-      while (parent && parent !== svg) {
-        if (parent.classList.contains('node') || parent.tagName === 'g') {
-          return parent as unknown as SVGElement;
-        }
-        parent = parent.parentElement;
+  const byData = svg.querySelector(`g[data-node-id="${id}"]`);
+  if (byData) return byData;
+
+  const texts = svg.querySelectorAll('text');
+  for (const text of texts) {
+    if (text.textContent?.trim() === id) {
+      let g = text.parentElement;
+      while (g && g !== svg) {
+        if (g.tagName.toLowerCase() === 'g') return g;
+        g = g.parentElement;
       }
-      return textEl as SVGElement;
+      return text;
     }
   }
-
-  // Strategy 4: Find by data attributes (if Mermaid adds them)
-  const nodeByData = svg.querySelector(`[data-node-id="${nodeId}"]`);
-  if (nodeByData instanceof SVGElement) {
-    return nodeByData;
-  }
-
   return null;
 }

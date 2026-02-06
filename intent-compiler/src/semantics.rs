@@ -171,7 +171,11 @@ pub fn extract_implicit_requirements(output: &IntentOutput) -> Vec<ImplicitRequi
     let mut requirements = Vec::new();
 
     // Database implicit requirement
-    if output.features.iter().any(|f| f.contains("user") || f.contains("persist") || f.contains("store")) {
+    if output
+        .features
+        .iter()
+        .any(|f| f.contains("user") || f.contains("persist") || f.contains("store"))
+    {
         requirements.push(ImplicitRequirement {
             category: "database".to_string(),
             requirement: "Database persistence".to_string(),
@@ -181,7 +185,11 @@ pub fn extract_implicit_requirements(output: &IntentOutput) -> Vec<ImplicitRequi
     }
 
     // Authentication implicit requirement
-    if output.features.iter().any(|f| f.contains("user") || f.contains("auth") || f.contains("login")) {
+    if output
+        .features
+        .iter()
+        .any(|f| f.contains("user") || f.contains("auth") || f.contains("login"))
+    {
         requirements.push(ImplicitRequirement {
             category: "auth".to_string(),
             requirement: "Authentication system".to_string(),
@@ -191,7 +199,11 @@ pub fn extract_implicit_requirements(output: &IntentOutput) -> Vec<ImplicitRequi
     }
 
     // API implicit requirement
-    if output.tech_stack_hints.iter().any(|t| t.contains("React") || t.contains("Vue") || t.contains("Angular")) {
+    if output
+        .tech_stack_hints
+        .iter()
+        .any(|t| t.contains("React") || t.contains("Vue") || t.contains("Angular"))
+    {
         requirements.push(ImplicitRequirement {
             category: "api".to_string(),
             requirement: "REST or GraphQL API".to_string(),
@@ -211,7 +223,11 @@ pub fn extract_implicit_requirements(output: &IntentOutput) -> Vec<ImplicitRequi
     }
 
     // Security implicit requirement
-    if output.features.iter().any(|f| f.contains("payment") || f.contains("sensitive") || f.contains("api")) {
+    if output
+        .features
+        .iter()
+        .any(|f| f.contains("payment") || f.contains("sensitive") || f.contains("api"))
+    {
         requirements.push(ImplicitRequirement {
             category: "security".to_string(),
             requirement: "Security hardening (HTTPS, input validation, rate limiting)".to_string(),
@@ -246,7 +262,9 @@ pub fn detect_contradictions(output: &IntentOutput) -> Vec<Contradiction> {
             entity_b: "Vue".to_string(),
             conflict_type: "mutually_exclusive_frameworks".to_string(),
             severity: 0.95,
-            recommendation: "Choose one frontend framework. React for large apps, Vue for lightweight UIs".to_string(),
+            recommendation:
+                "Choose one frontend framework. React for large apps, Vue for lightweight UIs"
+                    .to_string(),
         });
     }
 
@@ -263,14 +281,20 @@ pub fn detect_contradictions(output: &IntentOutput) -> Vec<Contradiction> {
     }
 
     // Check for scale contradictions
-    if output.constraints.get("scale").is_some_and(|v| v.as_str() == Some("minimal"))
-        && output.features.len() > 10 {
+    if output
+        .constraints
+        .get("scale")
+        .is_some_and(|v| v.as_str() == Some("minimal"))
+        && output.features.len() > 10
+    {
         contradictions.push(Contradiction {
             entity_a: "Minimal scale requirement".to_string(),
             entity_b: "10+ features".to_string(),
             conflict_type: "scope_mismatch".to_string(),
             severity: 0.65,
-            recommendation: "Clarify scope: either reduce features for minimal setup or increase scale".to_string(),
+            recommendation:
+                "Clarify scope: either reduce features for minimal setup or increase scale"
+                    .to_string(),
         });
     }
 
@@ -291,7 +315,8 @@ pub fn suggest_code_style(output: &IntentOutput) -> Vec<StyleSuggestion> {
     let tech_str = output.tech_stack_hints.join(" ").to_lowercase();
 
     // TypeScript suggestions for Node/React
-    if (tech_str.contains("react") || tech_str.contains("node")) && !tech_str.contains("typescript") {
+    if (tech_str.contains("react") || tech_str.contains("node")) && !tech_str.contains("typescript")
+    {
         suggestions.push(StyleSuggestion {
             language: "TypeScript".to_string(),
             pattern: "strict type safety".to_string(),
