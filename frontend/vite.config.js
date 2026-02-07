@@ -189,7 +189,7 @@ export default defineConfig(({ mode }) => {
     },
 
     optimizeDeps: {
-      // Pre-bundle critical dependencies for faster dev server start
+      // Pre-bundle only truly critical dependencies
       include: [
         'svelte',
         'svelte/animate',
@@ -201,16 +201,16 @@ export default defineConfig(({ mode }) => {
         '@supabase/supabase-js',
         'lucide-svelte',
         'svelte-spa-router',
-        'marked',
       ],
-      // Exclude heavy dependencies from pre-bundling (loaded on demand)
+      // Exclude heavy libraries - they'll be loaded on demand
       exclude: [
         'jspdf',
         'shiki',
         'diff',
         'mermaid',
+        'marked',
       ],
-      // Don't force re-optimize every start — use cache
+      // Use cache to avoid re-optimizing every dev startup
       force: false,
     },
 
