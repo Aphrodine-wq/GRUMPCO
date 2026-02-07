@@ -80,7 +80,7 @@
     "zod": "^3.22.4"
   },
   "optionalDependencies": {
-    "@sentry/node": "^8.0.0",
+    "@sentry/node": "^10.38.0",
     "@sentry/profiling-node": "^8.0.0",
     "better-sqlite3": "^11.7.0",
     "msedge-tts": "^2.0.4",
