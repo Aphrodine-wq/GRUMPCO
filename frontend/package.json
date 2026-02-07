@@ -84,7 +84,7 @@
     "@storybook/addon-svelte-csf": "^5.0.10",
     "@chromatic-com/storybook": "^5.0.0",
     "@storybook/addon-a11y": "^10.2.3",
-    "@storybook/addon-docs": "^10.2.3",
+    "@storybook/addon-docs": "^10.2.7",
     "eslint-plugin-storybook": "^10.2.3",
     "png-to-ico": "^3.0.1",
     "sharp": "^0.33.5"
