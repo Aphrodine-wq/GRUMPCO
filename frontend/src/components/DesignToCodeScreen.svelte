@@ -983,13 +983,6 @@
     line-height: 1.3;
   }
 
-  .step-hint-inline {
-    font-size: 0.8125rem;
-    color: var(--color-text-muted);
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
   .figma-btn {
     margin-top: 0.5rem;
   }
@@ -1121,12 +1114,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-  }
-
-  .generate-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   /* Drop zone */
@@ -1380,18 +1367,6 @@
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid var(--color-border);
-  }
-
-  .generate-heading {
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-  }
-
-  .generate-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 1rem;
   }
 
   .field-inline {
