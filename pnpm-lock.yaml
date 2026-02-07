@@ -38,8 +38,8 @@ importers:
         specifier: ^19.0.0
         version: 19.8.1(@types/node@20.19.31)(typescript@5.9.3)
       '@commitlint/config-conventional':
-        specifier: ^19.0.0
-        version: 19.8.1
+        specifier: ^20.4.1
+        version: 20.4.1
       concurrently:
         specifier: ^8.2.0
         version: 8.2.2
@@ -101,8 +101,8 @@ importers:
         specifier: ^1.3.3
         version: 1.3.3
       bullmq:
-        specifier: ^5.34.5
-        version: 5.67.2
+        specifier: ^5.67.3
+        version: 5.67.3
       cls-rtracer:
         specifier: ^2.6.3
         version: 2.6.3
@@ -537,8 +537,8 @@ importers:
         specifier: workspace:*
         version: link:../shared-types
       bullmq:
-        specifier: ^5.0.0
-        version: 5.67.2
+        specifier: ^5.67.3
+        version: 5.67.3
       chokidar:
         specifier: ^4.0.0
         version: 4.0.3
@@ -840,12 +840,12 @@ packages:
       - typescript
     dev: true
 
-  /@commitlint/config-conventional@19.8.1:
-    resolution: {integrity: sha512-/AZHJL6F6B/G959CsMAzrPKKZjeEiAVifRyEwXxcT6qtqbPwGw+iQxmNS+Bu+i09OCtdNRW6pNpBvgPrtMr9EQ==}
+  /@commitlint/config-conventional@20.4.1:
+    resolution: {integrity: sha512-0YUvIeBtpi86XriqrR+TCULVFiyYTIOEPjK7tTRMxjcBm1qlzb+kz7IF2WxL6Fq5DaundG8VO37BNgMkMTBwqA==}
     engines: {node: '>=v18'}
     dependencies:
-      '@commitlint/types': 19.8.1
-      conventional-changelog-conventionalcommits: 7.0.2
+      '@commitlint/types': 20.4.0
+      conventional-changelog-conventionalcommits: 9.1.0
     dev: true
 
   /@commitlint/config-validator@19.8.1:
@@ -7089,8 +7089,8 @@ packages:
       - supports-color
     dev: true
 
-  /bullmq@5.67.2:
-    resolution: {integrity: sha512-3KYqNqQptKcgksACO1li4YW9/jxEh6XWa1lUg4OFrHa80Pf0C7H9zeb6ssbQQDfQab/K3QCXopbZ40vrvcyrLw==}
+  /bullmq@5.67.3:
+    resolution: {integrity: sha512-eeQobOJn8M0Rj8tcZCVFLrimZgJQallJH1JpclOoyut2nDNkDwTEPMVcZzLeSR2fGeIVbfJTjU96F563Qkge5A==}
     dependencies:
       cron-parser: 4.9.0
       ioredis: 5.9.2
@@ -7734,9 +7734,9 @@ packages:
       compare-func: 2.0.0
     dev: true
 
-  /conventional-changelog-conventionalcommits@7.0.2:
-    resolution: {integrity: sha512-NKXYmMR/Hr1DevQegFB4MwfM5Vv0m4UIxKZTTYuD98lpTknaZlSRrDOG4X7wIXpGkfsYxZTghUN+Qq+T0YQI7w==}
-    engines: {node: '>=16'}
+  /conventional-changelog-conventionalcommits@9.1.0:
+    resolution: {integrity: sha512-MnbEysR8wWa8dAEvbj5xcBgJKQlX/m0lhS8DsyAAWDHdfs2faDJxTgzRYlRYpXSe7UiKrIIlB4TrBKU9q9DgkA==}
+    engines: {node: '>=18'}
     dependencies:
       compare-func: 2.0.0
     dev: true
@@ -7750,6 +7750,14 @@ packages:
       is-text-path: 2.0.0
       meow: 12.1.1
       split2: 4.2.0
+    dev: true
+
+  /conventional-commits-parser@6.2.1:
+    resolution: {integrity: sha512-20pyHgnO40rvfI0NGF/xiEoFMkXDtkF8FwHvk5BokoFoCuTQRI8vrNCNFWUOfuolKJMm1tPCHc8GgYEtr1XRNA==}
+    engines: {node: '>=18'}
+    hasBin: true
+    dependencies:
+      meow: 13.2.0
     dev: true
 
   /cookie-parser@1.4.7:
@@ -11458,6 +11466,11 @@ packages:
   /meow@12.1.1:
     resolution: {integrity: sha512-BhXM0Au22RwUneMPwSCnyhTOizdWoIEPU9sp0Aqa1PnDMR5Wv2FGXYDjuzJEIX+Eo2Rb8xuYe5jrnm5QowQFkw==}
     engines: {node: '>=16.10'}
+    dev: true
+
+  /meow@13.2.0:
+    resolution: {integrity: sha512-pxQJQzB6djGPXh08dacEloMFopsOqGVRKFPYvPOt9XDZ1HasbgDZA74CJGreSU4G3Ak7EFJGoiH2auq+yXISgA==}
+    engines: {node: '>=18'}
     dev: true
 
   /merge-descriptors@1.0.3:
