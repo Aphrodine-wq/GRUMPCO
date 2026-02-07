@@ -204,7 +204,7 @@ importers:
         specifier: ^2.0.4
         version: 2.0.4
       playwright:
-        specifier: ^1.58.0
+        specifier: ^1.58.2
         version: 1.58.2
     devDependencies:
       '@eslint/js':
@@ -422,8 +422,8 @@ importers:
         specifier: ^28.0.0
         version: 28.0.0
       playwright:
-        specifier: ^1.58.0
-        version: 1.58.1
+        specifier: ^1.58.2
+        version: 1.58.2
       png-to-ico:
         specifier: ^3.0.1
         version: 3.0.1
@@ -12775,8 +12775,6 @@ packages:
     resolution: {integrity: sha512-yZkEtftgwS8CsfYo7nm0KE8jsvm6i/PTgVtB8DL726wNf6H2IMsDuxCpJj59KDaxCtSnrWan2AeDqM7JBaultg==}
     engines: {node: '>=18'}
     hasBin: true
-    dev: false
-    optional: true
 
   /playwright@1.58.1:
     resolution: {integrity: sha512-+2uTZHxSCcxjvGc5C891LrS1/NlxglGxzrC4seZiVjcYVQfUa87wBL6rTDqzGjuoWNjnBzRqKmF6zRYGMvQUaQ==}
@@ -12796,8 +12794,6 @@ packages:
       playwright-core: 1.58.2
     optionalDependencies:
       fsevents: 2.3.2
-    dev: false
-    optional: true
 
   /plist@3.1.0:
     resolution: {integrity: sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==}
