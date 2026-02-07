@@ -149,6 +149,7 @@ const chatStreamRequestSchema = z.object({
   includeRagContext: z.boolean().optional(),
   toolAllowlist: z.array(z.string()).optional(),
   toolDenylist: z.array(z.string()).optional(),
+  memoryContext: z.array(z.string()).optional(),
 });
 
 /** Type inferred from the chat stream request schema */
@@ -170,11 +171,11 @@ const router = Router();
 // Model presets: all use NVIDIA NIM (Powered by NVIDIA)
 const PRESET_FAST = {
   provider: "nim" as const,
-  modelId: "mistralai/mixtral-8x22b-instruct-v0.1",
+  modelId: "moonshotai/kimi-k2.5",
 };
 const PRESET_QUALITY = {
   provider: "nim" as const,
-  modelId: "meta/llama-3.1-405b-instruct",
+  modelId: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
 };
 
 router.post("/stream", async (req: Request, res: Response): Promise<void> => {
@@ -218,6 +219,7 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
     includeRagContext,
     toolAllowlist,
     toolDenylist,
+    memoryContext,
   } = body;
 
   // Support both 'gAgent' (new) and 'freeAgent' (deprecated) session types
@@ -312,6 +314,7 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+  res.flushHeaders(); // Push headers immediately — reduces TTFB by ~50-100ms
 
   // Handle client disconnect
   let isClientConnected = true;
@@ -367,48 +370,76 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
       reqProvider = PRESET_QUALITY.provider;
       reqModelId = PRESET_QUALITY.modelId;
     }
-    if (reqProvider == null || reqModelId == null) {
-      let modelPreference:
-        | { source?: "cloud" | "auto"; provider?: string; modelId?: string }
-        | undefined;
-      if (sessionType === "gAgent") {
-        // Use request body preference (from frontend) if provided; else load from DB
-        // Support both new gAgentModelPreference and deprecated freeAgentModelPreference
-        const modelPref = reqGAgentModelPreference || reqModelPreference;
-        if (modelPref && typeof modelPref === "object") {
-          modelPreference = modelPref;
-        } else {
-          try {
-            const userKey = getUserKey(req);
-            const db = getDatabase();
-            const settings = await db.getSettings(userKey);
-            const prefs = settings?.preferences as
-              | {
-                gAgentModelPreference?: {
-                  source?: string;
-                  provider?: string;
-                  modelId?: string;
-                };
-                freeAgentModelPreference?: {
-                  source?: string;
-                  provider?: string;
-                  modelId?: string;
-                };
-              }
-              | undefined;
-            // Support both new and deprecated preference keys
-            const pref =
-              prefs?.gAgentModelPreference || prefs?.freeAgentModelPreference;
-            const src = pref?.source;
-            modelPreference =
-              pref && (src === "cloud" || src === "auto")
-                ? { ...pref, source: src }
-                : undefined;
-          } catch {
-            // ignore
-          }
+
+    const guardOpts =
+      guardRailOptions &&
+        typeof guardRailOptions === "object" &&
+        Array.isArray(guardRailOptions.allowedDirs)
+        ? { allowedDirs: guardRailOptions.allowedDirs as string[] }
+        : undefined;
+
+    const tierRaw = tier ?? (req.headers["x-tier"] as string);
+    const tierOverride =
+      typeof tierRaw === "string" &&
+        ["free", "pro", "team", "enterprise"].includes(tierRaw.toLowerCase())
+        ? (tierRaw.toLowerCase() as "free" | "pro" | "team" | "enterprise")
+        : undefined;
+
+    // Load settings ONCE and extract everything we need
+    let gAgentCapabilities: string[] | undefined;
+    let gAgentExternalAllowlist: string[] | undefined;
+    let modelPreference: { source?: "cloud" | "auto"; provider?: string; modelId?: string } | undefined;
+
+    try {
+      const userKey = getUserKey(req);
+      const db = getDatabase();
+      const settings = await db.getSettings(userKey);
+      const prefs = settings?.preferences as
+        | {
+          gAgentCapabilities?: string[];
+          freeAgentCapabilities?: string[];
+          gAgentExternalAllowlist?: string[];
+          freeAgentExternalAllowlist?: string[];
+          gAgentModelPreference?: { source?: string; provider?: string; modelId?: string };
+          freeAgentModelPreference?: { source?: string; provider?: string; modelId?: string };
         }
+        | undefined;
+
+      if (sessionType === "gAgent") {
+        gAgentCapabilities = (prefs?.gAgentCapabilities ??
+          prefs?.freeAgentCapabilities) as string[] | undefined;
+        gAgentExternalAllowlist =
+          prefs?.gAgentExternalAllowlist ?? prefs?.freeAgentExternalAllowlist;
       }
+
+      // Extract model preference (do this once, use for routing)
+      if (!reqGAgentModelPreference && !reqModelPreference) {
+        const pref = prefs?.gAgentModelPreference || prefs?.freeAgentModelPreference;
+        const src = pref?.source;
+        if (pref && (src === "cloud" || src === "auto")) {
+          modelPreference = { ...pref, source: src };
+        }
+      } else {
+        modelPreference = reqGAgentModelPreference || reqModelPreference;
+      }
+
+      // Load MCP tools from user-configured servers (Pro+ tier) — fire-and-forget only
+      const mcpServers = settings?.mcp?.servers;
+      if (mcpServers && Array.isArray(mcpServers) && mcpServers.length > 0) {
+        import("../mcp/client.js").then(({ loadAllMcpTools }) => {
+          loadAllMcpTools(
+            mcpServers as import("../types/settings.js").McpServerConfig[],
+          ).catch((e: unknown) =>
+            logger.debug({ error: (e as Error).message }, "MCP tool load failed (non-blocking)"),
+          );
+        }).catch(() => {/* ignore */ });
+      }
+    } catch (err) {
+      logger.warn({ err, requestId: req.requestId }, "Failed to load settings");
+    }
+
+    // Route model if not provided
+    if (reqProvider == null || reqModelId == null) {
       const messageChars = messages.reduce((sum, m) => {
         const c = m.content;
         if (typeof c === "string") return sum + c.length;
@@ -444,46 +475,6 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
       reqProvider = routed.provider as "nim" | "ollama" | "mock";
       reqModelId = routed.modelId;
       recordLlmRouterSelection(routed.provider, routed.modelId);
-    }
-
-    const guardOpts =
-      guardRailOptions &&
-        typeof guardRailOptions === "object" &&
-        Array.isArray(guardRailOptions.allowedDirs)
-        ? { allowedDirs: guardRailOptions.allowedDirs as string[] }
-        : undefined;
-
-    const tierRaw = tier ?? (req.headers["x-tier"] as string);
-    const tierOverride =
-      typeof tierRaw === "string" &&
-        ["free", "pro", "team", "enterprise"].includes(tierRaw.toLowerCase())
-        ? (tierRaw.toLowerCase() as "free" | "pro" | "team" | "enterprise")
-        : undefined;
-
-    let gAgentCapabilities: string[] | undefined;
-    let gAgentExternalAllowlist: string[] | undefined;
-    try {
-      const userKey = getUserKey(req);
-      const db = getDatabase();
-      const settings = await db.getSettings(userKey);
-      if (sessionType === "gAgent") {
-        const prefs = settings?.preferences;
-        // Support both new gAgent* and deprecated freeAgent* preference keys
-        gAgentCapabilities = (prefs?.gAgentCapabilities ??
-          prefs?.freeAgentCapabilities) as string[] | undefined;
-        gAgentExternalAllowlist =
-          prefs?.gAgentExternalAllowlist ?? prefs?.freeAgentExternalAllowlist;
-      }
-      // Load MCP tools from user-configured servers (Pro+ tier)
-      const mcpServers = settings?.mcp?.servers;
-      if (mcpServers && Array.isArray(mcpServers) && mcpServers.length > 0) {
-        const { loadAllMcpTools } = await import("../mcp/client.js");
-        await loadAllMcpTools(
-          mcpServers as import("../types/settings.js").McpServerConfig[],
-        );
-      }
-    } catch (err) {
-      logger.warn({ err, requestId: req.requestId }, "Failed to load settings");
     }
 
     // OTLP span attributes for G-Agent (Agent Lightning observability)
@@ -551,9 +542,9 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
 
     // Stream events to client; collect full text for plan-mode cache
     let collectedText = "";
-    // Use minimal buffering for real-time streaming (5ms delay, 3 chunks max)
-    const batchMs = Number(process.env.STREAM_BATCH_MS ?? 5);
-    const batchMax = Number(process.env.STREAM_BATCH_MAX ?? 3);
+    // Use minimal buffering for real-time streaming (2ms delay, 2 chunks max) - OPTIMIZED for instant response
+    const batchMs = Number(process.env.STREAM_BATCH_MS ?? 2);
+    const batchMax = Number(process.env.STREAM_BATCH_MAX ?? 2);
     const textBuffer = new StreamBuffer(
       (chunk) => {
         try {
