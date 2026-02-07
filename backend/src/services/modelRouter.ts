@@ -28,6 +28,7 @@ import {
   getStream,
   getConfiguredProviders,
   getProviderConfig,
+  raceStream,
   PROVIDER_CONFIGS,
 } from "./llmGateway.js";
 
@@ -446,6 +447,27 @@ export async function* routeStream(
 ): AsyncGenerator<StreamEvent> {
   const requestType = options.requestType ?? classifyRequest(params);
   const decision = selectProvider(requestType, options);
+
+  // Optimistic racing for speed-sensitive requests
+  if (
+    !options.provider &&
+    (options.preferSpeed || requestType === "simple")
+  ) {
+    const configured = getConfiguredProviders();
+    const candidates = (decision.fallbackChain || [])
+      .filter((p) => configured.includes(p) && p !== "mock")
+      .slice(0, 3);
+
+    if (candidates.length > 1) {
+      logger.info({ candidates, model: decision.model }, "Racing providers for speed");
+      try {
+        yield* raceStream(candidates, { ...params, model: decision.model });
+        return;
+      } catch (err) {
+        logger.warn({ error: (err as Error).message }, "Race failed, falling back to primary provider");
+      }
+    }
+  }
 
   logger.info(
     {
