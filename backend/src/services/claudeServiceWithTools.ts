@@ -640,13 +640,18 @@ export class ClaudeServiceWithTools {
         ) as typeof mappedTools
         : undefined;
 
+      // SPEED OPTIMIZATION: Lower max_tokens = faster generation completion.
+      // 2048 is sufficient for most chat responses; longer outputs (code gen, plans) can override via env.
+      const maxTokens = Number(process.env.CHAT_MAX_TOKENS ?? 2048);
+
       const response = getStream(
         {
           model: finalModelId,
-          max_tokens: 4096, // OPTIMIZED: Reduced from 8192 for faster response time; can be overridden via env
+          max_tokens: maxTokens,
           system: systemPrompt,
           messages: gwMessages,
           tools: filteredTools,
+          temperature: 0.4, // Lower temperature = less sampling = faster token generation
         },
         { provider: finalProvider, modelId: finalModelId },
       );

@@ -168,14 +168,18 @@ const router = Router();
  * @returns {ApiErrorResponse} 400 - Validation error
  * @returns {ApiErrorResponse} 500 - Server error
  */
-// Model presets: all use NVIDIA NIM (Powered by NVIDIA)
+// Model presets: optimized for speed vs quality tradeoff
 const PRESET_FAST = {
   provider: "nim" as const,
-  modelId: "moonshotai/kimi-k2.5",
+  modelId: "moonshotai/kimi-k2.5",  // Fastest NIM model — optimized for quick responses
 };
 const PRESET_QUALITY = {
   provider: "nim" as const,
   modelId: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+};
+const PRESET_BALANCED = {
+  provider: "nim" as const,
+  modelId: "moonshotai/kimi-k2.5",
 };
 
 router.post("/stream", async (req: Request, res: Response): Promise<void> => {
@@ -373,6 +377,9 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
     } else if (modelPreset === "quality") {
       reqProvider = PRESET_QUALITY.provider;
       reqModelId = PRESET_QUALITY.modelId;
+    } else if (modelPreset === "balanced") {
+      reqProvider = PRESET_BALANCED.provider;
+      reqModelId = PRESET_BALANCED.modelId;
     }
 
     const guardOpts =

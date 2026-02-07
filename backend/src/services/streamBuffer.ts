@@ -19,8 +19,8 @@ export class StreamBuffer {
     private onFlush: (chunk: string) => void,
     options: { maxDelayMs?: number; maxBufferSize?: number } = {},
   ) {
-    this.maxDelayMs = options.maxDelayMs ?? 8;
-    this.maxBufferSize = options.maxBufferSize ?? 3;
+    this.maxDelayMs = options.maxDelayMs ?? 4;   // SPEED: Reduced from 8ms — flush faster for perceived speed
+    this.maxBufferSize = options.maxBufferSize ?? 2; // SPEED: Reduced from 3 — fewer chunks buffered before flush
   }
 
   push(chunk: string): void {
