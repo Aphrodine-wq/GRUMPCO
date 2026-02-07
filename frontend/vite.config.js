@@ -103,46 +103,62 @@ export default defineConfig(({ mode }) => {
           },
           // Advanced chunking strategy for optimal caching
           manualChunks(id) {
-            // Framework core - loaded on every page
+            // Framework core - loaded on every page (must be small)
             if (id.includes('node_modules')) {
-              // Svelte runtime - core framework (tiny, loads fast)
-              if (id.includes('svelte') && !id.includes('svelte-spa-router')) {
+              // Svelte runtime - framework (tiny, essential)
+              if (id.includes('/svelte/') || id.includes('/svelte$')) {
                 return 'vendor-svelte'
               }
 
-              // Database/auth - critical but can be cached separately
+              // Auth/DB - critical for app
               if (id.includes('@supabase')) {
                 return 'vendor-supabase'
               }
 
-              // Large feature libraries - loaded on demand
-              if (id.includes('mermaid')) {
-                return 'vendor-mermaid'
+              // UI icons - needed on most pages
+              if (id.includes('lucide-svelte')) {
+                return 'vendor-icons'
               }
-              if (id.includes('jspdf')) {
-                return 'vendor-pdf'
+
+              // Heavy feature libraries - lazy loaded on demand
+              // These should NOT be in the main bundle
+              if (id.includes('mermaid')) {
+                return 'vendor-mermaid' // Lazy loaded in BuilderScreen
               }
               if (id.includes('shiki')) {
-                return 'vendor-shiki'
+                return 'vendor-shiki' // Lazy loaded in CodeDiffViewer
               }
-              if (id.includes('diff')) {
-                return 'vendor-diff'
+              if (id.includes('jspdf')) {
+                return 'vendor-pdf' // Lazy loaded for exports
               }
+
+              // Markdown - used in multiple places, but can be lazy
               if (id.includes('marked') || id.includes('markdown')) {
                 return 'vendor-markdown'
               }
 
-              // Other third-party libraries
+              // Diff utility - used in CodeDiffViewer, lazy loaded
+              if (id.includes('diff')) {
+                return 'vendor-diff'
+              }
+
+              // Catch-all for other third-party libs
+              // This should be much smaller now
               return 'vendor'
             }
 
             // Route-based chunking for heavy components
+            // Only the feature components that have significant code
             if (id.includes('/components/')) {
-              if (id.includes('AgentSwarmVisualizer') ||
-                id.includes('DesignToCodeScreen') ||
-                id.includes('VoiceCodeScreen') ||
-                id.includes('CodeDiffViewer')) {
-                return 'feature-heavy'
+              // These components are used on specific routes
+              if (id.includes('AgentSwarmVisualizer')) {
+                return 'component-agent-swarm'
+              }
+              if (id.includes('DesignToCodeScreen')) {
+                return 'component-design-to-code'
+              }
+              if (id.includes('VoiceCodeScreen')) {
+                return 'component-voice'
               }
             }
           },
