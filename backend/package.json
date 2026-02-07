@@ -84,7 +84,7 @@
     "@sentry/profiling-node": "^8.0.0",
     "better-sqlite3": "^11.7.0",
     "msedge-tts": "^2.0.4",
-    "playwright": "^1.58.0"
+    "playwright": "^1.58.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
