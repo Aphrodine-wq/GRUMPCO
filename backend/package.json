@@ -99,7 +99,7 @@
     "@types/express-serve-static-core": "5.1.1",
     "@types/ioredis": "^5.0.0",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20.11.0",
+    "@types/node": "^25.2.1",
     "@types/node-cron": "^3.0.11",
     "@types/opossum": "^8.1.9",
     "@types/serve-static": "^1.15.5",
