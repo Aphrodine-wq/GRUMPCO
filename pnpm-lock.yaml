@@ -205,7 +205,7 @@ importers:
         version: 2.0.4
       playwright:
         specifier: ^1.58.0
-        version: 1.58.1
+        version: 1.58.2
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.2
@@ -235,8 +235,8 @@ importers:
         specifier: ^4.17.21
         version: 4.17.25
       '@types/express-serve-static-core':
-        specifier: 4.19.8
-        version: 4.19.8
+        specifier: 5.1.1
+        version: 5.1.1
       '@types/ioredis':
         specifier: ^5.0.0
         version: 5.0.0
@@ -360,10 +360,10 @@ importers:
         version: 10.2.6(storybook@10.2.6)
       '@storybook/addon-docs':
         specifier: ^10.2.3
-        version: 10.2.6(@types/react@19.2.11)(storybook@10.2.6)(vite@5.4.21)
+        version: 10.2.6(@types/react@19.2.13)(storybook@10.2.6)(vite@5.4.21)
       '@storybook/addon-svelte-csf':
         specifier: ^5.0.10
-        version: 5.0.10(@storybook/svelte@10.2.6)(@sveltejs/vite-plugin-svelte@4.0.4)(storybook@10.2.6)(svelte@5.49.1)(vite@5.4.21)
+        version: 5.0.10(@storybook/svelte@10.2.7)(@sveltejs/vite-plugin-svelte@4.0.4)(storybook@10.2.6)(svelte@5.49.1)(vite@5.4.21)
       '@storybook/svelte-vite':
         specifier: ^10.2.3
         version: 10.2.6(@sveltejs/vite-plugin-svelte@4.0.4)(storybook@10.2.6)(svelte@5.49.1)(vite@5.4.21)
@@ -609,6 +609,12 @@ importers:
       vitest:
         specifier: ^1.2.0
         version: 1.6.1(@types/node@20.19.31)
+
+  packages/voice:
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
 
   packages/vscode-extension:
     dependencies:
@@ -2498,14 +2504,14 @@ packages:
       - supports-color
     dev: true
 
-  /@mdx-js/react@3.1.1(@types/react@19.2.11)(react@19.2.4):
+  /@mdx-js/react@3.1.1(@types/react@19.2.13)(react@19.2.4):
     resolution: {integrity: sha512-f++rKLQgUVYDAtECQ6fn/is15GkEH9+nZPM3MS0RcxVqoTfawHvDlSCH7JbMhAM6uJ32v3eXLvLmLvjGu7PTQw==}
     peerDependencies:
       '@types/react': '>=16'
       react: '>=16'
     dependencies:
       '@types/mdx': 2.0.13
-      '@types/react': 19.2.11
+      '@types/react': 19.2.13
       react: 19.2.4
     dev: true
 
@@ -5076,12 +5082,12 @@ packages:
       storybook: 10.2.6(@testing-library/dom@10.4.1)(prettier@3.8.1)(react-dom@19.2.4)(react@19.2.4)
     dev: true
 
-  /@storybook/addon-docs@10.2.6(@types/react@19.2.11)(storybook@10.2.6)(vite@5.4.21):
+  /@storybook/addon-docs@10.2.6(@types/react@19.2.13)(storybook@10.2.6)(vite@5.4.21):
     resolution: {integrity: sha512-7a37fu2hdOJRCITS+EimhVN9xVVvSeodmX6QdfxOim+2ECYnvMC9YVYpJ0et3XC8xnl9/3AbQ4y670Uw1hXcmg==}
     peerDependencies:
       storybook: ^10.2.6
     dependencies:
-      '@mdx-js/react': 3.1.1(@types/react@19.2.11)(react@19.2.4)
+      '@mdx-js/react': 3.1.1(@types/react@19.2.13)(react@19.2.4)
       '@storybook/csf-plugin': 10.2.6(storybook@10.2.6)(vite@5.4.21)
       '@storybook/icons': 2.0.1(react-dom@19.2.4)(react@19.2.4)
       '@storybook/react-dom-shim': 10.2.6(react-dom@19.2.4)(react@19.2.4)(storybook@10.2.6)
@@ -5097,7 +5103,7 @@ packages:
       - webpack
     dev: true
 
-  /@storybook/addon-svelte-csf@5.0.10(@storybook/svelte@10.2.6)(@sveltejs/vite-plugin-svelte@4.0.4)(storybook@10.2.6)(svelte@5.49.1)(vite@5.4.21):
+  /@storybook/addon-svelte-csf@5.0.10(@storybook/svelte@10.2.7)(@sveltejs/vite-plugin-svelte@4.0.4)(storybook@10.2.6)(svelte@5.49.1)(vite@5.4.21):
     resolution: {integrity: sha512-poSvTS7VdaQ42ZoqW5e4+2Hv1iLO0mekH9fwn/QuBNse48R4WlTyR8XFbHRTfatl9gdc9ZYC4uWzazrmV6zGIA==}
     peerDependencies:
       '@storybook/svelte': ^0.0.0-0 || ^8.2.0 || ^9.0.0 || ^9.1.0-0 || ^10.0.0-0
@@ -5107,7 +5113,7 @@ packages:
       vite: ^5.0.0 || ^6.0.0 || ^7.0.0
     dependencies:
       '@storybook/csf': 0.1.13
-      '@storybook/svelte': 10.2.6(storybook@10.2.6)(svelte@5.49.1)
+      '@storybook/svelte': 10.2.7(storybook@10.2.6)(svelte@5.49.1)
       '@sveltejs/vite-plugin-svelte': 4.0.4(svelte@5.49.1)(vite@5.4.21)
       dedent: 1.7.1
       es-toolkit: 1.44.0
@@ -5220,6 +5226,18 @@ packages:
     resolution: {integrity: sha512-M8mDoHmFSSdFw0dkCkUl6XqAZbuoFr+nW4JmPqkzPxbVQxolrIxiGp2cSJnN7IskYUPsHzpoQSUZtpR7pL23Yw==}
     peerDependencies:
       storybook: ^10.2.6
+      svelte: ^5.0.0
+    dependencies:
+      storybook: 10.2.6(@testing-library/dom@10.4.1)(prettier@3.8.1)(react-dom@19.2.4)(react@19.2.4)
+      svelte: 5.49.1
+      ts-dedent: 2.2.0
+      type-fest: 2.19.0
+    dev: true
+
+  /@storybook/svelte@10.2.7(storybook@10.2.6)(svelte@5.49.1):
+    resolution: {integrity: sha512-SVwPskd5ZyTAi0eWDSA9Ml3aKVR8USPIP1wEPFmX0VAikL8TZ2hBjLDC/3at7oJj8lIlHpYPesIJ42q3LKZmLQ==}
+    peerDependencies:
+      storybook: ^10.2.7
       svelte: ^5.0.0
     dependencies:
       storybook: 10.2.6(@testing-library/dom@10.4.1)(prettier@3.8.1)(react-dom@19.2.4)(react@19.2.4)
@@ -5688,6 +5706,15 @@ packages:
       '@types/range-parser': 1.2.7
       '@types/send': 1.2.1
 
+  /@types/express-serve-static-core@5.1.1:
+    resolution: {integrity: sha512-v4zIMr/cX7/d2BpAEX3KNKL/JrT1s43s96lLvvdTmza1oEvDudCqK9aF/djc/SWgy8Yh0h30TZx5VpzqFCxk5A==}
+    dependencies:
+      '@types/node': 20.19.31
+      '@types/qs': 6.14.0
+      '@types/range-parser': 1.2.7
+      '@types/send': 1.2.1
+    dev: true
+
   /@types/express@4.17.25:
     resolution: {integrity: sha512-dVd04UKsfpINUnK0yBoYHDF3xu7xVH4BuDotC/xGuycx4CgbP48X/KF/586bcObxT0HENHXEU8Nqtu6NR+eKhw==}
     dependencies:
@@ -5844,8 +5871,8 @@ packages:
   /@types/range-parser@1.2.7:
     resolution: {integrity: sha512-hKormJbkJqzQGhziax5PItDUTMAM9uE2XXQmM37dyd4hVM+5aVl7oVxMVUiVQn2oCQFN/LKCZdvSM0pFRqbSmQ==}
 
-  /@types/react@19.2.11:
-    resolution: {integrity: sha512-tORuanb01iEzWvMGVGv2ZDhYZVeRMrw453DCSAIn/5yvcSVnMoUMTyf33nQJLahYEnv9xqrTNbgz4qY5EfSh0g==}
+  /@types/react@19.2.13:
+    resolution: {integrity: sha512-KkiJeU6VbYbUOp5ITMIc7kBfqlYkKA5KhEHVrGMmUUMt7NeaZg65ojdPk+FtNrBAOXNVM5QM72jnADjM+XVRAQ==}
     dependencies:
       csstype: 3.2.3
     dev: true
@@ -12836,6 +12863,14 @@ packages:
     resolution: {integrity: sha512-bcWzOaTxcW+VOOGBCQgnaKToLJ65d6AqfLVKEWvexyS3AS6rbXl+xdpYRMGSRBClPvyj44njOWoxjNdL/H9UNg==}
     engines: {node: '>=18'}
     hasBin: true
+    dev: true
+
+  /playwright-core@1.58.2:
+    resolution: {integrity: sha512-yZkEtftgwS8CsfYo7nm0KE8jsvm6i/PTgVtB8DL726wNf6H2IMsDuxCpJj59KDaxCtSnrWan2AeDqM7JBaultg==}
+    engines: {node: '>=18'}
+    hasBin: true
+    dev: false
+    optional: true
 
   /playwright@1.58.1:
     resolution: {integrity: sha512-+2uTZHxSCcxjvGc5C891LrS1/NlxglGxzrC4seZiVjcYVQfUa87wBL6rTDqzGjuoWNjnBzRqKmF6zRYGMvQUaQ==}
@@ -12845,6 +12880,18 @@ packages:
       playwright-core: 1.58.1
     optionalDependencies:
       fsevents: 2.3.2
+    dev: true
+
+  /playwright@1.58.2:
+    resolution: {integrity: sha512-vA30H8Nvkq/cPBnNw4Q8TWz1EJyqgpuinBcHET0YVJVFldr8JDNiU9LaWAE1KqSkRYazuaBhTpB5ZzShOezQ6A==}
+    engines: {node: '>=18'}
+    hasBin: true
+    dependencies:
+      playwright-core: 1.58.2
+    optionalDependencies:
+      fsevents: 2.3.2
+    dev: false
+    optional: true
 
   /plist@3.1.0:
     resolution: {integrity: sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==}
