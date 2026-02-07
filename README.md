@@ -235,20 +235,8 @@ graph TB
 
 ## 📖 Documentation
 
-| Guide | Description |
-|-------|-------------|
-| [Getting Started](./docs/GETTING_STARTED.md) | Fastest path to first use |
-| [Architecture](./docs/ARCHITECTURE.md) | System design deep dive |
-| [API Reference](./docs/API.md) | Complete API documentation |
-| [Agent System](./docs/AGENT_SYSTEM.md) | G-Agent orchestration |
-| [Production](./docs/PRODUCTION.md) | Deployment guide |
-| [Security](./docs/SECURITY.md) | Security configuration |
-| [Troubleshooting](./docs/TROUBLESHOOTING.md) | Common issues & fixes |
-| [Contributing](./docs/legal/CONTRIBUTING.md) | Contribution guidelines |
-| [Changelog](./CHANGELOG.md) | Version history |
-| [Launch Materials](./docs/launch/) | Launch checklists and progress |
-| [Reports](./docs/reports/) | Test reports and release notes |
-| [Project Planning](./docs/project/) | Roadmaps and optimization plans |
+All documentation is available in the [docs](./docs/index.md) directory.
+
 
 ---
 

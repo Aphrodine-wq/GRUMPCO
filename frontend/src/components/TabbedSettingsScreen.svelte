@@ -394,6 +394,27 @@
         needsKey ? configuringApiKey : undefined
       );
 
+      // Also persist per-provider key to localStorage so ModelPicker can detect it
+      if (needsKey && configuringApiKey.trim()) {
+        const providerKeyMap: Record<string, string> = {
+          anthropic: 'g-rump-anthropic-key',
+          google: 'g-rump-google-key',
+          openrouter: 'g-rump-openrouter-key',
+          groq: 'g-rump-groq-key',
+          mistral: 'g-rump-mistral-key',
+          kimi: 'g-rump-kimi-key',
+          'nvidia-nim': 'g-rump-nvidia-nim-key',
+        };
+        const storageKey = providerKeyMap[configuringProvider];
+        if (storageKey) {
+          try {
+            localStorage.setItem(storageKey, configuringApiKey.trim());
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+
       // Also save to backend settings so models API can detect provider
       await settingsStore.save({
         models: {
@@ -407,11 +428,11 @@
         'success'
       );
 
-      // Refresh models list
+      // Refresh models list with user-config overrides
       fetchApi('/api/models/list')
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to fetch'))))
         .then((d: { groups?: ModelListGroup[] }) => {
-          modelGroups = d.groups ?? [];
+          modelGroups = applyUserConfigOverridesToModelGroups(d.groups ?? []);
         })
         .catch(() => {});
       setTimeout(() => {
@@ -426,6 +447,48 @@
   const configuringProviderInfo = $derived(
     configuringProvider ? AI_PROVIDER_OPTIONS.find((p) => p.id === configuringProvider) : null
   );
+
+  /**
+   * Check user-stored API keys and override configured status on model groups.
+   * This ensures that providers configured via the Settings UI (stored in localStorage)
+   * show as available even if the backend doesn't have the key in its .env.
+   */
+  function applyUserConfigOverridesToModelGroups(serverGroups: ModelListGroup[]): ModelListGroup[] {
+    const userConfigured = new Set<string>();
+    userConfigured.add('grump'); // Always configured
+    try {
+      const data = newOnboardingStore.get();
+      if (data?.aiProvider && data.aiProviderApiKey) {
+        userConfigured.add(data.aiProvider);
+      }
+      const PER_PROVIDER_KEYS: Record<string, string> = {
+        anthropic: 'g-rump-anthropic-key',
+        google: 'g-rump-google-key',
+        openrouter: 'g-rump-openrouter-key',
+        groq: 'g-rump-groq-key',
+        mistral: 'g-rump-mistral-key',
+        kimi: 'g-rump-kimi-key',
+        'nvidia-nim': 'g-rump-nvidia-nim-key',
+      };
+      for (const [provider, storageKey] of Object.entries(PER_PROVIDER_KEYS)) {
+        try {
+          const key = localStorage.getItem(storageKey);
+          if (key && key.trim()) userConfigured.add(provider);
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    return serverGroups.map((g) => {
+      if (g.configured) return g;
+      if (userConfigured.has(g.provider)) {
+        return { ...g, configured: true, configNote: undefined };
+      }
+      return g;
+    });
+  }
 
   onMount(() => {
     // Clear initial tab after use so next open doesn't default to it
@@ -516,10 +579,27 @@
     fetchApi('/api/models/list')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to fetch models'))))
       .then((d: { groups?: ModelListGroup[] }) => {
-        modelGroups = d.groups ?? [];
+        modelGroups = applyUserConfigOverridesToModelGroups(d.groups ?? []);
       })
       .catch(() => {
-        modelGroups = [];
+        // Provide fallback so G-CompN1 is always available
+        modelGroups = applyUserConfigOverridesToModelGroups([
+          {
+            provider: 'grump',
+            displayName: 'G-CompN1 Model Mix',
+            icon: '/icons/providers/grump.svg',
+            models: [
+              {
+                id: 'g-compn1-auto',
+                provider: 'grump',
+                capabilities: ['code', 'reasoning', 'vision', 'creative'],
+                contextWindow: 200000,
+                description: 'Smart routing: Opus 4.6 + Kimi K2.5 + Gemini 3 Pro',
+                isRecommended: true,
+              },
+            ],
+          },
+        ]);
       })
       .finally(() => {
         modelGroupsLoading = false;

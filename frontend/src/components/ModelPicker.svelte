@@ -7,6 +7,7 @@
   import { fetchApi } from '$lib/api';
   import { ChevronDown, ChevronRight, Settings, Sparkles, Zap, Lock } from 'lucide-svelte';
   import { setCurrentView, settingsInitialTab } from '../stores/uiStore';
+  import { newOnboardingStore } from '../stores/newOnboardingStore';
   import {
     getProviderIconPath,
     getProviderSvgPath,
@@ -108,15 +109,84 @@
     }
   });
 
+  /**
+   * Get the set of provider IDs that the user has configured locally
+   * (API keys stored in localStorage via onboarding/settings).
+   */
+  function getUserConfiguredProviders(): Set<string> {
+    const configured = new Set<string>();
+    // G-CompN1 is always configured (platform keys)
+    configured.add('grump');
+    try {
+      const data = newOnboardingStore.get();
+      if (data?.aiProvider && data.aiProviderApiKey) {
+        configured.add(data.aiProvider);
+      }
+      // Also check for per-provider keys stored individually in localStorage
+      const PER_PROVIDER_KEYS: Record<string, string> = {
+        anthropic: 'g-rump-anthropic-key',
+        google: 'g-rump-google-key',
+        openrouter: 'g-rump-openrouter-key',
+        groq: 'g-rump-groq-key',
+        mistral: 'g-rump-mistral-key',
+        kimi: 'g-rump-kimi-key',
+        'nvidia-nim': 'g-rump-nvidia-nim-key',
+      };
+      for (const [provider, storageKey] of Object.entries(PER_PROVIDER_KEYS)) {
+        try {
+          const key = localStorage.getItem(storageKey);
+          if (key && key.trim()) configured.add(provider);
+        } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
+    return configured;
+  }
+
+  /**
+   * Merge user-configured status into backend groups.
+   * If the user has entered an API key for a provider locally,
+   * override configured=true so the model is selectable.
+   */
+  function applyUserConfigOverrides(serverGroups: ModelGroup[]): ModelGroup[] {
+    const userConfigured = getUserConfiguredProviders();
+    return serverGroups.map((g) => {
+      if (g.configured) return g; // Already configured server-side
+      if (userConfigured.has(g.provider)) {
+        return { ...g, configured: true, configNote: undefined };
+      }
+      return g;
+    });
+  }
+
   onMount(async () => {
     try {
       const res = await fetchApi('/api/models/list');
       if (!res.ok) throw new Error('Failed to fetch models');
       const data = await res.json();
-      groups = data.groups ?? [];
+      groups = applyUserConfigOverrides(data.groups ?? []);
     } catch (e) {
       error = (e as Error).message;
-      groups = [];
+      // Provide fallback groups so users can still see what's available
+      groups = applyUserConfigOverrides([
+        {
+          provider: 'grump',
+          displayName: 'G-CompN1 Model Mix',
+          icon: '/icons/providers/grump.svg',
+          configured: true,
+          models: [
+            {
+              id: 'g-compn1-auto',
+              provider: 'grump',
+              capabilities: ['code', 'reasoning', 'vision', 'creative'],
+              contextWindow: 200_000,
+              costPerMillionInput: 0,
+              costPerMillionOutput: 0,
+              description: 'Smart routing: Opus 4.6 + Kimi K2.5 + Gemini 3 Pro',
+              isRecommended: true,
+            },
+          ],
+        },
+      ]);
     } finally {
       loading = false;
     }

@@ -99,9 +99,10 @@ async function runCommand(cmd: string, cwd: string): Promise<string> {
   try {
     const { stdout } = await execAsync(cmd, { cwd, maxBuffer: 10 * 1024 * 1024 });
     return stdout;
-  } catch (error: any) {
+  } catch (error) {
     // npm/pnpm audit return non-zero exit code if vulns found
-    if (error.stdout) return error.stdout;
+    const err = error as any;
+    if (err.stdout) return err.stdout;
     throw error;
   }
 }
@@ -228,23 +229,7 @@ export async function scanForCodeIssues(
         type: 'setup',
         message: 'No lockfile found. Run npm/pnpm install to generate one for accurate scanning.'
       });
-      if (stdout) {
-         try {
-            processAuditOutput(JSON.parse(stdout), result);
-         } catch (parseError) {
-            logger.error({ userId, parseError }, "Failed to parse pnpm audit output (stdout)");
-         }
-      }
-    } catch (error: any) {
-      if (error.stdout) {
-        try {
-          processAuditOutput(JSON.parse(error.stdout), result);
-        } catch (parseError) {
-          logger.error({ userId, parseError }, "Failed to parse pnpm audit output (error.stdout)");
-        }
-      } else {
-        logger.warn({ userId, error }, "pnpm audit command failed execution");
-      }
+      return result;
     }
 
     logger.info({ userId, pm }, `Detected package manager: ${pm}`);
