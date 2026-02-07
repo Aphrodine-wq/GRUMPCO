@@ -243,12 +243,6 @@
     }
   }
 
-  .brand {
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
 
   .tagline {
     font-size: 1.25rem;
