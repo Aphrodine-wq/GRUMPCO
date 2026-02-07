@@ -204,7 +204,7 @@ importers:
         specifier: ^2.0.4
         version: 2.0.4
       playwright:
-        specifier: ^1.58.2
+        specifier: ^1.58.0
         version: 1.58.2
     devDependencies:
       '@eslint/js':
@@ -559,8 +559,8 @@ importers:
         specifier: ^8.5.13
         version: 8.18.1
       fast-check:
-        specifier: ^3.15.0
-        version: 3.23.2
+        specifier: ^4.5.3
+        version: 4.5.3
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
@@ -9613,11 +9613,11 @@ packages:
     dev: true
     optional: true
 
-  /fast-check@3.23.2:
-    resolution: {integrity: sha512-h5+1OzzfCC3Ef7VbtKdcv7zsstUQwUDlYpUTvjeUsJAssPgLn7QzbboPtL5ro04Mq0rPOsMzl7q5hIbRs2wD1A==}
-    engines: {node: '>=8.0.0'}
+  /fast-check@4.5.3:
+    resolution: {integrity: sha512-IE9csY7lnhxBnA8g/WI5eg/hygA6MGWJMSNfFRrBlXUciADEhS1EDB0SIsMSvzubzIlOBbVITSsypCsW717poA==}
+    engines: {node: '>=12.17.0'}
     dependencies:
-      pure-rand: 6.1.0
+      pure-rand: 7.0.1
     dev: true
 
   /fast-copy@4.0.2:
@@ -12775,6 +12775,8 @@ packages:
     resolution: {integrity: sha512-yZkEtftgwS8CsfYo7nm0KE8jsvm6i/PTgVtB8DL726wNf6H2IMsDuxCpJj59KDaxCtSnrWan2AeDqM7JBaultg==}
     engines: {node: '>=18'}
     hasBin: true
+    dev: false
+    optional: true
 
   /playwright@1.58.1:
     resolution: {integrity: sha512-+2uTZHxSCcxjvGc5C891LrS1/NlxglGxzrC4seZiVjcYVQfUa87wBL6rTDqzGjuoWNjnBzRqKmF6zRYGMvQUaQ==}
@@ -12794,6 +12796,8 @@ packages:
       playwright-core: 1.58.2
     optionalDependencies:
       fsevents: 2.3.2
+    dev: false
+    optional: true
 
   /plist@3.1.0:
     resolution: {integrity: sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==}
@@ -13174,8 +13178,8 @@ packages:
       - utf-8-validate
     dev: true
 
-  /pure-rand@6.1.0:
-    resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
+  /pure-rand@7.0.1:
+    resolution: {integrity: sha512-oTUZM/NAZS8p7ANR3SHh30kXB+zK2r2BPcEn/awJIbOvq82WoMN4p62AWWp3Hhw50G0xMsw1mhIBLqHw64EcNQ==}
     dev: true
 
   /qs@6.14.1:
