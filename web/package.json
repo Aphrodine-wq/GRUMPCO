@@ -15,8 +15,8 @@
     "test:coverage:report": "vitest run --coverage && open coverage/index.html"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.91.1",
-    "axios": "^1.13.4",
+    "@supabase/supabase-js": "^2.95.3",
+    "axios": "^1.6.0",
     "mermaid": "^10.9.0",
     "svelte": "^5.0.0",
     "svelte-spa-router": "^4.0.0"
