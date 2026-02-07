@@ -35,7 +35,7 @@
     "@grump/ai-core": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.57.0",
-    "@opentelemetry/exporter-prometheus": "^0.57.0",
+    "@opentelemetry/exporter-prometheus": "^0.211.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
     "@opentelemetry/resources": "^1.30.0",
     "@opentelemetry/sdk-node": "^0.57.0",
