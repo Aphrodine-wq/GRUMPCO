@@ -28,6 +28,7 @@
     Cloud,
     Hammer,
     Bot,
+    Trash2,
   } from 'lucide-svelte';
   import { sessionsStore, sortedSessions, currentSession } from '../../stores/sessionsStore';
   import { setCurrentView, sidebarCollapsed, currentView } from '../../stores/uiStore';
@@ -44,7 +45,6 @@
   let hoverExpanded = $state(false);
   let hoverTimer: ReturnType<typeof setTimeout> | null = $state(null);
   let searchQuery = $state('');
-  let hoveredSessionId: string | null = $state(null);
   let accountMenuOpen = $state(false);
   let showAuthModal = $state(false);
   let accountMenuRef: HTMLDivElement | null = $state(null);
@@ -323,8 +323,6 @@
             class="session-item"
             class:active={session.id === $currentSession?.id}
             class:collapsed={effectiveCollapsed}
-            onmouseenter={() => (hoveredSessionId = session.id)}
-            onmouseleave={() => (hoveredSessionId = null)}
             role="group"
           >
             <button
@@ -335,7 +333,7 @@
             >
               <span class="session-name">{formatSessionName(session.name)}</span>
             </button>
-            {#if hoveredSessionId === session.id && !effectiveCollapsed}
+            {#if !effectiveCollapsed}
               <button
                 type="button"
                 class="delete-btn"
@@ -343,18 +341,7 @@
                 title="Delete"
                 aria-label="Delete session"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
-                  />
-                </svg>
+                <Trash2 size={14} />
               </button>
             {/if}
           </div>
@@ -370,8 +357,6 @@
             class="session-item"
             class:active={session.id === $currentSession?.id}
             class:collapsed={effectiveCollapsed}
-            onmouseenter={() => (hoveredSessionId = session.id)}
-            onmouseleave={() => (hoveredSessionId = null)}
             role="group"
           >
             <button
@@ -382,7 +367,7 @@
             >
               <span class="session-name">{formatSessionName(session.name)}</span>
             </button>
-            {#if hoveredSessionId === session.id && !effectiveCollapsed}
+            {#if !effectiveCollapsed}
               <button
                 type="button"
                 class="delete-btn"
@@ -390,18 +375,7 @@
                 title="Delete"
                 aria-label="Delete session"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
-                  />
-                </svg>
+                <Trash2 size={14} />
               </button>
             {/if}
           </div>
@@ -417,8 +391,6 @@
             class="session-item"
             class:active={session.id === $currentSession?.id}
             class:collapsed={effectiveCollapsed}
-            onmouseenter={() => (hoveredSessionId = session.id)}
-            onmouseleave={() => (hoveredSessionId = null)}
             role="group"
           >
             <button
@@ -429,7 +401,7 @@
             >
               <span class="session-name">{formatSessionName(session.name)}</span>
             </button>
-            {#if hoveredSessionId === session.id && !effectiveCollapsed}
+            {#if !effectiveCollapsed}
               <button
                 type="button"
                 class="delete-btn"
@@ -437,18 +409,7 @@
                 title="Delete"
                 aria-label="Delete session"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
-                  />
-                </svg>
+                <Trash2 size={14} />
               </button>
             {/if}
           </div>
@@ -464,8 +425,6 @@
             class="session-item"
             class:active={session.id === $currentSession?.id}
             class:collapsed={effectiveCollapsed}
-            onmouseenter={() => (hoveredSessionId = session.id)}
-            onmouseleave={() => (hoveredSessionId = null)}
             role="group"
           >
             <button
@@ -476,7 +435,7 @@
             >
               <span class="session-name">{formatSessionName(session.name)}</span>
             </button>
-            {#if hoveredSessionId === session.id && !effectiveCollapsed}
+            {#if !effectiveCollapsed}
               <button
                 type="button"
                 class="delete-btn"
@@ -484,18 +443,7 @@
                 title="Delete"
                 aria-label="Delete session"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
-                  />
-                </svg>
+                <Trash2 size={14} />
               </button>
             {/if}
           </div>
@@ -995,8 +943,15 @@
     border-radius: 6px;
     color: var(--color-text-muted, #6d28d9);
     cursor: pointer;
-    opacity: 0.6;
+    opacity: 0;
+    pointer-events: none;
     transition: all 60ms ease-out;
+  }
+
+  .session-item:hover .delete-btn,
+  .delete-btn:focus-visible {
+    opacity: 0.6;
+    pointer-events: auto;
   }
 
   .delete-btn:hover {
