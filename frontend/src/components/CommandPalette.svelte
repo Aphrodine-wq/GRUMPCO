@@ -63,8 +63,19 @@
   let searchQuery = $state('');
   let selectedIndex = $state(0);
   let commands: Command[] = $state([]);
-  let filteredCommands: Command[] = $state([]);
   let searchInput: HTMLInputElement | null = $state(null);
+
+  // Derive filtered commands reactively — avoids the infinite $effect loop
+  // that was caused by reading + writing $state inside $effect.
+  const filteredCommands = $derived.by(() => {
+    if (!searchQuery.trim()) return commands;
+    return commands.filter(
+      (cmd) =>
+        fuzzyMatch(searchQuery, cmd.label) ||
+        fuzzyMatch(searchQuery, cmd.category) ||
+        fuzzyMatch(searchQuery, categoryLabels[cmd.category])
+    );
+  });
 
   const categoryLabels: Record<CommandCategory, string> = {
     modes: 'Modes',
@@ -342,8 +353,6 @@
         },
       });
     }
-
-    filteredCommands = commands;
   }
 
   // Fuzzy search
@@ -363,21 +372,14 @@
     return queryIndex === lowerQuery.length;
   }
 
-  function filterCommands() {
-    if (!searchQuery.trim()) {
-      filteredCommands = commands;
+  // Clamp selectedIndex when filteredCommands changes length
+  $effect(() => {
+    if (filteredCommands.length === 0) {
       selectedIndex = 0;
-      return;
+    } else if (selectedIndex >= filteredCommands.length) {
+      selectedIndex = filteredCommands.length - 1;
     }
-
-    filteredCommands = commands.filter(
-      (cmd) =>
-        fuzzyMatch(searchQuery, cmd.label) ||
-        fuzzyMatch(searchQuery, cmd.category) ||
-        fuzzyMatch(searchQuery, categoryLabels[cmd.category])
-    );
-    selectedIndex = Math.min(Math.max(0, selectedIndex), filteredCommands.length - 1);
-  }
+  });
 
   type ListItem =
     | { type: 'header'; category: CommandCategory }
@@ -431,8 +433,10 @@
     }
   }
 
+  // Reset selectedIndex when search query changes
   $effect(() => {
-    filterCommands();
+    searchQuery; // track
+    selectedIndex = 0;
   });
 
   $effect(() => {
