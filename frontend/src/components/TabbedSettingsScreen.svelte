@@ -333,6 +333,8 @@
     provider: string;
     displayName: string;
     icon: string;
+    configured?: boolean;
+    configNote?: string;
     models: ModelListItem[];
   }
   let modelGroups = $state<ModelListGroup[]>([]);
@@ -3074,17 +3076,6 @@
     min-width: 0;
   }
 
-  .integrations-section-content.integrations-primary {
-    width: 100%;
-  }
-
-  .integrations-section-content.integrations-grid-three {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    align-items: start;
-  }
-
   .integrations-section-content.integrations-grid-two {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -3108,8 +3099,7 @@
     margin-bottom: 0.5rem;
   }
 
-  .tab-section.integrations-tab .field-label,
-  .tab-section.integrations-tab .label {
+  .tab-section.integrations-tab .field-label {
     font-size: 0.8125rem;
   }
 
@@ -3118,23 +3108,8 @@
     gap: 0.5rem;
   }
 
-  .tab-section.integrations-tab .status-text {
-    font-size: 0.8125rem;
-    margin: 0.375rem 0;
-  }
-
   @media (max-width: 1024px) {
-    .integrations-section-content.integrations-grid-three {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
     .integrations-section-content.integrations-grid-two {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .integrations-section-content.integrations-grid-three {
       grid-template-columns: 1fr;
     }
   }
@@ -3145,10 +3120,6 @@
 
   .models-tab {
     max-width: 720px;
-  }
-
-  .chat-model-card .preset-segmented {
-    margin-bottom: 1rem;
   }
 
   .preset-label {
@@ -3209,21 +3180,6 @@
     font-size: 0.8125rem;
   }
 
-  .inline-link {
-    background: none;
-    border: none;
-    padding: 0;
-    font-size: inherit;
-    font-weight: 600;
-    color: var(--color-primary, #7c3aed);
-    text-decoration: underline;
-    cursor: pointer;
-  }
-
-  .inline-link:hover {
-    color: var(--color-primary-hover, #6d28d9);
-  }
-
   .advanced-finetuning {
     margin-top: 1.25rem;
     padding-top: 1.25rem;
@@ -3280,14 +3236,6 @@
     margin-bottom: 0;
   }
 
-  .models-tab .models-preset .custom-select {
-    max-width: 280px;
-  }
-
-  .models-provider-list-card {
-    max-width: 720px;
-  }
-
   .models-provider-loading {
     color: #6b7280;
     font-size: 0.875rem;
@@ -3318,11 +3266,6 @@
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
-  }
-
-  .ai-providers-tab .provider-card-wrap .set-default-btn {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
   }
 
   .ai-providers-tab .settings-providers-grid {
@@ -3910,10 +3853,6 @@
     margin-bottom: 4px;
   }
 
-  .billing-tier-row .tier-badge {
-    font-size: 0.875rem;
-  }
-
   .billing-usage-dashboard {
     display: flex;
     flex-direction: column;
@@ -4041,12 +3980,6 @@
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 12px;
-  }
-
-  .status-text {
-    margin: 8px 0;
-    color: #71717a;
-    font-size: 14px;
   }
 
   .custom-model-form {
@@ -4415,12 +4348,6 @@
   .messaging-tab .channel-btn:hover {
     border-color: var(--accent, #7c3aed);
     color: var(--color-text, #e0e0e0);
-  }
-
-  .messaging-tab .channel-btn.active {
-    background: var(--accent, #7c3aed);
-    color: #fff;
-    border-color: var(--accent, #7c3aed);
   }
 
   .messaging-tab .save-btn {
