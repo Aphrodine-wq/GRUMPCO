@@ -110,7 +110,7 @@
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",
     "esbuild": "^0.24.0",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.1.0",
     "js-yaml": "^4.1.0",
