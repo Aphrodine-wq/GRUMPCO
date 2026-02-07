@@ -53,7 +53,8 @@ RUN mkdir -p node_modules/@grump/ai-core && \
 # Build backend using SWC (fast transpiler, matches npm run build)
 RUN npx swc src -d dist --copy-files --config-file .swcrc
 RUN node scripts/copy-migrations.mjs
-RUN echo "=== WORKDIR ===" && pwd && echo "=== dist contents ===" && ls -la /app/dist/ 2>&1 | head -20 && echo "=== find index ===" && find /app -name "index.js" -type f 2>/dev/null | head -10
+# Verify build output exists
+RUN test -f /app/dist/src/index.js || (echo "ERROR: dist/src/index.js not found" && exit 1)
 
 # =============================================================================
 # Production stage
@@ -97,7 +98,6 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # Copy built application from builder
 COPY --from=builder --chown=grump:grump /app/dist ./dist
-RUN echo "=== Prod dist check ===" && ls -la /app/dist/index.js && echo "=== Prod dist OK ==="
 
 # Copy built ai-core from builder
 COPY --from=builder --chown=grump:grump /app/packages/ai-core/dist ./node_modules/@grump/ai-core/dist
@@ -138,4 +138,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 ENTRYPOINT ["/sbin/tini", "--"]
 
 # Start the application
-CMD ["sh", "-c", "echo '=== Runtime check ===' && ls -la /app/dist/ | head -5 && exec node dist/index.js"]
+CMD ["node", "dist/src/index.js"]
