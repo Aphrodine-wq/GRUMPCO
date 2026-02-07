@@ -13,14 +13,11 @@ import logger from "../middleware/logger.js";
 import { getDatabase as _getDatabase } from "../db/database.js";
 import { getCompletion } from "./llmGatewayHelper.js";
 import { writeAuditLog } from "./auditLogService.js";
-import { getCompletion } from "./llmGatewayHelper.js";
 import { queueAgentTask, isAgentRunning } from "./persistentAgentService.js";
-import { getCompletion } from "./llmGatewayHelper.js";
 import fs from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
 import util from "util";
-import { getCompletion } from "./llmGatewayHelper.js";
 
 const execAsync = util.promisify(exec);
 

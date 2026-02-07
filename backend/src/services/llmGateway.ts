@@ -1,3 +1,4 @@
+import { providerRacing } from "./providerRacing.js";
 /**
  * @fileoverview Unified LLM Gateway - Multi-Provider AI Router
  *
@@ -64,11 +65,15 @@ export interface StreamParams {
   /** Maximum tokens to generate */
   max_tokens: number;
   /** System prompt/instructions */
+  /** AbortSignal for request cancellation */
+  signal?: AbortSignal;
   system: string;
   /** Conversation messages */
   messages: Array<{
     role: "user" | "assistant";
     content: string | MultimodalContentPart[];
+  /** AbortSignal for request cancellation */
+  signal?: AbortSignal;
   }>;
   /** Optional tool definitions for function calling */
   tools?: Array<{
@@ -394,7 +399,7 @@ async function* streamOpenAICompatible(
       method: "POST",
       headers,
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: params.signal ? AbortSignal.any([params.signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     });
 
     if (!res.ok) {
@@ -635,7 +640,7 @@ async function* streamAnthropic(
       method: "POST",
       headers,
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: params.signal ? AbortSignal.any([params.signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     });
 
     if (!res.ok) {
@@ -773,7 +778,7 @@ async function* streamOllama(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: params.signal ? AbortSignal.any([params.signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     });
 
     if (!res.ok) {
@@ -1131,4 +1136,50 @@ export function getProviderConfig(
 ): ProviderConfig | undefined {
   if (provider === "mock") return undefined;
   return PROVIDER_CONFIGS[provider as Exclude<LLMProvider, "mock">];
+}
+
+/**
+ * Get the raw stream generator for a provider (no metrics/retries wrapper)
+ */
+export function getStreamForProvider(
+  provider: LLMProvider,
+  params: StreamParams,
+): AsyncGenerator<StreamEvent> {
+  switch (provider) {
+    case "openrouter":
+      return streamOpenRouter(params);
+    case "ollama":
+      return streamOllama(params);
+    case "github-copilot":
+      return streamGitHubCopilot(params);
+    case "kimi":
+      return streamKimi(params);
+    case "anthropic":
+      return streamAnthropic(params);
+    case "mistral":
+      return streamMistral(params);
+    case "groq":
+      return streamGroq(params);
+    case "nim":
+    default:
+      return streamNim(params);
+  }
+}
+
+/**
+ * Race multiple providers for the fastest response
+ */
+export async function* raceStream(
+  candidates: LLMProvider[],
+  params: StreamParams,
+): AsyncGenerator<StreamEvent> {
+  // Use the racing service
+  const raceResult = await providerRacing.race(
+    candidates,
+    params,
+    (provider, p) => getStreamForProvider(provider, p),
+  );
+
+  // Yield from the winning stream
+  yield* raceResult.stream;
 }

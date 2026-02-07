@@ -10,7 +10,7 @@ const WORKSPACE_CACHE_DIR = join(tmpdir(), "grump-workspaces");
 async function ensureCacheDir() {
   try {
     await fs.mkdir(WORKSPACE_CACHE_DIR, { recursive: true });
-  } catch (_e) {
+  } catch (e) {
     // Ignore if exists
   }
 }
@@ -67,7 +67,7 @@ export async function loadRemoteWorkspace(
     try {
       logger.info("Updating existing cached workspace...");
       await spawnAsync("git", ["pull"], { cwd: targetDir });
-    } catch (_e) {
+    } catch (e) {
       logger.warn("Failed to pull latest changes, using cached version.");
     }
     return { url: repoUrl, localPath: targetDir };
@@ -89,7 +89,7 @@ export async function clearWorkspaceCache(): Promise<void> {
   try {
     await fs.rm(WORKSPACE_CACHE_DIR, { recursive: true, force: true });
     await fs.mkdir(WORKSPACE_CACHE_DIR, { recursive: true });
-  } catch (_e) {
+  } catch (e) {
     logger.error(e, "Failed to clear workspace cache");
   }
 }

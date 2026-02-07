@@ -112,9 +112,9 @@ export interface GenerationSession {
 }
 
 export interface GenerationPreferences {
-  frontendFramework?: "vue" | "react";
-  backendRuntime?: "node" | "python" | "go";
-  database?: "postgres" | "mongodb";
+  frontendFramework?: "vue" | "react" | "next" | "svelte" | "angular";
+  backendRuntime?: "node" | "python" | "go" | "bun" | "deno";
+  database?: "postgres" | "mongodb" | "sqlite";
   includeTests?: boolean;
   includeDocs?: boolean;
   styleGuide?: "airbnb" | "google" | "standard";

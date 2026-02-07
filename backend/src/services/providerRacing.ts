@@ -14,11 +14,10 @@ import { getTieredCache } from "./tieredCache.js";
 import logger from "../middleware/logger.js";
 import type { LLMProvider, StreamParams, StreamEvent } from "./llmGateway.js";
 
-interface RaceResult {
+export interface RaceResult {
   provider: LLMProvider;
-  events: StreamEvent[];
+  stream: AsyncGenerator<StreamEvent>;
   timeToFirstByte: number;
-  totalTime: number;
 }
 
 interface ProviderPerformance {
@@ -39,7 +38,7 @@ class ProviderRacingService {
   async race(
     providers: LLMProvider[],
     params: StreamParams,
-    streamFn: (
+    streamFactory: (
       provider: LLMProvider,
       params: StreamParams,
     ) => AsyncGenerator<StreamEvent>,
@@ -55,88 +54,73 @@ class ProviderRacingService {
       "Starting provider race",
     );
 
-    const _startTime = Date.now();
     const abortControllers = new Map<LLMProvider, AbortController>();
 
-    // Create abort controllers for each racer
-    racers.forEach((provider) => {
-      abortControllers.set(provider, new AbortController());
-    });
+    // Create promises that resolve on first byte
+    const racePromises = racers.map(async (provider) => {
+        const controller = new AbortController();
+        abortControllers.set(provider, controller);
 
-    // Race all providers
-    const racePromises = racers.map(
-      async (provider): Promise<RaceResult | null> => {
-        const providerStart = Date.now();
-        let timeToFirstByte = 0;
-        const events: StreamEvent[] = [];
+        // Merge signals: either params.signal (user cancel) or controller.signal (we cancel)
+        const signals = [controller.signal];
+        if (params.signal) signals.push(params.signal);
+
+        // Use AbortSignal.any (Node 20+)
+        const signal = AbortSignal.any(signals);
+
+        const raceParams = { ...params, signal };
+        const startTime = Date.now();
 
         try {
-          for await (const event of streamFn(provider, params)) {
-            if (timeToFirstByte === 0) {
-              timeToFirstByte = Date.now() - providerStart;
+            const generator = streamFactory(provider, raceParams);
+            const iterator = generator[Symbol.asyncIterator]();
+
+            // Wait for the first chunk
+            const firstResult = await iterator.next();
+
+            if (firstResult.done) {
+                 // Empty stream is a failure for racing purposes
+                 throw new Error(`Provider ${provider} returned empty stream`);
             }
 
-            events.push(event);
+            const timeToFirstByte = Date.now() - startTime;
 
-            // Check if we should abort (another provider won)
-            const abortController = abortControllers.get(provider);
-            if (abortController?.signal.aborted) {
-              logger.debug({ provider }, "Aborting slow provider");
-              return null;
-            }
+            // Create a new generator that yields the first chunk then the rest
+            const stream = async function* () {
+                yield firstResult.value;
+                yield* { [Symbol.asyncIterator]: () => iterator };
+            };
 
-            // Stop after first few events if another provider is winning
-            if (events.length > 5) {
-              // Let it continue, but track
-            }
-          }
+            return {
+                provider,
+                stream: stream(),
+                timeToFirstByte
+            } as RaceResult;
 
-          const totalTime = Date.now() - providerStart;
-
-          return {
-            provider,
-            events,
-            timeToFirstByte,
-            totalTime,
-          };
         } catch (error) {
-          logger.warn(
-            { provider, error: (error as Error).message },
-            "Provider failed in race",
-          );
-          return null;
+             logger.warn(
+                { provider, error: (error as Error).message },
+                "Provider failed in race",
+              );
+              return null;
         }
-      },
-    );
+    });
 
-    // Wait for first successful result
-    let winner: RaceResult | null = null;
-
-    while (racePromises.length > 0 && !winner) {
-      const result = await Promise.race(racePromises);
-
-      if (result) {
-        winner = result;
-
-        // Abort other providers
-        for (const [provider, controller] of abortControllers.entries()) {
-          if (provider !== winner.provider) {
-            controller.abort();
-          }
-        }
-
-        break;
-      }
-
-      // Remove completed promise and continue
-      racePromises.shift();
-    }
+    // Race to first success
+    const winner = await this.raceToSuccess(racePromises);
 
     if (!winner) {
       throw new Error("All providers failed in race");
     }
 
-    // Update performance metrics
+    // Cancel losers
+    for (const [provider, controller] of abortControllers) {
+      if (provider !== winner.provider) {
+        controller.abort();
+      }
+    }
+
+    // Update metrics
     this.updateMetrics(winner);
 
     // Cache winner for future requests
@@ -146,13 +130,41 @@ class ProviderRacingService {
       {
         winner: winner.provider,
         timeToFirstByte: winner.timeToFirstByte,
-        totalTime: winner.totalTime,
         racers: racers.length,
       },
       "Provider race completed",
     );
 
     return winner;
+  }
+
+    /**
+   * Race promises to first success (ignoring failures until all fail)
+   */
+  private async raceToSuccess<T>(promises: Promise<T | null>[]): Promise<T | null> {
+    return new Promise((resolve) => {
+        let failureCount = 0;
+        let resolved = false;
+
+        promises.forEach(p => {
+            p.then(result => {
+                if (resolved) return;
+                if (result) {
+                    resolved = true;
+                    resolve(result);
+                } else {
+                    failureCount++;
+                    if (failureCount === promises.length) resolve(null);
+                }
+            }).catch(() => {
+                if (resolved) return;
+                failureCount++;
+                if (failureCount === promises.length) resolve(null);
+            });
+        });
+
+        if (promises.length === 0) resolve(null);
+    });
   }
 
   /**
