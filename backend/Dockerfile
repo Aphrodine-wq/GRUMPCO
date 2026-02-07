@@ -53,7 +53,7 @@ RUN mkdir -p node_modules/@grump/ai-core && \
 # Build backend using SWC (fast transpiler, matches npm run build)
 RUN npx swc src -d dist --copy-files --config-file .swcrc
 RUN node scripts/copy-migrations.mjs
-RUN echo "=== Builder dist check ===" && ls -la /app/dist/index.js && echo "=== Builder dist OK ==="
+RUN echo "=== WORKDIR ===" && pwd && echo "=== dist contents ===" && ls -la /app/dist/ 2>&1 | head -20 && echo "=== find index ===" && find /app -name "index.js" -type f 2>/dev/null | head -10
 
 # =============================================================================
 # Production stage
