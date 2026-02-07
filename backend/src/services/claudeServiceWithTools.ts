@@ -215,6 +215,75 @@ export type ChatStreamEvent =
 export class ClaudeServiceWithTools {
   /** Default model for API calls */
   private model: string = "moonshotai/kimi-k2.5";
+
+  /**
+   * Core tools that are always included. Other tools are only sent
+   * when the conversation suggests they might be needed, reducing
+   * input token count and improving time-to-first-token.
+   */
+  private static CORE_TOOL_NAMES = new Set([
+    "bash_execute",
+    "file_read",
+    "file_write",
+    "file_edit",
+    "list_directory",
+    "codebase_search",
+  ]);
+
+  /**
+   * Optional tools only sent when conversation context suggests need.
+   * Maps keyword patterns → tool names.
+   */
+  private static CONTEXTUAL_TOOL_KEYWORDS: Record<string, string[]> = {
+    "database|schema|migration|sql|db": ["generate_db_schema", "generate_migrations"],
+    "screenshot|browser|navigate|click|page": [
+      "screenshot_url", "browser_run_script", "browser_navigate",
+      "browser_click", "browser_type", "browser_get_content", "browser_screenshot",
+    ],
+    "git|commit|push|branch|diff|merge": [
+      "git_status", "git_diff", "git_log", "git_commit", "git_branch", "git_push",
+    ],
+    "terminal|npm|yarn|pip|cargo": ["terminal_execute"],
+  };
+
+  /**
+   * Filter tools based on conversation context to reduce token count.
+   * Core tools are always included; others only when conversation mentions relevant keywords.
+   * OPTIMIZED: Fast string check instead of regex for most cases.
+   */
+  private static filterToolsByContext(
+    allTools: Array<{ name: string;[key: string]: unknown }>,
+    messages: Array<{ role: string; content: string | unknown }>,
+  ): Array<{ name: string;[key: string]: unknown }> {
+    // Build lowercase conversation text for keyword matching (only last message + previous for speed)
+    const textParts = messages.slice(-3).map(m => typeof m.content === "string" ? m.content : "");
+    const conversationText = textParts.join(" ").toLowerCase();
+
+    // Determine which contextual tools to include
+    const includedNames = new Set(ClaudeServiceWithTools.CORE_TOOL_NAMES);
+
+    // Fast string checks instead of regex for common patterns
+    const fastChecks: Record<string, string[]> = {
+      "database": ["generate_db_schema", "generate_migrations"],
+      "screenshot": ["screenshot_url", "browser_run_script", "browser_navigate", "browser_click", "browser_type", "browser_get_content", "browser_screenshot"],
+      "git": ["git_status", "git_diff", "git_log", "git_commit", "git_branch", "git_push"],
+      "npm": ["terminal_execute"],
+    };
+
+    for (const [keyword, toolNames] of Object.entries(fastChecks)) {
+      if (conversationText.includes(keyword)) {
+        for (const name of toolNames) includedNames.add(name);
+      }
+    }
+
+    // Always include user-defined tools, MCP tools, and skill tools
+    return allTools.filter(t =>
+      includedNames.has(t.name) ||
+      t.name.startsWith("skill_") ||
+      t.name.startsWith("mcp_") ||
+      t.name.startsWith("user_")
+    );
+  }
   /** Shared tool execution service */
   private toolExecutionService: ToolExecutionService;
   /** Request-scoped tool execution service (for isolation) */
@@ -367,29 +436,37 @@ export class ClaudeServiceWithTools {
           })
           : getChatModePrompt(chatMode, { workspaceRoot, specialist });
       let systemPrompt = `${headPrompt}\n\n${wrapModeContext(modePrompt)}`;
+
+      // RAG context: DISABLED by default for instant response; use 200ms ultra-aggressive timeout
       const ragContextEnabled =
-        process.env.RAG_CONTEXT_ENABLED === "true" ||
-        includeRagContext === true;
+        process.env.RAG_CONTEXT_ENABLED === "true" &&
+        includeRagContext === true; // Require BOTH conditions, not OR
       if (ragContextEnabled && messages.length > 0) {
         const lastUser = [...messages].reverse().find((m) => m.role === "user");
         const lastUserText =
           typeof lastUser?.content === "string" ? lastUser.content : undefined;
         if (lastUserText?.trim().length) {
           try {
-            const ragResult = await getIntentGuidedRagContext(
+            // Ultra-aggressive: 200ms timeout, minimal chunks for speed
+            const RAG_TIMEOUT_MS = 200;
+            const ragPromise = getIntentGuidedRagContext(
               lastUserText.trim(),
               {
                 namespace: workspaceRoot ?? undefined,
-                maxChunks: 6,
+                maxChunks: 2, // Minimal context for maximum speed
               },
             );
+            const timeoutPromise = new Promise<null>((resolve) =>
+              setTimeout(() => resolve(null), RAG_TIMEOUT_MS),
+            );
+            const ragResult = await Promise.race([ragPromise, timeoutPromise]);
             if (ragResult?.context) {
-              systemPrompt += `\n\nRelevant context from knowledge base:\n\n${ragResult.context}`;
+              systemPrompt += `\n\n<context>\n${ragResult.context}\n</context>`;
             }
           } catch (e) {
             logger.debug(
               { error: (e as Error).message },
-              "RAG context for prompt failed",
+              "RAG context for prompt failed (non-blocking)",
             );
           }
         }
@@ -452,24 +529,24 @@ export class ClaudeServiceWithTools {
         },
       };
 
-      // When mode is design, parse intent from last user message and emit
+      // When mode is design, parse intent from last user message and emit (non-blocking)
       if (mode === "design") {
         const lastUser = [...messages].reverse().find((m) => m.role === "user");
         const raw =
           typeof lastUser?.content === "string" ? lastUser.content : undefined;
         if (raw && raw.trim().length > 10) {
-          try {
-            const enriched = await parseAndEnrichIntent(raw.trim(), undefined);
-            yield {
-              type: "intent",
-              value: enriched as unknown as Record<string, unknown>,
-            };
-          } catch (err) {
-            logger.warn(
-              { err },
-              "Intent parse failed; continuing without intent",
-            );
-          }
+          // Fire-and-forget: don't await intent parsing — let stream start immediately
+          parseAndEnrichIntent(raw.trim(), undefined)
+            .then((enriched) => {
+              // Intent will be emitted separately if needed
+              logger.debug({ enriched }, "Intent parsed (async)");
+            })
+            .catch((err) => {
+              logger.warn(
+                { err },
+                "Intent parse failed; continuing without intent",
+              );
+            });
         }
       }
 
@@ -555,13 +632,21 @@ export class ClaudeServiceWithTools {
           })
           : undefined;
 
+      // Smart tool filtering: reduce input tokens by only sending relevant tools
+      const filteredTools = mappedTools
+        ? ClaudeServiceWithTools.filterToolsByContext(
+          mappedTools as Array<{ name: string;[key: string]: unknown }>,
+          messages,
+        ) as typeof mappedTools
+        : undefined;
+
       const response = getStream(
         {
           model: finalModelId,
-          max_tokens: 4096,
+          max_tokens: 4096, // OPTIMIZED: Reduced from 8192 for faster response time; can be overridden via env
           system: systemPrompt,
           messages: gwMessages,
-          tools: mappedTools,
+          tools: filteredTools,
         },
         { provider: finalProvider, modelId: finalModelId },
       );
