@@ -488,8 +488,8 @@ importers:
         specifier: ^5.6.2
         version: 5.6.2
       commander:
-        specifier: ^12.1.0
-        version: 12.1.0
+        specifier: ^14.0.3
+        version: 14.0.3
       conf:
         specifier: ^13.1.0
         version: 13.1.0
@@ -609,6 +609,12 @@ importers:
       vitest:
         specifier: ^4.0.18
         version: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@25.2.1)(tsx@4.21.0)
+
+  packages/voice:
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
 
   packages/voice:
     devDependencies:
@@ -6098,6 +6104,18 @@ packages:
       type-fest: 2.19.0
     dev: true
 
+  /@storybook/svelte@10.2.7(storybook@10.2.6)(svelte@5.49.1):
+    resolution: {integrity: sha512-SVwPskd5ZyTAi0eWDSA9Ml3aKVR8USPIP1wEPFmX0VAikL8TZ2hBjLDC/3at7oJj8lIlHpYPesIJ42q3LKZmLQ==}
+    peerDependencies:
+      storybook: ^10.2.7
+      svelte: ^5.0.0
+    dependencies:
+      storybook: 10.2.6(@testing-library/dom@10.4.1)(prettier@3.8.1)(react-dom@19.2.4)(react@19.2.4)
+      svelte: 5.49.1
+      ts-dedent: 2.2.0
+      type-fest: 2.19.0
+    dev: true
+
   /@supabase/auth-js@2.94.1:
     resolution: {integrity: sha512-Wt/SdmAtNNiqrcBbPlzWojLcE1bQ9OYb8PTaYF6QccFX5JeXZI0sZ01MLNE+E83UK6cK0lw4YznX0D2g08UQng==}
     engines: {node: '>=20.0.0'}
@@ -8648,15 +8666,9 @@ packages:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
     dev: false
 
-  /commander@12.1.0:
-    resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
-    engines: {node: '>=18'}
-    dev: false
-
   /commander@14.0.3:
     resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
     engines: {node: '>=20'}
-    dev: true
 
   /commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
