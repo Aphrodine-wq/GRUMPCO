@@ -18,7 +18,7 @@
   import PRDResult from './PRDResult.svelte';
   import PlanResult from './PlanResult.svelte';
   import CodeResult from './CodeResult.svelte';
-  import { Badge, Button, Tooltip } from '../../lib/design-system';
+  import { Tooltip } from '../../lib/design-system';
   import { parseMessageContent as parseContentBlocks } from '../../utils/contentParser';
   import { showToast } from '../../stores/toastStore';
   import { chatPhaseStore } from '../../stores/chatPhaseStore';
@@ -268,15 +268,10 @@
               <pre class="code-content"><code>{block.code}</code></pre>
             </div>
           {:else if block.type === 'mermaid'}
-            <div class="diagram-card" use:handleDiagramRef={bIdx}>
-              <div class="diagram-header">
-                <Badge variant="info">Architecture</Badge>
-                <Button variant="ghost" size="sm" onclick={() => onExportSvg?.(index, bIdx)}>
-                  Export
-                </Button>
-              </div>
+            <div class="diagram-embed" use:handleDiagramRef={bIdx}>
               <DiagramRenderer
                 code={block.content}
+                compact={true}
                 on:generate-code={(e) =>
                   onGenerateCode?.({
                     mermaidCode: e.detail.mermaidCode,
@@ -328,15 +323,10 @@
           {:else if block.type === 'tool_result'}
             <ToolResultCard toolResult={block} />
           {:else if block.type === 'mermaid'}
-            <div class="diagram-card">
-              <div class="diagram-header">
-                <Badge variant="info">Architecture</Badge>
-                <Button variant="ghost" size="sm" onclick={() => onExportSvg?.(index, 0)}>
-                  Export
-                </Button>
-              </div>
+            <div class="diagram-embed">
               <DiagramRenderer
                 code={block.content}
+                compact={true}
                 on:generate-code={(e) =>
                   onGenerateCode?.({
                     mermaidCode: e.detail.mermaidCode,
@@ -784,23 +774,8 @@
     color: var(--color-primary, #7c3aed);
   }
 
-  /* Diagram card */
-  .diagram-card {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: 0.75rem;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  .diagram-embed {
     margin: 0.25rem 0;
-  }
-
-  .diagram-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--color-border-light);
-    background-color: var(--color-bg-secondary);
   }
 
   /* Context and intent blocks */

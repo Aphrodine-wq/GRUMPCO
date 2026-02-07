@@ -476,12 +476,12 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #6b7280;
+    background: var(--color-text-muted);
   }
 
   .topbar-indicator.online {
-    background: #10b981;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    background: var(--color-success);
+    box-shadow: 0 0 8px var(--color-success-border);
     animation: pulse-green 2s infinite;
   }
 
@@ -538,10 +538,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(139, 92, 246, 0.08));
-    border: 1px solid var(--color-border, #e9d5ff);
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
+    border: 1px solid var(--color-border);
     border-radius: 10px;
-    color: var(--color-primary, #7c3aed);
+    color: var(--color-primary);
   }
 
   .cc-logo-text h1 {
@@ -580,15 +580,15 @@
   }
 
   .cc-status-pill.online {
-    color: #059669;
-    border-color: rgba(16, 185, 129, 0.3);
-    background: rgba(16, 185, 129, 0.08);
+    color: var(--color-success);
+    border-color: var(--color-success-border);
+    background: var(--color-success-subtle);
   }
 
   .cc-status-pill.offline {
-    color: #dc2626;
-    border-color: rgba(239, 68, 68, 0.3);
-    background: rgba(239, 68, 68, 0.08);
+    color: var(--color-error);
+    border-color: var(--color-error-border);
+    background: var(--color-error-subtle);
   }
 
   .cc-clock {
@@ -613,8 +613,8 @@
   }
 
   .cc-settings-btn:hover {
-    background: rgba(124, 58, 237, 0.12);
-    border-color: var(--color-primary, #7c3aed);
+    background: var(--color-primary-subtle);
+    border-color: var(--color-primary);
   }
 
   /* Body */
@@ -639,10 +639,10 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.875rem 1rem;
-    background: var(--color-bg, #ffffff);
-    border: 1px solid var(--color-border, #e9d5ff);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(124, 58, 237, 0.04);
+    box-shadow: var(--shadow-sm);
   }
 
   .cc-stat-icon {
@@ -656,20 +656,20 @@
   }
 
   .cc-stat-icon.sessions {
-    background: rgba(124, 58, 237, 0.1);
-    color: #7c3aed;
+    background: var(--color-primary-subtle);
+    color: var(--color-primary);
   }
   .cc-stat-icon.messages {
-    background: rgba(6, 182, 212, 0.1);
-    color: #0891b2;
+    background: var(--color-info-subtle);
+    color: var(--color-info);
   }
   .cc-stat-icon.capabilities {
-    background: rgba(234, 179, 8, 0.1);
-    color: #d97706;
+    background: var(--color-warning-subtle);
+    color: var(--color-warning);
   }
   .cc-stat-icon.uptime {
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
+    background: var(--color-success-subtle);
+    color: var(--color-success);
   }
 
   .cc-stat-info {
@@ -704,11 +704,11 @@
 
   /* Sections */
   .cc-section {
-    background: var(--color-bg, #ffffff);
-    border: 1px solid var(--color-border, #e9d5ff);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 14px;
     padding: 1rem 1.25rem;
-    box-shadow: 0 1px 3px rgba(124, 58, 237, 0.04);
+    box-shadow: var(--shadow-sm);
   }
 
   .cc-section-header {
@@ -758,16 +758,16 @@
   }
 
   .cc-task-card:hover {
-    background: rgba(124, 58, 237, 0.06);
-    border-color: var(--task-color, #7c3aed);
-    transform: translateX(4px);
-    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.08);
+    background: var(--color-primary-subtle);
+    border-color: var(--task-color, var(--color-primary));
+    transform: translateX(2px);
+    box-shadow: var(--shadow-sm);
   }
 
   .cc-task-card:hover .cc-task-icon {
-    background: var(--task-color, #7c3aed);
-    color: white;
-    box-shadow: 0 2px 10px color-mix(in srgb, var(--task-color, #7c3aed) 30%, transparent);
+    background: var(--task-color, var(--color-primary));
+    color: var(--color-text-inverse);
+    box-shadow: var(--shadow-sm);
   }
 
   .cc-task-icon {
@@ -777,10 +777,10 @@
     align-items: center;
     justify-content: center;
     border-radius: 10px;
-    background: rgba(124, 58, 237, 0.08);
-    color: var(--task-color, #7c3aed);
+    background: var(--color-primary-subtle);
+    color: var(--task-color, var(--color-primary));
     flex-shrink: 0;
-    transition: all 0.25s;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
   }
 
   .cc-task-info {
@@ -809,8 +809,8 @@
   }
 
   .cc-task-card:hover :global(.cc-task-arrow) {
-    color: var(--task-color, #7c3aed);
-    transform: translateX(2px);
+    color: var(--task-color, var(--color-primary));
+    transform: translateX(1px);
   }
 
   /* Right Panel */
@@ -843,8 +843,8 @@
   }
 
   .cc-session-row:hover {
-    background: rgba(124, 58, 237, 0.06);
-    border-color: var(--color-border, #e9d5ff);
+    background: var(--color-primary-subtle);
+    border-color: var(--color-border);
   }
 
   .cc-session-indicator {
@@ -904,8 +904,8 @@
   }
 
   .cc-session-delete:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
+    background: var(--color-error-subtle);
+    color: var(--color-error);
   }
 
   .cc-session-actions :global(.cc-session-arrow) {
@@ -952,8 +952,8 @@
     gap: 0.5rem;
     padding: 0.5rem 0.625rem;
     border-radius: 8px;
-    background: var(--color-bg-subtle, #f5f3ff);
-    border: 1px solid var(--color-border-light, #f3e8ff);
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border-light);
   }
 
   .cc-cap-icon {
@@ -963,15 +963,15 @@
     align-items: center;
     justify-content: center;
     border-radius: 6px;
-    background: rgba(124, 58, 237, 0.08);
-    color: var(--color-primary, #7c3aed);
+    background: var(--color-primary-subtle);
+    color: var(--color-primary);
     flex-shrink: 0;
   }
 
   .cc-cap-label {
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--color-text, #1f1147);
+    color: var(--color-text);
     flex: 1;
   }
 
@@ -979,8 +979,8 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #10b981;
-    box-shadow: 0 0 6px rgba(16, 185, 129, 0.3);
+    background: var(--color-success);
+    box-shadow: 0 0 6px var(--color-success-border);
     flex-shrink: 0;
   }
 

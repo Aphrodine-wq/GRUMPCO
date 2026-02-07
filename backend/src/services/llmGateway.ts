@@ -34,6 +34,8 @@ import { recordLlmStreamMetrics } from "../middleware/metrics.js";
 import { addNimSpanAttributes } from "../middleware/tracing.js";
 import { getNimChatUrl } from "../config/nim.js";
 import { env, getApiKey, type ApiProvider } from "../config/env.js";
+import { getApiKey as getStoredApiKey } from "./secretsService.js";
+import type { IntegrationProviderId } from "../types/integrations.js";
 
 /** Supported LLM provider identifiers */
 export type LLMProvider =
@@ -67,6 +69,10 @@ export interface StreamParams {
   model: string;
   /** Maximum tokens to generate */
   max_tokens: number;
+  /** Optional user ID for resolving user-stored API keys */
+  userId?: string;
+  /** Optional JAN_BASE_URL override (e.g. from user settings) */
+  janBaseUrlOverride?: string;
   /** System prompt/instructions */
   /** AbortSignal for request cancellation */
   signal?: AbortSignal;
@@ -383,7 +389,9 @@ async function* streamOpenAICompatible(
   provider: Exclude<LLMProvider, "mock" | "ollama" | "anthropic">,
 ): AsyncGenerator<StreamEvent> {
   const config = PROVIDER_CONFIGS[provider];
-  const apiKey = getApiKeyForProvider(provider);
+  const apiKey =
+    (await getApiKeyForProviderAsync(provider, params.userId)) ??
+    getApiKeyForProvider(provider);
 
   if (!apiKey) {
     logger.warn({ provider }, `${provider} not configured - API key missing`);
@@ -485,10 +493,10 @@ async function* streamOpenAICompatible(
     let buf = "";
     // chunkCount initiated above
 
-    // Track tool calls
+    // Track streamed tool calls and emit only after finish_reason=tool_calls
+    // so we don't execute tools with partial/incomplete arguments.
     const toolCalls: Map<number, { id: string; name: string; args: string }> =
       new Map();
-    const emittedToolIndices = new Set<number>();
 
     while (true) {
       const { done, value } = await reader.read();
@@ -503,6 +511,29 @@ async function* streamOpenAICompatible(
         if (!line.trim() || !line.startsWith("data: ")) continue;
         const dataStr = line.slice(6);
         if (dataStr === "[DONE]") {
+          if (toolCalls.size > 0) {
+            for (const [, acc] of [...toolCalls.entries()].sort((a, b) => a[0] - b[0])) {
+              if (!acc.id || !acc.name) continue;
+              let input: Record<string, unknown> = {};
+              try {
+                if (acc.args.trim()) {
+                  input = JSON.parse(acc.args) as Record<string, unknown>;
+                }
+              } catch {
+                input = { raw: acc.args };
+              }
+              yield {
+                type: "content_block_start" as const,
+                content_block: {
+                  type: "tool_use" as const,
+                  id: acc.id,
+                  name: acc.name,
+                  input,
+                },
+              };
+            }
+            toolCalls.clear();
+          }
           yield { type: "message_stop" as const };
           return;
         }
@@ -523,11 +554,12 @@ async function* streamOpenAICompatible(
             }>;
           };
 
-          const delta = j.choices?.[0]?.delta;
-          if (!delta) continue;
+          const choice = j.choices?.[0];
+          const delta = choice?.delta;
+          const finishReason = choice?.finish_reason;
 
           // Text content
-          if (delta.content) {
+          if (delta?.content) {
             yield {
               type: "content_block_delta" as const,
               delta: { type: "text_delta" as const, text: delta.content },
@@ -535,7 +567,7 @@ async function* streamOpenAICompatible(
           }
 
           // Tool calls
-          if (delta.tool_calls) {
+          if (delta?.tool_calls) {
             for (const tc of delta.tool_calls) {
               const idx = tc.index;
               if (!toolCalls.has(idx)) {
@@ -545,33 +577,60 @@ async function* streamOpenAICompatible(
               if (tc.id) acc.id = tc.id;
               if (tc.function?.name) acc.name = tc.function.name;
               if (tc.function?.arguments) acc.args += tc.function.arguments;
-
-              // Emit once we have id + name
-              if (acc.id && acc.name && !emittedToolIndices.has(idx)) {
-                emittedToolIndices.add(idx);
-                let input: Record<string, unknown> = {};
-                try {
-                  if (acc.args.trim())
-                    input = JSON.parse(acc.args) as Record<string, unknown>;
-                } catch {
-                  input = { raw: acc.args };
-                }
-                yield {
-                  type: "content_block_start" as const,
-                  content_block: {
-                    type: "tool_use" as const,
-                    id: acc.id,
-                    name: acc.name,
-                    input,
-                  },
-                };
-              }
             }
+          }
+
+          if (finishReason === "tool_calls" && toolCalls.size > 0) {
+            for (const [, acc] of [...toolCalls.entries()].sort((a, b) => a[0] - b[0])) {
+              if (!acc.id || !acc.name) continue;
+              let input: Record<string, unknown> = {};
+              try {
+                if (acc.args.trim()) {
+                  input = JSON.parse(acc.args) as Record<string, unknown>;
+                }
+              } catch {
+                input = { raw: acc.args };
+              }
+              yield {
+                type: "content_block_start" as const,
+                content_block: {
+                  type: "tool_use" as const,
+                  id: acc.id,
+                  name: acc.name,
+                  input,
+                },
+              };
+            }
+            toolCalls.clear();
           }
         } catch {
           // skip malformed chunk
         }
       }
+    }
+
+    if (toolCalls.size > 0) {
+      for (const [, acc] of [...toolCalls.entries()].sort((a, b) => a[0] - b[0])) {
+        if (!acc.id || !acc.name) continue;
+        let input: Record<string, unknown> = {};
+        try {
+          if (acc.args.trim()) {
+            input = JSON.parse(acc.args) as Record<string, unknown>;
+          }
+        } catch {
+          input = { raw: acc.args };
+        }
+        yield {
+          type: "content_block_start" as const,
+          content_block: {
+            type: "tool_use" as const,
+            id: acc.id,
+            name: acc.name,
+            input,
+          },
+        };
+      }
+      toolCalls.clear();
     }
   } catch (error) {
     logger.warn({ error, model, provider }, `${provider} request failed`);
@@ -645,7 +704,9 @@ async function* streamAnthropic(
   params: StreamParams,
 ): AsyncGenerator<StreamEvent> {
   const config = PROVIDER_CONFIGS.anthropic;
-  const apiKey = getApiKeyForProvider("anthropic");
+  const apiKey =
+    (await getApiKeyForProviderAsync("anthropic", params.userId)) ??
+    getApiKeyForProvider("anthropic");
 
   if (!apiKey) {
     logger.warn(
@@ -930,7 +991,10 @@ async function* streamOllama(
 async function* streamJan(params: StreamParams): AsyncGenerator<StreamEvent> {
   const config = PROVIDER_CONFIGS.jan;
   const model = params.model || config.defaultModel;
-  const janBaseUrl = process.env.JAN_BASE_URL || "http://localhost:1337";
+  const janBaseUrl =
+    params.janBaseUrlOverride ||
+    process.env.JAN_BASE_URL ||
+    "http://localhost:1337";
   const url = `${janBaseUrl}/v1/chat/completions`;
 
   logger.debug({ model, url }, "[Jan] Starting local stream request");
@@ -1009,7 +1073,9 @@ async function* streamJan(params: StreamParams): AsyncGenerator<StreamEvent> {
  */
 async function* streamGoogle(params: StreamParams): AsyncGenerator<StreamEvent> {
   const config = PROVIDER_CONFIGS.google;
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const apiKey =
+    (await getApiKeyForProviderAsync("google", params.userId)) ??
+    process.env.GOOGLE_AI_API_KEY;
 
   if (!apiKey) {
     logger.warn("Google AI not configured - GOOGLE_AI_API_KEY missing");
@@ -1461,11 +1527,41 @@ export function toApiProvider(provider: LLMProvider): ApiProvider | null {
   }
 }
 
+/** LLM providers that can have user-stored keys (same id as IntegrationProviderId). */
+const USER_STORED_PROVIDERS: readonly LLMProvider[] = [
+  "anthropic",
+  "openrouter",
+  "google",
+  "kimi",
+  "groq",
+  "mistral",
+] as const;
+
 /**
- * Get API key for LLM provider.
+ * Get API key for LLM provider. When userId is provided, checks user-stored key first, then env.
+ */
+export async function getApiKeyForProviderAsync(
+  provider: LLMProvider,
+  userId?: string,
+): Promise<string | undefined> {
+  if (userId && USER_STORED_PROVIDERS.includes(provider)) {
+    try {
+      const key = await getStoredApiKey(userId, provider as IntegrationProviderId);
+      if (key) return key;
+    } catch {
+      // fall through to env
+    }
+  }
+  const apiProvider = toApiProvider(provider);
+  return apiProvider ? getApiKey(apiProvider) : undefined;
+}
+
+/**
+ * Get API key for LLM provider (sync; env only). Use getApiKeyForProviderAsync when userId is available.
  */
 export function getApiKeyForProvider(
   provider: LLMProvider,
+  userId?: string,
 ): string | undefined {
   const apiProvider = toApiProvider(provider);
   return apiProvider ? getApiKey(apiProvider) : undefined;

@@ -21,10 +21,12 @@ export interface Tier {
   name: string;
   priceMonthlyCents: number;
   priceYearlyCents?: number;
-  /** Credits included per month */
+  /** Credits included per month (legacy; prefer monthlyBudgetUsd for cost-based) */
   creditsPerMonth: number;
   /** For backward compatibility; maps to credits */
   apiCallsPerMonth: number;
+  /** Monthly budget in USD for cost-based billing (usage sum must not exceed this) */
+  monthlyBudgetUsd: number;
   features: string[];
   premiumFeatures: PremiumFeature[];
   /** Seats included per month */
@@ -77,6 +79,7 @@ export const TIERS: Record<TierId, Tier> = {
     priceMonthlyCents: 0,
     creditsPerMonth: 10,
     apiCallsPerMonth: 10,
+    monthlyBudgetUsd: 0.1,
     features: [
       "10 credits/month (1 credit = 1 message)",
       "G-CompN1 Model Mix (auto-routing)",
@@ -101,6 +104,7 @@ export const TIERS: Record<TierId, Tier> = {
     priceYearlyCents: 20000,
     creditsPerMonth: 200,
     apiCallsPerMonth: 200,
+    monthlyBudgetUsd: 2,
     features: [
       "200 credits/month (platform usage)",
       "G-CompN1 Model Mix (Opus 4.6 + Kimi K2.5 + Gemini 3 Pro)",
@@ -128,6 +132,7 @@ export const TIERS: Record<TierId, Tier> = {
     priceYearlyCents: 49000,
     creditsPerMonth: 1_000,
     apiCallsPerMonth: 1_000,
+    monthlyBudgetUsd: 10,
     features: [
       "1,000 credits/month (platform usage)",
       "G-CompN1 Model Mix (priority routing)",
@@ -158,6 +163,7 @@ export const TIERS: Record<TierId, Tier> = {
     priceYearlyCents: 149000,
     creditsPerMonth: 5_000,
     apiCallsPerMonth: 5_000,
+    monthlyBudgetUsd: 50,
     features: [
       "5,000 credits/month (platform usage)",
       "BYOK for model costs",
@@ -192,6 +198,7 @@ export const TIERS: Record<TierId, Tier> = {
     priceMonthlyCents: 0,
     creditsPerMonth: Number.MAX_SAFE_INTEGER,
     apiCallsPerMonth: Number.MAX_SAFE_INTEGER,
+    monthlyBudgetUsd: Number.MAX_SAFE_INTEGER,
     features: [
       "Unlimited credits",
       "BYOK or hosted models",

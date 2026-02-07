@@ -18,9 +18,11 @@
   interface Props {
     code?: string;
     architectureMetadata?: ArchitectureMetadata;
+    /** When true, hides the header and chrome for embedded use (e.g., in chat messages) */
+    compact?: boolean;
   }
 
-  let { code = $bindable(''), architectureMetadata }: Props = $props();
+  let { code = $bindable(''), architectureMetadata, compact = false }: Props = $props();
 
   const dispatch = createEventDispatcher();
 
@@ -440,8 +442,8 @@
   }
 </script>
 
-<div class="diagram-container">
-  {#if code && !isRendering && !error}
+<div class="diagram-container" class:compact>
+  {#if code && !isRendering && !error && !compact}
     <div class="diagram-header">
       <div class="diagram-header-left">
         <span class="diagram-title">Architecture Diagram</span>
@@ -549,6 +551,7 @@
     <div
       bind:this={diagramRef}
       class="diagram-output"
+      class:compact
       class:success-animation={showSuccessAnimation}
       class:has-metadata={!!architectureMetadata}
       role="button"
@@ -582,6 +585,16 @@
     border: 1px solid var(--color-border, #e5e5e5);
     border-radius: 12px;
     box-shadow: var(--shadow-sm, 0 2px 6px rgba(0, 0, 0, 0.05));
+  }
+
+  .diagram-container.compact {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    min-height: auto;
+    padding: 0;
+    overflow: visible;
   }
 
   .diagram-header {
@@ -749,9 +762,20 @@
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
+    /* Extra right padding so diagram never sits under a parent scrollbar */
+    padding-right: 2rem;
     position: relative;
     background: var(--color-bg-card, #ffffff);
     min-height: 200px;
+  }
+
+  /* Compact mode: zero chrome for inline chat diagrams */
+  .diagram-output.compact {
+    padding: 0.5rem 0;
+    background: transparent;
+    min-height: auto;
+    border: none;
+    box-shadow: none;
   }
 
   .diagram-output :global(svg) {

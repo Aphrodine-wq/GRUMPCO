@@ -78,14 +78,7 @@
   .slide-background-default .slide-bg-gradient {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      165deg,
-      #fafafa 0%,
-      #f5f3ff 30%,
-      #ede9fe 55%,
-      #e9e5ff 80%,
-      #ddd6fe 100%
-    );
+    background: var(--onboarding-slide-default-bg);
   }
 
   .slide-background-default .slide-bg-dots {
@@ -93,7 +86,7 @@
     inset: 0;
     background-image: radial-gradient(
       circle at 1px 1px,
-      rgba(124, 58, 237, 0.1) 1px,
+      var(--onboarding-slide-dots) 1px,
       transparent 0
     );
     background-size: 20px 20px;
@@ -150,11 +143,11 @@
     justify-content: center;
     width: 56px;
     height: 56px;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     border-radius: 16px;
     color: white;
     margin-bottom: 1rem;
-    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+    box-shadow: var(--shadow-glow);
   }
 
   :global(.slide-title) {
@@ -175,33 +168,30 @@
     align-items: center;
     gap: 0.75rem;
     padding: 1rem 2rem;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     color: white;
     font-size: 1.125rem;
     font-weight: 600;
     border: none;
     border-radius: 9999px;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--shadow-glow);
     transition: all 0.2s ease-out;
     margin-top: 1.5rem;
   }
 
   :global(.slide-cta-button:hover) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(124, 58, 237, 0.5);
+    opacity: 0.95;
+    box-shadow: var(--shadow-lg);
   }
 
   :global(.slide-cta-button:active) {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+    opacity: 1;
   }
 
   :global(.slide-cta-button:focus-visible) {
     outline: none;
-    box-shadow:
-      0 0 0 4px rgba(124, 58, 237, 0.3),
-      0 4px 16px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--focus-ring);
   }
 
   :global(.slide-arrow) {
@@ -211,7 +201,7 @@
   }
 
   :global(.slide-cta-button:hover .slide-arrow) {
-    transform: translateX(4px);
+    transform: translateX(2px);
   }
 
   @media (prefers-reduced-motion: reduce) {

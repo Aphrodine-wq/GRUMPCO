@@ -67,6 +67,12 @@ const providerSchema = z.enum([
   "sentry",
   "datadog",
   "postman",
+  "anthropic",
+  "google",
+  "kimi",
+  "groq",
+  "mistral",
+  "jan",
 ]);
 
 const createIntegrationSchema = z.object({
@@ -379,7 +385,7 @@ router.post("/:provider/oauth/revoke", async (req: Request, res: Response) => {
 
 /**
  * POST /integrations/api-key
- * Store an API key for a provider
+ * Store an API key for a provider (body: { provider, apiKey })
  */
 router.post("/api-key", async (req: Request, res: Response) => {
   try {
@@ -389,6 +395,37 @@ router.post("/api-key", async (req: Request, res: Response) => {
     await storeApiKey(userId, provider, apiKey);
 
     // Create/update integration
+    await upsertIntegration({ userId, provider });
+    await updateIntegrationStatus(userId, provider, "active");
+
+    res.json({ success: true });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid request", details: err.errors });
+      return;
+    }
+    logger.error({ error: (err as Error).message }, "Failed to store API key");
+    res.status(500).json({ error: "Failed to store API key" });
+  }
+});
+
+const storeApiKeyByProviderSchema = z.object({
+  apiKey: z.string().min(1),
+  keyName: z.string().optional(),
+});
+
+/**
+ * POST /integrations/:provider/api-key
+ * Store an API key for a provider (provider in path, body: { apiKey } or { apiKey, keyName })
+ */
+router.post("/:provider/api-key", async (req: Request, res: Response) => {
+  try {
+    const userId = (req as Request & { userId?: string }).userId ?? "default";
+    const provider = providerSchema.parse(req.params.provider);
+    const { apiKey } = storeApiKeyByProviderSchema.parse(req.body);
+
+    await storeApiKey(userId, provider, apiKey);
+
     await upsertIntegration({ userId, provider });
     await updateIntegrationStatus(userId, provider, "active");
 

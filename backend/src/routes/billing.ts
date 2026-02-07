@@ -7,9 +7,10 @@ import { Router, type Request, type Response } from "express";
 import { TIERS, OVERAGE_RATES, type TierId } from "../config/pricing.js";
 import {
   getMonthlyCallCount,
-  getMonthlyCreditsFromTokens,
+  getMonthlyCostForUser,
   getUsageByOperation,
 } from "../services/usageTracker.js";
+import { getCreditUsageSummary } from "../services/creditService.js";
 import logger from "../middleware/logger.js";
 
 const router = Router();
@@ -22,23 +23,26 @@ const DEFAULT_USER = "default";
 router.get("/me", async (req: Request, res: Response) => {
   try {
     const userId = (req.query.userId as string) || DEFAULT_USER;
-    const tierId = (process.env.TIER_DEFAULT as TierId) || "free";
-    const tier = TIERS[tierId] ?? TIERS.free;
-    let usage = 0;
-    let tokenCredits = 0;
+    let summary: Awaited<ReturnType<typeof getCreditUsageSummary>> | null = null;
+    let usageCalls = 0;
     try {
-      usage = await getMonthlyCallCount(userId);
-      tokenCredits = await getMonthlyCreditsFromTokens(userId);
+      summary = await getCreditUsageSummary(userId);
+      usageCalls = await getMonthlyCallCount(userId);
     } catch (e) {
       logger.debug({ err: e }, "Usage tracker not available for billing/me");
     }
-    const displayUsage = tokenCredits > 0 ? tokenCredits : usage;
+    const tierId = (process.env.TIER_DEFAULT as TierId) || summary?.tier || "free";
+    const tier = TIERS[tierId] ?? TIERS.free;
+    const costUsedUsd = summary?.costUsedUsd ?? 0;
+    const costLimitUsd = summary?.costLimitUsd ?? tier.monthlyBudgetUsd ?? tier.creditsPerMonth ?? null;
     res.json({
       tier: tier.name,
-      usage: displayUsage,
-      usageCalls: usage,
-      tokenCredits,
-      limit: tier.creditsPerMonth ?? tier.apiCallsPerMonth ?? null,
+      usage: costUsedUsd,
+      usageCalls,
+      tokenCredits: costUsedUsd,
+      limit: costLimitUsd,
+      costUsedUsd,
+      costLimitUsd: costLimitUsd != null ? costLimitUsd : null,
       computeMinutesUsed: 0,
       computeMinutesLimit: tier.includedComputeMinutes ?? null,
       storageGbUsed: 0,

@@ -283,37 +283,37 @@
   }
 
   .gagent-status-panel.site-style .status-connected {
-    color: #059669;
+    color: var(--color-success);
   }
 
   .gagent-status-panel.site-style .status-disconnected {
-    color: #dc2626;
+    color: var(--color-error);
   }
 
   .gagent-status-panel.site-style .status-dot.status-connected {
-    background: #059669;
+    background: var(--color-success);
   }
 
   .gagent-status-panel.site-style .status-dot.status-disconnected {
-    background: #dc2626;
+    background: var(--color-error);
   }
 
   .gagent-status-panel.site-style .panel-status-line .status-connected {
-    color: #059669;
+    color: var(--color-success);
   }
 
   .gagent-status-panel.site-style .panel-status-line .status-disconnected {
-    color: #dc2626;
+    color: var(--color-error);
   }
 
   .gagent-status-panel.site-style .status-stopped {
-    color: #dc2626;
+    color: var(--color-error);
     font-weight: 500;
   }
 
   .gagent-status-panel.site-style .badge-pending {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--color-warning-subtle);
+    color: var(--color-warning);
     padding: 2px 8px;
     border-radius: 9999px;
     font-weight: 500;

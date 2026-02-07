@@ -175,42 +175,42 @@
     justify-content: center;
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     border-radius: 20px;
     color: white;
     margin-bottom: 1rem;
-    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--shadow-glow);
   }
 
   .icon-pulse {
     position: absolute;
     inset: -4px;
     border-radius: 24px;
-    border: 2px solid #7c3aed;
+    border: 2px solid var(--color-primary);
     animation: pulse 2s ease-out infinite;
   }
 
   @keyframes pulse {
     0% {
-      opacity: 0.6;
+      opacity: 0.5;
       transform: scale(1);
     }
     100% {
       opacity: 0;
-      transform: scale(1.3);
+      transform: scale(1.12);
     }
   }
 
   .title {
     font-size: 2rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--color-text);
     margin-bottom: 0.5rem;
   }
 
   .subtitle {
     font-size: 1.125rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   /* Capabilities vertical list */
@@ -296,9 +296,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    background: var(--color-primary-subtle);
     border-radius: 10px;
-    color: #7c3aed;
+    color: var(--color-primary);
   }
 
   .feature-text {

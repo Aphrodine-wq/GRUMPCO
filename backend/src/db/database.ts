@@ -89,6 +89,7 @@ interface UsageRecordRow {
   latency_ms?: number | null;
   success: number;
   created_at: string;
+  estimated_cost_usd?: number | null;
 }
 
 class DatabaseService {
@@ -734,6 +735,7 @@ class DatabaseService {
     latencyMs?: number;
     storageBytes?: number;
     success: boolean;
+    estimatedCostUsd?: number;
   }): Promise<void> {
     if (!this.db) throw new Error("Database not initialized");
 
@@ -741,8 +743,8 @@ class DatabaseService {
     try {
       const stmt = this.getStatement(`
         INSERT INTO usage_records
-        (id, user_id, endpoint, method, model, input_tokens, output_tokens, latency_ms, storage_bytes, success, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        (id, user_id, endpoint, method, model, input_tokens, output_tokens, latency_ms, storage_bytes, success, estimated_cost_usd, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
       `);
 
       stmt.run(
@@ -756,6 +758,7 @@ class DatabaseService {
         record.latencyMs || null,
         record.storageBytes || null,
         record.success ? 1 : 0,
+        record.estimatedCostUsd ?? 0,
       );
 
       const duration = Number(process.hrtime.bigint() - start) / 1e9;

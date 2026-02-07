@@ -41,6 +41,13 @@ export type IntegrationProvider =
   | 'sentry'
   | 'datadog'
   | 'postman'
+  | 'anthropic'
+  | 'openrouter'
+  | 'google'
+  | 'kimi'
+  | 'groq'
+  | 'mistral'
+  | 'jan'
   | 'custom';
 
 export type IntegrationStatus = 'active' | 'disabled' | 'error' | 'pending';

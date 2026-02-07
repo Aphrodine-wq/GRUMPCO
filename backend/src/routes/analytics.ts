@@ -58,4 +58,21 @@ router.get(
   },
 );
 
+/**
+ * POST /events
+ * Receives analytics events from the frontend.
+ * Fire-and-forget – always returns 200 so analytics never breaks the UI.
+ */
+router.post("/events", (req, res) => {
+  // In a production setup you'd persist these; for now just acknowledge.
+  if (process.env.NODE_ENV !== "production") {
+    const event = req.body;
+    if (event?.name) {
+      // Optional: log in dev for debugging
+      // console.debug('[Analytics Event]', event.name, event.properties);
+    }
+  }
+  res.status(200).json({ ok: true });
+});
+
 export default router;

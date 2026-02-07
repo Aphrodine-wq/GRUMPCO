@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "lastUpdated": "2026-01-31",
+  "lastUpdated": "2026-02-07",
   "overview": {
     "systemRating": 1000,
     "targetRating": 1000,
@@ -119,6 +119,13 @@
       "priority": "P2",
       "description": "RAG screen enhancements: types filter, hybrid, namespace, doc upload, chat integration",
       "notes": "AskDocsScreen: types filter, hybrid search, namespace (workspace), doc upload. Chat: includeRagContext toggle in Settings. Onboarding slide, Ask docs in ChatEmptyState. Mobile nav removed. Workspace-scoped indexes via namespace."
+    },
+    {
+      "id": "chat-mermaid-clarify-latency",
+      "status": "done",
+      "priority": "P1",
+      "description": "Remove Mermaid chat chrome, improve clarification prompting, and reduce streaming lag",
+      "notes": "Rendered Mermaid in compact no-header mode in chat surfaces, tightened clarification prompt rules for ambiguous requests, and throttled chat/design streaming scroll updates to reduce UI-induced latency."
     }
   ],
   "verification": {

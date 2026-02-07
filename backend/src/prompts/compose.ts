@@ -30,7 +30,9 @@ function rulesBlock(): string {
 - Prefer small, focused edits over large rewrites.
 - When using tools, paths are relative to the workspace root.
 - Explain briefly what you did after tool use.
-- If the request is ambiguous, ask one short clarifying question or pick a sensible default and say so.
+- If requirements are ambiguous or materially incomplete, ask a short clarifying question before implementation.
+- Response formatting defaults to plain text paragraphs and simple bullets.
+- Do not use markdown headings (#, ##, ###) or bold markers (**) unless the user explicitly asks for markdown formatting.
 - ALWAYS use tools (file_write, file_edit, bash_execute) to create and modify code. Never output code only in text — create real files.
 - When creating files, use file_write with the complete file content. When editing, use file_edit for targeted changes.
 - After making code changes, verify correctness by running builds or tests when possible.

@@ -5,7 +5,7 @@
   import { showToast } from '../stores/toastStore';
   import { Button, Card, Badge, Modal } from '../lib/design-system';
   import type { McpServerConfig } from '../types/settings';
-  import { Plus, Trash2, Settings2, Plug2, Terminal, Globe, Download, Check } from 'lucide-svelte';
+  import { Plus, Trash2, Settings2, Plug2, Terminal, Globe, Download, Check, Play } from 'lucide-svelte';
 
   // Built-in MCP server directory
   interface McpDirectoryEntry {
@@ -266,6 +266,16 @@
       icon: ICONS.globe,
       color: '#f48120',
     },
+    {
+      id: 'figma',
+      name: 'Figma',
+      description: 'Read and inspect Figma files, frames, and design tokens (design-to-code)',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-figma'],
+      category: 'Design',
+      icon: ICONS.globe,
+      color: '#a259ff',
+    },
   ];
 
   let servers = $state<McpServerConfig[]>([]);
@@ -493,6 +503,14 @@
                 {server.url ? server.url : (server.command ?? '')}
               </p>
               <div class="mcp-server-actions">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onclick={() => showToast('Run the server command in a terminal, or start a chat to use its tools.', 'info')}
+                  title="Test connection"
+                >
+                  <Play size={14} /> Test
+                </Button>
                 <Button variant="ghost" size="sm" onclick={() => toggleEnabled(server)}>
                   {server.enabled !== false ? 'Disable' : 'Enable'}
                 </Button>
@@ -514,7 +532,7 @@
   <div class="mcp-directory-section">
     <h2 class="mcp-section-title">MCP Server Directory</h2>
     <p class="mcp-directory-desc">
-      Popular MCP servers you can add with one click. Requires Node.js/npx installed.
+      Popular MCP servers you can add with one click. Requires Node.js/npx installed. After adding, start a chat—the agent will use the server's tools. See docs for troubleshooting.
     </p>
     <div class="mcp-directory-grid">
       {#each MCP_DIRECTORY as entry (entry.id)}

@@ -233,11 +233,11 @@
     justify-content: center;
     width: 72px;
     height: 72px;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     border-radius: 20px;
     color: white;
     margin-bottom: 1rem;
-    box-shadow: 0 4px 24px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--shadow-glow);
   }
 
   .header-icon.celebration {
@@ -249,7 +249,7 @@
       transform: scale(1);
     }
     50% {
-      transform: scale(1.2);
+      transform: scale(1.08);
     }
     100% {
       transform: scale(1);
@@ -315,8 +315,8 @@
   .tips-card {
     width: 100%;
     padding: 1.25rem;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
-    border: 1px solid rgba(124, 58, 237, 0.1);
+    background: var(--onboarding-card-bg);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     margin-bottom: 1.5rem;
   }
@@ -324,7 +324,7 @@
   .tips-title {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #7c3aed;
+    color: var(--color-primary);
     margin-bottom: 0.75rem;
     text-align: left;
   }
@@ -445,20 +445,20 @@
     align-items: center;
     gap: 0.75rem;
     padding: 1rem 2.5rem;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     color: white;
     font-size: 1.25rem;
     font-weight: 600;
     border: none;
     border-radius: 9999px;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.5);
+    box-shadow: var(--shadow-glow);
     transition: all 0.2s ease-out;
   }
 
   .cta-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 28px rgba(124, 58, 237, 0.6);
+    opacity: 0.95;
+    box-shadow: var(--shadow-lg);
   }
 
   .cta-button:focus-visible {

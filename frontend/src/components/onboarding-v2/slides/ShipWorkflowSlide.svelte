@@ -175,23 +175,23 @@
     justify-content: center;
     width: 56px;
     height: 56px;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     border-radius: 16px;
     color: white;
     margin-bottom: 1rem;
-    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+    box-shadow: var(--shadow-glow);
   }
 
   .title {
     font-size: 2rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--color-text);
     margin-bottom: 0.5rem;
   }
 
   .subtitle {
     font-size: 1.125rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
   }
 
   /* Workflow */
@@ -333,27 +333,25 @@
     align-items: center;
     gap: 0.75rem;
     padding: 1rem 2rem;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     color: white;
     font-size: 1.125rem;
     font-weight: 600;
     border: none;
     border-radius: 9999px;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--shadow-glow);
     transition: all 0.2s ease-out;
   }
 
   .cta-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(124, 58, 237, 0.5);
+    opacity: 0.95;
+    box-shadow: var(--shadow-lg);
   }
 
   .cta-button:focus-visible {
     outline: none;
-    box-shadow:
-      0 0 0 4px rgba(124, 58, 237, 0.3),
-      0 4px 16px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--focus-ring);
   }
 
   .arrow {
@@ -363,7 +361,7 @@
   }
 
   .cta-button:hover .arrow {
-    transform: translateX(4px);
+    transform: translateX(2px);
   }
 
   /* Reduced motion */

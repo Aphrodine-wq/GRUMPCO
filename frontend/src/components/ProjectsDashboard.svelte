@@ -100,7 +100,7 @@
             tabindex="0"
           >
             <div class="card-header">
-              <span class="date">{formatDate(session.updatedAt)}</span>
+              <span class="date" title="Last used">Last used: {formatDate(session.updatedAt)}</span>
               <div class="card-actions">
                 <button
                   class="edit-btn"
@@ -142,9 +142,9 @@
                 </button>
               </div>
             </div>
-            <h3 class="title">{session.name}</h3>
+            <h3 class="title">{session.name || 'Untitled Project'}</h3>
             <div class="card-footer">
-              <span class="message-count">{session.messages.length} messages</span>
+              <span class="message-count">{session.messages?.length ?? 0} messages</span>
               <div class="arrow">
                 <svg
                   width="16"

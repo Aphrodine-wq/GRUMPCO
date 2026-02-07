@@ -4,10 +4,13 @@
    * Models are grouped by provider with expandable sections showing model details
    */
   import { onMount } from 'svelte';
+  import { get } from 'svelte/store';
   import { fetchApi } from '$lib/api';
-  import { ChevronDown, ChevronRight, Settings, Sparkles, Zap, Lock } from 'lucide-svelte';
+  import { ChevronDown, ChevronRight, Settings, Sparkles, Zap, Lock, RefreshCw } from 'lucide-svelte';
   import { setCurrentView, settingsInitialTab } from '../stores/uiStore';
   import { newOnboardingStore } from '../stores/newOnboardingStore';
+  import { user } from '../stores/authStore.js';
+  import { janBaseUrl } from '../stores/preferencesStore.js';
   import {
     getProviderIconPath,
     getProviderSvgPath,
@@ -158,15 +161,22 @@
     });
   }
 
-  onMount(async () => {
+  async function loadModels() {
+    loading = true;
+    error = null;
     try {
-      const res = await fetchApi('/api/models/list');
+      const userId = get(user)?.id;
+      const janUrl = get(janBaseUrl);
+      const params = new URLSearchParams();
+      if (userId) params.set('userId', userId);
+      if (janUrl) params.set('janBaseUrl', janUrl);
+      const url = `/api/models/list${params.toString() ? `?${params.toString()}` : ''}`;
+      const res = await fetchApi(url);
       if (!res.ok) throw new Error('Failed to fetch models');
       const data = await res.json();
       groups = applyUserConfigOverrides(data.groups ?? []);
     } catch (e) {
       error = (e as Error).message;
-      // Provide fallback groups so users can still see what's available
       groups = applyUserConfigOverrides([
         {
           provider: 'grump',
@@ -190,6 +200,10 @@
     } finally {
       loading = false;
     }
+  }
+
+  onMount(() => {
+    loadModels();
   });
 
   function selectAuto() {
@@ -271,7 +285,7 @@
       onmouseleave={() => (!embedded ? (open = false) : null)}
       onkeydown={(e) => !embedded && e.key === 'Escape' && (open = false)}
     >
-      <!-- Search input -->
+      <!-- Search input + Refresh -->
       <div class="model-search-wrap">
         <input
           type="text"
@@ -279,6 +293,17 @@
           placeholder="Search models…"
           bind:value={searchQuery}
         />
+        <button
+          type="button"
+          class="model-refresh-btn"
+          class:spin={loading}
+          onclick={() => loadModels()}
+          disabled={loading}
+          title="Refresh model list (e.g. after starting Jan)"
+          aria-label="Refresh model list"
+        >
+          <RefreshCw size={14} />
+        </button>
       </div>
 
       {#if showAuto}
@@ -571,6 +596,9 @@
 
   /* Search */
   .model-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
     padding: 0.375rem 0.5rem;
     position: sticky;
     top: 0;
@@ -579,7 +607,8 @@
   }
 
   .model-search-input {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     padding: 0.4rem 0.625rem;
     font-size: 0.8125rem;
     font-family: inherit;
@@ -598,6 +627,35 @@
 
   .model-search-input::placeholder {
     color: var(--color-text-muted, #9ca3af);
+  }
+
+  .model-refresh-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 8px;
+    background: var(--color-bg-secondary, #f9fafb);
+    color: var(--color-text-muted, #9ca3af);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .model-refresh-btn:hover:not(:disabled) {
+    color: var(--color-primary, #7c3aed);
+    border-color: var(--color-primary, #7c3aed);
+  }
+  .model-refresh-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  .model-refresh-btn.spin :global(svg) {
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   /* Provider group */

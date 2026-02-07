@@ -42,7 +42,15 @@ export type IntegrationProviderId =
   | "sentry"
   | "datadog"
   | "postman"
-  | "sendgrid";
+  | "sendgrid"
+  // LLM / API providers (for user-stored API keys, same names as env ApiProvider where applicable)
+  | "anthropic"
+  | "openrouter"
+  | "google"
+  | "kimi"
+  | "groq"
+  | "mistral"
+  | "jan";
 
 export type IntegrationStatus = "active" | "disabled" | "error" | "pending";
 

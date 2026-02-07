@@ -159,11 +159,11 @@
     justify-content: center;
     width: 56px;
     height: 56px;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     border-radius: 16px;
     color: white;
     margin-bottom: 1rem;
-    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+    box-shadow: var(--shadow-glow);
   }
 
   .title {
@@ -215,19 +215,19 @@
   }
 
   .theme-option:hover {
-    border-color: #d1d5db;
-    transform: translateY(-2px);
+    border-color: var(--color-border-highlight);
+    box-shadow: var(--shadow-sm);
   }
 
   .theme-option.selected {
-    border-color: #7c3aed;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.05) 0%, rgba(109, 40, 217, 0.05) 100%);
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
+    border-color: var(--color-primary);
+    background: var(--onboarding-card-bg);
+    box-shadow: var(--shadow-glow);
   }
 
   .theme-option:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
+    box-shadow: var(--focus-ring);
   }
 
   .theme-icon {
@@ -361,28 +361,26 @@
     align-items: center;
     gap: 0.75rem;
     padding: 1rem 2rem;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     color: white;
     font-size: 1.125rem;
     font-weight: 600;
     border: none;
     border-radius: 9999px;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--shadow-glow);
     transition: all 0.2s ease-out;
     margin-top: 1rem;
   }
 
   .cta-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(124, 58, 237, 0.5);
+    opacity: 0.95;
+    box-shadow: var(--shadow-lg);
   }
 
   .cta-button:focus-visible {
     outline: none;
-    box-shadow:
-      0 0 0 4px rgba(124, 58, 237, 0.3),
-      0 4px 16px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--focus-ring);
   }
 
   .arrow {

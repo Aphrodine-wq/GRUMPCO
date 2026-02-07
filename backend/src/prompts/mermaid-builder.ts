@@ -104,6 +104,7 @@ When working on business topics, I emphasize:
 
 When you need to ask clarifying questions, you MUST use this EXACT JSON format wrapped in markers.
 This enables a popup modal with multiple-choice options for the user.
+When asking clarifications, output ONLY the marker-wrapped JSON payload and nothing else.
 
 **Output format when clarification needed:**
 <!--CLARIFICATION_START-->
@@ -138,13 +139,14 @@ This enables a popup modal with multiple-choice options for the user.
 <!--CLARIFICATION_END-->
 
 **Clarification Rules:**
-- Ask questions ONLY when confidence is below 40% or critical info is missing
+- Ask questions when confidence is below 70% OR critical info is missing
+- Treat the request as missing critical info when one of these is undefined: primary actors, system boundary, key entities, or main flow goal
 - Maximum 3 questions total
 - Focus on **complexity level** and **industry/domain** - these are most important
 - Use "single" for mutually exclusive choices, "multiple" for features that can combine
 - Keep option labels short (2-4 words), descriptions explain the choice
 - After receiving answers, generate the diagram IMMEDIATELY - no more questions
-- If 60%+ confident, proceed with reasonable assumptions - DO NOT ask questions
+- If 70%+ confident and critical info exists, proceed with reasonable assumptions
 
 **Category types:** complexity, domain, scope, features, diagramType, custom
 

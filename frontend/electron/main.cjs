@@ -52,7 +52,9 @@ const projectRoot = path.resolve(__dirname, '..', '..');
 const backendDir = path.join(projectRoot, 'backend');
 const backendScript = path.join(backendDir, 'dist', 'index.js');
 const distPath = path.join(__dirname, '../dist/index.html');
+// Frowny icon: build:icon generates public/favicon.ico from public/grump-frowny.svg
 const iconPath = path.join(__dirname, '../public/favicon.ico');
+const iconPathPng = path.join(__dirname, '../build/icon.png');
 function getBoundsFile() {
   try { return path.join(app.getPath('userData'), 'window-bounds.json'); } catch (e) { return null; }
 }
@@ -224,11 +226,14 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 
 // Optimized main window creation
 function createMainWindow() {
-  // Pre-load icon
+  // Pre-load icon (frowny: favicon.ico or build/icon.png from grump-frowny.svg)
   let icon = null;
   try {
     if (fs.existsSync(iconPath)) {
       icon = nativeImage.createFromPath(iconPath);
+    }
+    if ((!icon || icon.isEmpty()) && fs.existsSync(iconPathPng)) {
+      icon = nativeImage.createFromPath(iconPathPng);
     }
   } catch (e) { }
 
@@ -384,8 +389,11 @@ function createTray() {
     let trayIcon = null;
     if (fs.existsSync(iconPath)) {
       trayIcon = nativeImage.createFromPath(iconPath);
-      if (!trayIcon.isEmpty()) trayIcon = trayIcon.resize({ width: 16, height: 16 });
     }
+    if ((!trayIcon || trayIcon.isEmpty()) && fs.existsSync(iconPathPng)) {
+      trayIcon = nativeImage.createFromPath(iconPathPng);
+    }
+    if (trayIcon && !trayIcon.isEmpty()) trayIcon = trayIcon.resize({ width: 16, height: 16 });
     if (!trayIcon || trayIcon.isEmpty()) trayIcon = nativeImage.createFromDataURL(TRAY_ICON_DATA);
     tray = new Tray(trayIcon);
     tray.setToolTip('G-Rump');

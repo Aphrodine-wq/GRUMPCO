@@ -83,16 +83,10 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(ellipse 80% 50% at 20% 40%, rgba(124, 58, 237, 0.25) 0%, transparent 50%),
-      radial-gradient(ellipse 60% 80% at 80% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 45%),
-      radial-gradient(ellipse 50% 50% at 50% 80%, rgba(196, 181, 253, 0.15) 0%, transparent 50%),
-      linear-gradient(
-        135deg,
-        rgba(249, 250, 251, 1) 0%,
-        rgba(243, 232, 255, 0.5) 35%,
-        rgba(237, 233, 254, 0.6) 65%,
-        rgba(221, 214, 254, 0.4) 100%
-      );
+      radial-gradient(ellipse 80% 50% at 20% 40%, var(--onboarding-welcome-radial-1) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 80% at 80% 20%, var(--onboarding-welcome-radial-2) 0%, transparent 45%),
+      radial-gradient(ellipse 50% 50% at 50% 80%, var(--onboarding-welcome-radial-3) 0%, transparent 50%),
+      var(--onboarding-welcome-linear);
     animation: gradient-shift 10s ease-in-out infinite;
   }
 
@@ -182,7 +176,7 @@
   .logo-glow {
     position: absolute;
     inset: -28px;
-    background: radial-gradient(circle, rgba(124, 58, 237, 0.45) 0%, transparent 68%);
+    background: radial-gradient(circle, var(--onboarding-welcome-logo-glow) 0%, transparent 68%);
     filter: blur(24px);
     animation: pulse 4s ease-in-out infinite;
   }
@@ -205,7 +199,7 @@
   .title {
     font-size: 2.75rem;
     font-weight: 800;
-    color: #1f2937;
+    color: var(--color-text);
     margin-bottom: 1rem;
     line-height: 1.2;
     letter-spacing: -0.03em;
@@ -218,14 +212,14 @@
     display: block;
     font-size: 0.5em;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--color-text-muted);
     letter-spacing: 0.02em;
     animation: fade-in-up 0.6s ease-out;
   }
 
   .title-brand {
     display: block;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%);
+    background: var(--onboarding-welcome-title-brand);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;

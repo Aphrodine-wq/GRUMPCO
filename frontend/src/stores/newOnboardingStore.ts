@@ -275,6 +275,9 @@ export interface OnboardingData {
   completedSteps: OnboardingStep[];
   isComplete: boolean;
   skipped: boolean;
+
+  // Security: required acknowledgment that software can execute code and access resources
+  riskAcknowledged: boolean;
 }
 
 const STORAGE_KEY = 'g-rump-onboarding-v2';
@@ -297,6 +300,7 @@ const DEFAULT_ONBOARDING_DATA: OnboardingData = {
   completedSteps: [],
   isComplete: false,
   skipped: false,
+  riskAcknowledged: false,
 };
 
 // Step order for navigation (g-agent early – right after welcome; tech stack removed – AI chooses best fit)
@@ -485,6 +489,13 @@ export const newOnboardingStore = {
     onboardingData.update((data) => ({
       ...data,
       telemetryOptIn: optIn,
+    }));
+  },
+
+  setRiskAcknowledged: (acknowledged: boolean) => {
+    onboardingData.update((data) => ({
+      ...data,
+      riskAcknowledged: acknowledged,
     }));
   },
 

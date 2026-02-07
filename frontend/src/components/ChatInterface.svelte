@@ -9,8 +9,7 @@
   import ToolCallCard from './ToolCallCard.svelte';
   import ToolResultCard from './ToolResultCard.svelte';
   import SettingsScreen from './SettingsScreen.svelte';
-  import { Badge, Button, Card } from '../lib/design-system';
-  import { exportAsSvg, downloadFile } from '../lib/mermaid';
+  import { Card } from '../lib/design-system';
   import { trackMessageSent, trackDiagramGenerated, trackError } from '../lib/analytics';
   import { showToast } from '../stores/toastStore';
   import { processError, logError } from '../utils/errorHandler';
@@ -72,7 +71,6 @@
   let streaming = $state(false);
   let streamingContent = $state('');
   let streamingBlocks = $state<ContentBlock[]>([]);
-  let diagramRefs: Record<string, HTMLElement> = $state({});
   let lastUserMessage = $state('');
   let activeController: AbortController | null = $state(null);
   let workspaceInput = $state('');
@@ -276,6 +274,14 @@
     if (messagesRef) {
       messagesRef.scrollTop = messagesRef.scrollHeight;
     }
+  }
+
+  let lastStreamScrollAt = 0;
+  function maybeScrollStreaming(force = false) {
+    const now = performance.now();
+    if (!force && now - lastStreamScrollAt < 40) return;
+    lastStreamScrollAt = now;
+    requestAnimationFrame(() => scrollToBottom());
   }
 
   function formatTimestamp(timestamp?: number): string {
@@ -568,8 +574,7 @@
           const parsed = JSON.parse(data);
           if (parsed.text) {
             streamingContent += parsed.text;
-            await tick();
-            scrollToBottom();
+            maybeScrollStreaming();
           }
         } catch (parseErr) {
           // Non-JSON SSE data or malformed event - log at debug level
@@ -715,13 +720,11 @@
                 content: ev.value as { mode: string; capabilities?: string[]; toolCount?: number },
               },
             ];
-            await tick();
           } else if (ev.type === 'intent' && ev.value) {
             streamingBlocks = [
               ...streamingBlocks,
               { type: 'intent', content: ev.value as Record<string, unknown> },
             ];
-            await tick();
           } else if (ev.type === 'from_cache' && ev.value) {
             /* Backend served from cache; next text event will be full content – show immediately. */
             fromCacheThisStream = true;
@@ -738,8 +741,7 @@
             } else {
               streamingBlocks = [...streamingBlocks, { type: 'text', content: ev.text }];
             }
-            await tick();
-            scrollToBottom();
+            maybeScrollStreaming();
           } else if (ev.type === 'tool_call' && ev.id && ev.name) {
             streamingBlocks = [
               ...streamingBlocks,
@@ -751,8 +753,7 @@
                 status: 'executing',
               },
             ];
-            await tick();
-            scrollToBottom();
+            maybeScrollStreaming(true);
           } else if (ev.type === 'tool_result' && ev.id && ev.toolName) {
             const idx = streamingBlocks.findIndex(
               (b) => b.type === 'tool_call' && (b as any).id === ev.id
@@ -775,8 +776,7 @@
                 diff: ev.diff,
               },
             ];
-            await tick();
-            scrollToBottom();
+            maybeScrollStreaming(true);
           }
         } catch (parseErr) {
           // Non-JSON SSE data or malformed event - log at debug level
@@ -805,24 +805,6 @@
     streaming = false;
     streamingContent = '';
     streamingBlocks = [];
-  }
-
-  async function exportSvg(msgIndex: number, blockIndex: number) {
-    const key = `${msgIndex}-${blockIndex}`;
-    const svgElement = diagramRefs[key]?.querySelector('svg') as SVGElement;
-    if (svgElement) {
-      const svgData = await exportAsSvg(svgElement);
-      downloadFile(svgData, 'diagram.svg', 'image/svg+xml');
-    }
-  }
-
-  function setupDiagramRef(el: HTMLElement, params: { index: number; blockIdx: number }) {
-    diagramRefs[`${params.index}-${params.blockIdx}`] = el;
-    return {
-      update(newParams: { index: number; blockIdx: number }) {
-        diagramRefs[`${newParams.index}-${newParams.blockIdx}`] = el;
-      },
-    };
   }
 
   const dispatch = createEventDispatcher<{ 'messages-updated': Message[] }>();
@@ -1043,20 +1025,10 @@
                             {#if block.type === 'text'}
                               <div class="text-block">{block.content}</div>
                             {:else if block.type === 'mermaid'}
-                              <div
-                                class="diagram-card"
-                                use:setupDiagramRef={{ index, blockIdx: bIdx }}
-                              >
-                                <div class="diagram-header">
-                                  <Badge variant="info">Architecture</Badge>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onclick={() => exportSvg(index, bIdx)}>Export</Button
-                                  >
-                                </div>
+                              <div class="diagram-embed">
                                 <DiagramRenderer
                                   code={block.content}
+                                  compact={true}
                                   on:generate-code={(e) =>
                                     handleMermaidToCode({
                                       mermaidCode: e.detail.mermaidCode,
@@ -1757,25 +1729,8 @@
     margin: 0;
   }
 
-  /* Diagram Card */
-  .diagram-card {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: 0.75rem;
-    overflow: hidden;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  .diagram-embed {
     margin: 0.5rem 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .diagram-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--color-border-light);
-    background-color: var(--color-bg-secondary);
   }
 
   /* Chat Mode Header (simplified: G-Agent + Status) */

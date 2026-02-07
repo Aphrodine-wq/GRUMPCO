@@ -76,7 +76,7 @@
   }
 </script>
 
-<div class="slide-container">
+<div class="slide-container auth-slide">
   <div class="content" class:mounted>
     <!-- Header -->
     <div class="header">
@@ -193,6 +193,10 @@
 </div>
 
 <style>
+  .slide-container.auth-slide {
+    padding: 2.5rem 2rem;
+  }
+
   .slide-container {
     display: flex;
     flex-direction: column;
@@ -219,9 +223,9 @@
     transform: translateY(0);
   }
 
-  /* Header */
+  /* Header – pull down and spread out */
   .header {
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
   }
 
   .header-icon {
@@ -230,33 +234,34 @@
     justify-content: center;
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     border-radius: 20px;
     color: white;
     margin-bottom: 1rem;
-    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--shadow-glow);
   }
 
   .title {
     font-size: 2rem;
     font-weight: 700;
     color: var(--color-text);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
   }
 
   .subtitle {
     font-size: 1rem;
     color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
   }
 
   .auth-buttons {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1rem;
     width: 100%;
-    max-width: 240px;
-    margin-bottom: 1.5rem;
+    max-width: 280px;
+    margin-bottom: 2rem;
   }
 
   .oauth-btn {
@@ -265,10 +270,10 @@
     justify-content: center;
     gap: 12px;
     width: 100%;
-    padding: 10px 24px;
+    padding: 12px 24px;
     font-size: 14px;
     font-weight: 500;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
     transition:
       background 0.15s,

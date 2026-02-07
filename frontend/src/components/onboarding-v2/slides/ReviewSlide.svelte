@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { ArrowRight, ClipboardCheck } from 'lucide-svelte';
   import { newOnboardingStore, AI_PROVIDER_OPTIONS } from '../../../stores/newOnboardingStore';
   import SlideLayout from '../shared/SlideLayout.svelte';
@@ -12,6 +13,11 @@
   let { onNext, onEdit }: Props = $props();
 
   let data = $state(newOnboardingStore.get());
+  let riskChecked = $state(newOnboardingStore.get().riskAcknowledged ?? false);
+
+  onMount(() => {
+    riskChecked = newOnboardingStore.get().riskAcknowledged ?? false;
+  });
 
   const sections = $derived([
     {
@@ -49,9 +55,21 @@
     {/each}
   </div>
 
+  <label class="risk-ack">
+    <input
+      type="checkbox"
+      bind:checked={riskChecked}
+      onchange={() => newOnboardingStore.setRiskAcknowledged(riskChecked)}
+    />
+    <span class="risk-ack-text"
+      >I understand this software can execute code and access resources, and I accept the security
+      and privacy risks.</span
+    >
+  </label>
+
   <p class="note">You can change any of these settings later in Settings</p>
 
-  <button class="cta-button" onclick={onNext}>
+  <button class="cta-button" disabled={!riskChecked} onclick={onNext}>
     <span>Looks good, let's go!</span>
     <ArrowRight size={18} />
   </button>
@@ -64,6 +82,30 @@
     flex-direction: column;
     gap: 0.5rem;
     margin-bottom: 1.5rem;
+  }
+
+  .risk-ack {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+    margin-bottom: 1.25rem;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .risk-ack input[type='checkbox'] {
+    margin-top: 0.25rem;
+    flex-shrink: 0;
+    width: 1.125rem;
+    height: 1.125rem;
+    accent-color: var(--color-primary);
+  }
+
+  .risk-ack-text {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
   }
 
   .note {
@@ -79,27 +121,30 @@
     align-items: center;
     gap: 0.75rem;
     padding: 1rem 2rem;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     color: white;
     font-size: 1.125rem;
     font-weight: 600;
     border: none;
     border-radius: 9999px;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--shadow-glow);
     transition: all 0.2s ease-out;
   }
 
-  .cta-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(124, 58, 237, 0.5);
+  .cta-button:hover:not(:disabled) {
+    opacity: 0.95;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .cta-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .cta-button:focus-visible {
     outline: none;
-    box-shadow:
-      0 0 0 4px rgba(124, 58, 237, 0.3),
-      0 4px 16px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--focus-ring);
   }
 
   .arrow {

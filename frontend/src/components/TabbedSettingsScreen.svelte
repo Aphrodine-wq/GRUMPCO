@@ -3,6 +3,7 @@
    * TabbedSettingsScreen - Reorganized settings with tabbed navigation
    * Replaces the long scrolling SettingsScreen with organized categories
    */
+  declare const __APP_VERSION__: string;
   import { onMount } from 'svelte';
   import { settingsStore } from '../stores/settingsStore';
   import { showToast } from '../stores/toastStore';
@@ -38,6 +39,7 @@
     gAgentPersona,
     gAgentAutoApprove,
     gAgentPersistent,
+    janBaseUrl,
     type GAgentCapabilityKey,
     CAPABILITY_DESCRIPTIONS,
     PREMIUM_CAPABILITIES,
@@ -1428,6 +1430,20 @@
                 Need GitHub or OAuth? Open Integrations tab
               </Button>
             </div>
+          </Card>
+          <Card title="Local AI (Jan)" padding="md" class="jan-base-url-card">
+            <p class="field-hint">
+              Override Jan base URL if Jan runs on a different host/port. Leave empty to use default (http://localhost:1337). Used when listing models and when using Jan for chat.
+            </p>
+            <label class="field-label" for="jan-base-url">Jan base URL</label>
+            <input
+              id="jan-base-url"
+              type="url"
+              class="custom-input"
+              placeholder="http://localhost:1337"
+              value={$janBaseUrl}
+              oninput={(e) => preferencesStore.setJanBaseUrl((e.currentTarget as HTMLInputElement).value)}
+            />
           </Card>
         </div>
 
@@ -2937,7 +2953,7 @@
 
           <Card title="About G-Rump" padding="md">
             <div class="about-info">
-              <p class="about-version">Version: 1.0.0-beta</p>
+              <p class="about-version">Version: {__APP_VERSION__}</p>
               <p class="about-desc">
                 G-Rump is an AI-powered development assistant that helps you write, understand, and
                 refactor code.

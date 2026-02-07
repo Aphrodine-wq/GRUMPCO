@@ -25,6 +25,8 @@
     tier?: string | null;
     usage?: number;
     limit?: number | string | null;
+    costUsedUsd?: number;
+    costLimitUsd?: number | null;
     computeMinutesUsed?: number;
     computeMinutesLimit?: number | null;
     storageGbUsed?: number;
@@ -124,24 +126,43 @@
   }
 
   const usagePercent = $derived.by(() => {
-    const u = billingMe?.usage ?? 0;
-    const l = billingMe?.limit;
+    const u = billingMe?.costUsedUsd ?? billingMe?.usage ?? 0;
+    const l = billingMe?.costLimitUsd ?? billingMe?.limit;
     if (typeof l !== 'number' || l <= 0) return 0;
     return Math.min(100, Math.round((u / l) * 100));
   });
 
   const isLowCredits = $derived.by(() => {
-    const u = billingMe?.usage ?? 0;
-    const l = billingMe?.limit;
+    const u = billingMe?.costUsedUsd ?? billingMe?.usage ?? 0;
+    const l = billingMe?.costLimitUsd ?? billingMe?.limit;
     if (typeof l !== 'number' || l <= 0) return false;
     return u >= l || u >= l * 0.8;
   });
 
   const isExhausted = $derived.by(() => {
-    const u = billingMe?.usage ?? 0;
-    const l = billingMe?.limit;
+    const u = billingMe?.costUsedUsd ?? billingMe?.usage ?? 0;
+    const l = billingMe?.costLimitUsd ?? billingMe?.limit;
     if (typeof l !== 'number' || l <= 0) return false;
     return u >= l;
+  });
+
+  const useCostDisplay = $derived.by(
+    () =>
+      typeof billingMe?.costUsedUsd === 'number' ||
+      typeof billingMe?.costLimitUsd === 'number',
+  );
+  const displayUsed = $derived.by(() => {
+    if (useCostDisplay && typeof billingMe?.costUsedUsd === 'number') {
+      return `$${billingMe.costUsedUsd.toFixed(2)}`;
+    }
+    return formatCredits(billingMe?.usage);
+  });
+  const displayLimit = $derived.by(() => {
+    if (useCostDisplay && typeof billingMe?.costLimitUsd === 'number') {
+      return `$${billingMe.costLimitUsd.toFixed(2)}`;
+    }
+    if (billingMe?.costLimitUsd == null && billingMe?.limit == null) return '∞';
+    return billingMe?.limit ?? '∞';
   });
 
   async function load() {
@@ -253,12 +274,13 @@
           {#if billingMe?.tier}
             <div class="usage-stats">
               <div class="usage-numbers">
-                <span class="usage-current">{formatCredits(billingMe?.usage)}</span>
+                <span class="usage-current">{displayUsed}</span>
                 <span class="usage-sep">/</span>
-                <span class="usage-total">{billingMe.limit ?? '∞'}</span>
-                <span class="usage-label">credits used</span>
+                <span class="usage-total">{displayLimit}</span>
+                <span class="usage-label">{useCostDisplay ? 'Usage this month' : 'credits used'}</span>
               </div>
-              {#if typeof billingMe.limit === 'number' && billingMe.limit > 0}
+              {#if (typeof billingMe?.costLimitUsd === 'number' && billingMe.costLimitUsd > 0) ||
+                  (typeof billingMe?.limit === 'number' && (billingMe?.limit ?? 0) > 0)}
                 <div class="usage-bar-container">
                   <div class="usage-bar">
                     <div

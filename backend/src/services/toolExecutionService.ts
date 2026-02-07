@@ -155,7 +155,7 @@ export class ToolExecutionService {
    * ```
    */
   constructor(
-    workspaceRoot: string = process.env.WORKSPACE_ROOT || "/tmp/workspace",
+    workspaceRoot: string = process.env.WORKSPACE_ROOT || process.cwd(),
     options?: {
       allowedDirs?: string[];
       userId?: string;

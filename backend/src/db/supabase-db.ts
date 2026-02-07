@@ -394,6 +394,7 @@ export class SupabaseDatabaseService {
     latencyMs?: number;
     storageBytes?: number;
     success: boolean;
+    estimatedCostUsd?: number;
   }): Promise<void> {
     const start = process.hrtime.bigint();
     const { error } = await this.client.from("usage_records").insert({
@@ -407,6 +408,7 @@ export class SupabaseDatabaseService {
       latency_ms: record.latencyMs || null,
       storage_bytes: record.storageBytes || null,
       success: record.success ? 1 : 0,
+      estimated_cost_usd: record.estimatedCostUsd ?? 0,
       created_at: new Date().toISOString(),
     });
 

@@ -30,12 +30,31 @@
       toolName === 'edit_file'
     );
   };
+
+  const getFilePath = (): string | null => {
+    if (!toolResult) return null;
+    if (toolResult.diff?.filePath) return toolResult.diff.filePath;
+    const match = toolResult.output?.match(/:\s*([^\n\r]+)$/m);
+    return match?.[1]?.trim() || null;
+  };
+
+  const getFileActionLabel = (): string => {
+    const type = toolResult?.diff?.changeType;
+    if (type === 'created') return 'Created';
+    if (type === 'modified') return 'Updated';
+    if (type === 'deleted') return 'Deleted';
+    return 'Changed';
+  };
+
+  const filePath = $derived(getFilePath());
+  const fileAction = $derived(getFileActionLabel());
 </script>
 
 {#if toolResult}
   <div
     class="tool-result-card"
     class:is-error={!toolResult.success}
+    class:file-result={isFileOperation(toolResult.toolName)}
     style:--border-color={colors.border.default}
     style:--bg-header={colors.background.tertiary}
     style:--bg-content={colors.background.secondary}
@@ -74,6 +93,9 @@
           >
         {/if}
         <span class="tool-name">{toolResult.toolName}</span>
+        {#if isFileOperation(toolResult.toolName)}
+          <span class="grump-chip">G-Rump Write</span>
+        {/if}
       </div>
       <div class="header-meta">
         {#if toolResult.executionTime != null}
@@ -84,6 +106,13 @@
         </Badge>
       </div>
     </div>
+
+    {#if isFileOperation(toolResult.toolName) && filePath}
+      <div class="file-result-summary">
+        <span class="file-action">{fileAction}</span>
+        <code class="file-path">{filePath}</code>
+      </div>
+    {/if}
 
     <div class="tool-result-content">
       {#if toolResult.diff && isFileOperation(toolResult.toolName)}
@@ -110,6 +139,11 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
+  .tool-result-card.file-result {
+    border: 1px solid color-mix(in srgb, var(--success-color, #22c55e) 30%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--success-color, #22c55e) 16%, transparent);
+  }
+
   .tool-result-header {
     background-color: var(--color-bg-elevated, #ffffff);
     padding: 12px 14px;
@@ -131,6 +165,18 @@
     color: var(--text-primary);
   }
 
+  .grump-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--success-color, #22c55e);
+    background: color-mix(in srgb, var(--success-color, #22c55e) 14%, transparent);
+  }
+
   .header-meta {
     display: flex;
     align-items: center;
@@ -146,6 +192,32 @@
   .tool-result-content {
     max-height: 400px;
     overflow-y: auto;
+  }
+
+  .file-result-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px 10px;
+    flex-wrap: wrap;
+  }
+
+  .file-action {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--success-color, #22c55e);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .file-path {
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 11px;
+    color: var(--text-primary);
+    background: var(--bg-content);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 3px 7px;
   }
 
   .output-wrapper {

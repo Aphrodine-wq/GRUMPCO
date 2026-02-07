@@ -4,7 +4,7 @@
  * Also supports dynamic Ollama and Jan model detection when configured.
  * Shows all providers with `configured` flag for API key gating in the frontend.
  */
-import { Router } from "express";
+import { Router, type Request } from "express";
 import {
   MODEL_REGISTRY,
   PROVIDER_METADATA,
@@ -13,6 +13,20 @@ import {
   type ModelConfig,
 } from "@grump/ai-core";
 import { env, isProviderConfigured, getConfiguredProviders } from "../config/env.js";
+import { getApiKey as getStoredApiKey } from "../services/secretsService.js";
+import type { IntegrationProviderId } from "../types/integrations.js";
+
+const DEFAULT_USER = "default";
+
+/** LLM provider ids that can have user-stored API keys (same as ApiProvider where applicable). */
+const LLM_PROVIDER_IDS: IntegrationProviderId[] = [
+  "anthropic",
+  "openrouter",
+  "google",
+  "kimi",
+  "groq",
+  "mistral",
+];
 
 const router = Router();
 
@@ -67,10 +81,13 @@ async function getOllamaModels(): Promise<{ id: string; description?: string }[]
 /**
  * Fetch available Jan models from local instance
  * Jan uses OpenAI-compatible /v1/models endpoint
- * Tries configured URL, falls back to default localhost:1337
+ * Tries override URL, then env, then default localhost:1337
  */
-async function getJanModels(): Promise<{ id: string; description?: string }[]> {
+async function getJanModels(
+  janBaseUrlOverride?: string | null,
+): Promise<{ id: string; description?: string }[]> {
   const urlsToTry = [
+    janBaseUrlOverride,
     env.JAN_BASE_URL,
     process.env.JAN_BASE_URL,
     "http://localhost:1337", // Default Jan port
@@ -230,10 +247,22 @@ const ALL_PROVIDERS: Array<{
  * Dynamically includes Ollama and Jan models when detected.
  * All providers are listed with `configured` flag for frontend gating.
  */
-router.get("/list", async (_req, res) => {
+router.get("/list", async (req, res) => {
   try {
-    // Build groups from ALL_PROVIDERS with configured status
+    const userId = (req.query.userId as string) || (req as Request & { userId?: string }).userId || DEFAULT_USER;
+    const janBaseUrlOverride = (req.query.janBaseUrl as string) || undefined;
+
+    // Build configured set: env providers + user-stored API keys
     const configuredSet = new Set<string>(getConfiguredProviders());
+    for (const providerId of LLM_PROVIDER_IDS) {
+      try {
+        const key = await getStoredApiKey(userId, providerId);
+        if (key) configuredSet.add(providerId);
+      } catch {
+        // ignore per-provider errors
+      }
+    }
+
     const groups: ModelListGroup[] = [];
 
     // 1. Start with NIM (primary provider from ai-core registry)
@@ -302,8 +331,8 @@ router.get("/list", async (_req, res) => {
       });
     }
 
-    // 4. Dynamically add Jan models if detected
-    const janModels = await getJanModels();
+    // 4. Dynamically add Jan models if detected (optional user-configured URL)
+    const janModels = await getJanModels(janBaseUrlOverride);
     if (janModels.length > 0) {
       groups.push({
         provider: "jan",

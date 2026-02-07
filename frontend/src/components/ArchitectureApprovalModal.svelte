@@ -6,7 +6,7 @@
    * Non-disruptive: blends with the chat interface instead of blocking the view.
    */
   import { createEventDispatcher } from 'svelte';
-  import { fly, fade } from 'svelte/transition';
+  import { fly } from 'svelte/transition';
   import { Check, Pencil, X } from 'lucide-svelte';
 
   interface Props {
@@ -51,28 +51,45 @@
 </script>
 
 {#if open}
-  <div class="approval-card" transition:fly={{ y: 12, duration: 200 }}>
-    <div class="card-header">
-      <div class="card-icon">
-        <Check size={16} />
+  <div
+    class="approval-card"
+    role="region"
+    aria-label="Architecture review"
+    transition:fly={{ y: 8, duration: 160 }}
+  >
+    <div class="card-row">
+      <div class="card-main">
+        <div class="card-title-row">
+          <div class="card-icon">
+            <Check size={14} />
+          </div>
+          <p class="card-title">Architecture ready</p>
+        </div>
+        <p class="card-body">Looks good to continue, or should I revise it first?</p>
       </div>
-      <div class="card-title">Architecture Review</div>
-      <button class="close-btn" onclick={handleClose} aria-label="Dismiss">
-        <X size={14} />
-      </button>
+
+      <div class="card-actions">
+        <button class="btn btn-approve" onclick={handleApprove}>
+          <Check size={14} />
+          Continue
+        </button>
+        <button class="btn btn-change" onclick={handleRequestChanges}>
+          <Pencil size={14} />
+          {feedbackMode ? 'Send' : 'Revise'}
+        </button>
+        <button class="close-btn" onclick={handleClose} aria-label="Dismiss">
+          <X size={14} />
+        </button>
+      </div>
     </div>
 
-    <p class="card-body">
-      Does this architecture look right? Approve to pick a section, or request changes.
-    </p>
-
     {#if feedbackMode}
-      <div class="feedback-area" transition:fly={{ y: 6, duration: 150 }}>
+      <div class="feedback-area" transition:fly={{ y: 6, duration: 140 }}>
         <textarea
           bind:this={feedbackRef}
           bind:value={feedbackText}
           class="feedback-input"
-          placeholder="Describe the changes you'd like..."
+          placeholder="Tell me what to change..."
           rows="2"
           onkeydown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -81,99 +98,101 @@
             }
           }}
         ></textarea>
+        <p class="feedback-hint">Press Enter to send, Shift+Enter for a new line.</p>
       </div>
     {/if}
-
-    <div class="card-actions">
-      <button class="btn btn-approve" onclick={handleApprove}>
-        <Check size={14} />
-        Approve
-      </button>
-      <button class="btn btn-change" onclick={handleRequestChanges}>
-        <Pencil size={14} />
-        {feedbackMode ? 'Send Feedback' : 'Request Changes'}
-      </button>
-    </div>
   </div>
 {/if}
 
 <style>
   .approval-card {
-    margin: 0.5rem 0;
-    padding: 1rem 1.25rem;
-    background: var(--color-bg-card, #1a1a2e);
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.06));
-    border-radius: 14px;
-    max-width: 480px;
-    will-change: transform, opacity;
-    box-shadow: var(--shadow-sm, 0 2px 6px rgba(0, 0, 0, 0.05));
+    margin: 0.375rem 0;
+    padding: 0.75rem 0.875rem;
+    background: var(--color-bg-subtle, rgba(15, 23, 42, 0.35));
+    border: 1px solid var(--color-border-light, rgba(148, 163, 184, 0.2));
+    border-radius: 12px;
+    width: min(100%, 860px);
+    box-shadow: none;
+    contain: layout style paint;
+    content-visibility: auto;
   }
 
-  .card-header {
+  .card-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .card-main {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .card-title-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.5rem;
   }
 
   .card-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.25rem;
+    height: 1.25rem;
     border-radius: 0.375rem;
-    background: rgba(124, 58, 237, 0.15);
-    color: var(--color-primary, #7c3aed);
+    background: color-mix(in srgb, var(--color-primary, #3b82f6) 18%, transparent);
+    color: var(--color-primary, #3b82f6);
     flex-shrink: 0;
   }
 
   .card-title {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--color-text, #e2e8f0);
-    flex: 1;
+    margin: 0;
   }
 
   .close-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.75rem;
+    height: 1.75rem;
     background: none;
-    border: none;
-    border-radius: 0.25rem;
+    border: 1px solid transparent;
+    border-radius: 0.45rem;
     color: var(--color-text-muted, #64748b);
     cursor: pointer;
     padding: 0;
-    transition: color 0.12s;
+    transition: all 0.12s ease;
   }
   .close-btn:hover {
+    border-color: var(--color-border-light, rgba(148, 163, 184, 0.25));
+    background: color-mix(in srgb, var(--color-bg-card, #0f172a) 88%, transparent);
     color: var(--color-text, #e2e8f0);
   }
 
   .card-body {
-    font-size: 0.8125rem;
+    font-size: 0.78rem;
     color: var(--color-text-secondary, #94a3b8);
-    margin: 0 0 0.75rem;
-    line-height: 1.5;
+    margin: 0.375rem 0 0;
+    line-height: 1.35;
   }
 
   .feedback-area {
-    margin-bottom: 0.75rem;
+    margin-top: 0.6rem;
   }
 
   .feedback-input {
     width: 100%;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-input, rgba(15, 23, 42, 0.5));
+    border: 1px solid var(--color-border, rgba(148, 163, 184, 0.3));
     border-radius: 0.5rem;
     color: var(--color-text, #e2e8f0);
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 0.8125rem;
-    padding: 0.5rem 0.625rem;
+    font-size: 0.78rem;
+    padding: 0.45rem 0.55rem;
     resize: none;
     outline: none;
     transition: border-color 0.12s;
@@ -185,43 +204,72 @@
     color: var(--color-text-muted, #64748b);
   }
 
+  .feedback-hint {
+    margin: 0.35rem 0 0;
+    font-size: 0.68rem;
+    color: var(--color-text-muted, #64748b);
+  }
+
   .card-actions {
     display: flex;
     gap: 0.375rem;
+    flex-shrink: 0;
   }
 
   .btn {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    padding: 0.375rem 0.75rem;
+    padding: 0.35rem 0.65rem;
     border: 1px solid transparent;
     border-radius: 0.5rem;
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.12s;
   }
 
   .btn-approve {
-    background: rgba(16, 185, 129, 0.12);
-    color: #34d399;
-    border-color: rgba(16, 185, 129, 0.2);
+    background: color-mix(in srgb, var(--color-primary, #3b82f6) 20%, transparent);
+    color: var(--color-primary, #60a5fa);
+    border-color: color-mix(in srgb, var(--color-primary, #3b82f6) 28%, transparent);
   }
   .btn-approve:hover {
-    background: rgba(16, 185, 129, 0.2);
-    border-color: rgba(16, 185, 129, 0.35);
+    background: color-mix(in srgb, var(--color-primary, #3b82f6) 28%, transparent);
   }
 
   .btn-change {
-    background: rgba(255, 255, 255, 0.03);
+    background: transparent;
     color: var(--color-text-secondary, #94a3b8);
-    border-color: rgba(255, 255, 255, 0.06);
+    border-color: var(--color-border-light, rgba(148, 163, 184, 0.25));
   }
   .btn-change:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-bg-card, #0f172a) 88%, transparent);
     color: var(--color-text, #e2e8f0);
+  }
+
+  @media (max-width: 820px) {
+    .card-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.6rem;
+    }
+
+    .card-actions {
+      width: 100%;
+    }
+
+    .btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    .close-btn {
+      width: 2rem;
+      height: 2rem;
+      align-self: center;
+      flex: 0 0 auto;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

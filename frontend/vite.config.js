@@ -1,13 +1,19 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
+import { readFileSync } from 'fs'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { visualizer } from 'rollup-plugin-visualizer'
+
+const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'))
 
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production'
 
   return {
     base: isProduction ? './' : '/',
+    define: {
+      __APP_VERSION__: JSON.stringify(pkg.version || '0.0.0'),
+    },
     plugins: [
       svelte({
         // Enable hot module replacement for faster dev iterations

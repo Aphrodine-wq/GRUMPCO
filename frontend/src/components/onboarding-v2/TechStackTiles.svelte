@@ -123,22 +123,21 @@
   }
 
   .tech-tile-unselected:hover {
-    border-color: #d1d5db;
-    background: #f9fafb;
-    transform: translateY(-1px);
+    border-color: var(--color-border-highlight);
+    background: var(--color-bg-subtle);
+    box-shadow: var(--shadow-sm);
   }
 
   .tech-tile-selected {
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-    border-color: #7c3aed;
+    background: var(--onboarding-cta-gradient);
+    border-color: var(--color-primary);
     color: white;
-    transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    box-shadow: var(--shadow-glow);
   }
 
   .tech-tile-selected:hover {
-    transform: scale(1.04);
-    box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+    opacity: 0.95;
+    box-shadow: var(--shadow-lg);
   }
 
   .popular-badge {
@@ -150,15 +149,15 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.025em;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    background: linear-gradient(135deg, var(--color-warning) 0%, #d97706 100%);
     color: white;
     border-radius: 9999px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-xs);
   }
 
   .tech-tile-selected .popular-badge {
-    background: white;
-    color: #7c3aed;
+    background: var(--color-bg-card);
+    color: var(--color-primary);
   }
 
   .tech-icon {
@@ -168,7 +167,7 @@
   }
 
   .tech-tile:hover .tech-icon {
-    transform: scale(1.1);
+    opacity: 0.9;
   }
 
   .tech-tile-selected .tech-icon {
@@ -212,16 +211,16 @@
     transform: scale(1);
   }
 
-  /* Animation for selection */
+  /* Animation for selection – subtle */
   @keyframes selectPop {
     0% {
       transform: scale(1);
     }
     50% {
-      transform: scale(1.08);
+      transform: scale(1.02);
     }
     100% {
-      transform: scale(1.02);
+      transform: scale(1);
     }
   }
 

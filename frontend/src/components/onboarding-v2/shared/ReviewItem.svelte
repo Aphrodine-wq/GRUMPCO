@@ -43,12 +43,12 @@
   }
 
   .review-item:hover {
-    border-color: #d1d5db;
+    border-color: var(--color-border-highlight);
   }
 
   .review-item.configured {
-    border-color: #d1fae5;
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.02) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border-color: var(--color-success-border);
+    background: var(--color-success-subtle);
   }
 
   .item-status {

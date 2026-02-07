@@ -111,6 +111,9 @@ export interface UserPreferences {
 
   /** When true, inject RAG context into chat for more tailored answers from indexed docs. */
   includeRagContext?: boolean;
+
+  /** Override URL for Jan local AI (e.g. http://localhost:1337). Used when listing models and streaming. */
+  janBaseUrl?: string;
 }
 
 const DEFAULT_G_AGENT_CAPABILITIES: GAgentCapabilityKey[] = [
@@ -272,6 +275,8 @@ export const density = derived(
 
 export const includeRagContext = derived(preferences, (p) => p.includeRagContext ?? false);
 
+export const janBaseUrl = derived(preferences, (p) => p.janBaseUrl ?? '');
+
 // G-Agent derived stores (new naming)
 export const gAgentCapabilities = derived(
   preferences,
@@ -353,6 +358,11 @@ export const preferencesStore = {
 
   setIncludeRagContext: (enabled: boolean) => {
     preferences.update((p) => ({ ...p, includeRagContext: enabled }));
+  },
+
+  setJanBaseUrl: (url: string) => {
+    const trimmed = url.trim();
+    preferences.update((p) => ({ ...p, janBaseUrl: trimmed || undefined }));
   },
 
   // G-Agent methods (new naming)

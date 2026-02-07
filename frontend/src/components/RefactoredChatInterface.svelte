@@ -879,40 +879,39 @@
           </aside>
         {/if}
 
-        <!-- Chat content -->
-        <div class="chat-content">
-          <!-- G-Agent Plan Viewer -->
-          {#if isGAgentSession && hasGAgentPlan}
-            <div class="plan-panel">
-              <GAgentPlanViewer
-                compact={false}
-                workspaceRoot={$workspaceStore.root ?? undefined}
-                onApprove={() => {
-                  showGAgentPlanApproval = false;
-                }}
-                onCancel={() => {
-                  gAgentPlanStore.clearPlan();
-                }}
-              />
-            </div>
-          {/if}
-
-          <!-- Live Output -->
-          {#if isGAgentSession && (showGAgentLiveOutput || isGAgentExecuting)}
-            <div class="live-output-panel">
-              <GAgentLiveOutput
-                bind:this={liveOutputRef}
-                isExecuting={isGAgentExecuting}
-                currentTaskId={$gAgentCurrentPlan?.tasks.find((t) => t.status === 'in_progress')
-                  ?.id ?? ''}
-                onClose={() => {
-                  showGAgentLiveOutput = false;
-                }}
-              />
-            </div>
-          {/if}
-
-          <!-- Messages -->
+        <!-- Center column: plan/live output above, then messages to the edge -->
+        <div class="chat-main-center">
+          <div class="chat-content">
+            {#if isGAgentSession && hasGAgentPlan}
+              <div class="plan-panel">
+                <GAgentPlanViewer
+                  compact={false}
+                  workspaceRoot={$workspaceStore.root ?? undefined}
+                  onApprove={() => {
+                    showGAgentPlanApproval = false;
+                  }}
+                  onCancel={() => {
+                    gAgentPlanStore.clearPlan();
+                  }}
+                />
+              </div>
+            {/if}
+            {#if isGAgentSession && (showGAgentLiveOutput || isGAgentExecuting)}
+              <div class="live-output-panel">
+                <GAgentLiveOutput
+                  bind:this={liveOutputRef}
+                  isExecuting={isGAgentExecuting}
+                  currentTaskId={$gAgentCurrentPlan?.tasks.find((t) => t.status === 'in_progress')
+                    ?.id ?? ''}
+                  onClose={() => {
+                    showGAgentLiveOutput = false;
+                  }}
+                />
+              </div>
+            {/if}
+            <ScrollNavigation scrollContainer={messagesRef} />
+          </div>
+          <!-- Messages: sibling of chat-content so gradient/messages extend to edge -->
           <div class="messages-container" bind:this={messagesRef}>
             <div class="messages-inner" class:is-empty={messages.length <= 1 && !streaming}>
               {#if messages.length <= 1 && !streaming}
@@ -1019,10 +1018,7 @@
                 {/if}
               {/if}
             </div>
-          </div>
-
-          <!-- Scroll navigation -->
-          <ScrollNavigation scrollContainer={messagesRef} />
+        </div>
         </div>
 
         <!-- Memory sidebar -->
@@ -1183,8 +1179,16 @@
     overflow: hidden;
   }
 
-  .chat-content {
+  .chat-main-center {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .chat-content {
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1258,6 +1262,8 @@
     flex: 1;
     overflow-y: auto;
     padding: 2rem 1rem;
+    /* Reserve space for scrollbar so it doesn't overlap Mermaid diagrams and content */
+    scrollbar-gutter: stable;
     scroll-behavior: smooth;
     display: flex;
     flex-direction: column;
@@ -1692,8 +1698,14 @@
 
   /* Inline card wrappers for architecture approval / section picker */
   .inline-card-wrapper {
-    padding: 0.25rem 3.25rem;
+    padding: 0.25rem 1.25rem 0.25rem 3.25rem;
     animation: card-in 0.2s ease-out;
+  }
+
+  @media (max-width: 920px) {
+    .inline-card-wrapper {
+      padding: 0.25rem 0.75rem;
+    }
   }
 
   @keyframes card-in {

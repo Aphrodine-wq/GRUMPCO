@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { Key, Check, AlertCircle, ExternalLink } from 'lucide-svelte';
   import { newOnboardingStore, AI_PROVIDER_OPTIONS } from '../../../stores/newOnboardingStore';
-  import { getProviderIconPath, getProviderFallbackLetter } from '../../../lib/aiProviderIcons.js';
+  import { getProviderIconPath, getProviderSvgPath, getProviderFallbackLetter, getProviderColor } from '../../../lib/aiProviderIcons.js';
 
   interface Props {
     onNext: () => void;
@@ -74,7 +74,7 @@
   const displayProviders = $derived(AI_PROVIDER_OPTIONS.filter((p) => p.id !== 'nvidia-nim'));
 </script>
 
-<div class="slide-container">
+<div class="slide-container api-provider-slide">
   <div class="content" class:mounted>
     <!-- Header -->
     <div class="header">
@@ -88,11 +88,13 @@
       </p>
     </div>
 
-    <!-- Provider selection -->
+    <!-- Provider selection: real provider icons (file or inline SVG) -->
     <div class="providers-grid">
       {#each displayProviders as provider}
         {@const iconPath = getProviderIconPath(provider.id)}
+        {@const svgPath = getProviderSvgPath(provider.id)}
         {@const fallbackLetter = getProviderFallbackLetter(provider.id)}
+        {@const accentColor = getProviderColor(provider.id)}
         <button
           class="provider-card"
           class:selected={selectedProvider === provider.id}
@@ -103,12 +105,14 @@
             <span class="recommended-badge">Recommended</span>
           {/if}
           <span class="provider-icon" aria-hidden="true">
-            {#if iconPath}
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" role="img">
-                <path d={iconPath} />
+            {#if iconPath && iconPath.startsWith('/')}
+              <img src={iconPath} alt="" width="24" height="24" class="provider-icon-img" />
+            {:else if svgPath}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={accentColor} role="img">
+                <path d={svgPath} />
               </svg>
             {:else}
-              <span class="provider-icon-fallback">{fallbackLetter}</span>
+              <span class="provider-icon-fallback" style="background: {accentColor}20; color: {accentColor}">{fallbackLetter}</span>
             {/if}
           </span>
           <span class="provider-name">{provider.name}</span>
@@ -223,6 +227,14 @@
     overflow-y: auto;
   }
 
+  .slide-container.api-provider-slide {
+    padding: 2rem 1.5rem;
+  }
+
+  .slide-container.api-provider-slide .content {
+    max-width: 720px;
+  }
+
   .content {
     display: flex;
     flex-direction: column;
@@ -253,11 +265,11 @@
     justify-content: center;
     width: 56px;
     height: 56px;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     border-radius: 16px;
     color: white;
     margin-bottom: 1rem;
-    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+    box-shadow: var(--shadow-glow);
   }
 
   .title {
@@ -279,7 +291,7 @@
   .providers-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+    gap: 1rem;
     width: 100%;
     margin-bottom: 1.5rem;
   }
@@ -287,6 +299,7 @@
   @media (min-width: 480px) {
     .providers-grid {
       grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
     }
   }
 
@@ -305,20 +318,19 @@
   }
 
   .provider-card:hover {
-    border-color: #d1d5db;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: var(--color-border-highlight);
+    box-shadow: var(--shadow-sm);
   }
 
   .provider-card.selected {
-    border-color: #7c3aed;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.05) 0%, rgba(109, 40, 217, 0.05) 100%);
-    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.2);
+    border-color: var(--color-primary);
+    background: var(--onboarding-card-bg);
+    box-shadow: var(--shadow-glow);
   }
 
   .provider-card:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
+    box-shadow: var(--focus-ring);
   }
 
   .recommended-badge {
@@ -330,7 +342,7 @@
     font-size: 0.625rem;
     font-weight: 600;
     text-transform: uppercase;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     color: white;
     border-radius: 9999px;
     white-space: nowrap;
@@ -349,6 +361,12 @@
   .provider-icon svg {
     width: 24px;
     height: 24px;
+  }
+
+  .provider-icon-img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
   }
 
   .provider-icon-fallback {
@@ -529,20 +547,20 @@
     align-items: center;
     gap: 0.75rem;
     padding: 1rem 2rem;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: var(--onboarding-cta-gradient);
     color: white;
     font-size: 1.125rem;
     font-weight: 600;
     border: none;
     border-radius: 9999px;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+    box-shadow: var(--shadow-glow);
     transition: all 0.2s ease-out;
   }
 
   .cta-button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(124, 58, 237, 0.5);
+    opacity: 0.95;
+    box-shadow: var(--shadow-lg);
   }
 
   .cta-button:disabled {

@@ -339,25 +339,7 @@
   .onboarding-bg-gradient {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      165deg,
-      #fafafa 0%,
-      #f5f3ff 25%,
-      #ede9fe 50%,
-      #e9e5ff 75%,
-      #ddd6fe 100%
-    );
-  }
-
-  :global(.dark) .onboarding-bg-gradient {
-    background: linear-gradient(
-      165deg,
-      #0f0a1a 0%,
-      #1a1028 25%,
-      #1e1433 50%,
-      #231740 75%,
-      #2a1b4d 100%
-    );
+    background: var(--onboarding-bg-gradient);
   }
 
   .onboarding-bg-dots {
@@ -365,7 +347,7 @@
     inset: 0;
     background-image: radial-gradient(
       circle at 1px 1px,
-      rgba(124, 58, 237, 0.12) 1px,
+      var(--onboarding-dots-color) 1px,
       transparent 0
     );
     background-size: 22px 22px;
@@ -373,11 +355,6 @@
   }
 
   :global(.dark) .onboarding-bg-dots {
-    background-image: radial-gradient(
-      circle at 1px 1px,
-      rgba(167, 139, 250, 0.15) 1px,
-      transparent 0
-    );
     opacity: 0.7;
   }
 
