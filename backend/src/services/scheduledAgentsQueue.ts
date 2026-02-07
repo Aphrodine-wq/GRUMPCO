@@ -13,6 +13,7 @@ import {
   getRedisConnectionConfig,
   sanitizeQueueName,
 } from "./redisConnection.js";
+import { runWithConcurrency } from "../utils/concurrency.js";
 
 const SCHEDULED_QUEUE_NAME = "grump-scheduled";
 
@@ -124,9 +125,12 @@ export async function loadRepeatableJobsFromDb(): Promise<void> {
 
   // Process in batches to prevent Redis connection overload
   const BATCH_SIZE = 50;
+  const batches = [];
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE);
+    batches.push(rows.slice(i, i + BATCH_SIZE));
+  }
 
+  await runWithConcurrency(batches, 5, async (batch) => {
     const jobs = batch.map((r) => {
       const params = (
         r.paramsJson ? JSON.parse(r.paramsJson) : {}
@@ -147,5 +151,5 @@ export async function loadRepeatableJobsFromDb(): Promise<void> {
         "Scheduled repeatable job loaded from DB",
       );
     }
-  }
+  });
 }
