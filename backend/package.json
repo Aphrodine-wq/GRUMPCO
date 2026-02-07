@@ -41,7 +41,7 @@
     "@opentelemetry/sdk-node": "^0.57.0",
     "@opentelemetry/sdk-trace-base": "^1.30.0",
     "@opentelemetry/semantic-conventions": "^1.30.0",
-    "@pinecone-database/pinecone": "^6.0.0",
+    "@pinecone-database/pinecone": "^7.0.0",
     "@supabase/supabase-js": "^2.91.1",
     "@types/archiver": "^7.0.0",
     "@types/swagger-jsdoc": "^6.0.4",
