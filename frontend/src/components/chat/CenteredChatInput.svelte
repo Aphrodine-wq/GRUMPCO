@@ -55,7 +55,7 @@
   let {
     value = $bindable(''),
     streaming = false,
-    isNimProvider = false,
+    isNimProvider: _isNimProvider = false,
     hasPendingImage = false,
     hasPendingDocuments = false,
     pendingImageCount = 0,
@@ -329,8 +329,7 @@
     border-radius: 1.25rem;
     padding: 0.35rem 0.6rem;
     box-shadow: var(--shadow-sm, 0 2px 6px rgba(0, 0, 0, 0.05));
-    transition:
-      box-shadow 0.2s;
+    transition: box-shadow 50ms ease-out;
   }
 
   .input-container:focus-within {
@@ -350,7 +349,7 @@
     font-size: 0.8125rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 50ms ease-out;
     white-space: nowrap;
     flex-shrink: 0;
   }
@@ -446,7 +445,7 @@
     border-radius: 0.5rem;
     color: var(--color-text-muted);
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 50ms ease-out;
     position: relative;
   }
 
@@ -490,7 +489,7 @@
     border: none;
     border-radius: 0.375rem;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background 50ms ease-out;
   }
 
   .attach-menu-item:hover:not(:disabled) {
@@ -541,7 +540,7 @@
     border-radius: 0.75rem;
     color: white;
     cursor: not-allowed;
-    transition: all 0.15s;
+    transition: all 50ms ease-out;
   }
 
   .send-button.can-send {

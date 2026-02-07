@@ -613,17 +613,48 @@ const options = {
 
 const swaggerSpec = swaggerJsdoc(options);
 
+import { Router } from "express";
+
 /**
- * Setup Swagger UI on an Express app.
+ * Router that serves Swagger UI and the OpenAPI spec JSON.
+ *
+ * Mounted by the lazy route registry at /api/docs, so all paths below
+ * are relative to that mount point:
+ *   GET /api/docs/            → Swagger UI
+ *   GET /api/docs/swagger.json → raw spec
+ */
+const router = Router();
+
+// Serve swagger spec as JSON
+router.get("/swagger.json", (_req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerSpec);
+});
+
+// Serve Swagger UI at the mount root
+router.use(
+  "/",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customCss: ".swagger-ui .topbar { display: none }",
+    customSiteTitle: "G-Rump API Documentation",
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      filter: true,
+    },
+  }),
+);
+
+/**
+ * Legacy helper – mount Swagger on an Express app at an arbitrary base path.
+ * Kept for backwards compatibility but the primary export is now the Router.
  */
 export function setupSwagger(app: Express, basePath = "/docs"): void {
-  // Serve swagger spec as JSON
   app.get(`${basePath}/swagger.json`, (_req, res) => {
     res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
   });
-
-  // Serve Swagger UI
   app.use(
     basePath,
     swaggerUi.serve,
@@ -637,11 +668,7 @@ export function setupSwagger(app: Express, basePath = "/docs"): void {
       },
     }),
   );
-
-  // Also serve at /api-docs for compatibility
-  app.get("/api-docs", (_req, res) => {
-    res.redirect(basePath);
-  });
 }
 
+export default router;
 export { swaggerSpec };

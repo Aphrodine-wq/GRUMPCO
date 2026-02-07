@@ -7,7 +7,7 @@
    Animation Timing Functions
    ============================================ */
 :root {
-  /* Easing Functions */
+  /* Easing Functions – fast-out for snappy feel */
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
@@ -15,13 +15,13 @@
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
   --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
 
-  /* Duration Scale */
-  --duration-instant: 50ms;
-  --duration-fast: 100ms;
-  --duration-normal: 200ms;
-  --duration-slow: 300ms;
-  --duration-slower: 500ms;
-  --duration-slowest: 700ms;
+  /* Duration Scale – ultra-fast for 250fps+ mode */
+  --duration-instant: 8ms;
+  --duration-fast: 25ms;
+  --duration-normal: 40ms;
+  --duration-slow: 60ms;
+  --duration-slower: 90ms;
+  --duration-slowest: 120ms;
 }
 
 /* ============================================
@@ -33,6 +33,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -42,6 +43,7 @@
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }
@@ -52,6 +54,7 @@
     opacity: 0;
     transform: translateY(16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -63,6 +66,7 @@
     opacity: 0;
     transform: translateY(-16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -74,6 +78,7 @@
     opacity: 0;
     transform: translateX(-16px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -85,6 +90,7 @@
     opacity: 0;
     transform: translateX(16px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -97,6 +103,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -108,6 +115,7 @@
     opacity: 1;
     transform: scale(1);
   }
+
   to {
     opacity: 0;
     transform: scale(0.95);
@@ -119,9 +127,11 @@
     opacity: 0;
     transform: scale(0.8);
   }
+
   70% {
     transform: scale(1.05);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);
@@ -133,12 +143,15 @@
     opacity: 0;
     transform: scale(0.3);
   }
+
   50% {
     transform: scale(1.1);
   }
+
   70% {
     transform: scale(0.9);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);
@@ -150,6 +163,7 @@
   from {
     transform: translateY(100%);
   }
+
   to {
     transform: translateY(0);
   }
@@ -159,6 +173,7 @@
   from {
     transform: translateY(-100%);
   }
+
   to {
     transform: translateY(0);
   }
@@ -168,6 +183,7 @@
   from {
     transform: translateX(-100%);
   }
+
   to {
     transform: translateX(0);
   }
@@ -177,6 +193,7 @@
   from {
     transform: translateX(100%);
   }
+
   to {
     transform: translateX(0);
   }
@@ -187,6 +204,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -196,29 +214,35 @@
   from {
     transform: rotate(360deg);
   }
+
   to {
     transform: rotate(0deg);
   }
 }
 
 @keyframes wiggle {
+
   0%,
   100% {
     transform: rotate(0deg);
   }
+
   25% {
     transform: rotate(-5deg);
   }
+
   75% {
     transform: rotate(5deg);
   }
 }
 
 @keyframes shake {
+
   0%,
   100% {
     transform: translateX(0);
   }
+
   10%,
   30%,
   50%,
@@ -226,6 +250,7 @@
   90% {
     transform: translateX(-4px);
   }
+
   20%,
   40%,
   60%,
@@ -236,50 +261,61 @@
 
 /* Pulse Animations */
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
 }
 
 @keyframes pulseScale {
+
   0%,
   100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }
 }
 
 @keyframes heartbeat {
+
   0%,
   100% {
     transform: scale(1);
   }
+
   14% {
     transform: scale(1.1);
   }
+
   28% {
     transform: scale(1);
   }
+
   42% {
     transform: scale(1.1);
   }
+
   70% {
     transform: scale(1);
   }
 }
 
 @keyframes breathe {
+
   0%,
   100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.02);
     opacity: 0.8;
@@ -288,20 +324,24 @@
 
 /* Bounce Animations */
 @keyframes bounce {
+
   0%,
   100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-8px);
   }
 }
 
 @keyframes bounceLight {
+
   0%,
   100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-4px);
   }
@@ -309,10 +349,12 @@
 
 /* Glow Animations */
 @keyframes glow {
+
   0%,
   100% {
     box-shadow: 0 0 5px var(--color-primary-glow);
   }
+
   50% {
     box-shadow:
       0 0 20px var(--color-primary-glow),
@@ -321,10 +363,12 @@
 }
 
 @keyframes glowPulse {
+
   0%,
   100% {
     box-shadow: 0 0 0 0 var(--color-primary-glow);
   }
+
   50% {
     box-shadow: 0 0 0 10px transparent;
   }
@@ -335,6 +379,7 @@
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
@@ -345,16 +390,19 @@
   from {
     width: 0;
   }
+
   to {
     width: 100%;
   }
 }
 
 @keyframes blink {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0;
   }
@@ -362,20 +410,24 @@
 
 /* Float Animation */
 @keyframes float {
+
   0%,
   100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-10px);
   }
 }
 
 @keyframes floatRotate {
+
   0%,
   100% {
     transform: translateY(0) rotate(0deg);
   }
+
   50% {
     transform: translateY(-10px) rotate(5deg);
   }
@@ -386,6 +438,7 @@
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(400%);
   }
@@ -397,6 +450,7 @@
     transform: scale(0);
     opacity: 0.5;
   }
+
   100% {
     transform: scale(4);
     opacity: 0;
@@ -408,6 +462,7 @@
   0% {
     stroke-dashoffset: 100;
   }
+
   100% {
     stroke-dashoffset: 0;
   }
@@ -530,12 +585,10 @@
 
 /* Loading */
 .animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--color-bg-subtle) 25%,
-    var(--color-bg-card) 50%,
-    var(--color-bg-subtle) 75%
-  );
+  background: linear-gradient(90deg,
+      var(--color-bg-subtle) 25%,
+      var(--color-bg-card) 50%,
+      var(--color-bg-subtle) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s var(--ease-in-out) infinite;
 }
@@ -728,34 +781,43 @@
    Stagger Animation Helpers
    ============================================ */
 
-.stagger-children > *:nth-child(1) {
+.stagger-children>*:nth-child(1) {
   animation-delay: 0ms;
 }
-.stagger-children > *:nth-child(2) {
+
+.stagger-children>*:nth-child(2) {
   animation-delay: 50ms;
 }
-.stagger-children > *:nth-child(3) {
+
+.stagger-children>*:nth-child(3) {
   animation-delay: 100ms;
 }
-.stagger-children > *:nth-child(4) {
+
+.stagger-children>*:nth-child(4) {
   animation-delay: 150ms;
 }
-.stagger-children > *:nth-child(5) {
+
+.stagger-children>*:nth-child(5) {
   animation-delay: 200ms;
 }
-.stagger-children > *:nth-child(6) {
+
+.stagger-children>*:nth-child(6) {
   animation-delay: 250ms;
 }
-.stagger-children > *:nth-child(7) {
+
+.stagger-children>*:nth-child(7) {
   animation-delay: 300ms;
 }
-.stagger-children > *:nth-child(8) {
+
+.stagger-children>*:nth-child(8) {
   animation-delay: 350ms;
 }
-.stagger-children > *:nth-child(9) {
+
+.stagger-children>*:nth-child(9) {
   animation-delay: 400ms;
 }
-.stagger-children > *:nth-child(10) {
+
+.stagger-children>*:nth-child(10) {
   animation-delay: 450ms;
 }
 
@@ -781,6 +843,7 @@
    ============================================ */
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {

@@ -1,0 +1,157 @@
+/**
+ * 250fps Ultra-Performance Optimizations
+ * 
+ * Targets a 4ms frame budget. Only promotes essential elements to GPU layers.
+ * Avoids wildcard layer promotion (which causes GPU memory exhaustion).
+ * Uses CSS containment aggressively to isolate layout/paint boundaries.
+ */
+
+/* ============================================================
+   CSS CONTAINMENT — Isolate layout boundaries
+   ============================================================ */
+
+/* Main app shell: prevent child layout from affecting ancestors */
+#app {
+    contain: layout style;
+}
+
+.app-body {
+    contain: layout style;
+}
+
+.main-content {
+    contain: layout style;
+}
+
+.main-content-view {
+    contain: layout style;
+}
+
+/* Scrollable containers: isolate scroll paint from parent */
+.messages-container,
+.message-list,
+.chat-messages,
+.sessions-list {
+    contain: layout style;
+    scroll-behavior: auto;
+    /* smooth scrolling kills high-fps */
+}
+
+/* ============================================================
+   GPU LAYER PROMOTION — Surgical, not blanket
+   ============================================================ */
+
+/* Only promote elements that ACTUALLY animate via transform/opacity */
+.modal-overlay,
+.modal-content,
+.toast-item {
+    will-change: opacity;
+}
+
+/* Sidebar width transition needs its own layer */
+.unified-sidebar {
+    will-change: width;
+    contain: layout style;
+}
+
+/* ============================================================
+   ANIMATION PERFORMANCE
+   ============================================================ */
+
+/* Force compositor-only transitions on messages (transform + opacity only) */
+.message-wrapper {
+    transition: opacity 60ms ease-out, transform 60ms ease-out !important;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 80px;
+}
+
+.message-actions {
+    transition: opacity 50ms ease-out !important;
+}
+
+/* ============================================================
+   SCROLL PERFORMANCE
+   ============================================================ */
+
+/* Fixed/sticky elements get containment but NOT blanket will-change */
+.chat-input-container,
+.input-area,
+.top-bar,
+.electron-title-bar {
+    contain: layout style paint;
+}
+
+/* ============================================================
+   IMAGE & SVG PERFORMANCE
+   ============================================================ */
+
+/* Lazy-render off-screen images/SVGs */
+img,
+svg.diagram-svg,
+canvas {
+    content-visibility: auto;
+}
+
+/* Mermaid diagrams - contain but don't over-promote */
+.diagram-output svg,
+.diagram-container svg {
+    contain: layout style;
+}
+
+/* ============================================================
+   MODAL PERFORMANCE
+   ============================================================ */
+
+.modal-overlay {
+    contain: layout style paint;
+}
+
+.modal-content {
+    contain: layout style;
+}
+
+/* ============================================================
+   TEXT RENDERING
+   ============================================================ */
+
+/* Speed over subpixel quality at 250fps */
+.message-bubble,
+.text-block,
+.code-block {
+    text-rendering: optimizeSpeed;
+}
+
+/* ============================================================
+   REDUCE PAINT COMPLEXITY
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+
+    /* Avoid expensive box-shadow repaints on hover during scroll */
+    .message-wrapper:hover {
+        box-shadow: none !important;
+    }
+
+    /* Outline instead of box-shadow for focus (no repaint) */
+    *:focus-visible {
+        outline: 2px solid var(--color-primary, #7c3aed);
+        outline-offset: 2px;
+        box-shadow: none !important;
+    }
+}
+
+/* ============================================================
+   CONTENT VISIBILITY (Virtual Rendering)
+   ============================================================ */
+
+/* Auto-hide off-screen messages for huge chat histories */
+.message-wrapper {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 80px;
+}
+
+/* Off-screen session items */
+.session-item {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 34px;
+}

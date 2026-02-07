@@ -230,11 +230,6 @@ const ROUTE_DEFINITIONS: RouteEntry[] = [
     module: "../features/testing-qa/routes.js",
     priority: "cold",
   },
-  {
-    path: "/api/intent",
-    module: "../features/intent-optimizer/routes.js",
-    priority: "cold",
-  },
 
   // ── Misc (COLD) ──────────────────────────────────────────────────────────
   { path: "/api/expo-test", module: "./expoTest.js", priority: "cold" },

@@ -56,9 +56,9 @@ interface CircuitBreakerState {
 }
 
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
-  maxAttempts: 3,
-  baseDelayMs: 1000,
-  maxDelayMs: 30000,
+  maxAttempts: 2,        // Reduced from 3: fail-fast for streaming
+  baseDelayMs: 200,      // Reduced from 1000: don't wait a full second  
+  maxDelayMs: 10000,     // Reduced from 30000: cap at 10s not 30s
   backoffMultiplier: 2,
   enableJitter: true,
   enableProviderFallback: true,
@@ -67,9 +67,10 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
 const CIRCUIT_BREAKER_THRESHOLD = 5;
 const CIRCUIT_BREAKER_RESET_MS = 60000; // 1 minute
 
-// Provider performance characteristics
+// Provider performance characteristics (fastest → slowest for fallback ordering)
 const PROVIDER_SPEED_RANKING: LLMProvider[] = [
-  "nim", // Fastest and most reliable
+  "groq", // Fastest inference (custom silicon)
+  "nim", // NVIDIA NIM — fast cloud inference
   "kimi", // Fast long-context
   "github-copilot", // Fast for code generation
   "mistral", // Fast European provider

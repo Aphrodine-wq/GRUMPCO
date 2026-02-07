@@ -1,0 +1,41 @@
+{
+    "id": "testing",
+    "name": "Test Generation",
+    "version": "1.0.0",
+    "description": "Automatically generate unit tests, integration tests, and test fixtures for your codebase. Supports Jest, Vitest, Mocha, Pytest, and more.",
+    "category": "quality",
+    "icon": "🧪",
+    "tags": [
+        "testing",
+        "unit-test",
+        "integration",
+        "coverage",
+        "tdd"
+    ],
+    "capabilities": [
+        "test-generation",
+        "test-analysis",
+        "coverage-report"
+    ],
+    "triggers": {
+        "keywords": [
+            "test",
+            "unit test",
+            "write tests",
+            "testing",
+            "coverage",
+            "spec"
+        ],
+        "commands": [
+            "/test",
+            "/generate-tests"
+        ],
+        "fileExtensions": [
+            ".test.ts",
+            ".test.js",
+            ".spec.ts",
+            ".spec.js",
+            ".test.py"
+        ]
+    }
+}

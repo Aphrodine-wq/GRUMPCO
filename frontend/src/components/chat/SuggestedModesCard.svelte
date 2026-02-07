@@ -99,7 +99,7 @@
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 50ms ease-out;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   }
 

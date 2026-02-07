@@ -105,9 +105,9 @@
 
 <style>
   .scroll-nav {
-    position: fixed;
-    right: 24px;
-    bottom: 140px; /* Above the input area */
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -139,7 +139,7 @@
     color: #6b7280;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.15s;
+    transition: all 50ms ease-out;
   }
 
   .scroll-btn:hover {

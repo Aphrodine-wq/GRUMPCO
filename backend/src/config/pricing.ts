@@ -4,7 +4,7 @@
  * Hosted models are optional and billed via credits.
  */
 
-export type TierId = "free" | "pro" | "team" | "enterprise";
+export type TierId = "free" | "starter" | "pro" | "team" | "enterprise";
 
 /** Premium feature flags for gating capabilities */
 export type PremiumFeature =
@@ -50,6 +50,10 @@ export const CREDITS_PER_OPERATION: Record<string, number> = {
   ship: 10,
   codegen: 20,
   swarm_run: 15,
+  // G-CompN1 Model Mix operations (internal billing)
+  grump_fast: 1,      // Kimi K2.5 route
+  grump_balanced: 2,  // Gemini 3 Pro route
+  grump_quality: 4,   // Opus 4.6 route
 };
 
 /** Overage rates for platform usage */
@@ -75,6 +79,7 @@ export const TIERS: Record<TierId, Tier> = {
     apiCallsPerMonth: 10,
     features: [
       "10 credits/month (1 credit = 1 message)",
+      "G-CompN1 Model Mix (auto-routing)",
       "BYOK for model costs",
       "1 seat",
       "1 GB storage",
@@ -89,6 +94,33 @@ export const TIERS: Record<TierId, Tier> = {
     maxConcurrentAgents: 1,
     maxHeartbeats: 3,
   },
+  starter: {
+    id: "starter",
+    name: "Starter",
+    priceMonthlyCents: 2000,
+    priceYearlyCents: 20000,
+    creditsPerMonth: 200,
+    apiCallsPerMonth: 200,
+    features: [
+      "200 credits/month (platform usage)",
+      "G-CompN1 Model Mix (Opus 4.6 + Kimi K2.5 + Gemini 3 Pro)",
+      "BYOK for model costs",
+      "1 seat",
+      "5 GB storage",
+      "Cloud tools access",
+      "Up to 3 agents per swarm",
+      "Email support",
+      "Usage analytics",
+      "Custom skills",
+    ],
+    premiumFeatures: ["cloud_tools"],
+    seats: 1,
+    includedStorageGb: 5,
+    includedComputeMinutes: 120,
+    maxSwarmAgents: 3,
+    maxConcurrentAgents: 2,
+    maxHeartbeats: 5,
+  },
   pro: {
     id: "pro",
     name: "Pro",
@@ -98,6 +130,8 @@ export const TIERS: Record<TierId, Tier> = {
     apiCallsPerMonth: 1_000,
     features: [
       "1,000 credits/month (platform usage)",
+      "G-CompN1 Model Mix (priority routing)",
+      "Anthropic Opus 4.6 via Agent SDK",
       "BYOK for model costs",
       "1 seat",
       "10 GB storage",
@@ -106,6 +140,8 @@ export const TIERS: Record<TierId, Tier> = {
       "Priority support",
       "Usage analytics",
       "Overage billing (storage/compute)",
+      "Advanced skills & workflows",
+      "Session messaging (SMS/WhatsApp)",
     ],
     premiumFeatures: ["cloud_tools", "cicd_tools", "priority_routing"],
     seats: 1,

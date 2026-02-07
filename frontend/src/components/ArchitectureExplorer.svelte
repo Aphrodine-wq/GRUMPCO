@@ -228,11 +228,11 @@
 
     // Features
     {
-      id: 'mock-mode',
-      label: 'Mock Mode',
+      id: 'skills-system',
+      label: 'Skills System',
       type: 'feature',
-      description: 'Zero-config demo mode - no API keys',
-      dependencies: ['ai-core'],
+      description: '20+ built-in skills for code review, testing, docs, and more',
+      dependencies: ['backend'],
       status: 'active',
       x: 800,
       y: 350,
@@ -292,7 +292,7 @@
     { from: 'arch-mode', to: 'backend', type: 'api' },
     { from: 'ship-mode', to: 'frontend', type: 'data' },
     { from: 'ship-mode', to: 'backend', type: 'api' },
-    { from: 'mock-mode', to: 'ai-core', type: 'dep' },
+    { from: 'skills-system', to: 'backend', type: 'dep' },
   ];
 
   const categories = {
@@ -304,7 +304,7 @@
       label: 'External Providers',
       nodes: ['nim', 'openrouter', 'groq', 'ollama', 'pinecone', 'supabase'],
     },
-    features: { label: 'Features', nodes: ['chat', 'arch-mode', 'ship-mode', 'mock-mode'] },
+    features: { label: 'Features', nodes: ['chat', 'arch-mode', 'ship-mode', 'skills-system'] },
   };
 
   function getNodeIcon(type: string) {
@@ -601,8 +601,8 @@
                   <p class="font-medium mb-1">Getting Started</p>
                   <p class="text-gray-600">
                     Click any component to see details. Start with <span
-                      class="font-mono text-pink-500">Mock Mode</span
-                    > for zero-config exploration!
+                      class="font-mono text-pink-500">Chat Mode</span
+                    > to begin using AI-powered development!
                   </p>
                 </div>
               </div>
@@ -692,12 +692,12 @@
                   </button>
                 {/if}
 
-                {#if selectedNode.id === 'mock-mode'}
+                {#if selectedNode.id === 'skills-system'}
                   <div class="p-3 bg-green-50 rounded-lg border border-green-200">
                     <p class="text-sm text-green-800">
-                      <strong>✓ Perfect for beginners!</strong><br />
-                      Run <code class="bg-green-100 px-1 rounded">npm run setup:interactive</code> and
-                      choose "Quick Start" to enable this.
+                      <strong>✓ 20+ built-in skills</strong><br />
+                      Code review, testing, docs, security audit, refactoring, and more. Access via the
+                      Skills screen or <code class="bg-green-100 px-1 rounded">/skill</code> commands.
                     </p>
                   </div>
                 {/if}

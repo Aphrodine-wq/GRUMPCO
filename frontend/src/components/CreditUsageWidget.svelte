@@ -15,7 +15,7 @@
 
   let usage = $state<number | null>(null);
   let limit = $state<number | string | null>(null);
-  let tier = $state<string | null>(null);
+  let _tier = $state<string | null>(null);
   let loading = $state(true);
 
   onMount(async () => {
@@ -24,11 +24,11 @@
       const data = (await res.json()) as BillingMe;
       usage = data.usage ?? 0;
       limit = data.limit ?? null;
-      tier = data.tier ?? null;
+      _tier = data.tier ?? null;
     } catch {
       usage = null;
       limit = null;
-      tier = null;
+      _tier = null;
     } finally {
       loading = false;
     }

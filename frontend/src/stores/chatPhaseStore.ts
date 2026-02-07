@@ -1,5 +1,5 @@
 import { writable, derived } from 'svelte/store';
-import type { Writable, Readable } from 'svelte/store';
+import type { Readable } from 'svelte/store';
 
 export type DesignPhase = 'architecture' | 'prd' | 'plan' | 'code' | 'completed';
 
@@ -82,10 +82,10 @@ function createChatPhaseStore() {
 
   return {
     subscribe,
-    
+
     /** Start a new design workflow */
     startWorkflow(projectDescription: string) {
-      update((state) => {
+      update((_state) => {
         const newState: DesignWorkflowState = {
           ...initialState,
           isActive: true,
@@ -117,7 +117,7 @@ function createChatPhaseStore() {
         const phases: DesignPhase[] = ['architecture', 'prd', 'plan', 'code', 'completed'];
         const currentIndex = phases.indexOf(state.currentPhase);
         const nextPhase = phases[currentIndex + 1] || 'completed';
-        
+
         const newState: DesignWorkflowState = {
           ...state,
           currentPhase: nextPhase,

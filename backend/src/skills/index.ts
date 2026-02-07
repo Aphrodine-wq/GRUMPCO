@@ -98,18 +98,19 @@ class SkillRegistry {
         return;
       }
 
-      // Load skill module
-      const indexPath = path.join(skillPath, "index.js");
-      if (!fs.existsSync(indexPath)) {
-        // Try TypeScript source in development
+      // Load skill module - try .js first, fall back to .ts for dev mode (tsx)
+      let resolvedIndexPath = path.join(skillPath, "index.js");
+      if (!fs.existsSync(resolvedIndexPath)) {
         const tsIndexPath = path.join(skillPath, "index.ts");
-        if (!fs.existsSync(tsIndexPath)) {
+        if (fs.existsSync(tsIndexPath)) {
+          resolvedIndexPath = tsIndexPath;
+        } else {
           logger.warn({ skillPath }, "No index.js or index.ts found");
           return;
         }
       }
 
-      const skillModule = await import(pathToFileURL(indexPath).href);
+      const skillModule = await import(pathToFileURL(resolvedIndexPath).href);
       const skillExport = skillModule.default || skillModule;
 
       // Construct skill object - manifest MUST come after spread to ensure 

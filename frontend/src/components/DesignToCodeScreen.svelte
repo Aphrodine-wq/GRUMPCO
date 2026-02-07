@@ -183,7 +183,7 @@
     reader.readAsDataURL(file);
   }
 
-  function removeImage(index: number) {
+  function _removeImage(index: number) {
     imageFiles = imageFiles.filter((_, i) => i !== index);
     imagePreviews = imagePreviews.filter((_, i) => i !== index);
     if (primaryImageIndex >= imagePreviews.length)

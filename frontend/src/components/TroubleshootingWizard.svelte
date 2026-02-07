@@ -101,7 +101,8 @@
           <ol class="check-list">
             <li><strong>NVIDIA NIM:</strong> NVIDIA_NIM_API_KEY in backend/.env</li>
             <li><strong>OpenRouter:</strong> OPENROUTER_API_KEY</li>
-            <li><strong>Mock:</strong> MOCK_AI_MODE=true to test without keys</li>
+            <li><strong>Local:</strong> Run Ollama locally for offline use (no API key needed)</li>
+            <li><strong>Groq:</strong> GROQ_API_KEY for fast inference</li>
           </ol>
         </section>
       {:else}

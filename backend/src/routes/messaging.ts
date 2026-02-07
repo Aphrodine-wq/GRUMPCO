@@ -279,4 +279,217 @@ router.get("/subscriptions", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/messaging/discord
+ * Discord webhook for bot interactions.
+ * Body: Discord interaction payload or message event from bot.
+ */
+router.post("/discord", async (req: Request, res: Response) => {
+  const token = process.env.DISCORD_BOT_TOKEN;
+  if (!token) {
+    logger.warn("DISCORD_BOT_TOKEN not set");
+    res
+      .status(503)
+      .json({ error: "Discord not configured", type: "config_error" });
+    return;
+  }
+
+  const body = req.body ?? {};
+
+  // Handle Discord interaction verification (type 1 = PING)
+  if (body.type === 1) {
+    res.json({ type: 1 });
+    return;
+  }
+
+  // Handle message-based interactions
+  const channelId = body.channel_id ?? body.channelId;
+  const text =
+    body.content ??
+    body.data?.options?.[0]?.value ??
+    body.message?.content ??
+    "";
+  const userId = body.member?.user?.id ?? body.author?.id ?? body.user?.id;
+
+  if (!channelId || !text) {
+    res.status(200).json({ ok: true });
+    return;
+  }
+
+  const reply = await processMessage(
+    "discord",
+    userId ?? channelId,
+    text.toString().trim() || "(empty)",
+  );
+
+  // Send reply via Discord bot
+  try {
+    const { sendDiscord } = await import(
+      "../services/messagingShipNotifier.js"
+    );
+    await sendDiscord(channelId, reply);
+  } catch (err) {
+    logger.warn({ err }, "Discord send error");
+  }
+
+  res.status(200).json({ ok: true });
+});
+
+/**
+ * POST /api/messaging/slack
+ * Slack Events API webhook for receiving messages.
+ * Handles URL verification challenge and message events.
+ */
+router.post("/slack", async (req: Request, res: Response) => {
+  const body = req.body ?? {};
+
+  // Slack URL verification challenge
+  if (body.type === "url_verification" && body.challenge) {
+    res.status(200).json({ challenge: body.challenge });
+    return;
+  }
+
+  const slackToken =
+    process.env.SLACK_BOT_TOKEN || process.env.SLACK_SIGNING_SECRET;
+  if (!slackToken) {
+    logger.warn("SLACK_BOT_TOKEN not set");
+    res
+      .status(503)
+      .json({ error: "Slack not configured", type: "config_error" });
+    return;
+  }
+
+  // Handle event callbacks
+  if (body.type === "event_callback" && body.event) {
+    const event = body.event;
+
+    // Only process message events (not bot messages)
+    if (
+      event.type === "message" &&
+      !event.bot_id &&
+      !event.subtype &&
+      event.text
+    ) {
+      const userId = event.user;
+      const channelId = event.channel;
+      const text = event.text.toString().trim();
+
+      const reply = await processMessage(
+        "slack",
+        userId ?? channelId,
+        text || "(empty)",
+      );
+
+      // Send reply via Slack
+      try {
+        const { sendSlack } = await import(
+          "../services/messagingShipNotifier.js"
+        );
+        await sendSlack(channelId, reply);
+      } catch (err) {
+        logger.warn({ err }, "Slack send error");
+      }
+    }
+  }
+
+  res.status(200).json({ ok: true });
+});
+
+/**
+ * POST /api/messaging/whatsapp
+ * WhatsApp webhook (via Twilio WhatsApp Business API).
+ * Same as inbound but specifically for WhatsApp messages.
+ */
+router.post("/whatsapp", async (req: Request, res: Response) => {
+  const verification = verifyTwilioWebhook(req);
+  if (!verification.ok) {
+    res.status(403).json({ error: "Invalid webhook secret" });
+    return;
+  }
+
+  const body = req.body ?? {};
+  // WhatsApp messages come via Twilio with whatsapp: prefix
+  let from = (body.From ?? body.from ?? "").toString();
+  const text = (
+    body.Body ??
+    body.body ??
+    ""
+  )
+    .toString()
+    .trim();
+
+  if (!from) {
+    res.status(200).send("");
+    return;
+  }
+
+  // Ensure whatsapp: prefix for routing
+  if (!from.startsWith("whatsapp:")) {
+    from = `whatsapp:${from}`;
+  }
+
+  const reply = await processMessage("twilio", from, text || "(empty)");
+
+  if (reply) {
+    try {
+      await sendTwilio(from, reply);
+    } catch (err) {
+      logger.warn({ err }, "WhatsApp send error");
+    }
+  }
+
+  res.status(200).send("");
+});
+
+/**
+ * GET /api/messaging/channels
+ * Returns which messaging channels are configured and available.
+ */
+router.get("/channels", async (_req: Request, res: Response) => {
+  const channels = [
+    {
+      id: "twilio_sms",
+      name: "SMS (Twilio)",
+      icon: "💬",
+      configured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
+      webhookUrl: "/api/messaging/inbound",
+      description: "Send and receive SMS messages via Twilio",
+    },
+    {
+      id: "whatsapp",
+      name: "WhatsApp",
+      icon: "📱",
+      configured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_WHATSAPP_NUMBER),
+      webhookUrl: "/api/messaging/whatsapp",
+      description: "WhatsApp messaging via Twilio Business API",
+    },
+    {
+      id: "telegram",
+      name: "Telegram",
+      icon: "✈️",
+      configured: !!process.env.TELEGRAM_BOT_TOKEN,
+      webhookUrl: "/api/messaging/telegram",
+      description: "Telegram bot integration",
+    },
+    {
+      id: "discord",
+      name: "Discord",
+      icon: "🎮",
+      configured: !!process.env.DISCORD_BOT_TOKEN,
+      webhookUrl: "/api/messaging/discord",
+      description: "Discord bot for server messaging",
+    },
+    {
+      id: "slack",
+      name: "Slack",
+      icon: "💼",
+      configured: !!(process.env.SLACK_BOT_TOKEN || process.env.SLACK_SIGNING_SECRET),
+      webhookUrl: "/api/messaging/slack",
+      description: "Slack bot integration via Events API",
+    },
+  ];
+
+  res.json({ channels });
+});
+
 export default router;

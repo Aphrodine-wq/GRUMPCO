@@ -104,13 +104,13 @@ export function formatVerdictAsMessage(verdict: any): ContentBlock[] {
 
 **💡 Key Factors**
 Success:
-${verdict.analysis.ml_prediction.success_factors.map((f) => `• ${f}`).join('\n')}
+${verdict.analysis.ml_prediction.success_factors.map((f: string) => `• ${f}`).join('\n')}
 
 Risks:
-${verdict.analysis.ml_prediction.risk_factors.map((f) => `• ${f}`).join('\n')}
+${verdict.analysis.ml_prediction.risk_factors.map((f: string) => `• ${f}`).join('\n')}
 
 **✨ Reasoning**
-${verdict.reasoning.map((r) => `• ${r}`).join('\n')}
+${verdict.reasoning.map((r: string) => `• ${r}`).join('\n')}
 `.trim(),
     },
   ];
@@ -179,17 +179,17 @@ export function injectVerdictIntoChat(
   verdictResponse: ContentBlock[]
 ): Message[] {
   // Add user message
-  const updatedMessages = [
+  const updatedMessages: Message[] = [
     ...messages,
     {
-      role: 'user',
+      role: 'user' as const,
       content: userMessage,
     },
   ];
 
   // Add verdict response
   updatedMessages.push({
-    role: 'assistant',
+    role: 'assistant' as const,
     content: verdictResponse,
   });
 

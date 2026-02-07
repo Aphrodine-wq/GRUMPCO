@@ -44,6 +44,12 @@ export interface ChatStreamEvent {
     output: string;
     success: boolean;
     executionTime?: number;
+    diff?: {
+      filePath: string;
+      beforeContent: string;
+      afterContent: string;
+      changeType: 'created' | 'modified' | 'deleted';
+    };
   };
   /** Thinking content for extended thinking */
   thinking?: string;
@@ -73,6 +79,10 @@ export interface ChatStreamOptions {
   onEvent?: (event: ChatStreamEvent) => void;
   /** Base64 or data URL of image attached to the last user message (e.g. for NIM vision) */
   lastUserMessageImage?: string | null;
+  /** Array of enabled skill IDs to activate for this chat request */
+  enabledSkillIds?: string[];
+  /** User memory context to provide to the AI (from Memory page) */
+  memoryContext?: string[];
 }
 
 /**
@@ -152,6 +162,8 @@ export async function streamChat(
     signal,
     onEvent,
     lastUserMessageImage,
+    enabledSkillIds,
+    memoryContext,
   } = options;
 
   const apiMessages = prepareMessagesForApi(messages, { provider, lastUserMessageImage });
@@ -168,6 +180,8 @@ export async function streamChat(
   if (workspaceRoot) body.workspaceRoot = workspaceRoot;
   if (provider) body.provider = provider;
   if (modelId) body.modelId = modelId;
+  if (enabledSkillIds && enabledSkillIds.length > 0) body.enabledSkillIds = enabledSkillIds;
+  if (memoryContext && memoryContext.length > 0) body.memoryContext = memoryContext;
 
   const response = await fetchApi('/api/chat/stream', {
     method: 'POST',
@@ -247,7 +261,8 @@ function processStreamEvent(
     } else {
       blocks.push({ type: 'text', content: event.text });
     }
-    onEvent?.({ type: 'text', text: event.text, blocks: [...blocks] });
+    // Pass live reference instead of copying — avoids O(n²) for long streams
+    onEvent?.({ type: 'text', text: event.text, blocks });
   } else if (type === 'tool_call' && event.id && event.name) {
     const toolCall = {
       id: event.id as string,
@@ -261,7 +276,7 @@ function processStreamEvent(
       input: toolCall.input,
       status: 'executing',
     });
-    onEvent?.({ type: 'tool_call', toolCall, blocks: [...blocks] });
+    onEvent?.({ type: 'tool_call', toolCall, blocks });
   } else if (type === 'tool_result' && event.id) {
     const toolResult = {
       id: event.id as string,
@@ -269,6 +284,7 @@ function processStreamEvent(
       output: (event.output as string) ?? '',
       success: (event.success as boolean) ?? false,
       executionTime: event.executionTime as number | undefined,
+      diff: event.diff as { filePath: string; beforeContent: string; afterContent: string; changeType: 'created' | 'modified' | 'deleted' } | undefined,
     };
     blocks.push({
       type: 'tool_result',
@@ -277,13 +293,23 @@ function processStreamEvent(
       output: toolResult.output,
       success: toolResult.success,
       executionTime: toolResult.executionTime ?? 0,
+      diff: toolResult.diff,
     });
-    onEvent?.({ type: 'tool_result', toolResult, blocks: [...blocks] });
+    onEvent?.({ type: 'tool_result', toolResult, blocks });
   } else if (type === 'thinking' && typeof event.thinking === 'string') {
-    onEvent?.({ type: 'thinking', thinking: event.thinking, blocks: [...blocks] });
+    onEvent?.({ type: 'thinking', thinking: event.thinking, blocks });
   } else if (type === 'error') {
     const errorMessage = (event.message as string) ?? 'Unknown error';
-    onEvent?.({ type: 'error', error: errorMessage, blocks: [...blocks] });
+    onEvent?.({ type: 'error', error: errorMessage, blocks });
+  }
+
+  // Handle mode suggestion from backend
+  if (type === 'suggest_mode' && event.mode) {
+    onEvent?.({
+      type: 'text',
+      suggestChatMode: event.mode as 'design' | 'code',
+      blocks,
+    });
   }
 }
 

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "a4ec577a-9f0c-4dd0-a995-cbc123f96a00",
+    "projectName": "g",
+    "path": "New folder (2)\\g",
+    "destination": "local",
+    "status": "mermaid_ready",
+    "completedSectionIds": [],
+    "defaultProvider": "ollama",
+    "defaultModelId": "gpt-oss:20b-cloud",
+    "updatedAt": "2026-02-07T05:21:29.979Z",
+    "mermaid": "C4Container\ntitle Calorie Tracker App - Windows PC Architecture\n\nPerson(User, \"Health Conscious User\", \"Wants to track daily food intake and manage nutrition goals\")\n\nSystem_Boundary(windowsApp, \"Windows Calorie Tracker Application\") {\n    Container(uiLayer, \"Desktop UI Layer\", \"WPF / WinUI 3 / .NET MAUI\", \"Main window, food search interface, daily log view, progress charts, user settings\")\n    \n    Container(businessLogic, \"Business Logic Layer\", \"C# .NET\", \"Calorie calculations, macro tracking, goal management, data validation, report generation\")\n    \n    Container(localCache, \"Local Data Cache\", \"SQLite\", \"Offline food database, user history, daily logs, cached API responses\")\n    \n    Container(syncEngine, \"Sync Engine\", \"C# .NET\", \"Background synchronization, conflict resolution, offline queue management\")\n}\n\nSystem_Ext(nutritionApi, \"Nutrition Database API\", \"USDA FoodData Central / Edamam / Nutritionix\", \"Comprehensive food nutrition data, barcode lookup\")\nSystem_Ext(cloudStorage, \"Cloud Backup Service\", \"Azure Blob / AWS S3 / OneDrive API\", \"User data backup, cross-device synchronization\")\nSystem_Ext(authService, \"Authentication Service\", \"Azure AD / Auth0 / Firebase Auth\", \"User authentication, secure token management\")\n\nRel(User, uiLayer, \"Enters food items, views stats, sets goals\")\nRel(uiLayer, businessLogic, \"Routes user actions and data\")\nRel(businessLogic, localCache, \"Reads/Writes user data and food history\")\nRel(businessLogic, syncEngine, \"Triggers sync operations\")\nRel(syncEngine, cloudStorage, \"Backs up encrypted user data\", \"HTTPS/SSL\")\nRel(syncEngine, authService, \"Authenticates sync requests\", \"OAuth 2.0\")\nRel(businessLogic, nutritionApi, \"Searches food database, gets nutrition info\", \"REST API / JSON\")\nRel(localCache, nutritionApi, \"Caches frequently accessed items\")\n\nUpdateLayoutConfig($c4ShapeInRow=\"3\", $c4BoundaryInRow=\"1\")"
+  }
+]

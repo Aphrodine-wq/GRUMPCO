@@ -248,6 +248,25 @@
         {#each parseMessageContent(message.content) as block, bIdx}
           {#if block.type === 'text'}
             <div class="text-block">{block.content}</div>
+          {:else if block.type === 'code'}
+            <div class="code-card">
+              <div class="code-header">
+                <span class="code-lang">{block.language || 'code'}</span>
+                <button
+                  type="button"
+                  class="code-copy-btn"
+                  onclick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(block.code);
+                      showToast('Copied!', 'success', 1500);
+                    } catch {
+                      showToast('Failed to copy', 'error');
+                    }
+                  }}>Copy</button
+                >
+              </div>
+              <pre class="code-content"><code>{block.code}</code></pre>
+            </div>
           {:else if block.type === 'mermaid'}
             <div class="diagram-card" use:handleDiagramRef={bIdx}>
               <div class="diagram-header">
@@ -272,6 +291,25 @@
         {#each message.content as block}
           {#if block.type === 'text'}
             <div class="text-block">{block.content}</div>
+          {:else if block.type === 'code'}
+            <div class="code-card">
+              <div class="code-header">
+                <span class="code-lang">{block.language || 'code'}</span>
+                <button
+                  type="button"
+                  class="code-copy-btn"
+                  onclick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(block.code);
+                      showToast('Copied!', 'success', 1500);
+                    } catch {
+                      showToast('Failed to copy', 'error');
+                    }
+                  }}>Copy</button
+                >
+              </div>
+              <pre class="code-content"><code>{block.code}</code></pre>
+            </div>
           {:else if block.type === 'context'}
             <details class="context-block">
               <summary>Context: {block.content.mode} · {block.content.toolCount ?? 0} tools</summary
@@ -289,28 +327,55 @@
             <ToolCallCard toolCall={block} />
           {:else if block.type === 'tool_result'}
             <ToolResultCard toolResult={block} />
+          {:else if block.type === 'mermaid'}
+            <div class="diagram-card">
+              <div class="diagram-header">
+                <Badge variant="info">Architecture</Badge>
+                <Button variant="ghost" size="sm" onclick={() => onExportSvg?.(index, 0)}>
+                  Export
+                </Button>
+              </div>
+              <DiagramRenderer
+                code={block.content}
+                on:generate-code={(e) =>
+                  onGenerateCode?.({
+                    mermaidCode: e.detail.mermaidCode,
+                    framework: 'react',
+                    language: 'typescript',
+                  })}
+              />
+            </div>
           {:else if block.type === 'phase_result'}
             {#if block.phase === 'architecture' && block.data}
               <ArchitectureResult
-                data={block.data}
+                data={block.data as { mermaidCode: string; description: string }}
                 onApprove={() => handlePhaseApprove('architecture')}
                 onRequestChanges={(feedback) => handlePhaseRequestChanges('architecture', feedback)}
               />
             {:else if block.phase === 'prd' && block.data}
               <PRDResult
-                data={block.data}
+                data={block.data as { content: string; summary: string }}
                 onApprove={() => handlePhaseApprove('prd')}
                 onRequestChanges={(feedback) => handlePhaseRequestChanges('prd', feedback)}
               />
             {:else if block.phase === 'plan' && block.data}
               <PlanResult
-                data={block.data}
+                data={block.data as {
+                  tasks: {
+                    id: string;
+                    title: string;
+                    description: string;
+                    status: 'completed' | 'pending' | 'in-progress';
+                  }[];
+                }}
                 onApprove={() => handlePhaseApprove('plan')}
                 onRequestChanges={(feedback) => handlePhaseRequestChanges('plan', feedback)}
               />
             {:else if block.phase === 'code' && block.data}
               <CodeResult
-                data={block.data}
+                data={block.data as {
+                  files: { path: string; content: string; language: string }[];
+                }}
                 onApprove={() => handlePhaseApprove('code')}
                 onRequestChanges={(feedback) => handlePhaseRequestChanges('code', feedback)}
               />
@@ -451,8 +516,10 @@
     gap: 0.75rem;
     padding: 1rem 1.5rem;
     border-radius: 0.75rem;
-    transition: background-color 0.15s;
     position: relative;
+    contain: layout style;
+    content-visibility: auto;
+    contain-intrinsic-size: 0 80px;
   }
 
   .message-wrapper:hover {
@@ -545,6 +612,8 @@
 
   .message-time {
     color: var(--color-text-muted);
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 0.6875rem;
   }
 
   .model-badge {
@@ -558,7 +627,7 @@
     font-size: 0.6875rem;
     color: var(--color-primary, #7c3aed);
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 50ms ease-out;
   }
 
   .model-badge:hover {
@@ -602,14 +671,21 @@
 
   /* Message bubble */
   .message-bubble {
-    font-size: 0.9375rem;
-    line-height: 1.6;
+    font-size: 0.875rem;
+    line-height: 1.55;
     color: var(--color-text);
     white-space: pre-wrap;
     word-break: break-word;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    font-family:
+      'Inter',
+      -apple-system,
+      system-ui,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeSpeed;
   }
 
   .message-wrapper.user .message-bubble {
@@ -621,12 +697,91 @@
   }
 
   .message-wrapper.assistant .message-bubble {
-    background: transparent;
-    padding: 0.25rem 0;
+    background: rgba(0, 0, 0, 0.03);
+    padding: 0.625rem 0.875rem;
+    border-left: 3px solid var(--color-primary, #7c3aed);
+    border-radius: 0 0.5rem 0.5rem 0;
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    letter-spacing: -0.01em;
+  }
+
+  :global(.dark) .message-wrapper.assistant .message-bubble {
+    background: rgba(255, 255, 255, 0.03);
   }
 
   .text-block {
     margin: 0;
+    letter-spacing: -0.008em;
+  }
+
+  /* Code blocks */
+  .code-card {
+    background: #1e1e2e;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    margin: 0.25rem 0;
+    font-size: 0.8125rem;
+  }
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.375rem 0.75rem;
+    background: #181825;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .code-lang {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #a6adc8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .code-copy-btn {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #a6adc8;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 50ms ease-out;
+  }
+  .code-copy-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #cdd6f4;
+  }
+  .code-content {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    color: #cdd6f4;
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    white-space: pre;
+    tab-size: 2;
+  }
+  .code-content code {
+    font-family: inherit;
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+
+  /* Inline code in text blocks */
+  .text-block :global(code) {
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 0.8125em;
+    padding: 0.125em 0.3em;
+    background: rgba(124, 58, 237, 0.06);
+    border-radius: 0.25rem;
+    color: var(--color-primary, #7c3aed);
   }
 
   /* Diagram card */
@@ -690,7 +845,9 @@
     margin-top: 0.375rem;
     opacity: 0;
     transform: translateY(-4px);
-    transition: all 0.15s;
+    transition:
+      opacity 15ms ease-out,
+      transform 15ms ease-out;
     pointer-events: none;
   }
 
@@ -716,7 +873,6 @@
     border-radius: 0.375rem;
     color: var(--color-text-muted);
     cursor: pointer;
-    transition: all 0.15s;
   }
 
   .action-btn:hover {

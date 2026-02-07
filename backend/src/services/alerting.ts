@@ -60,12 +60,12 @@ const DEFAULT_CONFIG: AlertConfig = {
   },
   performanceDegradation: {
     enabled: true,
-    p95ThresholdMs: 5000, // 5 seconds
+    p95ThresholdMs: 15000, // 15 seconds (AI inference is slow)
   },
   databaseFailure: true,
   highMemoryUsage: {
     enabled: true,
-    threshold: 85, // 85%
+    threshold: 92, // 92% (Node GC runs at high % on small heaps)
   },
 };
 
@@ -306,6 +306,15 @@ class AlertingService {
     const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
     const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
     const heapPercentage = (heapUsedMB / heapTotalMB) * 100;
+
+    // Skip alerting when total heap is small (< 200 MB).
+    // V8 naturally runs at 90%+ utilization on small heaps because
+    // the GC only expands the heap when it truly needs more room.
+    // A 50 MB / 54 MB heap (93%) is normal — it is NOT memory pressure.
+    const MIN_HEAP_TOTAL_MB = 200;
+    if (heapTotalMB < MIN_HEAP_TOTAL_MB) {
+      return;
+    }
 
     if (heapPercentage > this.config.highMemoryUsage.threshold) {
       await this.sendAlert({

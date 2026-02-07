@@ -5,7 +5,268 @@
   import { showToast } from '../stores/toastStore';
   import { Button, Card, Badge, Modal } from '../lib/design-system';
   import type { McpServerConfig } from '../types/settings';
-  import { Plus, Trash2, Settings2, Plug2, Terminal, Globe } from 'lucide-svelte';
+  import { Plus, Trash2, Settings2, Plug2, Terminal, Globe, Download, Check } from 'lucide-svelte';
+
+  // Built-in MCP server directory
+  interface McpDirectoryEntry {
+    id: string;
+    name: string;
+    description: string;
+    command: string;
+    args?: string[];
+    category: string;
+    icon: string; // SVG path data
+    color: string; // icon accent color
+  }
+
+  // SVG icon paths (Lucide-style 24x24 viewbox)
+  const ICONS = {
+    folder: 'M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z',
+    github:
+      'M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z',
+    database:
+      'M12 2C7.582 2 4 3.79 4 6v12c0 2.21 3.582 4 8 4s8-1.79 8-4V6c0-2.21-3.582-4-8-4zM4 9c0 2.21 3.582 4 8 4s8-1.79 8-4M4 14c0 2.21 3.582 4 8 4s8-1.79 8-4',
+    search: 'M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35',
+    brain:
+      'M12 2a7 7 0 00-5.2 2.3A6.98 6.98 0 004 9c0 1.8.7 3.4 1.8 4.7L12 22l6.2-8.3A6.98 6.98 0 0020 9a6.98 6.98 0 00-2.8-4.7A7 7 0 0012 2z',
+    bot: 'M12 8V4H8M12 8a4 4 0 00-4 4v4a4 4 0 004 4h0a4 4 0 004-4v-4a4 4 0 00-4-4zM9 13h.01M15 13h.01',
+    messageSquare: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z',
+    mapPin: 'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z M12 7a3 3 0 100 6 3 3 0 000-6z',
+    globe:
+      'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z',
+    hardDrive:
+      'M22 12H2M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11zM6 16h.01M10 16h.01',
+    lightbulb:
+      'M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17a1 1 0 001 1h6a1 1 0 001-1v-2.3A7 7 0 0012 2z',
+    bell: 'M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0',
+    flask:
+      'M9 3h6M10 9V3M14 9V3M5.243 17l3.07-5.386A2 2 0 009 10V3M15 3v7a2 2 0 00.687 1.614L18.757 17a2 2 0 01-.557 3.261l-.137.055a10.96 10.96 0 01-12.126 0l-.137-.055A2 2 0 015.243 17z',
+    gitBranch:
+      'M6 3v12M18 9a3 3 0 100-6 3 3 0 000 6zM6 21a3 3 0 100-6 3 3 0 000 6zM18 9a9 9 0 01-9 9',
+  };
+
+  const MCP_DIRECTORY: McpDirectoryEntry[] = [
+    {
+      id: 'filesystem',
+      name: 'Filesystem',
+      description: 'Read, write, and manage files on your local filesystem',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-filesystem', '.'],
+      category: 'Core',
+      icon: ICONS.folder,
+      color: '#f59e0b',
+    },
+    {
+      id: 'github',
+      name: 'GitHub',
+      description: 'Manage repos, issues, PRs, and code search via the GitHub API',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-github'],
+      category: 'Development',
+      icon: ICONS.github,
+      color: '#e5e7eb',
+    },
+    {
+      id: 'postgres',
+      name: 'PostgreSQL',
+      description: 'Query and manage PostgreSQL databases with read/write access',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-postgres'],
+      category: 'Database',
+      icon: ICONS.database,
+      color: '#3b82f6',
+    },
+    {
+      id: 'brave-search',
+      name: 'Brave Search',
+      description: 'Search the web using Brave Search API for real-time information',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-brave-search'],
+      category: 'Search',
+      icon: ICONS.search,
+      color: '#f97316',
+    },
+    {
+      id: 'memory',
+      name: 'Memory',
+      description: 'Persistent knowledge graph for storing and retrieving info across sessions',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-memory'],
+      category: 'Core',
+      icon: ICONS.brain,
+      color: '#ec4899',
+    },
+    {
+      id: 'puppeteer',
+      name: 'Puppeteer',
+      description: 'Browser automation, screenshots, and web scraping via headless Chrome',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-puppeteer'],
+      category: 'Automation',
+      icon: ICONS.bot,
+      color: '#10b981',
+    },
+    {
+      id: 'slack',
+      name: 'Slack',
+      description: 'Send messages, manage channels, and interact with Slack workspaces',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-slack'],
+      category: 'Communication',
+      icon: ICONS.messageSquare,
+      color: '#6366f1',
+    },
+    {
+      id: 'google-maps',
+      name: 'Google Maps',
+      description: 'Geocoding, directions, place search, and distance calculations',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-google-maps'],
+      category: 'Location',
+      icon: ICONS.mapPin,
+      color: '#ef4444',
+    },
+    {
+      id: 'fetch',
+      name: 'Fetch',
+      description: 'Make HTTP requests and fetch content from any URL or web API',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-fetch'],
+      category: 'Core',
+      icon: ICONS.globe,
+      color: '#0ea5e9',
+    },
+    {
+      id: 'sqlite',
+      name: 'SQLite',
+      description: 'Query and manage local SQLite databases with full SQL support',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-sqlite'],
+      category: 'Database',
+      icon: ICONS.hardDrive,
+      color: '#8b5cf6',
+    },
+    {
+      id: 'sequential-thinking',
+      name: 'Sequential Thinking',
+      description: 'Dynamic, reflective problem-solving through structured chain-of-thought',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-sequential-thinking'],
+      category: 'Reasoning',
+      icon: ICONS.lightbulb,
+      color: '#eab308',
+    },
+    {
+      id: 'sentry',
+      name: 'Sentry',
+      description: 'Monitor errors, performance issues, and application health via Sentry',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-sentry'],
+      category: 'Monitoring',
+      icon: ICONS.bell,
+      color: '#f43f5e',
+    },
+    {
+      id: 'everything',
+      name: 'Everything',
+      description: 'Reference MCP server with prompts, resources, and tools for testing',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-everything'],
+      category: 'Development',
+      icon: ICONS.flask,
+      color: '#14b8a6',
+    },
+    {
+      id: 'gitlab',
+      name: 'GitLab',
+      description: 'Manage GitLab repos, merge requests, issues, and pipelines',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-gitlab'],
+      category: 'Development',
+      icon: ICONS.gitBranch,
+      color: '#f97316',
+    },
+    {
+      id: 'redis',
+      name: 'Redis',
+      description: 'Connect to Redis for caching, pub/sub, and key-value operations',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-redis'],
+      category: 'Database',
+      icon: ICONS.database,
+      color: '#dc2626',
+    },
+    {
+      id: 'mongodb',
+      name: 'MongoDB',
+      description: 'Query and manage MongoDB collections and documents',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-mongodb'],
+      category: 'Database',
+      icon: ICONS.database,
+      color: '#16a34a',
+    },
+    {
+      id: 'docker',
+      name: 'Docker',
+      description: 'Manage Docker containers, images, volumes, and networks',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-docker'],
+      category: 'Infrastructure',
+      icon: ICONS.hardDrive,
+      color: '#2563eb',
+    },
+    {
+      id: 'kubernetes',
+      name: 'Kubernetes',
+      description: 'Interact with Kubernetes clusters, pods, deployments, and services',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-kubernetes'],
+      category: 'Infrastructure',
+      icon: ICONS.globe,
+      color: '#3b82f6',
+    },
+    {
+      id: 'aws',
+      name: 'AWS',
+      description: 'Manage AWS services including S3, Lambda, EC2, and CloudFormation',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-aws'],
+      category: 'Cloud',
+      icon: ICONS.globe,
+      color: '#f59e0b',
+    },
+    {
+      id: 'notion',
+      name: 'Notion',
+      description: 'Search, read, and create pages and databases in Notion workspaces',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-notion'],
+      category: 'Productivity',
+      icon: ICONS.lightbulb,
+      color: '#1f2937',
+    },
+    {
+      id: 'linear',
+      name: 'Linear',
+      description: 'Manage Linear issues, projects, teams, and workflow automations',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-linear'],
+      category: 'Productivity',
+      icon: ICONS.lightbulb,
+      color: '#5e6ad2',
+    },
+    {
+      id: 'cloudflare',
+      name: 'Cloudflare',
+      description: 'Manage Cloudflare Workers, KV storage, D1 databases, and DNS',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-cloudflare'],
+      category: 'Cloud',
+      icon: ICONS.globe,
+      color: '#f48120',
+    },
+  ];
 
   let servers = $state<McpServerConfig[]>([]);
   let showAddModal = $state(false);
@@ -130,13 +391,17 @@
   }
 
   async function removeServer(id: string) {
-    if (!confirm('Remove this MCP server? G-Agent will no longer use its tools.')) return;
     const current = get(settingsStore);
     const existing = current?.mcp?.servers ?? [];
     const next = existing.filter((s) => s.id !== id);
-    const ok = await settingsStore.save({ mcp: { servers: next } });
-    if (ok) showToast('MCP server removed', 'success');
-    else showToast('Failed to remove', 'error');
+    saving = true;
+    try {
+      const ok = await settingsStore.save({ mcp: { servers: next } });
+      if (ok) showToast('MCP server removed', 'success');
+      else showToast('Failed to remove', 'error');
+    } finally {
+      saving = false;
+    }
   }
 
   async function toggleEnabled(server: McpServerConfig) {
@@ -148,6 +413,36 @@
     const ok = await settingsStore.save({ mcp: { servers: next } });
     if (ok) showToast(server.enabled !== false ? 'MCP disabled' : 'MCP enabled', 'success');
     else showToast('Failed to update', 'error');
+  }
+
+  function isDirectoryServerAdded(dirId: string): boolean {
+    return servers.some((s) => s.name.toLowerCase() === dirId || s.id.includes(dirId));
+  }
+
+  async function addFromDirectory(entry: McpDirectoryEntry) {
+    saving = true;
+    try {
+      const current = get(settingsStore);
+      const existing = current?.mcp?.servers ?? [];
+      const newServer: McpServerConfig = {
+        id: `mcp_${entry.id}_${Date.now()}`,
+        name: entry.name,
+        enabled: true,
+        command: entry.command,
+        args: entry.args,
+      };
+      const next = [...existing, newServer];
+      const ok = await settingsStore.save({ mcp: { servers: next } });
+      if (ok) {
+        showToast(`${entry.name} MCP server added`, 'success');
+      } else {
+        showToast('Failed to add server', 'error');
+      }
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Failed to add', 'error');
+    } finally {
+      saving = false;
+    }
   }
 </script>
 
@@ -214,6 +509,55 @@
       {/each}
     </div>
   {/if}
+
+  <!-- Built-in MCP Directory -->
+  <div class="mcp-directory-section">
+    <h2 class="mcp-section-title">MCP Server Directory</h2>
+    <p class="mcp-directory-desc">
+      Popular MCP servers you can add with one click. Requires Node.js/npx installed.
+    </p>
+    <div class="mcp-directory-grid">
+      {#each MCP_DIRECTORY as entry (entry.id)}
+        {@const isAdded = isDirectoryServerAdded(entry.id)}
+        <div class="mcp-directory-card" class:added={isAdded}>
+          <div class="mcp-dir-icon" style="background: {entry.color}15; color: {entry.color}">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d={entry.icon} />
+            </svg>
+          </div>
+          <div class="mcp-dir-info">
+            <span class="mcp-dir-name">{entry.name}</span>
+            <span class="mcp-dir-category">{entry.category}</span>
+          </div>
+          <p class="mcp-dir-desc">{entry.description}</p>
+          <button
+            type="button"
+            class="mcp-dir-add-btn"
+            class:added={isAdded}
+            disabled={isAdded || saving}
+            onclick={() => addFromDirectory(entry)}
+          >
+            {#if isAdded}
+              <Check size={14} />
+              Added
+            {:else}
+              <Download size={14} />
+              Add
+            {/if}
+          </button>
+        </div>
+      {/each}
+    </div>
+  </div>
 </div>
 
 <Modal
@@ -552,5 +896,119 @@
     margin-top: 1.25rem;
     padding-top: 1rem;
     border-top: 1px solid var(--color-border-light, #f3e8ff);
+  }
+
+  /* MCP Directory */
+  .mcp-directory-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border, #e9d5ff);
+  }
+
+  .mcp-directory-desc {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #6b7280);
+    margin: 0.35rem 0 1rem;
+    line-height: 1.5;
+  }
+
+  .mcp-directory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .mcp-directory-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border, #e9d5ff);
+    border-radius: 12px;
+    background: var(--color-bg-subtle, #f5f3ff);
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+
+  .mcp-directory-card:hover:not(.added) {
+    border-color: var(--color-primary, #7c3aed);
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.1);
+  }
+
+  .mcp-directory-card.added {
+    opacity: 0.7;
+    border-style: dashed;
+  }
+
+  .mcp-dir-icon {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .mcp-dir-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .mcp-dir-name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--color-text, #1f1147);
+  }
+
+  .mcp-dir-category {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--color-primary, #7c3aed);
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
+    padding: 0.125rem 0.5rem;
+    border-radius: 10px;
+  }
+
+  .mcp-dir-desc {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #6b7280);
+    line-height: 1.4;
+    margin: 0;
+    flex: 1;
+  }
+
+  .mcp-dir-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    align-self: flex-start;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border: 1px solid var(--color-primary, #7c3aed);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-primary, #7c3aed);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .mcp-dir-add-btn:hover:not(:disabled) {
+    background: var(--color-primary, #7c3aed);
+    color: white;
+  }
+
+  .mcp-dir-add-btn.added {
+    border-color: var(--color-success, #059669);
+    color: var(--color-success, #059669);
+    cursor: default;
+  }
+
+  .mcp-dir-add-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 </style>

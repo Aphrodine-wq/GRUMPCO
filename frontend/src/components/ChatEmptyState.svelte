@@ -4,7 +4,6 @@
   import { tutorialStore, type QuickStartTemplate } from '../stores/tutorialStore';
   import { chatModeStore } from '../stores/chatModeStore';
   import { setCurrentView } from '../stores/uiStore';
-  import { showToast } from '../stores/toastStore';
   import {
     Rocket,
     Zap,

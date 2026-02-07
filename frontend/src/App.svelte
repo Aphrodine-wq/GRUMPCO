@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fade } from 'svelte/transition';
+
   import ChatInterface from './components/RefactoredChatInterface.svelte';
   import { UnifiedSidebar } from './components/sidebar';
   import Toast from './components/Toast.svelte';
@@ -72,11 +72,7 @@
   );
 
   let isMobile = $state(false);
-  let densityValue = $state<'comfortable' | 'compact'>('comfortable');
-
-  $effect(() => {
-    densityValue = get(density);
-  });
+  let densityValue = $derived($density);
 
   // One-time tip after user reaches main chat (onboarding complete)
   $effect(() => {
@@ -125,12 +121,24 @@
         blue: '#2563eb',
         green: '#059669',
         amber: '#d97706',
+        rose: '#e11d48',
+        teal: '#0d9488',
+        indigo: '#4f46e5',
+        orange: '#ea580c',
+        cyan: '#0891b2',
+        slate: '#475569',
       };
       const accentHover: Record<string, string> = {
         purple: '#6d28d9',
         blue: '#1d4ed8',
         green: '#047857',
         amber: '#b45309',
+        rose: '#be123c',
+        teal: '#0f766e',
+        indigo: '#4338ca',
+        orange: '#c2410c',
+        cyan: '#0e7490',
+        slate: '#334155',
       };
       const fontScales: Record<string, string> = { small: '13px', medium: '14px', large: '15px' };
       const a = localStorage.getItem('g-rump-accent');
@@ -296,7 +304,7 @@
 
     <div class="main-content" class:full-width={isFullWidthView}>
       {#key $currentView}
-        <div class="main-content-view" transition:fade={{ duration: 200 }}>
+        <div class="main-content-view">
           {#if $currentView === 'settings'}
             <SettingsScreen
               onBack={() => setCurrentView('chat')}
@@ -414,9 +422,10 @@
     padding-top: 4px;
     padding-bottom: 4px;
   }
-  .app[data-density='compact'] :global(.sidebar-nav-item) {
+  .app[data-density='compact'] :global(.nav-item) {
     padding-top: 0.35rem;
     padding-bottom: 0.35rem;
+    height: 36px;
   }
 
   /* Ensure background fills the "void" outside the app on large screens; apply UI font size */

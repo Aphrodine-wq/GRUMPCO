@@ -33,19 +33,19 @@
     <span class="progress-title">Design Workflow</span>
     <span class="progress-percentage">{Math.round(progress)}%</span>
   </div>
-  
+
   <div class="progress-track">
-    <div 
-      class="progress-fill" 
-      style="width: {progress}%"
-      class:completed={isCompleted}
-    ></div>
+    <div class="progress-fill" style="width: {progress}%" class:completed={isCompleted}></div>
   </div>
 
   <div class="phases">
     {#each phases as phase, index}
       {@const status = getPhaseStatus(phase.id)}
-      <div class="phase" class:completed={status === 'completed'} class:active={status === 'active'}>
+      <div
+        class="phase"
+        class:completed={status === 'completed'}
+        class:active={status === 'active'}
+      >
         <div class="phase-indicator">
           {#if status === 'completed'}
             <Check size={14} strokeWidth={3} />
@@ -104,7 +104,7 @@
     height: 100%;
     background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
     border-radius: 2px;
-    transition: width 300ms ease;
+    transition: width 80ms ease-out;
   }
 
   .progress-fill.completed {
@@ -133,7 +133,7 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 6px;
-    transition: all 200ms ease;
+    transition: all 50ms ease-out;
   }
 
   .phase:not(.completed):not(.active) .phase-indicator {
@@ -156,7 +156,7 @@
     font-weight: 500;
     color: var(--color-text-muted);
     text-align: center;
-    transition: color 200ms ease;
+    transition: color 50ms ease-out;
   }
 
   .phase.active .phase-label {

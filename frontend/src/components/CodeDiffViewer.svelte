@@ -26,15 +26,15 @@
   let currentChangeIndex = $state(0);
   let lineRefs: Record<number, HTMLElement> = $state({});
   let jumpNavVisible = $state(false);
-  let isLoading = $state(true);
+  let _isLoading = $state(true);
 
   // Load diff data asynchronously
   async function loadDiffData() {
-    isLoading = true;
+    _isLoading = true;
     try {
       const [lines, diffSummary] = await Promise.all([
         computeLineDiff(diff.beforeContent, diff.afterContent),
-        formatDiffSummary(diff)
+        formatDiffSummary(diff),
       ]);
       diffLines = lines;
       summary = diffSummary;
@@ -42,7 +42,7 @@
     } catch (error) {
       console.error('Failed to load diff data:', error);
     } finally {
-      isLoading = false;
+      _isLoading = false;
     }
   }
 

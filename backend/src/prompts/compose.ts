@@ -31,6 +31,9 @@ function rulesBlock(): string {
 - When using tools, paths are relative to the workspace root.
 - Explain briefly what you did after tool use.
 - If the request is ambiguous, ask one short clarifying question or pick a sensible default and say so.
+- ALWAYS use tools (file_write, file_edit, bash_execute) to create and modify code. Never output code only in text — create real files.
+- When creating files, use file_write with the complete file content. When editing, use file_edit for targeted changes.
+- After making code changes, verify correctness by running builds or tests when possible.
 ${CLAUDE_CODE_QUALITY_BLOCK.trim()}
 </rules>`;
 }

@@ -88,23 +88,19 @@ router.get("/tree", async (req: Request, res: Response): Promise<void> => {
     const base = process.env.WORKSPACE_BASE
       ? path.resolve(process.env.WORKSPACE_BASE)
       : process.cwd();
-    const requestedDir = !rawPath
-      ? base
-      : path.isAbsolute(rawPath)
-        ? path.normalize(rawPath)
-        : path.resolve(base, rawPath);
+
+    let requestedDir: string;
+
+    if (!rawPath) {
+      requestedDir = base;
+    } else if (path.isAbsolute(rawPath)) {
+      // Allow absolute paths — this is a local desktop app; users set workspace paths
+      requestedDir = path.normalize(rawPath);
+    } else {
+      requestedDir = path.resolve(base, rawPath);
+    }
 
     const normalized = path.normalize(requestedDir);
-    const relative = path.relative(base, normalized);
-    if (relative.startsWith("..") || path.isAbsolute(relative)) {
-      sendErrorResponse(
-        res,
-        ErrorCode.FORBIDDEN,
-        "Path not under workspace base",
-        {},
-      );
-      return;
-    }
 
     let stat;
     try {

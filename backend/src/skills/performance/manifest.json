@@ -1,0 +1,35 @@
+{
+    "id": "performance",
+    "name": "Performance Optimizer",
+    "version": "1.0.0",
+    "description": "Analyze code for performance bottlenecks, suggest optimizations, profile bundle sizes, and identify memory leaks.",
+    "category": "quality",
+    "icon": "⚡",
+    "tags": [
+        "performance",
+        "optimization",
+        "bundle",
+        "profiling",
+        "speed"
+    ],
+    "capabilities": [
+        "performance-analysis",
+        "bundle-analysis",
+        "optimization-suggestions"
+    ],
+    "triggers": {
+        "keywords": [
+            "performance",
+            "optimize",
+            "slow",
+            "bundle size",
+            "memory leak",
+            "profiling"
+        ],
+        "commands": [
+            "/perf",
+            "/optimize",
+            "/bundle-analyze"
+        ]
+    }
+}

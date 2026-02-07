@@ -164,6 +164,11 @@ const TIER_CONFIGS: Record<TierId, Partial<GuardrailConfig>> = {
     maxInputLength: 50_000,
     maxOutputLength: 100_000,
   },
+  starter: {
+    enabled: true,
+    maxInputLength: 75_000,
+    maxOutputLength: 150_000,
+  },
   pro: {
     enabled: true,
     maxInputLength: 100_000,

@@ -1,0 +1,45 @@
+{
+    "id": "dependency-analyzer",
+    "name": "Dependency Analyzer",
+    "version": "1.0.0",
+    "description": "Analyze project dependencies for outdated packages, known vulnerabilities, license issues, and circular dependency detection across multiple ecosystems.",
+    "category": "code",
+    "icon": "📦",
+    "tags": [
+        "dependencies",
+        "npm",
+        "packages",
+        "vulnerabilities",
+        "audit"
+    ],
+    "capabilities": [
+        "dep-analysis",
+        "vulnerability-scan",
+        "outdated-check"
+    ],
+    "triggers": {
+        "keywords": [
+            "dependencies",
+            "packages",
+            "outdated",
+            "audit",
+            "npm audit",
+            "vulnerability",
+            "dependency check"
+        ],
+        "commands": [
+            "/deps",
+            "/audit",
+            "/dependencies"
+        ],
+        "fileExtensions": [
+            "package.json",
+            "package-lock.json",
+            "yarn.lock",
+            "pnpm-lock.yaml",
+            "requirements.txt",
+            "Gemfile",
+            "go.mod"
+        ]
+    }
+}
