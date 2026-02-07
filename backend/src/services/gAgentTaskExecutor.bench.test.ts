@@ -62,7 +62,18 @@ vi.mock("./claudeServiceWithTools.js", () => {
 });
 
 describe("GAgentTaskExecutor Benchmark", () => {
-  it("executes tasks with expected concurrency", async () => {
+  // Store original config
+  const originalConfig = { ...configManager.getConfig().performance };
+
+  afterEach(() => {
+    // Restore config
+    Object.assign(configManager.getConfig().performance, originalConfig);
+  });
+
+  it("executes tasks with expected concurrency (5)", async () => {
+    // Set concurrency to 5
+    configManager.getConfig().performance.maxConcurrentTasks = 5;
+
     const executor = new GAgentTaskExecutor();
     const taskCount = 10;
 
@@ -85,10 +96,9 @@ describe("GAgentTaskExecutor Benchmark", () => {
       parallel_batches: [tasks.map((t) => t.id)],
     };
 
-    console.log("Starting benchmark execution with concurrency limit 5 (default)...");
+    console.log("Starting benchmark execution with concurrency limit 5...");
     const start = Date.now();
 
-    // Execute plan
     // @ts-ignore
     const generator = executor.executePlan(plan);
 
@@ -99,24 +109,18 @@ describe("GAgentTaskExecutor Benchmark", () => {
     const duration = Date.now() - start;
     console.log(`Execution took ${duration}ms for ${taskCount} tasks (100ms each)`);
 
-    // Theoretical minimum with concurrency 5:
-    // 10 tasks / 5 concurrent = 2 batches.
-    // 2 batches * 100ms = 200ms.
-    // Allow some overhead (e.g. 50-100ms)
+    // With concurrency 5:
+    // 10 tasks / 5 = 2 batches.
+    // 2 * 100ms = 200ms.
+    // Allow overhead.
 
-    // If it was sequential (concurrency 1), it would take ~1000ms.
-
-    // Assert it is much faster than sequential
-    expect(duration).toBeLessThan(800);
-
-    // Assert it is roughly around 200-400ms
-    expect(duration).toBeGreaterThan(150);
+    expect(duration).toBeGreaterThan(150); // > 1.5x batch time (implies sequential execution happened for at least 1 batch)
+    expect(duration).toBeLessThan(400); // < 4x batch time (implies parallelism worked)
   });
-});
 
-  it("respects config batch size", async () => {
+  it("respects config maxConcurrentTasks (2)", async () => {
     // Change config
-    configManager.getConfig().performance.batchSize = 2;
+    configManager.getConfig().performance.maxConcurrentTasks = 2;
 
     const executor = new GAgentTaskExecutor();
     const taskCount = 10;
@@ -153,6 +157,7 @@ describe("GAgentTaskExecutor Benchmark", () => {
     // 10 tasks / 2 concurrent = 5 rounds.
     // 5 * 100ms = 500ms.
 
-    expect(duration).toBeGreaterThan(450);
-    expect(duration).toBeLessThan(700);
+    expect(duration).toBeGreaterThan(450); // > 4.5x batch time
+    expect(duration).toBeLessThan(700); // < 7x batch time
   });
+});

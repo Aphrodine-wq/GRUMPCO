@@ -311,7 +311,7 @@ export class GAgentTaskExecutor {
       .map((id) => state.plan.tasks.find((t) => t.id === id))
       .filter(Boolean) as Task[];
     // Run with concurrency limit (default 20) to balance performance and resources
-    const concurrencyLimit =
+    const concurrencyLimit = parseInt(process.env.G_AGENT_TASK_CONCURRENCY || "", 10) || configManager.getConfig().performance.maxConcurrentTasks || 20;
       parseInt(process.env.G_AGENT_TASK_CONCURRENCY || "", 10) || 20;
 
     const results = await runWithConcurrency(
