@@ -18,7 +18,7 @@
     "@supabase/supabase-js": "^2.95.3",
     "axios": "^1.6.0",
     "mermaid": "^10.9.0",
-    "svelte": "^5.0.0",
+    "svelte": "^5.50.0",
     "svelte-spa-router": "^4.0.0"
   },
   "devDependencies": {
