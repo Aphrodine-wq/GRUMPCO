@@ -85,14 +85,14 @@
     align-items: flex-start;
     gap: 12px;
     padding: 14px 16px;
-    background: white;
+    background: var(--color-bg-elevated, #ffffff);
     border-radius: 12px;
     box-shadow:
       0 4px 6px -1px rgba(0, 0, 0, 0.1),
       0 2px 4px -1px rgba(0, 0, 0, 0.06),
       0 0 0 1px rgba(0, 0, 0, 0.05);
     font-size: 14px;
-    color: #18181b;
+    color: var(--color-text, #18181b);
     pointer-events: auto;
     position: relative;
     overflow: hidden;
@@ -146,10 +146,10 @@
 
   .toast-action-btn {
     padding: 6px 12px;
-    border: 1px solid #e4e4e7;
+    border: 1px solid var(--color-border, #e4e4e7);
     border-radius: 6px;
-    background: white;
-    color: #3f3f46;
+    background: var(--color-bg-elevated, #ffffff);
+    color: var(--color-text-secondary, #3f3f46);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
@@ -157,8 +157,8 @@
   }
 
   .toast-action-btn:hover {
-    background: #f4f4f5;
-    border-color: #d4d4d8;
+    background: var(--color-bg-card-hover, #f4f4f5);
+    border-color: var(--color-border, #d4d4d8);
   }
 
   .toast-action-btn.primary {
@@ -176,7 +176,7 @@
     flex-shrink: 0;
     background: none;
     border: none;
-    color: #a1a1aa;
+    color: var(--color-text-muted, #a1a1aa);
     cursor: pointer;
     padding: 4px;
     margin: -4px -4px -4px 0;
@@ -188,8 +188,8 @@
   }
 
   .toast-dismiss:hover {
-    color: #3f3f46;
-    background: #f4f4f5;
+    color: var(--color-text-secondary, #3f3f46);
+    background: var(--color-bg-card-hover, #f4f4f5);
   }
 
   .toast-progress {

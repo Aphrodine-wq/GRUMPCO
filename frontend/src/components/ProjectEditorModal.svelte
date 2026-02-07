@@ -61,12 +61,7 @@
 <Modal bind:open {onClose} title="Edit Project" size="md" footer={editorFooter}>
   {#if session}
     <div class="editor-form">
-      <Input
-        bind:value={name}
-        label="Name"
-        placeholder="Project name"
-        fullWidth
-      />
+      <Input bind:value={name} label="Name" placeholder="Project name" fullWidth />
       <div class="field-group">
         <label class="field-label" for="project-description">Description (optional)</label>
         <textarea
@@ -79,11 +74,7 @@
       </div>
       <div class="field-group">
         <label class="field-label" for="project-session-type">Session Type</label>
-        <select
-          id="project-session-type"
-          class="session-type-select"
-          bind:value={sessionType}
-        >
+        <select id="project-session-type" class="session-type-select" bind:value={sessionType}>
           {#each SESSION_TYPE_OPTIONS as opt}
             <option value={opt.value}>{opt.label}</option>
           {/each}
@@ -95,9 +86,7 @@
 
 {#snippet editorFooter()}
   <Button variant="ghost" onclick={handleClose}>Cancel</Button>
-  <Button variant="primary" onclick={handleSave} disabled={!name.trim()}>
-    Save
-  </Button>
+  <Button variant="primary" onclick={handleSave} disabled={!name.trim()}>Save</Button>
 {/snippet}
 
 <style>
@@ -141,7 +130,8 @@
     border: 1px solid var(--color-border, #e4e4e7);
     border-radius: 8px;
     font-size: 0.875rem;
-    background: white;
+    background: var(--color-bg-elevated, #ffffff);
+    color: var(--color-text, #18181b);
     cursor: pointer;
   }
 </style>

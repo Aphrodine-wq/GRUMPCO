@@ -870,7 +870,7 @@
   }
 
   .settings-header {
-    background-color: white;
+    background-color: var(--color-bg-elevated, #ffffff);
     border-bottom: 1px solid var(--border-color);
     padding: 12px 24px;
     display: flex;
@@ -907,7 +907,7 @@
 
   .section-desc {
     font-size: 14px;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
     margin-bottom: 20px;
   }
 
@@ -919,7 +919,7 @@
     display: block;
     font-size: 13px;
     font-weight: 600;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
     margin-bottom: 8px;
   }
 
@@ -933,7 +933,7 @@
     display: block;
     font-size: 13px;
     font-weight: 600;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
     margin-bottom: 8px;
   }
   .radio-row {
@@ -946,7 +946,7 @@
     align-items: center;
     gap: 8px;
     font-size: 14px;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
     cursor: pointer;
   }
   .radio-option input {
@@ -957,9 +957,9 @@
     width: 100%;
     height: 40px;
     padding: 0 12px;
-    border: 1px solid #e4e4e7;
+    border: 1px solid var(--color-border, #e4e4e7);
     border-radius: 6px;
-    background-color: white;
+    background-color: var(--color-bg-elevated, #ffffff);
     font-size: 14px;
     outline: none;
     transition: border-color 150ms;
@@ -973,7 +973,7 @@
     width: 100%;
     min-height: 80px;
     padding: 12px;
-    border: 1px solid #e4e4e7;
+    border: 1px solid var(--color-border, #e4e4e7);
     border-radius: 6px;
     font-size: 14px;
     font-family: inherit;
@@ -995,7 +995,7 @@
 
   .checkbox-label-text {
     font-size: 14px;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
   }
 
   .billing-status {
@@ -1009,25 +1009,25 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px;
-    background-color: #f9fafb;
+    background-color: var(--color-bg-card, #f9fafb);
     border-radius: 8px;
   }
 
   .status-label {
     font-size: 14px;
     font-weight: 500;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
   }
 
   .status-value {
     font-size: 14px;
     font-weight: 600;
-    color: #18181b;
+    color: var(--color-text, #18181b);
   }
 
   .billing-empty {
     font-size: 14px;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
     font-style: italic;
   }
 
@@ -1106,7 +1106,7 @@
     padding: 0;
     margin: 0;
     font-size: 14px;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
   }
 
   .shortcuts-list li {
@@ -1120,8 +1120,8 @@
     padding: 2px 6px;
     font-family: ui-monospace, monospace;
     font-size: 12px;
-    background: #f4f4f5;
-    border: 1px solid #e4e4e7;
+    background: var(--color-bg-card, #f4f4f5);
+    border: 1px solid var(--color-border, #e4e4e7);
     border-radius: 4px;
   }
 

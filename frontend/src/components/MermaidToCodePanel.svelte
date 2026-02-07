@@ -293,8 +293,8 @@
 
 <style>
   .mermaid-to-code-panel {
-    background: #ffffff;
-    border: 1px solid #e5e5e5;
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--color-border, #e5e5e5);
     border-radius: 8px;
     padding: 1.5rem;
     margin: 1rem 0;
@@ -308,14 +308,14 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 1.125rem;
     font-weight: 600;
-    color: #000000;
+    color: var(--color-text, #000000);
     margin: 0 0 0.5rem 0;
   }
 
   .panel-description {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-muted, #6b7280);
     margin: 0;
   }
 
@@ -335,17 +335,17 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text-secondary, #374151);
   }
 
   .form-select {
     padding: 0.5rem 0.75rem;
-    border: 1px solid #e5e5e5;
+    border: 1px solid var(--color-border, #e5e5e5);
     border-radius: 4px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
-    background: #ffffff;
-    color: #000000;
+    background: var(--color-bg-elevated, #ffffff);
+    color: var(--color-text, #000000);
     cursor: pointer;
     outline: none;
     transition: border-color 0.15s;
@@ -408,10 +408,10 @@
 
   .error-message {
     padding: 0.75rem;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
+    background: var(--color-error-subtle, #fef2f2);
+    border: 1px solid var(--color-error-border, #fecaca);
     border-radius: 4px;
-    color: #991b1b;
+    color: var(--color-error, #991b1b);
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
     margin-bottom: 0.5rem;
@@ -419,10 +419,10 @@
 
   .validation-warning {
     padding: 0.75rem;
-    background: #fffbeb;
-    border: 1px solid #fde68a;
+    background: var(--color-warning-subtle, #fffbeb);
+    border: 1px solid var(--color-warning-border, #fde68a);
     border-radius: 4px;
-    color: #92400e;
+    color: var(--color-warning, #92400e);
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
     margin-bottom: 0.5rem;

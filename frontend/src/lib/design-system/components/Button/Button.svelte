@@ -111,13 +111,13 @@
   }
 
   .btn-secondary {
-    background-color: white;
+    background-color: var(--color-bg-elevated, #ffffff);
     color: var(--text-primary);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background-color: #fafafa;
+    background-color: var(--color-bg-card-hover, #fafafa);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     transform: translateY(-1px);
   }
@@ -129,12 +129,12 @@
 
   .btn-ghost {
     background-color: transparent;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
     box-shadow: none;
   }
 
   .btn-ghost:hover:not(:disabled) {
-    background-color: #f5f5f5;
+    background-color: var(--color-bg-card-hover, #f5f5f5);
     color: var(--text-primary);
   }
 
@@ -143,7 +143,7 @@
   }
 
   .btn-danger {
-    background-color: white;
+    background-color: var(--color-bg-elevated, #ffffff);
     color: var(--error-color);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }

@@ -230,7 +230,7 @@
     justify-content: space-between;
     gap: 8px;
     width: 100%;
-    background: white;
+    background: var(--color-bg-elevated, #ffffff);
     border: 1px solid var(--color-border, #e9d5ff);
     border-radius: 10px;
     font-size: 14px;
@@ -302,7 +302,7 @@
     left: 0;
     right: 0;
     z-index: 100;
-    background: white;
+    background: var(--color-bg-elevated, #ffffff);
     border: 1px solid var(--color-border, #e9d5ff);
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);

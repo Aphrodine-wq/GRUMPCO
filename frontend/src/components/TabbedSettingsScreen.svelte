@@ -3510,7 +3510,7 @@
   .models-provider-name {
     font-size: 0.875rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text-secondary, #374151);
   }
 
   .models-provider-select {
@@ -3520,7 +3520,7 @@
   }
 
   .models-custom-details {
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 10px;
     overflow: hidden;
   }
@@ -3529,9 +3529,9 @@
     padding: 0.875rem 1rem;
     font-size: 0.9375rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-secondary, #374151);
     cursor: pointer;
-    background: #f9fafb;
+    background: var(--color-bg-subtle, #f9fafb);
     list-style: none;
   }
 
@@ -3552,7 +3552,7 @@
 
   .models-custom-inner {
     padding: 1rem 1rem 1.25rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--color-border, #e5e7eb);
   }
 
   .models-custom-inner .section-desc {
@@ -3561,7 +3561,7 @@
 
   .section-desc {
     font-size: 14px;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
     margin-bottom: 20px;
   }
 
@@ -3577,7 +3577,7 @@
     display: block;
     font-size: 13px;
     font-weight: 600;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
     margin-bottom: 8px;
   }
 
@@ -3594,7 +3594,7 @@
 
   .field-hint {
     font-size: 12px;
-    color: #a1a1aa;
+    color: var(--color-text-muted, #a1a1aa);
     margin-top: 6px;
   }
 
@@ -3602,7 +3602,7 @@
     display: block;
     font-size: 13px;
     font-weight: 600;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
     margin-bottom: 8px;
   }
 
@@ -3728,7 +3728,7 @@
     align-items: center;
     gap: 8px;
     font-size: 14px;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
     cursor: pointer;
   }
 
@@ -3740,9 +3740,10 @@
     width: 100%;
     height: 40px;
     padding: 0 12px;
-    border: 1px solid #e4e4e7;
+    border: 1px solid var(--color-border, #e4e4e7);
     border-radius: 6px;
-    background-color: white;
+    background-color: var(--color-bg-elevated, #ffffff);
+    color: var(--color-text, #18181b);
     font-size: 14px;
     outline: none;
     transition: border-color 150ms;
@@ -3756,7 +3757,7 @@
     width: 100%;
     min-height: 80px;
     padding: 12px;
-    border: 1px solid #e4e4e7;
+    border: 1px solid var(--color-border, #e4e4e7);
     border-radius: 6px;
     font-size: 14px;
     font-family: inherit;
@@ -3770,7 +3771,7 @@
 
   .security-tab .section-desc {
     margin-bottom: 1rem;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
     line-height: 1.5;
   }
 
@@ -3782,7 +3783,7 @@
   .field-hint code {
     font-size: 0.75em;
     padding: 0.1em 0.35em;
-    background: #f4f4f5;
+    background: var(--color-bg-card, #f4f4f5);
     border-radius: 4px;
   }
 
@@ -3798,7 +3799,7 @@
     grid-template-rows: auto auto;
     gap: 2px 12px;
     padding: 14px 0;
-    border-bottom: 1px solid #f4f4f5;
+    border-bottom: 1px solid var(--color-border, #f4f4f5);
     cursor: pointer;
     user-select: none;
     align-items: start;
@@ -3817,12 +3818,12 @@
   .guard-rail-title {
     font-size: 14px;
     font-weight: 500;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
   }
 
   .guard-rail-desc {
     font-size: 12px;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
     line-height: 1.4;
   }
 
@@ -3836,7 +3837,7 @@
 
   .checkbox-label-text {
     font-size: 14px;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
   }
 
   .billing-status {
@@ -3929,25 +3930,25 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px;
-    background-color: #f9fafb;
+    background-color: var(--color-bg-card, #f9fafb);
     border-radius: 8px;
   }
 
   .status-label {
     font-size: 14px;
     font-weight: 500;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
   }
 
   .status-value {
     font-size: 14px;
     font-weight: 600;
-    color: #18181b;
+    color: var(--color-text, #18181b);
   }
 
   .billing-empty {
     font-size: 14px;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
     font-style: italic;
     margin-bottom: 16px;
   }
@@ -3966,7 +3967,7 @@
     align-items: center;
     gap: 12px;
     font-size: 14px;
-    color: #18181b;
+    color: var(--color-text, #18181b);
   }
 
   .billing-actions {
@@ -3988,13 +3989,13 @@
     gap: 8px;
     margin-top: 12px;
     padding: 12px;
-    background: #f9fafb;
+    background: var(--color-bg-subtle, #f9fafb);
     border-radius: 8px;
   }
 
   .custom-model-form .custom-input {
     padding: 8px 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 6px;
     font-size: 14px;
   }
@@ -4015,7 +4016,7 @@
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 6px;
     margin-bottom: 4px;
   }
@@ -4028,7 +4029,7 @@
 
   .custom-model-endpoint {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--color-text-muted, #6b7280);
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -4040,7 +4041,7 @@
     padding: 0;
     margin: 0;
     font-size: 14px;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
   }
 
   .shortcuts-list li {
@@ -4054,8 +4055,8 @@
     padding: 2px 6px;
     font-family: ui-monospace, monospace;
     font-size: 12px;
-    background: #f4f4f5;
-    border: 1px solid #e4e4e7;
+    background: var(--color-bg-card, #f4f4f5);
+    border: 1px solid var(--color-border, #e4e4e7);
     border-radius: 4px;
   }
 
@@ -4073,20 +4074,20 @@
   .about-version {
     font-size: 14px;
     font-weight: 600;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
     margin-bottom: 8px;
   }
 
   .about-desc {
     font-size: 14px;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
   }
 
   .architecture-summary {
     font-size: 14px;
-    color: #3f3f46;
+    color: var(--color-text-secondary, #3f3f46);
     line-height: 1.5;
-    background: #f9fafb;
+    background: var(--color-bg-subtle, #f9fafb);
     padding: 12px;
     border-radius: 6px;
   }

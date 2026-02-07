@@ -730,8 +730,8 @@
     height: 44px;
     border-radius: 12px;
     border: none;
-    background: white;
-    color: #18181b;
+    background: var(--color-bg-elevated, #ffffff);
+    color: var(--color-text, #18181b);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     align-items: center;
@@ -740,7 +740,7 @@
   }
 
   .mobile-toggle:hover {
-    background: #f4f4f5;
+    background: var(--color-bg-card-hover, #f4f4f5);
     transform: scale(1.05);
   }
 

@@ -125,20 +125,20 @@
                   onclick={(e) => deleteProject(e, session.id)}
                   aria-label="Delete project"
                 >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M3 6h18"></path>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                </svg>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  </svg>
                 </button>
               </div>
             </div>
@@ -184,8 +184,8 @@
   }
 
   .header {
-    background: white;
-    border-bottom: 1px solid #e4e4e7;
+    background: var(--color-bg-elevated, #ffffff);
+    border-bottom: 1px solid var(--color-border, #e4e4e7);
     position: sticky;
     top: 0;
     z-index: 20;
@@ -210,7 +210,7 @@
   .logo-area h1 {
     font-size: 20px;
     font-weight: 800;
-    color: #18181b;
+    color: var(--color-text, #18181b);
     letter-spacing: -0.02em;
   }
 
@@ -231,14 +231,14 @@
   .section-header h2 {
     font-size: 16px;
     font-weight: 600;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   .count {
     font-size: 13px;
-    color: #a1a1aa;
+    color: var(--color-text-muted, #a1a1aa);
     font-weight: 500;
   }
 
@@ -249,8 +249,8 @@
   }
 
   .project-card {
-    background: white;
-    border: 1px solid #e4e4e7;
+    background: var(--color-bg-elevated, #ffffff);
+    border: 1px solid var(--color-border, #e4e4e7);
     border-radius: 16px;
     padding: 20px;
     display: flex;
@@ -263,7 +263,7 @@
   }
 
   .project-card:hover {
-    border-color: #18181b;
+    border-color: var(--color-text, #18181b);
     transform: translateY(-2px);
     box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.1);
   }
@@ -286,7 +286,7 @@
   }
 
   .edit-btn {
-    color: #a1a1aa;
+    color: var(--color-text-muted, #a1a1aa);
     padding: 4px;
     border-radius: 6px;
     transition: all 0.2s;
@@ -297,18 +297,18 @@
 
   .edit-btn:hover {
     color: var(--color-primary, #7c3aed);
-    background: #f5f3ff;
+    background: var(--color-primary-subtle, #f5f3ff);
   }
 
   .date {
     font-size: 12px;
     font-weight: 500;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
   }
 
   .delete-btn {
     opacity: 0;
-    color: #a1a1aa;
+    color: var(--color-text-muted, #a1a1aa);
     padding: 4px;
     border-radius: 6px;
     transition: all 0.2s;
@@ -327,13 +327,13 @@
 
   .delete-btn:hover {
     color: #ef4444;
-    background: #fef2f2;
+    background: var(--color-error-subtle, #fef2f2);
   }
 
   .title {
     font-size: 18px;
     font-weight: 700;
-    color: #18181b;
+    color: var(--color-text, #18181b);
     line-height: 1.3;
     margin: 4px 0;
     display: -webkit-box;
@@ -354,11 +354,11 @@
   .message-count {
     font-size: 13px;
     font-weight: 500;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
   }
 
   .arrow {
-    color: #18181b;
+    color: var(--color-text, #18181b);
     opacity: 0;
     transform: translateX(-10px);
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -372,8 +372,8 @@
   .empty-state {
     padding: 80px 40px;
     text-align: center;
-    background: white;
-    border: 2px dashed #e4e4e7;
+    background: var(--color-bg-elevated, #ffffff);
+    border: 2px dashed var(--color-border, #e4e4e7);
     border-radius: 24px;
     display: flex;
     flex-direction: column;
@@ -385,7 +385,7 @@
   :global(.empty-icon) {
     width: 64px;
     height: 64px;
-    background: #f4f4f5;
+    background: var(--color-bg-card, #f4f4f5);
     border-radius: 20px;
     display: flex;
     align-items: center;
@@ -396,11 +396,11 @@
   .empty-state h3 {
     font-size: 20px;
     font-weight: 700;
-    color: #18181b;
+    color: var(--color-text, #18181b);
   }
 
   .empty-state p {
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
     max-width: 320px;
     line-height: 1.5;
     margin-bottom: 8px;

@@ -130,7 +130,8 @@
     border: 1px solid var(--color-border);
     border-radius: 8px;
     font-size: 14px;
-    background: white;
+    background: var(--color-bg-elevated, #ffffff);
+    color: var(--color-text, #18181b);
     outline: none;
     transition: border-color 0.2s;
   }

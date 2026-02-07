@@ -601,7 +601,7 @@
     gap: 1.25rem;
   }
 
-  .query-card {
+  :global(.query-card) {
     flex-shrink: 0;
   }
 
@@ -668,7 +668,7 @@
     cursor: pointer;
   }
 
-  .ask-btn {
+  :global(.ask-btn) {
     margin-top: 0.5rem;
   }
 
@@ -768,11 +768,11 @@
     border-color: var(--color-primary);
   }
 
-  .result-card {
+  :global(.result-card) {
     background: var(--color-bg-card, #fff);
   }
 
-  .result-card.error {
+  :global(.result-card.error) {
     background: var(--color-error-subtle, rgba(239, 68, 68, 0.06));
     border-color: var(--color-error, #ef4444);
   }
@@ -800,7 +800,7 @@
   .sources-label {
     font-size: 12px;
     font-weight: 600;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
     margin: 16px 0 8px;
     text-transform: uppercase;
   }
@@ -809,12 +809,12 @@
     margin: 0;
     padding-left: 20px;
     font-size: 13px;
-    color: #52525b;
+    color: var(--color-text-secondary, #52525b);
   }
 
   .source-type {
     font-weight: 600;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
     margin-right: 6px;
   }
 
@@ -849,10 +849,10 @@
 
   .fallback-cta {
     font-size: 0.8125rem;
-    color: #b45309;
+    color: var(--color-warning, #b45309);
     margin: 0 0 0.75rem;
     padding: 0.5rem 0.75rem;
-    background: #fffbeb;
+    background: var(--color-warning-subtle, #fffbeb);
     border-radius: 6px;
   }
 
@@ -880,12 +880,6 @@
 
   .citation-link:hover {
     text-decoration: underline;
-  }
-
-  .type-chips {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
   }
 
   .type-chip {
@@ -936,12 +930,12 @@
   .upload-label {
     cursor: pointer;
     font-size: 14px;
-    color: #71717a;
+    color: var(--color-text-muted, #71717a);
   }
 
   .upload-error {
     margin-top: 8px;
     font-size: 13px;
-    color: #dc2626;
+    color: var(--color-error, #dc2626);
   }
 </style>

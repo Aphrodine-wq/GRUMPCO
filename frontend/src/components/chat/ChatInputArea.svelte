@@ -171,7 +171,7 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    background-color: #f3f4f6;
+    background-color: var(--color-bg-input, #f3f4f6);
     border-radius: 0.75rem;
     padding: 0.75rem 1rem;
     border: 1px solid transparent;
@@ -181,15 +181,15 @@
   }
 
   .input-container:focus-within {
-    border-color: #3b82f6;
+    border-color: var(--color-primary, #3b82f6);
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-    background-color: white;
+    background-color: var(--color-bg-elevated, #ffffff);
   }
 
   .input-prompt {
     font-family: 'Fira Code', monospace;
     font-weight: 700;
-    color: #6b7280;
+    color: var(--color-text-muted, #6b7280);
     user-select: none;
   }
 
@@ -203,13 +203,13 @@
     border: none;
     background: transparent;
     font-size: 1rem;
-    color: #111827;
+    color: var(--color-text, #111827);
     outline: none;
     padding: 0;
   }
 
   .message-input::placeholder {
-    color: #9ca3af;
+    color: var(--color-text-muted, #9ca3af);
   }
 
   .message-input:disabled {
@@ -237,7 +237,7 @@
   }
 
   .send-button:disabled {
-    background: #d1d5db;
+    background: var(--color-border, #d1d5db);
     cursor: not-allowed;
   }
 
@@ -254,8 +254,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #e5e7eb;
-    color: #4b5563;
+    background: var(--color-bg-inset, #e5e7eb);
+    color: var(--color-text-secondary, #4b5563);
     border: none;
     border-radius: 0.5rem;
     width: 2rem;
@@ -266,7 +266,7 @@
   }
 
   .attach-image-btn:hover:not(:disabled) {
-    background: #d1d5db;
+    background: var(--color-border, #d1d5db);
   }
 
   .attach-image-btn:disabled {

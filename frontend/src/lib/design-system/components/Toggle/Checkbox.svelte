@@ -98,7 +98,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: white;
+    background: var(--color-bg-elevated, #ffffff);
     border: 2px solid var(--color-border, #e9d5ff);
     border-radius: 6px;
     transition: all 150ms ease;

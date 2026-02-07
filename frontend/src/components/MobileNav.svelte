@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { showSettings, showAskDocs, showVoiceCode, showSwarm, showDesignToCode } from '../stores/uiStore';
+  import {
+    showSettings,
+    showAskDocs,
+    showVoiceCode,
+    showSwarm,
+    showDesignToCode,
+  } from '../stores/uiStore';
   import { currentSession } from '../stores/sessionsStore';
 
   interface Props {
@@ -56,7 +62,7 @@
     },
   ];
 
-  function handleNavClick(item: typeof navItems[0]) {
+  function handleNavClick(item: (typeof navItems)[0]) {
     item.action();
   }
 </script>
@@ -83,8 +89,8 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: white;
-    border-top: 1px solid #e5e7eb;
+    background: var(--color-bg-elevated, #ffffff);
+    border-top: 1px solid var(--color-border, #e5e7eb);
     z-index: 100;
     display: none;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
@@ -123,7 +129,7 @@
   }
 
   .mobile-nav-item.active {
-    background: #eff6ff;
+    background: var(--color-primary-subtle, #eff6ff);
   }
 
   .mobile-nav-icon {
@@ -138,12 +144,12 @@
   .mobile-nav-label {
     font-size: 11px;
     font-weight: 500;
-    color: #6b7280;
+    color: var(--color-text-muted, #6b7280);
     transition: color 0.2s ease;
   }
 
   .mobile-nav-item.active .mobile-nav-label {
-    color: #3b82f6;
+    color: var(--color-primary, #3b82f6);
     font-weight: 600;
   }
 

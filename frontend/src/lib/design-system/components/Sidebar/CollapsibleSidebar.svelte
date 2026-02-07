@@ -114,7 +114,7 @@
   .sidebar-header {
     padding: 16px;
     border-bottom: 1px solid var(--border-color);
-    background-color: rgba(255, 255, 255, 0.5); /* Subtle transparency */
+    background-color: var(--color-bg-card, rgba(255, 255, 255, 0.5)); /* Subtle transparency */
   }
 
   .sidebar-content {
@@ -139,7 +139,7 @@
   .sidebar-footer {
     padding: 16px;
     border-top: 1px solid var(--border-color);
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: var(--color-bg-card, rgba(255, 255, 255, 0.5));
     overflow-y: auto;
     overflow-x: hidden;
     flex-shrink: 0;
@@ -156,7 +156,7 @@
     top: 32px;
     width: 24px;
     height: 24px;
-    background-color: #ffffff;
+    background-color: var(--color-bg-elevated, #ffffff);
     border: 1px solid var(--border-color);
     border-radius: 50%;
     cursor: pointer;
@@ -175,7 +175,7 @@
 
   .collapse-toggle:hover {
     background-color: var(--primary-color);
-    color: #ffffff;
+    color: var(--color-text-inverse, #ffffff);
     border-color: var(--primary-color);
     transform: scale(1.05); /* Subtle scale */
   }

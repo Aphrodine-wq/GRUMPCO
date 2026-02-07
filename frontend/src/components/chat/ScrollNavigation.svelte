@@ -133,19 +133,19 @@
     width: 2.5rem;
     height: 2.5rem;
     padding: 0;
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-elevated, #ffffff);
+    border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 50%;
-    color: #6b7280;
+    color: var(--color-text-muted, #6b7280);
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: all 50ms ease-out;
   }
 
   .scroll-btn:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
-    color: #374151;
+    background: var(--color-bg-card-hover, #f9fafb);
+    border-color: var(--color-border, #d1d5db);
+    color: var(--color-text-secondary, #374151);
     transform: scale(1.05);
   }
 

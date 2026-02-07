@@ -215,7 +215,7 @@
   }
 
   .tabs-default .tab.active {
-    background: white;
+    background: var(--color-bg-elevated, #ffffff);
     color: var(--color-text, #1f1147);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }

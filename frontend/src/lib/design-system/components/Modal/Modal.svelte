@@ -151,7 +151,8 @@
   .modal-container {
     display: flex;
     flex-direction: column;
-    background: white;
+    background: var(--color-bg-elevated, #ffffff);
+    border: 1px solid var(--color-border, #e9d5ff);
     border-radius: 20px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
     max-height: calc(100vh - 32px);
@@ -251,7 +252,7 @@
     gap: 12px;
     padding: 16px 24px;
     border-top: 1px solid var(--color-border-light, #f3e8ff);
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--color-bg-card, rgba(255, 255, 255, 0.5));
   }
 
   @media (prefers-reduced-motion: reduce) {

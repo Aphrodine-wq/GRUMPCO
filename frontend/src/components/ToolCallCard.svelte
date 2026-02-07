@@ -83,13 +83,13 @@
     border-radius: 8px;
     overflow: hidden;
     margin: 8px 0;
-    background: white;
+    background: var(--color-bg-elevated, #ffffff);
     font-family: inherit;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
   .tool-call-header {
-    background-color: white;
+    background-color: var(--color-bg-elevated, #ffffff);
     padding: 12px 14px;
     display: flex;
     align-items: center;
