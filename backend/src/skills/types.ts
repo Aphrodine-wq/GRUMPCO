@@ -200,10 +200,10 @@ export type SkillEvent =
   | { type: "tool_result"; toolName: string; result: ToolExecutionResult }
   | { type: "output"; content: string }
   | {
-      type: "file_change";
-      path: string;
-      action: "created" | "modified" | "deleted";
-    }
+    type: "file_change";
+    path: string;
+    action: "created" | "modified" | "deleted";
+  }
   | { type: "error"; error: Error; recoverable: boolean }
   | { type: "completed"; summary?: string; duration: number };
 
@@ -356,3 +356,17 @@ export interface LoggerService {
   error(message: string, meta?: Record<string, unknown>): void;
   debug(message: string, meta?: Record<string, unknown>): void;
 }
+
+/**
+ * Simple skill module interface for self-contained skills
+ * that provide tools, a system prompt, and an execute method.
+ */
+export interface SkillModule {
+  id: string;
+  name: string;
+  description: string;
+  tools: ToolDefinition[];
+  systemPrompt: string;
+  execute(toolName: string, input: Record<string, unknown>): Promise<string>;
+}
+

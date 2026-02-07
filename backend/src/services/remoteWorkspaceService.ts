@@ -90,6 +90,6 @@ export async function clearWorkspaceCache(): Promise<void> {
     await fs.rm(WORKSPACE_CACHE_DIR, { recursive: true, force: true });
     await fs.mkdir(WORKSPACE_CACHE_DIR, { recursive: true });
   } catch (_e) {
-    logger.error(e, "Failed to clear workspace cache");
+    logger.error(_e, "Failed to clear workspace cache");
   }
 }

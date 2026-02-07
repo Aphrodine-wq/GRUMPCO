@@ -1419,7 +1419,7 @@ try {
   registerStreamProvider("grump", {
     name: "grump",
     supportsTools: true,
-    stream: async function* (params) { yield* streamGrumpMix(params); },
+    stream: async function* (params: any) { yield* streamGrumpMix(params); },
   });
 } catch {
   // ai-core may not be available in all environments

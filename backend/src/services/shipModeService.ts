@@ -237,9 +237,9 @@ export async function executeDesignPhase(
       projectType: "general",
       techStack: session.preferences?.backendRuntime
         ? ([
-            session.preferences.backendRuntime,
-            session.preferences.frontendFramework || "vue",
-          ].filter(Boolean) as string[])
+          session.preferences.backendRuntime,
+          session.preferences.frontendFramework || "vue",
+        ].filter(Boolean) as string[])
         : undefined,
       systemPromptPrefix,
     });
@@ -348,8 +348,8 @@ export async function executeSpecPhase(
     try {
       const ragResult = await getIntentGuidedRagContext(
         session.projectDescription +
-          "\n" +
-          (designResult.prd.sections?.overview ?? ""),
+        "\n" +
+        (designResult.prd.sections?.overview ?? ""),
         { namespace, maxChunks: 6 },
       );
       if (ragResult?.context)
@@ -515,9 +515,9 @@ export async function executeCodePhase(
       prdId: designResult.prd.id,
       architectureId: designResult.architecture.id,
       preferences: {
-        frontendFramework: session.preferences?.frontendFramework,
-        backendRuntime: session.preferences?.backendRuntime,
-        database: session.preferences?.database,
+        frontendFramework: session.preferences?.frontendFramework as GenerationPreferences["frontendFramework"],
+        backendRuntime: session.preferences?.backendRuntime as GenerationPreferences["backendRuntime"],
+        database: session.preferences?.database as GenerationPreferences["database"],
         includeTests: session.preferences?.includeTests !== false,
         includeDocs: session.preferences?.includeDocs !== false,
       },

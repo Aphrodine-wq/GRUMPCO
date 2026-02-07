@@ -2,7 +2,7 @@
  * Performance Profiler Skill
  * Analyzes code for performance bottlenecks and optimization opportunities
  */
-import type { SkillModule } from '../types';
+import type { SkillModule } from '../types.js';
 
 const perfProfilerSkill: SkillModule = {
     id: 'perf-profiler',
@@ -47,7 +47,7 @@ const perfProfilerSkill: SkillModule = {
                 required: ['code'],
             },
         },
-    ] as import('../types').ToolDefinition[],
+    ] as import('../types.js').ToolDefinition[],
 
     systemPrompt: `You are a performance optimization expert. When using the Performance Profiler skill:
 

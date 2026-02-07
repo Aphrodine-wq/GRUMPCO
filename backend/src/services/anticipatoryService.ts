@@ -13,14 +13,11 @@ import logger from "../middleware/logger.js";
 import { getDatabase as _getDatabase } from "../db/database.js";
 import { getCompletion } from "./llmGatewayHelper.js";
 import { writeAuditLog } from "./auditLogService.js";
-import { getCompletion } from "./llmGatewayHelper.js";
 import { queueAgentTask, isAgentRunning } from "./persistentAgentService.js";
-import { getCompletion } from "./llmGatewayHelper.js";
 import fs from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
 import util from "util";
-import { getCompletion } from "./llmGatewayHelper.js";
 
 const execAsync = util.promisify(exec);
 
@@ -159,12 +156,12 @@ function parseAuditOutput(jsonOutput: string): CodeScanResult["vulnerabilities"]
             }
           }
         } else {
-           vulnerabilities.push({
-              severity,
-              file: `package.json > ${advisory.module_name}`,
-              message,
-              cwe,
-           });
+          vulnerabilities.push({
+            severity,
+            file: `package.json > ${advisory.module_name}`,
+            message,
+            cwe,
+          });
         }
       }
     }
@@ -184,11 +181,11 @@ function parseOutdatedOutput(jsonOutput: string): CodeScanResult["outdatedDeps"]
 
       let breaking = false;
       if (current !== "unknown" && latest !== "unknown") {
-          const currentMajor = parseInt(current.split('.')[0]);
-          const latestMajor = parseInt(latest.split('.')[0]);
-          if (!isNaN(currentMajor) && !isNaN(latestMajor) && latestMajor > currentMajor) {
-              breaking = true;
-          }
+        const currentMajor = parseInt(current.split('.')[0]);
+        const latestMajor = parseInt(latest.split('.')[0]);
+        if (!isNaN(currentMajor) && !isNaN(latestMajor) && latestMajor > currentMajor) {
+          breaking = true;
+        }
       }
 
       outdated.push({
@@ -223,12 +220,13 @@ export async function scanForCodeIssues(
   };
 
   try {
-    // 1. Run pnpm audit
-    // Note: Using pnpm because the project is a pnpm monorepo and getSecurityScore also uses pnpm.
-    try {
-      const { stdout } = await execAsync("pnpm audit --json --prod", {
-        cwd: workspacePath,
-        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+    const pm = await detectPackageManager(workspacePath);
+    if (!pm) {
+      logger.warn({ userId, workspacePath }, "No supported package manager found (npm/pnpm/yarn)");
+      result.codeSmells.push({
+        file: 'package.json',
+        type: 'setup',
+        message: 'No lockfile found. Run npm/pnpm install to generate one for accurate scanning.'
       });
       if (stdout) {
          try {
@@ -249,29 +247,38 @@ export async function scanForCodeIssues(
       }
     }
 
-    // 2. Run pnpm outdated
-    try {
-       const { stdout } = await execAsync("pnpm outdated --json", {
-        cwd: workspacePath,
-        maxBuffer: 10 * 1024 * 1024,
-      });
-      if (stdout) {
-        try {
-            processOutdatedOutput(JSON.parse(stdout), result);
-        } catch (parseError) {
-            logger.error({ userId, parseError }, "Failed to parse pnpm outdated output (stdout)");
-        }
-      }
-    } catch (error: any) {
-       if (error.stdout) {
-          try {
-             processOutdatedOutput(JSON.parse(error.stdout), result);
-          } catch (parseError) {
-              logger.error({ userId, parseError }, "Failed to parse pnpm outdated output (error.stdout)");
-          }
-       } else {
-           logger.warn({ userId, error }, "pnpm outdated command failed execution");
-       }
+    logger.info({ userId, pm }, `Detected package manager: ${pm}`);
+
+    let auditCmd = '';
+    let outdatedCmd = '';
+
+    if (pm === 'npm') {
+      auditCmd = 'npm audit --json';
+      outdatedCmd = 'npm outdated --json';
+    } else if (pm === 'pnpm') {
+      auditCmd = 'pnpm audit --json';
+      outdatedCmd = 'pnpm outdated --json';
+    } else if (pm === 'yarn') {
+      auditCmd = 'yarn audit --json';
+      outdatedCmd = 'yarn outdated --json';
+    }
+
+    // Run in parallel
+    const [auditRes, outdatedRes] = await Promise.allSettled([
+      runCommand(auditCmd, workspacePath),
+      runCommand(outdatedCmd, workspacePath)
+    ]);
+
+    if (auditRes.status === 'fulfilled') {
+      result.vulnerabilities = parseAuditOutput(auditRes.value);
+    } else {
+      logger.warn({ error: auditRes.reason }, "Audit command failed");
+    }
+
+    if (outdatedRes.status === 'fulfilled') {
+      result.outdatedDeps = parseOutdatedOutput(outdatedRes.value);
+    } else {
+      logger.warn({ error: outdatedRes.reason }, "Outdated command failed");
     }
 
     // Generate insights from scan results
@@ -293,15 +300,15 @@ export async function scanForCodeIssues(
     if (result.outdatedDeps.length > 0) {
       const breaking = result.outdatedDeps.filter(d => d.breaking).length;
       if (breaking > 0 || result.outdatedDeps.length > 5) {
-          await createInsight({
-            userId,
-            category: "code_issue",
-            severity: breaking > 0 ? "warning" : "info",
-            title: `${result.outdatedDeps.length} outdated dependencies`,
-            description: `${result.outdatedDeps.length} dependencies can be updated (${breaking} breaking changes).`,
-            suggestedAction: `Review and update dependencies with \`${pm} update\`.`,
-            metadata: { outdatedDeps: result.outdatedDeps.slice(0, 50) },
-          });
+        await createInsight({
+          userId,
+          category: "code_issue",
+          severity: breaking > 0 ? "warning" : "info",
+          title: `${result.outdatedDeps.length} outdated dependencies`,
+          description: `${result.outdatedDeps.length} dependencies can be updated (${breaking} breaking changes).`,
+          suggestedAction: `Review and update dependencies with \`${pm} update\`.`,
+          metadata: { outdatedDeps: result.outdatedDeps.slice(0, 50) },
+        });
       }
     }
 
@@ -334,16 +341,16 @@ function processAuditOutput(auditOutput: any, result: CodeScanResult) {
 }
 
 function processOutdatedOutput(outdatedOutput: any, result: CodeScanResult) {
-    Object.entries(outdatedOutput).forEach(([name, info]: [string, any]) => {
-         if (info.latest !== info.wanted) {
-             result.outdatedDeps.push({
-                 name: name,
-                 current: info.current || info.wanted,
-                 latest: info.latest,
-                 breaking: isBreakingChange(info.current || info.wanted, info.latest),
-             });
-         }
-    });
+  Object.entries(outdatedOutput).forEach(([name, info]: [string, any]) => {
+    if (info.latest !== info.wanted) {
+      result.outdatedDeps.push({
+        name: name,
+        current: info.current || info.wanted,
+        latest: info.latest,
+        breaking: isBreakingChange(info.current || info.wanted, info.latest),
+      });
+    }
+  });
 }
 
 function isBreakingChange(current: string, latest: string): boolean {
@@ -363,10 +370,10 @@ function isBreakingChange(current: string, latest: string): boolean {
 
   // For 0.x, minor changes are breaking
   if (currentMajor === 0) {
-      const currentMinor = parseInt(currentParts[1], 10);
-      const latestMinor = parseInt(latestParts[1], 10);
-      if (isNaN(currentMinor) || isNaN(latestMinor)) return false;
-      return currentMinor !== latestMinor;
+    const currentMinor = parseInt(currentParts[1], 10);
+    const latestMinor = parseInt(latestParts[1], 10);
+    if (isNaN(currentMinor) || isNaN(latestMinor)) return false;
+    return currentMinor !== latestMinor;
   }
 
   return false;
@@ -749,7 +756,7 @@ export async function fetchTechTrends(
     const start = cleanText.indexOf('[');
     const end = cleanText.lastIndexOf(']');
     if (start !== -1 && end !== -1) {
-        cleanText = cleanText.substring(start, end + 1);
+      cleanText = cleanText.substring(start, end + 1);
     }
 
     const suggestions = JSON.parse(cleanText) as Array<{ title: string; summary: string; relevance: number }>;

@@ -83,6 +83,9 @@ const HEALTH_CHECK_ENDPOINTS: Record<Exclude<LLMProvider, "mock">, string> = {
   anthropic: "https://api.anthropic.com/v1/models",
   mistral: "https://api.mistral.ai/v1/models",
   groq: "https://api.groq.com/openai/v1/models",
+  jan: `${process.env.JAN_BASE_URL || "http://localhost:1337"}/v1/models`,
+  google: "https://generativelanguage.googleapis.com/v1beta/openai/models",
+  grump: "https://integrate.api.nvidia.com/v1/models", // meta-provider, uses sub-provider health
 };
 
 // =============================================================================

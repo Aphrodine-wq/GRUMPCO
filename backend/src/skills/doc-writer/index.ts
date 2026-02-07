@@ -2,7 +2,7 @@
  * Doc Writer Skill
  * Generates documentation for code, APIs, and projects
  */
-import type { SkillModule } from '../types';
+import type { SkillModule } from '../types.js';
 
 const docWriterSkill: SkillModule = {
     id: 'doc-writer',
@@ -50,7 +50,7 @@ const docWriterSkill: SkillModule = {
                 required: ['code'],
             },
         },
-    ] as import('../types').ToolDefinition[],
+    ] as import('../types.js').ToolDefinition[],
 
     systemPrompt: `You are a documentation expert. When using the Doc Writer skill:
 
