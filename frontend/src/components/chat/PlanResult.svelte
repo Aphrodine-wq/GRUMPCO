@@ -55,10 +55,7 @@
       <ListTodo size={18} class="plan-icon" />
       <h3 class="result-title">Implementation Plan</h3>
     </div>
-    <button 
-      class="toggle-btn"
-      onclick={() => showAllTasks = !showAllTasks}
-    >
+    <button class="toggle-btn" onclick={() => (showAllTasks = !showAllTasks)}>
       {#if showAllTasks}
         <ChevronUp size={16} />
       {:else}
@@ -72,9 +69,9 @@
     <div class="tasks-summary">
       <span class="task-count">{data.tasks.length} tasks</span>
       <span class="task-breakdown">
-        {data.tasks.filter(t => t.status === 'completed').length} completed, 
-        {data.tasks.filter(t => t.status === 'in-progress').length} in progress, 
-        {data.tasks.filter(t => t.status === 'pending').length} pending
+        {data.tasks.filter((t) => t.status === 'completed').length} completed,
+        {data.tasks.filter((t) => t.status === 'in-progress').length} in progress,
+        {data.tasks.filter((t) => t.status === 'pending').length} pending
       </span>
     </div>
 
@@ -82,13 +79,13 @@
       <div class="tasks-list">
         {#each data.tasks as task, index}
           <div class="task-item" class:expanded={expandedTasks.has(task.id)}>
-            <button 
-              class="task-header"
-              onclick={() => toggleTask(task.id)}
-            >
+            <button class="task-header" onclick={() => toggleTask(task.id)}>
               <div class="task-left">
                 <span class="task-number">{index + 1}</span>
-                <div class="task-status" style="background-color: {getTaskStatusColor(task.status)}"></div>
+                <div
+                  class="task-status"
+                  style="background-color: {getTaskStatusColor(task.status)}"
+                ></div>
                 <span class="task-title">{task.title}</span>
               </div>
               {#if task.description}
@@ -99,7 +96,7 @@
                 {/if}
               {/if}
             </button>
-            
+
             {#if expandedTasks.has(task.id) && task.description}
               <div class="task-description">
                 {task.description}
@@ -117,14 +114,14 @@
 
   <div class="approval-section">
     <p class="approval-question">Does this implementation plan look good?</p>
-    
+
     {#if !showFeedbackInput}
       <div class="approval-buttons">
         <button class="approve-btn" onclick={handleApprove}>
           <Check size={16} />
           <span>Looks good! Continue to Code</span>
         </button>
-        <button class="changes-btn" onclick={() => showFeedbackInput = true}>
+        <button class="changes-btn" onclick={() => (showFeedbackInput = true)}>
           <RefreshCw size={16} />
           <span>Request changes</span>
         </button>
@@ -140,7 +137,7 @@
           <button class="submit-feedback-btn" onclick={handleRequestChanges}>
             Submit Feedback
           </button>
-          <button class="cancel-btn" onclick={() => showFeedbackInput = false}>
+          <button class="cancel-btn" onclick={() => (showFeedbackInput = false)}>
             <X size={16} />
             <span>Cancel</span>
           </button>
@@ -194,7 +191,7 @@
     font-size: 12px;
     color: var(--color-text-muted);
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .toggle-btn:hover {
@@ -237,7 +234,7 @@
     background: var(--color-bg-subtle);
     border-radius: 8px;
     overflow: hidden;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .task-item.expanded {
@@ -255,7 +252,7 @@
     cursor: pointer;
     text-align: left;
     color: var(--color-text);
-    transition: background 150ms ease;
+    transition: background 50ms ease-out;
   }
 
   .task-header:hover {
@@ -340,7 +337,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .approve-btn:hover {
@@ -360,7 +357,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .changes-btn:hover {
@@ -385,7 +382,7 @@
     font-family: inherit;
     color: var(--color-text);
     resize: vertical;
-    transition: border-color 150ms ease;
+    transition: border-color 50ms ease-out;
   }
 
   textarea:focus {
@@ -412,7 +409,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .submit-feedback-btn:hover {
@@ -431,7 +428,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .cancel-btn:hover {

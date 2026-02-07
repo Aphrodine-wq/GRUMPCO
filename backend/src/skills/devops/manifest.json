@@ -1,0 +1,42 @@
+{
+    "id": "devops",
+    "name": "DevOps Assistant",
+    "version": "1.0.0",
+    "description": "Generate Dockerfiles, docker-compose configs, CI/CD pipelines, Kubernetes manifests, and deployment scripts.",
+    "category": "infrastructure",
+    "icon": "🚀",
+    "tags": [
+        "devops",
+        "docker",
+        "ci-cd",
+        "kubernetes",
+        "deployment",
+        "infrastructure"
+    ],
+    "capabilities": [
+        "dockerfile-generation",
+        "cicd-pipeline",
+        "k8s-manifests"
+    ],
+    "triggers": {
+        "keywords": [
+            "devops",
+            "deploy",
+            "dockerfile",
+            "ci/cd",
+            "pipeline",
+            "kubernetes",
+            "k8s"
+        ],
+        "commands": [
+            "/devops",
+            "/deploy",
+            "/docker"
+        ],
+        "fileExtensions": [
+            ".dockerfile",
+            ".yml",
+            ".yaml"
+        ]
+    }
+}

@@ -32,6 +32,7 @@ export interface UserRateLimit {
 /** Max requests per window by tier (same windowMs). */
 const TIER_MULTIPLIERS: Record<TierId, number> = {
   free: 1,
+  starter: 2,
   pro: 4,
   team: 8,
   enterprise: 20,
@@ -42,12 +43,12 @@ function getTierFromRequest(req: Request): TierId {
   // The tier must be set by auth middleware after verifying JWT claims or database lookup
   const authReq = req as RequestWithAuth;
   const userTier = authReq.user?.tier as TierId | undefined;
-  if (userTier && ["pro", "team", "enterprise"].includes(userTier)) {
+  if (userTier && ["starter", "pro", "team", "enterprise"].includes(userTier)) {
     return userTier;
   }
   // Fallback: check if tier was set by auth middleware on session
   const sessionTier = authReq.session?.tier as TierId | undefined;
-  if (sessionTier && ["pro", "team", "enterprise"].includes(sessionTier)) {
+  if (sessionTier && ["starter", "pro", "team", "enterprise"].includes(sessionTier)) {
     return sessionTier;
   }
   return "free";
@@ -95,9 +96,18 @@ const ENDPOINT_LIMITS: Record<string, RateLimitConfig> = {
 // Global fallback rate limit (max scaled by tier)
 const GLOBAL_LIMIT: RateLimitConfig = {
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 500,
   message: "Too many requests. Please wait a moment.",
 };
+
+// Read-only metadata endpoints exempt from strict rate limiting
+const EXEMPT_PREFIXES = [
+  "/api/skills",
+  "/api/models",
+  "/api/settings",
+  "/api/mcp",
+  "/health",
+];
 
 interface RequestWithAuth extends Request {
   user?: { id?: string; tier?: TierId };
@@ -184,8 +194,10 @@ function createRateLimiter(
         return `ip:${ip}`;
       }),
     skip: (req: Request) => {
-      // Skip rate limiting for health checks
-      return req.path.startsWith("/health");
+      // Skip rate limiting for health checks and read-only metadata endpoints
+      if (req.path.startsWith("/health")) return true;
+      if (req.method === "GET" && EXEMPT_PREFIXES.some(p => req.path.startsWith(p))) return true;
+      return false;
     },
     handler: (req: Request, res: Response) => {
       logger.warn(
@@ -286,7 +298,7 @@ function buildTierLimiters(
   store?: Store,
 ): Map<string, RateLimitRequestHandler> {
   const limiters = new Map<string, RateLimitRequestHandler>();
-  const tiers: TierId[] = ["free", "pro", "team", "enterprise"];
+  const tiers: TierId[] = ["free", "starter", "pro", "team", "enterprise"];
   for (const tier of tiers) {
     const globalMax = Math.max(
       1,

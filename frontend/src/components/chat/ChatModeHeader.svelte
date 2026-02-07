@@ -66,7 +66,7 @@
     border: 1px solid transparent;
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 50ms ease-out;
   }
 
   .mode-pill:hover {

@@ -4,7 +4,7 @@
  * Tier can come from env (TIER_DEFAULT), from settings, or from a future billing API.
  */
 
-export type TierId = "free" | "pro" | "team" | "enterprise";
+export type TierId = "free" | "starter" | "pro" | "team" | "enterprise";
 
 export interface FeatureFlags {
   has_design: boolean;
@@ -29,6 +29,17 @@ const TIER_FLAGS: Record<TierId, FeatureFlags> = {
     has_ship: false,
     has_codegen: false,
     has_mcp_browser: false,
+    has_github: false,
+  },
+  starter: {
+    has_design: true,
+    has_plan: true,
+    has_spec: true,
+    has_argument: true,
+    has_code: true,
+    has_ship: true,
+    has_codegen: false,
+    has_mcp_browser: true,
     has_github: false,
   },
   pro: {
@@ -67,7 +78,7 @@ const TIER_FLAGS: Record<TierId, FeatureFlags> = {
 };
 
 function parseTier(s: string | undefined): TierId {
-  if (s === "pro" || s === "team" || s === "enterprise") return s;
+  if (s === "starter" || s === "pro" || s === "team" || s === "enterprise") return s;
   return "free";
 }
 

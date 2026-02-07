@@ -33,7 +33,14 @@
       currentPath = data.path;
       entries = data.entries;
     } catch (e) {
-      error = (e as Error).message;
+      const msg = (e as Error).message || 'Unknown error';
+      if (msg.includes('404') || msg.includes('not found')) {
+        error = 'Directory not found. The workspace path may have moved or been deleted.';
+      } else if (msg.includes('403') || msg.includes('Forbidden')) {
+        error = 'Access denied to this directory.';
+      } else {
+        error = `Could not access workspace: ${msg}`;
+      }
       entries = [];
     } finally {
       loading = false;

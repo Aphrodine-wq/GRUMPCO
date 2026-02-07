@@ -39,7 +39,10 @@
   import { workspaceStore } from '../stores/workspaceStore';
   import { openModal } from '../stores/clarificationStore';
   import { parseAssistantResponse } from '../utils/responseParser';
-  import { flattenTextContent, parseMessageContent as parseContentBlocks } from '../utils/contentParser';
+  import {
+    flattenTextContent,
+    parseMessageContent as parseContentBlocks,
+  } from '../utils/contentParser';
   import { generatePlan } from '../stores/planStore';
   import { startSpecSession } from '../stores/specStore';
   import { fetchApi } from '../lib/api.js';
@@ -926,252 +929,250 @@
           <span class="mode-header-hint"><kbd>Ctrl</kbd>+<kbd>K</kbd> to search</span>
         </header>
         <div class="chat-main-area" class:with-sidebar={showGAgentMemoryPanel}>
-            <!-- G-Agent Status Panel (floating or docked) -->
-            {#if isGAgentSession && showGAgentStatusPanel}
-              <div class="gagent-status-sidebar">
-                <GAgentStatusPanel
-                  sessionId={gAgentSessionId}
-                  compact={false}
-                  showCompiler={true}
-                  showBudget={true}
-                />
-              </div>
-            {/if}
-
-            <div class="chat-content">
-              <!-- G-Agent Plan Viewer (shown when there's an active plan) -->
-              {#if isGAgentSession && hasGAgentPlan}
-                <div class="gagent-plan-panel">
-                  <GAgentPlanViewer
-                    compact={false}
-                    workspaceRoot={$workspaceStore.root ?? undefined}
-                    onApprove={() => {
-                      showGAgentPlanApproval = false;
-                    }}
-                    onCancel={() => {
-                      gAgentPlanStore.clearPlan();
-                    }}
-                  />
-                </div>
-              {/if}
-
-              <!-- G-Agent Live Output (shown during execution) -->
-              {#if isGAgentSession && (showGAgentLiveOutput || isGAgentExecuting)}
-                <div class="gagent-live-output-panel">
-                  <GAgentLiveOutput
-                    bind:this={liveOutputRef}
-                    isExecuting={isGAgentExecuting}
-                    currentTaskId={$gAgentCurrentPlan?.tasks.find((t) => t.status === 'in_progress')
-                      ?.id ?? ''}
-                    onClose={() => {
-                      showGAgentLiveOutput = false;
-                    }}
-                  />
-                </div>
-              {/if}
-
-              <div class="messages-scroll" bind:this={messagesRef}>
-                <div class="messages-inner">
-                  {#if messages.length <= 1 && !streaming}
-                    <div class="empty-state">
-                      <Card variant="flat" padding="lg">
-                        <FrownyFace size="lg" state="idle" animated={true} />
-                        <h1 class="empty-title">What are we building?</h1>
-                      </Card>
-                    </div>
-                  {/if}
-
-                  {#each messages as msg, index}
-                    <div class="message-wrapper {msg.role}">
-                      <div class="message-avatar">
-                        {#if msg.role === 'user'}
-                          <div class="avatar-circle user">U</div>
-                        {:else}
-                          <FrownyFace size="sm" state="idle" animated={false} />
-                        {/if}
-                      </div>
-                      <div class="message-content-container">
-                        <div class="message-meta">
-                          <span class="message-role">{msg.role === 'user' ? 'You' : 'G-Rump'}</span>
-                          {#if msg.timestamp}<span class="message-time"
-                              >{formatTimestamp(msg.timestamp)}</span
-                            >{/if}
-                          {#if msg.role === 'assistant' && msg.model}
-                            <span class="model-badge">
-                              <span class="model-name">{msg.model}</span>
-                              <button
-                                type="button"
-                                class="model-details-toggle"
-                                onclick={() =>
-                                  (expandedModelIndex =
-                                    expandedModelIndex === index ? null : index)}
-                                title="Routing details"
-                              >
-                                <svg
-                                  width="14"
-                                  height="14"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  stroke-width="2"
-                                >
-                                  <circle cx="12" cy="12" r="10" />
-                                  <path d="M12 16v-4M12 8h.01" />
-                                </svg>
-                              </button>
-                            </span>
-                          {/if}
-                        </div>
-                        {#if msg.role === 'assistant' && msg.routingDecision && expandedModelIndex === index}
-                          <div class="model-details">
-                            {#if msg.routingDecision.complexity != null}
-                              <span>Complexity: {msg.routingDecision.complexity}</span>
-                            {/if}
-                            {#if msg.routingDecision.reason}
-                              <span>Reason: {msg.routingDecision.reason}</span>
-                            {/if}
-                            {#if msg.routingDecision.estimatedCost != null}
-                              <span>Est. cost: {msg.routingDecision.estimatedCost}</span>
-                            {/if}
-                          </div>
-                        {/if}
-                        <div class="message-bubble">
-                          {#if typeof msg.content === 'string'}
-                            {#each parseMessageContent(msg.content) as block, bIdx}
-                              {#if block.type === 'text'}
-                                <div class="text-block">{block.content}</div>
-                              {:else if block.type === 'mermaid'}
-                                <div
-                                  class="diagram-card"
-                                  use:setupDiagramRef={{ index, blockIdx: bIdx }}
-                                >
-                                  <div class="diagram-header">
-                                    <Badge variant="info">Architecture</Badge>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onclick={() => exportSvg(index, bIdx)}>Export</Button
-                                    >
-                                  </div>
-                                  <DiagramRenderer
-                                    code={block.content}
-                                    on:generate-code={(e) =>
-                                      handleMermaidToCode({
-                                        mermaidCode: e.detail.mermaidCode,
-                                        framework: 'react',
-                                        language: 'typescript',
-                                      })}
-                                  />
-                                </div>
-                              {/if}
-                            {/each}
-                          {:else}
-                            {#each msg.content as block}
-                              {#if block.type === 'text'}
-                                <div class="text-block">{block.content}</div>
-                              {:else if block.type === 'context'}
-                                <details class="context-block">
-                                  <summary
-                                    >Context: {block.content.mode} · {block.content.toolCount ?? 0} tools</summary
-                                  >
-                                  {#if block.content.capabilities?.length}
-                                    <p class="context-capabilities">
-                                      {block.content.capabilities.join(', ')}
-                                    </p>
-                                  {/if}
-                                </details>
-                              {:else if block.type === 'intent'}
-                                <details class="intent-block">
-                                  <summary>Intent</summary>
-                                  <pre class="intent-content">{JSON.stringify(
-                                      block.content,
-                                      null,
-                                      2
-                                    )}</pre>
-                                </details>
-                              {:else if block.type === 'tool_call'}
-                                <ToolCallCard toolCall={block} />
-                              {:else if block.type === 'tool_result'}
-                                <ToolResultCard toolResult={block} />
-                              {/if}
-                            {/each}
-                          {/if}
-                        </div>
-                      </div>
-                    </div>
-                  {/each}
-
-                  {#if streaming}
-                    <div class="message-wrapper assistant streaming">
-                      <div class="message-avatar">
-                        <FrownyFace size="sm" state="thinking" animated={true} />
-                      </div>
-                      <div class="message-content-container">
-                        <div class="message-meta">
-                          <span class="message-role">G-Rump</span>
-                          <span class="thinking-indicator">Thinking...</span>
-                        </div>
-                        <div class="message-bubble">
-                          {#if streamingBlocks.length > 0}
-                            {#each streamingBlocks as block}
-                              {#if block.type === 'text'}
-                                <div class="text-block">{block.content}</div>
-                              {:else if block.type === 'context'}
-                                <details class="context-block">
-                                  <summary
-                                    >Context: {block.content.mode} · {block.content.toolCount ?? 0} tools</summary
-                                  >
-                                  {#if block.content.capabilities?.length}
-                                    <p class="context-capabilities">
-                                      {block.content.capabilities.join(', ')}
-                                    </p>
-                                  {/if}
-                                </details>
-                              {:else if block.type === 'intent'}
-                                <details class="intent-block">
-                                  <summary>Intent</summary>
-                                  <pre class="intent-content">{JSON.stringify(
-                                      block.content,
-                                      null,
-                                      2
-                                    )}</pre>
-                                </details>
-                              {:else if block.type === 'tool_call'}
-                                <ToolCallCard toolCall={block} />
-                              {:else if block.type === 'tool_result'}
-                                <ToolResultCard toolResult={block} />
-                              {/if}
-                            {/each}
-                          {:else}
-                            <div class="text-block">{streamingContent || '...'}</div>
-                          {/if}
-                        </div>
-                      </div>
-                    </div>
-                  {/if}
-                </div>
-              </div>
+          <!-- G-Agent Status Panel (floating or docked) -->
+          {#if isGAgentSession && showGAgentStatusPanel}
+            <div class="gagent-status-sidebar">
+              <GAgentStatusPanel
+                sessionId={gAgentSessionId}
+                compact={false}
+                showCompiler={true}
+                showBudget={true}
+              />
             </div>
-            <!-- .chat-content -->
+          {/if}
 
-            <!-- G-Agent Memory Sidebar -->
-            {#if isGAgentSession && showGAgentMemoryPanel}
-              <div class="gagent-memory-sidebar">
-                <GAgentMemoryPanel
-                  bind:this={memoryPanelRef}
-                  compact={true}
-                  onPatternSelect={(pattern) => {
-                    showToast(
-                      `Pattern: ${pattern.name} (${Math.round(pattern.confidence * 100)}% confidence)`,
-                      'info'
-                    );
+          <div class="chat-content">
+            <!-- G-Agent Plan Viewer (shown when there's an active plan) -->
+            {#if isGAgentSession && hasGAgentPlan}
+              <div class="gagent-plan-panel">
+                <GAgentPlanViewer
+                  compact={false}
+                  workspaceRoot={$workspaceStore.root ?? undefined}
+                  onApprove={() => {
+                    showGAgentPlanApproval = false;
+                  }}
+                  onCancel={() => {
+                    gAgentPlanStore.clearPlan();
                   }}
                 />
               </div>
             {/if}
+
+            <!-- G-Agent Live Output (shown during execution) -->
+            {#if isGAgentSession && (showGAgentLiveOutput || isGAgentExecuting)}
+              <div class="gagent-live-output-panel">
+                <GAgentLiveOutput
+                  bind:this={liveOutputRef}
+                  isExecuting={isGAgentExecuting}
+                  currentTaskId={$gAgentCurrentPlan?.tasks.find((t) => t.status === 'in_progress')
+                    ?.id ?? ''}
+                  onClose={() => {
+                    showGAgentLiveOutput = false;
+                  }}
+                />
+              </div>
+            {/if}
+
+            <div class="messages-scroll" bind:this={messagesRef}>
+              <div class="messages-inner">
+                {#if messages.length <= 1 && !streaming}
+                  <div class="empty-state">
+                    <Card variant="flat" padding="lg">
+                      <FrownyFace size="lg" state="idle" animated={true} />
+                      <h1 class="empty-title">What are we building?</h1>
+                    </Card>
+                  </div>
+                {/if}
+
+                {#each messages as msg, index}
+                  <div class="message-wrapper {msg.role}">
+                    <div class="message-avatar">
+                      {#if msg.role === 'user'}
+                        <div class="avatar-circle user">U</div>
+                      {:else}
+                        <FrownyFace size="sm" state="idle" animated={false} />
+                      {/if}
+                    </div>
+                    <div class="message-content-container">
+                      <div class="message-meta">
+                        <span class="message-role">{msg.role === 'user' ? 'You' : 'G-Rump'}</span>
+                        {#if msg.timestamp}<span class="message-time"
+                            >{formatTimestamp(msg.timestamp)}</span
+                          >{/if}
+                        {#if msg.role === 'assistant' && msg.model}
+                          <span class="model-badge">
+                            <span class="model-name">{msg.model}</span>
+                            <button
+                              type="button"
+                              class="model-details-toggle"
+                              onclick={() =>
+                                (expandedModelIndex = expandedModelIndex === index ? null : index)}
+                              title="Routing details"
+                            >
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                              >
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 16v-4M12 8h.01" />
+                              </svg>
+                            </button>
+                          </span>
+                        {/if}
+                      </div>
+                      {#if msg.role === 'assistant' && msg.routingDecision && expandedModelIndex === index}
+                        <div class="model-details">
+                          {#if msg.routingDecision.complexity != null}
+                            <span>Complexity: {msg.routingDecision.complexity}</span>
+                          {/if}
+                          {#if msg.routingDecision.reason}
+                            <span>Reason: {msg.routingDecision.reason}</span>
+                          {/if}
+                          {#if msg.routingDecision.estimatedCost != null}
+                            <span>Est. cost: {msg.routingDecision.estimatedCost}</span>
+                          {/if}
+                        </div>
+                      {/if}
+                      <div class="message-bubble">
+                        {#if typeof msg.content === 'string'}
+                          {#each parseMessageContent(msg.content) as block, bIdx}
+                            {#if block.type === 'text'}
+                              <div class="text-block">{block.content}</div>
+                            {:else if block.type === 'mermaid'}
+                              <div
+                                class="diagram-card"
+                                use:setupDiagramRef={{ index, blockIdx: bIdx }}
+                              >
+                                <div class="diagram-header">
+                                  <Badge variant="info">Architecture</Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onclick={() => exportSvg(index, bIdx)}>Export</Button
+                                  >
+                                </div>
+                                <DiagramRenderer
+                                  code={block.content}
+                                  on:generate-code={(e) =>
+                                    handleMermaidToCode({
+                                      mermaidCode: e.detail.mermaidCode,
+                                      framework: 'react',
+                                      language: 'typescript',
+                                    })}
+                                />
+                              </div>
+                            {/if}
+                          {/each}
+                        {:else}
+                          {#each msg.content as block}
+                            {#if block.type === 'text'}
+                              <div class="text-block">{block.content}</div>
+                            {:else if block.type === 'context'}
+                              <details class="context-block">
+                                <summary
+                                  >Context: {block.content.mode} · {block.content.toolCount ?? 0} tools</summary
+                                >
+                                {#if block.content.capabilities?.length}
+                                  <p class="context-capabilities">
+                                    {block.content.capabilities.join(', ')}
+                                  </p>
+                                {/if}
+                              </details>
+                            {:else if block.type === 'intent'}
+                              <details class="intent-block">
+                                <summary>Intent</summary>
+                                <pre class="intent-content">{JSON.stringify(
+                                    block.content,
+                                    null,
+                                    2
+                                  )}</pre>
+                              </details>
+                            {:else if block.type === 'tool_call'}
+                              <ToolCallCard toolCall={block} />
+                            {:else if block.type === 'tool_result'}
+                              <ToolResultCard toolResult={block} />
+                            {/if}
+                          {/each}
+                        {/if}
+                      </div>
+                    </div>
+                  </div>
+                {/each}
+
+                {#if streaming}
+                  <div class="message-wrapper assistant streaming">
+                    <div class="message-avatar">
+                      <FrownyFace size="sm" state="thinking" animated={true} />
+                    </div>
+                    <div class="message-content-container">
+                      <div class="message-meta">
+                        <span class="message-role">G-Rump</span>
+                        <span class="thinking-indicator">Thinking...</span>
+                      </div>
+                      <div class="message-bubble">
+                        {#if streamingBlocks.length > 0}
+                          {#each streamingBlocks as block}
+                            {#if block.type === 'text'}
+                              <div class="text-block">{block.content}</div>
+                            {:else if block.type === 'context'}
+                              <details class="context-block">
+                                <summary
+                                  >Context: {block.content.mode} · {block.content.toolCount ?? 0} tools</summary
+                                >
+                                {#if block.content.capabilities?.length}
+                                  <p class="context-capabilities">
+                                    {block.content.capabilities.join(', ')}
+                                  </p>
+                                {/if}
+                              </details>
+                            {:else if block.type === 'intent'}
+                              <details class="intent-block">
+                                <summary>Intent</summary>
+                                <pre class="intent-content">{JSON.stringify(
+                                    block.content,
+                                    null,
+                                    2
+                                  )}</pre>
+                              </details>
+                            {:else if block.type === 'tool_call'}
+                              <ToolCallCard toolCall={block} />
+                            {:else if block.type === 'tool_result'}
+                              <ToolResultCard toolResult={block} />
+                            {/if}
+                          {/each}
+                        {:else}
+                          <div class="text-block">{streamingContent || '...'}</div>
+                        {/if}
+                      </div>
+                    </div>
+                  </div>
+                {/if}
+              </div>
+            </div>
           </div>
-          <!-- .chat-main-area -->
-        {/if}
+          <!-- .chat-content -->
+
+          <!-- G-Agent Memory Sidebar -->
+          {#if isGAgentSession && showGAgentMemoryPanel}
+            <div class="gagent-memory-sidebar">
+              <GAgentMemoryPanel
+                bind:this={memoryPanelRef}
+                compact={true}
+                onPatternSelect={(pattern) => {
+                  showToast(
+                    `Pattern: ${pattern.name} (${Math.round(pattern.confidence * 100)}% confidence)`,
+                    'info'
+                  );
+                }}
+              />
+            </div>
+          {/if}
+        </div>
+        <!-- .chat-main-area -->
 
         <div class="chat-controls">
           <!-- G-Agent Quick Stats Bar -->
@@ -1354,7 +1355,8 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
-    background-color: var(--bg-primary);
+    background-color: var(--color-bg-app);
+    color: var(--color-text);
     position: relative;
     font-family: 'Inter', sans-serif;
   }
@@ -1383,13 +1385,13 @@
     flex: 1;
     overflow: auto;
     padding: 1rem;
-    background-color: var(--bg-secondary);
+    background-color: var(--color-bg-subtle);
   }
 
   .gagent-plan-panel {
     padding: 1rem;
-    border-bottom: 1px solid var(--border-color, #e5e5e5);
-    background: var(--bg-secondary, #f9fafb);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
     max-height: 50vh;
     overflow-y: auto;
   }
@@ -1419,8 +1421,8 @@
     height: 300px;
     min-height: 200px;
     max-height: 50vh;
-    border-bottom: 1px solid var(--border-color, #e5e5e5);
-    background: #1a1a2e;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-inset);
   }
 
   /* G-Agent Memory Sidebar */
@@ -1428,7 +1430,7 @@
     width: 360px;
     min-width: 280px;
     max-width: 400px;
-    border-left: 1px solid var(--border-color, #e5e5e5);
+    border-left: 1px solid var(--color-border);
     background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
     overflow: hidden;
     animation: slideIn 0.3s ease;
@@ -1439,7 +1441,7 @@
     width: 320px;
     min-width: 280px;
     max-width: 380px;
-    border-right: 1px solid var(--border-color, #e5e5e5);
+    border-right: 1px solid var(--color-border);
     background: linear-gradient(180deg, #111827 0%, #1f2937 100%);
     overflow-y: auto;
     animation: slideInLeft 0.3s ease;
@@ -1663,10 +1665,10 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.125rem 0.375rem;
-    background: var(--bg-secondary, rgba(59, 130, 246, 0.15));
+    background: var(--color-primary-subtle, rgba(59, 130, 246, 0.15));
     border-radius: 0.25rem;
     font-size: 0.7rem;
-    color: var(--text-secondary, #6b7280);
+    color: var(--color-text-secondary);
   }
 
   .model-name {
@@ -1689,7 +1691,7 @@
   }
 
   .model-details-toggle:hover {
-    color: var(--text-primary, #111);
+    color: var(--color-text);
   }
 
   .model-details {
@@ -1697,7 +1699,7 @@
     flex-wrap: wrap;
     gap: 0.5rem;
     font-size: 0.7rem;
-    color: var(--text-secondary, #6b7280);
+    color: var(--color-text-secondary);
     margin-bottom: 0.25rem;
     padding: 0.25rem 0;
   }
@@ -1758,7 +1760,7 @@
   /* Diagram Card */
   .diagram-card {
     background: var(--color-bg-card);
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 0.75rem;
     overflow: hidden;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -1851,7 +1853,7 @@
     right: 0;
     background: var(--color-bg-card);
     padding: 1rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--color-border);
     box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
     z-index: 10;
   }
@@ -1932,6 +1934,8 @@
     align-items: center;
     gap: 1rem;
     width: 100%;
+    position: relative;
+    z-index: 10;
   }
 
   .model-selector-left {
@@ -1947,6 +1951,8 @@
     border-radius: 0.75rem;
     padding: 0.75rem 1rem;
     border: 1px solid transparent;
+    position: relative;
+    z-index: 5;
     transition:
       border-color 0.2s,
       box-shadow 0.2s;
@@ -2004,7 +2010,7 @@
   }
 
   .send-button:disabled {
-    background: #d1d5db;
+    background: var(--color-text-disabled, #d1d5db);
     cursor: not-allowed;
   }
 
@@ -2033,7 +2039,7 @@
   }
 
   .attach-image-btn:hover:not(:disabled) {
-    background: #d1d5db;
+    background: var(--color-bg-inset);
   }
 
   .attach-image-btn:disabled {
@@ -2062,7 +2068,7 @@
   .mode-btn {
     padding: 0.5rem 1rem;
     border-radius: 9999px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     background: var(--color-bg-card);
     color: var(--color-text-secondary);
     font-size: 0.875rem;
@@ -2091,16 +2097,16 @@
 
   .model-selector-label {
     font-size: 0.75rem;
-    color: var(--text-secondary, #6b7280);
+    color: var(--color-text-secondary);
   }
 
   .model-selector {
     font-size: 0.8rem;
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
-    border: 1px solid var(--border, #e5e7eb);
-    background: var(--bg-primary, #fff);
-    color: var(--text-primary, #111);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-app);
+    color: var(--color-text);
   }
 
   .mode-selector {
@@ -2114,7 +2120,7 @@
   .intent-block {
     margin: 0.5rem 0;
     padding: 0.5rem 0.75rem;
-    background: var(--bg-subtle, #f5f5f5);
+    background: var(--color-bg-subtle);
     border-radius: 6px;
     font-size: 0.8125rem;
   }
@@ -2123,13 +2129,13 @@
   .intent-block summary {
     cursor: pointer;
     font-weight: 500;
-    color: var(--text-secondary, #6b7280);
+    color: var(--color-text-secondary);
   }
 
   .context-capabilities {
     margin: 0.5rem 0 0;
     font-size: 0.75rem;
-    color: var(--text-muted, #9ca3af);
+    color: var(--color-text-muted);
   }
 
   .intent-content {

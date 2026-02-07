@@ -51,8 +51,11 @@ router.get("/live", (_req: Request, res: Response) => {
   const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
   const heapPercentage = (heapUsedMB / heapTotalMB) * 100;
 
-  // Fail if heap usage exceeds 90%
-  if (heapPercentage > 90) {
+  // Fail if heap usage exceeds 90%, but only when the total heap is large
+  // enough to be meaningful. V8 naturally runs at 90%+ on small heaps (< 200 MB)
+  // because GC only expands the heap under real memory pressure.
+  const heapIsLarge = heapTotalMB >= 200;
+  if (heapIsLarge && heapPercentage > 90) {
     res.status(503).json({
       status: "unhealthy",
       reason: "high_memory_usage",
@@ -284,10 +287,10 @@ router.get("/detailed", async (_req: Request, res: Response) => {
         details: connected
           ? { message: "connected" }
           : {
-              message: "Redis configured but disconnected",
-              impact:
-                "Rate limiting not shared; L2 cache disabled. See docs/RUNBOOK_REDIS.md.",
-            },
+            message: "Redis configured but disconnected",
+            impact:
+              "Rate limiting not shared; L2 cache disabled. See docs/RUNBOOK_REDIS.md.",
+          },
       };
     } catch (error) {
       checks.redis = {
@@ -306,11 +309,14 @@ router.get("/detailed", async (_req: Request, res: Response) => {
   const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
   const heapPercentage = (heapUsedMB / heapTotalMB) * 100;
 
+  // Only flag memory as unhealthy/degraded when heap is large enough (>= 200 MB).
+  // Small V8 heaps naturally run at 90%+ — that's normal GC behavior.
+  const detailedHeapIsLarge = heapTotalMB >= 200;
   checks.memory = {
     status:
-      heapPercentage > 90
+      detailedHeapIsLarge && heapPercentage > 90
         ? "unhealthy"
-        : heapPercentage > 75
+        : detailedHeapIsLarge && heapPercentage > 75
           ? "degraded"
           : "healthy",
     details: {

@@ -207,7 +207,7 @@
     border-radius: 0.375rem;
     color: #9ca3af;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 50ms ease-out;
   }
 
   .copy-btn:hover {

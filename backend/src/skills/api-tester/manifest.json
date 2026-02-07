@@ -1,0 +1,47 @@
+{
+    "id": "api-tester",
+    "name": "API Tester",
+    "version": "1.0.0",
+    "description": "Generate and run HTTP request tests against REST APIs with assertions and reporting",
+    "author": "G-Rump Team",
+    "category": "testing",
+    "icon": "plug-zap",
+    "tags": [
+        "api",
+        "testing",
+        "http",
+        "rest",
+        "endpoints"
+    ],
+    "capabilities": {
+        "providesTools": true,
+        "providesRoutes": false,
+        "providesPrompts": true,
+        "requiresWorkspace": true,
+        "supportsStreaming": false,
+        "supportsBackground": false
+    },
+    "permissions": [
+        "file_read",
+        "network"
+    ],
+    "triggers": {
+        "keywords": [
+            "test api",
+            "api test",
+            "http test",
+            "endpoint test",
+            "curl",
+            "request test"
+        ],
+        "patterns": [
+            "test\\s+(my|this|the)?\\s*(api|endpoint)",
+            "api\\s+test"
+        ],
+        "commands": [
+            "/api-test",
+            "/test-api"
+        ],
+        "fileExtensions": []
+    }
+}

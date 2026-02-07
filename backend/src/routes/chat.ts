@@ -126,7 +126,7 @@ const chatStreamRequestSchema = z.object({
     .array(chatMessageSchema)
     .min(1, "messages array must not be empty"),
   workspaceRoot: z.string().optional(),
-  mode: z.enum(["normal", "plan", "spec", "execute", "design"]).optional(),
+  mode: z.enum(["normal", "plan", "spec", "execute", "design", "argument", "code", "ship"]).optional(),
   planMode: z.boolean().optional(), // Deprecated
   planId: z.string().optional(),
   specSessionId: z.string().optional(),
@@ -334,7 +334,11 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
 
   try {
     // Determine mode: prefer new 'mode' parameter, fall back to planMode for backward compatibility
-    const chatMode = mode || (planMode ? "plan" : "normal");
+    // Map frontend-only modes to backend stream modes
+    const rawMode = mode || (planMode ? "plan" : "normal");
+    const chatMode = (rawMode === "code" || rawMode === "ship" || rawMode === "argument")
+      ? "normal" as const
+      : rawMode as "normal" | "plan" | "spec" | "execute" | "design";
     if (req.body.planMode !== undefined) {
       logger.warn(
         { requestId: req.requestId },

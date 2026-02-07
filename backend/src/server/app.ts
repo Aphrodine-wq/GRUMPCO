@@ -88,10 +88,10 @@ export function createApp(): Express {
 
   // Stripe webhook removed - desktop only (no billing)
 
-  // Body parsing
+  // Body parsing — larger limit avoids double-parse for multimodal payloads
   app.use(
     express.json({
-      limit: "100kb",
+      limit: "1mb",
       verify: (req: Request, _res: Response, buf: Buffer) => {
         (req as Request & { rawBody?: Buffer }).rawBody = buf;
       },
@@ -112,14 +112,14 @@ export function createApp(): Express {
  */
 function createCompressionMiddleware() {
   return compression({
-    level: isServerlessRuntime ? 4 : 6, // Faster compression in serverless
-    threshold: 1024, // Only compress responses > 1KB
+    level: isServerlessRuntime ? 4 : 1, // Level 1 is ~10x faster than level 6, only 5% larger
+    threshold: 512, // Compress responses > 512 bytes
     filter: (req, res) => {
       // Don't compress if client doesn't support it
       if (req.headers["x-no-compression"]) {
         return false;
       }
-      // Don't compress SSE streams
+      // Don't compress SSE streams (they're already chunked)
       if (
         res.getHeader("Content-Type")?.toString().includes("text/event-stream")
       ) {

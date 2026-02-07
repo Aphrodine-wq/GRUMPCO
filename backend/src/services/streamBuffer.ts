@@ -1,6 +1,10 @@
 /**
  * Stream Buffer
  * Batches small text chunks into fewer SSE events to reduce overhead.
+ *
+ * Key optimisation: the *first* chunk is always flushed immediately
+ * so the user sees text appear with zero added latency (time-to-first-token).
+ * Subsequent chunks are batched normally.
  */
 
 export class StreamBuffer {
@@ -8,17 +12,27 @@ export class StreamBuffer {
   private flushTimer: NodeJS.Timeout | null = null;
   private readonly maxDelayMs: number;
   private readonly maxBufferSize: number;
+  /** Tracks whether we have sent the very first token yet */
+  private firstChunkSent = false;
 
   constructor(
     private onFlush: (chunk: string) => void,
     options: { maxDelayMs?: number; maxBufferSize?: number } = {},
   ) {
-    this.maxDelayMs = options.maxDelayMs ?? 50;
-    this.maxBufferSize = options.maxBufferSize ?? 10;
+    this.maxDelayMs = options.maxDelayMs ?? 8;
+    this.maxBufferSize = options.maxBufferSize ?? 3;
   }
 
   push(chunk: string): void {
     if (!chunk) return;
+
+    // Flush first token immediately — no buffering delay for TTFT
+    if (!this.firstChunkSent) {
+      this.firstChunkSent = true;
+      this.onFlush(chunk);
+      return;
+    }
+
     this.buffer.push(chunk);
 
     if (this.buffer.length >= this.maxBufferSize) {
@@ -47,5 +61,15 @@ export class StreamBuffer {
 
   end(): void {
     this.flush();
+  }
+
+  /** Reset buffer state (e.g. between requests) */
+  reset(): void {
+    this.buffer = [];
+    this.firstChunkSent = false;
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
   }
 }

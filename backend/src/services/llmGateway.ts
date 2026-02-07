@@ -40,11 +40,14 @@ export type LLMProvider =
   | "nim"
   | "openrouter"
   | "ollama"
+  | "jan"
   | "github-copilot"
   | "kimi"
   | "anthropic"
   | "mistral"
   | "groq"
+  | "google"
+  | "grump"
   | "mock";
 
 /**
@@ -72,8 +75,8 @@ export interface StreamParams {
   messages: Array<{
     role: "user" | "assistant";
     content: string | MultimodalContentPart[];
-  /** AbortSignal for request cancellation */
-  signal?: AbortSignal;
+    /** AbortSignal for request cancellation */
+    signal?: AbortSignal;
   }>;
   /** Optional tool definitions for function calling */
   tools?: Array<{
@@ -100,14 +103,14 @@ export type StreamEvent =
   | { type: "content_block_delta"; delta: { type: "text_delta"; text: string } }
   /** Tool invocation start */
   | {
-      type: "content_block_start";
-      content_block: {
-        type: "tool_use";
-        id: string;
-        name: string;
-        input: Record<string, unknown>;
-      };
-    }
+    type: "content_block_start";
+    content_block: {
+      type: "tool_use";
+      id: string;
+      name: string;
+      input: Record<string, unknown>;
+    };
+  }
   /** End of message stream */
   | { type: "message_stop" }
   /** Stream error */
@@ -148,12 +151,13 @@ export const PROVIDER_CONFIGS: Record<
       "mistralai/mistral-large-2-instruct",
       "nvidia/llama-3.1-nemotron-ultra-253b-v1",
       "mistralai/codestral-22b-instruct-v0.1",
+      "moonshotai/kimi-k2.5",
     ],
     capabilities: ["streaming", "vision", "json_mode", "function_calling"],
     costPer1kTokens: 0.0002,
     speedRank: 2,
     qualityRank: 2,
-    defaultModel: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+    defaultModel: "moonshotai/kimi-k2.5",
     supportsTools: true,
   },
   openrouter: {
@@ -192,12 +196,12 @@ export const PROVIDER_CONFIGS: Record<
       "qwen2.5-coder",
       "deepseek-coder",
     ],
-    capabilities: ["streaming"],
+    capabilities: ["streaming", "function_calling"],
     costPer1kTokens: 0, // Local = free
     speedRank: 5,
     qualityRank: 4,
     defaultModel: "llama3.1",
-    supportsTools: false,
+    supportsTools: true,
   },
   "github-copilot": {
     name: "github-copilot",
@@ -236,6 +240,7 @@ export const PROVIDER_CONFIGS: Record<
       "claude-3-opus-20240229",
       "claude-3-sonnet-20240229",
       "claude-3-haiku-20240307",
+      "claude-opus-4-6-20260206",
     ],
     capabilities: ["streaming", "vision", "json_mode", "function_calling"],
     costPer1kTokens: 0.003,
@@ -281,6 +286,59 @@ export const PROVIDER_CONFIGS: Record<
     defaultModel: "llama3-70b-8192",
     supportsTools: true,
   },
+  jan: {
+    name: "jan",
+    baseUrl: `${process.env.JAN_BASE_URL || "http://localhost:1337"}/v1/chat/completions`,
+    apiKeyEnvVar: "",
+    models: [
+      "llama3.1",
+      "mistral",
+      "codellama",
+      "gemma2",
+      "phi-3",
+      "deepseek-coder-v2",
+    ],
+    capabilities: ["streaming", "function_calling"],
+    costPer1kTokens: 0, // Local = free
+    speedRank: 5,
+    qualityRank: 4,
+    defaultModel: "llama3.1",
+    supportsTools: true,
+  },
+  google: {
+    name: "google",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    apiKeyEnvVar: "GOOGLE_AI_API_KEY",
+    models: [
+      "gemini-3-pro",
+      "gemini-2.5-pro-preview-06-05",
+      "gemini-2.5-flash-preview-05-20",
+      "gemini-2.0-flash",
+    ],
+    capabilities: ["streaming", "vision", "json_mode", "function_calling"],
+    costPer1kTokens: 0.00125,
+    speedRank: 2,
+    qualityRank: 2,
+    defaultModel: "gemini-3-pro",
+    supportsTools: true,
+  },
+  grump: {
+    name: "grump",
+    baseUrl: "", // Meta-provider; routes to sub-providers
+    apiKeyEnvVar: "",
+    models: [
+      "g-compn1-auto",
+      "g-compn1-quality",
+      "g-compn1-fast",
+      "g-compn1-balanced",
+    ],
+    capabilities: ["streaming", "vision", "json_mode", "function_calling"],
+    costPer1kTokens: 0.0015, // Blended average of sub-providers
+    speedRank: 2,
+    qualityRank: 1,
+    defaultModel: "g-compn1-auto",
+    supportsTools: true,
+  },
 };
 
 // =============================================================================
@@ -293,9 +351,12 @@ const TIMEOUT_DEFAULT_MS = Number(
 const TIMEOUT_FAST_MS = Number(process.env.LLM_TIMEOUT_FAST_MS ?? 30_000);
 const TIMEOUT_SLOW_MS = Number(process.env.LLM_TIMEOUT_SLOW_MS ?? 180_000);
 
+/** Cached smartRetry module to avoid per-request dynamic import overhead */
+let _smartRetryModule: typeof import("./smartRetry.js") | null = null;
+
 function getTimeoutMs(provider: LLMProvider, maxTokens?: number): number {
-  // GitHub Copilot and Kimi are consistently fast
-  if (provider === "github-copilot" || provider === "kimi")
+  // GitHub Copilot is consistently fast
+  if (provider === "github-copilot")
     return TIMEOUT_FAST_MS;
 
   // Ollama depends on local hardware
@@ -354,10 +415,10 @@ async function* streamOpenAICompatible(
           typeof m.content === "string"
             ? m.content
             : (m.content as MultimodalContentPart[]).map((p) =>
-                p.type === "text"
-                  ? { type: "text" as const, text: p.text ?? "" }
-                  : { type: "image_url" as const, image_url: p.image_url },
-              ),
+              p.type === "text"
+                ? { type: "text" as const, text: p.text ?? "" }
+                : { type: "image_url" as const, image_url: p.image_url },
+            ),
       })),
     ],
   };
@@ -397,9 +458,13 @@ async function* streamOpenAICompatible(
 
     const res = await fetch(config.baseUrl, {
       method: "POST",
-      headers,
+      headers: {
+        ...headers,
+        "Connection": "keep-alive",
+      },
       body: JSON.stringify(body),
       signal: params.signal ? AbortSignal.any([params.signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
+      keepalive: true,
     });
 
     if (!res.ok) {
@@ -638,9 +703,10 @@ async function* streamAnthropic(
 
     const res = await fetch(config.baseUrl, {
       method: "POST",
-      headers,
+      headers: { ...headers, "Connection": "keep-alive" },
       body: JSON.stringify(body),
       signal: params.signal ? AbortSignal.any([params.signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
+      keepalive: true,
     });
 
     if (!res.ok) {
@@ -776,9 +842,10 @@ async function* streamOllama(
   try {
     const res = await fetch(config.baseUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Connection": "keep-alive" },
       body: JSON.stringify(body),
       signal: params.signal ? AbortSignal.any([params.signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
+      keepalive: true,
     });
 
     if (!res.ok) {
@@ -851,6 +918,285 @@ async function* streamOllama(
     };
     yield { type: "message_stop" as const };
   }
+}
+
+// =============================================================================
+// Jan (Local) Stream
+// =============================================================================
+
+/**
+ * Stream from Jan (OpenAI-compatible local inference at localhost:1337).
+ */
+async function* streamJan(params: StreamParams): AsyncGenerator<StreamEvent> {
+  const config = PROVIDER_CONFIGS.jan;
+  const model = params.model || config.defaultModel;
+  const janBaseUrl = process.env.JAN_BASE_URL || "http://localhost:1337";
+  const url = `${janBaseUrl}/v1/chat/completions`;
+
+  logger.debug({ model, url }, "[Jan] Starting local stream request");
+
+  try {
+    const body: Record<string, unknown> = {
+      model,
+      max_tokens: params.max_tokens,
+      stream: true,
+      messages: [
+        ...(params.system ? [{ role: "system" as const, content: params.system }] : []),
+        ...params.messages,
+      ],
+    };
+    if (params.temperature !== undefined) body.temperature = params.temperature;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(getTimeoutMs("jan", params.max_tokens)),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      logger.warn({ status: response.status, error: errText }, "Jan request failed");
+      yield {
+        type: "content_block_delta" as const,
+        delta: { type: "text_delta" as const, text: `[Jan error ${response.status}: ${errText}]` },
+      };
+      yield { type: "message_stop" as const };
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("Jan: no response body");
+
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") { yield { type: "message_stop" as const }; return; }
+        try {
+          const parsed = JSON.parse(data);
+          const delta = parsed.choices?.[0]?.delta;
+          if (delta?.content) {
+            yield { type: "content_block_delta" as const, delta: { type: "text_delta" as const, text: delta.content } };
+          }
+        } catch { /* skip malformed chunk */ }
+      }
+    }
+    yield { type: "message_stop" as const };
+  } catch (error) {
+    logger.warn({ error, model }, "Jan request failed");
+    yield {
+      type: "content_block_delta" as const,
+      delta: { type: "text_delta" as const, text: `[Jan connection failed - ensure Jan is running at ${process.env.JAN_BASE_URL || "http://localhost:1337"}]` },
+    };
+    yield { type: "message_stop" as const };
+  }
+}
+
+// =============================================================================
+// Google Gemini Stream
+// =============================================================================
+
+/**
+ * Stream from Google Gemini (via OpenAI-compatible endpoint).
+ */
+async function* streamGoogle(params: StreamParams): AsyncGenerator<StreamEvent> {
+  const config = PROVIDER_CONFIGS.google;
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+
+  if (!apiKey) {
+    logger.warn("Google AI not configured - GOOGLE_AI_API_KEY missing");
+    yield {
+      type: "content_block_delta" as const,
+      delta: { type: "text_delta" as const, text: "[Google AI not configured - set GOOGLE_AI_API_KEY environment variable]" },
+    };
+    yield { type: "message_stop" as const };
+    return;
+  }
+
+  const model = params.model || config.defaultModel;
+  logger.debug({ model }, "[Google] Starting Gemini stream request");
+
+  const body: Record<string, unknown> = {
+    model,
+    max_tokens: params.max_tokens,
+    stream: true,
+    messages: [
+      ...(params.system ? [{ role: "system" as const, content: params.system }] : []),
+      ...params.messages,
+    ],
+  };
+  if (params.temperature !== undefined) body.temperature = params.temperature;
+
+  try {
+    const response = await fetch(config.baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(getTimeoutMs("google" as LLMProvider, params.max_tokens)),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      logger.warn({ status: response.status, error: errText }, "Google AI request failed");
+      yield {
+        type: "content_block_delta" as const,
+        delta: { type: "text_delta" as const, text: `[Google AI error ${response.status}: ${errText}]` },
+      };
+      yield { type: "message_stop" as const };
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("Google: no response body");
+
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") { yield { type: "message_stop" as const }; return; }
+        try {
+          const parsed = JSON.parse(data);
+          const delta = parsed.choices?.[0]?.delta;
+          if (delta?.content) {
+            yield { type: "content_block_delta" as const, delta: { type: "text_delta" as const, text: delta.content } };
+          }
+        } catch { /* skip malformed chunk */ }
+      }
+    }
+    yield { type: "message_stop" as const };
+  } catch (error) {
+    logger.warn({ error, model }, "Google AI request failed");
+    yield {
+      type: "content_block_delta" as const,
+      delta: { type: "text_delta" as const, text: "[Google AI connection failed]" },
+    };
+    yield { type: "message_stop" as const };
+  }
+}
+
+// =============================================================================
+// G-CompN1 (G-Rump Model Mix) Smart Router
+// =============================================================================
+
+/**
+ * Classify query complexity for G-CompN1 routing.
+ * Returns: "quality" (→ Opus 4.6), "fast" (→ Kimi K2.5), or "balanced" (→ Gemini 3 Pro).
+ */
+function classifyGrumpQuery(params: StreamParams): "quality" | "fast" | "balanced" {
+  // Check explicit model preference
+  const model = params.model || "g-compn1-auto";
+  if (model === "g-compn1-quality") return "quality";
+  if (model === "g-compn1-fast") return "fast";
+  if (model === "g-compn1-balanced") return "balanced";
+
+  // Auto-classify based on content analysis
+  const lastMsg = params.messages[params.messages.length - 1];
+  const content = typeof lastMsg?.content === "string"
+    ? lastMsg.content
+    : Array.isArray(lastMsg?.content)
+      ? (lastMsg.content as Array<{ type: string; text?: string }>).filter(p => p.type === "text").map(p => p.text ?? "").join(" ")
+      : "";
+
+  const wordCount = content.split(/\s+/).length;
+  const hasCode = /```|function\s|class\s|import\s|const\s|let\s|var\s|def\s|async\s/.test(content);
+  const hasComplexReasoning = /explain|analyze|why|how does|compare|evaluate|design|architect|refactor|debug|optimize/i.test(content);
+  const isSimpleQuery = wordCount < 20 && !hasCode && !hasComplexReasoning;
+  const isComplexQuery = wordCount > 100 || (hasCode && hasComplexReasoning) || params.tools?.length;
+
+  // Route based on complexity
+  if (isComplexQuery) return "quality";   // Opus 4.6 for hard problems
+  if (isSimpleQuery) return "fast";       // Kimi K2.5 for cheap, quick answers
+  return "balanced";                      // Gemini 3 Pro for everything else
+}
+
+/**
+ * G-CompN1 Model Mix: Smart routing between Opus 4.6, Kimi K2.5, and Gemini 3 Pro.
+ * Optimizes for cost while maintaining high quality.
+ */
+async function* streamGrumpMix(params: StreamParams): AsyncGenerator<StreamEvent> {
+  const tier = classifyGrumpQuery(params);
+
+  logger.info({ tier, model: params.model }, "[G-CompN1] Routing query");
+
+  // Route to sub-provider based on classification
+  let subProvider: LLMProvider;
+  let subModel: string;
+
+  switch (tier) {
+    case "quality":
+      // Anthropic Opus 4.6 — best reasoning, highest quality
+      if (isProviderConfigured("anthropic")) {
+        subProvider = "anthropic";
+        subModel = "claude-opus-4-6-20260206";
+      } else if (isProviderConfigured("nim")) {
+        subProvider = "nim";
+        subModel = "moonshotai/kimi-k2.5";
+      } else {
+        subProvider = "google";
+        subModel = "gemini-3-pro";
+      }
+      break;
+
+    case "fast":
+      // Kimi K2.5 via NIM — cheapest, fastest for simple queries
+      if (isProviderConfigured("nim")) {
+        subProvider = "nim";
+        subModel = "moonshotai/kimi-k2.5";
+      } else if (isProviderConfigured("google")) {
+        subProvider = "google";
+        subModel = "gemini-2.0-flash";
+      } else {
+        subProvider = "anthropic";
+        subModel = "claude-3-haiku-20240307";
+      }
+      break;
+
+    case "balanced":
+    default:
+      // Gemini 3 Pro — balanced cost/quality
+      if (isProviderConfigured("google")) {
+        subProvider = "google";
+        subModel = "gemini-3-pro";
+      } else if (isProviderConfigured("nim")) {
+        subProvider = "nim";
+        subModel = "moonshotai/kimi-k2.5";
+      } else {
+        subProvider = "anthropic";
+        subModel = "claude-3-5-sonnet-20241022";
+      }
+      break;
+  }
+
+  logger.info({ tier, subProvider, subModel }, "[G-CompN1] Dispatching to sub-provider");
+
+  // Emit routing context event
+  yield {
+    type: "content_block_delta" as const,
+    delta: { type: "text_delta" as const, text: "" }, // Empty delta to signal start
+  };
+
+  // Delegate to the resolved sub-provider
+  const subParams = { ...params, model: subModel };
+  const subStream = getStream(subParams, { provider: subProvider, modelId: subModel });
+  yield* withStreamMetrics(subStream, `grump:${subProvider}`, subModel);
 }
 
 // =============================================================================
@@ -963,6 +1309,9 @@ export async function* getStream(
     case "ollama":
       streamFn = streamOllama;
       break;
+    case "jan":
+      streamFn = streamJan;
+      break;
     case "github-copilot":
       streamFn = streamGitHubCopilot;
       break;
@@ -978,6 +1327,13 @@ export async function* getStream(
     case "groq":
       streamFn = streamGroq;
       break;
+    case "google":
+      streamFn = streamGoogle;
+      break;
+    case "grump":
+      // G-CompN1 meta-provider: route to sub-provider based on complexity
+      yield* streamGrumpMix(merged);
+      return;
     case "nim":
     default:
       streamFn = streamNim;
@@ -986,11 +1342,13 @@ export async function* getStream(
 
   const retryEnabled = process.env.LLM_RETRY_ENABLED !== "false";
 
-  // Lazy load streamWithRetry to avoid circular dependency
+  // Use cached smartRetry module to avoid per-request dynamic import overhead
   let source: AsyncIterable<StreamEvent>;
   if (retryEnabled) {
-    const { streamWithRetry } = await import("./smartRetry.js");
-    source = streamWithRetry(provider, merged, async function* (p, prm) {
+    if (!_smartRetryModule) {
+      _smartRetryModule = await import("./smartRetry.js");
+    }
+    source = _smartRetryModule.streamWithRetry(provider, merged, async function* (p, prm) {
       for await (const event of streamFn(prm)) {
         yield event;
       }
@@ -1020,7 +1378,7 @@ try {
   });
   registerStreamProvider("ollama", {
     name: "ollama",
-    supportsTools: false,
+    supportsTools: true,
     stream: streamOllama,
   });
   registerStreamProvider("github-copilot", {
@@ -1048,6 +1406,21 @@ try {
     supportsTools: true,
     stream: streamGroq,
   });
+  registerStreamProvider("jan", {
+    name: "jan",
+    supportsTools: true,
+    stream: streamJan,
+  });
+  registerStreamProvider("google", {
+    name: "google",
+    supportsTools: true,
+    stream: streamGoogle,
+  });
+  registerStreamProvider("grump", {
+    name: "grump",
+    supportsTools: true,
+    stream: async function* (params) { yield* streamGrumpMix(params); },
+  });
 } catch {
   // ai-core may not be available in all environments
 }
@@ -1067,6 +1440,8 @@ export function toApiProvider(provider: LLMProvider): ApiProvider | null {
       return "openrouter";
     case "ollama":
       return "ollama";
+    case "jan":
+      return "jan" as ApiProvider;
     case "github-copilot":
       return "github_copilot";
     case "kimi":
@@ -1077,6 +1452,10 @@ export function toApiProvider(provider: LLMProvider): ApiProvider | null {
       return "mistral";
     case "groq":
       return "groq" as ApiProvider;
+    case "google":
+      return "google" as ApiProvider;
+    case "grump":
+      return null; // meta-provider, no direct API key
     default:
       return null;
   }
@@ -1098,6 +1477,11 @@ export function getApiKeyForProvider(
 export function isProviderConfigured(provider: LLMProvider): boolean {
   if (provider === "mock") return true;
   if (provider === "ollama") return Boolean(env.OLLAMA_BASE_URL);
+  if (provider === "jan") return true; // Jan is always local
+  if (provider === "grump") {
+    // G-CompN1 is configured if at least one sub-provider is configured
+    return isProviderConfigured("anthropic") || isProviderConfigured("nim") || isProviderConfigured("google");
+  }
   return Boolean(getApiKeyForProvider(provider));
 }
 
@@ -1117,14 +1501,17 @@ export function getDefaultModelId(provider: LLMProvider = "nim"): string {
  */
 export function getConfiguredProviders(): LLMProvider[] {
   const providers: LLMProvider[] = [];
+  if (isProviderConfigured("grump")) providers.push("grump"); // G-CompN1 first
   if (isProviderConfigured("nim")) providers.push("nim");
   if (isProviderConfigured("openrouter")) providers.push("openrouter");
   if (isProviderConfigured("ollama")) providers.push("ollama");
+  if (isProviderConfigured("jan")) providers.push("jan");
   if (isProviderConfigured("github-copilot")) providers.push("github-copilot");
   if (isProviderConfigured("kimi")) providers.push("kimi");
   if (isProviderConfigured("anthropic")) providers.push("anthropic");
   if (isProviderConfigured("mistral")) providers.push("mistral");
   if (isProviderConfigured("groq")) providers.push("groq");
+  if (isProviderConfigured("google")) providers.push("google");
   return providers;
 }
 

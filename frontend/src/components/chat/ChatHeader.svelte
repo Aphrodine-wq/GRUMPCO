@@ -4,7 +4,7 @@
    *
    * Header bar for the chat interface with G-Agent controls.
    */
-  import { Bot, Brain } from 'lucide-svelte';
+  import { Brain } from 'lucide-svelte';
   import KillSwitchButton from '../gAgent/KillSwitchButton.svelte';
 
   interface Props {
@@ -42,7 +42,7 @@
     showMemoryPanel = false,
     modelName,
     modelPickerOpen = false,
-    onGAgentClick,
+    onGAgentClick: _onGAgentClick,
     onStatusToggle,
     onMemoryToggle,
     onModelClick,
@@ -97,10 +97,7 @@
   <span class="header-spacer"></span>
 
   {#if modelName !== undefined && onModelClick}
-    <div
-      class="model-block"
-      title="Current model. Click to change."
-    >
+    <div class="model-block" title="Current model. Click to change.">
       <span class="model-label-heading">Model</span>
       <button
         type="button"
@@ -139,7 +136,7 @@
     border: 1px solid transparent;
     border-radius: 0.5rem;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 50ms ease-out;
   }
 
   .header-btn:hover {

@@ -52,6 +52,10 @@
   <!-- DNS prefetch for API endpoints -->
   <link rel="dns-prefetch" href="//grump-backend.onrender.com">
   <link rel="dns-prefetch" href="//api.g-rump.com">
+  <link rel="dns-prefetch" href="//integrate.api.nvidia.com">
+  
+  <!-- Preload the main JS module to start loading early -->
+  <link rel="modulepreload" href="/src/main.ts">
   
   <!-- Preload critical fonts with display=swap -->
   <link rel="preload" 
@@ -84,31 +88,8 @@
         media="print" 
         onload="this.media='all'">
   
-  <!-- Preconnect to critical origins -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  
-  <!-- DNS prefetch for API endpoints -->
-  <link rel="dns-prefetch" href="//grump-backend.onrender.com">
-  
-  <!-- Performance monitoring -->
-  <script>
-    // Measure and report Core Web Vitals
-    if ('web-vitals' in window === false) {
-      window.addEventListener('load', function() {
-        // Report basic timing metrics
-        setTimeout(function() {
-          const timing = performance.timing;
-          const metrics = {
-            domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
-            loadComplete: timing.loadEventEnd - timing.navigationStart,
-            firstByte: timing.responseStart - timing.navigationStart,
-          };
-          console.log('[Performance]', metrics);
-        }, 0);
-      });
-    }
-  </script>
+
+
 </head>
 
 <body>

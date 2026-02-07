@@ -67,7 +67,7 @@ export interface IntegrationsSettings {
 }
 
 /** Tier override (e.g. from billing); used by feature-flags resolution when set. */
-export type TierId = "free" | "pro" | "team" | "enterprise";
+export type TierId = "free" | "starter" | "pro" | "team" | "enterprise";
 
 /** Guard rails for local file read/write: workspace, allowlist, confirm writes, autonomous. */
 export interface GuardRailsSettings {
@@ -178,12 +178,12 @@ export interface GAgentTask {
   id: string;
   description: string;
   status:
-    | "pending"
-    | "approved"
-    | "in_progress"
-    | "completed"
-    | "failed"
-    | "cancelled";
+  | "pending"
+  | "approved"
+  | "in_progress"
+  | "completed"
+  | "failed"
+  | "cancelled";
   priority: number;
   dependencies: string[];
   estimatedDuration?: number;
@@ -204,11 +204,11 @@ export interface GAgentPlan {
   goal: string;
   tasks: GAgentTask[];
   status:
-    | "planning"
-    | "awaiting_approval"
-    | "executing"
-    | "completed"
-    | "failed";
+  | "planning"
+  | "awaiting_approval"
+  | "executing"
+  | "completed"
+  | "failed";
   confidence: number;
   estimatedTotalDuration?: number;
   createdAt: string;

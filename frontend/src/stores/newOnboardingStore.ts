@@ -184,11 +184,18 @@ export const STYLING_OPTIONS: TechOption[] = [
 // AI Providers
 export const AI_PROVIDER_OPTIONS: TechOption[] = [
   {
+    id: 'grump',
+    name: 'G-CompN1 Model Mix',
+    icon: 'grump',
+    popular: true,
+    description: 'Recommended — Smart routing between Opus 4.6, Kimi K2.5 & Gemini 3 Pro',
+  },
+  {
     id: 'kimi',
     name: 'Kimi K2.5',
     icon: 'kimi',
     popular: true,
-    description: 'Recommended - Great balance of speed & quality',
+    description: 'Great balance of speed & quality',
   },
   {
     id: 'nvidia-nim',
@@ -197,17 +204,24 @@ export const AI_PROVIDER_OPTIONS: TechOption[] = [
     description: 'GPU-accelerated inference',
   },
   {
+    id: 'anthropic',
+    name: 'Anthropic Claude (Opus 4.6)',
+    icon: 'anthropic',
+    popular: true,
+    description: 'Advanced reasoning & Agent SDK',
+  },
+  {
+    id: 'google',
+    name: 'Google Gemini 3 Pro',
+    icon: 'gemini',
+    description: 'Fast, balanced quality & cost',
+  },
+  {
     id: 'openrouter',
     name: 'OpenRouter',
     icon: 'openrouter',
     popular: true,
     description: 'Access multiple models',
-  },
-  {
-    id: 'anthropic',
-    name: 'Anthropic Claude',
-    icon: 'anthropic',
-    description: 'Advanced reasoning',
   },
   { id: 'mistral', name: 'Mistral AI', icon: 'mistral', description: 'Efficient open models' },
   { id: 'groq', name: 'Groq', icon: 'groq', description: 'Ultra-fast inference' },
@@ -215,8 +229,8 @@ export const AI_PROVIDER_OPTIONS: TechOption[] = [
   { id: 'fireworks', name: 'Fireworks AI', icon: 'fireworks', description: 'Open model inference' },
   { id: 'replicate', name: 'Replicate', icon: 'replicate', description: 'Run open-source models' },
   { id: 'anyscale', name: 'Anyscale', icon: 'anyscale', description: 'Ray and LLM inference' },
-  { id: 'gemini', name: 'Google AI (Gemini)', icon: 'gemini', description: 'Gemini models' },
-  { id: 'ollama', name: 'Ollama (Local)', icon: 'ollama', description: 'Run models locally' },
+  { id: 'ollama', name: 'Ollama (Local)', icon: 'ollama', description: 'Run models locally via Ollama' },
+  { id: 'jan', name: 'Jan (Local)', icon: 'jan', description: 'Run models locally via Jan' },
 ];
 
 // Auth providers supported
@@ -278,7 +292,7 @@ const DEFAULT_ONBOARDING_DATA: OnboardingData = {
   ide: [],
   mobile: [],
   styling: [],
-  theme: 'system',
+  theme: 'light',
   telemetryOptIn: true,
   completedSteps: [],
   isComplete: false,

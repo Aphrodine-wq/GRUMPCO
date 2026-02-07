@@ -95,6 +95,16 @@ export interface GuardRailsSettings {
 export interface SettingsPreferences {
   /** Alert when usage exceeds this percent of limit (0–100). */
   usageAlertPercent?: number;
+  /** Show desktop notifications for completed tasks, etc. */
+  desktopNotifications?: boolean;
+  /** Play sound effects for events (send, receive, error). */
+  soundEffects?: boolean;
+  /** Automatically save files on change. */
+  autoSave?: boolean;
+  /** Show line numbers in code editors/blocks. */
+  showLineNumbers?: boolean;
+  /** Enable word-wrap in code editors/blocks. */
+  wordWrap?: boolean;
 }
 
 export interface Settings {

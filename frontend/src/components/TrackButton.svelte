@@ -14,7 +14,7 @@
    * </TrackButton>
    * ```
    */
-  import { analytics } from '$lib/analytics';
+  import { track } from '../lib/analytics';
   import { createEventDispatcher } from 'svelte';
 
   export let name: string;
@@ -28,7 +28,8 @@
 
   function handleClick(event: MouseEvent) {
     // Track the button click
-    analytics.buttonClick(name, {
+    track('button_click', {
+      name,
       ...properties,
       variant,
       size,

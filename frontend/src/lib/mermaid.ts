@@ -73,17 +73,57 @@ export async function initializeMermaid(config?: MermaidConfig): Promise<void> {
   if (isInitialized) return;
 
   const mermaid = await getMermaid();
-  const theme = config?.theme || 'base';
+
+  // Auto-detect theme from the DOM
+  const isDark = typeof document !== 'undefined' &&
+    document.documentElement.getAttribute('data-theme') === 'dark';
+  const theme = config?.theme || (isDark ? 'dark' : 'default');
 
   mermaid.initialize({
     startOnLoad: false,
     theme: theme as string,
     securityLevel: 'strict',
     fontFamily: 'Inter, sans-serif',
+    themeVariables: isDark ? {
+      // Dark mode friendly colors
+      primaryColor: '#7c3aed',
+      primaryTextColor: '#ffffff',
+      primaryBorderColor: '#a78bfa',
+      lineColor: '#a78bfa',
+      secondaryColor: '#1e1e3f',
+      tertiaryColor: '#2d2d4a',
+      mainBkg: '#1a1a2e',
+      nodeBorder: '#a78bfa',
+      clusterBkg: '#1e1e3f',
+      titleColor: '#ffffff',
+      edgeLabelBackground: '#1a1a2e',
+    } : {
+      // Light mode colors
+      primaryColor: '#7c3aed',
+      primaryTextColor: '#ffffff',
+      primaryBorderColor: '#6d28d9',
+      lineColor: '#7c3aed',
+      secondaryColor: '#f5f3ff',
+      tertiaryColor: '#ede9fe',
+      mainBkg: '#ffffff',
+      nodeBorder: '#7c3aed',
+      clusterBkg: '#f5f3ff',
+      titleColor: '#1f1147',
+      edgeLabelBackground: '#ffffff',
+    },
     ...config,
   });
 
   isInitialized = true;
+}
+
+/**
+ * Reinitializes Mermaid (e.g., after a theme change).
+ * Forces re-initialization with new config.
+ */
+export async function reinitializeMermaid(config?: MermaidConfig): Promise<void> {
+  isInitialized = false;
+  await initializeMermaid(config);
 }
 
 /**

@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { Check, X, RefreshCw, Code2, ChevronDown, ChevronUp, Download, FileCode } from 'lucide-svelte';
+  import {
+    Check,
+    X,
+    RefreshCw,
+    Code2,
+    ChevronDown,
+    ChevronUp,
+    Download,
+    FileCode,
+  } from 'lucide-svelte';
   import type { PhaseData } from '../../stores/chatPhaseStore';
 
   interface Props {
@@ -31,39 +40,34 @@
     selectedFile = filePath;
   }
 
-  function getFileIcon(path: string) {
-    const extension = path.split('.').pop()?.toLowerCase();
-    return FileCode;
-  }
-
   function getLanguageFromPath(path: string): string {
     const extension = path.split('.').pop()?.toLowerCase() || '';
     const languageMap: Record<string, string> = {
-      'ts': 'typescript',
-      'tsx': 'typescript',
-      'js': 'javascript',
-      'jsx': 'javascript',
-      'py': 'python',
-      'java': 'java',
-      'go': 'go',
-      'rs': 'rust',
-      'cpp': 'cpp',
-      'c': 'c',
-      'h': 'c',
-      'html': 'html',
-      'css': 'css',
-      'scss': 'scss',
-      'json': 'json',
-      'md': 'markdown',
-      'yml': 'yaml',
-      'yaml': 'yaml',
+      ts: 'typescript',
+      tsx: 'typescript',
+      js: 'javascript',
+      jsx: 'javascript',
+      py: 'python',
+      java: 'java',
+      go: 'go',
+      rs: 'rust',
+      cpp: 'cpp',
+      c: 'c',
+      h: 'c',
+      html: 'html',
+      css: 'css',
+      scss: 'scss',
+      json: 'json',
+      md: 'markdown',
+      yml: 'yaml',
+      yaml: 'yaml',
     };
     return languageMap[extension] || 'text';
   }
 
   async function downloadAllFiles() {
     if (!data?.files) return;
-    
+
     // Create a zip or download files individually
     for (const file of data.files) {
       const blob = new Blob([file.content], { type: 'text/plain' });
@@ -78,9 +82,7 @@
     }
   }
 
-  const selectedFileData = $derived(
-    data?.files?.find(f => f.path === selectedFile)
-  );
+  const selectedFileData = $derived(data?.files?.find((f) => f.path === selectedFile));
 </script>
 
 <div class="phase-result code-result">
@@ -94,10 +96,7 @@
         <Download size={14} />
         <span>Download All</span>
       </button>
-      <button 
-        class="toggle-btn"
-        onclick={() => showFileTree = !showFileTree}
-      >
+      <button class="toggle-btn" onclick={() => (showFileTree = !showFileTree)}>
         {#if showFileTree}
           <ChevronUp size={16} />
         {:else}
@@ -112,7 +111,7 @@
       <div class="code-browser">
         <div class="file-tree">
           {#each data.files as file}
-            <button 
+            <button
               class="file-item"
               class:selected={selectedFile === file.path}
               onclick={() => selectFile(file.path)}
@@ -151,14 +150,14 @@
 
   <div class="approval-section">
     <p class="approval-question">Does this code meet your requirements?</p>
-    
+
     {#if !showFeedbackInput}
       <div class="approval-buttons">
         <button class="approve-btn" onclick={handleApprove}>
           <Check size={16} />
           <span>Looks good! Complete workflow</span>
         </button>
-        <button class="changes-btn" onclick={() => showFeedbackInput = true}>
+        <button class="changes-btn" onclick={() => (showFeedbackInput = true)}>
           <RefreshCw size={16} />
           <span>Request changes</span>
         </button>
@@ -174,7 +173,7 @@
           <button class="submit-feedback-btn" onclick={handleRequestChanges}>
             Submit Feedback
           </button>
-          <button class="cancel-btn" onclick={() => showFeedbackInput = false}>
+          <button class="cancel-btn" onclick={() => (showFeedbackInput = false)}>
             <X size={16} />
             <span>Cancel</span>
           </button>
@@ -234,7 +233,7 @@
     font-size: 12px;
     color: var(--color-text);
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .download-btn:hover {
@@ -254,7 +253,7 @@
     border-radius: 6px;
     color: var(--color-text-muted);
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .toggle-btn:hover {
@@ -292,7 +291,7 @@
     border-radius: 6px;
     text-align: left;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
     color: var(--color-text);
   }
 
@@ -427,7 +426,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .approve-btn:hover {
@@ -447,7 +446,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .changes-btn:hover {
@@ -472,7 +471,7 @@
     font-family: inherit;
     color: var(--color-text);
     resize: vertical;
-    transition: border-color 150ms ease;
+    transition: border-color 50ms ease-out;
   }
 
   textarea:focus {
@@ -499,7 +498,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .submit-feedback-btn:hover {
@@ -518,7 +517,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .cancel-btn:hover {

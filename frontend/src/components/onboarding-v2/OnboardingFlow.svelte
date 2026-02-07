@@ -349,6 +349,17 @@
     );
   }
 
+  :global(.dark) .onboarding-bg-gradient {
+    background: linear-gradient(
+      165deg,
+      #0f0a1a 0%,
+      #1a1028 25%,
+      #1e1433 50%,
+      #231740 75%,
+      #2a1b4d 100%
+    );
+  }
+
   .onboarding-bg-dots {
     position: absolute;
     inset: 0;
@@ -359,6 +370,15 @@
     );
     background-size: 22px 22px;
     opacity: 0.9;
+  }
+
+  :global(.dark) .onboarding-bg-dots {
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgba(167, 139, 250, 0.15) 1px,
+      transparent 0
+    );
+    opacity: 0.7;
   }
 
   /* Skip button */
@@ -381,6 +401,15 @@
   .skip-button:hover {
     color: #374151;
     background: rgba(0, 0, 0, 0.05);
+  }
+
+  :global(.dark) .skip-button {
+    color: #9ca3af;
+  }
+
+  :global(.dark) .skip-button:hover {
+    color: #e5e7eb;
+    background: rgba(255, 255, 255, 0.08);
   }
 
   .skip-button:focus-visible {
@@ -455,11 +484,20 @@
     background: #e5e7eb;
   }
 
+  :global(.dark) .section-divider::before,
+  :global(.dark) .section-divider::after {
+    background: #374151;
+  }
+
   .section-divider span {
     font-size: 0.875rem;
     font-weight: 500;
     color: #6b7280;
     white-space: nowrap;
+  }
+
+  :global(.dark) .section-divider span {
+    color: #9ca3af;
   }
 
   .framework-grid,

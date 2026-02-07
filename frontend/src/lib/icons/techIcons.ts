@@ -77,7 +77,6 @@ import {
   Cpu,
   Split,
   MessagesSquare,
-  Handshake,
   // General/fallback
   Package,
   Settings,

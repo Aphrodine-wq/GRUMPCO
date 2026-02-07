@@ -577,10 +577,11 @@
     display: flex;
     flex-direction: column;
     overflow: auto;
-    background: #ffffff;
+    background: var(--color-bg-card, #ffffff);
     min-height: 200px;
-    border: 1px solid #e5e5e5;
-    border-radius: 6px;
+    border: 1px solid var(--color-border, #e5e5e5);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm, 0 2px 6px rgba(0, 0, 0, 0.05));
   }
 
   .diagram-header {
@@ -588,9 +589,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e5e5;
-    border-radius: 6px 6px 0 0;
+    background: var(--color-bg-subtle, #f9fafb);
+    border-bottom: 1px solid var(--color-border, #e5e5e5);
+    border-radius: 12px 12px 0 0;
   }
 
   .diagram-header-left {
@@ -600,10 +601,10 @@
   }
 
   .diagram-title {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #000000;
+    color: var(--color-text, #000000);
   }
 
   .validation-badge {
@@ -638,17 +639,17 @@
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     background: transparent;
-    border: 1px solid #e5e5e5;
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid var(--color-border, #e5e5e5);
+    border-radius: 8px;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 0.8rem;
-    color: #6b7280;
+    color: var(--color-text-muted, #6b7280);
     cursor: pointer;
     transition: all 0.15s;
   }
 
   .action-btn:hover {
-    background: #f5f5f5;
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.08));
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
@@ -747,17 +748,39 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
-  }
-
-  .diagram-output {
+    padding: 1.5rem;
     position: relative;
+    background: var(--color-bg-card, #ffffff);
+    min-height: 200px;
   }
 
   .diagram-output :global(svg) {
     max-width: 100%;
     height: auto;
     transition: transform 0.3s ease;
+    /* Override mermaid's potentially dark backgrounds */
+    background: transparent !important;
+  }
+
+  /* Force mermaid diagram backgrounds to be transparent/theme-aware */
+  .diagram-output :global(svg .flowchart),
+  .diagram-output :global(svg [class*='flowchart']),
+  .diagram-output :global(svg rect.basic) {
+    fill: var(--color-bg-card, #ffffff) !important;
+  }
+
+  /* Improve node visibility */
+  .diagram-output :global(svg .node rect),
+  .diagram-output :global(svg .node circle),
+  .diagram-output :global(svg .node polygon) {
+    stroke-width: 2px;
+  }
+
+  /* Better text readability */
+  .diagram-output :global(svg .nodeLabel),
+  .diagram-output :global(svg .edgeLabel) {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
   }
 
   .diagram-output.has-metadata :global(svg g.node),

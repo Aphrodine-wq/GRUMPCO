@@ -18,7 +18,6 @@
     builderError,
     setBuilderCurrentSession,
     clearBuilderError,
-    type BuilderSession,
     type BuilderDestination,
     type BuildStreamEvent,
   } from '../stores/builderStore';
@@ -71,7 +70,7 @@
   let mermaidSvg = $state<string | null>(null);
   let mermaidId = $state(0);
   let sections = $state<MermaidSection[]>([]);
-  let selectedSectionId = $state<string | null>(null);
+  let _selectedSectionId = $state<string | null>(null);
   let buildEvents = $state<BuildStreamEvent[]>([]);
   let building = $state(false);
   let buildDone = $state(false);
@@ -188,7 +187,7 @@
   async function handleSelectSection(sectionId: string) {
     const completed = session?.completedSectionIds ?? [];
     if (completed.includes(sectionId)) return;
-    selectedSectionId = sectionId;
+    _selectedSectionId = sectionId;
     step = 'build';
     buildEvents = [];
     building = true;
@@ -217,7 +216,7 @@
 
   function handleMoveToNext() {
     step = 'mermaid';
-    selectedSectionId = null;
+    _selectedSectionId = null;
     buildEvents = [];
     buildDone = false;
     getBuilderSession(session!.id).catch(() => {});
@@ -414,7 +413,11 @@
                   >
                     <option value="">— Select model —</option>
                     {#each modelGroups.find((g) => g.provider === projectProvider)?.models ?? [] as model}
-                      <option value={model.id}>{model.description ?? model.id}</option>
+                      <option value={model.id}
+                        >{model.id}{model.description && model.description !== model.id
+                          ? ` — ${model.description}`
+                          : ''}</option
+                      >
                     {/each}
                   </select>
                 {/if}
@@ -520,7 +523,11 @@
                 >
                   <option value="">— Select model —</option>
                   {#each modelGroups.find((g) => g.provider === sectionOverrideProvider)?.models ?? [] as model}
-                    <option value={model.id}>{model.description ?? model.id}</option>
+                    <option value={model.id}
+                      >{model.id}{model.description && model.description !== model.id
+                        ? ` — ${model.description}`
+                        : ''}</option
+                    >
                   {/each}
                 </select>
               {/if}
@@ -628,6 +635,7 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
+    padding: 1.5rem 1.25rem 0;
   }
   .builder-header {
     display: flex;
@@ -637,6 +645,7 @@
     gap: 12px;
     flex-shrink: 0;
     margin-bottom: 16px;
+    padding-top: 2rem;
   }
   .builder-header :global(button:first-of-type) {
     position: absolute;
@@ -833,6 +842,9 @@
     flex-direction: column;
     gap: 16px;
     max-width: 560px;
+    width: 100%;
+    align-self: center;
+    margin: 0 auto;
   }
   .prompt-desc {
     font-size: 0.875rem;

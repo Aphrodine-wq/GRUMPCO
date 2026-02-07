@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { Card, Button } from '../lib/design-system';
+  import { Card } from '../lib/design-system';
   import {
     getSystemOverview,
     getHolographicStats,

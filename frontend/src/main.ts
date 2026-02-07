@@ -18,6 +18,7 @@ window.addEventListener('error', (event) => {
     event.stopPropagation();
     return true;
   }
+  return;
 });
 
 import { mount } from 'svelte';
@@ -25,13 +26,14 @@ import App from './App.svelte';
 import AuthGoogleStart from './components/AuthGoogleStart.svelte';
 import AuthDone from './components/AuthDone.svelte';
 import './style.css';
+import './styles/performance.css';
 
 // Apply theme immediately from localStorage (before first paint) so dark mode works
 (function applyInitialTheme() {
   try {
     const stored = localStorage.getItem('g-rump-onboarding-v2');
     const data = stored ? JSON.parse(stored) : null;
-    const theme = data?.theme ?? 'system';
+    const theme = data?.theme ?? 'dark';
     const resolved =
       theme === 'system'
         ? typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -49,7 +51,7 @@ const path = window.location.pathname;
 const params = new URLSearchParams(window.location.search);
 const route = params.get('route');
 
-let app;
+let app: ReturnType<typeof mount> | undefined;
 
 if (path === '/auth/google/start' || route === 'auth-google-start') {
   app = mount(AuthGoogleStart, { target });

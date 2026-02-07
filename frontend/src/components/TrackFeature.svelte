@@ -10,9 +10,8 @@
    * </TrackFeature>
    * ```
    */
-  import { analytics } from '$lib/analytics';
+  import { track } from '../lib/analytics';
   import { onMount, onDestroy } from 'svelte';
-  import { browser } from '$app/environment';
 
   export let name: string;
   export let trigger: 'visible' | 'click' | 'hover' | 'mount' = 'mount';
@@ -26,12 +25,12 @@
   function trackFeature() {
     if (once && hasTracked) return;
 
-    analytics.featureDiscovered(name, properties);
+    track('feature_discovered', { name, ...properties });
     hasTracked = true;
   }
 
   onMount(() => {
-    if (!browser) return;
+    if (typeof window === 'undefined') return;
 
     switch (trigger) {
       case 'mount':

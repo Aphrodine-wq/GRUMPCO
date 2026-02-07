@@ -6,7 +6,6 @@
     stopPolling,
     checkConnection,
   } from '../stores/connectionStatusStore';
-  import { WifiOff, RefreshCw } from 'lucide-svelte';
 
   let retrying = $state(false);
 

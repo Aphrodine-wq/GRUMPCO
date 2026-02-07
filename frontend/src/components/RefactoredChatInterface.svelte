@@ -29,7 +29,9 @@
   import ToolResultCard from './ToolResultCard.svelte';
   import SettingsScreen from './TabbedSettingsScreen.svelte';
   import FreeAgentLocalConfirmModal from './FreeAgentLocalConfirmModal.svelte';
-  import QuestionModal from './QuestionModal.svelte';
+  import ConfirmModal from './ConfirmModal.svelte';
+  import ArchitectureApprovalModal from './ArchitectureApprovalModal.svelte';
+  import SectionPickerModal from './SectionPickerModal.svelte';
   import ModelPicker from './ModelPicker.svelte';
   import GAgentPlanViewer from './GAgentPlanViewer.svelte';
   import GAgentPlanApproval from './GAgentPlanApproval.svelte';
@@ -47,6 +49,7 @@
     removeSessionAttachment,
     type SessionAttachment,
   } from '../lib/api';
+  import { listMemories } from '../lib/integrationsApi';
 
   // Verdict integration
   import { verdictMiddleware } from '../lib/chatMiddleware';
@@ -59,9 +62,6 @@
   import { chatPhaseStore } from '../stores/chatPhaseStore';
   import { settingsStore } from '../stores/settingsStore';
   import { workspaceStore } from '../stores/workspaceStore';
-  import { showSettings, focusChatTrigger, setCurrentView, currentView } from '../stores/uiStore';
-  import type { ViewType } from '../stores/uiStore';
-  import { addSavedPrompt } from '../stores/savedPromptsStore';
   import {
     gAgentPlanStore,
     currentPlan as gAgentCurrentPlan,
@@ -69,6 +69,14 @@
   } from '../stores/gAgentPlanStore';
   import { gAgentStore, isConnected as gAgentConnected } from '../stores/gAgentStore';
   import { gAgentCompilerStore, compilerStats } from '../stores/gAgentCompilerStore';
+  import {
+    showSettings,
+    focusChatTrigger,
+    setCurrentView,
+    currentView as _currentView,
+  } from '../stores/uiStore';
+  import type { ViewType } from '../stores/uiStore';
+  import { addSavedPrompt } from '../stores/savedPromptsStore';
 
   // Utilities
   import { processError, logError } from '../utils/errorHandler';
@@ -78,7 +86,7 @@
   import type { Message, ContentBlock } from '../types';
 
   /** Views that can be opened from the chat mode bar (secondary row). G-Agent is accessed from sidebar/session, not this strip. */
-  const CHAT_VIEW_MODES: { id: ViewType; label: string; icon: typeof Mic }[] = [
+  const _CHAT_VIEW_MODES: { id: ViewType; label: string; icon: typeof Mic }[] = [
     { id: 'voiceCode', label: 'Voice', icon: Mic },
     { id: 'askDocs', label: 'Ask Docs', icon: BookOpen },
     { id: 'canvas', label: 'Canvas', icon: LayoutGrid },
@@ -120,7 +128,7 @@
   let showModelPicker = $state(false);
   let addToProjectBannerDismissed = $state(false);
   let sessionAttachments = $state<SessionAttachment[]>([]);
-  let sessionAttachmentsLoading = $state(false);
+  let _sessionAttachmentsLoading = $state(false);
   let sessionAttachmentInputEl = $state<HTMLInputElement | null>(null);
 
   const showAddToProjectBanner = $derived.by(() => {
@@ -136,6 +144,11 @@
   let showGAgentMemoryPanel = $state(false);
   let showGAgentStatusPanel = $state(false);
   let liveOutputRef: GAgentLiveOutput | null = $state(null);
+
+  // Architecture Approval + Section Picker modals
+  let showApprovalModal = $state(false);
+  let showSectionPicker = $state(false);
+  let lastMermaidCode = $state('');
   /** Ref used only by bind:this in template (TS 6133: never read in script) */
   // @ts-ignore
   let memoryPanelRef: GAgentMemoryPanel | null = $state(null);
@@ -149,7 +162,7 @@
   let showShipConfirmModal = $state(false);
 
   /** Label for top-right mode indicator (Chat view only) */
-  const modeIndicatorLabel = $derived(
+  const _modeIndicatorLabel = $derived(
     shipModeActive
       ? 'Ship'
       : chatMode === 'plan'
@@ -164,7 +177,7 @@
   );
 
   /** Flowchart labels under the input – change when mode changes */
-  const modeFlowchartLabels = $derived.by(() => {
+  const _modeFlowchartLabels = $derived.by(() => {
     if (shipModeActive) return ['Code', 'Ship', 'Deploy'];
     if (chatMode === 'plan') return ['Plan', 'Tasks', 'Code', 'Ship'];
     if (chatMode === 'spec') return ['Requirements', 'Spec', 'Plan', 'Code', 'Ship'];
@@ -179,7 +192,7 @@
 
   // Derived state
   const showSettingsValue = $derived($showSettings);
-  let isNimProvider = $state(false);
+  let _isNimProvider = $state(false);
   let gAgentSessionId = $derived(get(currentSession)?.id ?? 'default');
   let hasGAgentPlan = $derived($gAgentCurrentPlan !== null);
   let isGAgentSession = $derived(
@@ -204,9 +217,13 @@
   });
 
   // Project/session name for header (show when user has entered a named project; nothing for new chats)
-  const headerProjectName = $derived(
-    $currentSession?.name && $currentSession.name !== 'New Chat' ? $currentSession.name : ''
-  );
+  const headerProjectName = $derived.by(() => {
+    const sess = $currentSession;
+    if (!sess) return '';
+    // Don't show default/auto-generated names
+    if (!sess.name || sess.name === 'New Chat' || sess.name.startsWith('Session ')) return '';
+    return sess.name;
+  });
 
   // Event dispatcher removed — using callback props (Svelte 5 pattern)
   // Sync messages to parent
@@ -278,7 +295,7 @@
   // Mode button handlers (Architecture, Code, Ship) – toggle off when clicking active mode
   import { startDesignWorkflow } from '../lib/api';
 
-  async function setModeArchitecture() {
+  async function _setModeArchitecture() {
     if ($chatModeStore === 'design') {
       chatModeStore.clearMode();
       chatMode = 'normal';
@@ -302,7 +319,7 @@
       }
     }
   }
-  function setModeCode() {
+  function _setModeCode() {
     if ($chatModeStore === 'code') {
       chatModeStore.clearMode();
       chatMode = 'normal';
@@ -311,7 +328,7 @@
       chatMode = 'code';
     }
   }
-  function setModeShip() {
+  function _setModeShip() {
     if (chatMode === 'ship') {
       const storeMode = get(chatModeStore);
       chatMode = storeMode === 'design' ? 'design' : storeMode === 'code' ? 'code' : 'normal';
@@ -320,7 +337,7 @@
     }
   }
 
-  function setModeArgument() {
+  function _setModeArgument() {
     if ($chatModeStore === 'argument') {
       chatModeStore.clearMode();
       chatMode = 'normal';
@@ -330,7 +347,7 @@
     }
   }
 
-  function setModePlan() {
+  function _setModePlan() {
     if (chatMode === 'plan') {
       chatModeStore.clearMode();
       chatMode = 'normal';
@@ -341,7 +358,7 @@
     }
   }
 
-  function setModeSpec() {
+  function _setModeSpec() {
     if (chatMode === 'spec') {
       chatModeStore.clearMode();
       chatMode = 'normal';
@@ -363,7 +380,7 @@
       if (settings?.models?.defaultModelId) {
         currentModelKey = `${settings.models.defaultProvider ?? 'nim'}:${settings.models.defaultModelId}`;
       }
-      isNimProvider = (settings?.models?.defaultProvider ?? '') === 'nim';
+      _isNimProvider = (settings?.models?.defaultProvider ?? '') === 'nim';
     });
 
     const onSwitchPlanMode = () => {
@@ -431,13 +448,13 @@
       sessionAttachments = [];
       return;
     }
-    sessionAttachmentsLoading = true;
+    _sessionAttachmentsLoading = true;
     try {
       sessionAttachments = await listSessionAttachments(sid);
     } catch {
       sessionAttachments = [];
     } finally {
-      sessionAttachmentsLoading = false;
+      _sessionAttachmentsLoading = false;
     }
   }
 
@@ -447,7 +464,7 @@
     else sessionAttachments = [];
   });
 
-  async function handleAddSessionAttachments(files: FileList | null) {
+  async function _handleAddSessionAttachments(files: FileList | null) {
     const sid = $currentSession?.id;
     if (!sid || !files?.length) return;
     const items: Array<{ name: string; mimeType: string; size: number; dataBase64?: string }> = [];
@@ -481,7 +498,7 @@
     if (sessionAttachmentInputEl) sessionAttachmentInputEl.value = '';
   }
 
-  async function handleRemoveSessionAttachment(attachmentId: string) {
+  async function _handleRemoveSessionAttachment(attachmentId: string) {
     const sid = $currentSession?.id;
     if (!sid) return;
     try {
@@ -605,32 +622,56 @@
     pendingImages = [];
     pendingDocuments = [];
 
-    // Handle stream events
-    const handleEvent = async (event: ChatStreamEvent) => {
+    // Handle stream events — use live reference instead of copying
+    // The streamChat function passes blocks by reference, so we just
+    // need to trigger Svelte reactivity by reassigning the reference.
+    let scrollQueued = false;
+    function queueScroll() {
+      if (!scrollQueued) {
+        scrollQueued = true;
+        requestAnimationFrame(() => {
+          scrollToBottom();
+          scrollQueued = false;
+        });
+      }
+    }
+
+    const handleEvent = (event: ChatStreamEvent) => {
       if (event.type === 'text') {
-        streamingStatus = 'Speaking...';
-        streamingBlocks = [...event.blocks];
-        await tick();
-        scrollToBottom();
+        streamingStatus = 'Thinking...';
+        // Use live blocks reference — avoid spreading
+        streamingBlocks = event.blocks;
+        queueScroll();
       } else if (event.type === 'tool_call') {
         const lastBlock = event.blocks[event.blocks.length - 1];
         if (lastBlock?.type === 'tool_call') {
           streamingStatus = `Running ${lastBlock.name}...`;
         }
-        streamingBlocks = [...event.blocks];
-        await tick();
-        scrollToBottom();
+        streamingBlocks = event.blocks;
+        queueScroll();
       } else if (event.type === 'tool_result') {
-        streamingStatus = 'Analyzing results...';
-        streamingBlocks = [...event.blocks];
-        await tick();
-        scrollToBottom();
+        streamingStatus = 'Thinking...';
+        streamingBlocks = event.blocks;
+        queueScroll();
       } else if (event.type === 'error') {
         showToast(event.error || 'Stream error', 'error', 5000);
       }
     };
 
     // Use the streaming service
+    const enabledSkillIds = s?.skills?.enabledIds ?? [];
+
+    // Fetch user memories for AI context
+    let memoryContext: string[] = [];
+    try {
+      const mems = await listMemories(undefined, 20);
+      if (mems.length > 0) {
+        memoryContext = mems.map((m) => `[${m.type.toUpperCase()}] ${m.content}`);
+      }
+    } catch {
+      // Memory unavailable — continue without it
+    }
+
     const blocks = await streamChat(messages, {
       mode,
       sessionType: sessionTypeVal,
@@ -640,10 +681,14 @@
       signal,
       onEvent: handleEvent,
       lastUserMessageImage: imageForRequest,
+      enabledSkillIds,
+      memoryContext,
     });
 
-    // Finalize message
-    messages = [...messages, { role: 'assistant', content: blocks, timestamp: Date.now() }];
+    // Finalize message — store as string so MessageBubble's parseMessageContent
+    // can split out mermaid blocks and render them with DiagramRenderer (actual SVG)
+    const finalContent = flattenMessageContent(blocks);
+    messages = [...messages, { role: 'assistant', content: finalContent, timestamp: Date.now() }];
     streamingBlocks = [];
 
     // Save session
@@ -651,6 +696,19 @@
       sessionsStore.updateSession($currentSession.id, messages);
     } else {
       sessionsStore.createSession(messages);
+    }
+
+    // Check for mermaid diagrams: auto-show approval modal
+    const hasMermaid = /```mermaid[\s\S]*?```/.test(finalContent);
+    if (hasMermaid) {
+      const mermaidMatch = finalContent.match(/```mermaid\s*([\s\S]*?)```/);
+      if (mermaidMatch && mermaidMatch[1]) {
+        lastMermaidCode = mermaidMatch[1].trim();
+        // Brief delay to let the diagram render first
+        setTimeout(() => {
+          showApprovalModal = true;
+        }, 1200);
+      }
     }
   }
 
@@ -713,6 +771,48 @@
         5000
       );
     }
+  }
+
+  // Architecture Approval: user approves the diagram
+  function handleArchitectureApproved(e: CustomEvent<{ mermaidCode: string }>) {
+    lastMermaidCode = e.detail.mermaidCode;
+    showApprovalModal = false;
+    // Show the section picker
+    setTimeout(() => {
+      showSectionPicker = true;
+    }, 200);
+  }
+
+  // Architecture Approval: user requests changes
+  function handleArchitectureChanges(e: CustomEvent<{ mermaidCode: string; feedback: string }>) {
+    showApprovalModal = false;
+    // Inject the user's feedback as a new message & re-stream
+    const feedback = e.detail.feedback;
+    inputText = `Please update the architecture diagram based on this feedback: ${feedback}`;
+    sendMessage();
+  }
+
+  // Section Picker: user selects a section to code
+  function handleSectionSelected(
+    e: CustomEvent<{
+      sectionId: string;
+      sectionLabel: string;
+      mermaidCode: string;
+      allSections: Array<{ id: string; label: string }>;
+    }>
+  ) {
+    showSectionPicker = false;
+    const { sectionLabel, allSections } = e.detail;
+    const sectionList = allSections.map((s) => s.label).join(', ');
+    let ws: { root: string | null } = { root: null };
+    const unsub = workspaceStore.subscribe((v) => (ws = v));
+    unsub();
+    const wsRoot = ws.root || '';
+    const wsInstruction = wsRoot
+      ? `\nIMPORTANT: Use file_write tool to create all files under the workspace: ${wsRoot}. Do NOT just output code — use tool calls to write each file.`
+      : `\nIMPORTANT: Use file_write tool to create all files. Do NOT just output code — use tool calls to write each file.`;
+    inputText = `Start coding the "${sectionLabel}" section from the architecture. The full architecture has these sections: ${sectionList}. Build this section with production-quality code, proper file structure, types, and tests.${wsInstruction}`;
+    sendMessage();
   }
 
   // G-Agent: leave mode and stay in chat
@@ -890,41 +990,32 @@
                       </div>
                     {/if}
                   </div>
-                {:else if messages.length >= 2 && messages[messages.length - 1]?.role === 'assistant'}
-                  {@const lastMsg = messages[messages.length - 1]}
-                  {@const lastContent =
-                    typeof lastMsg?.content === 'string'
-                      ? lastMsg.content
-                      : flattenMessageContent(lastMsg?.content ?? [])}
-                  {@const suggestDesignMode =
-                    lastContent && /mermaid|diagram|architecture\s*(diagram)?/i.test(lastContent)}
-                  {#if suggestDesignMode}
-                    <p class="design-mode-suggestion">
-                      <button
-                        type="button"
-                        class="inline-design-mode-btn"
-                        onclick={() => {
-                          chatModeStore.setMode('design');
-                          setCurrentView('chat');
-                          focusChatTrigger.update((n) => n + 1);
-                        }}
-                      >
-                        Use Design mode for diagrams
-                      </button>
-                    </p>
-                  {/if}
-                  <!-- <SuggestedModesCard
-                      onSelectMode={(view) => {
-                        if (view === 'chat') return;
-                        if (view === 'designMode') {
-                          chatModeStore.setMode('design');
-                          setCurrentView('chat');
-                          focusChatTrigger.update((n) => n + 1);
-                          return;
-                        }
-                        setCurrentView(view);
-                      }}
-                    /> -->
+                {/if}
+
+                <!-- Inline architecture approval (inside chat flow) -->
+                {#if showApprovalModal}
+                  <div class="inline-card-wrapper">
+                    <ArchitectureApprovalModal
+                      bind:open={showApprovalModal}
+                      mermaidCode={lastMermaidCode}
+                      on:approve={handleArchitectureApproved}
+                      on:request-changes={handleArchitectureChanges}
+                    />
+                  </div>
+                {/if}
+
+                <!-- Inline section picker (inside chat flow) -->
+                {#if showSectionPicker}
+                  <div class="inline-card-wrapper">
+                    <SectionPickerModal
+                      bind:open={showSectionPicker}
+                      mermaidCode={lastMermaidCode}
+                      on:select-section={handleSectionSelected}
+                    />
+                  </div>
+                {/if}
+                {#if !streaming && messages.length >= 2 && messages[messages.length - 1]?.role === 'assistant'}
+                  <!-- Mode suggestions removed -->
                 {/if}
               {/if}
             </div>
@@ -1030,7 +1121,7 @@
     onRejected={() => (showGAgentPlanApproval = false)}
   />
 
-  <QuestionModal
+  <ConfirmModal
     bind:open={showShipConfirmModal}
     title="Run SHIP?"
     message="Do you want to run SHIP (Design → Spec → Plan → Code) for this project? You'll be taken to the SHIP workflow to describe your app and generate architecture, spec, plan, and code."
@@ -1043,6 +1134,8 @@
     }}
     onClose={() => (showShipConfirmModal = false)}
   />
+
+  <!-- Architecture & Section modals are now inline in the chat flow above -->
 </div>
 
 <style>
@@ -1051,7 +1144,8 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
-    background: var(--color-bg, #ffffff);
+    background: var(--color-bg-app);
+    color: var(--color-text);
     font-family:
       'Inter',
       -apple-system,
@@ -1079,7 +1173,7 @@
     justify-content: center;
     padding: 0.25rem 1rem 0.5rem;
     flex-shrink: 0;
-    background: var(--color-bg-subtle, #fafafa);
+    background: var(--color-bg-subtle);
   }
 
   /* Main area */
@@ -1222,7 +1316,7 @@
   .shortcut-hint-label kbd {
     padding: 0.125rem 0.25rem;
     font-size: 0.625rem;
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--color-bg-subtle);
     border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 0.25rem;
   }
@@ -1363,9 +1457,9 @@
 
   /* Input area - compact height, pulled down from bottom edge */
   .input-area {
-    padding: 0.3rem 1rem 0.75rem 0.35rem;
+    padding: 0.3rem 1rem 0.75rem 1rem;
     margin-bottom: 0.5rem;
-    background: var(--color-bg, #ffffff);
+    background: var(--color-bg-app);
     position: relative;
   }
 
@@ -1596,6 +1690,45 @@
     color: var(--color-primary-hover, #6d28d9);
   }
 
+  /* Inline card wrappers for architecture approval / section picker */
+  .inline-card-wrapper {
+    padding: 0.25rem 3.25rem;
+    animation: card-in 0.2s ease-out;
+  }
+
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Streaming content blocks */
+  .streaming-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .streaming-content .text-block {
+    font-family:
+      'Inter',
+      -apple-system,
+      system-ui,
+      sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--color-text, #e2e8f0);
+    white-space: pre-wrap;
+    word-break: break-word;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeSpeed;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .status-sidebar,
     .memory-sidebar {
@@ -1604,6 +1737,10 @@
 
     .messages-container {
       scroll-behavior: auto;
+    }
+
+    .inline-card-wrapper {
+      animation: none;
     }
   }
 </style>

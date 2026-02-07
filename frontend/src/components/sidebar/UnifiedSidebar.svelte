@@ -42,6 +42,7 @@
   // Sidebar state
   let collapsed = $derived($sidebarCollapsed);
   let hoverExpanded = $state(false);
+  let hoverTimer: ReturnType<typeof setTimeout> | null = $state(null);
   let searchQuery = $state('');
   let hoveredSessionId: string | null = $state(null);
   let accountMenuOpen = $state(false);
@@ -208,10 +209,20 @@
 <aside
   class="unified-sidebar"
   class:collapsed={effectiveCollapsed}
+  class:hover-expanded={hoverExpanded}
   onmouseenter={() => {
-    if (collapsed) hoverExpanded = true;
+    if (collapsed) {
+      if (hoverTimer) clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => {
+        hoverExpanded = true;
+      }, 120);
+    }
   }}
   onmouseleave={() => {
+    if (hoverTimer) {
+      clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
     hoverExpanded = false;
   }}
   role="navigation"
@@ -262,25 +273,25 @@
         title={item.label}
       >
         {#if item.icon === 'chat'}
-          <MessageSquare size={16} />
+          <MessageSquare size={18} />
         {:else if item.icon === 'agent'}
-          <Bot size={16} />
+          <Bot size={18} />
         {:else if item.icon === 'projects'}
-          <FolderOpen size={16} />
+          <FolderOpen size={18} />
         {:else if item.icon === 'builder'}
-          <Hammer size={16} />
+          <Hammer size={18} />
         {:else if item.icon === 'integrations'}
-          <Plug size={16} />
+          <Plug size={18} />
         {:else if item.icon === 'tasks'}
-          <Clock size={16} />
+          <Clock size={18} />
         {:else if item.icon === 'skills'}
-          <BookOpen size={16} />
+          <BookOpen size={18} />
         {:else if item.icon === 'memory'}
-          <Brain size={16} />
+          <Brain size={18} />
         {:else if item.icon === 'mcp'}
-          <Server size={16} />
+          <Server size={18} />
         {:else if item.icon === 'cloud'}
-          <Cloud size={16} />
+          <Cloud size={18} />
         {:else}
           <Settings size={18} />
         {/if}
@@ -626,20 +637,30 @@
   .unified-sidebar {
     display: flex;
     flex-direction: column;
-    width: 230px;
+    width: 250px;
     height: calc(100vh - 40px); /* Account for title bar */
     margin: 8px;
     background: var(--glass-bg, rgba(255, 255, 255, 0.95));
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(6px);
     border: 1px solid var(--color-border-light, #f3e8ff);
     border-radius: 16px;
-    transition: width 200ms ease;
+    transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: width;
     overflow: hidden;
     flex-shrink: 0;
+    color: var(--color-text, #1f1147);
+    contain: layout style;
   }
 
   .unified-sidebar.collapsed {
     width: 64px;
+  }
+
+  /* Hover-expanded state: overlay on top of content without pushing layout */
+  .unified-sidebar.hover-expanded {
+    position: relative;
+    z-index: 100;
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.1);
   }
 
   /* Header */
@@ -657,7 +678,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    height: 38px;
+    height: 42px;
     padding: 0 10px;
     background: var(--color-primary, #7c3aed);
     color: white;
@@ -667,8 +688,8 @@
     font-weight: 500;
     cursor: pointer;
     transition:
-      background 150ms ease,
-      transform 100ms ease;
+      background 60ms ease-out,
+      transform 50ms ease-out;
   }
 
   .new-chat-btn:hover {
@@ -697,7 +718,7 @@
     border-radius: 8px;
     color: var(--color-text-muted, #6d28d9);
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 60ms ease-out;
   }
 
   .collapse-btn:hover {
@@ -720,7 +741,12 @@
     background: var(--color-bg-input, #f3e8ff);
     border-radius: 10px;
     border: 1px solid transparent;
-    transition: border-color 150ms ease;
+    transition:
+      border-color 60ms ease-out,
+      opacity 150ms ease-out,
+      max-height 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 50px;
+    overflow: hidden;
   }
 
   .sidebar-search:focus-within {
@@ -750,25 +776,25 @@
   .primary-nav {
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    padding: 2px 4px;
+    gap: 2px;
+    padding: 4px 6px;
   }
 
   .nav-item {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
     width: 100%;
-    height: 32px;
-    padding: 0 8px;
+    height: 44px;
+    padding: 0 12px;
     background: transparent;
     border: none;
-    border-radius: 6px;
-    font-size: 0.8125rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
     font-weight: 500;
     color: var(--color-text, #1f1147);
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 60ms ease-out;
     text-align: left;
   }
 
@@ -791,6 +817,15 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    opacity: 1;
+    transition: opacity 150ms ease-out;
+  }
+
+  .collapsed .nav-label {
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    overflow: hidden;
   }
 
   .nav-badge {
@@ -814,6 +849,13 @@
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+    transition: opacity 150ms ease-out 60ms;
+  }
+
+  .collapsed .sessions-section .section-header,
+  .collapsed .sessions-section .session-group-label {
+    opacity: 0;
+    transition: opacity 100ms ease-out;
   }
 
   .section-header {
@@ -874,7 +916,7 @@
     font-size: 13px;
     color: var(--color-text, #1f1147);
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 60ms ease-out;
     text-align: left;
   }
 
@@ -954,7 +996,7 @@
     color: var(--color-text-muted, #6d28d9);
     cursor: pointer;
     opacity: 0.6;
-    transition: all 150ms ease;
+    transition: all 60ms ease-out;
   }
 
   .delete-btn:hover {
@@ -992,7 +1034,7 @@
     gap: 4px;
     padding: 10px 6px;
     border-top: 1px solid var(--color-border-light, #f3e8ff);
-    background: rgba(255, 255, 255, 0.5);
+    background: transparent;
   }
 
   .user-section {
@@ -1052,7 +1094,7 @@
     border: none;
     cursor: pointer;
     text-align: left;
-    transition: background 0.15s;
+    transition: background 60ms ease-out;
   }
 
   .account-menu-item:hover {
@@ -1079,7 +1121,7 @@
     border: none;
     border-radius: 10px;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 60ms ease-out;
     text-align: left;
   }
 
@@ -1110,6 +1152,15 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    opacity: 1;
+    transition: opacity 150ms ease-out;
+  }
+
+  .collapsed .user-info {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    pointer-events: none;
   }
 
   .user-name {
@@ -1138,5 +1189,119 @@
     .user-btn {
       transition: none;
     }
+  }
+
+  /* Dark mode sidebar */
+  :global(.dark) .unified-sidebar {
+    background: #1e1e2e;
+    border-color: #2e2e3e;
+    color: #e0e0e5;
+  }
+
+  :global(.dark) .sidebar-header {
+    border-bottom-color: #2e2e3e;
+  }
+
+  :global(.dark) .sidebar-search {
+    background: #2a2a3a;
+    border-color: #3a3a4a;
+  }
+
+  :global(.dark) .search-input {
+    color: #e0e0e5;
+  }
+
+  :global(.dark) .search-input::placeholder {
+    color: #8888a0;
+  }
+
+  :global(.dark) .sidebar-search :global(.search-icon) {
+    color: #8888a0;
+  }
+
+  :global(.dark) .nav-item {
+    color: #c0c0d0;
+  }
+
+  :global(.dark) .nav-item:hover {
+    background: #2a2a3a;
+    color: #e0e0e5;
+  }
+
+  :global(.dark) .nav-item.active {
+    background: var(--color-primary, #7c3aed);
+    color: white;
+  }
+
+  :global(.dark) .section-title {
+    color: #8888a0;
+  }
+
+  :global(.dark) .session-group-label {
+    color: #8888a0;
+  }
+
+  :global(.dark) .session-item {
+    color: #c0c0d0;
+  }
+
+  :global(.dark) .session-item:hover {
+    background: #2a2a3a;
+  }
+
+  :global(.dark) .session-item.active {
+    background: #2a2a3a;
+    border-left-color: var(--color-primary, #7c3aed);
+    box-shadow: none;
+  }
+
+  :global(.dark) .collapse-btn {
+    border-color: #3a3a4a;
+    color: #8888a0;
+  }
+
+  :global(.dark) .collapse-btn:hover {
+    background: #2a2a3a;
+    border-color: var(--color-primary, #7c3aed);
+    color: var(--color-primary, #7c3aed);
+  }
+
+  :global(.dark) .user-name {
+    color: #e0e0e5;
+  }
+
+  :global(.dark) .user-plan {
+    color: #8888a0;
+  }
+
+  :global(.dark) .user-btn:hover {
+    background: #2a2a3a;
+  }
+
+  :global(.dark) .user-avatar {
+    background: rgba(124, 58, 237, 0.3);
+    color: #c4b5fd;
+  }
+
+  :global(.dark) .account-menu {
+    background: #252535;
+    border-color: #3a3a4a;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  :global(.dark) .account-menu-item {
+    color: #c0c0d0;
+  }
+
+  :global(.dark) .account-menu-item:hover {
+    background: #2a2a3a;
+  }
+
+  :global(.dark) .account-menu-divider {
+    background: #3a3a4a;
+  }
+
+  :global(.dark) .empty-sessions span {
+    color: #8888a0;
   }
 </style>

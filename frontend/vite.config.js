@@ -9,7 +9,14 @@ export default defineConfig(({ mode }) => {
   return {
     base: isProduction ? './' : '/',
     plugins: [
-      svelte(),
+      svelte({
+        // Enable hot module replacement for faster dev iterations
+        hot: !isProduction,
+        // Compile with fewer checks in dev for speed
+        compilerOptions: {
+          dev: !isProduction,
+        },
+      }),
       // Bundle visualizer for production builds
       isProduction && visualizer({
         filename: 'dist/stats.html',
@@ -28,6 +35,25 @@ export default defineConfig(({ mode }) => {
 
     server: {
       port: 5173,
+      // Faster dev server startup
+      warmup: {
+        clientFiles: [
+          './src/main.ts',
+          './src/App.svelte',
+          './src/style.css',
+          './src/styles/themes.css',
+          './src/styles/animations.css',
+          './src/lib/api.ts',
+          './src/stores/uiStore.ts',
+          './src/components/RefactoredChatInterface.svelte',
+        ],
+      },
+      // Faster HMR
+      hmr: {
+        overlay: false, // Don't block UI with error overlay
+      },
+      // Allow CORS for dev
+      cors: true,
       proxy: {
         '/api': {
           target: (process.env.VITE_PROXY_TARGET || process.env.VITE_API_URL || 'http://localhost:3000').replace(/\/api\/?$/, ''),
@@ -35,6 +61,11 @@ export default defineConfig(({ mode }) => {
           secure: false
         }
       }
+    },
+
+    // Faster CSS processing in dev
+    css: {
+      devSourcemap: false, // Skip sourcemaps for faster rebuild
     },
 
     build: {
@@ -46,7 +77,7 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 500,
 
       // Report compressed sizes for accurate metrics
-      reportCompressedSize: true,
+      reportCompressedSize: isProduction, // Skip in dev for faster build
 
       rollupOptions: {
         input: {
@@ -74,7 +105,7 @@ export default defineConfig(({ mode }) => {
           manualChunks(id) {
             // Framework core - loaded on every page
             if (id.includes('node_modules')) {
-              // Svelte runtime - core framework
+              // Svelte runtime - core framework (tiny, loads fast)
               if (id.includes('svelte') && !id.includes('svelte-spa-router')) {
                 return 'vendor-svelte'
               }
@@ -96,6 +127,9 @@ export default defineConfig(({ mode }) => {
               }
               if (id.includes('diff')) {
                 return 'vendor-diff'
+              }
+              if (id.includes('marked') || id.includes('markdown')) {
+                return 'vendor-markdown'
               }
 
               // Other third-party libraries
@@ -149,6 +183,9 @@ export default defineConfig(({ mode }) => {
         'svelte/store',
         'svelte/transition',
         '@supabase/supabase-js',
+        'lucide-svelte',
+        'svelte-spa-router',
+        'marked',
       ],
       // Exclude heavy dependencies from pre-bundling (loaded on demand)
       exclude: [
@@ -157,8 +194,8 @@ export default defineConfig(({ mode }) => {
         'diff',
         'mermaid',
       ],
-      // Force optimize on certain packages
-      force: true,
+      // Don't force re-optimize every start — use cache
+      force: false,
     },
 
     // Preload configuration for production

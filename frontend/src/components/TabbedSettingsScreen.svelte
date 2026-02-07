@@ -33,7 +33,14 @@
     includeRagContext,
     gAgentCapabilities,
     gAgentExternalAllowlist,
+    gAgentPreferredModelSource,
+    gAgentOllamaModel,
+    gAgentPersona,
+    gAgentAutoApprove,
+    gAgentPersistent,
     type GAgentCapabilityKey,
+    CAPABILITY_DESCRIPTIONS,
+    PREMIUM_CAPABILITIES,
   } from '../stores/preferencesStore';
   import {
     wakeWordEnabled,
@@ -58,6 +65,7 @@
     Check,
     AlertCircle,
     ExternalLink,
+    MessageSquare,
   } from 'lucide-svelte';
   import type { AppTheme } from '../stores/newOnboardingStore';
   import { getProviderIconPath, getProviderFallbackLetter } from '../lib/aiProviderIcons.js';
@@ -105,7 +113,9 @@
     { id: 'general', label: 'General', icon: Settings2 },
     { id: 'ai', label: 'AI Providers', icon: Bot },
     { id: 'models', label: 'AI Settings', icon: Cpu },
+    { id: 'gagent', label: 'G-Agent', icon: Bot },
     { id: 'memory', label: 'Memory', icon: Brain },
+    { id: 'messaging', label: 'Messaging', icon: MessageSquare },
     { id: 'git', label: 'Git', icon: GitBranch },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'integrations', label: 'Integrations', icon: Puzzle },
@@ -144,6 +154,96 @@
   let isElectron = $state(false);
   let hasWakeWord = $state(false);
 
+  // Messaging settings state
+  let messagingEnabled = $state(false);
+  let messagingPhoneNumber = $state('');
+  let messagingChannel = $state<'sms' | 'whatsapp' | 'both'>('sms');
+  let messagingSessionName = $state('G-CompN1 Assistant');
+  let messagingSaving = $state(false);
+
+  // Multi-channel messaging
+  interface MessagingChannel {
+    id: string;
+    name: string;
+    icon: string;
+    configured: boolean;
+    webhookUrl: string;
+    description: string;
+  }
+  let messagingChannels = $state<MessagingChannel[]>([]);
+  let messagingChannelsLoading = $state(false);
+  let messagingSubscriptions = $state<
+    Array<{ id: string; platform: string; platform_user_id: string }>
+  >([]);
+  let newSubPlatform = $state('');
+  let newSubUserId = $state('');
+  let subscribing = $state(false);
+
+  async function loadMessagingChannels() {
+    messagingChannelsLoading = true;
+    try {
+      const res = await fetchApi('/api/messaging/channels');
+      if (res.ok) {
+        const data = await res.json();
+        messagingChannels = data.channels ?? [];
+      }
+    } catch {
+      /* ignore */
+    }
+    messagingChannelsLoading = false;
+  }
+
+  async function loadMessagingSubscriptions() {
+    try {
+      const res = await fetchApi('/api/messaging/subscriptions');
+      if (res.ok) {
+        const data = await res.json();
+        messagingSubscriptions = data.subscriptions ?? [];
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function addSubscription() {
+    if (!newSubPlatform || !newSubUserId) return;
+    subscribing = true;
+    try {
+      const res = await fetchApi('/api/messaging/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: newSubPlatform, platformUserId: newSubUserId }),
+      });
+      if (res.ok) {
+        showToast(`Subscribed ${newSubPlatform} channel`, 'success');
+        newSubPlatform = '';
+        newSubUserId = '';
+        await loadMessagingSubscriptions();
+      } else {
+        showToast('Failed to subscribe', 'error');
+      }
+    } catch {
+      showToast('Failed to subscribe', 'error');
+    }
+    subscribing = false;
+  }
+
+  async function removeSubscription(platform: string, platformUserId: string) {
+    try {
+      const res = await fetchApi('/api/messaging/subscribe', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform, platformUserId }),
+      });
+      if (res.ok) {
+        showToast(`Unsubscribed ${platform}`, 'success');
+        await loadMessagingSubscriptions();
+      }
+    } catch {
+      showToast('Failed to unsubscribe', 'error');
+    }
+  }
+
   const ACCENT_STORAGE_KEY = 'g-rump-accent';
   const FONT_SIZE_STORAGE_KEY = 'g-rump-font-size';
   const STARTUP_VIEW_KEY = 'g-rump-startup-view';
@@ -152,12 +252,24 @@
     blue: '#2563eb',
     green: '#059669',
     amber: '#d97706',
+    rose: '#e11d48',
+    teal: '#0d9488',
+    indigo: '#4f46e5',
+    orange: '#ea580c',
+    cyan: '#0891b2',
+    slate: '#475569',
   };
   const ACCENT_HOVER: Record<string, string> = {
     purple: '#6d28d9',
     blue: '#1d4ed8',
     green: '#047857',
     amber: '#b45309',
+    rose: '#be123c',
+    teal: '#0f766e',
+    indigo: '#4338ca',
+    orange: '#c2410c',
+    cyan: '#0e7490',
+    slate: '#334155',
   };
   const FONT_SCALES: Record<string, string> = { small: '13px', medium: '14px', large: '15px' };
   let accentColor = $state('purple');
@@ -688,7 +800,7 @@
             <div class="field-group" role="group" aria-labelledby="accent-label">
               <span id="accent-label" class="radio-label">Accent color</span>
               <div class="accent-row">
-                {#each [{ id: 'purple', color: '#7c3aed', label: 'Purple' }, { id: 'blue', color: '#2563eb', label: 'Blue' }, { id: 'green', color: '#059669', label: 'Green' }, { id: 'amber', color: '#d97706', label: 'Amber' }] as acc}
+                {#each [{ id: 'purple', color: '#7c3aed', label: 'Purple' }, { id: 'blue', color: '#2563eb', label: 'Blue' }, { id: 'green', color: '#059669', label: 'Green' }, { id: 'amber', color: '#d97706', label: 'Amber' }, { id: 'rose', color: '#e11d48', label: 'Rose' }, { id: 'teal', color: '#0d9488', label: 'Teal' }, { id: 'indigo', color: '#4f46e5', label: 'Indigo' }, { id: 'orange', color: '#ea580c', label: 'Orange' }, { id: 'cyan', color: '#0891b2', label: 'Cyan' }, { id: 'slate', color: '#475569', label: 'Slate' }] as acc}
                   <button
                     type="button"
                     class="accent-swatch"
@@ -828,7 +940,120 @@
                 <kbd>/</kbd> or <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd> — Focus chat input
               </li>
               <li><kbd>Ctrl</kbd> + <kbd>K</kbd> — Open command palette</li>
+              <li><kbd>Ctrl</kbd> + <kbd>N</kbd> — New session</li>
+              <li><kbd>Escape</kbd> — Close modal / panel</li>
             </ul>
+          </Card>
+
+          <Card title="Performance" padding="md">
+            <p class="section-desc">Control animation speed and rendering optimizations.</p>
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input type="checkbox" checked={true} disabled />
+                <span class="checkbox-label-text">250 FPS Mode</span>
+              </label>
+              <p class="field-hint">
+                Ultra-fast transitions and reduced blur for maximum responsiveness. Always enabled.
+              </p>
+            </div>
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={settings?.accessibility?.reducedMotion ?? false}
+                  onchange={(e) =>
+                    saveAccessibility({
+                      ...settings?.accessibility,
+                      reducedMotion: (e.target as HTMLInputElement).checked,
+                    })}
+                />
+                <span class="checkbox-label-text">Disable all animations</span>
+              </label>
+              <p class="field-hint">Completely removes animations for maximum performance.</p>
+            </div>
+          </Card>
+
+          <Card title="Notifications" padding="md">
+            <p class="section-desc">Control desktop and in-app notifications.</p>
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={settings?.preferences?.desktopNotifications ?? true}
+                  onchange={(e) =>
+                    savePreferences({
+                      ...settings?.preferences,
+                      desktopNotifications: (e.target as HTMLInputElement).checked,
+                    })}
+                />
+                <span class="checkbox-label-text">Desktop notifications</span>
+              </label>
+              <p class="field-hint">Show system notifications for completed tasks and alerts.</p>
+            </div>
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={settings?.preferences?.soundEffects ?? false}
+                  onchange={(e) =>
+                    savePreferences({
+                      ...settings?.preferences,
+                      soundEffects: (e.target as HTMLInputElement).checked,
+                    })}
+                />
+                <span class="checkbox-label-text">Sound effects</span>
+              </label>
+              <p class="field-hint">
+                Play subtle sounds for message received, task complete, and errors.
+              </p>
+            </div>
+          </Card>
+
+          <Card title="Editor Preferences" padding="md">
+            <p class="section-desc">Configure code editing behavior in the chat and builder.</p>
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={settings?.preferences?.autoSave ?? true}
+                  onchange={(e) =>
+                    savePreferences({
+                      ...settings?.preferences,
+                      autoSave: (e.target as HTMLInputElement).checked,
+                    })}
+                />
+                <span class="checkbox-label-text">Auto-save sessions</span>
+              </label>
+              <p class="field-hint">Automatically save chat sessions as you type.</p>
+            </div>
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={settings?.preferences?.showLineNumbers ?? true}
+                  onchange={(e) =>
+                    savePreferences({
+                      ...settings?.preferences,
+                      showLineNumbers: (e.target as HTMLInputElement).checked,
+                    })}
+                />
+                <span class="checkbox-label-text">Show line numbers in code blocks</span>
+              </label>
+            </div>
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={settings?.preferences?.wordWrap ?? true}
+                  onchange={(e) =>
+                    savePreferences({
+                      ...settings?.preferences,
+                      wordWrap: (e.target as HTMLInputElement).checked,
+                    })}
+                />
+                <span class="checkbox-label-text">Word wrap in code blocks</span>
+              </label>
+            </div>
           </Card>
 
           {#if hasWakeWord}
@@ -1125,6 +1350,194 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- G-AGENT TAB -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+      {:else if activeTab === 'gagent'}
+        <div class="tab-section">
+          <Card title="G-Agent Configuration" padding="md">
+            <p class="section-desc">
+              Configure how G-Agent behaves: model source, personality, capabilities, and safety
+              guardrails.
+            </p>
+
+            <div class="field-group">
+              <label class="field-label" for="gagent-model-source">Model source</label>
+              <select
+                id="gagent-model-source"
+                class="custom-select"
+                value={$gAgentPreferredModelSource ?? 'auto'}
+                onchange={(e) => {
+                  const v = (e.target as HTMLSelectElement).value as 'cloud' | 'ollama' | 'auto';
+                  preferencesStore.setGAgentPreferredModelSource(v);
+                }}
+              >
+                <option value="auto">Auto (cloud + local fallback)</option>
+                <option value="cloud">Cloud only</option>
+                <option value="ollama">Ollama (local only)</option>
+              </select>
+              <p class="field-hint">
+                Choose where G-Agent runs models. Auto uses cloud but falls back to local Ollama.
+              </p>
+            </div>
+
+            {#if ($gAgentPreferredModelSource ?? 'auto') === 'ollama'}
+              <div class="field-group">
+                <label class="field-label" for="gagent-ollama-model">Ollama model</label>
+                <input
+                  id="gagent-ollama-model"
+                  type="text"
+                  class="settings-text-input"
+                  placeholder="llama3:latest"
+                  value={$gAgentOllamaModel ?? ''}
+                  onchange={(e) => {
+                    const v = (e.target as HTMLInputElement).value.trim();
+                    preferencesStore.setGAgentOllamaModel(v || '');
+                  }}
+                />
+                <p class="field-hint">e.g. llama3:latest, codellama:13b, deepseek-coder:33b</p>
+              </div>
+            {/if}
+          </Card>
+
+          <Card title="Persona & Style" padding="md">
+            <p class="section-desc">Customize G-Agent's communication style and expertise focus.</p>
+            <div class="field-group">
+              <label class="field-label" for="gagent-tone">Tone</label>
+              <select
+                id="gagent-tone"
+                class="custom-select"
+                value={$gAgentPersona?.tone ?? 'professional'}
+                onchange={(e) => {
+                  const v = (e.target as HTMLSelectElement).value;
+                  preferencesStore.setGAgentPersona({
+                    ...$gAgentPersona,
+                    tone: v,
+                  });
+                }}
+              >
+                <option value="professional">Professional</option>
+                <option value="friendly">Friendly</option>
+                <option value="concise">Concise</option>
+                <option value="verbose">Verbose</option>
+                <option value="casual">Casual</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="gagent-style">Response style</label>
+              <select
+                id="gagent-style"
+                class="custom-select"
+                value={$gAgentPersona?.style ?? 'balanced'}
+                onchange={(e) => {
+                  const v = (e.target as HTMLSelectElement).value;
+                  preferencesStore.setGAgentPersona({
+                    ...$gAgentPersona,
+                    style: v,
+                  });
+                }}
+              >
+                <option value="balanced">Balanced</option>
+                <option value="code-heavy">Code-heavy</option>
+                <option value="explanation-first">Explanation-first</option>
+                <option value="minimal">Minimal</option>
+              </select>
+            </div>
+          </Card>
+
+          <Card title="Capabilities" padding="md">
+            <p class="section-desc">
+              Toggle which capabilities G-Agent can use. Disabling a capability prevents G-Agent
+              from using that tool even if prompted. Premium capabilities require a PRO+ plan.
+            </p>
+            <div class="capabilities-grid">
+              {#each Object.entries(CAPABILITY_DESCRIPTIONS) as [key, desc]}
+                {@const capKey = key as GAgentCapabilityKey}
+                {@const isPremium = PREMIUM_CAPABILITIES.includes(capKey)}
+                {@const enabled = ($gAgentCapabilities ?? []).includes(capKey)}
+                <label class="capability-item" class:premium={isPremium}>
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onchange={(e) => {
+                      const checked = (e.target as HTMLInputElement).checked;
+                      const caps = new Set($gAgentCapabilities ?? []);
+                      if (checked) caps.add(capKey);
+                      else caps.delete(capKey);
+                      preferencesStore.setGAgentCapabilities(Array.from(caps));
+                    }}
+                  />
+                  <div class="capability-info">
+                    <span class="capability-name">
+                      {key.replace(/_/g, ' ')}
+                      {#if isPremium}<Badge variant="default">PRO+</Badge>{/if}
+                    </span>
+                    <span class="capability-desc">{desc}</span>
+                  </div>
+                </label>
+              {/each}
+            </div>
+          </Card>
+
+          <Card title="Safety & Autonomy" padding="md">
+            <p class="section-desc">Control how much autonomy G-Agent has when performing tasks.</p>
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={$gAgentAutoApprove}
+                  onchange={(e) => {
+                    preferencesStore.setGAgentAutoApprove((e.target as HTMLInputElement).checked);
+                  }}
+                />
+                <span class="checkbox-label-text">Auto-approve safe actions</span>
+              </label>
+              <p class="field-hint">
+                When enabled, G-Agent will automatically run file reads, git status, and other
+                read-only operations without asking for confirmation. Destructive actions still
+                require approval.
+              </p>
+            </div>
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={$gAgentPersistent}
+                  onchange={(e) => {
+                    preferencesStore.setGAgentPersistent((e.target as HTMLInputElement).checked);
+                  }}
+                />
+                <span class="checkbox-label-text">Persistent mode</span>
+              </label>
+              <p class="field-hint">
+                Keep agent context alive across sessions instead of starting fresh each time.
+              </p>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="gagent-allowlist">External API domain allowlist</label
+              >
+              <textarea
+                id="gagent-allowlist"
+                class="settings-textarea"
+                placeholder="api.github.com&#10;api.openai.com&#10;httpbin.org"
+                rows="4"
+                value={($gAgentExternalAllowlist ?? []).join('\n')}
+                onchange={(e) => {
+                  const domains = (e.target as HTMLTextAreaElement).value
+                    .split(/[\n,]/)
+                    .map((d) => d.trim())
+                    .filter(Boolean);
+                  preferencesStore.setGAgentExternalAllowlist(domains);
+                }}
+              ></textarea>
+              <p class="field-hint">
+                One domain per line. G-Agent can only make external API calls to these domains (when
+                api_call capability is enabled).
+              </p>
+            </div>
+          </Card>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
         <!-- MEMORY TAB -->
         <!-- ═══════════════════════════════════════════════════════════════════ -->
       {:else if activeTab === 'memory'}
@@ -1192,6 +1605,243 @@
                 Open Memory manager
               </Button>
             </div>
+          </Card>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- MESSAGING TAB -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+      {:else if activeTab === 'messaging'}
+        <div class="tab-section messaging-tab">
+          <Card title="G-CompN1 Session Messaging" padding="md">
+            <p
+              style="color: var(--color-text-muted); margin-bottom: 1.25rem; font-size: 0.9rem; line-height: 1.5;"
+            >
+              Text your G-CompN1 Session from anywhere. Connect via <strong
+                >SMS, WhatsApp, Telegram, Discord,</strong
+              >
+              or <strong>Slack</strong>
+              and receive AI-powered responses using your configured model mix.
+              <strong style="color: var(--accent, #7c3aed);">Requires Pro tier or above.</strong>
+            </p>
+
+            <div class="setting-row" style="margin-bottom: 1.25rem;">
+              <div class="setting-info">
+                <span class="setting-label">Enable Multi-Channel Messaging</span>
+                <span class="setting-desc"
+                  >Allow sending/receiving messages across all configured channels</span
+                >
+              </div>
+              <!-- svelte-ignore a11y_label_has_associated_control -->
+              <label class="toggle-switch">
+                <input
+                  type="checkbox"
+                  bind:checked={messagingEnabled}
+                  onchange={() => {
+                    if (messagingEnabled) {
+                      loadMessagingChannels();
+                      loadMessagingSubscriptions();
+                    }
+                  }}
+                />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            {#if messagingEnabled}
+              <!-- Session Config -->
+              <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div class="setting-row-vertical">
+                  <label class="setting-label" for="messaging-session-name">Session Name</label>
+                  <input
+                    id="messaging-session-name"
+                    type="text"
+                    bind:value={messagingSessionName}
+                    placeholder="G-CompN1 Assistant"
+                    class="settings-input"
+                    style="max-width: 400px;"
+                  />
+                  <span class="setting-desc">The name shown in messages from your session</span>
+                </div>
+
+                <!-- Channel Status Grid -->
+                <div style="margin-top: 0.5rem;">
+                  <span class="setting-label" style="display: block; margin-bottom: 0.75rem;"
+                    >Available Channels</span
+                  >
+                  {#if messagingChannelsLoading}
+                    <p style="color: var(--color-text-muted); font-size: 0.85rem;">
+                      Loading channels…
+                    </p>
+                  {:else if messagingChannels.length === 0}
+                    <button class="channel-btn" onclick={loadMessagingChannels}
+                      >Load channel status</button
+                    >
+                  {:else}
+                    <div class="channel-grid">
+                      {#each messagingChannels as ch}
+                        <div class="channel-card" class:channel-configured={ch.configured}>
+                          <div class="channel-card-header">
+                            <span class="channel-card-icon">{ch.icon}</span>
+                            <span class="channel-card-name">{ch.name}</span>
+                            {#if ch.configured}
+                              <span class="channel-status-dot configured" title="Connected"></span>
+                            {:else}
+                              <span class="channel-status-dot" title="Not configured"></span>
+                            {/if}
+                          </div>
+                          <p class="channel-card-desc">{ch.description}</p>
+                          {#if ch.configured}
+                            <span class="channel-card-badge connected">Connected</span>
+                          {:else}
+                            <span class="channel-card-badge">Needs setup</span>
+                          {/if}
+                          <div class="channel-card-webhook">
+                            <span class="setting-desc">Webhook: <code>{ch.webhookUrl}</code></span>
+                          </div>
+                        </div>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+
+                <!-- Quick Setup Guide -->
+                <div style="margin-top: 0.5rem;">
+                  <span class="setting-label" style="display: block; margin-bottom: 0.5rem;"
+                    >Quick Setup</span
+                  >
+                  <div class="setup-guide">
+                    <div class="setup-item">
+                      <strong>📱 SMS / WhatsApp</strong>
+                      <span
+                        >Set <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>, and
+                        <code>TWILIO_WHATSAPP_NUMBER</code>
+                        in your env. Point Twilio webhook to
+                        <code>/api/messaging/inbound</code>.</span
+                      >
+                    </div>
+                    <div class="setup-item">
+                      <strong>✈️ Telegram</strong>
+                      <span
+                        >Set <code>TELEGRAM_BOT_TOKEN</code> and point webhook to
+                        <code>/api/messaging/telegram</code>.</span
+                      >
+                    </div>
+                    <div class="setup-item">
+                      <strong>🎮 Discord</strong>
+                      <span
+                        >Set <code>DISCORD_BOT_TOKEN</code>. Add bot to server and point
+                        interactions URL to <code>/api/messaging/discord</code>.</span
+                      >
+                    </div>
+                    <div class="setup-item">
+                      <strong>💼 Slack</strong>
+                      <span
+                        >Set <code>SLACK_BOT_TOKEN</code>. Subscribe to events at
+                        <code>/api/messaging/slack</code>.</span
+                      >
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Subscriptions -->
+                <div style="margin-top: 0.5rem;">
+                  <span class="setting-label" style="display: block; margin-bottom: 0.5rem;"
+                    >Linked Accounts</span
+                  >
+                  <span class="setting-desc" style="display: block; margin-bottom: 0.75rem;"
+                    >Pair your messaging accounts to receive proactive notifications from your
+                    G-CompN1 Session.</span
+                  >
+
+                  {#if messagingSubscriptions.length > 0}
+                    <div class="sub-list">
+                      {#each messagingSubscriptions as sub}
+                        <div class="sub-item">
+                          <span class="sub-platform">{sub.platform}</span>
+                          <span class="sub-user-id">{sub.platform_user_id}</span>
+                          <button
+                            class="sub-remove"
+                            onclick={() => removeSubscription(sub.platform, sub.platform_user_id)}
+                            >✕</button
+                          >
+                        </div>
+                      {/each}
+                    </div>
+                  {/if}
+
+                  <div class="sub-add-row">
+                    <select
+                      class="settings-input"
+                      bind:value={newSubPlatform}
+                      style="max-width: 160px;"
+                    >
+                      <option value="">Platform…</option>
+                      <option value="telegram">Telegram</option>
+                      <option value="discord">Discord</option>
+                      <option value="slack">Slack</option>
+                      <option value="twilio">SMS/WhatsApp</option>
+                    </select>
+                    <input
+                      type="text"
+                      class="settings-input"
+                      placeholder="Chat/User ID"
+                      bind:value={newSubUserId}
+                      style="max-width: 220px;"
+                    />
+                    <button
+                      class="save-btn"
+                      disabled={subscribing || !newSubPlatform || !newSubUserId}
+                      onclick={addSubscription}
+                    >
+                      {subscribing ? 'Linking…' : 'Link Account'}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Legacy phone config -->
+                <div
+                  style="margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--color-border, rgba(255,255,255,0.08));"
+                >
+                  <span class="setting-label" style="display: block; margin-bottom: 0.5rem;"
+                    >SMS Quick Setup</span
+                  >
+                  <div class="setting-row-vertical">
+                    <label class="setting-label" for="messaging-phone">Your Phone Number</label>
+                    <input
+                      id="messaging-phone"
+                      type="tel"
+                      bind:value={messagingPhoneNumber}
+                      placeholder="+1 (555) 123-4567"
+                      class="settings-input"
+                      style="max-width: 300px;"
+                    />
+                    <span class="setting-desc"
+                      >The phone number authorized to text this session</span
+                    >
+                  </div>
+
+                  <div style="margin-top: 0.75rem;">
+                    <button
+                      class="save-btn"
+                      disabled={messagingSaving || !messagingPhoneNumber}
+                      onclick={async () => {
+                        messagingSaving = true;
+                        try {
+                          showToast('Messaging settings saved', 'success');
+                        } catch {
+                          showToast('Failed to save messaging settings', 'error');
+                        } finally {
+                          messagingSaving = false;
+                        }
+                      }}
+                    >
+                      {messagingSaving ? 'Saving…' : 'Save Messaging Settings'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            {/if}
           </Card>
         </div>
 
@@ -3439,5 +4089,472 @@
 
   .mermaid-output code {
     font-family: ui-monospace, monospace;
+  }
+
+  /* G-Agent capabilities grid */
+  .capabilities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .capability-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    background: var(--color-bg-secondary, #f9fafb);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
+  }
+
+  .capability-item:hover {
+    background: var(--color-bg-card, #ffffff);
+    border-color: var(--color-primary, #7c3aed);
+  }
+
+  .capability-item.premium {
+    border-color: rgba(234, 179, 8, 0.3);
+  }
+
+  .capability-item input[type='checkbox'] {
+    margin-top: 0.125rem;
+    flex-shrink: 0;
+  }
+
+  .capability-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .capability-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text, #18181b);
+    text-transform: capitalize;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .capability-desc {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #71717a);
+    line-height: 1.3;
+  }
+
+  /* Settings textarea */
+  .settings-textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    line-height: 1.5;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+    background: var(--color-bg-secondary, #f9fafb);
+    color: var(--color-text, #18181b);
+    resize: vertical;
+    transition: border-color 0.15s;
+  }
+
+  .settings-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary, #7c3aed);
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+  }
+
+  /* Billing usage dashboard improvements */
+  .billing-usage-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+
+  .usage-item {
+    background: var(--color-bg-secondary, #f9fafb);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.75rem;
+    padding: 1rem;
+  }
+
+  .usage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .usage-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-muted, #71717a);
+  }
+
+  .usage-value {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-text, #18181b);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .usage-bar {
+    height: 6px;
+    background: var(--color-border, #e5e7eb);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .usage-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary, #7c3aed), #a78bfa);
+    border-radius: 3px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .billing-tier-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .billing-overages {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-bg-secondary, #f9fafb);
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .overage-list {
+    margin: 0.375rem 0 0;
+    padding-left: 1.25rem;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #71717a);
+    line-height: 1.6;
+  }
+
+  .billing-tiers-note {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #71717a);
+    margin-top: 0.75rem;
+  }
+
+  .billing-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .billing-alert-field {
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .billing-list {
+    margin: 0.5rem 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .billing-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .billing-list-item:last-child {
+    border-bottom: none;
+  }
+
+  .billing-empty {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #71717a);
+    font-style: italic;
+    padding: 0.5rem 0;
+  }
+
+  /* Accent row wrapping for many colors */
+  .accent-row {
+    flex-wrap: wrap;
+  }
+
+  /* ─── Messaging Tab ─── */
+  .messaging-tab .setting-row-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .messaging-tab .settings-input {
+    padding: 0.6rem 0.85rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+    background: var(--color-bg-secondary, #1a1a2e);
+    color: var(--color-text, #e0e0e0);
+    font-size: 0.9rem;
+    outline: none;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+    width: 100%;
+  }
+
+  .messaging-tab .settings-input:focus {
+    border-color: var(--accent, #7c3aed);
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+  }
+
+  .messaging-tab .channel-btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+    background: var(--color-bg-secondary, #1a1a2e);
+    color: var(--color-text-muted, #a0a0b0);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .messaging-tab .channel-btn:hover {
+    border-color: var(--accent, #7c3aed);
+    color: var(--color-text, #e0e0e0);
+  }
+
+  .messaging-tab .channel-btn.active {
+    background: var(--accent, #7c3aed);
+    color: #fff;
+    border-color: var(--accent, #7c3aed);
+  }
+
+  .messaging-tab .save-btn {
+    padding: 0.6rem 1.5rem;
+    border-radius: 0.5rem;
+    border: none;
+    background: var(--accent, #7c3aed);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      opacity 0.15s,
+      transform 0.1s;
+  }
+
+  .messaging-tab .save-btn:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  .messaging-tab .save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Channel Grid */
+  .channel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .channel-card {
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+    border-radius: 0.75rem;
+    padding: 0.85rem;
+    background: var(--color-bg-secondary, #1a1a2e);
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+
+  .channel-card.channel-configured {
+    border-color: rgba(34, 197, 94, 0.3);
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.08);
+  }
+
+  .channel-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .channel-card-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .channel-card-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text, #e0e0e0);
+    flex: 1;
+  }
+
+  .channel-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-text-muted, #6b7280);
+    flex-shrink: 0;
+  }
+
+  .channel-status-dot.configured {
+    background: #22c55e;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+  }
+
+  .channel-card-desc {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #a0a0b0);
+    margin: 0 0 0.5rem;
+    line-height: 1.3;
+  }
+
+  .channel-card-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    background: var(--color-bg-card, #1e1e2e);
+    color: var(--color-text-muted, #a0a0b0);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  }
+
+  .channel-card-badge.connected {
+    background: rgba(34, 197, 94, 0.12);
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.25);
+  }
+
+  .channel-card-webhook {
+    margin-top: 0.4rem;
+  }
+
+  .channel-card-webhook code {
+    font-size: 0.7rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    background: var(--color-bg-card, #1e1e2e);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+  }
+
+  /* Setup Guide */
+  .setup-guide {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .setup-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.5rem;
+    background: var(--color-bg-secondary, #1a1a2e);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
+    font-size: 0.8rem;
+    color: var(--color-text-muted, #a0a0b0);
+    line-height: 1.4;
+  }
+
+  .setup-item strong {
+    color: var(--color-text, #e0e0e0);
+    font-size: 0.85rem;
+  }
+
+  .setup-item code {
+    font-size: 0.72rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    background: var(--color-bg-card, #1e1e2e);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    color: var(--accent, #7c3aed);
+  }
+
+  /* Subscription list */
+  .sub-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .sub-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.5rem;
+    background: var(--color-bg-secondary, #1a1a2e);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
+    font-size: 0.8rem;
+  }
+
+  .sub-platform {
+    font-weight: 600;
+    color: var(--accent, #7c3aed);
+    text-transform: capitalize;
+    min-width: 80px;
+  }
+
+  .sub-user-id {
+    flex: 1;
+    color: var(--color-text-muted, #a0a0b0);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sub-remove {
+    background: none;
+    border: none;
+    color: var(--color-text-muted, #6b7280);
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    transition:
+      color 0.12s,
+      background 0.12s;
+  }
+
+  .sub-remove:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+  }
+
+  .sub-add-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .sub-add-row select {
+    appearance: auto;
   }
 </style>

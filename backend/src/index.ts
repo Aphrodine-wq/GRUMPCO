@@ -46,33 +46,34 @@ const app = createApp();
  */
 async function bootstrap(): Promise<void> {
   try {
-    // Phase 1: Initialize core services (database, cost tracking)
+    // Phase 1: Initialize core services (database, cost tracking) — must be first
     await initializeCore();
 
-    // Phase 2: Initialize background workers (job queue, schedulers)
-    await initializeWorkers();
+    // Phase 2+3: Workers and middleware are INDEPENDENT — run in parallel
+    await Promise.all([
+      initializeWorkers(),
+      applyAsyncMiddleware(app),
+    ]);
 
-    // Phase 3: Apply async middleware (rate limiting, auth, routes)
-    await applyAsyncMiddleware(app);
-
-    // Phase 4: Apply metrics and error handlers
+    // Phase 4: Apply metrics and error handlers (sync, fast)
     applyMetricsEndpoint(app);
     applyErrorHandlers(app);
 
     // Signal that the app is ready for requests
     resolveAppReady?.();
 
-    // Phase 5: Initialize monitoring and alerting
-    initializeMonitoring();
-
-    // Phase 6: Initialize skills/plugin system
-    await initializeSkills(app);
-
-    // Phase 7: Start HTTP server
+    // Phase 5: Start HTTP server BEFORE optional services
     await startServer(app, PREFERRED_PORT);
 
-    // Phase 8: Register shutdown handlers
+    // Phase 6: Register shutdown handlers (sync, fast)
     registerShutdownHandlers();
+
+    // Phase 7+8: Non-critical — run in background AFTER server is listening
+    // This means the server starts accepting requests ~1s sooner
+    initializeMonitoring();
+    initializeSkills(app).catch((err) => {
+      logger.warn({ err: (err as Error).message }, "Skills init failed (non-fatal)");
+    });
   } catch (err) {
     const error = err as Error;
     logger.error(

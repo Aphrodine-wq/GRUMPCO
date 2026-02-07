@@ -176,8 +176,8 @@
     padding: 0.75rem 1rem;
     border: 1px solid transparent;
     transition:
-      border-color 0.2s,
-      box-shadow 0.2s;
+      border-color 50ms ease-out,
+      box-shadow 50ms ease-out;
   }
 
   .input-container:focus-within {
@@ -228,7 +228,7 @@
     width: 2rem;
     height: 2rem;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 50ms ease-out;
     padding: 0;
   }
 
@@ -261,7 +261,7 @@
     width: 2rem;
     height: 2rem;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 50ms ease-out;
     padding: 0;
   }
 

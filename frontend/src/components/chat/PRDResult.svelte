@@ -33,10 +33,7 @@
       <FileText size={18} class="prd-icon" />
       <h3 class="result-title">Product Requirements Document</h3>
     </div>
-    <button 
-      class="toggle-btn"
-      onclick={() => showContent = !showContent}
-    >
+    <button class="toggle-btn" onclick={() => (showContent = !showContent)}>
       {#if showContent}
         <ChevronUp size={16} />
       {:else}
@@ -64,14 +61,14 @@
 
   <div class="approval-section">
     <p class="approval-question">Does this PRD capture your requirements?</p>
-    
+
     {#if !showFeedbackInput}
       <div class="approval-buttons">
         <button class="approve-btn" onclick={handleApprove}>
           <Check size={16} />
           <span>Looks good! Continue to Plan</span>
         </button>
-        <button class="changes-btn" onclick={() => showFeedbackInput = true}>
+        <button class="changes-btn" onclick={() => (showFeedbackInput = true)}>
           <RefreshCw size={16} />
           <span>Request changes</span>
         </button>
@@ -87,7 +84,7 @@
           <button class="submit-feedback-btn" onclick={handleRequestChanges}>
             Submit Feedback
           </button>
-          <button class="cancel-btn" onclick={() => showFeedbackInput = false}>
+          <button class="cancel-btn" onclick={() => (showFeedbackInput = false)}>
             <X size={16} />
             <span>Cancel</span>
           </button>
@@ -141,7 +138,7 @@
     font-size: 12px;
     color: var(--color-text-muted);
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .toggle-btn:hover {
@@ -240,7 +237,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .approve-btn:hover {
@@ -260,7 +257,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .changes-btn:hover {
@@ -285,7 +282,7 @@
     font-family: inherit;
     color: var(--color-text);
     resize: vertical;
-    transition: border-color 150ms ease;
+    transition: border-color 50ms ease-out;
   }
 
   textarea:focus {
@@ -312,7 +309,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .submit-feedback-btn:hover {
@@ -331,7 +328,7 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 50ms ease-out;
   }
 
   .cancel-btn:hover {

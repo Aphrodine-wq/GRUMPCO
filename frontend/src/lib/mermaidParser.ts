@@ -191,8 +191,8 @@ export function findSvgNodeElement(svg: SVGElement | null, nodeId: string): Elem
   const texts = svg.querySelectorAll('text');
   for (const text of texts) {
     if (text.textContent?.trim() === id) {
-      let g = text.parentElement;
-      while (g && g !== svg) {
+      let g: Element | null = text.parentElement;
+      while (g && g !== (svg as Element)) {
         if (g.tagName.toLowerCase() === 'g') return g;
         g = g.parentElement;
       }

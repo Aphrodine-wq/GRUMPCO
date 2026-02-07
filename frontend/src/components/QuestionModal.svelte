@@ -86,7 +86,8 @@
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--color-bg-overlay, rgba(0, 0, 0, 0.6));
+    backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -100,12 +101,13 @@
     max-width: 560px;
     max-height: 90vh;
     overflow-y: auto;
-    background: #ffffff;
+    background: var(--color-bg-elevated, #ffffff);
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.12),
-      0 2px 8px rgba(0, 0, 0, 0.06);
-    border-radius: 8px;
-    animation: modal-slide-in 200ms ease-out;
+      0 24px 48px rgba(0, 0, 0, 0.2),
+      0 8px 24px rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    animation: modal-slide-in 250ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .modal-header {
@@ -113,18 +115,18 @@
   }
 
   .modal-title {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 1.25rem;
-    font-weight: 600;
-    color: #000000;
+    font-weight: 700;
+    color: var(--color-text, #111827);
     margin: 0 0 0.5rem 0;
     text-align: center;
   }
 
   .modal-context {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-muted, #6b7280);
     margin: 0;
     text-align: center;
   }
@@ -142,10 +144,10 @@
   }
 
   .question-text {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #000000;
+    color: var(--color-text, #111827);
     margin: 0 0 0.5rem 0;
   }
 
@@ -155,9 +157,9 @@
   }
 
   .selection-hint {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--color-text-muted, #6b7280);
     margin: 0 0 0.75rem 0;
   }
 
@@ -176,16 +178,20 @@
     flex-direction: column;
     align-items: flex-start;
     padding: 1rem;
-    background: #f5f5f5;
-    border-radius: 6px;
+    background: var(--color-bg-subtle, #f5f3ff);
+    border: 1px solid var(--color-border-light, transparent);
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.2s ease;
     text-align: left;
     position: relative;
   }
 
   .option-card:hover {
-    background: #ebebeb;
+    background: var(--color-bg-card-hover, #f0ecff);
+    border-color: var(--color-border, #e5e7eb);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm, 0 2px 6px rgba(0, 0, 0, 0.05));
   }
 
   .option-card.selected {
@@ -199,16 +205,16 @@
   }
 
   .option-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 0.875rem;
     font-weight: 600;
     margin-bottom: 0.25rem;
   }
 
   .option-desc {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--color-text-muted, #6b7280);
     line-height: 1.4;
   }
 
@@ -260,41 +266,48 @@
   }
 
   .primary-btn {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 0.875rem;
     font-weight: 600;
     padding: 0.75rem 1.5rem;
-    background: var(--color-primary);
+    background: var(--color-primary, #7c3aed);
     color: #ffffff;
-    border-radius: 6px;
+    border: none;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
   }
 
   .primary-btn:hover:not(:disabled) {
-    background: #0052cc;
+    background: var(--color-primary-hover, #6d28d9);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-glow, 0 6px 26px rgba(124, 58, 237, 0.35));
   }
 
   .primary-btn:disabled {
-    background: #e5e5e5;
-    color: #9ca3af;
+    background: var(--color-bg-input, #e5e5e5);
+    color: var(--color-text-disabled, #9ca3af);
     cursor: not-allowed;
+    box-shadow: none;
   }
 
   .secondary-btn {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 0.875rem;
     padding: 0.75rem 1.5rem;
-    background: #ebebeb;
-    color: #000000;
-    border-radius: 6px;
+    background: var(--color-bg-subtle, #f5f3ff);
+    color: var(--color-text, #111827);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.2s ease;
   }
 
   .secondary-btn:hover {
-    background: #000000;
-    color: #ffffff;
+    background: var(--color-bg-card-hover, #f0ecff);
+    border-color: var(--color-primary, #7c3aed);
+    color: var(--color-primary, #7c3aed);
   }
 
   @keyframes modal-fade-in {

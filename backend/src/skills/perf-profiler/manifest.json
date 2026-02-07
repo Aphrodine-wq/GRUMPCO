@@ -1,0 +1,64 @@
+{
+    "id": "perf-profiler",
+    "name": "Performance Profiler",
+    "description": "Analyze code for performance bottlenecks, memory leaks, and optimization opportunities with actionable recommendations.",
+    "version": "1.0.0",
+    "author": "G-Rump Team",
+    "category": "optimization",
+    "icon": "⚡",
+    "capabilities": [
+        "bottleneck_detection",
+        "memory_analysis",
+        "bundle_size_analysis",
+        "rendering_optimization"
+    ],
+    "triggers": {
+        "keywords": [
+            "performance",
+            "slow",
+            "optimize",
+            "profil",
+            "memory leak",
+            "bundle size",
+            "render"
+        ],
+        "filePatterns": [
+            "*.ts",
+            "*.js",
+            "*.tsx",
+            "*.jsx",
+            "*.svelte",
+            "*.vue"
+        ],
+        "contextual": true
+    },
+    "settings": {
+        "level": {
+            "type": "select",
+            "label": "Analysis Depth",
+            "options": [
+                "quick",
+                "standard",
+                "deep"
+            ],
+            "default": "standard"
+        },
+        "focus": {
+            "type": "select",
+            "label": "Focus Area",
+            "options": [
+                "all",
+                "cpu",
+                "memory",
+                "network",
+                "rendering"
+            ],
+            "default": "all"
+        }
+    },
+    "permissions": {
+        "fileAccess": true,
+        "networkAccess": false,
+        "shellAccess": true
+    }
+}

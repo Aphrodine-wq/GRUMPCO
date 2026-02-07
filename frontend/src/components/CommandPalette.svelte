@@ -19,7 +19,6 @@
     Blocks,
     Users,
     Brain,
-    Check,
     Clock,
     Container,
     Cog,
@@ -81,75 +80,6 @@
   // Initialize commands
   function initializeCommands() {
     commands = [
-      // Modes
-      {
-        id: 'switch-argument',
-        label: 'Argument',
-        category: 'modes',
-        icon: MessageSquare,
-        action: () => {
-          chatModeStore.setMode('argument');
-          setCurrentView('chat');
-          close();
-        },
-      },
-      {
-        id: 'switch-plan',
-        label: 'Plan',
-        category: 'modes',
-        icon: Clipboard,
-        action: () => {
-          chatModeStore.setMode('code');
-          window.dispatchEvent(new CustomEvent('switch-plan-mode'));
-          setCurrentView('chat');
-          close();
-        },
-      },
-      {
-        id: 'switch-spec',
-        label: 'Spec',
-        category: 'modes',
-        icon: FileText,
-        action: () => {
-          chatModeStore.setMode('code');
-          window.dispatchEvent(new CustomEvent('switch-spec-mode'));
-          setCurrentView('chat');
-          close();
-        },
-      },
-      {
-        id: 'open-ship-mode',
-        label: 'SHIP',
-        category: 'modes',
-        icon: Rocket,
-        action: () => {
-          window.dispatchEvent(new CustomEvent('open-ship-mode'));
-          setCurrentView('chat');
-          close();
-        },
-      },
-      {
-        id: 'switch-design',
-        label: 'Design',
-        category: 'modes',
-        icon: Palette,
-        action: () => {
-          chatModeStore.setMode('design');
-          setCurrentView('chat');
-          close();
-        },
-      },
-      {
-        id: 'switch-code',
-        label: 'Code',
-        category: 'modes',
-        icon: Code2,
-        action: () => {
-          chatModeStore.setMode('code');
-          setCurrentView('chat');
-          close();
-        },
-      },
       // Build
       {
         id: 'view-gAgent',
@@ -507,7 +437,7 @@
 
   $effect(() => {
     if (open && searchInput) {
-      searchInput.focus();
+      requestAnimationFrame(() => searchInput?.focus());
     }
   });
 
@@ -547,7 +477,7 @@
       role="menu"
       tabindex="0"
       onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => e.stopPropagation()}
+      onkeydown={handleKeydown}
     >
       <div class="command-palette-header">
         <input

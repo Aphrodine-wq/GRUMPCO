@@ -7,41 +7,11 @@
 @tailwind utilities;
 
 :root {
-  /* G-Rump Purple Theme */
-
-  /* Backgrounds */
-  --color-bg-app: #ffffff;
-  --color-bg-subtle: #f5f3ff;
-  --color-bg-card: #ffffff;
-  --color-bg-card-hover: #f8f5ff;
-  --color-bg-input: #f3e8ff;
-
-  /* Text - High Contrast */
-  --color-text: #1f1147;
-  --color-text-secondary: #4c1d95;
-  --color-text-muted: #6d28d9;
-  --color-text-inverse: #ffffff;
-
-  /* Brand / Accents */
-  --color-primary: #7c3aed;
-  --color-primary-glow: rgba(124, 58, 237, 0.32);
-  --color-primary-hover: #6d28d9;
-
-  /* Status */
-  --color-success: #34c759;
-  --color-error: #ff3b30;
-  --color-warning: #ff9500;
-
-  /* Borders */
-  --color-border: #e9d5ff;
-  --color-border-light: #f3e8ff;
-  --color-border-highlight: #d8b4fe;
-
-  /* Glassmorphism (Light) - Enhanced */
-  --glass-bg: rgba(255, 255, 255, 0.92);
-  --glass-border: rgba(124, 58, 237, 0.12);
-  --glass-shadow: 0 10px 36px rgba(76, 29, 149, 0.12);
-  --glass-backdrop: blur(24px);
+  /*
+   * Layout & typography tokens only.
+   * All color, glass, and shadow variables live in themes.css
+   * so dark mode [data-theme='dark'] can override them properly.
+   */
 
   /* Radius - Rounded (8, 12, 16, 24px) */
   --radius-sm: 8px;
@@ -49,12 +19,6 @@
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-full: 9999px;
-
-  /* Shadows - Diffuse & Clean - Enhanced */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.15);
-  --shadow-glow: 0 6px 26px rgba(124, 58, 237, 0.35);
 
   /* Typography */
   --font-sans: 'Space Grotesk', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
@@ -157,8 +121,8 @@ pre {
 
 .glass-panel {
   background: var(--glass-bg);
-  backdrop-filter: var(--glass-backdrop);
   -webkit-backdrop-filter: var(--glass-backdrop);
+  backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 }
@@ -225,6 +189,7 @@ pre {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -238,7 +203,7 @@ img {
 
 img[loading='lazy'] {
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 30ms ease-out;
 }
 
 img[loading='lazy'].loaded {
@@ -247,6 +212,7 @@ img[loading='lazy'].loaded {
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -260,4 +226,127 @@ img[loading='lazy'].loaded {
     animation: none;
     background: var(--color-bg-secondary);
   }
+}
+
+/* ============================================
+   250FPS PERFORMANCE MODE
+   Forces ultra-fast transitions, minimal blur,
+   GPU acceleration on interactive elements.
+   ============================================ */
+
+/* Global transition speed cap – no transition longer than 30ms */
+*,
+*::before,
+*::after {
+  transition-duration: 30ms !important;
+  transition-delay: 0ms !important;
+}
+
+/* Clamp animation durations at 120ms */
+/* no-op, overrides come from utilities */
+
+/* Kill all backdrop-filter blur – massive GPU/CPU savings */
+.glass-panel,
+[style*="backdrop-filter"] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Force GPU compositing on all interactive elements */
+button,
+a,
+input,
+textarea,
+select,
+[role="button"],
+[role="tab"],
+[role="option"],
+[role="dialog"],
+[role="menu"],
+[role="listbox"],
+.command-item,
+.sidebar-item,
+.nav-item,
+.modal,
+.overlay,
+.tooltip,
+.popover,
+.toast,
+.card,
+.panel {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Contain layout on all scrollable containers */
+[style*="overflow: auto"],
+[style*="overflow-y: auto"],
+[style*="overflow-x: auto"],
+.credit-body,
+.command-palette-list,
+.skills-screen .content,
+.memory-manager,
+.builder-main,
+.chat-messages,
+.settings-body,
+.mcp-servers-list,
+.integration-list {
+  contain: layout style;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 600px;
+}
+
+/* Eliminate expensive box-shadow transitions everywhere */
+*:hover {
+  transition-property: background-color, color, border-color, opacity, transform !important;
+}
+
+/* Faster scrolling */
+* {
+  scroll-behavior: auto !important;
+}
+
+/* Disable all animations on hover for snappier interactions */
+*:hover,
+*:focus {
+  animation-play-state: paused !important;
+}
+
+/* Kill filter/shadow transitions — most expensive CSS operations */
+* {
+  transition-property: background-color, color, border-color, opacity, transform !important;
+}
+
+/* Force layer promotion on modals and overlays */
+.modal-overlay,
+.command-palette-overlay,
+.credit-menu-overlay,
+.settings-overlay {
+  will-change: opacity;
+  contain: strict;
+}
+
+/* Instant hover/active feedback */
+button:hover,
+button:active,
+a:hover,
+a:active,
+[role="button"]:hover,
+[role="button"]:active {
+  transition-duration: 0ms !important;
+}
+
+/* Debounce repaints on typing */
+input:focus,
+textarea:focus {
+  contain: layout style;
+}
+
+/* Avoid layout thrashing in flex/grid containers */
+.message-wrapper,
+.message-content-wrapper,
+.chat-messages {
+  contain: layout;
 }

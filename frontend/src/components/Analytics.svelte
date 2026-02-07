@@ -17,23 +17,16 @@
    * />
    * ```
    */
-  import { analytics } from '$lib/analytics';
+  import { track, trackScreenView } from '../lib/analytics';
 
-  export function initializeAnalytics(apiKey: string, host?: string, debug = false) {
-    analytics.initialize({
-      apiKey,
-      host,
-      debug,
-      capture_pageview: true,
-    });
+  export function initializeAnalytics(_apiKey: string, _host?: string, _debug = false) {
+    // Analytics is initialized by the module itself — no explicit init needed
+    track('analytics_init', { host: _host, debug: _debug });
   }
 </script>
 
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { browser } from '$app/environment';
-  import { page } from '$app/stores';
-  import { analytics, isAnalyticsReady } from '$lib/analytics';
 
   // Props
   export let apiKey: string | undefined = undefined;
@@ -41,35 +34,36 @@
   export let debug: boolean = false;
   export let trackPageViews: boolean = true;
 
+  let _initialized = false;
   let unsubscribe: (() => void) | undefined;
 
   onMount(() => {
-    if (!browser) return;
+    if (typeof window === 'undefined') return;
 
-    // Initialize with props if provided, otherwise use env vars
-    const key = apiKey || import.meta.env.VITE_POSTHOG_API_KEY;
-    const hostUrl = host || import.meta.env.VITE_POSTHOG_HOST;
+    // Initialize with props if provided
+    const _key = apiKey || import.meta.env.VITE_POSTHOG_API_KEY;
+    const _hostUrl = host || import.meta.env.VITE_POSTHOG_HOST;
 
-    if (key && !analytics.isInitialized()) {
-      analytics.initialize({
-        apiKey: key,
-        host: hostUrl,
+    if (_key && !_initialized) {
+      track('analytics_setup', {
+        host: _hostUrl,
         debug: debug || import.meta.env.DEV,
-        capture_pageview: trackPageViews,
+        capturePageview: trackPageViews,
       });
+      _initialized = true;
     }
 
     // Track page views if enabled
     if (trackPageViews) {
-      unsubscribe = page.subscribe(($page) => {
-        if ($page.url) {
-          const pageName = $page.url.pathname.split('/').pop() || 'home';
-          analytics.pageView(pageName, {
-            route: $page.route.id,
-            params: $page.params,
-          });
-        }
-      });
+      // Use a simple location-based tracker instead of SvelteKit's page store
+      const handlePopState = () => {
+        const pageName = window.location.pathname.split('/').pop() || 'home';
+        trackScreenView(pageName);
+      };
+      window.addEventListener('popstate', handlePopState);
+      // Track initial page
+      handlePopState();
+      unsubscribe = () => window.removeEventListener('popstate', handlePopState);
     }
   });
 
@@ -81,6 +75,3 @@
 </script>
 
 <!-- This component doesn't render anything visible -->
-{#if $isAnalyticsReady}
-  <!-- Analytics initialized -->
-{/if}

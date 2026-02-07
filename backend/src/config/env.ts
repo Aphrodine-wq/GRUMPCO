@@ -117,6 +117,19 @@ const envSchema = z
     // Groq - https://groq.com
     GROQ_API_KEY: z.string().optional(),
 
+    // Jan - Local AI (OpenAI-compatible, default port 1337)
+    JAN_BASE_URL: z
+      .string()
+      .optional()
+      .default("http://localhost:1337")
+      .refine(
+        (v) => !v || /^https?:\/\/[^\s]+$/.test(String(v).trim()),
+        "JAN_BASE_URL must be a valid http(s) URL",
+      ),
+
+    // Google AI (Gemini) - https://ai.google.dev
+    GOOGLE_AI_API_KEY: z.string().optional(),
+
     // Provider routing preferences
     ROUTER_FAST_PROVIDER: z
       .enum([
@@ -584,9 +597,9 @@ if (!parseResult.success) {
 export const env: Env = parseResult.success
   ? parseResult.data
   : envSchema.parse({
-      ...process.env,
-      NVIDIA_NIM_API_KEY: "invalid-key-see-errors-above",
-    });
+    ...process.env,
+    NVIDIA_NIM_API_KEY: "invalid-key-see-errors-above",
+  });
 
 // Log successful validation (never log raw secrets or key material in production)
 if (parseResult.success) {
@@ -684,11 +697,13 @@ export type ApiProvider =
   | "nvidia_nim"
   | "openrouter"
   | "ollama"
+  | "jan"
   | "github_copilot"
   | "kimi"
   | "anthropic"
   | "mistral"
-  | "groq";
+  | "groq"
+  | "google";
 
 export function getApiKey(provider: ApiProvider): string | undefined {
   switch (provider) {
@@ -697,7 +712,8 @@ export function getApiKey(provider: ApiProvider): string | undefined {
     case "openrouter":
       return env.OPENROUTER_API_KEY;
     case "ollama":
-      // Ollama typically doesn't require an API key for local instances
+    case "jan":
+      // Local providers typically don't require an API key
       return undefined;
     case "github_copilot":
       return env.GITHUB_COPILOT_TOKEN;
@@ -709,6 +725,8 @@ export function getApiKey(provider: ApiProvider): string | undefined {
       return env.MISTRAL_API_KEY;
     case "groq":
       return env.GROQ_API_KEY;
+    case "google":
+      return env.GOOGLE_AI_API_KEY;
     default:
       return undefined;
   }
@@ -725,6 +743,8 @@ export function isProviderConfigured(provider: ApiProvider): boolean {
       return Boolean(env.OPENROUTER_API_KEY);
     case "ollama":
       return Boolean(env.OLLAMA_BASE_URL);
+    case "jan":
+      return true; // Jan is always local
     case "github_copilot":
       return Boolean(env.GITHUB_COPILOT_TOKEN);
     case "kimi":
@@ -735,6 +755,8 @@ export function isProviderConfigured(provider: ApiProvider): boolean {
       return Boolean(env.MISTRAL_API_KEY);
     case "groq":
       return Boolean(env.GROQ_API_KEY);
+    case "google":
+      return Boolean(env.GOOGLE_AI_API_KEY);
     default:
       return false;
   }
@@ -748,10 +770,12 @@ export function getConfiguredProviders(): ApiProvider[] {
   if (env.NVIDIA_NIM_API_KEY) providers.push("nvidia_nim");
   if (env.OPENROUTER_API_KEY) providers.push("openrouter");
   if (env.OLLAMA_BASE_URL) providers.push("ollama");
+  providers.push("jan"); // Jan is always available (local)
   if (env.GITHUB_COPILOT_TOKEN) providers.push("github_copilot");
   if (env.KIMI_API_KEY) providers.push("kimi");
   if (env.ANTHROPIC_API_KEY) providers.push("anthropic");
   if (env.MISTRAL_API_KEY) providers.push("mistral");
   if (env.GROQ_API_KEY) providers.push("groq");
+  if (env.GOOGLE_AI_API_KEY) providers.push("google");
   return providers;
 }

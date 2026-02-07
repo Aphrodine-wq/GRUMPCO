@@ -62,21 +62,21 @@
   --color-border-highlight: #d8b4fe;
   --color-border-focus: #7c3aed;
 
-  /* Glassmorphism (reduced - use sparingly) */
-  --glass-bg: rgba(255, 255, 255, 0.95);
-  --glass-bg-hover: rgba(255, 255, 255, 0.98);
+  /* Glassmorphism (DISABLED for performance – solid backgrounds instead) */
+  --glass-bg: rgba(255, 255, 255, 0.98);
+  --glass-bg-hover: #ffffff;
   --glass-border: rgba(124, 58, 237, 0.08);
-  --glass-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  --glass-backdrop: blur(16px);
+  --glass-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --glass-backdrop: none;
 
-  /* Shadows (subtle depth) */
+  /* Shadows (simplified for performance) */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.15);
-  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.2);
-  --shadow-glow: 0 6px 26px rgba(124, 58, 237, 0.35);
-  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 2px 8px rgba(124, 58, 237, 0.2);
+  --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.04);
 
   /* Focus Ring */
   --focus-ring: 0 0 0 3px rgba(124, 58, 237, 0.3);
@@ -151,21 +151,21 @@
   --color-border-highlight: #3d3d4d;
   --color-border-focus: #a78bfa;
 
-  /* Glassmorphism */
-  --glass-bg: rgba(26, 26, 36, 0.95);
-  --glass-bg-hover: rgba(30, 30, 42, 0.98);
+  /* Glassmorphism (DISABLED for performance) */
+  --glass-bg: rgba(32, 32, 36, 0.99);
+  --glass-bg-hover: rgba(40, 40, 45, 1);
   --glass-border: rgba(167, 139, 250, 0.12);
-  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-  --glass-backdrop: blur(16px);
+  --glass-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  --glass-backdrop: none;
 
-  /* Shadows */
+  /* Shadows (simplified for performance) */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.4);
-  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 6px 26px rgba(167, 139, 250, 0.3);
-  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-glow: 0 2px 8px rgba(167, 139, 250, 0.2);
+  --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.15);
 
   /* Focus Ring */
   --focus-ring: 0 0 0 3px rgba(167, 139, 250, 0.4);
@@ -194,21 +194,27 @@
 .bg-app {
   background-color: var(--color-bg-app);
 }
+
 .bg-subtle {
   background-color: var(--color-bg-subtle);
 }
+
 .bg-card {
   background-color: var(--color-bg-card);
 }
+
 .bg-elevated {
   background-color: var(--color-bg-elevated);
 }
+
 .bg-inset {
   background-color: var(--color-bg-inset);
 }
+
 .bg-primary {
   background-color: var(--color-primary);
 }
+
 .bg-primary-subtle {
   background-color: var(--color-primary-subtle);
 }
@@ -217,18 +223,23 @@
 .text-primary {
   color: var(--color-text);
 }
+
 .text-secondary {
   color: var(--color-text-secondary);
 }
+
 .text-muted {
   color: var(--color-text-muted);
 }
+
 .text-inverse {
   color: var(--color-text-inverse);
 }
+
 .text-disabled {
   color: var(--color-text-disabled);
 }
+
 .text-accent {
   color: var(--color-primary);
 }
@@ -237,12 +248,15 @@
 .text-success {
   color: var(--color-success);
 }
+
 .text-warning {
   color: var(--color-warning);
 }
+
 .text-error {
   color: var(--color-error);
 }
+
 .text-info {
   color: var(--color-info);
 }
@@ -251,12 +265,15 @@
 .border-default {
   border-color: var(--color-border);
 }
+
 .border-light {
   border-color: var(--color-border-light);
 }
+
 .border-highlight {
   border-color: var(--color-border-highlight);
 }
+
 .border-focus {
   border-color: var(--color-border-focus);
 }
@@ -265,21 +282,27 @@
 .shadow-xs {
   box-shadow: var(--shadow-xs);
 }
+
 .shadow-sm {
   box-shadow: var(--shadow-sm);
 }
+
 .shadow-md {
   box-shadow: var(--shadow-md);
 }
+
 .shadow-lg {
   box-shadow: var(--shadow-lg);
 }
+
 .shadow-xl {
   box-shadow: var(--shadow-xl);
 }
+
 .shadow-glow {
   box-shadow: var(--shadow-glow);
 }
+
 .shadow-inner {
   box-shadow: var(--shadow-inner);
 }
@@ -312,9 +335,11 @@
 }
 
 /* Firefox scrollbar */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+@supports (scrollbar-width: thin) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
 }
 
 /* Focus visible for keyboard users (a11y) */

@@ -66,6 +66,11 @@ const TIMEOUT_CONFIG: TimeoutConfig = {
   },
 };
 
+// Pre-sorted route patterns (longest first for most-specific match)
+const SORTED_ROUTE_PATTERNS = Object.keys(TIMEOUT_CONFIG.routes).sort(
+  (a, b) => b.length - a.length,
+);
+
 /**
  * Get timeout value for a specific path.
  * Matches the most specific route pattern first.
@@ -79,12 +84,8 @@ function getTimeoutForPath(path: string): number {
     return TIMEOUT_CONFIG.routes[path];
   }
 
-  // Check for prefix matches (e.g., /api/chat matches /api/chat/stream)
-  const sortedRoutes = Object.keys(TIMEOUT_CONFIG.routes).sort(
-    (a, b) => b.length - a.length,
-  );
-
-  for (const route of sortedRoutes) {
+  // Check for prefix matches using pre-sorted patterns
+  for (const route of SORTED_ROUTE_PATTERNS) {
     if (path.startsWith(route)) {
       return TIMEOUT_CONFIG.routes[route];
     }
@@ -167,15 +168,12 @@ export function createTimeoutMiddleware(timeoutMs: number): RequestHandler {
   };
 }
 
+// Cache timeout middleware instances per timeout value
+const _timeoutMiddlewareCache = new Map<number, RequestHandler>();
+
 /**
  * Dynamic timeout middleware that selects timeout based on route.
  * Apply this globally to the app for automatic per-route timeouts.
- *
- * @example
- * ```typescript
- * import { requestTimeout } from './middleware/timeout.js';
- * app.use(requestTimeout);
- * ```
  */
 export function requestTimeout(
   req: Request,
@@ -183,7 +181,11 @@ export function requestTimeout(
   next: NextFunction,
 ): void {
   const timeout = getTimeoutForPath(req.path);
-  const middleware = createTimeoutMiddleware(timeout);
+  let middleware = _timeoutMiddlewareCache.get(timeout);
+  if (!middleware) {
+    middleware = createTimeoutMiddleware(timeout);
+    _timeoutMiddlewareCache.set(timeout, middleware);
+  }
   middleware(req, res, next);
 }
 
