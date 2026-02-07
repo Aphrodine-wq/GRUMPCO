@@ -9,6 +9,7 @@ import { ragQuery } from '../services/ragService.js';
 import { claudeServiceWithTools } from '../services/claudeServiceWithTools.js';
 import type { ChatStreamEvent } from '../services/claudeServiceWithTools.js';
 import { route } from '../services/modelRouter.js';
+import { type LLMProvider } from '../services/llmGateway.js';
 import logger from '../middleware/logger.js';
 
 const router = Router();
@@ -126,7 +127,7 @@ router.post('/code', async (req: Request, res: Response) => {
       undefined,
       undefined,
       undefined,
-      routed.provider,
+      routed.provider as LLMProvider,
       routed.modelId
     );
     let fullText = '';

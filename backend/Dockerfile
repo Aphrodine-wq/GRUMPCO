@@ -50,8 +50,8 @@ RUN mkdir -p node_modules/@grump/ai-core && \
     cp -r packages/ai-core/dist node_modules/@grump/ai-core/ && \
     cp packages/ai-core/package.json node_modules/@grump/ai-core/
 
-# Build backend with TypeScript (ignore type errors, noEmitOnError:false generates output anyway)
-RUN npx tsc || true
+# Build backend using SWC (fast transpiler, matches npm run build)
+RUN npx swc src -d dist --copy-files --config-file .swcrc
 RUN node scripts/copy-migrations.mjs
 
 # =============================================================================
