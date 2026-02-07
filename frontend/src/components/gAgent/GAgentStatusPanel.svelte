@@ -282,10 +282,6 @@
     color: var(--color-text-muted);
   }
 
-  .gagent-status-panel.site-style .panel-meta {
-    color: var(--color-text-muted);
-  }
-
   .gagent-status-panel.site-style .status-connected {
     color: #059669;
   }
@@ -357,60 +353,6 @@
     background: var(--color-bg-card);
     color: var(--color-text);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  }
-
-  .gagent-status-panel.site-style .stat-card {
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 12px;
-  }
-
-  .gagent-status-panel.site-style .stat-label {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    margin-bottom: 4px;
-  }
-
-  .gagent-status-panel.site-style .stat-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--color-text);
-  }
-
-  .gagent-status-panel.site-style .stat-value-blue {
-    color: #2563eb;
-  }
-
-  .gagent-status-panel.site-style .stat-value-green {
-    color: #059669;
-  }
-
-  .gagent-status-panel.site-style .stat-sublabel {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-  }
-
-  .gagent-status-panel.site-style .cap-tag {
-    font-size: 0.75rem;
-    background: #e5e7eb;
-    color: var(--color-text-secondary);
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
-
-  .gagent-status-panel.site-style .panel-footer {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--color-border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .gagent-status-panel.site-style .footer-session {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
   }
 
   @keyframes pulse {
