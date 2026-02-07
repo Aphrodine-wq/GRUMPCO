@@ -44,7 +44,7 @@
     "lucide-svelte": "^0.563.0",
     "mermaid": "^10.9.0",
     "shiki": "^1.1.0",
-    "svelte": "^5.0.0"
+    "svelte": "^5.50.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
