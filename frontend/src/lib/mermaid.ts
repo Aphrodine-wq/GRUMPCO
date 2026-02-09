@@ -37,8 +37,9 @@
 
 import type { MermaidConfig } from '../types';
 
-/** Lazy-loaded mermaid instance */
-let mermaidInstance: any = null;
+// Mermaid module type (dynamic import)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mermaidModule: any = null;
 
 /** Tracks whether Mermaid has been initialized to prevent duplicate init calls. */
 let isInitialized = false;
@@ -46,11 +47,11 @@ let isInitialized = false;
 /**
  * Gets or creates the mermaid instance (lazy loaded)
  */
-async function getMermaid(): Promise<any> {
-  if (!mermaidInstance) {
-    mermaidInstance = await import('mermaid');
+async function getMermaid() {
+  if (!mermaidModule) {
+    mermaidModule = await import('mermaid');
   }
-  return mermaidInstance;
+  return mermaidModule;
 }
 
 /**
@@ -82,8 +83,15 @@ export async function initializeMermaid(config?: MermaidConfig): Promise<void> {
   mermaid.initialize({
     startOnLoad: false,
     theme: theme as string,
-    securityLevel: 'strict',
+    // 'sandbox' allows inline styles needed for proper node colors/fills.
+    // 'strict' strips them, causing invisible/unstyled nodes.
+    securityLevel: 'sandbox',
     fontFamily: 'Inter, sans-serif',
+    flowchart: {
+      htmlLabels: true,
+      useMaxWidth: true,
+      curve: 'basis',
+    },
     themeVariables: isDark ? {
       // Dark mode friendly colors
       primaryColor: '#7c3aed',
@@ -92,11 +100,14 @@ export async function initializeMermaid(config?: MermaidConfig): Promise<void> {
       lineColor: '#a78bfa',
       secondaryColor: '#1e1e3f',
       tertiaryColor: '#2d2d4a',
-      mainBkg: '#1a1a2e',
+      mainBkg: '#1e1e3f',
       nodeBorder: '#a78bfa',
-      clusterBkg: '#1e1e3f',
+      clusterBkg: 'rgba(30, 30, 63, 0.6)',
+      clusterBorder: '#a78bfa',
       titleColor: '#ffffff',
       edgeLabelBackground: '#1a1a2e',
+      textColor: '#e2e8f0',
+      nodeTextColor: '#ffffff',
     } : {
       // Light mode colors
       primaryColor: '#7c3aed',
@@ -105,11 +116,13 @@ export async function initializeMermaid(config?: MermaidConfig): Promise<void> {
       lineColor: '#7c3aed',
       secondaryColor: '#f5f3ff',
       tertiaryColor: '#ede9fe',
-      mainBkg: '#ffffff',
+      mainBkg: '#f5f3ff',
       nodeBorder: '#7c3aed',
       clusterBkg: '#f5f3ff',
       titleColor: '#1f1147',
       edgeLabelBackground: '#ffffff',
+      textColor: '#1f1147',
+      nodeTextColor: '#1f1147',
     },
     ...config,
   });

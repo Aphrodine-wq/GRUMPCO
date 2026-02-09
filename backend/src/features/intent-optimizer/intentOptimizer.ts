@@ -6,9 +6,9 @@
  */
 
 import logger from "../../middleware/logger.js";
-import { withResilience } from "../../services/resilience.js";
-import { withCache } from "../../services/cacheService.js";
-import { getStream, type StreamParams } from "../../services/llmGateway.js";
+import { withResilience } from "../../services/infra/resilience.js";
+import { withCache } from "../../services/caching/cacheService.js";
+import { getStream, type StreamParams } from "../../services/ai-providers/llmGateway.js";
 import {
   type OptimizationMode,
   type OptimizationOptions,

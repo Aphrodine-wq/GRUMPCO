@@ -28,12 +28,13 @@ export interface FileDiff {
 }
 
 // Lazy-loaded diff module
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let diffModule: any = null;
 
 /**
  * Gets or loads the diff module lazily
  */
-async function getDiffModule(): Promise<any> {
+async function getDiffModule() {
   if (!diffModule) {
     diffModule = await import('diff');
   }

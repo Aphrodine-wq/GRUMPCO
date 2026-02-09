@@ -3,9 +3,9 @@ import express, { type Request, type Response, type Router } from "express";
 import {
   generateDiagram,
   generateDiagramStream,
-} from "../services/claudeService.js";
-import { generateProjectZip } from "../services/codeGeneratorService.js";
-import { getTieredCache } from "../services/tieredCache.js";
+} from "../services/ai-providers/claudeService.js";
+import { generateProjectZip } from "../services/ship/codeGeneratorService.js";
+import { getTieredCache } from "../services/caching/tieredCache.js";
 import { getRequestLogger } from "../middleware/logger.js";
 import {
   validateDiagramRequest,

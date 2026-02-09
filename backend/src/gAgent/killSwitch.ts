@@ -18,6 +18,7 @@ import { messageBus, CHANNELS } from "./messageBus.js";
 import { supervisor } from "./supervisor.js";
 import { budgetManager } from "./budgetManager.js";
 import type { AgentStatus, Goal, AgentInstance } from "./types.js";
+import logger from "../middleware/logger.js";
 
 // ============================================================================
 // CONSTANTS
@@ -153,9 +154,7 @@ export class KillSwitch extends EventEmitter {
     let affectedAgents = 0;
     const affectedGoals = 0;
 
-    console.warn(
-      `[KillSwitch] ⚠️ EMERGENCY STOP ALL - Reason: ${reason}, By: ${initiatedBy}`,
-    );
+    logger.warn({ reason, initiatedBy }, "[KillSwitch] EMERGENCY STOP ALL");
 
     // 1. Set global stop flag IMMEDIATELY
     this.state.globalStop = true;
@@ -170,7 +169,7 @@ export class KillSwitch extends EventEmitter {
     for (const [id, controller] of this.abortControllers) {
       try {
         controller.abort();
-        console.log(`[KillSwitch] Aborted: ${id}`);
+        logger.info({ id }, "[KillSwitch] Aborted controller");
       } catch (err) {
         errors.push(`Failed to abort ${id}: ${err}`);
       }
@@ -246,11 +245,11 @@ export class KillSwitch extends EventEmitter {
    */
   resumeAll(initiatedBy: string = "system"): void {
     if (!this.state.globalStop) {
-      console.log("[KillSwitch] Already running, nothing to resume");
+      logger.info("[KillSwitch] Already running, nothing to resume");
       return;
     }
 
-    console.log(`[KillSwitch] Resuming operations - By: ${initiatedBy}`);
+    logger.info({ initiatedBy }, "[KillSwitch] Resuming operations");
 
     this.state.globalStop = false;
     this.state.globalStopReason = undefined;
@@ -311,7 +310,7 @@ export class KillSwitch extends EventEmitter {
     const errors: string[] = [];
     let affectedAgents = 0;
 
-    console.log(`[KillSwitch] Stopping goal: ${goalId} - Reason: ${reason}`);
+    logger.info({ goalId, reason }, "[KillSwitch] Stopping goal");
 
     // 1. Abort abort controller for this goal
     const controller = this.abortControllers.get(`goal:${goalId}`);
@@ -406,7 +405,7 @@ export class KillSwitch extends EventEmitter {
     const stoppedAt = new Date().toISOString();
     const errors: string[] = [];
 
-    console.log(`[KillSwitch] Stopping agent: ${agentId} - Reason: ${reason}`);
+    logger.info({ agentId, reason }, "[KillSwitch] Stopping agent");
 
     // 1. Abort abort controller for this agent
     const controller = this.abortControllers.get(`agent:${agentId}`);
@@ -487,9 +486,7 @@ export class KillSwitch extends EventEmitter {
     const errors: string[] = [];
     const affectedAgents = 0;
 
-    console.log(
-      `[KillSwitch] Stopping session: ${sessionId} - Reason: ${reason}`,
-    );
+    logger.info({ sessionId, reason }, "[KillSwitch] Stopping session");
 
     // 1. Stop budget tracking for session
     budgetManager.stopSession(sessionId, reason);
@@ -570,9 +567,7 @@ export class KillSwitch extends EventEmitter {
     const stoppedAt = new Date().toISOString();
     let savedStateSuccess = false;
 
-    console.log(
-      `[KillSwitch] Initiating graceful shutdown - Grace period: ${gracePeriodMs}ms`,
-    );
+    logger.info({ gracePeriodMs }, "[KillSwitch] Initiating graceful shutdown");
 
     // 1. Get count of active operations
     const activeAgents = supervisor.getAllInstances({
@@ -608,9 +603,9 @@ export class KillSwitch extends EventEmitter {
         // Save current state to a checkpoint
         // In production, this would persist to database
         savedStateSuccess = true;
-        console.log("[KillSwitch] State saved successfully");
+        logger.info("[KillSwitch] State saved successfully");
       } catch (err) {
-        console.error("[KillSwitch] Failed to save state:", err);
+        logger.error({ err }, "[KillSwitch] Failed to save state");
       }
     }
 
@@ -687,7 +682,7 @@ export class KillSwitch extends EventEmitter {
     budgetManager.on(
       "runaway",
       async (event: { type: string; reason: string }) => {
-        console.warn("[KillSwitch] Runaway detected, intervening...");
+        logger.warn("[KillSwitch] Runaway detected, intervening...");
         // The budget manager already handles this, but we log it
       },
     );
@@ -695,7 +690,7 @@ export class KillSwitch extends EventEmitter {
     // Listen for system errors
     messageBus.subscribe(CHANNELS.SYSTEM_ERROR, (message) => {
       if ("error" in message && message.error.includes("EMERGENCY")) {
-        console.warn("[KillSwitch] Emergency error detected");
+        logger.warn("[KillSwitch] Emergency error detected");
       }
     });
   }

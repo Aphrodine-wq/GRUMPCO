@@ -20,7 +20,7 @@ export function createSecureCommand(): Command {
 function createSetCommand(): Command {
   return new Command('set')
     .description('Securely store an API key in OS keychain')
-    .argument('<provider>', 'API provider (nvidia_nim, openai, groq, etc.)')
+    .argument('<provider>', 'API provider (nvidia_nim, openai, anthropic, etc.)')
     .option('-k, --key <key>', 'API key (will prompt if not provided)')
     .option('--no-keychain', 'Use encrypted file storage instead of OS keychain')
     .action(async (provider: string, options) => {
@@ -48,7 +48,7 @@ function createSetCommand(): Command {
       try {
         await secureConfig.setApiKey(provider, apiKey, options.keychain !== false);
         spinner.succeed(chalk.green(`API key for ${provider} stored securely`));
-        
+
         const method = options.keychain !== false ? 'OS keychain' : 'encrypted storage';
         console.log(chalk.dim(`Storage method: ${method}`));
       } catch (error) {
@@ -77,7 +77,7 @@ function createGetCommand(): Command {
         }
 
         const storageMethod = secureConfig.getStorageMethod(provider);
-        
+
         if (options.show) {
           console.log(chalk.cyan(`API key for ${provider}:`));
           console.log(apiKey);
@@ -86,7 +86,7 @@ function createGetCommand(): Command {
           const masked = apiKey.substring(0, 4) + '****' + apiKey.substring(apiKey.length - 4);
           console.log(chalk.cyan(`API key for ${provider}: ${masked}`));
         }
-        
+
         console.log(chalk.dim(`Storage: ${storageMethod}`));
       } catch (error) {
         spinner.fail(chalk.red(`Failed to retrieve API key: ${error}`));
@@ -180,7 +180,6 @@ function createMigrateCommand(): Command {
         'nvidia_nim',
         'openai',
         'anthropic',
-        'groq',
         'openrouter',
         'ollama',
         'kimi'
@@ -272,7 +271,7 @@ function createDoctorCommand(): Command {
         }
 
         console.log('');
-        
+
         const allPassed = checks.every(c => c.passed);
         if (allPassed) {
           console.log(chalk.green('All checks passed! Secure storage is ready.'));
@@ -298,7 +297,7 @@ async function checkKeychainAccess(): Promise<HealthCheck> {
     await secureConfig.setApiKey(testProvider, 'test', true);
     const retrieved = await secureConfig.getApiKey(testProvider);
     await secureConfig.deleteApiKey(testProvider);
-    
+
     if (retrieved === 'test') {
       return { name: 'OS Keychain Access', passed: true, message: 'Keychain storage is working' };
     }
@@ -311,10 +310,10 @@ async function checkKeychainAccess(): Promise<HealthCheck> {
 async function checkFallbackStorage(): Promise<HealthCheck> {
   try {
     const providers = await secureConfig.listStoredProviders();
-    return { 
-      name: 'Fallback Storage', 
-      passed: true, 
-      message: `${providers.length} key(s) in fallback storage` 
+    return {
+      name: 'Fallback Storage',
+      passed: true,
+      message: `${providers.length} key(s) in fallback storage`
     };
   } catch {
     return { name: 'Fallback Storage', passed: true, message: 'Fallback storage ready' };
@@ -322,14 +321,14 @@ async function checkFallbackStorage(): Promise<HealthCheck> {
 }
 
 async function checkEnvVariables(): Promise<HealthCheck> {
-  const providers = ['nvidia_nim', 'openai', 'anthropic', 'groq'];
+  const providers = ['nvidia_nim', 'openai', 'anthropic', 'openrouter'];
   const envKeys = providers.filter(p => process.env[`${p.toUpperCase()}_API_KEY`]);
-  
+
   if (envKeys.length > 0) {
-    return { 
-      name: 'Environment Variables', 
-      passed: false, 
-      message: `${envKeys.length} key(s) in env vars (use 'secure migrate' to secure them)` 
+    return {
+      name: 'Environment Variables',
+      passed: false,
+      message: `${envKeys.length} key(s) in env vars (use 'secure migrate' to secure them)`
     };
   }
   return { name: 'Environment Variables', passed: true, message: 'No API keys in environment' };

@@ -236,5 +236,4 @@ export const CAPABILITY_PRESETS = {
   ] as GAgentCapabilityKey[],
 };
 
-// Legacy exports for backward compatibility
-export { GAgentCapabilityKey as FreeAgentCapabilityKey };
+

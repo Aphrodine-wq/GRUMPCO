@@ -9,8 +9,11 @@
 :root,
 [data-theme='light'] {
   --app-font-size: 14px;
-  /* Backgrounds */
+  /* Backgrounds & Surfaces */
   --color-bg-app: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f9fafb;
+  --surface-3: #f3f4f6;
   --color-bg-subtle: #f5f3ff;
   --color-bg-secondary: #f9fafb;
   --color-bg-card: #ffffff;
@@ -109,14 +112,25 @@
   --onboarding-welcome-linear: linear-gradient(135deg, rgba(249, 250, 251, 1) 0%, rgba(243, 232, 255, 0.5) 35%, rgba(237, 233, 254, 0.6) 65%, rgba(221, 214, 254, 0.4) 100%);
   --onboarding-welcome-logo-glow: rgba(124, 58, 237, 0.45);
   --onboarding-welcome-title-brand: linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%);
+
+  /* Spacing Tokens */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
 }
 
 /* ============================================
    Dark Theme
    ============================================ */
 [data-theme='dark'] {
-  /* Backgrounds – black for full dark mode */
+  /* Backgrounds & Surfaces */
   --color-bg-app: #000000;
+  --surface-1: #000000;
+  --surface-2: #0f0f0f;
+  --surface-3: #1a1a1a;
   --color-bg-subtle: #0a0a0a;
   --color-bg-secondary: #0f0f0f;
   --color-bg-card: #0f0f0f;
@@ -212,7 +226,16 @@
   --onboarding-welcome-linear: linear-gradient(135deg, rgba(15, 10, 26, 0.98) 0%, rgba(26, 16, 40, 0.9) 35%, rgba(30, 20, 51, 0.95) 65%, rgba(35, 23, 64, 0.9) 100%);
   --onboarding-welcome-logo-glow: rgba(167, 139, 250, 0.35);
   --onboarding-welcome-title-brand: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 50%, #7c3aed 100%);
+
+  /* Spacing Tokens */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
 }
+
 
 /* Dark theme via class (e.g. body.dark) – same as data-theme for onboarding */
 .dark,

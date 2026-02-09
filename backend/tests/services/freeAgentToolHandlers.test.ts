@@ -61,10 +61,10 @@ import {
   k8sStatus,
   k8sRollback,
   cloudStatus,
-  executeFreAgentTool,
-} from '../../src/services/freeAgentToolHandlers.js';
+  executeGAgentTool,
+} from '../../src/services/gAgentToolHandlers.js';
 
-describe('Free Agent Tool Handlers', () => {
+describe('G-Agent Tool Handlers', () => {
   const baseContext: ToolContext = {
     userId: 'test-user-123',
     workspaceRoot: '/workspace',
@@ -807,139 +807,139 @@ describe('Free Agent Tool Handlers', () => {
     });
   });
 
-  describe('executeFreAgentTool', () => {
+  describe('executeGAgentTool', () => {
     it('should execute db_query tool', async () => {
-      const result = await executeFreAgentTool('db_query', { query: 'SELECT 1', params: [] }, baseContext);
+      const result = await executeGAgentTool('db_query', { query: 'SELECT 1', params: [] }, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute db_schema tool', async () => {
-      const result = await executeFreAgentTool('db_schema', {}, baseContext);
+      const result = await executeGAgentTool('db_schema', {}, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute db_migrate_dryrun tool', async () => {
-      const result = await executeFreAgentTool('db_migrate_dryrun', { sql: 'ALTER TABLE test ADD col INT' }, baseContext);
+      const result = await executeGAgentTool('db_migrate_dryrun', { sql: 'ALTER TABLE test ADD col INT' }, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute db_backup tool', async () => {
-      const result = await executeFreAgentTool('db_backup', {}, baseContext);
+      const result = await executeGAgentTool('db_backup', {}, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute http_get tool', async () => {
-      const result = await executeFreAgentTool('http_get', { url: 'https://not-allowed.com' }, baseContext);
+      const result = await executeGAgentTool('http_get', { url: 'https://not-allowed.com' }, baseContext);
       expect(result.success).toBe(false);
     });
 
     it('should execute http_post tool', async () => {
-      const result = await executeFreAgentTool('http_post', { url: 'https://not-allowed.com', body: {} }, baseContext);
+      const result = await executeGAgentTool('http_post', { url: 'https://not-allowed.com', body: {} }, baseContext);
       expect(result.success).toBe(false);
     });
 
     it('should execute http_put tool', async () => {
-      const result = await executeFreAgentTool('http_put', { url: 'https://not-allowed.com', body: {} }, baseContext);
+      const result = await executeGAgentTool('http_put', { url: 'https://not-allowed.com', body: {} }, baseContext);
       expect(result.success).toBe(false);
     });
 
     it('should execute http_delete tool', async () => {
-      const result = await executeFreAgentTool('http_delete', { url: 'https://not-allowed.com' }, baseContext);
+      const result = await executeGAgentTool('http_delete', { url: 'https://not-allowed.com' }, baseContext);
       expect(result.success).toBe(false);
     });
 
     it('should execute graphql_query tool', async () => {
-      const result = await executeFreAgentTool('graphql_query', { endpoint: 'https://not-allowed.com', query: '{}' }, baseContext);
+      const result = await executeGAgentTool('graphql_query', { endpoint: 'https://not-allowed.com', query: '{}' }, baseContext);
       expect(result.success).toBe(false);
     });
 
     it('should execute metrics_query tool', async () => {
       // metricsQuery returns success: true with warning when PROMETHEUS_URL not set
-      // But the executeFreAgentTool may fail if there's an error
-      const result = await executeFreAgentTool('metrics_query', { query: 'up' }, baseContext);
+      // But the executeGAgentTool may fail if there's an error
+      const result = await executeGAgentTool('metrics_query', { query: 'up' }, baseContext);
       // Without PROMETHEUS_URL, it should still work but return a warning
       // Let's just check it doesn't throw
       expect(result).toBeDefined();
     });
 
     it('should execute alert_create tool', async () => {
-      const result = await executeFreAgentTool('alert_create', { name: 'test', condition: 'cpu > 90', channels: [] }, baseContext);
+      const result = await executeGAgentTool('alert_create', { name: 'test', condition: 'cpu > 90', channels: [] }, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute alert_list tool', async () => {
-      const result = await executeFreAgentTool('alert_list', {}, baseContext);
+      const result = await executeGAgentTool('alert_list', {}, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute health_check tool', async () => {
-      const result = await executeFreAgentTool('health_check', { target: 'my-service' }, baseContext);
+      const result = await executeGAgentTool('health_check', { target: 'my-service' }, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute logs_search tool', async () => {
-      const result = await executeFreAgentTool('logs_search', { query: 'error', options: {} }, baseContext);
+      const result = await executeGAgentTool('logs_search', { query: 'error', options: {} }, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute pipeline_trigger tool', async () => {
-      const result = await executeFreAgentTool('pipeline_trigger', { provider: 'github', repo: 'owner/repo', workflow: 'test.yml' }, baseContext);
+      const result = await executeGAgentTool('pipeline_trigger', { provider: 'github', repo: 'owner/repo', workflow: 'test.yml' }, baseContext);
       // Will fail because no GITHUB_TOKEN
       expect(result.success).toBe(false);
     });
 
     it('should execute pipeline_status tool', async () => {
-      const result = await executeFreAgentTool('pipeline_status', { provider: 'github', repo: 'owner/repo' }, baseContext);
+      const result = await executeGAgentTool('pipeline_status', { provider: 'github', repo: 'owner/repo' }, baseContext);
       expect(result.success).toBe(false);
     });
 
     it('should execute build_logs tool', async () => {
-      const result = await executeFreAgentTool('build_logs', { provider: 'github', repo: 'owner/repo', runId: '123' }, baseContext);
+      const result = await executeGAgentTool('build_logs', { provider: 'github', repo: 'owner/repo', runId: '123' }, baseContext);
       expect(result.success).toBe(false);
     });
 
     it('should execute release_create tool', async () => {
-      const result = await executeFreAgentTool('release_create', { provider: 'github', repo: 'owner/repo', tag: 'v1.0.0' }, baseContext);
+      const result = await executeGAgentTool('release_create', { provider: 'github', repo: 'owner/repo', tag: 'v1.0.0' }, baseContext);
       expect(result.success).toBe(false);
     });
 
     it('should execute release_list tool', async () => {
-      const result = await executeFreAgentTool('release_list', { provider: 'github', repo: 'owner/repo' }, baseContext);
+      const result = await executeGAgentTool('release_list', { provider: 'github', repo: 'owner/repo' }, baseContext);
       expect(result.success).toBe(false);
     });
 
     it('should execute k8s_deploy tool', async () => {
-      const result = await executeFreAgentTool('k8s_deploy', { namespace: 'default', manifest: 'apiVersion: v1' }, baseContext);
+      const result = await executeGAgentTool('k8s_deploy', { namespace: 'default', manifest: 'apiVersion: v1' }, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute k8s_scale tool', async () => {
-      const result = await executeFreAgentTool('k8s_scale', { namespace: 'default', deployment: 'app', replicas: 3 }, baseContext);
+      const result = await executeGAgentTool('k8s_scale', { namespace: 'default', deployment: 'app', replicas: 3 }, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute k8s_logs tool', async () => {
-      const result = await executeFreAgentTool('k8s_logs', { namespace: 'default', pod: 'app-1', options: {} }, baseContext);
+      const result = await executeGAgentTool('k8s_logs', { namespace: 'default', pod: 'app-1', options: {} }, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute k8s_status tool', async () => {
-      const result = await executeFreAgentTool('k8s_status', { namespace: 'default', resourceType: 'pod' }, baseContext);
+      const result = await executeGAgentTool('k8s_status', { namespace: 'default', resourceType: 'pod' }, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute k8s_rollback tool', async () => {
-      const result = await executeFreAgentTool('k8s_rollback', { namespace: 'default', deployment: 'app' }, baseContext);
+      const result = await executeGAgentTool('k8s_rollback', { namespace: 'default', deployment: 'app' }, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should execute cloud_status tool', async () => {
-      const result = await executeFreAgentTool('cloud_status', { provider: 'aws' }, baseContext);
+      const result = await executeGAgentTool('cloud_status', { provider: 'aws' }, baseContext);
       expect(result.success).toBe(true);
     });
 
     it('should return error for unknown tool', async () => {
-      const result = await executeFreAgentTool('unknown_tool' as ToolName, {}, baseContext);
+      const result = await executeGAgentTool('unknown_tool' as ToolName, {}, baseContext);
       expect(result.success).toBe(false);
       expect(result.error).toContain('Unknown tool');
     });

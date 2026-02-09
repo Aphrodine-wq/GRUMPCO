@@ -75,11 +75,11 @@ describe('connectionStore', () => {
     });
 
     it('should preserve other fields when updating', () => {
-      connectionStore.updateConnection({ provider: 'groq' });
+      connectionStore.updateConnection({ provider: 'mistral' });
       connectionStore.updateConnection({ latency: 50 });
 
       const state = get(connectionStore);
-      expect(state.provider).toBe('groq');
+      expect(state.provider).toBe('mistral');
       expect(state.latency).toBe(50);
     });
   });

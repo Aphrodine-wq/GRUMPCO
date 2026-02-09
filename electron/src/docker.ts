@@ -4,45 +4,10 @@
  */
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
-import Dockerode from 'dockerode';
 import { spawn, exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
-
-// Docker client instance
-let docker: Dockerode | null = null;
-
-/**
- * Initialize Docker client with platform-specific socket
- */
-function getDockerClient(): Dockerode {
-  if (!docker) {
-    const isWindows = process.platform === 'win32';
-    
-    if (isWindows) {
-      // Windows: Use named pipe
-      docker = new Dockerode({ socketPath: '//./pipe/docker_engine' });
-    } else {
-      // macOS/Linux: Use Unix socket
-      docker = new Dockerode({ socketPath: '/var/run/docker.sock' });
-    }
-  }
-  return docker;
-}
-
-/**
- * Check if Docker daemon is running
- */
-async function isDockerRunning(): Promise<boolean> {
-  try {
-    const client = getDockerClient();
-    await client.ping();
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 // ============================================
 // Container Types
@@ -92,9 +57,58 @@ interface NetworkInfo {
   containers: string[];
 }
 
+// Docker client instance
+let docker: any | null = null;
+let Dockerode: any | null = null;
+
+/**
+ * Initialize Docker client with platform-specific socket
+ */
+function getDockerClient(): any {
+  if (!docker) {
+    if (!Dockerode) {
+      // Lazy load Dockerode only when needed
+      Dockerode = require('dockerode');
+    }
+
+    const isWindows = process.platform === 'win32';
+
+    if (isWindows) {
+      // Windows: Use named pipe
+      docker = new Dockerode({ socketPath: '//./pipe/docker_engine' });
+    } else {
+      // macOS/Linux: Use Unix socket
+      docker = new Dockerode({ socketPath: '/var/run/docker.sock' });
+    }
+  }
+  return docker;
+}
+
+/**
+ * Check if Docker daemon is running
+ */
+async function isDockerRunning(): Promise<boolean> {
+  try {
+    // Avoid full initialization just for ping if possible, 
+    // but getDockerClient handles it efficiently
+    const client = getDockerClient();
+    await Promise.race([
+      client.ping(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ============================================
 // Container Management
 // ============================================
+
+// Basic stats cache to prevent redundant heavy calls
+const statsCache = new Map<string, { stats: ContainerInfo['stats'], timestamp: number }>();
+const STATS_CACHE_TTL = 2000; // 2 seconds
 
 /**
  * List all containers with stats
@@ -102,92 +116,112 @@ interface NetworkInfo {
 async function listContainers(): Promise<ContainerInfo[]> {
   const client = getDockerClient();
   const containers = await client.listContainers({ all: true });
-  
-  const result: ContainerInfo[] = await Promise.all(
-    containers.map(async (container) => {
+
+  // Concurrency limit for stat fetching to prevent blocking the Docker daemon
+  const MAX_CONCURRENT_STATS = 3;
+  const runningContainers = containers.filter((c: any) => c.State === 'running');
+
+  // Process running containers in small batches for better responsiveness
+  const statsResults = new Map<string, ContainerInfo['stats']>();
+
+  for (let i = 0; i < runningContainers.length; i += MAX_CONCURRENT_STATS) {
+    const batch = runningContainers.slice(i, i + MAX_CONCURRENT_STATS);
+    await Promise.all(batch.map(async (container: any) => {
+      // Check cache first
+      const cached = statsCache.get(container.Id);
+      if (cached && (Date.now() - cached.timestamp) < STATS_CACHE_TTL) {
+        statsResults.set(container.Id, cached.stats);
+        return;
+      }
+
       const containerInstance = client.getContainer(container.Id);
-      let stats: ContainerInfo['stats'] | undefined;
-      
-      // Get stats for running containers
-      if (container.State === 'running') {
-        try {
-          const statsStream = await containerInstance.stats({ stream: false });
-          const cpuDelta = statsStream.cpu_stats.cpu_usage.total_usage - 
-                          (statsStream.precpu_stats?.cpu_usage?.total_usage || 0);
-          const systemDelta = statsStream.cpu_stats.system_cpu_usage - 
-                             (statsStream.precpu_stats?.system_cpu_usage || 0);
-          const cpuPercent = systemDelta > 0 
-            ? (cpuDelta / systemDelta) * (statsStream.cpu_stats.online_cpus || 1) * 100 
-            : 0;
-          
-          stats = {
-            cpuPercent: Math.round(cpuPercent * 100) / 100,
-            memoryUsage: statsStream.memory_stats.usage || 0,
-            memoryLimit: statsStream.memory_stats.limit || 0,
-            networkRx: (Object.values(statsStream.networks || {}) as Array<{ rx_bytes?: number }>).reduce((sum, n) => sum + (n.rx_bytes || 0), 0),
-            networkTx: (Object.values(statsStream.networks || {}) as Array<{ tx_bytes?: number }>).reduce((sum, n) => sum + (n.tx_bytes || 0), 0),
-          };
-        } catch {
-          // Stats not available
-        }
+      try {
+        // Fast stats call with timeout
+        const statsStream = await Promise.race([
+          containerInstance.stats({ stream: false }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000))
+        ]) as any;
+
+        const cpuDelta = statsStream.cpu_stats.cpu_usage.total_usage -
+          (statsStream.precpu_stats?.cpu_usage?.total_usage || 0);
+        const systemDelta = statsStream.cpu_stats.system_cpu_usage -
+          (statsStream.precpu_stats?.system_cpu_usage || 0);
+        const cpuPercent = systemDelta > 0
+          ? (cpuDelta / systemDelta) * (statsStream.cpu_stats.online_cpus || 1) * 100
+          : 0;
+
+        const stats = {
+          cpuPercent: Math.round(cpuPercent * 100) / 100,
+          memoryUsage: statsStream.memory_stats.usage || 0,
+          memoryLimit: statsStream.memory_stats.limit || 0,
+          networkRx: (Object.values(statsStream.networks || {}) as Array<{ rx_bytes?: number }>).reduce((sum, n) => sum + (n.rx_bytes || 0), 0),
+          networkTx: (Object.values(statsStream.networks || {}) as Array<{ tx_bytes?: number }>).reduce((sum, n) => sum + (n.tx_bytes || 0), 0),
+        };
+
+        statsResults.set(container.Id, stats);
+        statsCache.set(container.Id, { stats, timestamp: Date.now() });
+      } catch {
+        // Stats not available or timed out
       }
-      
-      // Parse ports
-      const ports = (container.Ports || [])
-        .filter(p => p.PublicPort)
-        .map(p => ({
-          host: p.PublicPort || 0,
-          container: p.PrivatePort,
-          protocol: p.Type || 'tcp',
-        }));
-      
-      // Determine status
-      let status: ContainerInfo['status'] = 'stopped';
-      switch (container.State) {
-        case 'running':
-          status = 'running';
-          break;
-        case 'paused':
-          status = 'paused';
-          break;
-        case 'restarting':
-          status = 'restarting';
-          break;
-        case 'exited':
-        case 'dead':
-          status = 'exited';
-          break;
-        default:
-          status = 'stopped';
-      }
-      
-      // Get health status
-      let health: 'healthy' | 'unhealthy' | 'starting' | undefined;
-      const healthStatus = container.Status;
-      if (healthStatus?.includes('healthy')) {
-        health = healthStatus.includes('unhealthy') ? 'unhealthy' : 'healthy';
-      } else if (healthStatus?.includes('starting')) {
-        health = 'starting';
-      }
-      
-      return {
-        id: container.Id,
-        name: container.Names[0]?.replace(/^\//, '') || 'unnamed',
-        image: container.Image,
-        status,
-        ports,
-        created: new Date(container.Created * 1000).toISOString(),
-        state: {
-          running: container.State === 'running',
-          paused: container.State === 'paused',
-          restarting: container.State === 'restarting',
-          health,
-        },
-        stats,
-      };
-    })
-  );
-  
+    }));
+  }
+
+  const result: ContainerInfo[] = containers.map((container: any) => {
+    // Parse ports
+    const ports = (container.Ports || [])
+      .filter((p: any) => p.PublicPort)
+      .map((p: any) => ({
+        host: p.PublicPort || 0,
+        container: p.PrivatePort,
+        protocol: p.Type || 'tcp',
+      }));
+
+    // Determine status
+    let status: ContainerInfo['status'] = 'stopped';
+    switch (container.State) {
+      case 'running':
+        status = 'running';
+        break;
+      case 'paused':
+        status = 'paused';
+        break;
+      case 'restarting':
+        status = 'restarting';
+        break;
+      case 'exited':
+      case 'dead':
+        status = 'exited';
+        break;
+      default:
+        status = 'stopped';
+    }
+
+    // Get health status
+    let health: 'healthy' | 'unhealthy' | 'starting' | undefined;
+    const healthStatus = container.Status;
+    if (healthStatus?.includes('healthy')) {
+      health = healthStatus.includes('unhealthy') ? 'unhealthy' : 'healthy';
+    } else if (healthStatus?.includes('starting')) {
+      health = 'starting';
+    }
+
+    return {
+      id: container.Id,
+      name: container.Names[0]?.replace(/^\//, '') || 'unnamed',
+      image: container.Image,
+      status,
+      ports,
+      created: new Date(container.Created * 1000).toISOString(),
+      state: {
+        running: container.State === 'running',
+        paused: container.State === 'paused',
+        restarting: container.State === 'restarting',
+        health,
+      },
+      stats: statsResults.get(container.Id),
+    };
+  });
+
   return result;
 }
 
@@ -233,24 +267,24 @@ async function removeContainer(id: string, force = false): Promise<void> {
 async function containerLogs(id: string, tail = 100): Promise<string> {
   const client = getDockerClient();
   const container = client.getContainer(id);
-  
+
   const logs = await container.logs({
     stdout: true,
     stderr: true,
     tail,
     follow: false,
   });
-  
+
   // Parse docker log stream format (remove header bytes)
   const logString = logs.toString('utf-8');
-  const lines = logString.split('\n').map(line => {
+  const lines = logString.split('\n').map((line: string) => {
     // Docker log format has 8-byte header per line
     if (line.length > 8) {
       return line.substring(8);
     }
     return line;
   });
-  
+
   return lines.join('\n');
 }
 
@@ -261,15 +295,15 @@ async function containerStats(id: string): Promise<ContainerInfo['stats']> {
   const client = getDockerClient();
   const container = client.getContainer(id);
   const statsData = await container.stats({ stream: false });
-  
-  const cpuDelta = statsData.cpu_stats.cpu_usage.total_usage - 
-                  (statsData.precpu_stats?.cpu_usage?.total_usage || 0);
-  const systemDelta = statsData.cpu_stats.system_cpu_usage - 
-                     (statsData.precpu_stats?.system_cpu_usage || 0);
-  const cpuPercent = systemDelta > 0 
-    ? (cpuDelta / systemDelta) * (statsData.cpu_stats.online_cpus || 1) * 100 
+
+  const cpuDelta = statsData.cpu_stats.cpu_usage.total_usage -
+    (statsData.precpu_stats?.cpu_usage?.total_usage || 0);
+  const systemDelta = statsData.cpu_stats.system_cpu_usage -
+    (statsData.precpu_stats?.system_cpu_usage || 0);
+  const cpuPercent = systemDelta > 0
+    ? (cpuDelta / systemDelta) * (statsData.cpu_stats.online_cpus || 1) * 100
     : 0;
-  
+
   return {
     cpuPercent: Math.round(cpuPercent * 100) / 100,
     memoryUsage: statsData.memory_stats.usage || 0,
@@ -289,8 +323,8 @@ async function containerStats(id: string): Promise<ContainerInfo['stats']> {
 async function listImages(): Promise<ImageInfo[]> {
   const client = getDockerClient();
   const images = await client.listImages();
-  
-  return images.map(image => ({
+
+  return images.map((image: any) => ({
     id: image.Id,
     tags: image.RepoTags || ['<none>:<none>'],
     size: image.Size,
@@ -303,14 +337,14 @@ async function listImages(): Promise<ImageInfo[]> {
  */
 async function pullImage(name: string): Promise<void> {
   const client = getDockerClient();
-  
+
   return new Promise((resolve, reject) => {
     client.pull(name, (err: Error | null, stream: NodeJS.ReadableStream) => {
       if (err) {
         reject(err);
         return;
       }
-      
+
       client.modem.followProgress(stream, (err: Error | null) => {
         if (err) {
           reject(err);
@@ -341,7 +375,7 @@ async function removeImage(id: string, force = false): Promise<void> {
 async function listVolumes(): Promise<VolumeInfo[]> {
   const client = getDockerClient();
   const { Volumes } = await client.listVolumes();
-  
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Docker SDK volume shape (intentional)
   return (Volumes || []).map((volume: any) => ({
     name: volume.Name,
@@ -370,8 +404,8 @@ async function removeVolume(name: string): Promise<void> {
 async function listNetworks(): Promise<NetworkInfo[]> {
   const client = getDockerClient();
   const networks = await client.listNetworks();
-  
-  return networks.map(network => ({
+
+  return networks.map((network: any) => ({
     id: network.Id,
     name: network.Name,
     driver: network.Driver || 'bridge',
@@ -389,7 +423,7 @@ async function listNetworks(): Promise<NetworkInfo[]> {
  */
 async function composeUp(cwd?: string): Promise<{ stdout: string; stderr: string }> {
   const workDir = cwd || process.cwd();
-  
+
   // Try docker compose (v2) first, fall back to docker-compose (v1)
   try {
     const result = await execAsync('docker compose up -d', { cwd: workDir });
@@ -406,7 +440,7 @@ async function composeUp(cwd?: string): Promise<{ stdout: string; stderr: string
  */
 async function composeDown(cwd?: string): Promise<{ stdout: string; stderr: string }> {
   const workDir = cwd || process.cwd();
-  
+
   // Try docker compose (v2) first, fall back to docker-compose (v1)
   try {
     const result = await execAsync('docker compose down', { cwd: workDir });
@@ -423,7 +457,7 @@ async function composeDown(cwd?: string): Promise<{ stdout: string; stderr: stri
  */
 async function composeLogs(cwd?: string, tail = 100): Promise<string> {
   const workDir = cwd || process.cwd();
-  
+
   try {
     const { stdout } = await execAsync(`docker compose logs --tail=${tail}`, { cwd: workDir });
     return stdout;
@@ -438,7 +472,7 @@ async function composeLogs(cwd?: string, tail = 100): Promise<string> {
  */
 async function composePs(cwd?: string): Promise<string> {
   const workDir = cwd || process.cwd();
-  
+
   try {
     const { stdout } = await execAsync('docker compose ps', { cwd: workDir });
     return stdout;
@@ -449,13 +483,13 @@ async function composePs(cwd?: string): Promise<string> {
 }
 
 // ============================================
-// Free Agent Sandbox Container
+// G-Agent Sandbox Container
 // ============================================
 
-const FREE_AGENT_CONTAINER_NAME = 'grump-freeagent-sandbox';
-const FREE_AGENT_IMAGE = 'grump/freeagent-sandbox:latest';
+const FREE_AGENT_CONTAINER_NAME = 'grump-freeagent-sandbox'; // kept for backward compat with existing containers
+const FREE_AGENT_IMAGE = 'grump/freeagent-sandbox:latest'; // kept for backward compat with existing images
 
-interface FreeAgentConfig {
+interface GAgentConfig {
   workspaceRoot: string;
   capabilities?: string[];
   resourceLimits?: {
@@ -464,7 +498,7 @@ interface FreeAgentConfig {
   };
 }
 
-interface FreeAgentStatus {
+interface GAgentStatus {
   running: boolean;
   containerId?: string;
   health?: 'healthy' | 'unhealthy' | 'starting';
@@ -472,20 +506,20 @@ interface FreeAgentStatus {
   workspaceRoot?: string;
 }
 
-let freeAgentStartTime: Date | null = null;
+let gAgentStartTime: Date | null = null;
 
 /**
- * Start Free Agent sandbox container
+ * Start G-Agent sandbox container
  */
-async function startFreeAgentSandbox(config: FreeAgentConfig): Promise<{ containerId: string }> {
+async function startGAgentSandbox(config: GAgentConfig): Promise<{ containerId: string }> {
   const client = getDockerClient();
-  
+
   // Check if already running
-  const existing = await getFreeAgentContainer();
+  const existing = await getGAgentContainer();
   if (existing && existing.running) {
     return { containerId: existing.containerId! };
   }
-  
+
   // Remove existing stopped container
   if (existing) {
     try {
@@ -495,7 +529,7 @@ async function startFreeAgentSandbox(config: FreeAgentConfig): Promise<{ contain
       // Ignore removal errors
     }
   }
-  
+
   // Create container with workspace mount
   const container = await client.createContainer({
     name: FREE_AGENT_CONTAINER_NAME,
@@ -525,67 +559,67 @@ async function startFreeAgentSandbox(config: FreeAgentConfig): Promise<{ contain
       '8080/tcp': {},
     },
   });
-  
+
   await container.start();
-  freeAgentStartTime = new Date();
-  
+  gAgentStartTime = new Date();
+
   return { containerId: container.id };
 }
 
 /**
- * Stop Free Agent sandbox container
+ * Stop G-Agent sandbox container
  */
-async function stopFreeAgentSandbox(): Promise<void> {
+async function stopGAgentSandbox(): Promise<void> {
   const client = getDockerClient();
-  
+
   try {
     const containers = await client.listContainers({ all: true });
-    const freeAgent = containers.find(c => c.Names.some(n => n.includes(FREE_AGENT_CONTAINER_NAME)));
-    
-    if (freeAgent) {
-      const container = client.getContainer(freeAgent.Id);
-      if (freeAgent.State === 'running') {
+    const gAgentContainer = containers.find((c: any) => c.Names.some((n: string) => n.includes(FREE_AGENT_CONTAINER_NAME)));
+
+    if (gAgentContainer) {
+      const container = client.getContainer(gAgentContainer.Id);
+      if (gAgentContainer.State === 'running') {
         await container.stop();
       }
     }
-    
-    freeAgentStartTime = null;
+
+    gAgentStartTime = null;
   } catch (err) {
-    throw new Error(`Failed to stop Free Agent: ${(err as Error).message}`);
+    throw new Error(`Failed to stop G-Agent: ${(err as Error).message}`);
   }
 }
 
 /**
- * Get Free Agent container status
+ * Get G-Agent container status
  */
-async function getFreeAgentContainer(): Promise<FreeAgentStatus> {
+async function getGAgentContainer(): Promise<GAgentStatus> {
   const client = getDockerClient();
-  
+
   try {
     const containers = await client.listContainers({ all: true });
-    const freeAgent = containers.find(c => c.Names.some(n => n.includes(FREE_AGENT_CONTAINER_NAME)));
-    
-    if (!freeAgent) {
+    const gAgentContainer = containers.find((c: any) => c.Names.some((n: string) => n.includes(FREE_AGENT_CONTAINER_NAME)));
+
+    if (!gAgentContainer) {
       return { running: false };
     }
-    
+
     // Get health status
     let health: 'healthy' | 'unhealthy' | 'starting' | undefined;
-    if (freeAgent.Status?.includes('healthy')) {
-      health = freeAgent.Status.includes('unhealthy') ? 'unhealthy' : 'healthy';
-    } else if (freeAgent.Status?.includes('starting')) {
+    if (gAgentContainer.Status?.includes('healthy')) {
+      health = gAgentContainer.Status.includes('unhealthy') ? 'unhealthy' : 'healthy';
+    } else if (gAgentContainer.Status?.includes('starting')) {
       health = 'starting';
     }
-    
+
     // Calculate uptime
     let uptime: number | undefined;
-    if (freeAgentStartTime && freeAgent.State === 'running') {
-      uptime = Date.now() - freeAgentStartTime.getTime();
+    if (gAgentStartTime && gAgentContainer.State === 'running') {
+      uptime = Date.now() - gAgentStartTime.getTime();
     }
-    
+
     return {
-      running: freeAgent.State === 'running',
-      containerId: freeAgent.Id,
+      running: gAgentContainer.State === 'running',
+      containerId: gAgentContainer.Id,
       health,
       uptime,
     };
@@ -595,38 +629,38 @@ async function getFreeAgentContainer(): Promise<FreeAgentStatus> {
 }
 
 /**
- * Execute a command in the Free Agent sandbox
+ * Execute a command in the G-Agent sandbox
  */
-async function execInFreeAgent(
+async function execInGAgent(
   command: string[],
   options?: { timeout?: number; workDir?: string }
 ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
   const client = getDockerClient();
-  
-  const status = await getFreeAgentContainer();
+
+  const status = await getGAgentContainer();
   if (!status.running || !status.containerId) {
-    throw new Error('Free Agent sandbox is not running');
+    throw new Error('G-Agent sandbox is not running');
   }
-  
+
   const container = client.getContainer(status.containerId);
-  
+
   const exec = await container.exec({
     Cmd: command,
     WorkingDir: options?.workDir || '/workspace',
     AttachStdout: true,
     AttachStderr: true,
   });
-  
+
   return new Promise((resolve, reject) => {
     exec.start({ hijack: true, stdin: false }, (err: Error | null, stream: NodeJS.ReadableStream) => {
       if (err) {
         reject(err);
         return;
       }
-      
+
       let stdout = '';
       let stderr = '';
-      
+
       // Parse multiplexed output
       stream.on('data', (chunk: Buffer) => {
         // Docker exec stream format: first 8 bytes are header
@@ -640,7 +674,7 @@ async function execInFreeAgent(
           pos += 8;
           const data = chunk.slice(pos, pos + len).toString('utf-8');
           pos += len;
-          
+
           if (streamType === 1) {
             stdout += data;
           } else if (streamType === 2) {
@@ -648,7 +682,7 @@ async function execInFreeAgent(
           }
         }
       });
-      
+
       stream.on('end', async () => {
         try {
           const inspectData = await exec.inspect();
@@ -661,9 +695,9 @@ async function execInFreeAgent(
           resolve({ exitCode: 0, stdout, stderr });
         }
       });
-      
+
       stream.on('error', reject);
-      
+
       // Timeout
       if (options?.timeout) {
         setTimeout(() => {
@@ -675,27 +709,27 @@ async function execInFreeAgent(
 }
 
 /**
- * Restart Free Agent sandbox
+ * Restart G-Agent sandbox
  */
-async function restartFreeAgentSandbox(): Promise<void> {
-  const status = await getFreeAgentContainer();
+async function restartGAgentSandbox(): Promise<void> {
+  const status = await getGAgentContainer();
   if (status.containerId) {
     const client = getDockerClient();
     const container = client.getContainer(status.containerId);
     await container.restart();
-    freeAgentStartTime = new Date();
+    gAgentStartTime = new Date();
   }
 }
 
 /**
- * Get Free Agent sandbox logs
+ * Get G-Agent sandbox logs
  */
-async function getFreeAgentLogs(tail = 100): Promise<string> {
-  const status = await getFreeAgentContainer();
+async function getGAgentLogs(tail = 100): Promise<string> {
+  const status = await getGAgentContainer();
   if (!status.containerId) {
     return '';
   }
-  
+
   return containerLogs(status.containerId, tail);
 }
 
@@ -703,10 +737,10 @@ async function getFreeAgentLogs(tail = 100): Promise<string> {
 function parseMemory(memStr: string): number {
   const match = memStr.toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(k|m|g|t)?b?$/);
   if (!match) return 2 * 1024 * 1024 * 1024; // Default 2GB
-  
+
   const value = parseFloat(match[1]);
   const unit = match[2] || '';
-  
+
   const multipliers: Record<string, number> = {
     '': 1,
     'k': 1024,
@@ -714,7 +748,7 @@ function parseMemory(memStr: string): number {
     'g': 1024 * 1024 * 1024,
     't': 1024 * 1024 * 1024 * 1024,
   };
-  
+
   return value * (multipliers[unit] || 1);
 }
 
@@ -730,8 +764,8 @@ interface DockerArgs {
   cwd?: string;
 }
 
-interface FreeAgentArgs {
-  config?: FreeAgentConfig;
+interface GAgentArgs {
+  config?: GAgentConfig;
   command?: string[];
   timeout?: number;
   workDir?: string;
@@ -748,12 +782,12 @@ export function registerDockerHandlers(): void {
     if (!dockerRunning && method !== 'isRunning') {
       throw new Error('Docker daemon is not running. Please start Docker Desktop or the Docker service.');
     }
-    
+
     switch (method) {
       // Status
       case 'isRunning':
         return dockerRunning;
-      
+
       // Containers
       case 'listContainers':
         return listContainers();
@@ -775,7 +809,7 @@ export function registerDockerHandlers(): void {
       case 'containerStats':
         if (!args.id) throw new Error('Container ID required');
         return containerStats(args.id);
-      
+
       // Images
       case 'listImages':
         return listImages();
@@ -785,18 +819,18 @@ export function registerDockerHandlers(): void {
       case 'removeImage':
         if (!args.id) throw new Error('Image ID required');
         return removeImage(args.id, args.force);
-      
+
       // Volumes
       case 'listVolumes':
         return listVolumes();
       case 'removeVolume':
         if (!args.name) throw new Error('Volume name required');
         return removeVolume(args.name);
-      
+
       // Networks
       case 'listNetworks':
         return listNetworks();
-      
+
       // Compose
       case 'composeUp':
         return composeUp(args.cwd);
@@ -806,36 +840,36 @@ export function registerDockerHandlers(): void {
         return composeLogs(args.cwd, args.tail);
       case 'composePs':
         return composePs(args.cwd);
-      
+
       default:
         throw new Error(`Unknown Docker method: ${method}`);
     }
   });
-  
-  // Free Agent sandbox handlers
-  ipcMain.handle('freeagent:start', async (_event: IpcMainInvokeEvent, config: FreeAgentConfig) => {
-    return startFreeAgentSandbox(config);
+
+  // G-Agent sandbox handlers (IPC channel names kept for backward compat)
+  ipcMain.handle('freeagent:start', async (_event: IpcMainInvokeEvent, config: GAgentConfig) => {
+    return startGAgentSandbox(config);
   });
-  
+
   ipcMain.handle('freeagent:stop', async () => {
-    return stopFreeAgentSandbox();
+    return stopGAgentSandbox();
   });
-  
+
   ipcMain.handle('freeagent:status', async () => {
-    return getFreeAgentContainer();
+    return getGAgentContainer();
   });
-  
+
   ipcMain.handle('freeagent:restart', async () => {
-    return restartFreeAgentSandbox();
+    return restartGAgentSandbox();
   });
-  
+
   ipcMain.handle('freeagent:logs', async (_event: IpcMainInvokeEvent, tail?: number) => {
-    return getFreeAgentLogs(tail);
+    return getGAgentLogs(tail);
   });
-  
-  ipcMain.handle('freeagent:exec', async (_event: IpcMainInvokeEvent, args: FreeAgentArgs) => {
+
+  ipcMain.handle('freeagent:exec', async (_event: IpcMainInvokeEvent, args: GAgentArgs) => {
     if (!args.command) throw new Error('Command required');
-    return execInFreeAgent(args.command, { timeout: args.timeout, workDir: args.workDir });
+    return execInGAgent(args.command, { timeout: args.timeout, workDir: args.workDir });
   });
 }
 

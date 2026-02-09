@@ -14,7 +14,7 @@ import {
   deleteHeartbeat,
   HEARTBEAT_TEMPLATES,
   createHeartbeatFromTemplate,
-} from "../services/heartbeatService.js";
+} from "../services/infra/heartbeatService.js";
 import logger from "../middleware/logger.js";
 
 const router = Router();

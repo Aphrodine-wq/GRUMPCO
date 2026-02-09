@@ -26,7 +26,7 @@ import type {
   DesignReviewResult,
 } from "./types.js";
 import _logger from "../../middleware/logger.js";
-import { withResilience } from "../../services/resilience.js";
+import { withResilience } from "../../services/infra/resilience.js";
 
 class FrontendDesignerSkill extends BaseSkill {
   manifest!: SkillManifest;

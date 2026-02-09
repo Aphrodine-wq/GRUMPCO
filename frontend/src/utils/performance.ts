@@ -12,7 +12,7 @@ interface PerformanceMetrics {
   domProcessing: number;
   resourceLoading: number;
   totalLoadTime: number;
-  
+
   // Custom metrics
   jsBundleSize?: number;
   cssBundleSize?: number;
@@ -40,7 +40,7 @@ class PerformanceMonitor {
    */
   mark(name: string): void {
     if (!this.isEnabled) return;
-    
+
     performance.mark(name);
     this.metrics.set(name, performance.now());
   }
@@ -70,7 +70,7 @@ class PerformanceMonitor {
    */
   startTimer(name: string): () => number {
     const startTime = performance.now();
-    
+
     return () => {
       const duration = performance.now() - startTime;
       this.timings.push({ name, startTime, duration });
@@ -94,7 +94,7 @@ class PerformanceMonitor {
       domProcessing: timing.domComplete - timing.domLoading,
       resourceLoading: timing.loadEventEnd - timing.domContentLoadedEventEnd,
       totalLoadTime: timing.loadEventEnd - timing.navigationStart,
-      
+
       // Use newer Navigation Timing API v2 if available
       ...(navigation && {
         firstContentfulPaint: this.getFirstContentfulPaint(),
@@ -156,13 +156,13 @@ class PerformanceMonitor {
    * Log all collected metrics
    */
   logMetrics(): void {
-    if (!this.isEnabled) return;
+    if (!this.isEnabled || !import.meta.env.DEV) return;
 
     const navigationTiming = this.getNavigationTiming();
     const bundleSizes = this.getBundleSizes();
-    
+
     console.group('📊 Performance Metrics');
-    
+
     if (navigationTiming) {
       console.log('Navigation Timing:', {
         'DNS Lookup': `${navigationTiming.dnsLookup}ms`,
@@ -217,9 +217,9 @@ class PerformanceMonitor {
         const entries = list.getEntries();
         callback(entries);
       });
-      
+
       observer.observe({ entryTypes: ['longtask'] });
-    } catch (error) {
+    } catch (_error) {
       console.warn('[Performance] Long task observation not supported');
     }
   }
@@ -237,7 +237,7 @@ export const performanceMonitor = new PerformanceMonitor();
 
 // Convenience exports
 export const mark = (name: string) => performanceMonitor.mark(name);
-export const measure = (name: string, startMark: string, endMark?: string) => 
+export const measure = (name: string, startMark: string, endMark?: string) =>
   performanceMonitor.measure(name, startMark, endMark);
 export const startTimer = (name: string) => performanceMonitor.startTimer(name);
 export const logMetrics = () => performanceMonitor.logMetrics();

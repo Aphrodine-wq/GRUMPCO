@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <rect width="24" height="24" rx="4" fill="#1f2937"/>
-  <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">O</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#1a1a2e"/>
+  <path d="M12 5a7 7 0 100 14 7 7 0 000-14z" fill="#fff"/>
+  <path d="M12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" fill="#1a1a2e"/>
+  <path d="M12 10a2 2 0 100 4 2 2 0 000-4z" fill="#fff"/>
 </svg>

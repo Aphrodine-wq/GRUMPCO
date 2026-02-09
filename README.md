@@ -10,14 +10,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Aphrodine-wq/GRUMPCO/releases/tag/v1.0.0">
+  <a href="https://github.com/Aphrodine-wq/GRUMPCO/releases/tag/v2.1.0">
     <img src="https://img.shields.io/badge/version-2.1.0-blue.svg" alt="Version" />
   </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License" />
   </a>
-  <a href="https://github.com/Aphrodine-wq/GRUMPCO/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/Aphrodine-wq/GRUMPCO/ci.yml?branch=main" alt="Build Status" />
+  <a href="https://github.com/Aphrodine-wq/GRUMPCO/actions/workflows/ci.yml">
+    <img src="https://github.com/Aphrodine-wq/GRUMPCO/actions/workflows/ci.yml/badge.svg" alt="CI" />
   </a>
   <a href="https://www.typescriptlang.org/">
     <img src="https://img.shields.io/badge/TypeScript-5.3-blue.svg" alt="TypeScript" />
@@ -78,15 +78,9 @@
 
 ---
 
-## 🎥 Demo Video
+## 🎥 Demo
 
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=YOUR_VIDEO_ID">
-    <img src="docs/assets/video-thumbnail.png" width="800" alt="G-Rump Demo Video - Install in 30 Seconds" />
-  </a>
-  <br>
-  <strong>🎬 Watch: "Install G-Rump in 30 Seconds"</strong>
-</p>
+> See the [full walkthrough](./docs/HOW_IT_WORKS.md) for a step-by-step guide showing project generation in under 60 seconds.
 
 ---
 
@@ -213,7 +207,6 @@ graph TB
         NIM[NVIDIA NIM]
         Kimi[Kimi K2.5]
         OpenRouter[OpenRouter]
-        Groq[Groq]
         Ollama[Ollama Local]
     end
     
@@ -290,7 +283,7 @@ See [docs/API.md](./docs/API.md) for complete reference.
 | **Frontend** | TypeScript 5.3, Mermaid.js, Shiki |
 | **Backend** | Node.js 20+, Express 5, TypeScript, SWC, Pino |
 | **Compiler** | Rust 1.77+, rayon, SIMD (AVX2/AVX-512), WASM |
-| **AI/ML** | NVIDIA NIM, Kimi K2.5, OpenRouter, Groq, Ollama |
+| **AI/ML** | NVIDIA NIM, Kimi K2.5, OpenRouter, Anthropic, Ollama |
 | **Database** | SQLite (dev), PostgreSQL/Supabase (prod) |
 | **Queue** | BullMQ, Redis |
 | **Infrastructure** | Docker, Kubernetes, NGC (GCP/AWS) |

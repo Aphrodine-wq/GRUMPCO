@@ -13,7 +13,7 @@ import {
   generateMermaid,
   streamBuildSection,
   runGit,
-} from "../services/builderService.js";
+} from "../services/ship/builderService.js";
 
 const router = Router();
 const log = getRequestLogger();

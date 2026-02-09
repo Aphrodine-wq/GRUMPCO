@@ -5,7 +5,7 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { createSkill } from "../services/userSkillsService.js";
+import { createSkill } from "../services/workspace/userSkillsService.js";
 import { sendServerError } from "../utils/errorResponse.js";
 
 const router = Router();

@@ -21,6 +21,8 @@ const state = writable<WorkflowState>({
 let statusPollingInterval: ReturnType<typeof setInterval> | null = null;
 // SSE for codegen.ready / codegen.failed
 let codegenEventSource: EventSource | null = null;
+/** Avoid duplicate grump.notify when both SSE and polling fire for the same session. */
+let codegenNotifiedSessionId: string | null = null;
 
 // Derived stores
 export const phase = derived(state, (s) => s.phase);
@@ -242,6 +244,8 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
     error: null,
   }));
 
+  codegenNotifiedSessionId = null;
+
   try {
     const response = await fetchApi('/api/codegen/start', {
       method: 'POST',
@@ -301,12 +305,14 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
                     },
                     phase: 'complete',
                   }));
-                  if (typeof window !== 'undefined')
+                  if (typeof window !== 'undefined' && codegenNotifiedSessionId !== data.sessionId) {
+                    codegenNotifiedSessionId = data.sessionId;
                     (
                       window as {
                         grump?: { notify?: (t: string, b: string, tag?: string) => void };
                       }
                     ).grump?.notify?.('G-Rump', 'Code generation ready', 'codegen');
+                  }
                 }
                 stopCodegenEventSource();
                 stopStatusPolling();
@@ -317,10 +323,12 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
               ...s,
               error: errMsg,
             }));
-            if (typeof window !== 'undefined')
+            if (typeof window !== 'undefined' && codegenNotifiedSessionId !== data.sessionId) {
+              codegenNotifiedSessionId = data.sessionId;
               (
                 window as { grump?: { notify?: (t: string, b: string, tag?: string) => void } }
               ).grump?.notify?.('G-Rump', errMsg, 'codegen');
+            }
             stopCodegenEventSource();
             stopStatusPolling();
           }
@@ -343,15 +351,32 @@ export async function startCodeGeneration(projectIdOverride?: string | null): Pr
   }
 }
 
+const POLL_INTERVAL_MS = 2000;
+const POLL_BACKOFF_AFTER_MS = 30_000;
+const POLL_BACKOFF_INTERVAL_MS = 5000;
+
 function startStatusPolling(sessionId: string) {
   if (statusPollingInterval) {
     clearInterval(statusPollingInterval);
+    statusPollingInterval = null;
   }
 
-  statusPollingInterval = setInterval(async () => {
+  const startTime = Date.now();
+
+  function scheduleNext(): void {
+    const elapsed = Date.now() - startTime;
+    const delay = elapsed >= POLL_BACKOFF_AFTER_MS ? POLL_BACKOFF_INTERVAL_MS : POLL_INTERVAL_MS;
+    statusPollingInterval = setTimeout(poll, delay) as unknown as ReturnType<typeof setInterval>;
+  }
+
+  async function poll(): Promise<void> {
+    statusPollingInterval = null;
     try {
       const response = await fetchApi(`/api/codegen/status/${sessionId}`);
-      if (!response.ok) return;
+      if (!response.ok) {
+        scheduleNext();
+        return;
+      }
 
       const data = await response.json();
 
@@ -361,7 +386,7 @@ function startStatusPolling(sessionId: string) {
           sessionId: data.sessionId,
           status: data.status,
           progress: data.progress || 0,
-          agents: data.agents,
+          agents: data.agents ?? s.codegenSession?.agents ?? {},
           generatedFileCount: data.generatedFileCount || 0,
           error: data.error,
         },
@@ -369,34 +394,44 @@ function startStatusPolling(sessionId: string) {
 
       if (data.status === 'completed') {
         state.update((s) => ({ ...s, phase: 'complete' }));
-        if (typeof window !== 'undefined')
+        if (typeof window !== 'undefined' && codegenNotifiedSessionId !== sessionId) {
+          codegenNotifiedSessionId = sessionId;
           (
             window as { grump?: { notify?: (t: string, b: string, tag?: string) => void } }
           ).grump?.notify?.('G-Rump', 'Code generation ready', 'codegen');
+        }
         stopStatusPolling();
         stopCodegenEventSource();
-      } else if (data.status === 'failed') {
+        return;
+      }
+      if (data.status === 'failed') {
         const errMsg = data.error || 'Code generation failed';
         state.update((s) => ({
           ...s,
           error: errMsg,
         }));
-        if (typeof window !== 'undefined')
+        if (typeof window !== 'undefined' && codegenNotifiedSessionId !== sessionId) {
+          codegenNotifiedSessionId = sessionId;
           (
             window as { grump?: { notify?: (t: string, b: string, tag?: string) => void } }
           ).grump?.notify?.('G-Rump', errMsg, 'codegen');
+        }
         stopStatusPolling();
         stopCodegenEventSource();
+        return;
       }
     } catch (err) {
       console.error('Status polling error:', err);
     }
-  }, 2000);
+    scheduleNext();
+  }
+
+  scheduleNext();
 }
 
 function stopStatusPolling() {
   if (statusPollingInterval) {
-    clearInterval(statusPollingInterval);
+    clearTimeout(statusPollingInterval);
     statusPollingInterval = null;
   }
 }

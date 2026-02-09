@@ -1,0 +1,64 @@
+{
+  "timestamp": "2026-02-09T00:32:42.582Z",
+  "platform": "win32",
+  "arch": "x64",
+  "nodeVersion": "v24.11.1",
+  "results": [
+    {
+      "name": "SWC Build",
+      "durationMs": 1473.9778,
+      "passed": true,
+      "detail": "Compiled backend in 1.47s"
+    },
+    {
+      "name": "TSC Build (baseline)",
+      "durationMs": 6308.1167,
+      "passed": true,
+      "detail": "Compiled backend in 6.31s"
+    },
+    {
+      "name": "Build Speedup Ratio",
+      "durationMs": 1473.9778,
+      "passed": true,
+      "detail": "SWC is 4.3× faster than TSC (threshold: ≥5×) PASS"
+    },
+    {
+      "name": "Intent Parse (fast / JSON.parse)",
+      "durationMs": 16.5952,
+      "opsPerSec": 602584,
+      "passed": true,
+      "detail": "10,000 intents in 17ms"
+    },
+    {
+      "name": "Intent Parse (legacy / multi-pass regex)",
+      "durationMs": 40.7499,
+      "opsPerSec": 245399,
+      "passed": true,
+      "detail": "10,000 intents in 41ms"
+    },
+    {
+      "name": "Intent Parsing Speedup",
+      "durationMs": 16.5952,
+      "passed": true,
+      "detail": "Fast path is 2.5× faster (threshold: ≥3×) PASS"
+    },
+    {
+      "name": "Eager CLI startup (50 cmds)",
+      "durationMs": 18.6352,
+      "passed": true,
+      "detail": "500 iterations in 19ms"
+    },
+    {
+      "name": "Lazy CLI startup (1 cmd)",
+      "durationMs": 0.374,
+      "passed": true,
+      "detail": "500 iterations in 0ms"
+    },
+    {
+      "name": "CLI Startup Speedup",
+      "durationMs": 0.374,
+      "passed": true,
+      "detail": "Lazy loading is 49.8× faster (threshold: ≥5×) PASS"
+    }
+  ]
+}

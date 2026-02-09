@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { setWorkspaceRoot, getWorkspaceRoot } from '../lib/api';
 
 const ROOT_KEY = 'grump-workspace-root';
 const REPO_URL_KEY = 'grump-workspace-repo-url';
@@ -40,6 +41,20 @@ function persist(state: WorkspaceState) {
   }
 }
 
+/**
+ * Sync a local workspace path to the backend so the AI's
+ * ToolExecutionService targets the correct directory for file writes.
+ */
+async function syncToBackend(root: string | null): Promise<void> {
+  if (!root) return;
+  try {
+    await setWorkspaceRoot(root);
+  } catch {
+    // Backend may be unreachable; the localStorage value still persists
+    // and will be synced next time.
+  }
+}
+
 const { subscribe, set } = writable<WorkspaceState>(loadStored());
 
 export const workspaceStore = {
@@ -48,10 +63,41 @@ export const workspaceStore = {
     const newState = { root, repoUrl, isRemote: !!repoUrl };
     persist(newState);
     set(newState);
+    // Sync to backend so AI file writes go to this folder
+    if (!repoUrl) {
+      syncToBackend(root);
+    }
   },
   clear() {
     const empty = { root: null, repoUrl: null, isRemote: false };
     persist(empty);
     set(empty);
   },
+  /**
+   * Restore workspace root from the backend (called once on app startup).
+   * If the backend has an active root, use it; otherwise fall back to localStorage.
+   */
+  async loadFromBackend(): Promise<void> {
+    try {
+      const backendRoot = await getWorkspaceRoot();
+      if (backendRoot) {
+        const newState: WorkspaceState = {
+          root: backendRoot,
+          repoUrl: null,
+          isRemote: false,
+        };
+        persist(newState);
+        set(newState);
+      } else {
+        // If backend has nothing, sync our localStorage value up
+        const stored = loadStored();
+        if (stored.root && !stored.isRemote) {
+          syncToBackend(stored.root);
+        }
+      }
+    } catch {
+      // Backend unreachable; localStorage value is still fine
+    }
+  },
 };
+

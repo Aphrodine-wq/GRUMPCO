@@ -1,14 +1,14 @@
 import express, { type Request, type Response, type Router } from "express";
 import { getRequestLogger } from "../middleware/logger.js";
 import { getDatabase } from "../db/database.js";
-import { getAllServiceStates } from "../services/bulkheads.js";
-import { getAlertingService } from "../services/alerting.js";
-import { isRedisConnected } from "../services/redis.js";
+import { getAllServiceStates } from "../services/infra/bulkheads.js";
+import { getAlertingService } from "../services/infra/alerting.js";
+import { isRedisConnected } from "../services/infra/redis.js";
 import {
   getConfiguredProviders,
   getProviderConfig,
   type LLMProvider,
-} from "../services/llmGateway.js";
+} from "../services/ai-providers/llmGateway.js";
 import { env } from "../config/env.js";
 
 const router: Router = express.Router();
@@ -408,17 +408,7 @@ router.get("/ai-providers", async (_req: Request, res: Response) => {
             healthy = response.ok;
           }
           break;
-        case "groq":
-          if (env.GROQ_API_KEY) {
-            const response = await fetch(
-              "https://api.groq.com/openai/v1/models",
-              {
-                headers: { Authorization: `Bearer ${env.GROQ_API_KEY}` },
-              },
-            );
-            healthy = response.ok;
-          }
-          break;
+
         case "openrouter":
           if (env.OPENROUTER_API_KEY) {
             const response = await fetch(
@@ -456,7 +446,7 @@ router.get("/ai-providers", async (_req: Request, res: Response) => {
   }
 
   // Add unconfigured providers
-  const allProviders: LLMProvider[] = ["nim", "groq", "openrouter", "ollama"];
+  const allProviders: LLMProvider[] = ["nim", "openrouter", "ollama"];
   for (const provider of allProviders) {
     if (!providerStatus[provider]) {
       providerStatus[provider] = { configured: false };

@@ -13,7 +13,7 @@ import { promises as fsPromises } from "fs";
 import path from "path";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
-import { loadRemoteWorkspace } from "../services/remoteWorkspaceService.js";
+import { loadRemoteWorkspace } from "../services/workspace/remoteWorkspaceService.js";
 import logger from "../middleware/logger.js";
 import {
   sendErrorResponse,
@@ -35,6 +35,107 @@ const SKIP_DIRS = new Set([
 
 /** Max depth for tree listing to avoid huge responses */
 const MAX_TREE_DEPTH = 3;
+
+// ============================================================================
+// ACTIVE WORKSPACE ROOT — persisted in-memory for this process lifetime
+// ============================================================================
+
+let activeWorkspaceRoot: string | null = null;
+
+/**
+ * Get the currently active workspace root.
+ * Other services (e.g. ToolExecutionService) can import this to discover
+ * which directory the user has selected for file output.
+ */
+export function getActiveWorkspaceRoot(): string | null {
+  return activeWorkspaceRoot;
+}
+
+/**
+ * Set the active workspace root programmatically (used by the endpoint below
+ * and by any startup restore logic).
+ */
+export function setActiveWorkspaceRoot(root: string | null): void {
+  activeWorkspaceRoot = root;
+  if (root) {
+    process.env.WORKSPACE_ROOT = root;
+  }
+}
+
+// ── POST /api/workspace/set ──────────────────────────────────────────────────
+
+const setWorkspaceSchema = z.object({
+  path: z
+    .string({ required_error: "path is required" })
+    .min(1, "path cannot be empty"),
+});
+
+/**
+ * POST /api/workspace/set
+ *
+ * Validates that the given path exists and is a directory, then sets it as
+ * the active workspace root so that subsequent AI file-write operations
+ * target the user's chosen folder.
+ *
+ * @route POST /api/workspace/set
+ * @param {string} req.body.path - Absolute path to the local directory
+ * @returns {{ success: true, path: string }}
+ */
+router.post("/set", async (req: Request, res: Response): Promise<void> => {
+  const validation = setWorkspaceSchema.safeParse(req.body);
+  if (!validation.success) {
+    const firstError = validation.error.errors[0];
+    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError.message, {});
+    return;
+  }
+
+  const rawPath = validation.data.path.trim();
+  const normalized = path.resolve(rawPath);
+
+  try {
+    const stat = await fsPromises.stat(normalized);
+    if (!stat.isDirectory()) {
+      sendErrorResponse(
+        res,
+        ErrorCode.VALIDATION_ERROR,
+        "Path is not a directory",
+        {},
+      );
+      return;
+    }
+  } catch (err: any) {
+    if (err.code === "ENOENT") {
+      sendErrorResponse(
+        res,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        "Directory not found",
+        {},
+      );
+      return;
+    }
+    sendServerError(res, err, { type: "workspace_set" });
+    return;
+  }
+
+  setActiveWorkspaceRoot(normalized);
+  logger.info({ workspace: normalized }, "Active workspace root set");
+
+  res.json({ success: true, path: normalized });
+});
+
+// ── GET /api/workspace/current ───────────────────────────────────────────────
+
+/**
+ * GET /api/workspace/current
+ *
+ * Returns the currently active workspace root directory, or null if none is set.
+ *
+ * @route GET /api/workspace/current
+ * @returns {{ path: string | null }}
+ */
+router.get("/current", (_req: Request, res: Response): void => {
+  res.json({ path: activeWorkspaceRoot });
+});
 
 /**
  * Schema for remote workspace request validation.

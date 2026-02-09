@@ -94,7 +94,7 @@
       // Build
       {
         id: 'view-gAgent',
-        label: 'G-Agent',
+        label: 'Agent',
         category: 'build',
         icon: Bot,
         action: () => {
@@ -149,7 +149,7 @@
         category: 'tools',
         icon: Blocks,
         action: () => {
-          setCurrentView('skills');
+          setCurrentView('memory');
           close();
         },
       },
@@ -166,21 +166,11 @@
       },
       {
         id: 'view-memory',
-        label: 'Memory',
+        label: 'Knowledge',
         category: 'ai',
         icon: Brain,
         action: () => {
           setCurrentView('memory');
-          close();
-        },
-      },
-      {
-        id: 'view-heartbeats',
-        label: 'Scheduled tasks',
-        category: 'ai',
-        icon: Clock,
-        action: () => {
-          setCurrentView('heartbeats');
           close();
         },
       },

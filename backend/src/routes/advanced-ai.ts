@@ -13,15 +13,15 @@ import { Router, type Request, type Response } from "express";
 import logger from "../middleware/logger.js";
 
 // Import services
-import { HolographicMemoryService } from "../services/holographicMemory.js";
-import { ContextCompressorService } from "../services/contextCompressor.js";
-import { SwarmOrchestratorService } from "../services/swarmOrchestrator.js";
-import { SupervisedSwarmService } from "../services/supervisedSwarm.js";
-import { PredictivePreloaderService } from "../services/predictivePreloader.js";
+import { HolographicMemoryService } from "../services/agents/holographicMemory.js";
+import { ContextCompressorService } from "../services/rag/contextCompressor.js";
+import { SwarmOrchestratorService } from "../services/agents/swarmOrchestrator.js";
+import { SupervisedSwarmService } from "../services/agents/supervisedSwarm.js";
+import { PredictivePreloaderService } from "../services/caching/predictivePreloader.js";
 import {
   RecursiveDistillationService,
   type ConversationTurn,
-} from "../services/recursiveDistillation.js";
+} from "../services/agents/recursiveDistillation.js";
 
 const router = Router();
 

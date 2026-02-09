@@ -46,8 +46,8 @@ describe('firstByteOptimizer', () => {
     });
 
     it('should send init message with progress enabled', () => {
-      const metadata = { provider: 'groq', model: 'test-model' };
-      
+      const metadata = { provider: 'nim', model: 'test-model' };
+
       firstByteOptimizer.sendHeadersImmediately(mockRes as any, {
         sendProgress: true,
         metadata,
@@ -57,7 +57,7 @@ describe('firstByteOptimizer', () => {
         expect.stringContaining('"type":"init"')
       );
       expect(mockRes.write).toHaveBeenCalledWith(
-        expect.stringContaining('"provider":"groq"')
+        expect.stringContaining('"provider":"nim"')
       );
     });
 
@@ -66,7 +66,7 @@ describe('firstByteOptimizer', () => {
         sendProgress: false,
       });
 
-      const initCalls = mockRes.write.mock.calls.filter((call: any[]) => 
+      const initCalls = mockRes.write.mock.calls.filter((call: any[]) =>
         call[0].includes('"type":"init"')
       );
       expect(initCalls).toHaveLength(0);
@@ -74,13 +74,13 @@ describe('firstByteOptimizer', () => {
 
     it('should include timestamp in init message', () => {
       const before = Date.now();
-      
+
       firstByteOptimizer.sendHeadersImmediately(mockRes as any);
-      
+
       const after = Date.now();
       const writeCall = mockRes.write.mock.calls[0][0];
       const parsed = JSON.parse(writeCall.trim());
-      
+
       expect(parsed.timestamp).toBeGreaterThanOrEqual(before);
       expect(parsed.timestamp).toBeLessThanOrEqual(after);
     });
@@ -103,27 +103,27 @@ describe('firstByteOptimizer', () => {
 
     it('should clamp progress to 0-100 range', () => {
       firstByteOptimizer.sendProgress(mockRes as any, -10);
-      
+
       const writeCall = mockRes.write.mock.calls[0][0];
       expect(writeCall).toContain('"progress":0');
 
       mockRes.write.mockClear();
-      
+
       firstByteOptimizer.sendProgress(mockRes as any, 150);
-      
+
       const writeCall2 = mockRes.write.mock.calls[0][0];
       expect(writeCall2).toContain('"progress":100');
     });
 
     it('should include timestamp', () => {
       const before = Date.now();
-      
+
       firstByteOptimizer.sendProgress(mockRes as any, 50);
-      
+
       const after = Date.now();
       const writeCall = mockRes.write.mock.calls[0][0];
       const parsed = JSON.parse(writeCall.trim());
-      
+
       expect(parsed.timestamp).toBeGreaterThanOrEqual(before);
       expect(parsed.timestamp).toBeLessThanOrEqual(after);
     });
@@ -132,7 +132,7 @@ describe('firstByteOptimizer', () => {
   describe('sendChunk', () => {
     it('should send data chunk', () => {
       const data = { token: 'Hello', index: 0 };
-      
+
       firstByteOptimizer.sendChunk(mockRes as any, data);
 
       expect(mockRes.write).toHaveBeenCalledWith(
@@ -145,12 +145,12 @@ describe('firstByteOptimizer', () => {
 
     it('should handle complex data objects', () => {
       const data = { nested: { array: [1, 2, 3], bool: true } };
-      
+
       firstByteOptimizer.sendChunk(mockRes as any, data);
 
       const writeCall = mockRes.write.mock.calls[0][0];
       const parsed = JSON.parse(writeCall.trim());
-      
+
       expect(parsed.data.nested.array).toEqual([1, 2, 3]);
       expect(parsed.data.nested.bool).toBe(true);
     });
@@ -160,7 +160,7 @@ describe('firstByteOptimizer', () => {
 
       const writeCall = mockRes.write.mock.calls[0][0];
       const parsed = JSON.parse(writeCall.trim());
-      
+
       expect(parsed.timestamp).toBeGreaterThan(0);
     });
   });
@@ -197,7 +197,7 @@ describe('firstByteOptimizer', () => {
 
       const writeCall = mockRes.write.mock.calls[0][0];
       const parsed = JSON.parse(writeCall.trim());
-      
+
       expect(parsed.timestamp).toBeGreaterThan(0);
     });
   });
@@ -212,8 +212,8 @@ describe('firstByteOptimizer', () => {
     });
 
     it('should include metadata when provided', () => {
-      const metadata = { totalTokens: 150, provider: 'groq' };
-      
+      const metadata = { totalTokens: 150, provider: 'nim' };
+
       firstByteOptimizer.complete(mockRes as any, metadata);
 
       expect(mockRes.write).toHaveBeenCalledWith(
@@ -229,13 +229,13 @@ describe('firstByteOptimizer', () => {
 
     it('should include timestamp', () => {
       const before = Date.now();
-      
+
       firstByteOptimizer.complete(mockRes as any);
-      
+
       const after = Date.now();
       const writeCall = mockRes.write.mock.calls[0][0];
       const parsed = JSON.parse(writeCall.trim());
-      
+
       expect(parsed.timestamp).toBeGreaterThanOrEqual(before);
       expect(parsed.timestamp).toBeLessThanOrEqual(after);
     });
@@ -245,15 +245,15 @@ describe('firstByteOptimizer', () => {
     it('should handle complete streaming flow', () => {
       // Start
       firstByteOptimizer.sendHeadersImmediately(mockRes as any);
-      
+
       // Progress updates
       firstByteOptimizer.sendProgress(mockRes as any, 25, 'Connecting');
       firstByteOptimizer.sendProgress(mockRes as any, 50, 'Streaming');
-      
+
       // Data chunks
       firstByteOptimizer.sendChunk(mockRes as any, { text: 'Hello' });
       firstByteOptimizer.sendChunk(mockRes as any, { text: ' World' });
-      
+
       // Complete
       firstByteOptimizer.complete(mockRes as any, { totalTokens: 2 });
 

@@ -59,7 +59,6 @@ async function testAiProviderConnection(
     'openrouter': 'https://openrouter.ai/api/v1/models',
     'anthropic': 'https://api.anthropic.com/v1/messages',
     'openai': 'https://api.openai.com/v1/models',
-    'groq': 'https://api.groq.com/openai/v1/models',
     'ollama': 'http://localhost:11434/api/tags'
   };
 

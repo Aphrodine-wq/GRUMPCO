@@ -168,7 +168,7 @@
               class="flex-1 px-4 py-3 bg-green-50 hover:bg-green-100 border-2 border-green-200 text-green-700 font-semibold rounded-lg transition-colors disabled:opacity-50"
               aria-label="Yes, this was helpful"
             >
-              👍 Yes
+              Yes
             </button>
             <button
               type="button"
@@ -177,7 +177,7 @@
               class="flex-1 px-4 py-3 bg-red-50 hover:bg-red-100 border-2 border-red-200 text-red-700 font-semibold rounded-lg transition-colors disabled:opacity-50"
               aria-label="No, this was not helpful"
             >
-              👎 No
+              No
             </button>
           </div>
         {/if}

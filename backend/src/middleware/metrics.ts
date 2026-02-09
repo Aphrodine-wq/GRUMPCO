@@ -260,7 +260,7 @@ export const taskComplexityScore = new client.Histogram({
   registers: [register],
 });
 
-// Chat requests by session type (chat vs freeAgent)
+// Chat requests by session type (chat vs gAgent)
 export const chatRequestsTotal = new client.Counter({
   name: "chat_requests_total",
   help: "Total chat stream requests by session type",
@@ -401,7 +401,7 @@ export function recordContextCacheHit(type: "hit" | "miss"): void {
   }
 }
 
-// Helper to record chat request (for Free Agent vs chat monitoring)
+// Helper to record chat request (for G-Agent vs chat monitoring)
 export function recordChatRequest(sessionType: string): void {
   chatRequestsTotal.inc({ session_type: sessionType });
 }

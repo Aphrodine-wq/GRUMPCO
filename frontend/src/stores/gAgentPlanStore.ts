@@ -1,5 +1,5 @@
 /**
- * G-Agent Plan Store
+ * Agent Plan Store
  * Manages execution plans and their state, including SSE-based real-time execution
  */
 
@@ -36,11 +36,11 @@ export type TaskExecutionEvent =
   | { type: 'task_skipped'; taskId: string; reason: string }
   | { type: 'batch_completed'; batchIndex: number; completedCount: number; failedCount: number }
   | {
-      type: 'plan_completed';
-      planId: string;
-      status: 'completed' | 'failed' | 'cancelled';
-      durationMs: number;
-    }
+    type: 'plan_completed';
+    planId: string;
+    status: 'completed' | 'failed' | 'cancelled';
+    durationMs: number;
+  }
   | { type: 'error'; message: string; planId?: string; taskId?: string }
   | { type: 'done' };
 
@@ -442,7 +442,7 @@ export const gAgentPlanStore = {
               if (event.type === 'done') {
                 return;
               }
-            } catch (e) {
+            } catch (_e) {
               console.warn('Failed to parse SSE event:', jsonStr);
             }
           }
@@ -479,10 +479,10 @@ export const gAgentPlanStore = {
           ...s,
           currentPlan: s.currentPlan
             ? {
-                ...s.currentPlan,
-                status: 'executing',
-                started_at: new Date().toISOString(),
-              }
+              ...s.currentPlan,
+              status: 'executing',
+              started_at: new Date().toISOString(),
+            }
             : null,
         }));
         break;
@@ -492,9 +492,9 @@ export const gAgentPlanStore = {
           ...s,
           currentPlan: s.currentPlan
             ? {
-                ...s.currentPlan,
-                current_batch: event.batchIndex,
-              }
+              ...s.currentPlan,
+              current_batch: event.batchIndex,
+            }
             : null,
         }));
         break;
@@ -522,10 +522,10 @@ export const gAgentPlanStore = {
           isExecuting: false,
           currentPlan: s.currentPlan
             ? {
-                ...s.currentPlan,
-                status: event.status,
-                completed_at: new Date().toISOString(),
-              }
+              ...s.currentPlan,
+              status: event.status,
+              completed_at: new Date().toISOString(),
+            }
             : null,
         }));
         break;
@@ -556,7 +556,7 @@ export const gAgentPlanStore = {
         await fetchApi(`/api/plan/${state.currentPlan.id}/cancel-execution`, {
           method: 'POST',
         });
-      } catch (e) {
+      } catch (_e) {
         // Ignore errors - we've already aborted locally
       }
     }

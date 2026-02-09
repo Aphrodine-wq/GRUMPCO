@@ -1,0 +1,77 @@
+# =============================================================================
+# G-Rump CODEOWNERS
+# =============================================================================
+# Defines code ownership for automatic PR review assignments.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything
+* @Aphrodine-wq
+
+# =============================================================================
+# Core Application
+# =============================================================================
+
+# Frontend (Svelte 5 + Electron)
+/frontend/                          @Aphrodine-wq
+/electron/                          @Aphrodine-wq
+
+# Backend (Express 5 + TypeScript)
+/backend/                           @Aphrodine-wq
+
+# =============================================================================
+# Shared Packages
+# =============================================================================
+
+/packages/ai-core/                  @Aphrodine-wq
+/packages/shared-types/             @Aphrodine-wq
+/packages/cli/                      @Aphrodine-wq
+/packages/rag/                      @Aphrodine-wq
+/packages/memory/                   @Aphrodine-wq
+/packages/voice/                    @Aphrodine-wq
+/packages/kimi/                     @Aphrodine-wq
+/packages/vscode-extension/         @Aphrodine-wq
+/packages/compiler-enhanced/        @Aphrodine-wq
+
+# =============================================================================
+# Performance-Critical (Rust)
+# =============================================================================
+
+/intent-compiler/                   @Aphrodine-wq
+
+# =============================================================================
+# Infrastructure & DevOps
+# =============================================================================
+
+/deploy/                            @Aphrodine-wq
+/infrastructure/                    @Aphrodine-wq
+/.github/                           @Aphrodine-wq
+/docker-compose.yml                 @Aphrodine-wq
+/Dockerfile.*                       @Aphrodine-wq
+
+# =============================================================================
+# Security-Sensitive
+# =============================================================================
+
+/backend/src/middleware/             @Aphrodine-wq
+/backend/src/services/security/     @Aphrodine-wq
+/.github/workflows/security.yml     @Aphrodine-wq
+/.github/workflows/codeql.yml       @Aphrodine-wq
+/.github/workflows/gitleaks.yml     @Aphrodine-wq
+
+# =============================================================================
+# Documentation & Legal
+# =============================================================================
+
+/docs/                              @Aphrodine-wq
+/docs/legal/                        @Aphrodine-wq
+/LICENSE                            @Aphrodine-wq
+
+# =============================================================================
+# Configuration (high impact, review needed)
+# =============================================================================
+
+/package.json                       @Aphrodine-wq
+/pnpm-workspace.yaml                @Aphrodine-wq
+/turbo.json                         @Aphrodine-wq
+/renovate.json                      @Aphrodine-wq
+/.env.example                       @Aphrodine-wq

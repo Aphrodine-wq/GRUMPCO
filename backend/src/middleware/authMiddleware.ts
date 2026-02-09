@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { auth } from "../services/supabaseClient.js";
+import { auth } from "../services/platform/supabaseClient.js";
 import { getRequestLogger } from "./logger.js";
 import { env } from "../config/env.js";
 

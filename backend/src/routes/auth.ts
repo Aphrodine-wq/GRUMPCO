@@ -4,7 +4,7 @@ import {
   validationResult,
   type ValidationChain,
 } from "express-validator";
-import { auth, isMockMode } from "../services/supabaseClient.js";
+import { auth, isMockMode } from "../services/platform/supabaseClient.js";
 import {
   requireAuth,
   type AuthenticatedRequest,

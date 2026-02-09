@@ -10,7 +10,7 @@ import {
   type Response,
   type NextFunction,
 } from "express";
-import { autoDeployService } from "../services/autoDeployService.js";
+import { autoDeployService } from "../services/workspace/autoDeployService.js";
 import logger from "../middleware/logger.js";
 
 const router = Router();

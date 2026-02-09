@@ -16,7 +16,7 @@ import {
   KIMI_K25_CONFIG,
   getKimiRoutingDecision,
   type KimiRoutingInput,
-} from "../services/kimiOptimizer.js";
+} from "../services/ai-providers/kimiOptimizer.js";
 import logger from "../middleware/logger.js";
 
 // Extend Express Request type to include Kimi optimization context

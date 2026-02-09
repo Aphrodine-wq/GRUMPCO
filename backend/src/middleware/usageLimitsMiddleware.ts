@@ -6,14 +6,14 @@
 import type { Request, Response, NextFunction } from "express";
 import type { AuthenticatedRequest } from "./authMiddleware.js";
 import { getTier } from "../config/pricing.js";
-import { licenseService } from "../services/licenseService.js";
+import { licenseService } from "../services/security/licenseService.js";
 import {
   getMonthlyComputeMinutes,
   getMonthlyStorageBytes,
   isComputeEndpoint,
   isCreditMeteredEndpoint,
-} from "../services/usageLimitsService.js";
-import { getCreditsUsed, getCreditsLimit } from "../services/creditService.js";
+} from "../services/platform/usageLimitsService.js";
+import { getCreditsUsed, getCreditsLimit } from "../services/platform/creditService.js";
 
 const SKIP_PATH_PREFIXES = [
   "/health",

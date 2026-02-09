@@ -208,6 +208,36 @@ export async function getWorkspaceTree(dirPath?: string): Promise<WorkspaceTreeR
   return res.json() as Promise<WorkspaceTreeResponse>;
 }
 
+/**
+ * Set the active workspace root on the backend.
+ * This tells the AI's file-write operations which local folder to target.
+ */
+export async function setWorkspaceRoot(
+  dirPath: string
+): Promise<{ success: boolean; path: string }> {
+  const res = await fetchApi('/api/workspace/set', {
+    method: 'POST',
+    body: JSON.stringify({ path: dirPath }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      (data as { error?: string }).error ?? `Failed to set workspace: ${res.status}`
+    );
+  }
+  return res.json() as Promise<{ success: boolean; path: string }>;
+}
+
+/**
+ * Get the currently active workspace root from the backend.
+ */
+export async function getWorkspaceRoot(): Promise<string | null> {
+  const res = await fetchApi('/api/workspace/current');
+  if (!res.ok) return null;
+  const data = (await res.json()) as { path: string | null };
+  return data.path;
+}
+
 // --- Session attachments ---
 
 export interface SessionAttachment {

@@ -460,10 +460,10 @@ describe('sessionsStore', () => {
     it('should update existing session type', () => {
       const session = sessionsStore.createSession([], null, 'chat');
 
-      sessionsStore.setSessionType(session.id, 'freeAgent');
+      sessionsStore.setSessionType(session.id, 'gAgent');
 
       const updated = get(sessionsStore.sessions).find((s) => s.id === session.id);
-      expect(updated?.sessionType).toBe('freeAgent');
+      expect(updated?.sessionType).toBe('gAgent');
     });
   });
 

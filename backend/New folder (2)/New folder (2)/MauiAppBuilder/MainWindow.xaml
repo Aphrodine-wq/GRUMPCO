@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window x:Class="MauiAppBuilder.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MauiAppBuilder"
+        xmlns:visual="clr-namespace:MauiAppBuilder.Visual"
+        mc:Ignorable="d"
+        Title="MAUI App Builder" 
+        Height="900" Width="1400"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BackgroundBrush}">
+    
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}"/>
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}"/>
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}"/>
+        <KeyBinding Key="Delete" Command="{Binding DeleteCommand}"/>
+    </Window.InputBindings>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Menu -->
+        <Menu Grid.Row="0" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextBrush}">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New Project" Command="{Binding NewProjectCommand}" InputGestureText="Ctrl+N"/>
+                <MenuItem Header="_Open Project" Command="{Binding OpenProjectCommand}" InputGestureText="Ctrl+O"/>
+                <Separator/>
+                <MenuItem Header="_Save" Command="{Binding SaveCommand}" InputGestureText="Ctrl+S"/>
+                <MenuItem Header="Save _As..." Command="{Binding SaveAsCommand}"/>
+                <Separator/>
+                <MenuItem Header="E_xit" Command="{Binding ExitCommand}"/>
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Undo" Command="{Binding UndoCommand}" InputGestureText="Ctrl+Z"/>
+                <MenuItem Header="_Redo" Command="{Binding RedoCommand}" InputGestureText="Ctrl+Y"/>
+                <Separator/>
+                <MenuItem Header="_Delete" Command="{Binding DeleteCommand}" InputGestureText="Delete"/>
+                <MenuItem Header="Select _All" Command="{Binding SelectAllCommand}" InputGestureText="Ctrl+A"/>
+            </MenuItem>
+            <MenuItem Header="_Build">
+                <MenuItem Header="_Generate Code" Command="{Binding GenerateCodeCommand}"/>
+                <MenuItem Header="_Preview" Command="{Binding PreviewCommand}" InputGestureText="F5"/>
+                <MenuItem Header="_Export App" Command="{Binding ExportCommand}"/>
+            </MenuItem>
+        </Menu>
+        
+        <!-- Toolbar -->
+        <ToolBarTray Grid.Row="1" Background="{DynamicResource SurfaceBrush}">
+            <ToolBar Background="{DynamicResource SurfaceBrush}">
+                <Button Command="{Binding NewProjectCommand}" ToolTip="New Project">
+                    <Path Data="M12,2L2,7L12,12L22,7L12,2M2,17L12,22L22,17" 
+                          Fill="{DynamicResource AccentBrush}" Width="16" Height="16"/>
+                </Button>
+                <Button Command="{Binding OpenProjectCommand}" ToolTip="Open Project">
+                    <Path Data="M20,6H12L10,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8A2,2 0 0,0 20,6Z" 
+                          Fill="{DynamicResource AccentBrush}" Width="16" Height="16"/>
+                </Button>
+                <Button Command="{Binding SaveCommand}" ToolTip="Save">
+                    <Path Data="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" 
+                          Fill="{DynamicResource AccentBrush}" Width="16" Height="16"/>
+                </Button>
+                <Separator/>
+                <Button Command="{Binding UndoCommand}" ToolTip="Undo">
+                    <Path Data="M12.5,8C9.85,8 7.45,8.99 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z" 
+                          Fill="{DynamicResource AccentBrush}" Width="16" Height="16"/>
+                </Button>
+                <Button Command="{Binding RedoCommand}" ToolTip="Redo">
+                    <Path Data="M18.4,10.6C16.55,8.99 14.15,8 11.5,8C6.85,8 2.92,11.03 1.54,15.22L3.9,16C4.95,12.81 7.95,10.5 11.5,10.5C13.45,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z" 
+                          Fill="{DynamicResource AccentBrush}" Width="16" Height="16"/>
+                </Button>
+                <Separator/>
+                <Button Command="{Binding PreviewCommand}" ToolTip="Preview (F5)">
+                    <Path Data="M8,5.14V19.14L19,12.14L8,5.14Z" 
+                          Fill="{DynamicResource SuccessBrush}" Width="16" Height="16"/>
+                </Button>
+                <Button Command="{Binding GenerateCodeCommand}" ToolTip="Generate Code">
+                    <Path Data="M9.4,16.6L4.8,12L9.4,7.4L8,6L2,12L8,18L9.4,16.6M14.6,16.6L19.2,12L14.6,7.4L16,6L22,12L16,18L14.6,16.6Z" 
+                          Fill="{DynamicResource AccentBrush}" Width="16" Height="16"/>
+                </Button>
+                <Button Command="{Binding ExportCommand}" ToolTip="Export App">
+                    <Path Data="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M16.59,7.58L10,14.17L7.41,11.59L6,13L10,17L18,9L16.59,7.58Z" 
+                          Fill="{DynamicResource SuccessBrush}" Width="16" Height="16"/>
+                </Button>
+            </ToolBar>
+        </ToolBarTray>
+        
+        <!-- Main Content -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="280"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Left Panel: Toolbox -->
+            <Border Grid.Column="0" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+                <visual:ToolboxPanel x:Name="ToolboxPanel"/>
+            </Border>
+            
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}"/>
+            
+            <!-- Center: Designer Canvas -->
+            <Border Grid.Column="2" Background="{DynamicResource CanvasBackgroundBrush}">
+                <visual:DesignerCanvas x:Name="DesignerCanvas"/>
+            </Border>
+            
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}"/>
+            
+            <!-- Right Panel: Properties & Project -->
+            <Grid Grid.Column="4" Background="{DynamicResource SurfaceBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="5"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <visual:PropertiesPanel x:Name="PropertiesPanel" Grid.Row="0"/>
+                <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" Background="{DynamicResource BorderBrush}"/>
+                <visual:ProjectExplorer x:Name="ProjectExplorer" Grid.Row="2"/>
+            </Grid>
+        </Grid>
+        
+        <!-- Status Bar -->
+        <StatusBar Grid.Row="3" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusText" Text="Ready" Foreground="{DynamicResource TextBrush}"/>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <TextBlock x:Name="SelectionInfo" Text="No selection" Foreground="{DynamicResource TextMutedBrush}"/>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>

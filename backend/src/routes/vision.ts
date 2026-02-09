@@ -3,8 +3,8 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { designToCode } from "../services/kimiVisionService.js";
-import type { DesignToCodeFramework } from "../services/kimiVisionService.js";
+import { designToCode } from "../services/ai-providers/kimiVisionService.js";
+import type { DesignToCodeFramework } from "../services/ai-providers/kimiVisionService.js";
 import logger from "../middleware/logger.js";
 
 const router = Router();
@@ -86,7 +86,7 @@ router.post("/design-to-code", async (req: Request, res: Response) => {
         componentStyle.trim() && { componentStyle: componentStyle.trim() }),
     };
     const result = await designToCode(
-      input as import("../services/kimiVisionService.js").DesignToCodeInput,
+      input as import("../services/ai-providers/kimiVisionService.js").DesignToCodeInput,
     );
     return res.json(result);
   } catch (e) {

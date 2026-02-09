@@ -12,7 +12,7 @@
  */
 
 import type { Request, Response, NextFunction } from "express";
-import { analytics } from "../services/analytics.js";
+import { analytics } from "../services/platform/analytics.js";
 
 interface AnalyticsMiddlewareOptions {
   /** Track all requests or only specific paths */

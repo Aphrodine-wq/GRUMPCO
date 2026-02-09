@@ -13,14 +13,14 @@ import {
   removeMember,
   canAccess,
   type ProjectRole,
-} from "../services/collaborationService.js";
+} from "../services/platform/collaborationService.js";
 import {
   addComment,
   listComments,
   addVersion,
   listVersions,
   type EntityType,
-} from "../services/commentsService.js";
+} from "../services/platform/commentsService.js";
 
 const router = Router();
 

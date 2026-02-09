@@ -12,7 +12,7 @@ import { z } from "zod";
 import {
   applyCanvasAction,
   getCanvasState,
-} from "../services/canvasService.js";
+} from "../services/workspace/canvasService.js";
 import {
   sendErrorResponse,
   sendServerError,

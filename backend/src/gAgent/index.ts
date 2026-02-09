@@ -261,7 +261,7 @@ export {
   createPredictivePrefetch,
   destroyPredictivePrefetch,
   DEFAULT_PREFETCH_CONFIG,
-} from "../services/predictivePrefetch.js";
+} from "../services/caching/predictivePrefetch.js";
 export type {
   QueryPattern,
   PatternTriggerType,
@@ -272,7 +272,7 @@ export type {
   PrefetchResult,
   PrefetchConfig,
   PrefetchMetrics,
-} from "../services/predictivePrefetch.js";
+} from "../services/caching/predictivePrefetch.js";
 
 // Multi-Modal Compiler (code + docs + tests unified context)
 export {
@@ -282,7 +282,7 @@ export {
   DEFAULT_MODALITY_WEIGHTS,
   INTENT_MODIFIERS,
   MODALITY_PATTERNS,
-} from "../services/multiModalCompiler.js";
+} from "../services/intent/multiModalCompiler.js";
 export type {
   ContentModality,
   MultiModalUnit,
@@ -293,7 +293,7 @@ export type {
   MultiModalRequest,
   MultiModalResult,
   MultiModalConfig,
-} from "../services/multiModalCompiler.js";
+} from "../services/intent/multiModalCompiler.js";
 
 // Hierarchical Cache (3-tier: L1 hot → L2 warm → L3 persistent)
 export {
@@ -301,14 +301,14 @@ export {
   getHierarchicalCache,
   destroyHierarchicalCache,
   destroyAllHierarchicalCaches,
-} from "../services/hierarchicalCache.js";
+} from "../services/caching/hierarchicalCache.js";
 export type {
   CacheEntry,
   CacheTierConfig,
   HierarchicalCacheConfig,
   CacheMetrics,
   TierMetrics,
-} from "../services/hierarchicalCache.js";
+} from "../services/caching/hierarchicalCache.js";
 
 // Real-Time Learning (feedback-based model refinement)
 export {
@@ -317,7 +317,7 @@ export {
   destroyRealTimeLearning,
   destroyAllRealTimeLearning,
   DEFAULT_LEARNING_CONFIG,
-} from "../services/realTimeLearning.js";
+} from "../services/agents/realTimeLearning.js";
 export type {
   FeedbackType,
   UserFeedback,
@@ -326,7 +326,7 @@ export type {
   LearningModel,
   LearningConfig,
   LearningMetrics,
-} from "../services/realTimeLearning.js";
+} from "../services/agents/realTimeLearning.js";
 
 // Types (re-export all)
 export * from "./types.js";

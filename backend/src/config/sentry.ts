@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { env } from './env.js';
 import type { Express } from 'express';
+import logger from '../middleware/logger.js';
 
 export function initializeSentry(app?: Express): void {
     if (!env.SENTRY_DSN) {
@@ -76,7 +77,7 @@ export function initializeSentry(app?: Express): void {
         enableTracing: true,
     });
 
-    console.log('✅ Sentry error tracking initialized');
+    logger.info('Sentry error tracking initialized');
 }
 
 export function captureException(error: Error, context?: Record<string, any>): void {

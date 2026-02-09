@@ -13,7 +13,7 @@ import {
   analyzeCode,
   scanSecurity,
   optimizePerformance,
-} from "../claudeCodeService.js";
+} from "../ai-providers/claudeCodeService.js";
 import type {
   CodeAnalysis,
   SecurityIssue,

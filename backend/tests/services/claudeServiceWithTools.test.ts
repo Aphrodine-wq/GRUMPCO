@@ -637,8 +637,8 @@ describe('ClaudeServiceWithTools', () => {
       });
     });
 
-    describe('Free Agent mode', () => {
-      it('should apply guardrails in Free Agent mode', async () => {
+    describe('G-Agent mode', () => {
+      it('should apply guardrails in G-Agent mode', async () => {
         mockGetStream.mockReturnValue(
           createMockStream([
             {
@@ -675,7 +675,7 @@ describe('ClaudeServiceWithTools', () => {
             undefined,
             undefined,
             false,
-            'freeAgent'
+            'gAgent'
           )
         );
 
@@ -718,7 +718,7 @@ describe('ClaudeServiceWithTools', () => {
             undefined,
             undefined,
             false,
-            'freeAgent'
+            'gAgent'
           )
         );
 
@@ -751,7 +751,7 @@ describe('ClaudeServiceWithTools', () => {
             undefined,
             undefined,
             false,
-            'freeAgent',
+            'gAgent',
             ['file_read', 'code_execute'] as any
           )
         );

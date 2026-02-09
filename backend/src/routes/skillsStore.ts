@@ -9,7 +9,7 @@ import {
   installSkill,
   uninstallSkill,
   setSkillEnabled,
-} from "../services/skillStoreService.js";
+} from "../services/workspace/skillStoreService.js";
 import { getErrorMessage } from "../utils/errorResponse.js";
 
 const router = Router();

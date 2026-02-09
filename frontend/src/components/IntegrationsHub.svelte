@@ -40,7 +40,7 @@
   let apiKeyInput = $state('');
   let botTokenInput = $state('');
   let displayNameInput = $state('');
-  let enableMcpForGAgent = $state(false);
+  let enableMcpForAgent = $state(false);
   let configuring = $state(false);
   let figmaConnected = $state(false);
   /** Set while redirecting to OAuth so we don't double-submit */
@@ -108,7 +108,7 @@
     apiKeyInput = '';
     botTokenInput = '';
     displayNameInput = getProviderMeta(provider).name;
-    enableMcpForGAgent = false;
+    enableMcpForAgent = false;
     showAddModal = true;
   }
 
@@ -117,7 +117,7 @@
     selectedProvider = null;
     apiKeyInput = '';
     botTokenInput = '';
-    enableMcpForGAgent = false;
+    enableMcpForAgent = false;
     configuring = false;
   }
 
@@ -127,7 +127,7 @@
     const existing = current?.mcp?.servers ?? [];
     const entry: McpServerConfig = {
       id: `integration_${provider}_${integrationId}`,
-      name: `${meta.name} (G-Agent)`,
+      name: `${meta.name} (Agent)`,
       enabled: true,
     };
     const next = [...existing.filter((s) => s.id !== entry.id), entry];
@@ -165,7 +165,7 @@
       await setApiKey(selectedProvider, apiKeyInput.trim());
       const list = await listIntegrations();
       const added = list.find((i) => i.provider === selectedProvider);
-      if (enableMcpForGAgent && added) {
+      if (enableMcpForAgent && added) {
         await addMcpForIntegration(selectedProvider, added.id);
       }
       showToast(`${getProviderMeta(selectedProvider).name} connected!`, 'success');
@@ -186,7 +186,7 @@
       await setBotToken(selectedProvider, botTokenInput.trim());
       const list = await listIntegrations();
       const added = list.find((i) => i.provider === selectedProvider);
-      if (enableMcpForGAgent && added) {
+      if (enableMcpForAgent && added) {
         await addMcpForIntegration(selectedProvider, added.id);
       }
       showToast(`${getProviderMeta(selectedProvider).name} connected!`, 'success');
@@ -498,8 +498,8 @@
 
       <div class="mcp-option">
         <label class="checkbox-label">
-          <input type="checkbox" bind:checked={enableMcpForGAgent} />
-          <span>Also add this integration's MCP for G-Agent to automatically control</span>
+          <input type="checkbox" bind:checked={enableMcpForAgent} />
+          <span>Also add this integration's MCP for the agent to automatically control</span>
         </label>
       </div>
 
@@ -560,7 +560,7 @@
           onclick={async () => {
             try {
               const created = await createIntegration(selectedProvider!);
-              if (enableMcpForGAgent && created?.id) {
+              if (enableMcpForAgent && created?.id) {
                 await addMcpForIntegration(selectedProvider!, created.id);
               }
               showToast(`${getProviderMeta(selectedProvider!).name} connected!`, 'success');
@@ -598,7 +598,6 @@
     margin: 0;
     background: transparent;
   }
-
 
   .empty-state {
     display: flex;
@@ -639,7 +638,6 @@
     margin: 0;
     max-width: 280px;
   }
-
 
   .hub-header {
     margin-bottom: var(--space-content, 24px);
@@ -720,7 +718,6 @@
     width: 24px;
     height: 24px;
   }
-
 
   .loading-state {
     display: flex;

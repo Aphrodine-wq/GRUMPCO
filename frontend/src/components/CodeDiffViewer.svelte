@@ -1,4 +1,10 @@
 <script lang="ts">
+  /**
+   * CodeDiffViewer — Claude Code-inspired dark diff viewer
+   *
+   * Shows diffs with a dark terminal aesthetic, file path header,
+   * diff stats, side-by-side or unified view, and quick actions.
+   */
   import { onMount } from 'svelte';
   import {
     computeLineDiff,
@@ -6,7 +12,6 @@
     detectLanguage,
     type FileDiff,
   } from '../utils/diffUtils';
-  import { highlightCode } from '../utils/highlighter';
   import { showToast } from '../stores/toastStore';
 
   interface Props {
@@ -15,20 +20,27 @@
 
   let { diff }: Props = $props();
 
-  let viewMode: 'side-by-side' | 'unified' = $state('side-by-side');
+  let viewMode: 'unified' | 'side-by-side' = $state('unified');
   let diffLines = $state<Array<import('../utils/diffUtils').DiffLine>>([]);
   let isCollapsed = $state(false);
   let language = $derived(detectLanguage(diff.filePath));
   let summary = $state('');
-  let changeLocations = $state<
-    Array<{ index: number; lineNumber: number; type: 'added' | 'removed' }>
-  >([]);
-  let currentChangeIndex = $state(0);
-  let lineRefs: Record<number, HTMLElement> = $state({});
-  let jumpNavVisible = $state(false);
   let _isLoading = $state(true);
 
-  // Load diff data asynchronously
+  // ── Diff stats ───────────────────────────────────────────────────────
+  const addedCount = $derived(diffLines.filter((l) => l.type === 'added').length);
+  const removedCount = $derived(diffLines.filter((l) => l.type === 'removed').length);
+
+  // ── Short path ───────────────────────────────────────────────────────
+  function getShortPath(fp: string): string {
+    const segs = fp.replace(/\\/g, '/').split('/');
+    if (segs.length <= 3) return segs.join('/');
+    return '…/' + segs.slice(-3).join('/');
+  }
+
+  const shortPath = $derived(getShortPath(diff.filePath));
+
+  // ── Data loading ─────────────────────────────────────────────────────
   async function loadDiffData() {
     _isLoading = true;
     try {
@@ -38,7 +50,6 @@
       ]);
       diffLines = lines;
       summary = diffSummary;
-      findChangeLocations();
     } catch (error) {
       console.error('Failed to load diff data:', error);
     } finally {
@@ -46,238 +57,77 @@
     }
   }
 
-  async function loadHighlights() {
-    try {
-      await highlightCode(diff.beforeContent, language);
-      await highlightCode(diff.afterContent, language);
-    } catch (error) {
-      console.error('Failed to highlight code:', error);
-    }
-  }
-
-  async function copyBefore() {
-    try {
-      await navigator.clipboard.writeText(diff.beforeContent);
-      showToast('Before content copied', 'success');
-    } catch (error) {
-      showToast('Failed to copy', 'error');
-    }
-  }
-
+  // ── Actions ──────────────────────────────────────────────────────────
   async function copyAfter() {
     try {
       await navigator.clipboard.writeText(diff.afterContent);
-      showToast('After content copied', 'success');
-    } catch (error) {
+      showToast('Code copied', 'success');
+    } catch {
       showToast('Failed to copy', 'error');
-    }
-  }
-
-  function toggleCollapse() {
-    isCollapsed = !isCollapsed;
-  }
-
-  // Find all change locations
-  function findChangeLocations() {
-    const changes: Array<{ index: number; lineNumber: number; type: 'added' | 'removed' }> = [];
-    diffLines.forEach((line, index) => {
-      if (line.type === 'added' || line.type === 'removed') {
-        changes.push({
-          index,
-          lineNumber: line.newLineNumber || line.oldLineNumber || 0,
-          type: line.type,
-        });
-      }
-    });
-    changeLocations = changes;
-    if (changes.length > 0) {
-      jumpNavVisible = true;
-    }
-  }
-
-  // Generate unified diff patch format
-  function generatePatch(): string {
-    let patch = `--- a/${diff.filePath}\n+++ b/${diff.filePath}\n`;
-    let oldLine = 1;
-    let newLine = 1;
-
-    diffLines.forEach((line) => {
-      if (line.type === 'removed') {
-        patch += `-${line.content}\n`;
-        oldLine++;
-      } else if (line.type === 'added') {
-        patch += `+${line.content}\n`;
-        newLine++;
-      } else {
-        patch += ` ${line.content}\n`;
-        oldLine++;
-        newLine++;
-      }
-    });
-
-    return patch;
-  }
-
-  // Quick actions
-  async function acceptAllChanges() {
-    try {
-      await navigator.clipboard.writeText(diff.afterContent);
-      showToast('All changes accepted (copied to clipboard)', 'success');
-    } catch (error) {
-      showToast('Failed to accept changes', 'error');
-    }
-  }
-
-  async function rejectAllChanges() {
-    try {
-      await navigator.clipboard.writeText(diff.beforeContent);
-      showToast('All changes rejected (original copied to clipboard)', 'info');
-    } catch (error) {
-      showToast('Failed to reject changes', 'error');
     }
   }
 
   async function copyPatch() {
     try {
-      const patch = generatePatch();
-      await navigator.clipboard.writeText(patch);
-      showToast('Diff patch copied to clipboard', 'success');
-    } catch (error) {
-      showToast('Failed to copy patch', 'error');
-    }
-  }
-
-  async function exportUnifiedDiff() {
-    try {
-      const patch = generatePatch();
-      const blob = new Blob([patch], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${diff.filePath.replace(/[^a-z0-9]/gi, '_')}.patch`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast('Unified diff exported', 'success');
-    } catch (error) {
-      showToast('Failed to export diff', 'error');
-    }
-  }
-
-  // Jump to changes navigation
-  function jumpToChange(index: number) {
-    if (index < 0 || index >= changeLocations.length) return;
-    currentChangeIndex = index;
-    const change = changeLocations[index];
-    const element = lineRefs[change.index];
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Highlight briefly
-      element.classList.add('highlight-change');
-      setTimeout(() => {
-        element.classList.remove('highlight-change');
-      }, 2000);
-    }
-  }
-
-  function jumpToNextChange() {
-    if (currentChangeIndex < changeLocations.length - 1) {
-      jumpToChange(currentChangeIndex + 1);
-    }
-  }
-
-  function jumpToPreviousChange() {
-    if (currentChangeIndex > 0) {
-      jumpToChange(currentChangeIndex - 1);
-    }
-  }
-
-  function handleKeydown(event: KeyboardEvent) {
-    // Only handle if diff viewer is focused or visible
-    if (isCollapsed) return;
-
-    // J/K for navigation (when not typing in input)
-    if (event.target === document.body || (event.target as HTMLElement).closest('.diff-viewer')) {
-      if (event.key === 'j' && !event.ctrlKey && !event.metaKey) {
-        event.preventDefault();
-        jumpToNextChange();
-      } else if (event.key === 'k' && !event.ctrlKey && !event.metaKey) {
-        event.preventDefault();
-        jumpToPreviousChange();
+      let patch = `--- a/${diff.filePath}\n+++ b/${diff.filePath}\n`;
+      for (const line of diffLines) {
+        if (line.type === 'removed') patch += `-${line.content}\n`;
+        else if (line.type === 'added') patch += `+${line.content}\n`;
+        else patch += ` ${line.content}\n`;
       }
+      await navigator.clipboard.writeText(patch);
+      showToast('Patch copied', 'success');
+    } catch {
+      showToast('Failed to copy', 'error');
     }
   }
 
-  function setLineRef(el: HTMLElement | null, index: number) {
-    if (el) {
-      lineRefs[index] = el;
-    }
-  }
-
-  function setupLineRef(el: HTMLElement, index: number) {
-    setLineRef(el, index);
-    return {
-      update(newIndex: number) {
-        setLineRef(el, newIndex);
-      },
-    };
-  }
-
-  // Watch for diff changes and reload
+  // ── Watch ────────────────────────────────────────────────────────────
   $effect(() => {
-    if (diff) {
-      loadDiffData();
-    }
+    if (diff) loadDiffData();
   });
 
   onMount(() => {
-    loadHighlights();
-    document.addEventListener('keydown', handleKeydown);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeydown);
-    };
+    /* Nothing extra needed */
   });
 </script>
 
 <div class="diff-viewer">
+  <!-- ── Header ─────────────────────────────────────────────────────── -->
   <div class="diff-header">
-    <div class="diff-header-left">
-      <span class="file-path">{diff.filePath}</span>
+    <div class="header-left">
+      <button class="collapse-btn" onclick={() => (isCollapsed = !isCollapsed)}>
+        {isCollapsed ? '▸' : '▾'}
+      </button>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        class="file-icon"
+      >
+        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+        <polyline points="13 2 13 9 20 9"></polyline>
+      </svg>
+      <span class="file-path" title={diff.filePath}>{shortPath}</span>
       <span
         class="change-badge"
         class:created={diff.changeType === 'created'}
         class:modified={diff.changeType === 'modified'}
-        class:deleted={diff.changeType === 'deleted'}
+        class:deleted={diff.changeType === 'deleted'}>{diff.changeType}</span
       >
-        {diff.changeType}
-      </span>
-      <span class="diff-summary">{summary}</span>
     </div>
-    <div class="diff-header-right">
-      <div class="quick-actions">
-        <button class="action-btn" onclick={acceptAllChanges} title="Accept all changes">
-          ✓ Accept All
-        </button>
-        <button class="action-btn" onclick={rejectAllChanges} title="Reject all changes">
-          ✗ Reject All
-        </button>
-        <button class="action-btn" onclick={copyPatch} title="Copy as patch">
-          📋 Copy Patch
-        </button>
-        <button class="action-btn" onclick={exportUnifiedDiff} title="Export unified diff">
-          💾 Export
-        </button>
-      </div>
+    <div class="header-right">
+      {#if addedCount > 0 || removedCount > 0}
+        <span class="diff-stats">
+          {#if addedCount > 0}<span class="stat-added">+{addedCount}</span>{/if}
+          {#if removedCount > 0}<span class="stat-removed">-{removedCount}</span>{/if}
+        </span>
+      {/if}
       <div class="view-toggle">
-        <button
-          class="toggle-btn"
-          class:active={viewMode === 'side-by-side'}
-          onclick={() => (viewMode = 'side-by-side')}
-        >
-          Side-by-side
-        </button>
         <button
           class="toggle-btn"
           class:active={viewMode === 'unified'}
@@ -285,160 +135,81 @@
         >
           Unified
         </button>
+        <button
+          class="toggle-btn"
+          class:active={viewMode === 'side-by-side'}
+          onclick={() => (viewMode = 'side-by-side')}
+        >
+          Split
+        </button>
       </div>
-      <button class="collapse-btn" onclick={toggleCollapse}>
-        {isCollapsed ? '▶' : '▼'}
-      </button>
+      <button class="action-btn" onclick={copyAfter} title="Copy final code">Copy</button>
+      <button class="action-btn" onclick={copyPatch} title="Copy as patch">Patch</button>
     </div>
   </div>
 
-  {#if jumpNavVisible && changeLocations.length > 0 && !isCollapsed}
-    <div class="jump-nav">
-      <div class="jump-nav-header">
-        <span class="jump-nav-title">Changes ({changeLocations.length})</span>
-        <span class="jump-nav-hint">Press J/K to navigate</span>
-      </div>
-      <div class="jump-nav-list">
-        {#each changeLocations as change, idx (idx)}
-          <button
-            class="jump-nav-item"
-            class:active={idx === currentChangeIndex}
-            onclick={() => jumpToChange(idx)}
-            title="Line {change.lineNumber}"
+  {#if !isCollapsed}
+    {#if viewMode === 'unified'}
+      <!-- ── Unified view ─────────────────────────────────────────── -->
+      <div class="diff-body">
+        {#each diffLines as line, idx (idx)}
+          <div
+            class="diff-line"
+            class:added={line.type === 'added'}
+            class:removed={line.type === 'removed'}
+            class:unchanged={line.type === 'unchanged'}
           >
-            <span
-              class="jump-nav-type"
-              class:added={change.type === 'added'}
-              class:removed={change.type === 'removed'}
-            >
-              {change.type === 'added' ? '+' : '-'}
+            <span class="line-num old">{line.oldLineNumber ?? ''}</span>
+            <span class="line-num new">{line.newLineNumber ?? ''}</span>
+            <span class="line-marker">
+              {line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' '}
             </span>
-            <span class="jump-nav-line">Line {change.lineNumber}</span>
-          </button>
+            <span class="line-code">{line.content}</span>
+          </div>
         {/each}
       </div>
-    </div>
-  {/if}
-
-  {#if !isCollapsed}
-    {#if viewMode === 'side-by-side'}
-      <div class="diff-content side-by-side">
-        <div class="diff-pane before-pane">
-          <div class="pane-header">
-            <span class="pane-label">Before</span>
-            <button class="copy-btn" onclick={copyBefore} title="Copy before content"> 📋 </button>
-          </div>
-          <div class="code-container">
-            <div class="line-numbers">
-              {#each diffLines as line, idx (idx)}
-                {#if line.type === 'removed' || line.type === 'unchanged'}
-                  <div class="line-number" class:removed={line.type === 'removed'}>
-                    {line.oldLineNumber || ''}
-                  </div>
-                {:else}
-                  <div class="line-number empty"></div>
-                {/if}
-              {/each}
-            </div>
-            <div class="code-content before-content">
-              {#each diffLines as line, idx (idx)}
-                {#if line.type === 'removed' || line.type === 'unchanged'}
-                  <div
-                    use:setupLineRef={idx}
-                    class="code-line"
-                    class:removed={line.type === 'removed'}
-                    class:unchanged={line.type === 'unchanged'}
-                    class:highlight-change={changeLocations.find(
-                      (c) => c.index === idx && idx === currentChangeIndex
-                    )}
-                  >
-                    {line.content}
-                  </div>
-                {:else}
-                  <div class="code-line empty"></div>
-                {/if}
-              {/each}
-            </div>
-          </div>
-        </div>
-        <div class="diff-pane after-pane">
-          <div class="pane-header">
-            <span class="pane-label">After</span>
-            <button class="copy-btn" onclick={copyAfter} title="Copy after content"> 📋 </button>
-          </div>
-          <div class="code-container">
-            <div class="line-numbers">
-              {#each diffLines as line, idx (idx)}
-                {#if line.type === 'added' || line.type === 'unchanged'}
-                  <div class="line-number" class:added={line.type === 'added'}>
-                    {line.newLineNumber || ''}
-                  </div>
-                {:else}
-                  <div class="line-number empty"></div>
-                {/if}
-              {/each}
-            </div>
-            <div class="code-content after-content">
-              {#each diffLines as line, idx (idx)}
-                {#if line.type === 'added' || line.type === 'unchanged'}
-                  <div
-                    use:setupLineRef={idx}
-                    class="code-line"
-                    class:added={line.type === 'added'}
-                    class:unchanged={line.type === 'unchanged'}
-                    class:highlight-change={changeLocations.find(
-                      (c) => c.index === idx && idx === currentChangeIndex
-                    )}
-                  >
-                    {line.content}
-                  </div>
-                {:else}
-                  <div class="code-line empty"></div>
-                {/if}
-              {/each}
-            </div>
-          </div>
-        </div>
-      </div>
     {:else}
-      <div class="diff-content unified">
-        <div class="pane-header">
-          <span class="pane-label">Unified Diff</span>
-          <button class="copy-btn" onclick={copyAfter} title="Copy after content"> 📋 </button>
-        </div>
-        <div class="code-container">
-          <div class="line-numbers">
+      <!-- ── Side-by-side view ────────────────────────────────────── -->
+      <div class="split-view">
+        <div class="split-pane">
+          <div class="pane-label">Before</div>
+          <div class="pane-body">
             {#each diffLines as line, idx (idx)}
-              <div
-                class="line-number"
-                class:added={line.type === 'added'}
-                class:removed={line.type === 'removed'}
-              >
-                {line.oldLineNumber && line.newLineNumber
-                  ? `${line.oldLineNumber}:${line.newLineNumber}`
-                  : line.oldLineNumber
-                    ? `${line.oldLineNumber}:`
-                    : line.newLineNumber
-                      ? `:${line.newLineNumber}`
-                      : ''}
-              </div>
+              {#if line.type === 'removed' || line.type === 'unchanged'}
+                <div
+                  class="diff-line"
+                  class:removed={line.type === 'removed'}
+                  class:unchanged={line.type === 'unchanged'}
+                >
+                  <span class="line-num">{line.oldLineNumber ?? ''}</span>
+                  <span class="line-code">{line.content}</span>
+                </div>
+              {:else}
+                <div class="diff-line empty">
+                  <span class="line-num"></span><span class="line-code"></span>
+                </div>
+              {/if}
             {/each}
           </div>
-          <div class="code-content unified-content">
+        </div>
+        <div class="split-pane">
+          <div class="pane-label">After</div>
+          <div class="pane-body">
             {#each diffLines as line, idx (idx)}
-              <div
-                use:setupLineRef={idx}
-                class="code-line"
-                class:added={line.type === 'added'}
-                class:removed={line.type === 'removed'}
-                class:unchanged={line.type === 'unchanged'}
-                class:highlight-change={changeLocations.find(
-                  (c) => c.index === idx && idx === currentChangeIndex
-                )}
-              >
-                {line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' '}
-                {line.content}
-              </div>
+              {#if line.type === 'added' || line.type === 'unchanged'}
+                <div
+                  class="diff-line"
+                  class:added={line.type === 'added'}
+                  class:unchanged={line.type === 'unchanged'}
+                >
+                  <span class="line-num">{line.newLineNumber ?? ''}</span>
+                  <span class="line-code">{line.content}</span>
+                </div>
+              {:else}
+                <div class="diff-line empty">
+                  <span class="line-num"></span><span class="line-code"></span>
+                </div>
+              {/if}
             {/each}
           </div>
         </div>
@@ -448,417 +219,282 @@
 </div>
 
 <style>
-  /* Light Theme CodeDiffViewer - Using Design System Tokens */
+  /* ── Container ────────────────────────────────────────────────────── */
   .diff-viewer {
-    background: var(--color-bg-card);
-    border: 0;
-    border-radius: 8px;
+    background: #0d1117;
+    border-radius: 6px;
     overflow: hidden;
-    margin: 8px 0;
-    font-family: var(--font-mono, 'JetBrains Mono', monospace);
-    font-size: var(--font-size-sm, 0.8rem);
-    line-height: var(--line-height-code, 1.6);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, monospace;
+    font-size: 0.75rem;
+    line-height: 1.6;
   }
 
+  /* ── Header ───────────────────────────────────────────────────────── */
   .diff-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
-    background: var(--color-bg-card);
-    border-bottom: 1px solid var(--color-border);
+    padding: 8px 12px;
+    background: #161b22;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
-  .diff-header-left {
+  .header-left {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    flex: 1;
+    gap: 8px;
     min-width: 0;
-  }
-
-  .file-path {
-    color: var(--color-text-primary, #000000);
-    font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .change-badge {
-    padding: 0.2rem 0.5rem;
-    border-radius: var(--radius-sm, 0.25rem);
-    font-size: var(--font-size-xs, 0.7rem);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .change-badge.created {
-    background: var(--color-status-success, #059669);
-    color: var(--color-text-inverse, #ffffff);
-  }
-
-  .change-badge.modified {
-    background: var(--color-status-warning, #f59e0b);
-    color: var(--color-text-inverse, #ffffff);
-  }
-
-  .change-badge.deleted {
-    background: var(--color-status-error, #dc2626);
-    color: var(--color-text-inverse, #ffffff);
-  }
-
-  .diff-summary {
-    color: var(--color-text-muted, #9ca3af);
-    font-size: var(--font-size-xs, 0.7rem);
-  }
-
-  .diff-header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .view-toggle {
-    display: flex;
-    gap: 0.25rem;
-    background: var(--color-bg-secondary);
-    border-radius: 6px;
-    padding: 0.25rem;
-  }
-
-  .toggle-btn {
-    padding: 0.35rem 0.75rem;
-    border: none;
-    background: transparent;
-    color: #3f3f46;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: var(--font-size-xs, 0.7rem);
-    font-family: inherit;
-    transition: all 150ms ease;
-  }
-
-  .toggle-btn:hover {
-    background: #ebebeb;
-    color: #18181b;
-  }
-
-  .toggle-btn.active {
-    background: var(--color-primary);
-    color: white;
+    flex: 1;
   }
 
   .collapse-btn {
-    padding: 0.35rem 0.5rem;
+    background: none;
     border: none;
-    background: transparent;
-    color: var(--color-text-muted, #9ca3af);
+    color: #8b949e;
     cursor: pointer;
-    font-size: var(--font-size-xs, 0.7rem);
-    border-radius: var(--radius-sm, 0.25rem);
-    transition: var(--transition-fast, 150ms ease-out);
-  }
-
-  .collapse-btn:hover {
-    background: var(--color-bg-tertiary, #ebebeb);
-    color: var(--color-text-primary, #000000);
-  }
-
-  .diff-content {
-    display: flex;
-    overflow-x: auto;
-  }
-
-  .diff-content.side-by-side {
-    flex-direction: row;
-  }
-
-  .diff-content.unified {
-    flex-direction: column;
-  }
-
-  .diff-pane {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid #f0f0f0;
-  }
-
-  .diff-pane:last-child {
-    border-right: none;
-  }
-
-  .pane-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: #f9f9f9;
-    border-bottom: 1px solid #f0f0f0;
-  }
-
-  .pane-label {
-    color: var(--color-text-secondary, #4b5563);
-    font-size: var(--font-size-xs, 0.7rem);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .copy-btn {
-    background: transparent;
-    border: none;
-    color: var(--color-text-muted, #9ca3af);
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--radius-sm, 0.25rem);
-    font-size: 14px;
-    transition: var(--transition-fast, 150ms ease-out);
-  }
-
-  .copy-btn:hover {
-    background: var(--color-bg-tertiary, #ebebeb);
-    color: var(--color-text-primary, #000000);
-  }
-
-  .code-container {
-    display: flex;
-    overflow-x: auto;
-    background: var(--color-bg-secondary, #ffffff);
-  }
-
-  .line-numbers {
-    background: #f9f9f9;
-    border-right: 1px solid #f0f0f0;
-    padding: 0.5rem 0.75rem;
-    color: #a1a1aa;
-    font-size: var(--font-size-xs, 0.7rem);
-    text-align: right;
-    user-select: none;
-    min-width: 60px;
+    padding: 0 2px;
+    font-size: 0.75rem;
     flex-shrink: 0;
   }
 
-  .line-number {
-    padding: 0 0.5rem;
-    height: 20px;
-    line-height: 20px;
+  .collapse-btn:hover {
+    color: #c9d1d9;
   }
 
-  .line-number.added {
-    background: var(--color-diff-added-bg, #dcfce7);
-    color: var(--color-diff-added-text, #166534);
+  .file-icon {
+    color: #58a6ff;
+    flex-shrink: 0;
   }
 
-  .line-number.removed {
-    background: var(--color-diff-removed-bg, #fee2e2);
-    color: var(--color-diff-removed-text, #991b1b);
+  .file-path {
+    color: #e6edf3;
+    font-weight: 600;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .line-number.empty {
-    opacity: 0.3;
+  .change-badge {
+    font-size: 0.58rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
   }
 
-  .code-content {
-    flex: 1;
-    padding: 0.5rem 0.75rem;
-    overflow-x: auto;
-    color: var(--color-text-code, #1f2937);
+  .change-badge.created {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.12);
+  }
+  .change-badge.modified {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.12);
+  }
+  .change-badge.deleted {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.12);
   }
 
-  .code-line {
-    padding: 0 0.5rem;
-    height: 20px;
-    line-height: 20px;
-    white-space: pre;
-    overflow-x: auto;
-  }
-
-  .code-line.added {
-    background: var(--color-diff-added-bg, #dcfce7);
-    border-left: 2px solid var(--color-diff-added-border, #86efac);
-    padding-left: calc(0.5rem - 2px);
-    color: var(--color-diff-added-text, #166534);
-  }
-
-  .code-line.removed {
-    background: var(--color-diff-removed-bg, #fee2e2);
-    border-left: 2px solid var(--color-diff-removed-border, #fca5a5);
-    padding-left: calc(0.5rem - 2px);
-    color: var(--color-diff-removed-text, #991b1b);
-  }
-
-  .code-line.unchanged {
-    color: var(--color-diff-unchanged-text, #374151);
-  }
-
-  .code-line.empty {
-    height: 20px;
-    background: transparent;
-  }
-
-  .unified-content .code-line {
-    padding-left: 1rem;
-  }
-
-  .quick-actions {
+  .header-right {
     display: flex;
-    gap: 0.5rem;
     align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ── Diff stats ───────────────────────────────────────────────────── */
+  .diff-stats {
+    display: flex;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 0.72rem;
+  }
+
+  .stat-added {
+    color: #22c55e;
+  }
+  .stat-removed {
+    color: #f87171;
+  }
+
+  /* ── View toggle ──────────────────────────────────────────────────── */
+  .view-toggle {
+    display: flex;
+    background: rgba(99, 102, 241, 0.06);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .toggle-btn {
+    padding: 3px 10px;
+    border: none;
+    background: transparent;
+    color: #8b949e;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.65rem;
+    transition: all 0.1s;
+  }
+
+  .toggle-btn:hover {
+    color: #c9d1d9;
+  }
+
+  .toggle-btn.active {
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
   }
 
   .action-btn {
-    padding: 0.35rem 0.75rem;
-    border: 0;
-    background: white;
-    color: #18181b;
+    background: transparent;
+    border: none;
+    color: #8b949e;
     cursor: pointer;
-    border-radius: 6px;
-    font-size: var(--font-size-xs, 0.7rem);
-    font-family: inherit;
-    transition: all 150ms ease;
-    white-space: nowrap;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    transition: all 0.1s;
   }
 
   .action-btn:hover {
-    background: #f5f5f5;
-    color: var(--color-primary);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    color: #c9d1d9;
+    background: rgba(99, 102, 241, 0.06);
   }
 
-  .jump-nav {
-    background: #f9f9f9;
-    border-bottom: 1px solid #f0f0f0;
-    max-height: 200px;
-    overflow-y: auto;
+  /* ── Diff body (unified) ──────────────────────────────────────────── */
+  .diff-body {
+    max-height: 500px;
+    overflow: auto;
   }
 
-  .jump-nav-header {
+  .diff-line {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 16px;
-    border-bottom: 1px solid #f0f0f0;
+    align-items: stretch;
+    min-height: 22px;
+    line-height: 22px;
   }
 
-  .jump-nav-title {
-    color: var(--color-text-primary, #000000);
-    font-size: var(--font-size-xs, 0.7rem);
-    font-weight: 600;
+  .diff-line.added {
+    background: rgba(34, 197, 94, 0.08);
   }
 
-  .jump-nav-hint {
-    color: var(--color-text-muted, #9ca3af);
-    font-size: var(--font-size-xs, 0.7rem);
+  .diff-line.removed {
+    background: rgba(248, 113, 113, 0.08);
   }
 
-  .jump-nav-list {
-    padding: 0.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .jump-nav-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
+  .diff-line.unchanged {
     background: transparent;
-    border: 0;
-    border-radius: 4px;
-    color: #18181b;
-    cursor: pointer;
-    font-size: var(--font-size-xs, 0.7rem);
-    text-align: left;
-    transition: all 150ms ease;
   }
 
-  .jump-nav-item:hover {
-    background: #f0f0f0;
+  .diff-line.empty {
+    background: rgba(13, 17, 23, 0.3);
+    min-height: 22px;
   }
 
-  .jump-nav-item.active {
-    background: #e0f2fe;
-    border: 0;
+  .line-num {
+    display: inline-block;
+    min-width: 36px;
+    padding: 0 6px;
+    text-align: right;
+    color: #484f58;
+    user-select: none;
+    flex-shrink: 0;
+    font-size: 0.68rem;
   }
 
-  .jump-nav-type {
-    width: 20px;
+  .line-num.old {
+    min-width: 32px;
+    border-right: 1px solid rgba(99, 102, 241, 0.04);
+  }
+
+  .line-num.new {
+    min-width: 32px;
+    border-right: 1px solid rgba(99, 102, 241, 0.04);
+  }
+
+  .diff-line.added .line-num {
+    color: rgba(34, 197, 94, 0.6);
+  }
+  .diff-line.removed .line-num {
+    color: rgba(248, 113, 113, 0.6);
+  }
+
+  .line-marker {
+    display: inline-block;
+    width: 16px;
     text-align: center;
+    color: #484f58;
+    user-select: none;
+    flex-shrink: 0;
     font-weight: 600;
   }
 
-  .jump-nav-type.added {
-    color: var(--color-status-success, #059669);
+  .diff-line.added .line-marker {
+    color: #22c55e;
+  }
+  .diff-line.removed .line-marker {
+    color: #f87171;
   }
 
-  .jump-nav-type.removed {
-    color: var(--color-status-error, #dc2626);
-  }
-
-  .jump-nav-line {
+  .line-code {
     flex: 1;
+    padding: 0 8px;
+    white-space: pre;
+    color: #c9d1d9;
+    overflow-x: auto;
   }
 
-  .code-line.highlight-change {
-    animation: highlight-pulse 2s ease-out;
+  .diff-line.added .line-code {
+    color: #b8e6c8;
+  }
+  .diff-line.removed .line-code {
+    color: #f5b3b3;
+    text-decoration: line-through;
+    text-decoration-color: rgba(248, 113, 113, 0.3);
   }
 
-  @keyframes highlight-pulse {
-    0% {
-      background: var(--color-accent-primary-light, rgba(0, 102, 255, 0.2));
-      box-shadow: 0 0 0 0 rgba(0, 102, 255, 0.4);
-    }
-    50% {
-      background: var(--color-accent-primary-light, rgba(0, 102, 255, 0.15));
-      box-shadow: 0 0 0 4px rgba(0, 102, 255, 0);
-    }
-    100% {
-      background: transparent;
-      box-shadow: 0 0 0 0 rgba(0, 102, 255, 0);
-    }
+  /* ── Split view ───────────────────────────────────────────────────── */
+  .split-view {
+    display: flex;
+    max-height: 500px;
+    overflow: auto;
   }
 
-  .code-line.added.highlight-change {
-    animation: highlight-pulse-added 2s ease-out;
+  .split-pane {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
   }
 
-  @keyframes highlight-pulse-added {
-    0% {
-      background: rgba(5, 150, 105, 0.3);
-      box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.4);
-    }
-    50% {
-      background: rgba(5, 150, 105, 0.2);
-      box-shadow: 0 0 0 4px rgba(5, 150, 105, 0);
-    }
-    100% {
-      background: var(--color-diff-added-bg, #dcfce7);
-      box-shadow: 0 0 0 0 rgba(5, 150, 105, 0);
-    }
+  .split-pane:first-child {
+    border-right: 1px solid rgba(99, 102, 241, 0.08);
   }
 
-  .code-line.removed.highlight-change {
-    animation: highlight-pulse-removed 2s ease-out;
+  .pane-label {
+    padding: 4px 12px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #484f58;
+    background: #161b22;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.06);
   }
 
-  @keyframes highlight-pulse-removed {
-    0% {
-      background: rgba(220, 38, 38, 0.3);
-      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
-    }
-    50% {
-      background: rgba(220, 38, 38, 0.2);
-      box-shadow: 0 0 0 4px rgba(220, 38, 38, 0);
-    }
-    100% {
-      background: var(--color-diff-removed-bg, #fee2e2);
-      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
-    }
+  .pane-body {
+    overflow-x: auto;
+  }
+
+  .split-pane .diff-line .line-num {
+    min-width: 36px;
+  }
+
+  .split-pane .diff-line .line-code {
+    padding: 0 8px;
   }
 </style>

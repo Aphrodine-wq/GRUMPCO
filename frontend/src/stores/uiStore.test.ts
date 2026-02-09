@@ -11,16 +11,14 @@ import {
   showSettings,
   showAskDocs,
   showVoiceCode,
-  showSwarm,
   showDesignToCode,
   showCostDashboard,
   sidebarOpen,
   showIntegrations,
   showApprovals,
-  showHeartbeats,
+
   showMemory,
   showAuditLog,
-  showAdvancedAI,
   showDocker,
   showCloudDashboard,
   sidebarCollapsed,
@@ -34,16 +32,14 @@ describe('uiStore', () => {
     showSettings.set(false);
     showAskDocs.set(false);
     showVoiceCode.set(false);
-    showSwarm.set(false);
     showDesignToCode.set(false);
     showCostDashboard.set(false);
     sidebarOpen.set(true);
     showIntegrations.set(false);
     showApprovals.set(false);
-    showHeartbeats.set(false);
+
     showMemory.set(false);
     showAuditLog.set(false);
-    showAdvancedAI.set(false);
     showDocker.set(false);
     showCloudDashboard.set(false);
     sidebarCollapsed.set(false);
@@ -85,16 +81,7 @@ describe('uiStore', () => {
     });
   });
 
-  describe('showSwarm', () => {
-    it('should default to false', () => {
-      expect(get(showSwarm)).toBe(false);
-    });
 
-    it('should toggle agent swarm visualizer', () => {
-      showSwarm.set(true);
-      expect(get(showSwarm)).toBe(true);
-    });
-  });
 
   describe('showDesignToCode', () => {
     it('should default to false', () => {
@@ -153,16 +140,7 @@ describe('uiStore', () => {
     });
   });
 
-  describe('showHeartbeats', () => {
-    it('should default to false', () => {
-      expect(get(showHeartbeats)).toBe(false);
-    });
 
-    it('should toggle heartbeats manager', () => {
-      showHeartbeats.set(true);
-      expect(get(showHeartbeats)).toBe(true);
-    });
-  });
 
   describe('showMemory', () => {
     it('should default to false', () => {
@@ -186,16 +164,7 @@ describe('uiStore', () => {
     });
   });
 
-  describe('showAdvancedAI', () => {
-    it('should default to false', () => {
-      expect(get(showAdvancedAI)).toBe(false);
-    });
 
-    it('should toggle advanced AI dashboard', () => {
-      showAdvancedAI.set(true);
-      expect(get(showAdvancedAI)).toBe(true);
-    });
-  });
 
   describe('showDocker', () => {
     it('should default to false', () => {

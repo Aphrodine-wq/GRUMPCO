@@ -19,7 +19,7 @@
  */
 
 import { getRequestLogger } from "../../middleware/logger.js";
-import { generateFixPlan } from "../wrunnerService.js";
+import { generateFixPlan } from "../ship/wrunnerService.js";
 import type {
   GenerationSession,
   AgentType,
@@ -72,7 +72,7 @@ export async function applyAutoFixes(
       );
 
       const fixDescription = issue.suggestedFixes
-        .map((f) => f.action)
+        .map((f: { action: string }) => f.action)
         .join("; ");
       appliedFixes.push({
         issueId: issue.id,

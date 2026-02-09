@@ -14,13 +14,13 @@ import {
   startPlanExecution,
   completePlanExecution,
   updatePhaseStatus,
-} from "../services/planService.js";
+} from "../services/ship/planService.js";
 import {
   runPlanCli,
   type Plan as RustPlan,
-} from "../services/intentCliRunner.js";
-import { gAgentTaskExecutor } from "../services/gAgentTaskExecutor.js";
-import { gAgentMemoryService } from "../services/gAgentMemoryService.js";
+} from "../services/intent/intentCliRunner.js";
+import { gAgentTaskExecutor } from "../services/agents/gAgentTaskExecutor.js";
+import { gAgentMemoryService } from "../services/agents/gAgentMemoryService.js";
 import type {
   PlanGenerationRequest,
   PlanApprovalRequest,
@@ -308,7 +308,7 @@ router.post(
       // If starting from a specific phase, update phase statuses
       if (executionRequest.startFromPhase) {
         const phaseIndex = plan.phases.findIndex(
-          (p) => p.id === executionRequest.startFromPhase,
+          (p: { id: string }) => p.id === executionRequest.startFromPhase,
         );
         if (phaseIndex > 0) {
           // Mark previous phases as completed

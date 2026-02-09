@@ -8,7 +8,7 @@ import type {
   CodePattern,
   OptimizationOpportunity,
   CodeQualityRequirements,
-} from "../services/intentCompilerService.js";
+} from "../services/intent/intentCompilerService.js";
 import type { SystemArchitecture } from "./architecture.js";
 import type { PRD } from "./prd.js";
 import type { AgentType } from "./agents.js";

@@ -59,7 +59,7 @@ npm run format             # Format with Prettier
 ## Architecture
 
 ### Request Flow
-Frontend (Svelte 5 / Vite) → `/api` proxy → Backend (Express 5, port 3000) → AI providers (NVIDIA NIM/Kimi K2.5, OpenRouter, Groq, Ollama)
+Frontend (Svelte 5 / Vite) → `/api` proxy → Backend (Express 5, port 3000) → AI providers (NVIDIA NIM/Kimi K2.5, OpenRouter, Ollama)
 
 The backend uses SSE (Server-Sent Events) for streaming AI responses to the frontend.
 
@@ -169,7 +169,7 @@ Older, superseded, or specialized docs are in `docs/archive/` for reference.
 |----------|---------|---------------------|
 | NVIDIA NIM | Primary, GPU-accelerated | `NVIDIA_NIM_API_KEY` |
 | OpenRouter | Multi-model fallback | `OPENROUTER_API_KEY` |
-| Groq | Fast inference | `GROQ_API_KEY` |
+| Anthropic | Claude models | `ANTHROPIC_API_KEY` |
 | Ollama | Local/offline | `OLLAMA_URL` |
 
 ## Version Information

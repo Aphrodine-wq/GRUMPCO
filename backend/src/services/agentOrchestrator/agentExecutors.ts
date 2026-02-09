@@ -23,7 +23,7 @@ import { getDocsAgentPrompt } from "../../prompts/agents/docs-agent.js";
 import {
   enrichContextForAgent,
   generateContextSummary,
-} from "../contextService.js";
+} from "../rag/contextService.js";
 import { generateAgentWorkReport } from "./workReports.js";
 import {
   resilientLlmCall,

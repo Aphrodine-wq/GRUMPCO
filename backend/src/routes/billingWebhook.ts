@@ -4,7 +4,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { handleWebhook } from '../services/stripeService.js';
+import { handleWebhook } from '../services/integrations/stripeService.js';
 
 export async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
   const payload = req.body;

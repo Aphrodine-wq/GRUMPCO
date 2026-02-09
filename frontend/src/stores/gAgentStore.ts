@@ -1,7 +1,7 @@
 /**
- * G-Agent Store
+ * Agent Store
  *
- * Main store for G-Agent state management including:
+ * Main store for Agent state management including:
  * - Goal queue management
  * - Agent status tracking
  * - SSE event streaming
@@ -192,11 +192,11 @@ export const gAgentStore = {
 
     eventSource.onopen = () => {
       store.update((s) => ({ ...s, isConnected: true, error: null }));
-      console.log('[G-Agent] SSE connected');
+      // Connection established successfully
     };
 
     eventSource.onerror = (error) => {
-      console.error('[G-Agent] SSE error:', error);
+      console.error('[Agent] SSE error:', error);
       store.update((s) => ({ ...s, isConnected: false }));
 
       // Attempt reconnection after 5 seconds
@@ -237,7 +237,7 @@ export const gAgentStore = {
           this.handleSSEEvent(event);
           this.emitSSEEvent(event);
         } catch (err) {
-          console.warn(`[G-Agent] Failed to parse ${eventType} event:`, err);
+          console.warn(`[Agent] Failed to parse ${eventType} event:`, err);
         }
       });
     }
@@ -621,7 +621,7 @@ export const gAgentStore = {
   // ==========================================================================
 
   /**
-   * Fetch comprehensive G-Agent status
+   * Fetch comprehensive Agent status
    */
   async fetchStatus(sessionId?: string): Promise<GAgentStatus> {
     store.update((s) => ({ ...s, isLoading: true }));

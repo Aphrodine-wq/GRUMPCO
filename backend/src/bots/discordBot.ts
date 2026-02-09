@@ -6,8 +6,8 @@
 
 // discord.js types have known issues with GatewayIntentBits export
 import { Client, GatewayIntentBits, type TextChannel } from "discord.js";
-import { processMessage } from "../services/messagingService.js";
-import { setDiscordSendFn } from "../services/messagingShipNotifier.js";
+import { processMessage } from "../services/integrations/messagingService.js";
+import { setDiscordSendFn } from "../services/integrations/messagingShipNotifier.js";
 import logger from "../middleware/logger.js";
 
 let client: Client | null = null;

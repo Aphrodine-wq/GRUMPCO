@@ -7,7 +7,7 @@
 
 import { Router, type Request, type Response } from "express";
 import logger from "../middleware/logger.js";
-import { enqueueGmailJob } from "../services/gmailJobQueue.js";
+import { enqueueGmailJob } from "../services/integrations/gmailJobQueue.js";
 
 const router = Router();
 

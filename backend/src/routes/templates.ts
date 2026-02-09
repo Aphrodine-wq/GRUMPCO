@@ -3,7 +3,7 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { listTemplates, getTemplate } from "../services/templateService.js";
+import { listTemplates, getTemplate } from "../services/ship/templateService.js";
 
 const router = Router();
 

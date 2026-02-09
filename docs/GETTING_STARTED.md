@@ -196,14 +196,6 @@ Multi-model access with pay-as-you-go pricing.
 echo "OPENROUTER_API_KEY=sk-or-v1-your-key" >> backend/.env
 ```
 
-#### Groq
-
-Ultra-fast inference.
-
-```bash
-echo "GROQ_API_KEY=gsk-your-key" >> backend/.env
-```
-
 #### Ollama (Local)
 
 Run models locally for offline use.
@@ -224,7 +216,6 @@ Key configuration options in `backend/.env`:
 # AI Provider (choose ONE)
 NVIDIA_NIM_API_KEY=nvapi-your-key
 # OPENROUTER_API_KEY=sk-or-v1-your-key
-# GROQ_API_KEY=gsk-your-key
 
 # Server Configuration
 NODE_ENV=development

@@ -1,7 +1,7 @@
 /**
- * G-Agent Config Store
+ * Agent Config Store
  *
- * Svelte store for G-Agent configuration management including:
+ * Svelte store for Agent configuration management including:
  * - Feature flags
  * - Autonomy level control
  * - Config presets

@@ -1,6 +1,6 @@
 {
   "name": "g-rump",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "license": "MIT",
   "type": "module",
   "description": "G-Rump AI Development Platform",
@@ -103,7 +103,8 @@
     ],
     "win": {
       "target": "portable",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "signAndEditExecutable": false
     },
     "portable": {
       "artifactName": "grump.exe"
@@ -111,7 +112,9 @@
     "extraMetadata": {
       "main": "electron/main.cjs"
     },
-    "asar": true,
-    "compression": "maximum"
+    "asarUnpack": [
+      "*.node"
+    ],
+    "compression": "normal"
   }
 }

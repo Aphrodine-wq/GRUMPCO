@@ -91,7 +91,7 @@ export async function handleGoalMode(
   const { requestId, session, emitEvent } = ctx;
 
   // Import goal queue lazily to avoid circular deps
-  const { gAgentGoalQueue } = await import("../services/gAgentGoalQueue.js");
+  const { gAgentGoalQueue } = await import("../services/agents/gAgentGoalQueue.js");
 
   const goal = await gAgentGoalQueue.createGoal({
     userId: request.userId,
@@ -137,7 +137,7 @@ export async function handlePlanMode(
   }
 
   // Generate plan using intent CLI (existing infrastructure)
-  const { runPlanCli } = await import("../services/intentCliRunner.js");
+  const { runPlanCli } = await import("../services/intent/intentCliRunner.js");
   const plan = await runPlanCli(request.message);
 
   session.planId = plan.id;
@@ -235,7 +235,7 @@ export async function handleSwarmMode(
   const { requestId, session, emitEvent } = ctx;
 
   // Import swarm service lazily
-  const { runSwarm } = await import("../services/swarmService.js");
+  const { runSwarm } = await import("../services/agents/swarmService.js");
 
   const results: Array<{ agentId: string; output: string }> = [];
   let summaryText = "";
@@ -293,7 +293,7 @@ export async function handleCodegenMode(
   const { generateCodeFromGoal } = await import("./agentLightningBridge.js");
 
   // Create a goal to track this codegen request
-  const { gAgentGoalQueue } = await import("../services/gAgentGoalQueue.js");
+  const { gAgentGoalQueue } = await import("../services/agents/gAgentGoalQueue.js");
 
   const goal = await gAgentGoalQueue.createGoal({
     userId: request.userId,
@@ -386,7 +386,7 @@ export async function handleCodegenMode(
 
     if (request.workspaceRoot) {
       const { generateProjectDocs } =
-        await import("../services/generateProjectDocs.js");
+        await import("../services/ship/generateProjectDocs.js");
       const docResult = await generateProjectDocs(request.workspaceRoot, {
         projectName: result.projectName,
       });
@@ -398,8 +398,8 @@ export async function handleCodegenMode(
       }
 
       const { runProjectTests } =
-        await import("../services/runProjectTests.js");
-      const { runProjectLint } = await import("../services/runProjectLint.js");
+        await import("../services/ship/runProjectTests.js");
+      const { runProjectLint } = await import("../services/ship/runProjectLint.js");
       const testResult = await runProjectTests(request.workspaceRoot);
       testsPassed = testResult.passed;
       testsOutput = testResult.stdout ?? testResult.stderr ?? testResult.error;
@@ -435,7 +435,7 @@ export async function handleCodegenMode(
       }
 
       const { runProjectBundleReport } =
-        await import("../services/runProjectBundleReport.js");
+        await import("../services/ship/runProjectBundleReport.js");
       const bundleResult = await runProjectBundleReport(request.workspaceRoot);
       if (bundleResult.success && bundleResult.summary) {
         bundleSize = bundleResult.summary;
@@ -548,7 +548,7 @@ export async function handleAutonomousMode(
   }
 
   // Create goal with autonomous flag
-  const { gAgentGoalQueue } = await import("../services/gAgentGoalQueue.js");
+  const { gAgentGoalQueue } = await import("../services/agents/gAgentGoalQueue.js");
 
   const goal = await gAgentGoalQueue.createGoal({
     userId: request.userId,
@@ -598,7 +598,7 @@ export async function handleChatMode(
   }
 
   if (message.includes("status") && session.goalId) {
-    const { gAgentGoalQueue } = await import("../services/gAgentGoalQueue.js");
+    const { gAgentGoalQueue } = await import("../services/agents/gAgentGoalQueue.js");
     const goal = await gAgentGoalQueue.getGoal(session.goalId);
 
     if (goal) {

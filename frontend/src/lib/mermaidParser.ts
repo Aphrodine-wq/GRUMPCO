@@ -4,6 +4,11 @@
  * Uses stable ids (sanitized) so backend and frontend agree on section identity.
  */
 
+// CSS.escape type declaration for browsers that support it
+declare const CSS: {
+  escape(str: string): string;
+};
+
 export interface MermaidSection {
   id: string;
   title: string;

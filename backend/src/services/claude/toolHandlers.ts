@@ -18,7 +18,7 @@ import {
   type FileEditInput,
   type ListDirectoryInput,
 } from "../../tools/index.js";
-import { type ToolExecutionService } from "../toolExecutionService.js";
+import { type ToolExecutionService } from "../workspace/toolExecutionService.js";
 import logger from "../../middleware/logger.js";
 
 // ============================================================================

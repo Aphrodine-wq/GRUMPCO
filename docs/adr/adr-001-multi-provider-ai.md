@@ -104,6 +104,6 @@ const PROVIDERS = {
 ---
 
 **Review Notes:**
-- Approved 2026-02-05 after removing Groq/Grok/direct OpenAI
+- Approved 2026-02-05 after removing Grok/direct OpenAI
 - Added Mistral AI for European compliance
 - Added GitHub Copilot for code specialization

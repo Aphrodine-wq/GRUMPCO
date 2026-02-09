@@ -45,7 +45,7 @@ describe('smartRetry', () => {
         { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hello' } },
         { type: 'message_stop' },
       ];
-      
+
       const mockStreamFn = vi.fn().mockImplementation(async function* () {
         for (const event of events) {
           yield event;
@@ -53,7 +53,7 @@ describe('smartRetry', () => {
       });
 
       const results: StreamEvent[] = [];
-      for await (const event of smartRetry.executeWithRetry('groq', {} as StreamParams, mockStreamFn)) {
+      for await (const event of smartRetry.executeWithRetry('nim', {} as StreamParams, mockStreamFn)) {
         results.push(event);
       }
 
@@ -67,7 +67,7 @@ describe('smartRetry', () => {
         { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hello' } },
         { type: 'message_stop' },
       ];
-      
+
       const mockStreamFn = vi.fn().mockImplementation(async function* () {
         attemptCount++;
         if (attemptCount === 1) {
@@ -79,7 +79,7 @@ describe('smartRetry', () => {
       });
 
       const results: StreamEvent[] = [];
-      for await (const event of smartRetry.executeWithRetry('groq', {} as StreamParams, mockStreamFn)) {
+      for await (const event of smartRetry.executeWithRetry('nim', {} as StreamParams, mockStreamFn)) {
         results.push(event);
       }
 
@@ -89,7 +89,7 @@ describe('smartRetry', () => {
 
     it('should fallback to different provider after retries', async () => {
       const mockStreamFn = vi.fn().mockImplementation(async function* (provider: LLMProvider) {
-        if (provider === 'groq') {
+        if (provider === 'nim') {
           throw new Error('Service unavailable');
         }
         yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Success' } };
@@ -98,8 +98,8 @@ describe('smartRetry', () => {
 
       const results: StreamEvent[] = [];
       for await (const event of smartRetry.executeWithRetry(
-        'groq', 
-        {} as StreamParams, 
+        'nim',
+        {} as StreamParams,
         mockStreamFn,
         { maxAttempts: 2 }
       )) {
@@ -116,7 +116,7 @@ describe('smartRetry', () => {
 
       const results: StreamEvent[] = [];
       for await (const event of smartRetry.executeWithRetry(
-        'groq',
+        'nim',
         {} as StreamParams,
         mockStreamFn,
         { maxAttempts: 1 }
@@ -133,7 +133,7 @@ describe('smartRetry', () => {
         yield { type: 'message_stop' };
       });
 
-      for await (const _ of smartRetry.executeWithRetry('groq', {} as StreamParams, mockStreamFn)) {
+      for await (const _ of smartRetry.executeWithRetry('nim', {} as StreamParams, mockStreamFn)) {
         // consume
       }
 
@@ -164,16 +164,16 @@ describe('smartRetry', () => {
       const mockStreamFn = vi.fn().mockImplementation(async function* () {
         throw new Error('timeout');
       });
-      
+
       // Create some failures first
       for (let i = 0; i < 3; i++) {
         try {
           for await (const _ of smartRetry.executeWithRetry(
-            'groq',
+            'nim',
             {} as StreamParams,
             mockStreamFn,
             { maxAttempts: 1 }
-          )) {}
+          )) { }
         } catch {
           // expected
         }
@@ -226,7 +226,7 @@ describe('smartRetry', () => {
         yield { type: 'message_stop' };
       });
 
-      for await (const _ of smartRetry.executeWithRetry('groq', {} as StreamParams, mockStreamFn)) {}
+      for await (const _ of smartRetry.executeWithRetry('nim', {} as StreamParams, mockStreamFn)) { }
 
       expect(attempts).toBe(2);
     });
@@ -245,7 +245,7 @@ describe('smartRetry', () => {
         yield { type: 'message_stop' };
       });
 
-      for await (const _ of customRetry.executeWithRetry('groq', {} as StreamParams, mockStreamFn)) {}
+      for await (const _ of customRetry.executeWithRetry('nim', {} as StreamParams, mockStreamFn)) { }
 
       expect(mockStreamFn).toHaveBeenCalled();
     });

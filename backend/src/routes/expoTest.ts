@@ -9,7 +9,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
-import { enqueueExpoTestJob } from "../services/jobQueue.js";
+import { enqueueExpoTestJob } from "../services/infra/jobQueue.js";
 import { getDatabase } from "../db/database.js";
 import { getRequestLogger } from "../middleware/logger.js";
 import {

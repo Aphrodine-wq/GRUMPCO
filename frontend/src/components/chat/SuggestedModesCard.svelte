@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * SuggestedModesCard - AI-offers-modes UI
-   * Displays suggested next actions (Chat, Design mode, Design to Code, G-Agent) after assistant responds.
+   * Displays suggested next actions (Chat, Design mode, Design to Code, Agent) after assistant responds.
    * Visually stunning card layout with icons and subtle animations.
    */
   import { fade, fly } from 'svelte/transition';
@@ -26,7 +26,7 @@
     { id: 'chat', label: 'Continue Chat', icon: MessageCircle, view: 'chat' },
     { id: 'designMode', label: 'Design mode', icon: Palette, view: 'designMode' },
     { id: 'design', label: 'Design to Code', icon: LayoutGrid, view: 'designToCode' },
-    { id: 'gagent', label: 'G-Agent', icon: Bot, view: 'gAgent' },
+    { id: 'gagent', label: 'Agent', icon: Bot, view: 'gAgent' },
     { id: 'swarm', label: 'Agent Swarm', icon: Users, view: 'swarm' },
   ];
 </script>

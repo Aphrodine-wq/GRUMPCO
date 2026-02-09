@@ -1,5 +1,3 @@
-version: '3.8'
-
 # AMD ROCm GPU overlay for G-Rump
 #
 # Usage: docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.rocm.yml up -d
@@ -40,7 +38,7 @@ services:
     group_add:
       - video
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: [ "CMD", "curl", "-f", "http://localhost:11434/api/tags" ]
       interval: 30s
       timeout: 10s
       retries: 5

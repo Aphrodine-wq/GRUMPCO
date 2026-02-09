@@ -8,8 +8,8 @@ import rateLimit, { type RateLimitRequestHandler } from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
 import type { Request, Response } from "express";
 import logger from "./logger.js";
-import { getRedisClient, isRedisConnected } from "../services/redis.js";
-import type { TierId } from "../services/featureFlagsService.js";
+import { getRedisClient, isRedisConnected } from "../services/infra/redis.js";
+import type { TierId } from "../services/platform/featureFlagsService.js";
 
 interface RateLimitConfig {
   windowMs: number;

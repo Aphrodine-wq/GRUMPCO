@@ -20,7 +20,6 @@ We use third-party services that may process your data, including:
 
 - **NVIDIA NIM** – For AI inference (Kimi K2.5). See [NVIDIA's privacy policy](https://www.nvidia.com/en-us/about-nvidia/privacy-policy/).
 - **OpenRouter** – For AI model routing. See [OpenRouter's privacy policy](https://openrouter.ai/privacy).
-- **Groq** – For fast AI inference. See [Groq's privacy policy](https://groq.com/privacy/).
 - **Anthropic** – For Claude AI model capabilities. See [Anthropic's privacy policy](https://www.anthropic.com/legal/privacy).
 - **Supabase** – For authentication and data storage when applicable. See [Supabase's privacy policy](https://supabase.com/privacy).
 - **Stripe** – For payment processing when applicable. See [Stripe's privacy policy](https://stripe.com/privacy).

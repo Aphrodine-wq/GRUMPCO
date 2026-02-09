@@ -16,6 +16,7 @@
 
 import { EventEmitter } from "events";
 import { messageBus, CHANNELS } from "./messageBus.js";
+import logger from "../middleware/logger.js";
 
 // ============================================================================
 // CONSTANTS - Token Costs (per 1M tokens, in cents)
@@ -26,24 +27,24 @@ import { messageBus, CHANNELS } from "./messageBus.js";
  * Updated: 2024 pricing
  */
 export const MODEL_PRICING: Record<string, { input: number; output: number }> =
-  {
-    // Claude models (Anthropic)
-    "claude-3-opus": { input: 1500, output: 7500 }, // $15/$75
-    "claude-3-sonnet": { input: 300, output: 1500 }, // $3/$15
-    "claude-3-haiku": { input: 25, output: 125 }, // $0.25/$1.25
-    "claude-3.5-sonnet": { input: 300, output: 1500 }, // $3/$15
-    "claude-3.5-haiku": { input: 100, output: 500 }, // $1/$5
+{
+  // Claude models (Anthropic)
+  "claude-3-opus": { input: 1500, output: 7500 }, // $15/$75
+  "claude-3-sonnet": { input: 300, output: 1500 }, // $3/$15
+  "claude-3-haiku": { input: 25, output: 125 }, // $0.25/$1.25
+  "claude-3.5-sonnet": { input: 300, output: 1500 }, // $3/$15
+  "claude-3.5-haiku": { input: 100, output: 500 }, // $1/$5
 
-    // GPT models (OpenAI)
-    "gpt-4-turbo": { input: 1000, output: 3000 }, // $10/$30
-    "gpt-4": { input: 3000, output: 6000 }, // $30/$60
-    "gpt-4o": { input: 500, output: 1500 }, // $5/$15
-    "gpt-4o-mini": { input: 15, output: 60 }, // $0.15/$0.60
-    "gpt-3.5-turbo": { input: 50, output: 150 }, // $0.50/$1.50
+  // GPT models (OpenAI)
+  "gpt-4-turbo": { input: 1000, output: 3000 }, // $10/$30
+  "gpt-4": { input: 3000, output: 6000 }, // $30/$60
+  "gpt-4o": { input: 500, output: 1500 }, // $5/$15
+  "gpt-4o-mini": { input: 15, output: 60 }, // $0.15/$0.60
+  "gpt-3.5-turbo": { input: 50, output: 150 }, // $0.50/$1.50
 
-    // Default for unknown models
-    default: { input: 300, output: 1500 },
-  };
+  // Default for unknown models
+  default: { input: 300, output: 1500 },
+};
 
 /**
  * Default budget configuration
@@ -308,7 +309,7 @@ export class BudgetManager extends EventEmitter {
 
       const cost = Math.ceil(
         (op.estimatedInputTokens * pricing.input) / 1_000_000 +
-          (op.estimatedOutputTokens * pricing.output) / 1_000_000,
+        (op.estimatedOutputTokens * pricing.output) / 1_000_000,
       );
 
       // Estimate duration (rough: 50 tokens/sec)
@@ -372,7 +373,7 @@ export class BudgetManager extends EventEmitter {
     const pricing = MODEL_PRICING[model] || MODEL_PRICING["default"];
     const cost = Math.ceil(
       (inputTokens * pricing.input) / 1_000_000 +
-        (expectedOutputTokens * pricing.output) / 1_000_000,
+      (expectedOutputTokens * pricing.output) / 1_000_000,
     );
 
     return {
@@ -394,7 +395,7 @@ export class BudgetManager extends EventEmitter {
   ): CostOperation | null {
     const tracker = this.trackers.get(sessionId);
     if (!tracker) {
-      console.warn(`[BudgetManager] No tracker for session: ${sessionId}`);
+      logger.warn({ sessionId }, "[BudgetManager] No tracker for session");
       return null;
     }
 
@@ -465,7 +466,7 @@ export class BudgetManager extends EventEmitter {
     const pricing = MODEL_PRICING[model] || MODEL_PRICING["default"];
     const cost = Math.ceil(
       (tokensIn * pricing.input) / 1_000_000 +
-        (tokensOut * pricing.output) / 1_000_000,
+      (tokensOut * pricing.output) / 1_000_000,
     );
 
     return this.recordCost(sessionId, {

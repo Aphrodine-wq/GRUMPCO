@@ -42,10 +42,10 @@
   const navItems: NavItem[] = [
     {
       view: 'gAgent',
-      label: 'G-Agent',
-      keywords: ['g-agent', 'gagent', 'agent', 'autonomous'],
+      label: 'Agent',
+      keywords: ['agent', 'autonomous'],
       group: 'build',
-      icon: 'g-agent',
+      icon: 'agent',
     },
     {
       view: 'voiceCode',
@@ -90,13 +90,6 @@
       keywords: ['approvals'],
       group: 'ai',
       icon: 'approvals',
-    },
-    {
-      view: 'heartbeats',
-      label: 'Scheduled tasks',
-      keywords: ['scheduled', 'tasks', 'cron'],
-      group: 'ai',
-      icon: 'heartbeats',
     },
     { view: 'docker', label: 'Docker', keywords: ['docker'], group: 'infra', icon: 'docker' },
     {
@@ -144,7 +137,7 @@
 
   const iconMap: Record<string, typeof Bot> = {
     canvas: LayoutGrid,
-    'g-agent': Bot,
+    agent: Bot,
     design: LayoutGrid,
     voice: Mic,
     docs: BookOpen,
@@ -342,7 +335,7 @@
             <div class="session-name" class:collapsed={effectiveCollapsed}>
               {truncateText(session.name)}
               {#if (session.sessionType === 'gAgent' || session.sessionType === 'freeAgent') && !collapsed}
-                <span class="session-type-badge" title="G-Agent session">GA</span>
+                <span class="session-type-badge" title="Agent session">A</span>
               {/if}
             </div>
             {#if !effectiveCollapsed}

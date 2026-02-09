@@ -114,8 +114,6 @@ const envSchema = z
     // Mistral AI - https://mistral.ai
     MISTRAL_API_KEY: z.string().optional(),
 
-    // Groq - https://groq.com
-    GROQ_API_KEY: z.string().optional(),
 
     // Jan - Local AI (OpenAI-compatible, default port 1337)
     JAN_BASE_URL: z
@@ -140,7 +138,6 @@ const envSchema = z
         "openrouter",
         "anthropic",
         "ollama",
-        "groq",
       ])
       .default("nim"),
     ROUTER_QUALITY_PROVIDER: z
@@ -152,7 +149,6 @@ const envSchema = z
         "github-copilot",
         "kimi",
         "ollama",
-        "groq",
       ])
       .default("anthropic"),
     ROUTER_CODING_PROVIDER: z
@@ -164,7 +160,6 @@ const envSchema = z
         "openrouter",
         "kimi",
         "ollama",
-        "groq",
       ])
       .default("github-copilot"),
 
@@ -225,6 +220,7 @@ const envSchema = z
       .default("block"),
     AGENT_ALLOWLIST: z.string().optional(),
     AGENT_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().optional(),
+    /** @deprecated Use G_AGENT_ENABLED instead. Kept for backward compat with existing .env files. */
     FREE_AGENT_ENABLED: z
       .string()
       .optional()
@@ -410,14 +406,14 @@ const envSchema = z
 
       // Check if any provider is configured
       const hasProvider = Boolean(
-        data.NVIDIA_NIM_API_KEY || data.OPENROUTER_API_KEY || data.GROQ_API_KEY,
+        data.NVIDIA_NIM_API_KEY || data.OPENROUTER_API_KEY,
       );
 
       return hasProvider;
     },
     {
       message:
-        "At least one AI provider API key is required (NVIDIA_NIM_API_KEY, OPENROUTER_API_KEY, or GROQ_API_KEY). Set MOCK_AI_MODE=true for zero-config mode. Get free keys: https://build.nvidia.com/",
+        "At least one AI provider API key is required (NVIDIA_NIM_API_KEY or OPENROUTER_API_KEY). Set MOCK_AI_MODE=true for zero-config mode. Get free keys: https://build.nvidia.com/",
     },
   )
   .superRefine((data, ctx) => {
@@ -606,7 +602,7 @@ if (parseResult.success) {
   const providers: string[] = [];
   if (env.NVIDIA_NIM_API_KEY) providers.push("NVIDIA NIM");
   if (env.OPENROUTER_API_KEY) providers.push("OpenRouter");
-  if (env.GROQ_API_KEY) providers.push("Groq");
+
   if (env.OLLAMA_BASE_URL && env.OLLAMA_BASE_URL !== "http://localhost:11434") {
     providers.push("Ollama");
   }
@@ -702,7 +698,6 @@ export type ApiProvider =
   | "kimi"
   | "anthropic"
   | "mistral"
-  | "groq"
   | "google";
 
 export function getApiKey(provider: ApiProvider): string | undefined {
@@ -723,8 +718,7 @@ export function getApiKey(provider: ApiProvider): string | undefined {
       return env.ANTHROPIC_API_KEY;
     case "mistral":
       return env.MISTRAL_API_KEY;
-    case "groq":
-      return env.GROQ_API_KEY;
+
     case "google":
       return env.GOOGLE_AI_API_KEY;
     default:
@@ -753,8 +747,7 @@ export function isProviderConfigured(provider: ApiProvider): boolean {
       return Boolean(env.ANTHROPIC_API_KEY);
     case "mistral":
       return Boolean(env.MISTRAL_API_KEY);
-    case "groq":
-      return Boolean(env.GROQ_API_KEY);
+
     case "google":
       return Boolean(env.GOOGLE_AI_API_KEY);
     default:
@@ -775,7 +768,7 @@ export function getConfiguredProviders(): ApiProvider[] {
   if (env.KIMI_API_KEY) providers.push("kimi");
   if (env.ANTHROPIC_API_KEY) providers.push("anthropic");
   if (env.MISTRAL_API_KEY) providers.push("mistral");
-  if (env.GROQ_API_KEY) providers.push("groq");
+
   if (env.GOOGLE_AI_API_KEY) providers.push("google");
   return providers;
 }

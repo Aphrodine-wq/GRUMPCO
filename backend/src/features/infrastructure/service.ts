@@ -4,7 +4,7 @@
  * Generates Kubernetes, Terraform, Docker, and CI/CD configurations.
  */
 
-import { getStream, type StreamParams } from "../../services/llmGateway.js";
+import { getStream, type StreamParams } from "../../services/ai-providers/llmGateway.js";
 import {
   type K8sGenerationRequest,
   type K8sGenerationResult,

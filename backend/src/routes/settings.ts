@@ -18,7 +18,7 @@ import {
   QUICK_START_TEMPLATES,
   applyQuickStartTemplate,
   getProgressiveConfig,
-} from "../services/zeroConfigService.js";
+} from "../services/platform/zeroConfigService.js";
 
 const router = Router();
 const DEFAULT_USER_KEY = "default";

@@ -11,8 +11,8 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { processMessage } from "../services/messagingService.js";
-import { sendTelegram, sendTwilio } from "../services/messagingShipNotifier.js";
+import { processMessage } from "../services/integrations/messagingService.js";
+import { sendTelegram, sendTwilio } from "../services/integrations/messagingShipNotifier.js";
 import { getDatabase } from "../db/database.js";
 import logger from "../middleware/logger.js";
 import { timingSafeEqualString } from "../utils/security.js";
@@ -325,7 +325,7 @@ router.post("/discord", async (req: Request, res: Response) => {
   // Send reply via Discord bot
   try {
     const { sendDiscord } = await import(
-      "../services/messagingShipNotifier.js"
+      "../services/integrations/messagingShipNotifier.js"
     );
     await sendDiscord(channelId, reply);
   } catch (err) {
@@ -383,7 +383,7 @@ router.post("/slack", async (req: Request, res: Response) => {
       // Send reply via Slack
       try {
         const { sendSlack } = await import(
-          "../services/messagingShipNotifier.js"
+          "../services/integrations/messagingShipNotifier.js"
         );
         await sendSlack(channelId, reply);
       } catch (err) {

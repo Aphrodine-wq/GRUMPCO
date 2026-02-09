@@ -1,350 +1,349 @@
-# Testing Guide
+# G-Rump Testing & Setup Guide
 
-This document describes the testing strategy, structure, and requirements for the G-Rump project.
+## Quick Start
 
-**NVIDIA Golden Developer** — For synthetic data generation (`npm run data:synth`) and NeMo training, see [services/nemo-curator/](../services/nemo-curator/) and [services/nemo-training/](../services/nemo-training/).
+### Prerequisites
 
-## Test Structure
+1. **Node.js 20+** - Required for all packages
+2. **npm** - Package manager
+3. **Docker** (optional) - For Docker panel functionality
+4. **Rust toolchain** (optional) - For intent-compiler
 
-### Backend Tests
+### Initial Setup
 
-Located in `backend/tests/`:
+```bash
+# Clone the repository
+git clone https://github.com/Aphrodine-wq/G-rump.com.git
+cd G-rump.com
 
-- **Unit Tests** (`backend/tests/services/`): Test individual services in isolation
-- **Integration Tests** (`backend/tests/integration/`): Test API endpoints and workflows
-- **Middleware Tests** (`backend/tests/middleware/`): Test Express middleware
-- **Load Tests** (`backend/tests/load/`): k6 performance and stress tests
+# Install all dependencies (monorepo)
+npm install
 
-### Frontend Tests
+# Copy environment files
+cp backend/.env.example backend/.env
 
-Located in `frontend/`:
+# Start development servers
+npm run dev
+```
 
-- **Unit Tests**: Component and utility tests using Vitest (setup in `src/test/setup.ts`; Vitest excludes `e2e/` so Playwright specs are not run as unit tests).
-- **E2E Tests** (`frontend/e2e/`): End-to-end tests using Playwright (run with `npm run test:e2e`).
+---
 
-- **E2E Tests** (`frontend/e2e/`): See [Critical user journeys](#critical-user-journeys-e2e) below. Additional specs: `full-demo.spec.ts`, `intent-optimizer.spec.ts`, `share-flow.spec.ts`. See [DEMO_E2E_SCRIPT.md](DEMO_E2E_SCRIPT.md).
+## Required API Keys
 
-Frontend coverage thresholds are in `frontend/vitest.config.ts` (80% statements/lines/functions, 75% branches). Target: 100% on included code (Phase 2).
+### Minimum Required (pick one):
+
+| Provider | Key Variable | Get From | Purpose |
+|----------|--------------|----------|---------|
+| **NVIDIA NIM** | `NVIDIA_NIM_API_KEY` | https://build.nvidia.com/ | Primary AI (Kimi K2.5) |
+| **OpenRouter** | `OPENROUTER_API_KEY` | https://openrouter.ai/ | Multi-model fallback |
+
+### Optional (for full functionality):
+
+| Provider | Key Variable | Get From | Purpose |
+|----------|--------------|----------|---------|
+| Together AI | `TOGETHER_API_KEY` | https://together.ai/ | Open source models |
+| Supabase | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY` | https://supabase.com/ | Database (prod) |
+| Stripe | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | https://stripe.com/ | Billing |
+| Twilio | `TWILIO_*` vars | https://twilio.com/ | SMS/Voice |
+| NVIDIA Build | `NVIDIA_BUILD_API_KEY` | https://build.nvidia.com/ | Voice ASR/TTS |
+
+---
+
+## Environment Configuration
+
+### backend/.env (minimum):
+
+```env
+# Required: At least one AI provider
+NVIDIA_NIM_API_KEY=nvapi-your_key_here
+
+# Server
+NODE_ENV=development
+PORT=3000
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+
+# Database (SQLite for local dev)
+DB_TYPE=sqlite
+DB_PATH=./data/grump.db
+```
+
+### For Vercel Deployment:
+
+Add these secrets in Vercel dashboard:
+- `NVIDIA_NIM_API_KEY` or `OPENROUTER_API_KEY`
+- `NODE_ENV=production`
+- `DB_TYPE=supabase`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_KEY`
+
+---
 
 ## Running Tests
 
 ### Backend Tests
-
 ```bash
 cd backend
-
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
-
-# Generate coverage report (opens in browser)
-npm run test:coverage:report
-
-# Coverage for CI (JSON output)
-npm run test:coverage:ci
-
-# Run load tests (requires k6)
-npm run load-test
+npm test                    # Run all tests
+npm run test:coverage       # With coverage report
+npm run type-check          # TypeScript validation
+npm run lint                # Linting
 ```
 
 ### Frontend Tests
-
 ```bash
 cd frontend
-
-# Run unit tests
-npm run test:run
-
-# Run unit tests in watch mode
-npm run test:unit
-
-# Run tests with coverage
-npm run test:coverage
-
-# Generate coverage report
-npm run test:coverage:report
-
-# Coverage for CI
-npm run test:coverage:ci
-
-# Run E2E tests
-npm run test:e2e
-
-# Run E2E tests with UI
-npm run test:e2e:ui
-
-# Run E2E tests in CI mode
-npm run test:e2e:ci
+npm run test:run            # Run Vitest tests
+npm run test:e2e            # Playwright E2E tests
+npm run type-check          # Svelte/TS validation
+npm run build               # Production build test
 ```
 
-### Multi-agent evals
-
-Agent quality (architecture, PRD, ship, codegen, safety, scheduled agent, intent optimizer, **swarm**) is measured by offline evals:
-
+### E2E Tests (requires backend running)
 ```bash
-cd backend
+# Terminal 1: Start backend
+cd backend && npm run dev
 
-# Start the backend first (e.g. npm run dev or npm run start:prod)
-# Then run evals against EVAL_BASE_URL (default http://localhost:3000)
-npm run evals
+# Terminal 2: Run E2E
+cd frontend && npm run test:e2e
 ```
 
-- **Requirements**: Running backend at `EVAL_BASE_URL`; `ANTHROPIC_API_KEY` (or configured judge provider) for LLM-as-judge.
-- **Output**: `frontend/test-results/agent-evals.json` (aggregated scores). Swarm evals call `POST /api/agents/swarm`, consume the SSE stream, and judge the final summary (see `backend/tests/evals/swarmTasks.ts` and `judgeSwarm` in `judge.ts`).
-- **CI**: Agent evals run on PRs (`agent-evals-pr`) and on main (`agent-evals`); results are uploaded as artifacts and a score summary is published.
+---
 
-## Verifying model routing at runtime
+## Feature Testing Checklist
 
-The backend records which model was selected for each chat request in a Prometheus counter. You can confirm that routing (including Nemotron for long-context, RAG, swarm, and vision) is working as expected:
+### Core Chat Features
+- [ ] Send a message and receive AI response
+- [ ] Message history persists across page reloads
+- [ ] Code blocks render with syntax highlighting
+- [ ] Copy code button works
+- [ ] Session management (create, rename, delete)
 
-1. Start the app (`npm run dev` from root) with `NVIDIA_NIM_API_KEY` set in `backend/.env`.
-2. Send a few chat requests that differ: e.g. a short message, a long message (e.g. paste a large block of text), and optionally a request with an image (if testing vision).
-3. Open `GET http://localhost:3000/metrics` (or your backend URL) and search for `llm_router_selections_total`.
-4. The counter has labels `provider` and `model_id`. Check that the `model_id` values match what you expect (e.g. Nemotron Super for default chat, Nemotron 3 Nano for very long context, Nemotron Vision for vision).
+### SHIP Mode (Spec → Hardcode → Integrate → Push)
+- [ ] Enter SHIP mode from chat
+- [ ] Generate project specification
+- [ ] Generate code from spec
+- [ ] View generated files in file tree
+- [ ] Push to GitHub (requires GitHub auth)
 
-Unit tests for the router live in `backend/tests/services/aiCoreRouter.test.ts` and assert on `route()`, `routeByTaskType()`, `getRAGModel()`, `getReasoningModel()`, and `getVisionModel()`.
+### Architecture Diagrams
+- [ ] Generate diagram from description
+- [ ] Mermaid diagram renders correctly
+- [ ] Export diagram as PNG/SVG
+- [ ] Edit diagram code manually
 
-## Coverage Requirements
+### Cloud Dashboard
+- [ ] View connected integrations
+- [ ] View deployments list
+- [ ] View cloud resources
+- [ ] View cost summary
+- [ ] API fallback to mock data works
 
-### Coverage policy
+### Docker Panel (Electron/Desktop only)
+- [ ] View running containers
+- [ ] Start/stop containers
+- [ ] View container logs
+- [ ] Docker Compose up/down
 
-Coverage thresholds apply to **included** code only. Many files are excluded so that core logic can meet high thresholds without forcing coverage on optional or infra-heavy modules.
+### Integrations Hub
+- [ ] Connect GitHub
+- [ ] View integration status
+- [ ] Disconnect integration
 
-- **Intended goal:** 100% statements/branches/functions/lines on **included** core logic (backend and frontend Vitest configs may set 100% thresholds on the included set). Optional modules are excluded.
-- **Main exclusion categories:** optional integrations (e.g. Discord, Slack, Obsidian), workers, prompt templates, infra (e.g. deploy service, job queue, MCP server), optional features (e.g. codebase analysis, security-compliance), and UI-only/static assets on the frontend.
-- **Overall repo coverage:** Excluded code is not counted toward the threshold, so “overall” coverage may be lower than the threshold percentage. The CI-enforced target is “100% on included” (or the configured threshold in each vitest.config).
+### Settings
+- [ ] Theme toggle (light/dark)
+- [ ] Model selection
+- [ ] API key configuration
 
-### Backend (CI enforced)
+---
 
-Coverage thresholds are set to **80%** statements/lines/functions and **75%** branches on core logic (optional modules excluded). CI runs `npm run test:coverage` in `backend/`. Goal per [SYSTEM_RATING.md](SYSTEM_RATING.md): **80%** on core. **Target (Phase 2 multi-agent plan): 100%** on included code; add tests incrementally and raise thresholds in `backend/vitest.config.ts` until 100% is met.
+## Electron Desktop App
 
-### Frontend (CI enforced)
-
-Coverage thresholds are in `frontend/vitest.config.ts`: **80%** statements/lines/functions, **75%** branches on core logic (components/UI excluded). CI runs `npm run test:coverage`; coverage goals are met for stores, lib, and utils. **Target (Phase 2 multi-agent plan): 100%** on included code; add tests incrementally and raise thresholds until 100% is met.
-
-### Coverage Exclusions
-
-The following are excluded from coverage:
-
-- Test files themselves
-- Configuration files
-- Type definitions
-- Build outputs
-- E2E test directories
-
-### Dependency audit and deprecated packages
-
-Run periodically from repo root or per package:
-
-- **Backend**: `cd backend && npm audit` (and `npm outdated` with network). Fix moderate/high vulnerabilities; upgrade deprecated transitive deps (e.g. glob, tar) when upgrading majors.
-- **Frontend**: `cd frontend && npm audit` and `npm outdated`; same as above.
-- **Marketing site** (if present): run `npm audit` and `npm outdated` in that directory.
-
-Document any **intentional pins** (e.g. a specific major held for compatibility) in the root README or here. Lockfiles may list deprecated packages as transitive dependencies; upgrade parent packages to pull in non-deprecated versions where possible.
-
-## Writing Tests
-
-### Unit Test Example
-
-```typescript
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { myService } from '../src/services/myService';
-
-describe('MyService', () => {
-  beforeEach(() => {
-    // Setup
-  });
-
-  it('should do something', () => {
-    const result = myService.doSomething();
-    expect(result).toBe(expected);
-  });
-});
-```
-
-### Integration Test Example
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import request from 'supertest';
-import app from '../src/index';
-
-describe('POST /api/endpoint', () => {
-  it('should return 200 with valid input', async () => {
-    const response = await request(app)
-      .post('/api/endpoint')
-      .send({ data: 'test' })
-      .expect(200);
-
-    expect(response.body).toHaveProperty('result');
-  });
-});
-```
-
-### E2E Test Example
-
-```typescript
-import { test, expect } from '@playwright/test';
-
-test('user can complete workflow', async ({ page }) => {
-  await page.goto('/');
-  
-  // Interact with UI
-  await page.fill('input[name="query"]', 'test');
-  await page.click('button[type="submit"]');
-  
-  // Verify result
-  await expect(page.locator('.result')).toBeVisible();
-});
-```
-
-## Test Best Practices
-
-### 1. Test Organization
-
-- Group related tests using `describe` blocks
-- Use descriptive test names that explain what is being tested
-- Follow the Arrange-Act-Assert pattern
-
-### 2. Mocking
-
-- Mock external dependencies (APIs, databases, file system)
-- Use Vitest's `vi.mock()` for module mocking
-- Mock at the appropriate level (unit vs integration)
-
-### 3. Test Data
-
-- Use factories or fixtures for test data
-- Keep test data minimal and focused
-- Clean up test data after tests
-
-### 4. Async Testing
-
-- Always await async operations
-- Use proper timeout values for slow operations
-- Handle errors appropriately
-
-### 5. Coverage
-
-- Aim for high coverage but focus on critical paths
-- Don't sacrifice test quality for coverage percentage
-- Test edge cases and error conditions
-
-## Critical user journeys (E2E)
-
-E2E specs in `frontend/e2e/` cover these critical user journeys:
-
-| Spec | Journey |
-|------|--------|
-| `critical-journeys.spec.ts` | Intent → Architecture → PRD → Code; error handling (e.g. invalid API key) |
-| `tests/chat-interface.spec.ts` | Chat UI and messaging |
-| `tests/cost-dashboard.spec.ts` | Cost dashboard |
-| `tests/error-handling.spec.ts` | Error handling and recovery |
-| `tests/mermaid-to-code.spec.ts` | Mermaid diagram to code flow |
-| `tests/sidebar-navigation.spec.ts` | Sidebar navigation |
-| `tests/critical-paths.spec.ts` | Critical paths |
-
-Extend these or add new specs as needed for additional journeys (e.g. auth/setup, ship/codegen).
-
-## Load Testing
-
-k6 load tests run in CI via [.github/workflows/benchmark.yml](../.github/workflows/benchmark.yml) (job `benchmark-api`): backend is started with Redis, then `k6 run tests/load/k6-scenarios.js` runs health, intent parse, architecture gen, session creation, and rate-limit scenarios.
-
-### k6 Setup (local)
-
-1. Install k6: https://k6.io/docs/getting-started/installation/
-2. Configure environment variables:
-   ```bash
-   export K6_BASE_URL=http://localhost:3000
-   export K6_VUS=10
-   export K6_DURATION=30s
-   ```
-3. Run load tests:
-   ```bash
-   npm run load-test
-   ```
-
-### Load Test Scenarios
-
-- **Health Check**: Basic API availability
-- **Intent Parsing**: Parse natural language intents
-- **Architecture Generation**: Generate system architectures
-- **Session Creation**: Create code generation sessions
-- **Rate Limiting**: Validate rate limiting behavior
-
-## CI Integration
-
-Tests run automatically in CI on:
-
-- Every push to main/develop branches
-- Every pull request
-- Coverage reports are uploaded and tracked
-- E2E tests run in headless mode
-- Load tests can be scheduled (optional)
-
-## Debugging Tests
-
-### Backend
-
+### Build & Run
 ```bash
-# Run specific test file
-npm test -- tests/services/myService.test.ts
+cd electron
 
-# Run tests matching pattern
-npm test -- -t "should do something"
+# Install dependencies
+npm install
 
-# Debug with Node inspector
-node --inspect-brk node_modules/.bin/vitest
+# Generate icons (if needed)
+npm run generate-icons
+
+# Development
+npm run dev
+
+# Build for distribution
+npm run build           # Current platform
+npm run build:mac       # macOS
+npm run build:win       # Windows
+npm run build:linux     # Linux
 ```
 
-### Frontend
+### Test Checklist
+- [ ] App launches without errors
+- [ ] Icon displays correctly in dock/taskbar
+- [ ] All web features work
+- [ ] Docker integration works (requires Docker running)
+- [ ] Window controls work (minimize, maximize, close)
 
+---
+
+## VSCode Extension
+
+### Build & Test
 ```bash
-# Run E2E tests in debug mode
-npm run test:e2e:debug
+cd packages/vscode-extension
 
-# Run E2E tests with UI
-npm run test:e2e:ui
+# Install dependencies
+npm install
+
+# Compile
+npm run compile
+
+# Package
+npm run package
+# Creates grump-vscode-0.1.0.vsix
+
+# Install in VSCode
+code --install-extension grump-vscode-0.1.0.vsix
 ```
 
-## Performance Benchmarks
+### Test Checklist
+- [ ] Extension activates
+- [ ] Sidebar panel appears
+- [ ] Chat works
+- [ ] Code context menu items work
+- [ ] Keyboard shortcuts work (Ctrl+Shift+G)
 
-Performance benchmarks are included in load tests:
+---
 
-- **API Response Time**: p95 < 5s
-- **Error Rate**: < 5%
-- **Concurrent Users**: Tested up to 20 VUs
+## API Endpoints to Test
+
+### Health Checks
+```bash
+# Quick health
+curl http://localhost:3000/health/quick
+
+# Full health (checks all services)
+curl http://localhost:3000/health/ready
+```
+
+### Core APIs
+```bash
+# Chat
+curl -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello", "sessionId": "test-123"}'
+
+# Architecture
+curl -X POST http://localhost:3000/api/architecture/generate \
+  -H "Content-Type: application/json" \
+  -d '{"description": "A simple REST API"}'
+
+# Cloud Dashboard
+curl http://localhost:3000/api/cloud/dashboard
+
+# Cloud Regions
+curl http://localhost:3000/api/cloud/regions?provider=aws
+```
+
+---
+
+## Vercel Deployment
+
+### Auto-Deploy Setup
+
+1. **Connect GitHub repo to Vercel** (if not already):
+   - Go to https://vercel.com/new
+   - Import your GitHub repository
+   - Vercel will auto-detect `vercel.json`
+
+2. **Add Environment Variables** in Vercel Dashboard:
+   - `NVIDIA_NIM_API_KEY` (required)
+   - `DB_TYPE=supabase`
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_KEY`
+   - `NODE_ENV=production`
+
+3. **Optional: GitHub Actions Deploy** (for more control):
+   Add these secrets to GitHub:
+   - `VERCEL_TOKEN` - From https://vercel.com/account/tokens
+   - `VERCEL_ORG_ID` - From `.vercel/project.json`
+   - `VERCEL_PROJECT_ID` - From `.vercel/project.json`
+
+### Verify Deployment
+```bash
+# Check marketing site
+curl https://your-app.vercel.app/
+
+# Check API
+curl https://your-app.vercel.app/health/quick
+
+# Check API endpoint
+curl https://your-app.vercel.app/api/cloud/dashboard
+```
+
+---
 
 ## Troubleshooting
 
-### Tests Fail in CI but Pass Locally
+### "Cannot find module" errors
+```bash
+# Clean install
+rm -rf node_modules package-lock.json
+npm install
+```
 
-- Check environment variables
-- Verify test data is available
-- Check for timing issues (add appropriate waits)
-- Ensure all dependencies are installed
+### Backend won't start
+```bash
+# Check for port conflicts
+lsof -i :3000
 
-### Coverage Not Increasing
+# Verify .env exists
+cat backend/.env
 
-- Verify files aren't excluded in `vitest.config.ts`
-- Check that tests are actually executing code paths
-- Ensure test files are in the correct location
+# Check logs
+cd backend && npm run dev 2>&1 | head -50
+```
 
-### E2E Tests Flaky
+### Frontend build fails
+```bash
+# Clear Vite cache
+cd frontend
+rm -rf node_modules/.vite
+npm run build
+```
 
-- Add explicit waits instead of fixed timeouts
-- Use `waitFor` for dynamic content
-- Verify test isolation (clean state between tests)
-- Check for race conditions
+### Docker panel shows "not available"
+- Ensure Docker Desktop is running
+- Check Docker socket: `docker ps`
+- In browser mode, Docker features are disabled (Electron only)
 
-## Additional Resources
+### LSP errors but builds pass
+- These are stale TypeScript cache issues
+- Restart your editor/IDE
+- Run `npm run type-check` to verify
 
-- [Vitest Documentation](https://vitest.dev/)
-- [Playwright Documentation](https://playwright.dev/)
-- [k6 Documentation](https://k6.io/docs/)
-- [Testing Best Practices](https://testingjavascript.com/)
+---
+
+## Production Checklist
+
+Before deploying to production:
+
+- [ ] All API keys are set in environment
+- [ ] `DB_TYPE=supabase` with valid credentials
+- [ ] `NODE_ENV=production`
+- [ ] `CORS_ORIGINS` set to your domain
+- [ ] `SECURITY_STRICT_PROD=true`
+- [ ] `ALLOWED_HOSTS` set to your domains
+- [ ] Stripe webhooks configured (if using billing)
+- [ ] Health check endpoint responds: `/health/ready`
+- [ ] HTTPS configured (Vercel handles this)
+
+---
+
+## Support
+
+- **Issues**: https://github.com/Aphrodine-wq/G-rump.com/issues
+- **Docs**: See `/docs` folder in repository

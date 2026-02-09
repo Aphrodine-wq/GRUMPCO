@@ -2,7 +2,7 @@
 
 ## Why G-Rump (differentiators)
 
-G-Rump is the one app that combines design-first architecture and PRD, full app generation (SHIP: design → spec → plan → code in one run), and tool-enabled code chat with workspace, plan mode, and specialist agents. Use it from Desktop, Web, VS Code ([integrations/vscode-extension](../integrations/vscode-extension)), CLI ([packages/cli](../packages/cli)), or chat bots (Moltbot/Clawdbot). From Cursor, use the [G-Rump API](CURSOR_GRUMP_API.md) or skill to delegate full app generation and SHIP. **Scheduled agents (24/7):** Run SHIP on a cron schedule. `POST /api/agents/schedule` (body: `name`, `cronExpression`, `action`: `ship`|`codegen`|`chat`, `params`), `GET /api/agents/scheduled`, `DELETE /api/agents/scheduled/:id`. With Redis: BullMQ repeatable jobs; without: node-cron in-process.
+G-Rump is the one app that combines design-first architecture and PRD, full app generation (SHIP: design → spec → plan → code in one run), and tool-enabled code chat with workspace, plan mode, and specialist agents. Use it from Desktop, Web, VS Code ([packages/vscode-extension](../packages/vscode-extension)), CLI ([packages/cli](../packages/cli)), or chat bots (Moltbot/Clawdbot). From Cursor, use the [G-Rump API](CURSOR_GRUMP_API.md) or skill to delegate full app generation and SHIP. **Scheduled agents (24/7):** Run SHIP on a cron schedule. `POST /api/agents/schedule` (body: `name`, `cronExpression`, `action`: `ship`|`codegen`|`chat`, `params`), `GET /api/agents/scheduled`, `DELETE /api/agents/scheduled/:id`. With Redis: BullMQ repeatable jobs; without: node-cron in-process.
 
 **Large context:** Chat accepts `largeContext: true` for up to 200K chars per message and 100 messages per request when using models that support it (Claude, OpenRouter).
 
@@ -389,7 +389,7 @@ Additional routes may be mounted by the **skills** system at runtime (see backen
 
 ## Integrations & extras
 
-- **VS Code extension** (`integrations/vscode-extension`): Commands “G-Rump: New from description” and “G-Rump: Open chat”; Chat view streams from `/api/chat/stream`. Settings: `grump.apiUrl`, `grump.apiKey`.
+- **VS Code extension** (`packages/vscode-extension`): Commands “G-Rump: New from description” and “G-Rump: Open chat”; Chat view streams from `/api/chat/stream`. Settings: `grump.apiUrl`, `grump.apiKey`.
 - **Cursor / G-Rump API**: See [CURSOR_GRUMP_API.md](CURSOR_GRUMP_API.md) for when to call G-Rump (full app generation, SHIP, codegen) and key endpoints.
 - **Moltbot / Clawdbot**: [integrations/moltbot-skill](../integrations/moltbot-skill) provides a SKILL.md and README so Moltbot can invoke G-Rump (SHIP, chat, codegen, status) from Telegram, WhatsApp, Discord, etc. Config: `GRUMP_API_URL`, `GRUMP_API_KEY`.
 - **Webhooks**: Outbound events (`ship.completed`, `codegen.ready`, `ship.failed`, `codegen.failed`) POST to URLs in `GRUMP_WEBHOOK_URLS` or registered via `POST /api/webhooks/outbound`. Inbound `POST /api/webhooks/trigger` with `{ action: 'ship', params: { sessionId } }` enqueues a ship job and returns 202. Moltbot (or any client) can trigger ship jobs via the webhook and register an outbound URL to receive completion events.

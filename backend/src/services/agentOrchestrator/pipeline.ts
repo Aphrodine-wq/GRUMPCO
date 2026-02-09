@@ -32,10 +32,10 @@ import { getDatabase } from "../../db/database.js";
 import {
   analyzeAgentReports,
   hasAutoFixableIssues,
-} from "../wrunnerService.js";
-import { dispatchWebhook } from "../webhookService.js";
-import { recordStorageUsage } from "../usageTracker.js";
-import { generateMasterContext } from "../contextService.js";
+} from "../ship/wrunnerService.js";
+import { dispatchWebhook } from "../integrations/webhookService.js";
+import { recordStorageUsage } from "../platform/usageTracker.js";
+import { generateMasterContext } from "../rag/contextService.js";
 import {
   runArchitectAgent,
   runFrontendAgent,
@@ -209,6 +209,8 @@ export async function executeCodeGeneration(
   }
 
   try {
+    const pipelineStart = Date.now();
+    const stageTimes: Record<string, number> = {};
     log.info(
       { sessionId: session.sessionId },
       "Starting code generation pipeline",
@@ -216,14 +218,16 @@ export async function executeCodeGeneration(
 
     let masterContext: MasterContext | undefined;
     try {
+      const ctxStart = Date.now();
       log.info({ sessionId: session.sessionId }, "Generating master context");
       masterContext = await generateMasterContext({
         projectDescription: prd.projectDescription,
         architecture,
         prd,
       });
+      stageTimes.masterContext = Date.now() - ctxStart;
       log.info(
-        { sessionId: session.sessionId, contextId: masterContext.id },
+        { sessionId: session.sessionId, contextId: masterContext?.id, durationMs: stageTimes.masterContext },
         "Master context generated",
       );
     } catch (error) {
@@ -235,7 +239,8 @@ export async function executeCodeGeneration(
 
     const systemPromptPrefix = options?.systemPromptPrefix;
 
-    // Run architect agent with tracking
+    // Stage 1: Architect agent (sequential — all others depend on its plan)
+    const architectStart = Date.now();
     const architecturePlan = await withAgentTracking(
       "planner",
       session.sessionId,
@@ -251,7 +256,10 @@ export async function executeCodeGeneration(
           systemPromptPrefix,
         ),
     );
+    stageTimes.architect = Date.now() - architectStart;
 
+    // Stage 2: Frontend + Backend in parallel (both depend on architect plan)
+    const primaryStart = Date.now();
     const parallelAgentPromises: Promise<void>[] = [];
 
     if (session.preferences.frontendFramework) {
@@ -266,9 +274,9 @@ export async function executeCodeGeneration(
             const specUiContext: SpecUiContext | undefined =
               options?.specification
                 ? {
-                    uiComponents: options.specification.sections.uiComponents,
-                    overview: options.specification.sections.overview,
-                  }
+                  uiComponents: options.specification.sections.uiComponents,
+                  overview: options.specification.sections.overview,
+                }
                 : undefined;
             const frontendFiles = await runFrontendAgent(
               session,
@@ -315,70 +323,83 @@ export async function executeCodeGeneration(
       await Promise.all(parallelAgentPromises);
       await db.saveSession(session);
     }
+    stageTimes.primaryAgents = Date.now() - primaryStart;
 
-    // Run DevOps agent with tracking
-    await withAgentTracking(
-      "devops",
-      session.sessionId,
-      goalId,
-      publishEvents,
-      async () => {
-        log.info({}, "Running DevOps agent");
-        const devopsFiles = await runDevOpsAgent(
-          session,
-          masterContext,
-          systemPromptPrefix,
-        );
-        (session.generatedFiles ??= []).push(...devopsFiles);
-      },
-    );
-    await db.saveSession(session);
+    // Stage 3: DevOps + Test + Docs in parallel (all independent of each other)
+    const secondaryStart = Date.now();
+    const secondaryAgentPromises: Promise<void>[] = [];
 
-    if (session.preferences.includeTests !== false) {
-      await withAgentTracking(
-        "test",
+    secondaryAgentPromises.push(
+      withAgentTracking(
+        "devops",
         session.sessionId,
         goalId,
         publishEvents,
         async () => {
-          log.info({}, "Running test agent");
-          const testFiles = await runTestAgent(
+          log.info({}, "Running DevOps agent");
+          const devopsFiles = await runDevOpsAgent(
             session,
-            prd,
-            undefined,
-            undefined,
             masterContext,
             systemPromptPrefix,
           );
-          (session.generatedFiles ??= []).push(...testFiles);
+          (session.generatedFiles ??= []).push(...devopsFiles);
         },
+      ),
+    );
+
+    if (session.preferences.includeTests !== false) {
+      secondaryAgentPromises.push(
+        withAgentTracking(
+          "test",
+          session.sessionId,
+          goalId,
+          publishEvents,
+          async () => {
+            log.info({}, "Running test agent");
+            const testFiles = await runTestAgent(
+              session,
+              prd,
+              undefined,
+              undefined,
+              masterContext,
+              systemPromptPrefix,
+            );
+            (session.generatedFiles ??= []).push(...testFiles);
+          },
+        ),
       );
-      await db.saveSession(session);
     }
 
     if (session.preferences.includeDocs !== false) {
-      await withAgentTracking(
-        "docs",
-        session.sessionId,
-        goalId,
-        publishEvents,
-        async () => {
-          log.info({}, "Running docs agent");
-          const docFiles = await runDocsAgent(
-            session,
-            prd,
-            undefined,
-            masterContext,
-            systemPromptPrefix,
-          );
-          (session.generatedFiles ??= []).push(...docFiles);
-        },
+      secondaryAgentPromises.push(
+        withAgentTracking(
+          "docs",
+          session.sessionId,
+          goalId,
+          publishEvents,
+          async () => {
+            log.info({}, "Running docs agent");
+            const docFiles = await runDocsAgent(
+              session,
+              prd,
+              undefined,
+              masterContext,
+              systemPromptPrefix,
+            );
+            (session.generatedFiles ??= []).push(...docFiles);
+          },
+        ),
       );
-      await db.saveSession(session);
     }
 
-    // Run WRunner analysis
+    await Promise.all(secondaryAgentPromises);
+    stageTimes.secondaryAgents = Date.now() - secondaryStart;
+    await db.saveSession(session);
+
+    // Stage 4: WRunner analysis (must run after all agents complete)
+    const wrunnerStart = Date.now();
     await runWRunnerPhase(session, prd);
+    stageTimes.wrunner = Date.now() - wrunnerStart;
 
     session.status = "completed";
     session.completedAt = new Date().toISOString();
@@ -400,6 +421,10 @@ export async function executeCodeGeneration(
       );
     }
 
+    const totalPipelineMs = Date.now() - pipelineStart;
+    const sequentialSum = Object.values(stageTimes).reduce((a, b) => a + b, 0);
+    const parallelismRatio = sequentialSum > 0 ? sequentialSum / totalPipelineMs : 1;
+
     dispatchWebhook("codegen.ready", {
       sessionId: session.sessionId,
       fileCount: session.generatedFiles?.length ?? 0,
@@ -409,6 +434,9 @@ export async function executeCodeGeneration(
       {
         sessionId: session.sessionId,
         fileCount: (session.generatedFiles ?? []).length,
+        totalPipelineMs,
+        stageTimes,
+        parallelismRatio: parallelismRatio.toFixed(2),
       },
       "Code generation pipeline completed",
     );
@@ -490,7 +518,7 @@ export async function executeCodeGenerationMulti(
         prd: prds[0],
       });
       log.info(
-        { sessionId: session.sessionId, contextId: masterContext.id },
+        { sessionId: session.sessionId, contextId: masterContext?.id },
         "Master context generated",
       );
     } catch (error) {
@@ -559,38 +587,53 @@ export async function executeCodeGenerationMulti(
       await db.saveSession(session);
     }
 
-    log.info({}, "Running DevOps agent");
-    const devopsFiles = await runDevOpsAgent(session, masterContext);
-    (session.generatedFiles ??= []).push(...devopsFiles);
-    await db.saveSession(session);
+    // DevOps + Test + Docs in parallel (all independent of each other)
+    const secondaryPromises: Promise<void>[] = [];
+
+    secondaryPromises.push(
+      (async () => {
+        log.info({}, "Running DevOps agent");
+        const devopsFiles = await runDevOpsAgent(session, masterContext);
+        (session.generatedFiles ??= []).push(...devopsFiles);
+      })(),
+    );
 
     if (session.preferences.includeTests !== false) {
       const { prds: testPrds, subTasks: testSubTasks } =
         getPrdsAndSubTasksForAgent(session, "test");
-      log.info({}, "Running test agent");
-      const testFiles = await runTestAgent(
-        session,
-        testPrds[0] ?? prds[0],
-        testPrds.length ? testPrds : undefined,
-        testSubTasks.length ? testSubTasks : undefined,
-        masterContext,
+      secondaryPromises.push(
+        (async () => {
+          log.info({}, "Running test agent");
+          const testFiles = await runTestAgent(
+            session,
+            testPrds[0] ?? prds[0],
+            testPrds.length ? testPrds : undefined,
+            testSubTasks.length ? testSubTasks : undefined,
+            masterContext,
+          );
+          (session.generatedFiles ??= []).push(...testFiles);
+        })(),
       );
-      (session.generatedFiles ??= []).push(...testFiles);
-      await db.saveSession(session);
     }
 
     if (session.preferences.includeDocs !== false) {
       const { prds: docPrds } = getPrdsAndSubTasksForAgent(session, "docs");
-      log.info({}, "Running docs agent");
-      const docFiles = await runDocsAgent(
-        session,
-        docPrds[0] ?? prds[0],
-        docPrds.length ? docPrds : undefined,
-        masterContext,
+      secondaryPromises.push(
+        (async () => {
+          log.info({}, "Running docs agent");
+          const docFiles = await runDocsAgent(
+            session,
+            docPrds[0] ?? prds[0],
+            docPrds.length ? docPrds : undefined,
+            masterContext,
+          );
+          (session.generatedFiles ??= []).push(...docFiles);
+        })(),
       );
-      (session.generatedFiles ??= []).push(...docFiles);
-      await db.saveSession(session);
     }
+
+    await Promise.all(secondaryPromises);
+    await db.saveSession(session);
 
     // Run WRunner analysis
     await runWRunnerPhase(session, prds[0], prds);

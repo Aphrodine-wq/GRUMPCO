@@ -11,7 +11,7 @@ import {
   generateSpecification,
   isSessionComplete,
   getNextQuestion,
-} from "../services/specService.js";
+} from "../services/ship/specService.js";
 import type {
   SpecStartRequest,
   SpecAnswerRequest,

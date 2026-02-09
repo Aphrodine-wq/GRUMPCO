@@ -22,7 +22,7 @@
     <div class="header-text">
       <h1>MCP Servers</h1>
       <p class="subtitle">
-        Model Context Protocol – configure stdio or URL-based servers so G-Agent can use their
+        Model Context Protocol – configure stdio or URL-based servers so the agent can use their
         tools.
       </p>
     </div>

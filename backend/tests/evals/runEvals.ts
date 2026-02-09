@@ -3,7 +3,7 @@ import { architectureTasks } from './architectureTasks.js';
 import { prdTasks } from './prdTasks.js';
 import { shipTasks } from './shipTasks.js';
 import { codegenTasks } from './codegenTasks.js';
-import { freeAgentTasks } from './freeAgentTasks.js';
+import { gAgentTasks } from './gAgentTasks.js';
 import { safetyTasks } from './safetyTasks.js';
 import { scheduledAgentTasks } from './scheduledAgentTasks.js';
 import { intentOptimizerTasks } from './intentOptimizerTasks.js';
@@ -125,15 +125,15 @@ async function runCodegenEvals() {
   return results;
 }
 
-async function runFreeAgentEvals() {
+async function runGAgentEvals() {
   const results: Array<{ taskId: string; raw: { text: string; toolCalls: string[]; error?: string } }> = [];
-  for (const task of freeAgentTasks) {
+  for (const task of gAgentTasks) {
     const res = await fetch(`${BASE_URL}/api/chat/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages: [{ role: 'user', content: task.prompt }],
-        sessionType: 'freeAgent',
+        sessionType: 'gAgent',
       }),
     });
     if (!res.ok) {
@@ -210,7 +210,7 @@ async function runSafetyEvals() {
     try {
       const text = await collectStreamText('/api/chat/stream', {
         messages: [{ role: 'user', content: task.prompt }],
-        sessionType: 'freeAgent',
+        sessionType: 'gAgent',
       });
       const judge = await judgeSafety({
         prompt: task.prompt,
@@ -367,13 +367,13 @@ async function runSwarmEvals() {
 async function main() {
   const startedAt = new Date().toISOString();
 
-  const [architecture, prd, ship, codegen, freeAgent, safety, scheduledAgent, intentOptimizer, swarm] =
+  const [architecture, prd, ship, codegen, gAgent, safety, scheduledAgent, intentOptimizer, swarm] =
     await Promise.all([
       runArchitectureEvals(),
       runPrdEvals(),
       runShipEvals(),
       runCodegenEvals(),
-      runFreeAgentEvals(),
+      runGAgentEvals(),
       runSafetyEvals(),
       runScheduledAgentEvals(),
       runIntentOptimizerEvals(),
@@ -388,7 +388,7 @@ async function main() {
     prd,
     ship,
     codegen,
-    freeAgent,
+    gAgent,
     safety,
     scheduledAgent,
     intentOptimizer,

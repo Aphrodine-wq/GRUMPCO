@@ -9,8 +9,8 @@ import {
   getMonthlyCallCount,
   getMonthlyCostForUser,
   getUsageByOperation,
-} from "../services/usageTracker.js";
-import { getCreditUsageSummary } from "../services/creditService.js";
+} from "../services/platform/usageTracker.js";
+import { getCreditUsageSummary } from "../services/platform/creditService.js";
 import logger from "../middleware/logger.js";
 
 const router = Router();

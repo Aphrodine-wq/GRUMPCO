@@ -22,8 +22,8 @@ import {
   createScheduledAgent,
   cancelScheduledAgent,
   getScheduledAgent,
-} from "../services/scheduledAgentsService.js";
-import { runSwarm } from "../services/swarmService.js";
+} from "../services/agents/scheduledAgentsService.js";
+import { runSwarm } from "../services/agents/swarmService.js";
 import {
   sendErrorResponse,
   sendServerError,

@@ -1,5 +1,5 @@
 /**
- * G-Agent Budget Store
+ * Agent Budget Store
  *
  * Svelte store for tracking AI operation costs, budget limits,
  * and the "Cost Prophecy" system for pre-execution estimates.

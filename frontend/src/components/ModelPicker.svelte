@@ -6,7 +6,15 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { fetchApi } from '$lib/api';
-  import { ChevronDown, ChevronRight, Settings, Sparkles, Zap, Lock, RefreshCw } from 'lucide-svelte';
+  import {
+    ChevronDown,
+    ChevronRight,
+    Settings,
+    Sparkles,
+    Zap,
+    Lock,
+    RefreshCw,
+  } from 'lucide-svelte';
   import { setCurrentView, settingsInitialTab } from '../stores/uiStore';
   import { newOnboardingStore } from '../stores/newOnboardingStore';
   import { user } from '../stores/authStore.js';
@@ -130,7 +138,6 @@
         anthropic: 'g-rump-anthropic-key',
         google: 'g-rump-google-key',
         openrouter: 'g-rump-openrouter-key',
-        groq: 'g-rump-groq-key',
         mistral: 'g-rump-mistral-key',
         kimi: 'g-rump-kimi-key',
         'nvidia-nim': 'g-rump-nvidia-nim-key',
@@ -139,9 +146,13 @@
         try {
           const key = localStorage.getItem(storageKey);
           if (key && key.trim()) configured.add(provider);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return configured;
   }
 
@@ -640,7 +651,9 @@
     background: var(--color-bg-secondary, #f9fafb);
     color: var(--color-text-muted, #9ca3af);
     cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
+    transition:
+      color 0.15s,
+      border-color 0.15s;
   }
   .model-refresh-btn:hover:not(:disabled) {
     color: var(--color-primary, #7c3aed);
@@ -654,8 +667,12 @@
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* Provider group */

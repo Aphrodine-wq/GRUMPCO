@@ -123,8 +123,7 @@ export type GAgentCapabilityKey =
   | "memory" // NEW: Unified memory system
   | "self_improve"; // NEW: Self-improvement loop
 
-/** @deprecated Use GAgentCapabilityKey instead */
-export type FreeAgentCapabilityKey = GAgentCapabilityKey;
+
 
 /** Capabilities that require a PRO+ tier license */
 export const PREMIUM_CAPABILITIES: GAgentCapabilityKey[] = [
@@ -156,8 +155,7 @@ export interface GAgentModelPreference {
   modelId?: string;
 }
 
-/** @deprecated Use GAgentModelPreference instead */
-export type FreeAgentModelPreference = GAgentModelPreference;
+
 
 /**
  * G-Agent Persona - customizable agent personality
@@ -168,8 +166,7 @@ export interface GAgentPersona {
   expertise?: string[];
 }
 
-/** @deprecated Use GAgentPersona instead */
-export type FreeAgentPersona = GAgentPersona;
+
 
 /**
  * G-Agent Task - represents a planned task in the execution queue
@@ -237,21 +234,6 @@ export interface UserPreferences {
   gAgentGoals?: string[];
   gAgentAutoApprove?: boolean; // Auto-approve safe tasks
   gAgentPersistent?: boolean; // Enable 24/7 mode
-
-  /** @deprecated Use gAgentCapabilities instead */
-  freeAgentCapabilities?: GAgentCapabilityKey[];
-  /** @deprecated Use gAgentExternalAllowlist instead */
-  freeAgentExternalAllowlist?: string[];
-  /** @deprecated Use gAgentPreferredModelSource instead */
-  freeAgentPreferredModelSource?: "cloud" | "ollama" | "auto";
-  /** @deprecated Use gAgentOllamaModel instead */
-  freeAgentOllamaModel?: string;
-  /** @deprecated Use gAgentModelPreference instead */
-  freeAgentModelPreference?: GAgentModelPreference;
-  /** @deprecated Use gAgentPersona instead */
-  freeAgentPersona?: GAgentPersona;
-  /** @deprecated Use gAgentGoals instead */
-  freeAgentGoals?: string[];
 
   /** Alert when usage exceeds this percent of limit (0–100). */
   usageAlertPercent?: number;

@@ -12,12 +12,12 @@ import {
   type CloudProvider,
   type IaCTool,
   type InfrastructureSpec,
-} from "../services/cloudProvisioningService.js";
+} from "../services/workspace/cloudProvisioningService.js";
 import {
   getVercelPresetForStack,
   type VercelPresetStack,
-} from "../services/deployService.js";
-import { getIntegrations } from "../services/integrationService.js";
+} from "../services/workspace/deployService.js";
+import { getIntegrations } from "../services/integrations/integrationService.js";
 import type { IntegrationProviderId } from "../types/integrations.js";
 import logger from "../middleware/logger.js";
 

@@ -1,8 +1,12 @@
 /**
- * Model Registry – NVIDIA NIM Exclusive
+ * Model Registry – NVIDIA NIM Exclusive (Tool-Call Capable Only)
  * 
  * Powered by NVIDIA NIM - Enterprise AI infrastructure for deploying
  * state-of-the-art foundation models with optimized inference.
+ * 
+ * All models listed here support function/tool calling on NVIDIA NIM.
+ * Models without tool-call support have been removed to prevent
+ * API errors (e.g. "tool_choice requires --enable-auto-tool-choice").
  * 
  * Featured Models:
  * - Llama 3.1 405B Instruct (Flagship)
@@ -162,24 +166,8 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     featured: true,
   },
 
-  // MIXTRAL: 8x22B MoE (Cost-Effective)
-  {
-    id: 'mistralai/mixtral-8x22b-instruct-v0.1',
-    provider: 'nim',
-    capabilities: [
-      'code',
-      'agent',
-      'multilingual',
-      'reasoning',
-      'function-calling',
-    ],
-    contextWindow: 65_536,
-    costPerMillionInput: 0.9,
-    costPerMillionOutput: 0.9,
-    description: 'Mixtral 8x22B MoE - Cost-effective with excellent performance',
-    publisher: 'Mistral AI',
-    parameters: '141B (MoE)',
-  },
+  // MIXTRAL 8x22B removed — does not support tool calling on NVIDIA NIM
+  // (NIM returns error 400: "auto" tool choice requires --enable-auto-tool-choice)
 
   // NEMOTRON: Ultra 253B (Scientific Reasoning)
   {
@@ -259,22 +247,7 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     featured: true,
   },
 
-  // NEMOTRON: Nano 12B v2 VL (Vision / diagram / document)
-  {
-    id: 'nvidia/nemotron-nano-12b-v2-vl',
-    provider: 'nim',
-    capabilities: [
-      'vision',
-      'multimodal',
-      'reasoning',
-    ],
-    contextWindow: 128_000,
-    costPerMillionInput: 0.10,
-    costPerMillionOutput: 0.10,
-    description: 'Nemotron Nano VL - Document and diagram understanding',
-    publisher: 'NVIDIA',
-    parameters: '12B',
-  },
+  // NEMOTRON Nano 12B v2 VL removed — vision-only model, does not support tool calling on NIM
 
   // CODESTRAL: Code Generation Specialist
   {
@@ -426,7 +399,7 @@ export function getRecommendedModel(
     case 'reasoning':
       return getModelById('nvidia/llama-3.1-nemotron-ultra-253b-v1') || getDefaultModel();
     case 'cost-optimized':
-      return getModelById('meta/llama-3.1-70b-instruct') || getCheapestModel();
+      return getModelById('nvidia/llama-3.3-nemotron-super-49b-v1.5') || getCheapestModel();
     case 'multilingual':
       return getModelById('mistralai/mistral-large-2-instruct') || getDefaultModel();
     default:

@@ -16,14 +16,15 @@ import {
   generateOAuthUrl,
   exchangeOAuthCode,
   OAUTH_PROVIDERS,
-} from "../services/integrationService.js";
+} from "../services/integrations/integrationService.js";
 import {
   storeApiKey,
   storeBotToken,
   getApiKey,
   deleteSecret,
-} from "../services/secretsService.js";
-import { queryAuditLogs } from "../services/auditLogService.js";
+} from "../services/security/secretsService.js";
+import { queryAuditLogs } from "../services/security/auditLogService.js";
+import { markProviderConfigured } from "../services/ai-providers/llmGateway.js";
 import type { IntegrationProviderId } from "../types/integrations.js";
 import logger from "../middleware/logger.js";
 
@@ -68,9 +69,9 @@ const providerSchema = z.enum([
   "datadog",
   "postman",
   "anthropic",
+  "openrouter",
   "google",
   "kimi",
-  "groq",
   "mistral",
   "jan",
 ]);
@@ -393,6 +394,7 @@ router.post("/api-key", async (req: Request, res: Response) => {
     const { provider, apiKey } = storeApiKeySchema.parse(req.body);
 
     await storeApiKey(userId, provider, apiKey);
+    markProviderConfigured(provider);
 
     // Create/update integration
     await upsertIntegration({ userId, provider });
@@ -425,6 +427,7 @@ router.post("/:provider/api-key", async (req: Request, res: Response) => {
     const { apiKey } = storeApiKeyByProviderSchema.parse(req.body);
 
     await storeApiKey(userId, provider, apiKey);
+    markProviderConfigured(provider);
 
     await upsertIntegration({ userId, provider });
     await updateIntegrationStatus(userId, provider, "active");

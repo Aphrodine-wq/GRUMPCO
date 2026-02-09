@@ -1,5 +1,5 @@
 /**
- * G-Agent Budget Store Tests
+ * Agent Budget Store Tests
  *
  * Tests for budget tracking, cost estimation, and approval handling
  */

@@ -19,7 +19,7 @@ A comprehensive command-line interface for G-Rump with frowny face branding, col
 - **Progress Indicators** - Know exactly what's happening with visual feedback
 - **Error Handling** - Helpful error messages (with extra frowns)
 - **API Key Management** - Built-in commands for managing credentials
-- **Multi-Provider Support** - NVIDIA NIM, OpenRouter, Groq, Ollama
+- **Multi-Provider Support** - NVIDIA NIM, OpenRouter, Anthropic, Ollama
 
 ---
 

@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <rect width="24" height="24" rx="4" fill="#7c3aed"/>
-  <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">G</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <circle cx="12" cy="12" r="10" fill="#7c3aed"/>
+  <circle cx="9" cy="10" r="2" fill="white"/>
+  <circle cx="15" cy="10" r="2" fill="white"/>
+  <path d="M8 16q4-3 8 0" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
 </svg>

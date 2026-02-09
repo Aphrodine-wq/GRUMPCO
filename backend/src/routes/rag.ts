@@ -4,8 +4,8 @@
 
 import { createHash } from "crypto";
 import { Router, type Request, type Response } from "express";
-import { ragQuery, runIndexer } from "../services/ragService.js";
-import { getTieredCache } from "../services/tieredCache.js";
+import { ragQuery, runIndexer } from "../services/rag/ragService.js";
+import { getTieredCache } from "../services/caching/tieredCache.js";
 import logger from "../middleware/logger.js";
 import { timingSafeEqualString } from "../utils/security.js";
 

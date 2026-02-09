@@ -1,0 +1,110 @@
+# =============================================================================
+# G-Rump Development Docker Compose
+# =============================================================================
+#
+# One-command full-stack development environment with hot-reload.
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up
+#
+# Features:
+#   - Backend hot-reload via tsx watch (source mounted)
+#   - Frontend HMR via Vite (source mounted)
+#   - Redis for caching/queues (no auth in dev)
+#   - SQLite for database (no Postgres needed)
+#   - No resource limits (dev-friendly)
+#   - Debug ports exposed
+#
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # Backend API (hot-reload)
+  # ===========================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      target: development
+    container_name: grump-backend-dev
+    ports:
+      - "3000:3000"
+      - "9229:9229" # Node.js debugger
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_TYPE=sqlite
+      - DB_PATH=/app/data/grump-dev.db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=debug
+      - TIERED_CACHE_L1_MAX=100
+      - TIERED_CACHE_L1_TTL_MS=60000
+    volumes:
+      - ./backend/src:/app/src:cached
+      - ./backend/tests:/app/tests:cached
+      - ./packages:/packages:cached
+      - backend-dev-data:/app/data
+    command: npx tsx watch --inspect=0.0.0.0:9229 src/index.ts
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - grump-dev
+
+  # ===========================================================================
+  # Frontend (Vite HMR)
+  # ===========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: grump-frontend-dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      - ./frontend/src:/app/src:cached
+      - ./frontend/public:/app/public:cached
+      - ./frontend/index.html:/app/index.html:cached
+    command: npx vite --host 0.0.0.0
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - grump-dev
+
+  # ===========================================================================
+  # Redis (no auth for dev)
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: grump-redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly no --save ""
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - grump-dev
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  backend-dev-data:
+    driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  grump-dev:
+    driver: bridge

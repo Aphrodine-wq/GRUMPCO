@@ -60,6 +60,15 @@ intent-compiler/target/
 # Temporary backup dirs
 .backup-untracked/
 
+# SQLite databases
+data/*.db
+
+# TypeScript build cache
+backend/.tsbuildinfo
+
+# Prevent npm lockfiles (project uses pnpm)
+package-lock.json
+
 # Electron app builds (too large for GitHub)
 grump-app/
 frontend/electron-dist/

@@ -5,7 +5,7 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { parseAndEnrichIntent } from "../services/intentCompilerService.js";
+import { parseAndEnrichIntent } from "../services/intent/intentCompilerService.js";
 import { getRequestLogger } from "../middleware/logger.js";
 import { sendServerError } from "../utils/errorResponse.js";
 

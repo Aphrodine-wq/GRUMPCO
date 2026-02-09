@@ -19,8 +19,7 @@ export type ChatModeName =
   | "spec"
   | "argument"
   | "execute"
-  | "gAgent"
-  | "freeAgent";
+  | "gAgent";
 
 export interface ChatModePromptOptions {
   workspaceRoot?: string;
@@ -36,7 +35,7 @@ export interface ChatModePromptOptions {
 /**
  * Returns the mode-specific prompt for the given mode.
  * 'normal' and 'execute' both use the Code mode prompt (tools, implementation).
- * 'gAgent' and 'freeAgent' use the G-Agent mode prompt (autonomous agent with planning).
+ * 'gAgent' uses the G-Agent mode prompt (autonomous agent with planning).
  */
 export function getChatModePrompt(
   mode: ChatModeName,
@@ -52,7 +51,7 @@ export function getChatModePrompt(
     case "argument":
       return getArgumentModePrompt();
     case "gAgent":
-    case "freeAgent":
+    case "freeAgent" as ChatModeName: // backward compat: accept legacy sessionType
       return getGAgentModePrompt({
         workspaceRoot: opts?.workspaceRoot,
         specialist: opts?.specialist,
@@ -82,8 +81,4 @@ export { getArgumentModePrompt } from "./argument.js";
 export type { CodeSpecialist } from "./code.js";
 export type { GAgentPromptOptions } from "./gAgent.js";
 
-// Deprecated aliases for backward compatibility
-/** @deprecated Use getGAgentModePrompt instead */
-export { getFreeAgentModePrompt } from "./gAgent.js";
-/** @deprecated Use GAgentPromptOptions instead */
-export type { FreeAgentPromptOptions } from "./gAgent.js";
+

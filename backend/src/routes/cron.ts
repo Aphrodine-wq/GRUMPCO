@@ -14,7 +14,7 @@ import {
   deleteCronJob,
   listCronJobs,
   getCronJob,
-} from "../services/cronService.js";
+} from "../services/infra/cronService.js";
 import {
   sendErrorResponse,
   sendServerError,

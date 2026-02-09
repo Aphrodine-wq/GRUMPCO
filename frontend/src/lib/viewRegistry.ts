@@ -46,16 +46,7 @@ export const VIEW_REGISTRY = {
     loadingLabel: 'Loading Canvas…',
     backTo: 'chat',
   },
-  skills: {
-    loader: () => import('../components/SkillsScreen.svelte'),
-    loadingLabel: 'Loading Skills…',
-    backTo: 'chat',
-  },
-  swarm: {
-    loader: () => import('../components/AgentSwarmVisualizer.svelte'),
-    loadingLabel: 'Loading Agent swarm…',
-    backTo: 'chat',
-  },
+
   designToCode: {
     loader: () => import('../components/DesignToCodeScreen.svelte'),
     loadingLabel: 'Loading Design to code…',
@@ -66,27 +57,8 @@ export const VIEW_REGISTRY = {
     loadingLabel: 'Loading Projects…',
     backTo: 'chat',
   },
-  builder: {
-    loader: () => import('../components/BuilderScreen.svelte'),
-    loadingLabel: 'Loading Builder…',
-    backTo: 'chat',
-  },
-  // G-Agent: Both 'freeAgent' and 'gAgent' route to the same consolidated screen
-  freeAgent: {
-    loader: () => import('../components/GAgentScreen.svelte'),
-    loadingLabel: 'Loading G-Agent…',
-    backTo: 'chat',
-  },
-  gAgent: {
-    loader: () => import('../components/GAgentScreen.svelte'),
-    loadingLabel: 'Loading G-Agent…',
-    backTo: 'chat',
-  },
-  advancedAI: {
-    loader: () => import('../components/AdvancedAIDashboard.svelte'),
-    loadingLabel: 'Loading Advanced AI…',
-    backTo: 'chat',
-  },
+
+
 
   // ── Cost & Billing ─────────────────────────────────────────────────────
   credits: {
@@ -106,19 +78,10 @@ export const VIEW_REGISTRY = {
     loadingLabel: 'Loading Integrations…',
     backTo: 'chat',
   },
-  heartbeats: {
-    loader: () => import('../components/HeartbeatsManager.svelte'),
-    loadingLabel: 'Loading Scheduled tasks…',
-    backTo: 'chat',
-  },
+
   memory: {
-    loader: () => import('../components/MemoryManager.svelte'),
-    loadingLabel: 'Loading Memory…',
-    backTo: 'chat',
-  },
-  mcp: {
-    loader: () => import('../components/McpScreen.svelte'),
-    loadingLabel: 'Loading MCP…',
+    loader: () => import('../components/KnowledgeBase.svelte'),
+    loadingLabel: 'Loading Knowledge base…',
     backTo: 'chat',
   },
   auditLog: {
@@ -143,6 +106,21 @@ export const VIEW_REGISTRY = {
     loadingLabel: 'Loading Cloud…',
     backTo: 'chat',
   },
+
+  // ── New Feature Screens ──────────────────────────────────────────────
+
+  github: {
+    loader: () => import('../components/GitHubPanel.svelte'),
+    loadingLabel: 'Loading GitHub…',
+    backTo: 'chat',
+  },
+
+  analytics: {
+    loader: () => import('../components/AnalyticsDashboard.svelte'),
+    loadingLabel: 'Loading Analytics…',
+    backTo: 'chat',
+  },
+
 
   // ── Settings sub-screens ───────────────────────────────────────────────
   troubleshooting: {

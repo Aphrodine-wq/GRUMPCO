@@ -78,7 +78,7 @@ describe('newOnboardingStore', () => {
       const expectedOrder: OnboardingStep[] = [
         'welcome',
         'ship-workflow',
-        'g-agent',
+        'agent',
         'auth',
         'api-provider',
         'frontend-stack',

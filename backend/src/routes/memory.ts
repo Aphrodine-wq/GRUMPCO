@@ -23,11 +23,11 @@ import {
   recall,
   remember,
   learnFromFeedback,
-} from "../services/memoryService.js";
+} from "../services/session/memoryService.js";
 import {
   gAgentMemoryService,
   type MemoryCategory,
-} from "../services/gAgentMemoryService.js";
+} from "../services/agents/gAgentMemoryService.js";
 import logger from "../middleware/logger.js";
 import {
   sendErrorResponse,

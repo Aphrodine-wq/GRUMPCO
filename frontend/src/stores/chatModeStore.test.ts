@@ -97,6 +97,47 @@ describe('chatModeStore', () => {
     });
   });
 
+  describe('clearMode', () => {
+    it('should clear mode to none', () => {
+      chatModeStore.setMode('code');
+      expect(get(chatModeStore)).toBe('code');
+
+      chatModeStore.clearMode();
+
+      expect(get(chatModeStore)).toBe('none');
+    });
+
+    it('should not persist none to localStorage', () => {
+      chatModeStore.setMode('code');
+      expect(localStorage.getItem('grump-chat-mode')).toBe('code');
+
+      chatModeStore.clearMode();
+
+      // Should still have code, not be overwritten with 'none'
+      expect(localStorage.getItem('grump-chat-mode')).toBe('code');
+    });
+
+    it('should update subscribers', () => {
+      const values: string[] = [];
+      const unsubscribe = chatModeStore.subscribe((v) => values.push(v));
+
+      chatModeStore.setMode('argument');
+      chatModeStore.clearMode();
+
+      unsubscribe();
+
+      expect(values).toEqual(['design', 'argument', 'none']);
+    });
+
+    it('should allow setting mode after clear', () => {
+      chatModeStore.clearMode();
+      expect(get(chatModeStore)).toBe('none');
+
+      chatModeStore.setMode('design');
+      expect(get(chatModeStore)).toBe('design');
+    });
+  });
+
   describe('localStorage error handling', () => {
     it('should default to design when localStorage.getItem throws', async () => {
       const originalGetItem = localStorage.getItem;

@@ -233,7 +233,7 @@ Built-in quality enforcement:
                                │
 ┌──────────────────────────────▼──────────────────────────────────┐
 │                      AI Providers                                │
-│   NVIDIA NIM │ Kimi K2.5 │ OpenRouter │ Groq │ Anthropic       │
+│   NVIDIA NIM │ Kimi K2.5 │ OpenRouter │ Anthropic │ Ollama          │
 │              │ Ollama (Local) │ GitHub Copilot │ Mistral        │
 └──────────────────────────────┬──────────────────────────────────┘
                                │
@@ -646,7 +646,7 @@ Three-tier caching architecture:
 | NVIDIA NIM | Primary inference, Nemotron models | P0 |
 | Anthropic Claude | High-quality reasoning | P0 |
 | OpenRouter | Multi-model access | P1 |
-| Groq | Ultra-fast inference | P1 |
+| Anthropic | Claude models | P1 |
 | Kimi K2.5 | Long context, multilingual | P1 |
 | Ollama | Local/offline models | P1 |
 | GitHub Copilot | Code completion | P2 |

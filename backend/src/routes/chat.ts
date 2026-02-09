@@ -18,12 +18,12 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { getDatabase } from "../db/database.js";
-import { claudeServiceWithTools } from "../services/claudeServiceWithTools.js";
-import { route } from "../services/modelRouter.js";
+import { claudeServiceWithTools } from "../services/ai-providers/claudeServiceWithTools.js";
+import { route } from "../services/ai-providers/modelRouter.js";
 import {
   getCachedChatResponse,
   setCachedChatResponse,
-} from "../services/chatCache.js";
+} from "../services/caching/chatCache.js";
 import {
   recordLlmRouterSelection,
   recordChatRequest,
@@ -35,7 +35,7 @@ import {
   ErrorCode,
   getClientSSEErrorMessage,
 } from "../utils/errorResponse.js";
-import { StreamBuffer } from "../services/streamBuffer.js";
+import { StreamBuffer } from "../services/infra/streamBuffer.js";
 import {
   generateArchitectureForChat,
   generatePRDForChat,
@@ -44,7 +44,7 @@ import {
   iteratePhase,
   type DesignWorkflowState,
   type DesignPhase,
-} from "../services/designWorkflowService.js";
+} from "../services/ship/designWorkflowService.js";
 
 /**
  * Extract user identifier from request headers or query params.
@@ -133,7 +133,7 @@ const chatStreamRequestSchema = z.object({
   agentProfile: z
     .enum(["general", "router", "frontend", "backend", "devops", "test"])
     .optional(),
-  provider: z.enum(["nim", "ollama", "mock"]).optional(),
+  provider: z.enum(["nim", "openrouter", "ollama", "jan", "github-copilot", "kimi", "anthropic", "mistral", "google", "grump", "mock"]).optional(),
   modelId: z.string().optional(),
   modelKey: z.string().optional(),
   guardRailOptions: guardRailOptionsSchema,
@@ -144,7 +144,7 @@ const chatStreamRequestSchema = z.object({
   maxLatencyMs: z.number().positive().optional(),
   modelPreset: z.enum(["fast", "quality", "balanced"]).optional(),
   sessionType: z.enum(["chat", "gAgent", "freeAgent"]).optional(),
-  freeAgentModelPreference: modelPreferenceSchema, // Deprecated
+  freeAgentModelPreference: modelPreferenceSchema, // Legacy field, kept for backward compat
   gAgentModelPreference: modelPreferenceSchema,
   includeRagContext: z.boolean().optional(),
   toolAllowlist: z.array(z.string()).optional(),
@@ -218,7 +218,7 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
     maxLatencyMs,
     modelPreset,
     sessionType: sessionTypeRaw,
-    freeAgentModelPreference: reqModelPreference,
+    freeAgentModelPreference: reqModelPreference, // legacy field
     gAgentModelPreference: reqGAgentModelPreference,
     includeRagContext,
     toolAllowlist,
@@ -252,7 +252,7 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
   }
 
   // Resolve provider for validation (multimodal allowed for nim)
-  let providerForValidation: "nim" | "ollama" | "mock" | undefined = provider;
+  let providerForValidation: string | undefined = provider;
   if (modelKey && typeof modelKey === "string") {
     const [prefix, rest] = modelKey.split(":");
     if (prefix === "nim" && rest) providerForValidation = "nim";
@@ -340,9 +340,9 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
     // Determine mode: prefer new 'mode' parameter, fall back to planMode for backward compatibility
     // Map frontend-only modes to backend stream modes
     const rawMode = mode || (planMode ? "plan" : "normal");
-    const chatMode = (rawMode === "code" || rawMode === "ship" || rawMode === "argument")
+    const chatMode = (rawMode === "ship" || rawMode === "argument")
       ? "normal" as const
-      : rawMode as "normal" | "plan" | "spec" | "execute" | "design";
+      : rawMode as "normal" | "plan" | "spec" | "execute" | "design" | "code";
     if (req.body.planMode !== undefined) {
       logger.warn(
         { requestId: req.requestId },
@@ -355,16 +355,21 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
         ? agentProfile
         : undefined;
     // Model: provider + modelId, or modelKey (e.g. nim:meta/llama-3.1-70b-instruct), or model router when none set
-    let reqProvider: "nim" | "ollama" | "mock" | undefined = provider;
+    let reqProvider: import("../services/ai-providers/llmGateway.js").LLMProvider | undefined = provider as import("../services/ai-providers/llmGateway.js").LLMProvider | undefined;
     let reqModelId: string | undefined = modelId;
     if (modelKey && typeof modelKey === "string") {
-      const [prefix, rest] = modelKey.split(":");
-      if (prefix === "nim" && rest) {
-        reqProvider = "nim";
-        reqModelId = rest;
-      } else if (prefix === "ollama" && rest) {
-        reqProvider = "ollama";
-        reqModelId = rest;
+      const colonIdx = modelKey.indexOf(":");
+      if (colonIdx > 0) {
+        const prefix = modelKey.slice(0, colonIdx);
+        const rest = modelKey.slice(colonIdx + 1);
+        const VALID_PROVIDERS = new Set(["nim", "openrouter", "ollama", "jan", "github-copilot", "kimi", "anthropic", "mistral", "google", "grump", "mock"]);
+        if (VALID_PROVIDERS.has(prefix) && rest) {
+          reqProvider = prefix as import("../services/ai-providers/llmGateway.js").LLMProvider;
+          reqModelId = rest;
+        } else {
+          reqModelId = modelKey;
+          if (!reqProvider) reqProvider = "nim";
+        }
       } else {
         reqModelId = modelKey;
         if (!reqProvider) reqProvider = "nim";
@@ -408,24 +413,19 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
       const prefs = settings?.preferences as
         | {
           gAgentCapabilities?: string[];
-          freeAgentCapabilities?: string[];
           gAgentExternalAllowlist?: string[];
-          freeAgentExternalAllowlist?: string[];
           gAgentModelPreference?: { source?: string; provider?: string; modelId?: string };
-          freeAgentModelPreference?: { source?: string; provider?: string; modelId?: string };
         }
         | undefined;
 
       if (sessionType === "gAgent") {
-        gAgentCapabilities = (prefs?.gAgentCapabilities ??
-          prefs?.freeAgentCapabilities) as string[] | undefined;
-        gAgentExternalAllowlist =
-          prefs?.gAgentExternalAllowlist ?? prefs?.freeAgentExternalAllowlist;
+        gAgentCapabilities = prefs?.gAgentCapabilities as string[] | undefined;
+        gAgentExternalAllowlist = prefs?.gAgentExternalAllowlist;
       }
 
       // Extract model preference (do this once, use for routing)
       if (!reqGAgentModelPreference && !reqModelPreference) {
-        const pref = prefs?.gAgentModelPreference || prefs?.freeAgentModelPreference;
+        const pref = prefs?.gAgentModelPreference;
         const src = pref?.source;
         if (pref && (src === "cloud" || src === "auto")) {
           modelPreference = { ...pref, source: src };
@@ -483,8 +483,21 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
         sessionType,
         modelPreference,
       });
-      reqProvider = routed.provider as "nim" | "ollama" | "mock";
+      reqProvider = routed.provider as import("../services/ai-providers/llmGateway.js").LLMProvider;
       reqModelId = routed.modelId;
+
+      // SPEED OPTIMIZATION: Auto-upgrade from slow local Ollama to NIM cloud for code mode
+      // Local Ollama is too slow for code generation — use cloud inference instead
+      if (chatMode === "code" && reqProvider === "ollama") {
+        const prevProvider = reqProvider;
+        reqProvider = "nim";
+        reqModelId = "moonshotai/kimi-k2.5";
+        logger.info(
+          { from: prevProvider, to: reqProvider, model: reqModelId, mode: chatMode },
+          "Auto-upgraded code mode from local Ollama to NIM cloud for speed",
+        );
+      }
+
       recordLlmRouterSelection(routed.provider, routed.modelId);
     }
 
@@ -501,9 +514,11 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
       }
     }
 
-    // Plan-only cache: when mode is plan and no provider/model override, try cache first
+    // SPEED OPTIMIZATION: Cache lookup for plan AND normal mode (identical recent queries)
+    // Normal mode uses a shorter TTL (2 min) while plan mode uses 10 min
+    const cacheableMode = chatMode === "plan" || chatMode === "normal";
     if (
-      chatMode === "plan" &&
+      cacheableMode &&
       provider == null &&
       modelId == null &&
       modelKey == null
@@ -519,13 +534,14 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
         res.write('data: {"type":"done"}\n\n');
         res.end();
         logger.debug(
-          { requestId: req.requestId },
-          "Chat stream served from cache (plan mode)",
+          { requestId: req.requestId, mode: chatMode },
+          "Chat stream served from cache",
         );
         return;
       }
     }
 
+    const userId = getUserKey(req);
     const stream = claudeServiceWithTools.generateChatStream(
       messages as Array<{ role: "user" | "assistant"; content: string }>,
       abortController.signal,
@@ -549,6 +565,7 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
       Boolean(includeRagContext),
       Array.isArray(toolAllowlist) ? toolAllowlist : undefined,
       Array.isArray(toolDenylist) ? toolDenylist : undefined,
+      userId,
     );
 
     // Stream events to client; collect full text for plan-mode cache
@@ -572,47 +589,118 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
       { maxDelayMs: batchMs, maxBufferSize: batchMax },
     );
 
-    for await (const event of stream) {
-      if (!isClientConnected) {
-        logger.debug(
-          { requestId: req.requestId, sessionType },
-          "Client disconnected, stopping stream",
+    // ── HANG-PROOF: SSE Keepalive ──────────────────────────────────────
+    // Send heartbeat comments every 15s to prevent proxy/CDN/firewall
+    // from killing idle SSE connections during long tool executions.
+    const KEEPALIVE_MS = 15_000;
+    const keepaliveInterval = setInterval(() => {
+      if (isClientConnected && !res.writableEnded) {
+        try {
+          res.write(": keepalive\n\n");
+        } catch {
+          // Client disconnected — cleanup will happen in req.on('close')
+        }
+      }
+    }, KEEPALIVE_MS);
+
+    // ── HANG-PROOF: Stream Idle Watchdog ────────────────────────────────
+    // If no event arrives from generateChatStream for 60s, assume it's
+    // stalled and abort with a retryable error.
+    const STREAM_IDLE_TIMEOUT_MS = Number(process.env.STREAM_IDLE_TIMEOUT_MS ?? 60_000);
+    let streamIdleTimer: ReturnType<typeof setTimeout> | null = null;
+    let streamTimedOut = false;
+
+    const resetIdleTimer = () => {
+      if (streamIdleTimer) clearTimeout(streamIdleTimer);
+      streamIdleTimer = setTimeout(() => {
+        streamTimedOut = true;
+        abortController.abort();
+        logger.warn(
+          { requestId: req.requestId, timeoutMs: STREAM_IDLE_TIMEOUT_MS, sessionType },
+          "Stream idle watchdog triggered — aborting stalled stream",
         );
-        break;
-      }
-      if (event.type === "text" && (event as { text?: string }).text) {
-        const text = (event as { text: string }).text;
-        if (chatMode === "plan") collectedText += text;
-        textBuffer.push(text);
-        continue;
+      }, STREAM_IDLE_TIMEOUT_MS);
+    };
+    resetIdleTimer(); // Start watchdog
+
+    try {
+      for await (const event of stream) {
+        resetIdleTimer(); // Reset watchdog on every event
+        if (!isClientConnected) {
+          logger.debug(
+            { requestId: req.requestId, sessionType },
+            "Client disconnected, stopping stream",
+          );
+          break;
+        }
+        if (event.type === "text" && (event as { text?: string }).text) {
+          const text = (event as { text: string }).text;
+          if (cacheableMode) collectedText += text;
+          textBuffer.push(text);
+          continue;
+        }
+
+        // Flush buffered text before non-text events
+        textBuffer.flush();
+
+        // Send event to client
+        try {
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+        } catch (writeError) {
+          logger.error(
+            { error: writeError, requestId: req.requestId },
+            "Failed to write to stream",
+          );
+          break;
+        }
       }
 
-      // Flush buffered text before non-text events
-      textBuffer.flush();
+    } finally {
+      // Cleanup keepalive and watchdog timers
+      clearInterval(keepaliveInterval);
+      if (streamIdleTimer) clearTimeout(streamIdleTimer);
+    }
 
-      // Send event to client
+    // If the watchdog triggered, send a retryable timeout error
+    if (streamTimedOut) {
+      textBuffer.end();
       try {
-        res.write(`data: ${JSON.stringify(event)}\n\n`);
-      } catch (writeError) {
-        logger.error(
-          { error: writeError, requestId: req.requestId },
-          "Failed to write to stream",
+        if (!res.writableEnded) {
+          res.write(
+            `data: ${JSON.stringify({
+              type: "error",
+              message: "Stream timed out — the model stopped responding. Please try again.",
+              errorType: "timeout",
+              retryable: true,
+              metadata: { requestId: req.requestId, timeoutMs: STREAM_IDLE_TIMEOUT_MS },
+            })}\n\n`,
+          );
+          res.end();
+        }
+      } catch { /* client disconnected */ }
+    } else {
+      // Flush remaining text and send completion marker
+      textBuffer.end();
+      try {
+        if (!res.writableEnded) {
+          res.write('data: {"type":"done"}\n\n');
+          res.end();
+        }
+      } catch (endError) {
+        logger.debug(
+          { error: endError, requestId: req.requestId },
+          "Failed to write done/end to stream (client likely disconnected)",
         );
-        break;
       }
     }
 
-    // Flush remaining text and send completion marker
-    textBuffer.end();
-    res.write('data: {"type":"done"}\n\n');
-    res.end();
-
-    // Cache plan-mode response for future identical requests
-    if (chatMode === "plan" && collectedText) {
+    // SPEED OPTIMIZATION: Cache responses for plan AND normal mode
+    // Avoids re-calling LLM for identical recent queries
+    if (cacheableMode && collectedText) {
       setCachedChatResponse(chatMode, messages, collectedText).catch((err) => {
         logger.warn(
           { error: err instanceof Error ? err.message : String(err) },
-          "Failed to cache plan response",
+          "Failed to cache chat response",
         );
       });
     }
@@ -666,7 +754,13 @@ router.post("/stream", async (req: Request, res: Response): Promise<void> => {
       logger.error({ error: writeError }, "Failed to write error to stream");
     }
 
-    res.end();
+    try {
+      if (!res.writableEnded) {
+        res.end();
+      }
+    } catch {
+      // Socket already destroyed; nothing to do
+    }
   } finally {
     // Cleanup
     abortController.abort();

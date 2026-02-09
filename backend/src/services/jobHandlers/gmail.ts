@@ -1,6 +1,6 @@
 import logger from "../../middleware/logger.js";
-import { GmailService } from "../gmailService.js";
-import { from } from "../supabaseClient.js";
+import { GmailService } from "../integrations/gmailService.js";
+import { from } from "../platform/supabaseClient.js";
 
 interface ProcessGmailWebhookJob {
   emailAddress: string;

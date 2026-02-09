@@ -8,7 +8,7 @@ import {
   getFeatureFlags,
   formatCapabilityListForPrompt,
   type TierId,
-} from "../services/featureFlagsService.js";
+} from "../services/platform/featureFlagsService.js";
 
 export interface ComposeHeadOptions {
   tier?: TierId;
@@ -33,7 +33,7 @@ function rulesBlock(): string {
 - If requirements are ambiguous or materially incomplete, ask a short clarifying question before implementation.
 - Response formatting defaults to plain text paragraphs and simple bullets.
 - Do not use markdown headings (#, ##, ###) or bold markers (**) unless the user explicitly asks for markdown formatting.
-- ALWAYS use tools (file_write, file_edit, bash_execute) to create and modify code. Never output code only in text — create real files.
+- ALWAYS use tools (file_write, file_edit, bash_execute) to create and modify code. Never output code only in text — create real files. When tools are unavailable or fail, output the code in markdown code blocks. Never respond to a code request with only explanation and no code.
 - When creating files, use file_write with the complete file content. When editing, use file_edit for targeted changes.
 - After making code changes, verify correctness by running builds or tests when possible.
 ${CLAUDE_CODE_QUALITY_BLOCK.trim()}

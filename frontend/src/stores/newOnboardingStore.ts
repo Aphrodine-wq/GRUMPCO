@@ -7,7 +7,7 @@ import { writable, derived, get } from 'svelte/store';
 export type OnboardingStep =
   | 'welcome'
   | 'ship-workflow'
-  | 'g-agent'
+  | 'agent'
   | 'auth'
   | 'api-provider'
   | 'frontend-stack'
@@ -224,11 +224,6 @@ export const AI_PROVIDER_OPTIONS: TechOption[] = [
     description: 'Access multiple models',
   },
   { id: 'mistral', name: 'Mistral AI', icon: 'mistral', description: 'Efficient open models' },
-  { id: 'groq', name: 'Groq', icon: 'groq', description: 'Ultra-fast inference' },
-  { id: 'cohere', name: 'Cohere', icon: 'cohere', description: 'Command and embed models' },
-  { id: 'fireworks', name: 'Fireworks AI', icon: 'fireworks', description: 'Open model inference' },
-  { id: 'replicate', name: 'Replicate', icon: 'replicate', description: 'Run open-source models' },
-  { id: 'anyscale', name: 'Anyscale', icon: 'anyscale', description: 'Ray and LLM inference' },
   { id: 'ollama', name: 'Ollama (Local)', icon: 'ollama', description: 'Run models locally via Ollama' },
   { id: 'jan', name: 'Jan (Local)', icon: 'jan', description: 'Run models locally via Jan' },
 ];
@@ -303,14 +298,11 @@ const DEFAULT_ONBOARDING_DATA: OnboardingData = {
   riskAcknowledged: false,
 };
 
-// Step order for navigation (g-agent early – right after welcome; tech stack removed – AI chooses best fit)
+// Step order for navigation – streamlined to essentials only
 export const STEP_ORDER: OnboardingStep[] = [
   'welcome',
-  'g-agent',
-  'ship-workflow',
   'auth',
   'api-provider',
-  'app-preferences',
   'review',
   'next-steps',
 ];

@@ -93,7 +93,7 @@
     title="View usage and budget — {usageCalls} API calls this month"
   >
     <div class="credit-top">
-      <span class="credit-label">{costUsedUsd != null ? '💰 Usage' : '⚡ Credits'}</span>
+      <span class="credit-label">{costUsedUsd != null ? 'Usage' : 'Credits'}</span>
       <span class="credit-value">{displayText}</span>
     </div>
     <div class="credit-bar-track">

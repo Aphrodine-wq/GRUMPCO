@@ -46,6 +46,10 @@ const app = createApp();
  */
 async function bootstrap(): Promise<void> {
   try {
+    // Phase 0: Register shutdown & error handlers FIRST so unhandledRejection /
+    // uncaughtException handlers protect every subsequent phase.
+    registerShutdownHandlers();
+
     // Phase 1: Initialize core services (database, cost tracking) — must be first
     await initializeCore();
 
@@ -65,8 +69,7 @@ async function bootstrap(): Promise<void> {
     // Phase 5: Start HTTP server BEFORE optional services
     await startServer(app, PREFERRED_PORT);
 
-    // Phase 6: Register shutdown handlers (sync, fast)
-    registerShutdownHandlers();
+    // Phase 6: Shutdown handlers already registered in Phase 0
 
     // Phase 7+8: Non-critical — run in background AFTER server is listening
     // This means the server starts accepting requests ~1s sooner

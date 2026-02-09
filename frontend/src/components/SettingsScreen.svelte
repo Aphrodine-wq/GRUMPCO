@@ -22,7 +22,7 @@
   import { workspaceStore } from '../stores/workspaceStore';
   import { analyzeArchitecture } from '../stores/featuresStore';
   import { setCurrentView, showPricing } from '../stores/uiStore';
-  import { onboardingStore } from '../stores/onboardingStore';
+
   import { authGateStore } from '../stores/authGateStore';
   import { preferencesStore, density, includeRagContext } from '../stores/preferencesStore';
   import {
@@ -645,7 +645,9 @@
             variant="secondary"
             size="sm"
             onclick={() => {
-              onboardingStore.resetOnboarding();
+              try {
+                localStorage.removeItem('g-rump-onboarding-seen');
+              } catch {}
               window.location.reload();
             }}
           >

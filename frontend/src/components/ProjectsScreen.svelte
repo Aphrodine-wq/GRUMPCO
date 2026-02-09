@@ -16,7 +16,7 @@
     type Integration,
     type IntegrationProvider,
   } from '../lib/integrationsApi';
-  import OnboardingDots from './onboarding/OnboardingDots.svelte';
+  import OnboardingDots from './OnboardingDots.svelte';
 
   interface Props {
     onBack?: () => void;
@@ -44,7 +44,7 @@
     { id: 'webapp', label: 'Web App', desc: 'Frontend or full-stack web' },
     { id: 'api', label: 'API', desc: 'Backend REST or GraphQL' },
     { id: 'cli', label: 'CLI', desc: 'Command-line tool' },
-    { id: 'gAgent', label: 'G-Agent', desc: 'AI agent workflow' },
+    { id: 'gAgent', label: 'Agent', desc: 'AI agent workflow' },
     { id: 'saas', label: 'SaaS', desc: 'Subscription software product' },
     { id: 'dashboard', label: 'Dashboard', desc: 'Analytics, admin panels' },
     { id: 'ecommerce', label: 'E-commerce', desc: 'Online store, marketplace' },
@@ -69,7 +69,7 @@
     { id: 'webapp', label: 'Web App' },
     { id: 'api', label: 'API' },
     { id: 'cli', label: 'CLI' },
-    { id: 'gAgent', label: 'G-Agent' },
+    { id: 'gAgent', label: 'Agent' },
     { id: 'saas', label: 'SaaS' },
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'ecommerce', label: 'E-commerce' },

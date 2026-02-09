@@ -11,7 +11,7 @@
  */
 
 import { EventEmitter } from "events";
-import { HRRVector, HolographicMemory } from "../services/holographicMemory.js";
+import { HRRVector, HolographicMemory } from "../services/agents/holographicMemory.js";
 
 // ============================================================================
 // TYPES

@@ -12,7 +12,7 @@ import {
   approveRequest,
   rejectRequest,
   assessRiskLevel,
-} from "../services/approvalService.js";
+} from "../services/security/approvalService.js";
 import logger from "../middleware/logger.js";
 
 const router = Router();

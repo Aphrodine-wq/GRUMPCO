@@ -85,7 +85,7 @@ const ROUTE_DEFINITIONS: RouteEntry[] = [
   // ── Core AI (COLD - less frequently used) ────────────────────────────────
   {
     path: "/api/gagent",
-    module: "./gagent.js",
+    module: "./gagent/index.js",
     priority: "cold",
     skipServerless: true,
   },

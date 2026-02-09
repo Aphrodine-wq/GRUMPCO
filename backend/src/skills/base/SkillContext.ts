@@ -8,7 +8,7 @@ import fs from "fs/promises";
 import { existsSync } from "fs";
 import { v4 as uuidv4 } from "uuid";
 import logger from "../../middleware/logger.js";
-import { getStream, type StreamParams } from "../../services/llmGateway.js";
+import { getStream, type StreamParams } from "../../services/ai-providers/llmGateway.js";
 import type {
   SkillContext,
   SkillEvent,

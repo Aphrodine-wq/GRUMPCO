@@ -8,22 +8,22 @@ import express, { type Request, type Response, type Router } from "express";
 import {
   generateArchitecture,
   generateArchitectureStream,
-} from "../services/architectureService.js";
+} from "../services/ship/architectureService.js";
 import { getRequestLogger } from "../middleware/logger.js";
 import { sendServerError, writeSSEError } from "../utils/errorResponse.js";
 import {
   validateArchitectureRequest,
   handleArchitectureValidationErrors,
 } from "../middleware/validator.js";
-import { dispatchWebhook } from "../services/webhookService.js";
-import { getTieredCache } from "../services/tieredCache.js";
+import { dispatchWebhook } from "../services/integrations/webhookService.js";
+import { getTieredCache } from "../services/caching/tieredCache.js";
 import { logOnError } from "../utils/safeAsync.js";
 import { DEMO_ARCHITECTURE } from "../demo/sampleData.js";
 import type {
   ArchitectureRequest,
   ConversationMessage,
 } from "../types/index.js";
-import type { EnrichedIntent } from "../services/intentCompilerService.js";
+import type { EnrichedIntent } from "../services/intent/intentCompilerService.js";
 
 const ARCHITECTURE_CACHE_TTL_SEC = 60 * 60; // 1 hour (seconds for tiered cache)
 

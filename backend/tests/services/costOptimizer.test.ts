@@ -13,7 +13,7 @@ vi.mock('@grump/ai-core', () => ({
     {
       id: 'cheap-model',
       name: 'Cheap Model',
-      provider: 'groq',
+      provider: 'nim',
       costPerMillionInput: 0.1,
       costPerMillionOutput: 0.2,
       capabilities: ['chat'],
@@ -235,7 +235,7 @@ describe('CostOptimizer', () => {
       const result = optimizer.selectModel(complexity);
 
       expect(result.modelId).toBe('cheap-model');
-      expect(result.provider).toBe('groq');
+      expect(result.provider).toBe('nim');
       expect(result.reasoning).toContain('Simple task');
     });
 

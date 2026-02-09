@@ -56,6 +56,11 @@ const browserGlobals = {
   URLSearchParams: 'readonly',
   structuredClone: 'readonly',
   TouchEvent: 'readonly',
+  performance: 'readonly',
+  PerformanceObserver: 'readonly',
+  PerformanceEntry: 'readonly',
+  PerformanceNavigationTiming: 'readonly',
+  PerformanceResourceTiming: 'readonly',
 };
 
 

@@ -5,7 +5,7 @@
  */
 
 import { parentPort, workerData } from "worker_threads";
-import { runIntentCli } from "../services/intentCliRunner.js";
+import { runIntentCli } from "../services/intent/intentCliRunner.js";
 
 const _workerIndex =
   (workerData as { workerIndex?: number; cpuCount?: number } | undefined)

@@ -64,7 +64,7 @@ Use only the tools enabled for this session. Your current capabilities determine
 - memory: Persist and recall context
 - self_improve: Create skills and update patterns
 
-If a tool is not available, explain what you would do and suggest enabling that capability in Settings.`;
+If a tool is not available, explain what you would do and suggest enabling that capability in Settings. If file tools are not enabled, output requested code in markdown code blocks.`;
 
 const MEMORY_INSTRUCTIONS = `MEMORY & LEARNING:
 - Use memory tools to store important context (project structure, user preferences, successful patterns)
@@ -129,8 +129,4 @@ You are currently executing an approved plan. Focus on completing the current ta
   return parts.join("\n\n");
 }
 
-// Backward compatibility alias
-/** @deprecated Use getGAgentModePrompt instead */
-export const getFreeAgentModePrompt = getGAgentModePrompt;
-/** @deprecated Use GAgentPromptOptions instead */
-export type FreeAgentPromptOptions = GAgentPromptOptions;
+

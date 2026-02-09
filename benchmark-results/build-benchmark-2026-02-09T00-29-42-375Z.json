@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-02-09T00:29:42.376Z",
+  "platform": "win32",
+  "arch": "x64",
+  "nodeVersion": "v24.11.1",
+  "results": [
+    {
+      "name": "SWC Build",
+      "durationMs": 1593.4981,
+      "passed": true,
+      "detail": "Compiled backend in 1.59s (TSC comparison unavailable)"
+    },
+    {
+      "name": "TSC Build (baseline)",
+      "durationMs": 0,
+      "passed": false,
+      "detail": "TSC build failed (likely type errors), but SWC still compiled successfully — this itself demonstrates SWC's resilience"
+    },
+    {
+      "name": "Intent Parse (fast / JSON)",
+      "durationMs": 6.9379,
+      "opsPerSec": 1441358,
+      "passed": true,
+      "detail": "10,000 intents in 7ms"
+    },
+    {
+      "name": "Intent Parse (naive / RegExp)",
+      "durationMs": 8.57,
+      "opsPerSec": 1166861,
+      "passed": true,
+      "detail": "10,000 intents in 9ms"
+    },
+    {
+      "name": "Intent Parsing Speedup",
+      "durationMs": 6.9379,
+      "passed": false,
+      "detail": "Fast path is 1.2× faster (threshold: ≥3×) FAIL"
+    },
+    {
+      "name": "Eager CLI startup (50 cmds)",
+      "durationMs": 20.5456,
+      "passed": true,
+      "detail": "500 iterations in 21ms"
+    },
+    {
+      "name": "Lazy CLI startup (1 cmd)",
+      "durationMs": 0.396,
+      "passed": true,
+      "detail": "500 iterations in 0ms"
+    },
+    {
+      "name": "CLI Startup Speedup",
+      "durationMs": 0.396,
+      "passed": true,
+      "detail": "Lazy loading is 51.9× faster (threshold: ≥5×) PASS"
+    }
+  ]
+}

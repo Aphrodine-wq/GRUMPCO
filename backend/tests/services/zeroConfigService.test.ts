@@ -424,7 +424,7 @@ describe('zeroConfigService', () => {
         expect(template.description).toBeDefined();
         expect(template.techStack).toBeInstanceOf(Array);
         expect(template.diagramStyle).toMatch(/^(minimal|detailed|comprehensive)$/);
-        expect(template.freeAgentCapabilities).toBeInstanceOf(Array);
+        expect(template.gAgentCapabilities).toBeInstanceOf(Array);
       }
     });
 
@@ -439,8 +439,8 @@ describe('zeroConfigService', () => {
       expect(template?.techStack).toContain('Node.js');
       expect(template?.techStack).toContain('PostgreSQL');
       expect(template?.diagramStyle).toBe('detailed');
-      expect(template?.freeAgentCapabilities).toContain('file');
-      expect(template?.freeAgentCapabilities).toContain('git');
+      expect(template?.gAgentCapabilities).toContain('file');
+      expect(template?.gAgentCapabilities).toContain('git');
     });
 
     it('should have static-site template with minimal diagram style', async () => {
@@ -459,8 +459,8 @@ describe('zeroConfigService', () => {
       
       expect(template).toBeDefined();
       expect(template?.diagramStyle).toBe('comprehensive');
-      expect(template?.freeAgentCapabilities).toContain('cloud');
-      expect(template?.freeAgentCapabilities).toContain('monitoring');
+      expect(template?.gAgentCapabilities).toContain('cloud');
+      expect(template?.gAgentCapabilities).toContain('monitoring');
     });
   });
 
@@ -496,7 +496,7 @@ describe('zeroConfigService', () => {
         preferences: expect.objectContaining({
           diagramStyle: 'detailed',
           primaryTechStack: ['React', 'Node.js', 'PostgreSQL', 'Docker'],
-          freeAgentCapabilities: ['file', 'git', 'bash', 'npm', 'docker'],
+          gAgentCapabilities: ['file', 'git', 'bash', 'npm', 'docker'],
           theme: 'dark',
           analyticsOptIn: true,
           setupComplete: true,
@@ -517,7 +517,7 @@ describe('zeroConfigService', () => {
         preferences: expect.objectContaining({
           diagramStyle: 'detailed',
           primaryTechStack: ['Python', 'PostgreSQL', 'Redis', 'Docker'],
-          freeAgentCapabilities: ['file', 'git', 'bash', 'docker'],
+          gAgentCapabilities: ['file', 'git', 'bash', 'docker'],
           theme: 'auto',
           analyticsOptIn: false,
           setupComplete: false,
@@ -552,7 +552,7 @@ describe('zeroConfigService', () => {
         preferences: expect.objectContaining({
           diagramStyle: 'comprehensive',
           primaryTechStack: ['Python', 'Redis', 'Docker'],
-          freeAgentCapabilities: expect.arrayContaining(['file', 'git', 'bash', 'docker', 'api_call', 'webhooks', 'heartbeats']),
+          gAgentCapabilities: expect.arrayContaining(['file', 'git', 'bash', 'docker', 'api_call', 'webhooks', 'heartbeats']),
         }),
       }));
     });
@@ -756,7 +756,7 @@ describe('zeroConfigService', () => {
       expect(typeof template.description).toBe('string');
       expect(Array.isArray(template.techStack)).toBe(true);
       expect(['minimal', 'detailed', 'comprehensive']).toContain(template.diagramStyle);
-      expect(Array.isArray(template.freeAgentCapabilities)).toBe(true);
+      expect(Array.isArray(template.gAgentCapabilities)).toBe(true);
     });
 
     it('should export ProgressiveConfig type correctly', async () => {
@@ -782,7 +782,7 @@ describe('zeroConfigService', () => {
       await performZeroConfig('user-123');
       
       const savedSettings = mockDb.saveSettings.mock.calls[0][1];
-      const capabilities = savedSettings.preferences.freeAgentCapabilities;
+      const capabilities = savedSettings.preferences.gAgentCapabilities;
       
       expect(capabilities).toContain('file');
       expect(capabilities).toContain('git');
@@ -807,7 +807,7 @@ describe('zeroConfigService', () => {
       
       const savedSettings = mockDb.saveSettings.mock.calls[0][1];
       
-      expect(savedSettings.preferences.freeAgentExternalAllowlist).toEqual([]);
+      expect(savedSettings.preferences.gAgentExternalAllowlist).toEqual([]);
     });
 
     it('should set density to comfortable by default', async () => {

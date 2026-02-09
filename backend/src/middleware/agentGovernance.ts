@@ -3,7 +3,7 @@
  * Blocks or strictly governs requests from Moltbot/OpenClaw and similar AI agents.
  * Requests from the G-Rump app (X-GRump-Client: desktop | web) are never treated as agents.
  * Default: block all detected agent requests.
- * Env: AGENT_ACCESS_POLICY=block|allowlist|audit_only, AGENT_ALLOWLIST, AGENT_RATE_LIMIT_PER_HOUR, FREE_AGENT_ENABLED
+ * Env: AGENT_ACCESS_POLICY=block|allowlist|audit_only, AGENT_ALLOWLIST, AGENT_RATE_LIMIT_PER_HOUR, G_AGENT_ENABLED
  */
 
 import type { Request, Response, NextFunction } from "express";
@@ -12,8 +12,8 @@ import { env } from "../config/env.js";
 import {
   createApprovalRequest,
   getApprovalRequest,
-} from "../services/approvalService.js";
-import { writeAuditLog } from "../services/auditLogService.js";
+} from "../services/security/approvalService.js";
+import { writeAuditLog } from "../services/security/auditLogService.js";
 
 // Extend Express Request for agent context
 export interface AgentGovernedRequest extends Request {
@@ -157,7 +157,7 @@ export async function agentGovernanceMiddleware(
     return;
   }
 
-  // User-initiated requests from the G-Rump app (Free Agent, desktop, web) are never governed as external agents
+  // User-initiated requests from the G-Rump app (G-Agent, desktop, web) are never governed as external agents
   if (isGrumpAppRequest(req)) {
     next();
     return;

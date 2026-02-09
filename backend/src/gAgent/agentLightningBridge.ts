@@ -28,7 +28,7 @@ import type {
 let agentOrchestrator:
   | typeof import("../services/agentOrchestrator.js")
   | null = null;
-let swarmService: typeof import("../services/swarmService.js") | null = null;
+let swarmService: typeof import("../services/agents/swarmService.js") | null = null;
 
 async function getAgentOrchestrator() {
   if (!agentOrchestrator) {
@@ -39,7 +39,7 @@ async function getAgentOrchestrator() {
 
 async function getSwarmService() {
   if (!swarmService) {
-    swarmService = await import("../services/swarmService.js");
+    swarmService = await import("../services/agents/swarmService.js");
   }
   return swarmService;
 }

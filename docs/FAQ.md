@@ -45,7 +45,7 @@ Yes! G-Rump is open source (MIT license) with:
 - Development and testing
 - Demo environments
 
-For real AI generation, add one API key from [NVIDIA NIM](https://build.nvidia.com/), [OpenRouter](https://openrouter.ai/), or [Groq](https://groq.com/).
+For real AI generation, add one API key from [NVIDIA NIM](https://build.nvidia.com/) or [OpenRouter](https://openrouter.ai/).
 
 ### What are the system requirements?
 
@@ -120,7 +120,6 @@ echo "OLLAMA_URL=http://localhost:11434" >> backend/.env
 |----------|---------------------|--------|
 | **NVIDIA NIM** | `NVIDIA_NIM_API_KEY` | Nemotron, Llama, Mistral |
 | **OpenRouter** | `OPENROUTER_API_KEY` | 100+ models |
-| **Groq** | `GROQ_API_KEY` | Fast inference |
 | **Ollama** | `OLLAMA_URL` | Local models |
 
 ### Can I use G-Rump via API?

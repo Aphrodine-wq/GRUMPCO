@@ -2,7 +2,13 @@
   import { onMount } from 'svelte';
   import { Key, Check, AlertCircle, ExternalLink } from 'lucide-svelte';
   import { newOnboardingStore, AI_PROVIDER_OPTIONS } from '../../../stores/newOnboardingStore';
-  import { getProviderIconPath, getProviderSvgPath, getProviderFallbackLetter, getProviderColor } from '../../../lib/aiProviderIcons.js';
+  import {
+    getProviderIconPath,
+    getProviderSvgPath,
+    getProviderFallbackLetter,
+    getProviderColor,
+  } from '../../../lib/aiProviderIcons.js';
+  import { setApiKey as storeApiKeyOnServer } from '../../../lib/integrationsApi';
 
   interface Props {
     onNext: () => void;
@@ -16,6 +22,7 @@
   let showApiKeyInput = $state(false);
   let testState = $state<'idle' | 'testing' | 'success' | 'error'>('idle');
   let errorMessage = $state('');
+  let keySaved = $state(false);
 
   onMount(() => {
     setTimeout(() => (mounted = true), 100);
@@ -32,6 +39,23 @@
     showApiKeyInput = id !== 'ollama'; // Ollama doesn't need API key
     testState = 'idle';
     errorMessage = '';
+    keySaved = false;
+  }
+
+  /**
+   * Map onboarding provider IDs to the integration provider IDs accepted by the backend.
+   * Some providers (like 'grump') don't have a direct backend mapping.
+   */
+  function getBackendProviderId(providerId: string): string | null {
+    const mapping: Record<string, string> = {
+      anthropic: 'anthropic',
+      google: 'google',
+      kimi: 'kimi',
+      mistral: 'mistral',
+      jan: 'jan',
+      openrouter: 'openrouter',
+    };
+    return mapping[providerId] ?? null;
   }
 
   async function testConnection() {
@@ -41,12 +65,23 @@
     errorMessage = '';
 
     try {
-      // Simulate API test - in real implementation, call backend
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // For demo, always succeed unless empty API key for non-Ollama providers
       if (selectedProvider !== 'ollama' && !apiKey.trim()) {
         throw new Error('API key is required');
+      }
+
+      // Actually store the API key on the backend so the LLM gateway can use it
+      const backendProvider = getBackendProviderId(selectedProvider);
+      if (backendProvider && apiKey.trim()) {
+        try {
+          await storeApiKeyOnServer(
+            backendProvider as import('../../../lib/integrationsApi').IntegrationProvider,
+            apiKey.trim()
+          );
+          keySaved = true;
+        } catch (storeErr) {
+          console.warn('Failed to store API key on server:', storeErr);
+          // Don't block — the key might still work via env var fallback
+        }
       }
 
       testState = 'success';
@@ -57,8 +92,23 @@
     }
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (selectedProvider) {
+      // Persist the API key to the backend if not already saved
+      if (!keySaved && apiKey.trim()) {
+        const backendProvider = getBackendProviderId(selectedProvider);
+        if (backendProvider) {
+          try {
+            await storeApiKeyOnServer(
+              backendProvider as import('../../../lib/integrationsApi').IntegrationProvider,
+              apiKey.trim()
+            );
+            keySaved = true;
+          } catch (storeErr) {
+            console.warn('Failed to store API key on server during continue:', storeErr);
+          }
+        }
+      }
       newOnboardingStore.setAiProvider(selectedProvider, apiKey);
     }
     onNext();
@@ -112,7 +162,10 @@
                 <path d={svgPath} />
               </svg>
             {:else}
-              <span class="provider-icon-fallback" style="background: {accentColor}20; color: {accentColor}">{fallbackLetter}</span>
+              <span
+                class="provider-icon-fallback"
+                style="background: {accentColor}20; color: {accentColor}">{fallbackLetter}</span
+              >
             {/if}
           </span>
           <span class="provider-name">{provider.name}</span>

@@ -16,37 +16,37 @@ import {
   getDatabase,
   databaseSupportsRawDb,
 } from "../db/database.js";
-import { initializeCostTracking } from "../services/costAnalytics.js";
+import { initializeCostTracking } from "../services/ai-providers/costAnalytics.js";
 import { goalRepository } from "../gAgent/goalRepository.js";
-import { initializeAlerting } from "../services/alerting.js";
-import { startJobWorker, stopJobWorker } from "../services/jobQueue.js";
+import { initializeAlerting } from "../services/infra/alerting.js";
+import { startJobWorker, stopJobWorker } from "../services/infra/jobQueue.js";
 import {
   startScheduledAgentsWorker,
   stopScheduledAgentsWorker,
   loadRepeatableJobsFromDb,
-} from "../services/scheduledAgentsQueue.js";
+} from "../services/agents/scheduledAgentsQueue.js";
 import {
   startGmailWorker,
   stopGmailWorker,
-} from "../services/gmailJobQueue.js";
-import { shutdownWorkerPool } from "../services/workerPool.js";
+} from "../services/integrations/gmailJobQueue.js";
+import { shutdownWorkerPool } from "../services/infra/workerPool.js";
 import { shutdownTracing } from "../middleware/tracing.js";
-import { getTieredCache } from "../services/tieredCache.js";
-import { getNIMAccelerator } from "../services/nimAccelerator.js";
+import { getTieredCache } from "../services/caching/tieredCache.js";
+import { getNIMAccelerator } from "../services/ai-providers/nimAccelerator.js";
 import { updateGpuMetrics } from "../middleware/metrics.js";
 import { skillRegistry } from "../skills/index.js";
 import {
   USER_SKILLS_DIR,
   ensureUserSkillsDir,
-} from "../services/userSkillsService.js";
+} from "../services/workspace/userSkillsService.js";
 import { isServerlessRuntime } from "../config/runtime.js";
 import { findAvailablePort } from "../utils/portUtils.js";
 import {
   initErrorTracking,
   flushErrorTracking,
-} from "../services/errorTracking.js";
+} from "../services/infra/errorTracking.js";
 import { prewarmHotRoutes } from "../routes/registry.js";
-import { getConfiguredProviders } from "../services/llmGateway.js";
+import { getConfiguredProviders, refreshProviderCache } from "../services/ai-providers/llmGateway.js";
 import { env } from "../config/env.js";
 
 /** Interval handle for GPU metrics collection */
@@ -63,44 +63,17 @@ function printStartupBanner(port: number): void {
   const providerList =
     providers.length > 0 ? providers.join(", ") : "None (MOCK MODE)";
 
-  console.log("");
-  console.log(
-    "╔════════════════════════════════════════════════════════════════╗",
+  logger.info(
+    {
+      providers: providerList,
+      nimConfigured: !!env.NVIDIA_NIM_API_KEY,
+      mockMode: !!env.MOCK_AI_MODE,
+      database: isServerlessRuntime ? "Supabase (Cloud)" : "SQLite (Local)",
+      port,
+      environment: process.env.NODE_ENV || "development",
+    },
+    "🚀 G-RUMP AI PLATFORM — Ready to generate architectures, PRDs, and code!",
   );
-  console.log(
-    "║                                                                ║",
-  );
-  console.log(
-    "║                    🚀 G-RUMP AI PLATFORM                       ║",
-  );
-  console.log(
-    "║              The AI Product Operating System                   ║",
-  );
-  console.log(
-    "║                                                                ║",
-  );
-  console.log(
-    "╚════════════════════════════════════════════════════════════════╝",
-  );
-  console.log("");
-  console.log("📡 AI Providers:", providerList);
-  console.log(
-    "🔑 NVIDIA NIM:",
-    env.NVIDIA_NIM_API_KEY ? "✅ Configured" : "❌ Not configured",
-  );
-  console.log(
-    "🤖 Mock Mode:",
-    env.MOCK_AI_MODE ? "⚠️  ENABLED" : "❌ Disabled",
-  );
-  console.log(
-    "🗄️  Database:",
-    isServerlessRuntime ? "Supabase (Cloud)" : "SQLite (Local)",
-  );
-  console.log("🌐 Server Port:", port);
-  console.log("🎯 Environment:", process.env.NODE_ENV || "development");
-  console.log("");
-  console.log("✨ Ready to generate architectures, PRDs, and code!");
-  console.log("");
 }
 
 /**
@@ -135,6 +108,10 @@ export async function initializeCore(): Promise<void> {
       logger.warn({ err: (err as Error).message }, "Route prewarming failed");
     });
   }
+
+  // Prime the user-stored provider cache so isProviderConfigured() works
+  // for keys stored via the Onboarding Wizard (not just env vars)
+  await refreshProviderCache("default");
 }
 
 /**
@@ -154,7 +131,7 @@ export async function initializeWorkers(): Promise<void> {
   logger.info("Gmail worker started");
 
   // Scheduled agents: Redis = BullMQ repeatable jobs; no Redis = node-cron
-  const { useRedis } = await import("../services/redisConnection.js");
+  const { useRedis } = await import("../services/infra/redisConnection.js");
   if (useRedis()) {
     await startScheduledAgentsWorker();
     if (databaseSupportsRawDb()) {
@@ -163,7 +140,7 @@ export async function initializeWorkers(): Promise<void> {
     logger.info("Scheduled agents worker started (Redis/BullMQ)");
   } else {
     const { loadAllFromDbAndSchedule: loadCron } =
-      await import("../services/scheduledAgentsCron.js");
+      await import("../services/agents/scheduledAgentsCron.js");
     await loadCron();
     logger.info("Scheduled agents started (node-cron)");
   }
@@ -208,7 +185,7 @@ export async function initializeSkills(app: Express): Promise<void> {
 export function startOptionalServices(port: number): void {
   // Bonjour/mDNS advertising (local network discovery)
   if (process.env.BONJOUR_ENABLED === "true") {
-    import("../services/bonjourService.js")
+    import("../services/platform/bonjourService.js")
       .then(({ startBonjour }) => startBonjour(port))
       .catch((err) =>
         logger.debug({ err: (err as Error).message }, "Bonjour not available"),
@@ -301,7 +278,7 @@ export async function gracefulShutdown(): Promise<void> {
 
   // Stop Bonjour advertising
   try {
-    const { stopBonjour } = await import("../services/bonjourService.js");
+    const { stopBonjour } = await import("../services/platform/bonjourService.js");
     stopBonjour();
   } catch {
     // Ignore if not running
@@ -360,6 +337,45 @@ export function registerShutdownHandlers(): void {
   // Increase max listeners to prevent warning in tests
   // (multiple test files register shutdown handlers)
   process.setMaxListeners(20);
+
+  // Prevent unhandled promise rejections from crashing the process.
+  // These commonly occur in async streaming pipelines (e.g. LLM stream
+  // generators, SSE writes after client disconnect, abort signal races).
+  process.on("unhandledRejection", (reason, promise) => {
+    logger.error(
+      {
+        reason: reason instanceof Error ? { message: reason.message, stack: reason.stack } : String(reason),
+      },
+      "Unhandled promise rejection (server kept alive)",
+    );
+  });
+
+  // Prevent uncaught exceptions from silently killing the process.
+  // Log the error for debugging, but keep the server running for
+  // non-fatal exceptions (e.g. write-after-end on SSE streams).
+  process.on("uncaughtException", (error, origin) => {
+    logger.error(
+      {
+        error: { message: error.message, stack: error.stack, name: error.name },
+        origin,
+      },
+      "Uncaught exception (server kept alive)",
+    );
+
+    // If the error indicates a truly unrecoverable state, shut down gracefully
+    const fatal =
+      error.message?.includes("out of memory") ||
+      error.message?.includes("ENOMEM") ||
+      origin === "uncaughtException" && error.name === "RangeError";
+    if (fatal) {
+      logger.error("Fatal uncaught exception — initiating graceful shutdown");
+      gracefulShutdown().finally(() => {
+        if (process.env.NODE_ENV !== "test") {
+          process.exit(1);
+        }
+      });
+    }
+  });
 
   process.on("SIGTERM", async () => {
     logger.info("SIGTERM received");

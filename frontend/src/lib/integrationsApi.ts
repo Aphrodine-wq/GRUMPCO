@@ -45,7 +45,6 @@ export type IntegrationProvider =
   | 'openrouter'
   | 'google'
   | 'kimi'
-  | 'groq'
   | 'mistral'
   | 'jan'
   | 'custom';
@@ -733,6 +732,48 @@ export const PROVIDER_METADATA: Record<
     color: '#FF6C37',
     description: 'API development, testing, and documentation',
     authType: 'api_key',
+  },
+  anthropic: {
+    name: 'Anthropic',
+    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z',
+    color: '#D4A373',
+    description: 'Claude AI models — advanced reasoning and coding',
+    authType: 'api_key',
+  },
+  openrouter: {
+    name: 'OpenRouter',
+    icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+    color: '#6366F1',
+    description: 'Access multiple AI models through one API',
+    authType: 'api_key',
+  },
+  google: {
+    name: 'Google Gemini',
+    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z',
+    color: '#4285F4',
+    description: 'Gemini AI models — fast and versatile',
+    authType: 'api_key',
+  },
+  kimi: {
+    name: 'Kimi',
+    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z',
+    color: '#00C9A7',
+    description: 'Moonshot AI Kimi — great balance of speed and quality',
+    authType: 'api_key',
+  },
+  mistral: {
+    name: 'Mistral AI',
+    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z',
+    color: '#FF7000',
+    description: 'Efficient open AI models',
+    authType: 'api_key',
+  },
+  jan: {
+    name: 'Jan',
+    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z',
+    color: '#1E88E5',
+    description: 'Run AI models locally via Jan',
+    authType: 'local',
   },
   custom: {
     name: 'Custom Integration',

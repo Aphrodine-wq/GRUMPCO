@@ -106,13 +106,14 @@
 
 <style>
   .approval-card {
-    margin: 0.375rem 0;
-    padding: 0.75rem 0.875rem;
-    background: var(--color-bg-subtle, rgba(15, 23, 42, 0.35));
-    border: 1px solid var(--color-border-light, rgba(148, 163, 184, 0.2));
-    border-radius: 12px;
+    margin: 0.25rem 0;
+    padding: 0.625rem 0.75rem;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-left: 3px solid var(--color-primary, #7c3aed);
+    border-radius: 0 0.5rem 0.5rem 0;
     width: min(100%, 860px);
-    box-shadow: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     contain: layout style paint;
     content-visibility: auto;
   }
@@ -141,16 +142,16 @@
     justify-content: center;
     width: 1.25rem;
     height: 1.25rem;
-    border-radius: 0.375rem;
-    background: color-mix(in srgb, var(--color-primary, #3b82f6) 18%, transparent);
-    color: var(--color-primary, #3b82f6);
+    border-radius: 0.25rem;
+    background: rgba(124, 58, 237, 0.08);
+    color: var(--color-primary, #7c3aed);
     flex-shrink: 0;
   }
 
   .card-title {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: var(--color-text, #e2e8f0);
+    color: #374151;
     margin: 0;
   }
 
@@ -158,41 +159,41 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 1.25rem;
+    height: 1.25rem;
     background: none;
-    border: 1px solid transparent;
-    border-radius: 0.45rem;
-    color: var(--color-text-muted, #64748b);
+    border: 1px solid #e5e7eb;
+    border-radius: 0.25rem;
+    color: #9ca3af;
     cursor: pointer;
     padding: 0;
     transition: all 0.12s ease;
   }
   .close-btn:hover {
-    border-color: var(--color-border-light, rgba(148, 163, 184, 0.25));
-    background: color-mix(in srgb, var(--color-bg-card, #0f172a) 88%, transparent);
-    color: var(--color-text, #e2e8f0);
+    border-color: #d1d5db;
+    background: #f9fafb;
+    color: #374151;
   }
 
   .card-body {
-    font-size: 0.78rem;
-    color: var(--color-text-secondary, #94a3b8);
-    margin: 0.375rem 0 0;
+    font-size: 0.72rem;
+    color: #6b7280;
+    margin: 0.25rem 0 0;
     line-height: 1.35;
   }
 
   .feedback-area {
-    margin-top: 0.6rem;
+    margin-top: 0.5rem;
   }
 
   .feedback-input {
     width: 100%;
-    background: var(--color-bg-input, rgba(15, 23, 42, 0.5));
-    border: 1px solid var(--color-border, rgba(148, 163, 184, 0.3));
-    border-radius: 0.5rem;
-    color: var(--color-text, #e2e8f0);
-    font-size: 0.78rem;
-    padding: 0.45rem 0.55rem;
+    background: #fafafa;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    color: #374151;
+    font-size: 0.72rem;
+    padding: 0.35rem 0.5rem;
     resize: none;
     outline: none;
     transition: border-color 0.12s;

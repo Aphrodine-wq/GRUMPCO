@@ -10,15 +10,15 @@ import {
   generatePRDStream,
   suggestComponentsFromArchitecture,
   generatePRDForComponent,
-} from "../services/prdGeneratorService.js";
+} from "../services/ship/prdGeneratorService.js";
 import { getRequestLogger } from "../middleware/logger.js";
 import { sendServerError, writeSSEError } from "../utils/errorResponse.js";
 import {
   validatePrdGenerateRequest,
   handlePrdValidationErrors,
 } from "../middleware/validator.js";
-import { dispatchWebhook } from "../services/webhookService.js";
-import { getTieredCache } from "../services/tieredCache.js";
+import { dispatchWebhook } from "../services/integrations/webhookService.js";
+import { getTieredCache } from "../services/caching/tieredCache.js";
 import { logOnError } from "../utils/safeAsync.js";
 import { DEMO_PRD } from "../demo/sampleData.js";
 import type { PRDRequest, ConversationMessage } from "../types/index.js";

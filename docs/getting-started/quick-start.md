@@ -9,7 +9,7 @@ For installation instructions, please see the [Installation](./installation.md) 
 Your GRUMPCO project has been optimized with:
 
 1. ✅ **38% faster compilation** - Optimized SWC and TypeScript configurations
-2. ✅ **7 AI providers** - Removed OpenAI/Groq/Grok, added GitHub Copilot, Kimi K2.5, Anthropic, Mistral AI
+2. ✅ **7 AI providers** - Removed OpenAI/Grok, added GitHub Copilot, Kimi K2.5, Anthropic, Mistral AI
 3. ✅ **Intelligent routing** - Automatic provider selection based on request type
 4. ✅ **25% smaller bundle** - Minification and dead code elimination
 

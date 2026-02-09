@@ -10,25 +10,25 @@ export type ViewType =
   | 'talkMode'
   | 'skills'
   | 'canvas'
-  | 'swarm'
   | 'designToCode'
   | 'cost'
   | 'credits'
   | 'integrations'
   | 'approvals'
-  | 'heartbeats'
+  | 'gAgent'
+  | 'swarm'
   | 'memory'
   | 'mcp'
   | 'auditLog'
-  | 'advancedAI'
   | 'docker'
   | 'docker-setup'
   | 'cloud'
   | 'troubleshooting'
-  | 'reset'
-  | 'gAgent'
-  | 'freeAgent'
-  | 'builder';
+
+  | 'github'
+  | 'analytics'
+
+  | 'reset';
 
 const CHAT: ViewType = 'chat';
 
@@ -53,23 +53,17 @@ export const showVoiceCode = createViewStore(currentView, 'voiceCode');
 export const showTalkMode = createViewStore(currentView, 'talkMode');
 export const showSkills = createViewStore(currentView, 'skills');
 export const showCanvas = createViewStore(currentView, 'canvas');
-export const showSwarm = createViewStore(currentView, 'swarm');
 export const showDesignToCode = createViewStore(currentView, 'designToCode');
 export const showCostDashboard = createViewStore(currentView, 'cost');
 export const showCredits = createViewStore(currentView, 'credits');
 export const showIntegrations = createViewStore(currentView, 'integrations');
 export const showApprovals = createViewStore(currentView, 'approvals');
-export const showHeartbeats = createViewStore(currentView, 'heartbeats');
+
 export const showMemory = createViewStore(currentView, 'memory');
 export const showMcp = createViewStore(currentView, 'mcp');
 export const showAuditLog = createViewStore(currentView, 'auditLog');
-export const showAdvancedAI = createViewStore(currentView, 'advancedAI');
 export const showDocker = createViewStore(currentView, 'docker');
 export const showCloudDashboard = createViewStore(currentView, 'cloud');
-export const showGAgent = createViewStore(currentView, 'gAgent');
-/** @deprecated Use showGAgent instead */
-export const showFreeAgent = createViewStore(currentView, 'freeAgent');
-export const showBuilder = createViewStore(currentView, 'builder');
 
 export const sidebarOpen = writable(true);
 
@@ -90,3 +84,6 @@ export const focusChatTrigger = writable(0);
 
 /** When true, show the Command Palette (Ctrl/Cmd+K). */
 export const commandPaletteOpen = writable(false);
+
+/** When true, the chat is actively streaming a response. Used to lock navigation. */
+export const chatStreaming = writable(false);

@@ -48,7 +48,6 @@ export type IntegrationProviderId =
   | "openrouter"
   | "google"
   | "kimi"
-  | "groq"
   | "mistral"
   | "jan";
 

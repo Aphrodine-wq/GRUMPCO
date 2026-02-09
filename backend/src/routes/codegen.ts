@@ -11,10 +11,10 @@ import {
   executeCodeGeneration,
   executeCodeGenerationMulti,
 } from "../services/agentOrchestrator.js";
-import { enqueueCodegenJob } from "../services/jobQueue.js";
+import { enqueueCodegenJob } from "../services/infra/jobQueue.js";
 import { isServerlessRuntime } from "../config/runtime.js";
 import { getDatabase } from "../db/database.js";
-import { createCodegenZip } from "../services/zipService.js";
+import { createCodegenZip } from "../services/ship/zipService.js";
 import { getRequestLogger } from "../middleware/logger.js";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware.js";
 import { sendServerError } from "../utils/errorResponse.js";

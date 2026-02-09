@@ -10,7 +10,7 @@ import {
   createAndPush,
   getCallbackRedirectSuccess,
   getCallbackRedirectError,
-} from "../services/githubService.js";
+} from "../services/integrations/githubService.js";
 import { getRequestLogger } from "../middleware/logger.js";
 import {
   sendServerError,

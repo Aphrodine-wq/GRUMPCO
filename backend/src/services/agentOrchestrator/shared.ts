@@ -9,9 +9,9 @@
  * @module agentOrchestrator/shared
  */
 
-import { withResilience } from "../resilience.js";
-import { getCompletion, type CompletionResult } from "../llmGatewayHelper.js";
-import type { StreamParams } from "../llmGateway.js";
+import { withResilience } from "../infra/resilience.js";
+import { getCompletion, type CompletionResult } from "../ai-providers/llmGatewayHelper.js";
+import type { StreamParams } from "../ai-providers/llmGateway.js";
 import type { GeneratedFile } from "../../types/agents.js";
 
 /**

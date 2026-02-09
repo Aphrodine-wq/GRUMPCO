@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { licenseService } from "../services/licenseService.js";
+import { licenseService } from "../services/security/licenseService.js";
 
 describe("LicenseService", () => {
   beforeEach(() => {

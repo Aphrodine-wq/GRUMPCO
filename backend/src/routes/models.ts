@@ -13,7 +13,8 @@ import {
   type ModelConfig,
 } from "@grump/ai-core";
 import { env, isProviderConfigured, getConfiguredProviders } from "../config/env.js";
-import { getApiKey as getStoredApiKey } from "../services/secretsService.js";
+import { getConfiguredProviders as getGatewayConfiguredProviders } from "../services/ai-providers/llmGateway.js";
+import { getApiKey as getStoredApiKey } from "../services/security/secretsService.js";
 import type { IntegrationProviderId } from "../types/integrations.js";
 
 const DEFAULT_USER = "default";
@@ -24,7 +25,7 @@ const LLM_PROVIDER_IDS: IntegrationProviderId[] = [
   "openrouter",
   "google",
   "kimi",
-  "groq",
+
   "mistral",
 ];
 
@@ -211,16 +212,7 @@ const ALL_PROVIDERS: Array<{
         { id: "kimi-k2.5", description: "Kimi K2.5 — fast coding model", contextWindow: 128_000, costPerMillionInput: 0.6, costPerMillionOutput: 0.6, capabilities: ["code", "reasoning"] },
       ],
     },
-    {
-      id: "groq",
-      displayName: "Groq",
-      icon: "/icons/providers/groq.svg",
-      configNote: "Requires GROQ_API_KEY",
-      models: [
-        { id: "llama-3.3-70b-versatile", description: "Llama 3.3 70B on Groq (fast)", contextWindow: 128_000, costPerMillionInput: 0.59, costPerMillionOutput: 0.79, capabilities: ["code", "reasoning"] },
-        { id: "mixtral-8x7b-32768", description: "Mixtral 8x7B (32K context)", contextWindow: 32_768, costPerMillionInput: 0.24, costPerMillionOutput: 0.24, capabilities: ["code", "reasoning"] },
-      ],
-    },
+
     {
       id: "openrouter",
       displayName: "OpenRouter",
@@ -252,8 +244,11 @@ router.get("/list", async (req, res) => {
     const userId = (req.query.userId as string) || (req as Request & { userId?: string }).userId || DEFAULT_USER;
     const janBaseUrlOverride = (req.query.janBaseUrl as string) || undefined;
 
-    // Build configured set: env providers + user-stored API keys
-    const configuredSet = new Set<string>(getConfiguredProviders());
+    // Build configured set: env providers + gateway cache + user-stored API keys
+    const configuredSet = new Set<string>([
+      ...getConfiguredProviders(),
+      ...getGatewayConfiguredProviders(),
+    ]);
     for (const providerId of LLM_PROVIDER_IDS) {
       try {
         const key = await getStoredApiKey(userId, providerId);
@@ -266,7 +261,11 @@ router.get("/list", async (req, res) => {
     const groups: ModelListGroup[] = [];
 
     // 1. Start with NIM (primary provider from ai-core registry)
-    const nimModels = getModelsByProvider("nim");
+    //    Only include models that support tool/function calling to avoid
+    //    NIM API 400 errors ("tool_choice requires --enable-auto-tool-choice")
+    const nimModels = getModelsByProvider("nim").filter(
+      (m) => m.capabilities.includes("function-calling") || m.capabilities.includes("tools"),
+    );
     if (nimModels.length > 0) {
       const nimMeta = PROVIDER_METADATA["nim"] ?? { displayName: "NVIDIA NIM", icon: "/icons/providers/nvidia.svg" };
       groups.push({
@@ -282,12 +281,12 @@ router.get("/list", async (req, res) => {
       });
     }
 
-    // 2. Add all static providers (G-CompN1, Anthropic, Google, Kimi, Groq, etc.)
+    // 2. Add all static providers (G-CompN1, Anthropic, Google, Kimi, etc.)
     for (const provider of ALL_PROVIDERS) {
       // Map display provider IDs to ApiProvider names for config check
       const providerToApiProvider: Record<string, string> = {
         anthropic: 'anthropic', google: 'google', kimi: 'kimi',
-        groq: 'groq', openrouter: 'openrouter', mistral: 'mistral',
+        openrouter: 'openrouter', mistral: 'mistral',
       };
       const apiProviderKey = providerToApiProvider[provider.id];
       const isConfigured = provider.isAlwaysConfigured || (apiProviderKey ? configuredSet.has(apiProviderKey) : false);

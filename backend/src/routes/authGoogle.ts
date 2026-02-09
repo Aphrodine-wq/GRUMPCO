@@ -6,7 +6,7 @@
  */
 
 import express, { type Request, type Response, type Router } from "express";
-import { auth } from "../services/supabaseClient.js";
+import { auth } from "../services/platform/supabaseClient.js";
 import { getRequestLogger } from "../middleware/logger.js";
 
 const router: Router = express.Router();

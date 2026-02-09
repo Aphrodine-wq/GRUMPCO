@@ -7,7 +7,7 @@
  * @module gAgent/goalRepository
  */
 
-import cronParser from "cron-parser";
+import { CronExpressionParser } from "cron-parser";
 import type { GoalRow } from "../db/schema.js";
 import type {
   Goal,
@@ -623,8 +623,9 @@ class GoalRepository {
    */
   private calculateNextCronRun(cronExpression: string): string {
     try {
-      const interval = cronParser.parseExpression(cronExpression);
-      return interval.next().toDate().toISOString();
+      const interval = CronExpressionParser.parse(cronExpression);
+      const nextDate = interval.next().toDate();
+      return nextDate ? nextDate.toISOString() : new Date(Date.now() + 60 * 1000).toISOString();
     } catch (err) {
       logger.warn(
         { err, cronExpression },

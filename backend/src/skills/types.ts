@@ -4,7 +4,7 @@
  */
 
 import type { Router } from "express";
-import type { StreamEvent } from "../services/llmGateway.js";
+import type { StreamEvent } from "../services/ai-providers/llmGateway.js";
 
 /**
  * Skill manifest - metadata about a skill

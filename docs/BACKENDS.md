@@ -10,7 +10,7 @@ G-Rump uses a **single backend** (grump-backend). Deployment options include Doc
 
 - **Desktop app** talks to **backend** via `VITE_API_URL` (default `http://localhost:3000`). Auth routes (`/auth/*`) and all product APIs live on backend.
 
-The former **backend-web** (grump-backend-web) was merged into backend in Jan 2026 and retired; its code lives in `archive/backend-web/` for reference only.
+The former **backend-web** (grump-backend-web) was merged into backend in Jan 2026 and retired.
 
 ## See also
 

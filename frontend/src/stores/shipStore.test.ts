@@ -282,9 +282,8 @@ describe('shipStore', () => {
 
       // After stream ends, status becomes 'completed' due to done: true loop exit
       // But the error should still be captured in state
-      let state: Record<string, unknown> = {};
-      shipStore.subscribe((s) => {
-        state = s as unknown as Record<string, unknown>;
+      shipStore.subscribe(() => {
+        // Subscribe to trigger state updates
       })();
       // The error gets set then overwritten by completed - this is actual behavior
       // Testing that the onUpdate callback received the error event

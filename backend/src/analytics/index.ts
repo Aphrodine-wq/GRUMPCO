@@ -4,12 +4,12 @@
  * Centralized exports for all analytics-related modules
  */
 
-export { analytics, AnalyticsService } from "../services/analytics.js";
+export { analytics, AnalyticsService } from "../services/platform/analytics.js";
 export type {
   AnalyticsEvent,
   AnalyticsEventName,
   AnalyticsUser,
-} from "../services/analytics.js";
+} from "../services/platform/analytics.js";
 export {
   analyticsMiddleware,
   identifyMiddleware,

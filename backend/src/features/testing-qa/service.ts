@@ -6,7 +6,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { getStream, type StreamParams } from "../../services/llmGateway.js";
+import { getStream, type StreamParams } from "../../services/ai-providers/llmGateway.js";
 import {
   type TestGenerationRequest,
   type TestGenerationResult,

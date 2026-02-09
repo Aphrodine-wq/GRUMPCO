@@ -3,7 +3,7 @@ import type { Writable } from 'svelte/store';
 import { fetchApi } from '../lib/api.js';
 import { session } from './authStore.js';
 
-/** G-Agent capability keys (new naming) */
+/** Agent capability keys (new naming) */
 export type GAgentCapabilityKey =
   | 'file'
   | 'git'
@@ -23,8 +23,7 @@ export type GAgentCapabilityKey =
   | 'memory'
   | 'self_improve';
 
-/** @deprecated Use GAgentCapabilityKey instead */
-export type FreeAgentCapabilityKey = GAgentCapabilityKey;
+
 
 /** Capabilities that require PRO+ tier */
 export const PREMIUM_CAPABILITIES: GAgentCapabilityKey[] = [
@@ -62,8 +61,7 @@ export interface GAgentModelPreference {
   modelId?: string;
 }
 
-/** @deprecated Use GAgentModelPreference instead */
-export type FreeAgentModelPreference = GAgentModelPreference;
+
 
 export interface GAgentPersona {
   tone?: string;
@@ -71,8 +69,7 @@ export interface GAgentPersona {
   expertise?: string[];
 }
 
-/** @deprecated Use GAgentPersona instead */
-export type FreeAgentPersona = GAgentPersona;
+
 
 export interface UserPreferences {
   diagramStyle: 'minimal' | 'detailed' | 'comprehensive';
@@ -82,7 +79,7 @@ export interface UserPreferences {
   setupComplete: boolean;
   density?: 'comfortable' | 'compact';
 
-  // G-Agent preferences (new naming)
+  // Agent preferences (new naming)
   gAgentCapabilities?: GAgentCapabilityKey[];
   gAgentExternalAllowlist?: string[];
   gAgentPreferredModelSource?: 'cloud' | 'ollama' | 'auto';
@@ -92,22 +89,6 @@ export interface UserPreferences {
   gAgentGoals?: string[];
   gAgentAutoApprove?: boolean;
   gAgentPersistent?: boolean;
-
-  // Deprecated - use gAgent* equivalents
-  /** @deprecated Use gAgentCapabilities instead */
-  freeAgentCapabilities?: GAgentCapabilityKey[];
-  /** @deprecated Use gAgentExternalAllowlist instead */
-  freeAgentExternalAllowlist?: string[];
-  /** @deprecated Use gAgentPreferredModelSource instead */
-  freeAgentPreferredModelSource?: 'cloud' | 'ollama' | 'auto';
-  /** @deprecated Use gAgentOllamaModel instead */
-  freeAgentOllamaModel?: string;
-  /** @deprecated Use gAgentModelPreference instead */
-  freeAgentModelPreference?: GAgentModelPreference;
-  /** @deprecated Use gAgentPersona instead */
-  freeAgentPersona?: GAgentPersona;
-  /** @deprecated Use gAgentGoals instead */
-  freeAgentGoals?: string[];
 
   /** When true, inject RAG context into chat for more tailored answers from indexed docs. */
   includeRagContext?: boolean;
@@ -136,8 +117,7 @@ const DEFAULT_G_AGENT_CAPABILITIES: GAgentCapabilityKey[] = [
   // 'self_improve',
 ];
 
-/** @deprecated Use DEFAULT_G_AGENT_CAPABILITIES instead. Exported for backward compatibility. */
-export const DEFAULT_FREE_AGENT_CAPABILITIES = DEFAULT_G_AGENT_CAPABILITIES;
+
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   diagramStyle: 'detailed',
@@ -147,9 +127,6 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   density: 'comfortable',
   gAgentCapabilities: DEFAULT_G_AGENT_CAPABILITIES,
   gAgentExternalAllowlist: [],
-  // Also set deprecated fields for backward compatibility
-  freeAgentCapabilities: DEFAULT_G_AGENT_CAPABILITIES,
-  freeAgentExternalAllowlist: [],
 };
 
 // Local storage key
@@ -277,56 +254,37 @@ export const includeRagContext = derived(preferences, (p) => p.includeRagContext
 
 export const janBaseUrl = derived(preferences, (p) => p.janBaseUrl ?? '');
 
-// G-Agent derived stores (new naming)
+// Agent derived stores (new naming)
 export const gAgentCapabilities = derived(
   preferences,
-  (p) => p.gAgentCapabilities ?? p.freeAgentCapabilities ?? DEFAULT_G_AGENT_CAPABILITIES
+  (p) => p.gAgentCapabilities ?? DEFAULT_G_AGENT_CAPABILITIES
 );
 
 export const gAgentExternalAllowlist = derived(
   preferences,
-  (p) => p.gAgentExternalAllowlist ?? p.freeAgentExternalAllowlist ?? []
+  (p) => p.gAgentExternalAllowlist ?? []
 );
 
 export const gAgentPreferredModelSource = derived(
   preferences,
-  (p) => p.gAgentPreferredModelSource ?? p.freeAgentPreferredModelSource ?? 'auto'
+  (p) => p.gAgentPreferredModelSource ?? 'auto'
 );
 
 export const gAgentOllamaModel = derived(
   preferences,
-  (p) => p.gAgentOllamaModel ?? p.freeAgentOllamaModel ?? 'glm4'
+  (p) => p.gAgentOllamaModel ?? 'glm4'
 );
 
 export const gAgentPersona = derived(
   preferences,
-  (p) => p.gAgentPersona ?? p.freeAgentPersona ?? {}
+  (p) => p.gAgentPersona ?? {}
 );
 
-export const gAgentGoals = derived(preferences, (p) => p.gAgentGoals ?? p.freeAgentGoals ?? []);
+export const gAgentGoals = derived(preferences, (p) => p.gAgentGoals ?? []);
 
 export const gAgentAutoApprove = derived(preferences, (p) => p.gAgentAutoApprove ?? false);
 
 export const gAgentPersistent = derived(preferences, (p) => p.gAgentPersistent ?? false);
-
-// Deprecated aliases - use gAgent* instead
-/** @deprecated Use gAgentCapabilities instead */
-export const freeAgentCapabilities = gAgentCapabilities;
-
-/** @deprecated Use gAgentExternalAllowlist instead */
-export const freeAgentExternalAllowlist = gAgentExternalAllowlist;
-
-/** @deprecated Use gAgentPreferredModelSource instead */
-export const freeAgentPreferredModelSource = gAgentPreferredModelSource;
-
-/** @deprecated Use gAgentOllamaModel instead */
-export const freeAgentOllamaModel = gAgentOllamaModel;
-
-/** @deprecated Use gAgentPersona instead */
-export const freeAgentPersona = gAgentPersona;
-
-/** @deprecated Use gAgentGoals instead */
-export const freeAgentGoals = gAgentGoals;
 
 // Store actions
 export const preferencesStore = {
@@ -365,30 +323,27 @@ export const preferencesStore = {
     preferences.update((p) => ({ ...p, janBaseUrl: trimmed || undefined }));
   },
 
-  // G-Agent methods (new naming)
+  // Agent methods (new naming)
   setGAgentCapabilities: (capabilities: GAgentCapabilityKey[]) => {
     preferences.update((p) => ({
       ...p,
       gAgentCapabilities: capabilities,
-      freeAgentCapabilities: capabilities, // Keep deprecated field in sync
     }));
   },
   setGAgentExternalAllowlist: (allowlist: string[]) => {
     preferences.update((p) => ({
       ...p,
       gAgentExternalAllowlist: allowlist,
-      freeAgentExternalAllowlist: allowlist, // Keep deprecated field in sync
     }));
   },
   toggleGAgentCapability: (key: GAgentCapabilityKey) => {
     preferences.update((p) => {
       const current =
-        p.gAgentCapabilities ?? p.freeAgentCapabilities ?? DEFAULT_G_AGENT_CAPABILITIES;
-      const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+        p.gAgentCapabilities ?? DEFAULT_G_AGENT_CAPABILITIES;
+      const next = current.includes(key) ? current.filter((k: GAgentCapabilityKey) => k !== key) : [...current, key];
       return {
         ...p,
         gAgentCapabilities: next,
-        freeAgentCapabilities: next, // Keep deprecated field in sync
       };
     });
   },
@@ -396,24 +351,22 @@ export const preferencesStore = {
     const trimmed = domain.trim().toLowerCase();
     if (!trimmed) return;
     preferences.update((p) => {
-      const current = p.gAgentExternalAllowlist ?? p.freeAgentExternalAllowlist ?? [];
+      const current = p.gAgentExternalAllowlist ?? [];
       if (current.includes(trimmed)) return p;
       const next = [...current, trimmed];
       return {
         ...p,
         gAgentExternalAllowlist: next,
-        freeAgentExternalAllowlist: next, // Keep deprecated field in sync
       };
     });
   },
   removeGAgentAllowlistDomain: (domain: string) => {
     preferences.update((p) => {
-      const current = p.gAgentExternalAllowlist ?? p.freeAgentExternalAllowlist ?? [];
-      const next = current.filter((d) => d !== domain);
+      const current = p.gAgentExternalAllowlist ?? [];
+      const next = current.filter((d: string) => d !== domain);
       return {
         ...p,
         gAgentExternalAllowlist: next,
-        freeAgentExternalAllowlist: next, // Keep deprecated field in sync
       };
     });
   },
@@ -422,10 +375,10 @@ export const preferencesStore = {
       const modelPref =
         source === 'ollama'
           ? {
-              source: 'ollama' as const,
-              provider: 'ollama',
-              modelId: p.gAgentOllamaModel ?? p.freeAgentOllamaModel ?? 'glm4',
-            }
+            source: 'ollama' as const,
+            provider: 'ollama',
+            modelId: p.gAgentOllamaModel ?? 'glm4',
+          }
           : source === 'cloud'
             ? { source: 'cloud' as const }
             : { source: 'auto' as const };
@@ -433,8 +386,6 @@ export const preferencesStore = {
         ...p,
         gAgentPreferredModelSource: source,
         gAgentModelPreference: modelPref,
-        freeAgentPreferredModelSource: source, // Keep deprecated field in sync
-        freeAgentModelPreference: modelPref,
       };
     });
   },
@@ -442,13 +393,11 @@ export const preferencesStore = {
     preferences.update((p) => {
       const next: Partial<UserPreferences> = {
         gAgentOllamaModel: model,
-        freeAgentOllamaModel: model, // Keep deprecated field in sync
       };
-      const source = p.gAgentPreferredModelSource ?? p.freeAgentPreferredModelSource;
+      const source = p.gAgentPreferredModelSource;
       if (source === 'ollama') {
         const modelPref = { source: 'ollama' as const, provider: 'ollama', modelId: model };
         next.gAgentModelPreference = modelPref;
-        next.freeAgentModelPreference = modelPref;
       }
       return { ...p, ...next };
     });
@@ -457,14 +406,12 @@ export const preferencesStore = {
     preferences.update((p) => ({
       ...p,
       gAgentPersona: persona,
-      freeAgentPersona: persona, // Keep deprecated field in sync
     }));
   },
   setGAgentGoals: (goals: string[]) => {
     preferences.update((p) => ({
       ...p,
       gAgentGoals: goals,
-      freeAgentGoals: goals, // Keep deprecated field in sync
     }));
   },
   setGAgentAutoApprove: (autoApprove: boolean) => {
@@ -472,44 +419,6 @@ export const preferencesStore = {
   },
   setGAgentPersistent: (persistent: boolean) => {
     preferences.update((p) => ({ ...p, gAgentPersistent: persistent }));
-  },
-
-  // Deprecated Free Agent methods - use gAgent* equivalents
-  /** @deprecated Use setGAgentCapabilities instead */
-  setFreeAgentCapabilities: (capabilities: GAgentCapabilityKey[]) => {
-    preferencesStore.setGAgentCapabilities(capabilities);
-  },
-  /** @deprecated Use setGAgentExternalAllowlist instead */
-  setFreeAgentExternalAllowlist: (allowlist: string[]) => {
-    preferencesStore.setGAgentExternalAllowlist(allowlist);
-  },
-  /** @deprecated Use toggleGAgentCapability instead */
-  toggleFreeAgentCapability: (key: GAgentCapabilityKey) => {
-    preferencesStore.toggleGAgentCapability(key);
-  },
-  /** @deprecated Use addGAgentAllowlistDomain instead */
-  addFreeAgentAllowlistDomain: (domain: string) => {
-    preferencesStore.addGAgentAllowlistDomain(domain);
-  },
-  /** @deprecated Use removeGAgentAllowlistDomain instead */
-  removeFreeAgentAllowlistDomain: (domain: string) => {
-    preferencesStore.removeGAgentAllowlistDomain(domain);
-  },
-  /** @deprecated Use setGAgentPreferredModelSource instead */
-  setFreeAgentPreferredModelSource: (source: 'cloud' | 'ollama' | 'auto') => {
-    preferencesStore.setGAgentPreferredModelSource(source);
-  },
-  /** @deprecated Use setGAgentOllamaModel instead */
-  setFreeAgentOllamaModel: (model: string) => {
-    preferencesStore.setGAgentOllamaModel(model);
-  },
-  /** @deprecated Use setGAgentPersona instead */
-  setFreeAgentPersona: (persona: GAgentPersona) => {
-    preferencesStore.setGAgentPersona(persona);
-  },
-  /** @deprecated Use setGAgentGoals instead */
-  setFreeAgentGoals: (goals: string[]) => {
-    preferencesStore.setGAgentGoals(goals);
   },
 
   // Update analytics opt-in

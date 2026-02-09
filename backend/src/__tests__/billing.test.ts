@@ -30,7 +30,7 @@ vi.mock('../services/featureFlagsService.js', () => ({
 }));
 
 import billingRoutes from '../routes/billing.js';
-import { licenseService } from '../services/licenseService.js';
+import { licenseService } from '../services/security/licenseService.js';
 import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 
 function createApp(userId?: string) {

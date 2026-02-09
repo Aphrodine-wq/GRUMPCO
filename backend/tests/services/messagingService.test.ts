@@ -102,7 +102,7 @@ describe('messagingService', () => {
 
     // Default mock implementations
     mockPermissions.getEffectivePermissions.mockReturnValue({
-      freeAgentEnabled: false,
+      gAgentEnabled: false,
       allowedCapabilities: [],
       rateLimitPerHour: 100,
     });
@@ -481,7 +481,7 @@ describe('messagingService', () => {
 
     it('should process status request', async () => {
       mockPermissions.getEffectivePermissions.mockReturnValue({
-        freeAgentEnabled: true,
+        gAgentEnabled: true,
         allowedCapabilities: ['file_read', 'bash_execute'],
         rateLimitPerHour: 50,
       });
@@ -496,15 +496,15 @@ describe('messagingService', () => {
 
     it('should route to Free Agent when enabled', async () => {
       mockPermissions.getEffectivePermissions.mockReturnValue({
-        freeAgentEnabled: true,
+        gAgentEnabled: true,
         allowedCapabilities: ['file_read'],
         rateLimitPerHour: 100,
       });
       mockPermissions.checkRateLimit.mockReturnValue({ allowed: true });
       mockDb.getSettings.mockResolvedValue({
         preferences: {
-          freeAgentCapabilities: ['file_read'],
-          freeAgentExternalAllowlist: [],
+          gAgentCapabilities: ['file_read'],
+          gAgentExternalAllowlist: [],
         },
         tier: 'pro',
       });
@@ -524,7 +524,7 @@ describe('messagingService', () => {
 
     it('should use standard chat when Free Agent is disabled', async () => {
       mockPermissions.getEffectivePermissions.mockReturnValue({
-        freeAgentEnabled: false,
+        gAgentEnabled: false,
         allowedCapabilities: [],
         rateLimitPerHour: 100,
       });
@@ -544,7 +544,7 @@ describe('messagingService', () => {
 
     it('should handle empty message', async () => {
       mockPermissions.getEffectivePermissions.mockReturnValue({
-        freeAgentEnabled: false,
+        gAgentEnabled: false,
         allowedCapabilities: [],
         rateLimitPerHour: 100,
       });
@@ -564,13 +564,13 @@ describe('messagingService', () => {
 
     it('should handle /freeagent command', async () => {
       mockPermissions.getEffectivePermissions.mockReturnValue({
-        freeAgentEnabled: true,
+        gAgentEnabled: true,
         allowedCapabilities: ['bash_execute'],
         rateLimitPerHour: 100,
       });
       mockPermissions.checkRateLimit.mockReturnValue({ allowed: true });
       mockDb.getSettings.mockResolvedValue({
-        preferences: { freeAgentCapabilities: ['bash_execute'] },
+        preferences: { gAgentCapabilities: ['bash_execute'] },
         tier: 'pro',
       });
       
@@ -589,7 +589,7 @@ describe('messagingService', () => {
 
     it('should return error when Free Agent is disabled for /fa command', async () => {
       mockPermissions.getEffectivePermissions.mockReturnValue({
-        freeAgentEnabled: false,
+        gAgentEnabled: false,
         allowedCapabilities: [],
         rateLimitPerHour: 100,
       });
@@ -603,7 +603,7 @@ describe('messagingService', () => {
 
     it('should enforce rate limiting', async () => {
       mockPermissions.getEffectivePermissions.mockReturnValue({
-        freeAgentEnabled: true,
+        gAgentEnabled: true,
         allowedCapabilities: ['file_read'],
         rateLimitPerHour: 10,
       });
@@ -624,7 +624,7 @@ describe('messagingService', () => {
   describe('conversation persistence', () => {
     it('should maintain conversation history in chat', async () => {
       mockPermissions.getEffectivePermissions.mockReturnValue({
-        freeAgentEnabled: false,
+        gAgentEnabled: false,
         allowedCapabilities: [],
         rateLimitPerHour: 100,
       });

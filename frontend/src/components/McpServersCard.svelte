@@ -5,7 +5,17 @@
   import { showToast } from '../stores/toastStore';
   import { Button, Card, Badge, Modal } from '../lib/design-system';
   import type { McpServerConfig } from '../types/settings';
-  import { Plus, Trash2, Settings2, Plug2, Terminal, Globe, Download, Check, Play } from 'lucide-svelte';
+  import {
+    Plus,
+    Trash2,
+    Settings2,
+    Plug2,
+    Terminal,
+    Globe,
+    Download,
+    Check,
+    Play,
+  } from 'lucide-svelte';
 
   // Built-in MCP server directory
   interface McpDirectoryEntry {
@@ -458,7 +468,7 @@
 
 <div class="mcp-card-wrapper">
   <div class="mcp-header-row">
-    <h2 class="mcp-section-title">G-Agent MCP Servers</h2>
+    <h2 class="mcp-section-title">MCP Servers</h2>
     <Button variant="primary" size="md" onclick={openAdd} class="add-mcp-btn">
       <Plus size={16} />
       Add MCP server
@@ -472,7 +482,7 @@
       </div>
       <h3 class="mcp-empty-title">No MCP servers yet</h3>
       <p class="mcp-empty-text">
-        Add stdio commands or URL endpoints so G-Agent can use their tools.
+        Add stdio commands or URL endpoints so your AI assistant can use their tools.
       </p>
     </div>
   {:else}
@@ -506,7 +516,11 @@
                 <Button
                   variant="ghost"
                   size="sm"
-                  onclick={() => showToast('Run the server command in a terminal, or start a chat to use its tools.', 'info')}
+                  onclick={() =>
+                    showToast(
+                      'Run the server command in a terminal, or start a chat to use its tools.',
+                      'info'
+                    )}
                   title="Test connection"
                 >
                   <Play size={14} /> Test
@@ -532,7 +546,8 @@
   <div class="mcp-directory-section">
     <h2 class="mcp-section-title">MCP Server Directory</h2>
     <p class="mcp-directory-desc">
-      Popular MCP servers you can add with one click. Requires Node.js/npx installed. After adding, start a chat—the agent will use the server's tools. See docs for troubleshooting.
+      Popular MCP servers you can add with one click. Requires Node.js/npx installed. After adding,
+      start a chat—the agent will use the server's tools. See docs for troubleshooting.
     </p>
     <div class="mcp-directory-grid">
       {#each MCP_DIRECTORY as entry (entry.id)}

@@ -151,7 +151,6 @@ cd backend && npm run dev
    # Verify key format
    # NVIDIA: starts with nvapi-
    # OpenRouter: starts with sk-or-v1-
-   # Groq: starts with gsk-
    ```
 
 2. **Authentication required:**

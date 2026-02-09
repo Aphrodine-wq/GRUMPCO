@@ -7,8 +7,8 @@ import { Router, type Request, type Response } from "express";
 import crypto from "crypto";
 import { getRequestLogger } from "../middleware/logger.js";
 import { getDatabase } from "../db/database.js";
-import { processMessage } from "../services/messagingService.js";
-import { encryptValue } from "../services/cryptoService.js";
+import { processMessage } from "../services/integrations/messagingService.js";
+import { encryptValue } from "../services/security/cryptoService.js";
 
 const router = Router();
 const log = getRequestLogger();
@@ -226,7 +226,7 @@ router.post("/events", async (req: Request, res: Response) => {
           const tokenRecord = await db.getSlackTokenByWorkspace(team);
           if (tokenRecord) {
             const { decryptValue } =
-              await import("../services/cryptoService.js");
+              await import("../services/security/cryptoService.js");
             const accessToken = decryptValue(
               JSON.parse(tokenRecord.access_token_enc),
             );

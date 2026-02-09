@@ -1,29 +1,55 @@
 # G-Rump Marketing Site
 
-Premium static landing page for G-Rump. Open `index.html` in a browser or serve from any static host (e.g. Vercel, Netlify).
+Static marketing and landing pages for [G-Rump](https://g-rump.com).
 
-## Sections
+## File Structure
 
-- **Hero**: Dark-mode with animated gradient orbs, stats bar
-- **How It Works**: 4-step SHIP workflow
-- **Install**: Windows Desktop, NPM, Docker options
-- **Features**: 6 feature cards with scroll animations
-- **Testimonials**: Developer social proof
-- **Comparison**: G-Rump vs Traditional vs Generic AI
-- **Pricing**: Free, Starter ($20), Pro ($29), Team ($49)
-- **FAQ**: Collapsible questions
-- **CTA**: Email capture and sticky download bar
+```
+marketing-site/
+├── index.html      # Main landing page
+├── docs.html       # Documentation hub
+├── styles.css      # Shared styles
+├── robots.txt      # SEO crawler directives
+├── sitemap.xml     # XML sitemap for search engines
+└── README.md       # This file
+```
 
-## Files
+## Local Development
 
-- `index.html` — Main landing page
-- `styles.css` — Premium CSS with animations
-- `docs.html` — Documentation hub
-- `robots.txt` — SEO robots file
-- `sitemap.xml` — XML sitemap
+Preview the site locally with any static file server:
 
-## Production
+```bash
+# Using Python (built-in)
+cd marketing-site && python -m http.server 8080
 
-Update the app links in `index.html` to match your real deployment:
-- Web app: `https://app.g-rump.com`
-- GitHub: `https://github.com/Aphrodine-wq/G-rump.com`
+# Using npx
+npx serve marketing-site
+
+# Using VS Code Live Server extension
+# Right-click index.html → "Open with Live Server"
+```
+
+Then open [http://localhost:8080](http://localhost:8080).
+
+## Deployment
+
+The marketing site is a static site deployed to **Vercel** via the root `vercel.json` configuration. Any push to the `main` branch triggers an automatic deployment via the [Vercel Deploy](./../.github/workflows/vercel-deploy.yml) workflow.
+
+To deploy manually:
+
+```bash
+npx vercel --prod --cwd marketing-site
+```
+
+## SEO
+
+- `robots.txt` allows all crawlers and points to `sitemap.xml`
+- `sitemap.xml` includes all public pages with `lastmod` dates
+- Both `index.html` and `docs.html` include proper `<meta>` tags for title, description, and Open Graph
+
+## Adding New Pages
+
+1. Create a new `.html` file in this directory
+2. Link the shared `styles.css`
+3. Add the page URL to `sitemap.xml`
+4. Update navigation links in existing pages

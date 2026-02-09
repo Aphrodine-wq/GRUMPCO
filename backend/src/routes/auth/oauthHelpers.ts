@@ -8,7 +8,7 @@
  */
 
 import type { Response } from "express";
-import { auth } from "../../services/supabaseClient.js";
+import { auth } from "../../services/platform/supabaseClient.js";
 import { getRequestLogger } from "../../middleware/logger.js";
 
 // =============================================================================

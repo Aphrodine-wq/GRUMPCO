@@ -1,9 +1,7 @@
-version: '3.8'
-
 # GPU-enabled overlay for G-Rump
-# 
+#
 # Usage: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
-# 
+#
 # Prerequisites:
 # - NVIDIA GPU with CUDA support
 # - nvidia-container-toolkit installed
@@ -44,11 +42,11 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
         limits:
           memory: 16G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/v1/health" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -72,11 +70,11 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
         limits:
           memory: 4G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:80/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -90,9 +88,9 @@ services:
     image: nvcr.io/nvidia/tritonserver:24.08-py3
     container_name: grump-triton
     ports:
-      - "8002:8000"  # HTTP
-      - "8003:8001"  # gRPC
-      - "8004:8002"  # Metrics
+      - "8002:8000" # HTTP
+      - "8003:8001" # gRPC
+      - "8004:8002" # Metrics
     environment:
       - TRITON_MODEL_REPOSITORY=/models
     volumes:
@@ -104,12 +102,12 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
         limits:
           memory: 24G
-    command: ["tritonserver", "--model-repository=/models", "--strict-model-config=false"]
+    command: [ "tritonserver", "--model-repository=/models", "--strict-model-config=false" ]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v2/health/ready"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/v2/health/ready" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -118,15 +116,15 @@ services:
       - grump-network
     restart: unless-stopped
     profiles:
-      - triton  # Optional: use --profile triton to enable
+      - triton # Optional: use --profile triton to enable
 
   # NVIDIA Riva for speech services (ASR/TTS)
   riva:
     image: nvcr.io/nvidia/riva/riva-speech:2.15.0
     container_name: grump-riva
     ports:
-      - "50051:50051"  # gRPC
-      - "8009:8009"    # HTTP
+      - "50051:50051" # gRPC
+      - "8009:8009" # HTTP
     environment:
       - NGC_API_KEY=${NGC_API_KEY:-}
       - RIVA_API_KEY=${NVIDIA_RIVA_API_KEY:-}
@@ -139,11 +137,11 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
         limits:
           memory: 16G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8009/v1/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8009/v1/health" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -152,7 +150,7 @@ services:
       - grump-network
     restart: unless-stopped
     profiles:
-      - riva  # Optional: use --profile riva to enable
+      - riva # Optional: use --profile riva to enable
 
   # NeMo Guardrails for safety filtering (lightweight)
   guardrails:
@@ -170,7 +168,7 @@ services:
         limits:
           memory: 4G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -179,7 +177,7 @@ services:
       - grump-network
     restart: unless-stopped
     profiles:
-      - guardrails  # Optional: use --profile guardrails to enable
+      - guardrails # Optional: use --profile guardrails to enable
 
 volumes:
   nim-cache:

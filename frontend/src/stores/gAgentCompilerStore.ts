@@ -1,5 +1,5 @@
 /**
- * G-Agent Semantic Compiler Store
+ * Agent Semantic Compiler Store
  *
  * Svelte store for the 100x Semantic Compiler - the solution to the Data Wall Problem.
  *
@@ -778,7 +778,7 @@ export const gAgentCompilerStore = {
               } else if (currentEvent === 'error') {
                 throw new Error(data.error);
               }
-            } catch (e) {
+            } catch (_e) {
               console.warn('Failed to parse SSE data:', line);
             }
           }

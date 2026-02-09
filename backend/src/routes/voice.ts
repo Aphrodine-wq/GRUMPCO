@@ -4,12 +4,12 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { transcribe, synthesize } from '../services/voiceService.js';
-import { ragQuery } from '../services/ragService.js';
-import { claudeServiceWithTools } from '../services/claudeServiceWithTools.js';
-import type { ChatStreamEvent } from '../services/claudeServiceWithTools.js';
-import { route } from '../services/modelRouter.js';
-import { type LLMProvider } from '../services/llmGateway.js';
+import { transcribe, synthesize } from '../services/platform/voiceService.js';
+import { ragQuery } from '../services/rag/ragService.js';
+import { claudeServiceWithTools } from '../services/ai-providers/claudeServiceWithTools.js';
+import type { ChatStreamEvent } from '../services/ai-providers/claudeServiceWithTools.js';
+import { route } from '../services/ai-providers/modelRouter.js';
+import { type LLMProvider } from '../services/ai-providers/llmGateway.js';
 import logger from '../middleware/logger.js';
 
 const router = Router();

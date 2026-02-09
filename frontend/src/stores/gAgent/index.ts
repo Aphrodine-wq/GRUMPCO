@@ -1,7 +1,7 @@
 /**
- * G-Agent Unified Store Namespace
+ * Agent Unified Store Namespace
  *
- * Single entry point for all G-Agent stores.
+ * Single entry point for all Agent stores.
  * Import from this file instead of individual store files.
  *
  * @example

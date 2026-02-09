@@ -1,5 +1,5 @@
 /**
- * G-Agent Deduplication Store
+ * Agent Deduplication Store
  *
  * Svelte store for semantic deduplication - cross-session pattern sharing.
  *

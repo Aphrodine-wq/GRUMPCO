@@ -300,7 +300,6 @@ export const AI_PROVIDER_ICONS: Record<string, ComponentType> = {
   openrouter: Split,
   anthropic: Brain,
   openai: Bot,
-  groq: Zap,
   ollama: Box,
 };
 
@@ -352,7 +351,7 @@ export const COMMAND_ICONS: Record<string, ComponentType> = {
   design: Palette,
   code: Code2,
   // Build
-  freeAgent: Bot,
+  gAgent: Bot,
   designToCode: Layout,
   // Tools
   voiceCode: Mic,

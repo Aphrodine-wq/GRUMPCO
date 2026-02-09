@@ -39,7 +39,7 @@ vi.mock('../../src/config/env.js', () => ({
     MULTI_PROVIDER_ROUTING: true,
     NVIDIA_NIM_API_KEY: 'test-nim-key',
     OPENROUTER_API_KEY: 'test-openrouter-key',
-    GROQ_API_KEY: 'test-groq-key',
+    ANTHROPIC_API_KEY: 'test-anthropic-key',
     OLLAMA_BASE_URL: 'http://localhost:11434',
     PUBLIC_BASE_URL: 'https://test.example.com',
   },
@@ -47,18 +47,18 @@ vi.mock('../../src/config/env.js', () => ({
     const keys: Record<string, string | undefined> = {
       nvidia_nim: 'test-nim-key',
       openrouter: 'test-openrouter-key',
-      groq: 'test-groq-key',
+      anthropic: 'test-anthropic-key',
       ollama: undefined,
     };
     return keys[provider];
   }),
   isProviderConfigured: vi.fn((provider: string) => {
-    return ['nvidia_nim', 'openrouter', 'groq', 'ollama'].includes(provider);
+    return ['nvidia_nim', 'openrouter', 'anthropic', 'ollama'].includes(provider);
   }),
   getConfiguredProviders: vi.fn().mockReturnValue([
     'nvidia_nim',
     'openrouter',
-    'groq',
+    'anthropic',
     'ollama',
   ]),
 }));
@@ -83,7 +83,7 @@ describe('Multi-Provider AI Router', () => {
   describe('Provider Configuration', () => {
     it('should have all provider configs defined', () => {
       const providers: Exclude<LLMProvider, 'mock'>[] = [
-        'groq',
+        'anthropic',
         'nim',
         'openrouter',
         'ollama',
@@ -100,20 +100,20 @@ describe('Multi-Provider AI Router', () => {
     });
 
     it('should have correct provider rankings', () => {
-      expect(PROVIDER_CONFIGS.groq.speedRank).toBe(1);
+      expect(PROVIDER_CONFIGS.anthropic.speedRank).toBe(1);
       expect(PROVIDER_CONFIGS.openrouter.qualityRank).toBe(1);
       expect(PROVIDER_CONFIGS.ollama.speedRank).toBe(5);
     });
 
     it('should have correct cost rankings', () => {
       expect(PROVIDER_CONFIGS.ollama.costPer1kTokens).toBe(0);
-      expect(PROVIDER_CONFIGS.groq.costPer1kTokens).toBeLessThan(
+      expect(PROVIDER_CONFIGS.anthropic.costPer1kTokens).toBeLessThan(
         PROVIDER_CONFIGS.openrouter.costPer1kTokens
       );
     });
 
     it('should identify tool support correctly', () => {
-      expect(PROVIDER_CONFIGS.groq.supportsTools).toBe(true);
+      expect(PROVIDER_CONFIGS.anthropic.supportsTools).toBe(true);
       expect(PROVIDER_CONFIGS.nim.supportsTools).toBe(true);
       expect(PROVIDER_CONFIGS.openrouter.supportsTools).toBe(true);
       expect(PROVIDER_CONFIGS.ollama.supportsTools).toBe(false);
@@ -319,16 +319,16 @@ describe('Multi-Provider AI Router', () => {
       };
 
       const decision = getRoutingDecision(params, {
-        provider: 'groq',
+        provider: 'anthropic',
       });
 
-      expect(decision.estimatedCost).toBe(PROVIDER_CONFIGS.groq.costPer1kTokens);
+      expect(decision.estimatedCost).toBe(PROVIDER_CONFIGS.anthropic.costPer1kTokens);
     });
   });
 
   describe('Default Models', () => {
     it('should return default model for each provider', () => {
-      const providers: LLMProvider[] = ['groq', 'nim', 'openrouter', 'ollama'];
+      const providers: LLMProvider[] = ['anthropic', 'nim', 'openrouter', 'ollama'];
 
       for (const provider of providers) {
         const defaultModel = getDefaultModelId(provider);
@@ -346,26 +346,26 @@ describe('Multi-Provider AI Router', () => {
 
   describe('Provider Capabilities', () => {
     it('should identify streaming support', () => {
-      expect(PROVIDER_CONFIGS.groq.capabilities).toContain('streaming');
+      expect(PROVIDER_CONFIGS.anthropic.capabilities).toContain('streaming');
       expect(PROVIDER_CONFIGS.nim.capabilities).toContain('streaming');
       expect(PROVIDER_CONFIGS.openrouter.capabilities).toContain('streaming');
       expect(PROVIDER_CONFIGS.ollama.capabilities).toContain('streaming');
     });
 
     it('should identify vision support', () => {
-      expect(PROVIDER_CONFIGS.groq.capabilities).toContain('vision');
+      expect(PROVIDER_CONFIGS.anthropic.capabilities).toContain('vision');
       expect(PROVIDER_CONFIGS.nim.capabilities).toContain('vision');
       expect(PROVIDER_CONFIGS.openrouter.capabilities).toContain('vision');
     });
 
     it('should identify JSON mode support', () => {
-      expect(PROVIDER_CONFIGS.groq.capabilities).toContain('json_mode');
+      expect(PROVIDER_CONFIGS.anthropic.capabilities).toContain('json_mode');
       expect(PROVIDER_CONFIGS.nim.capabilities).toContain('json_mode');
       expect(PROVIDER_CONFIGS.openrouter.capabilities).toContain('json_mode');
     });
 
     it('should identify function calling support', () => {
-      expect(PROVIDER_CONFIGS.groq.capabilities).toContain('function_calling');
+      expect(PROVIDER_CONFIGS.anthropic.capabilities).toContain('function_calling');
       expect(PROVIDER_CONFIGS.nim.capabilities).toContain('function_calling');
       expect(PROVIDER_CONFIGS.openrouter.capabilities).toContain('function_calling');
     });

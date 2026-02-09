@@ -8,7 +8,7 @@
 
 import { type Request, type Response, type NextFunction } from "express";
 import logger from "./logger.js";
-import { recordApiCall } from "../services/usageTracker.js";
+import { recordApiCall } from "../services/platform/usageTracker.js";
 
 // Track which endpoints to skip (health checks, metrics, etc.)
 const SKIP_TRACKING = ["/health", "/metrics", "/api/health"];

@@ -1,5 +1,5 @@
 /**
- * G-Agent Plan Store Tests
+ * Agent Plan Store Tests
  *
  * Comprehensive tests for plan management and execution state
  */
@@ -804,7 +804,7 @@ describe('gAgentPlanStore', () => {
 
       // Create a mock SSE stream that hangs (simulating long execution)
       type ReadResult = { done: boolean; value: Uint8Array | undefined };
-      let resolveReadFn: (value: ReadResult) => void = () => {};
+      let resolveReadFn: (value: ReadResult) => void = () => { };
       const hangingPromise = new Promise<ReadResult>((resolve) => {
         resolveReadFn = resolve;
       });
@@ -824,7 +824,7 @@ describe('gAgentPlanStore', () => {
       mockFetchApi.mockResolvedValue({ ok: true });
 
       // Start execution (creates abort controller)
-      const executePromise = gAgentPlanStore.executeCurrentPlan();
+      gAgentPlanStore.executeCurrentPlan();
 
       // Give it a moment to set up
       await new Promise((r) => setTimeout(r, 10));

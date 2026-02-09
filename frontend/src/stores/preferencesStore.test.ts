@@ -34,7 +34,7 @@ vi.mock('./authStore.js', () => ({
   session: {
     subscribe: vi.fn((cb: (value: null) => void) => {
       cb(null); // Default to logged out
-      return () => {};
+      return () => { };
     }),
   },
 }));
@@ -268,7 +268,7 @@ describe('preferencesStore', () => {
     });
   });
 
-  describe('G-Agent capability methods', () => {
+  describe('Agent capability methods', () => {
     it('setGAgentCapabilities should set capabilities', async () => {
       const { preferencesStore, gAgentCapabilities } = await import('./preferencesStore');
 
@@ -296,7 +296,7 @@ describe('preferencesStore', () => {
     });
   });
 
-  describe('G-Agent allowlist methods', () => {
+  describe('Agent allowlist methods', () => {
     it('setGAgentExternalAllowlist should set allowlist', async () => {
       const { preferencesStore, gAgentExternalAllowlist } = await import('./preferencesStore');
 
@@ -352,7 +352,7 @@ describe('preferencesStore', () => {
     });
   });
 
-  describe('G-Agent model source methods', () => {
+  describe('Agent model source methods', () => {
     it('setGAgentPreferredModelSource should set cloud source', async () => {
       const { preferencesStore, gAgentPreferredModelSource } = await import('./preferencesStore');
 
@@ -398,7 +398,7 @@ describe('preferencesStore', () => {
     });
   });
 
-  describe('G-Agent persona and goals', () => {
+  describe('Agent persona and goals', () => {
     it('setGAgentPersona should set persona', async () => {
       const { preferencesStore, gAgentPersona } = await import('./preferencesStore');
 
@@ -434,78 +434,78 @@ describe('preferencesStore', () => {
     });
   });
 
-  describe('deprecated Free Agent methods', () => {
-    it('setFreeAgentCapabilities should delegate to setGAgentCapabilities', async () => {
+  describe('Agent methods (formerly deprecated Free Agent methods)', () => {
+    it('setGAgentCapabilities should update capabilities', async () => {
       const { preferencesStore, gAgentCapabilities } = await import('./preferencesStore');
 
-      preferencesStore.setFreeAgentCapabilities(['file', 'git']);
+      preferencesStore.setGAgentCapabilities(['file', 'git']);
 
       expect(get(gAgentCapabilities)).toEqual(['file', 'git']);
     });
 
-    it('setFreeAgentExternalAllowlist should delegate to setGAgentExternalAllowlist', async () => {
+    it('setGAgentExternalAllowlist should update allowlist', async () => {
       const { preferencesStore, gAgentExternalAllowlist } = await import('./preferencesStore');
 
-      preferencesStore.setFreeAgentExternalAllowlist(['example.com']);
+      preferencesStore.setGAgentExternalAllowlist(['example.com']);
 
       expect(get(gAgentExternalAllowlist)).toEqual(['example.com']);
     });
 
-    it('toggleFreeAgentCapability should delegate to toggleGAgentCapability', async () => {
+    it('toggleGAgentCapability should toggle capability', async () => {
       const { preferencesStore, gAgentCapabilities } = await import('./preferencesStore');
 
       preferencesStore.setGAgentCapabilities(['file']);
-      preferencesStore.toggleFreeAgentCapability('git');
+      preferencesStore.toggleGAgentCapability('git');
 
       expect(get(gAgentCapabilities)).toContain('git');
     });
 
-    it('addFreeAgentAllowlistDomain should delegate to addGAgentAllowlistDomain', async () => {
+    it('addGAgentAllowlistDomain should add domain', async () => {
       const { preferencesStore, gAgentExternalAllowlist } = await import('./preferencesStore');
 
       preferencesStore.setGAgentExternalAllowlist([]);
-      preferencesStore.addFreeAgentAllowlistDomain('api.test.com');
+      preferencesStore.addGAgentAllowlistDomain('api.test.com');
 
       expect(get(gAgentExternalAllowlist)).toContain('api.test.com');
     });
 
-    it('removeFreeAgentAllowlistDomain should delegate to removeGAgentAllowlistDomain', async () => {
+    it('removeGAgentAllowlistDomain should remove domain', async () => {
       const { preferencesStore, gAgentExternalAllowlist } = await import('./preferencesStore');
 
       preferencesStore.setGAgentExternalAllowlist(['api.test.com']);
-      preferencesStore.removeFreeAgentAllowlistDomain('api.test.com');
+      preferencesStore.removeGAgentAllowlistDomain('api.test.com');
 
       expect(get(gAgentExternalAllowlist)).not.toContain('api.test.com');
     });
 
-    it('setFreeAgentPreferredModelSource should delegate to setGAgentPreferredModelSource', async () => {
+    it('setGAgentPreferredModelSource should update source', async () => {
       const { preferencesStore, gAgentPreferredModelSource } = await import('./preferencesStore');
 
-      preferencesStore.setFreeAgentPreferredModelSource('ollama');
+      preferencesStore.setGAgentPreferredModelSource('ollama');
 
       expect(get(gAgentPreferredModelSource)).toBe('ollama');
     });
 
-    it('setFreeAgentOllamaModel should delegate to setGAgentOllamaModel', async () => {
+    it('setGAgentOllamaModel should update model', async () => {
       const { preferencesStore, gAgentOllamaModel } = await import('./preferencesStore');
 
-      preferencesStore.setFreeAgentOllamaModel('mistral');
+      preferencesStore.setGAgentOllamaModel('mistral');
 
       expect(get(gAgentOllamaModel)).toBe('mistral');
     });
 
-    it('setFreeAgentPersona should delegate to setGAgentPersona', async () => {
+    it('setGAgentPersona should update persona', async () => {
       const { preferencesStore, gAgentPersona } = await import('./preferencesStore');
 
-      preferencesStore.setFreeAgentPersona({ tone: 'casual' });
+      preferencesStore.setGAgentPersona({ tone: 'casual' });
 
       expect(get(gAgentPersona)).toEqual({ tone: 'casual' });
     });
 
-    it('setFreeAgentGoals should delegate to setGAgentGoals', async () => {
+    it('setGAgentGoals should update goals', async () => {
       const { preferencesStore, gAgentGoals } = await import('./preferencesStore');
 
-      preferencesStore.setFreeAgentGoals(['goal1', 'goal2']);
+      preferencesStore.setGAgentGoals(['goal1', 'goal2']);
 
       expect(get(gAgentGoals)).toEqual(['goal1', 'goal2']);
     });
@@ -524,15 +524,10 @@ describe('preferencesStore', () => {
       expect(get(includeRagContext)).toBe(false);
     });
 
-    it('gAgentCapabilities should fallback to freeAgentCapabilities when gAgentCapabilities is undefined', async () => {
-      // The derived store first checks gAgentCapabilities, then freeAgentCapabilities, then defaults
-      // Since loadPreferences merges with defaults (which have gAgentCapabilities),
-      // we need to test the derived store's fallback logic directly
-      const { gAgentCapabilities, preferencesStore } = await import('./preferencesStore');
+    it('gAgentCapabilities should return defaults when not set', async () => {
+      // The derived store checks gAgentCapabilities, then defaults
+      const { gAgentCapabilities } = await import('./preferencesStore');
 
-      // Set preferences where gAgentCapabilities is explicitly undefined but freeAgentCapabilities is set
-      // This can't happen via localStorage due to merge, so we test the derived store directly
-      // The fallback chain is: gAgentCapabilities ?? freeAgentCapabilities ?? defaults
       const current = get(gAgentCapabilities);
       expect(Array.isArray(current)).toBe(true);
       expect(current.length).toBeGreaterThan(0);
@@ -546,9 +541,9 @@ describe('preferencesStore', () => {
       expect(get(gAgentExternalAllowlist)).toEqual([]);
     });
 
-    it('gAgentPreferredModelSource should fallback to freeAgentPreferredModelSource', async () => {
+    it('gAgentPreferredModelSource should load from storage', async () => {
       mockStorage['g-rump-preferences'] = JSON.stringify({
-        freeAgentPreferredModelSource: 'ollama',
+        gAgentPreferredModelSource: 'ollama',
       });
 
       vi.resetModules();
@@ -557,9 +552,9 @@ describe('preferencesStore', () => {
       expect(get(gAgentPreferredModelSource)).toBe('ollama');
     });
 
-    it('gAgentOllamaModel should fallback to freeAgentOllamaModel', async () => {
+    it('gAgentOllamaModel should load from storage', async () => {
       mockStorage['g-rump-preferences'] = JSON.stringify({
-        freeAgentOllamaModel: 'mistral',
+        gAgentOllamaModel: 'mistral',
       });
 
       vi.resetModules();
@@ -568,9 +563,9 @@ describe('preferencesStore', () => {
       expect(get(gAgentOllamaModel)).toBe('mistral');
     });
 
-    it('gAgentPersona should fallback to freeAgentPersona', async () => {
+    it('gAgentPersona should load from storage', async () => {
       mockStorage['g-rump-preferences'] = JSON.stringify({
-        freeAgentPersona: { tone: 'friendly' },
+        gAgentPersona: { tone: 'friendly' },
       });
 
       vi.resetModules();
@@ -579,15 +574,15 @@ describe('preferencesStore', () => {
       expect(get(gAgentPersona)).toEqual({ tone: 'friendly' });
     });
 
-    it('gAgentGoals should fallback to freeAgentGoals', async () => {
+    it('gAgentGoals should load from storage', async () => {
       mockStorage['g-rump-preferences'] = JSON.stringify({
-        freeAgentGoals: ['legacy-goal'],
+        gAgentGoals: ['goal-1'],
       });
 
       vi.resetModules();
       const { gAgentGoals } = await import('./preferencesStore');
 
-      expect(get(gAgentGoals)).toEqual(['legacy-goal']);
+      expect(get(gAgentGoals)).toEqual(['goal-1']);
     });
 
     it('gAgentAutoApprove should default to false', async () => {

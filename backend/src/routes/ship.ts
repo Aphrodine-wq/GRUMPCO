@@ -17,9 +17,9 @@ import {
   executeSpecPhase,
   executePlanPhase,
   executeCodePhase,
-} from "../services/shipModeService.js";
-import { registerSession } from "../services/sessionCoordinatorService.js";
-import { enqueueShipJob } from "../services/jobQueue.js";
+} from "../services/ship/shipModeService.js";
+import { registerSession } from "../services/session/sessionCoordinatorService.js";
+import { enqueueShipJob } from "../services/infra/jobQueue.js";
 import { isServerlessRuntime } from "../config/runtime.js";
 import type { ShipStartRequest, ShipPhase } from "../types/ship.js";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware.js";

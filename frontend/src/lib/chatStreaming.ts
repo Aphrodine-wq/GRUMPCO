@@ -19,6 +19,8 @@ export type ChatStreamEventType =
   | 'tool_call'
   | 'tool_result'
   | 'thinking'
+  | 'files_summary'
+  | 'agentic_progress'
   | 'error'
   | 'done';
 
@@ -53,6 +55,24 @@ export interface ChatStreamEvent {
   };
   /** Thinking content for extended thinking */
   thinking?: string;
+  /** Files summary for code generation turns */
+  filesSummary?: {
+    files: Array<{
+      path: string;
+      changeType: 'created' | 'modified' | 'deleted';
+      linesAdded: number;
+      linesRemoved: number;
+    }>;
+    commandsRun: number;
+    commandsPassed: number;
+    totalTurns: number;
+  };
+  /** Agentic progress tracking */
+  agenticProgress?: {
+    currentTurn: number;
+    maxTurns: number;
+    toolCallCount: number;
+  };
   /** Error message */
   error?: string;
   /** Accumulated content blocks */
@@ -65,7 +85,7 @@ export interface ChatStreamEvent {
 export interface ChatStreamOptions {
   /** Chat mode */
   mode?: 'normal' | 'plan' | 'spec' | 'ship' | 'execute' | 'design' | 'argument' | 'code';
-  /** Session type */
+  /** Session type ('freeAgent' kept for backward compat) */
   sessionType?: 'chat' | 'gAgent' | 'freeAgent';
   /** Workspace root for tool execution */
   workspaceRoot?: string;
@@ -131,6 +151,32 @@ export function prepareMessagesForApi(
         p.type === 'text' ? (p.text ?? '').trim().length > 0 : true
       );
     });
+}
+
+// ── HANG-PROOF: Read with idle timeout ─────────────────────────────────────
+// If the server stops sending data (no chunks, no keepalives) for this long,
+// throw instead of waiting forever. 30s is well above the 15s keepalive.
+const STREAM_READ_TIMEOUT_MS = 30_000;
+
+class StreamTimeoutError extends Error {
+  retryable = true;
+  constructor(timeoutMs: number) {
+    super(`Stream stalled — no data received for ${timeoutMs / 1000}s`);
+    this.name = 'StreamTimeoutError';
+  }
+}
+
+function readWithTimeout(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  timeoutMs = STREAM_READ_TIMEOUT_MS,
+): Promise<ReadableStreamReadResult<Uint8Array>> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new StreamTimeoutError(timeoutMs)), timeoutMs);
+  });
+  return Promise.race([reader.read(), timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 /**
@@ -202,9 +248,35 @@ export async function streamChat(
   let buffer = '';
   const blocks: ContentBlock[] = [];
 
+  // SPEED OPTIMIZATION: Pre-allocate event batch array and use microtask batching
+  // to reduce forced reflows from rapid DOM updates during streaming
+  let pendingEvents: Array<Record<string, unknown>> = [];
+  let rafScheduled = false;
+
+  const flushPendingEvents = () => {
+    rafScheduled = false;
+    const batch = pendingEvents;
+    pendingEvents = [];
+    for (const event of batch) {
+      processStreamEvent(event, blocks, onEvent);
+    }
+  };
+
+  const scheduleEventFlush = (event: Record<string, unknown>) => {
+    pendingEvents.push(event);
+    // Flush text events immediately for perceived speed; batch non-text events
+    if (event.type === 'text') {
+      rafScheduled = false;
+      flushPendingEvents();
+    } else if (!rafScheduled && typeof requestAnimationFrame !== 'undefined') {
+      rafScheduled = true;
+      requestAnimationFrame(flushPendingEvents);
+    }
+  };
+
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const { done, value } = await readWithTimeout(reader);
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
@@ -217,12 +289,15 @@ export async function streamChat(
 
         try {
           const event = JSON.parse(raw);
-          processStreamEvent(event, blocks, onEvent);
+          scheduleEventFlush(event);
         } catch {
           // Ignore parse errors for malformed JSON
         }
       }
     }
+
+    // Flush any pending batched events
+    if (pendingEvents.length > 0) flushPendingEvents();
 
     // Process any remaining buffer
     if (buffer.startsWith('data: ')) {
@@ -240,7 +315,39 @@ export async function streamChat(
     reader.releaseLock();
   }
 
+  if (blocks.length === 0) {
+    console.warn('[streamChat] Stream completed with 0 blocks. Mode:', mode, 'Messages sent:', apiMessages.length);
+  }
+
   return blocks;
+}
+
+/**
+ * Streams chat with automatic retry on stream timeouts.
+ * Wraps streamChat with up to 2 retries using exponential backoff.
+ */
+export async function streamChatWithRetry(
+  messages: Message[],
+  options: ChatStreamOptions = {},
+  maxRetries = 2,
+): Promise<ContentBlock[]> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await streamChat(messages, options);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      const isRetryable = (err as { retryable?: boolean }).retryable === true;
+      if (!isRetryable || attempt >= maxRetries) throw lastError;
+      // Exponential backoff: 2s, 4s
+      const backoffMs = 2000 * Math.pow(2, attempt);
+      console.warn(
+        `[streamChatWithRetry] Attempt ${attempt + 1} failed (${lastError.message}), retrying in ${backoffMs}ms...`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+  throw lastError!;
 }
 
 /**
@@ -298,6 +405,35 @@ function processStreamEvent(
     onEvent?.({ type: 'tool_result', toolResult, blocks });
   } else if (type === 'thinking' && typeof event.thinking === 'string') {
     onEvent?.({ type: 'thinking', thinking: event.thinking, blocks });
+  } else if (type === 'files_summary' && event.files) {
+    // Files-changed summary from the agentic loop
+    const filesSummary = {
+      files: event.files as Array<{
+        path: string;
+        changeType: 'created' | 'modified' | 'deleted';
+        linesAdded: number;
+        linesRemoved: number;
+      }>,
+      commandsRun: (event.commandsRun as number) ?? 0,
+      commandsPassed: (event.commandsPassed as number) ?? 0,
+      totalTurns: (event.totalTurns as number) ?? 0,
+    };
+    blocks.push({
+      type: 'files_summary',
+      ...filesSummary,
+    });
+    onEvent?.({ type: 'files_summary', filesSummary, blocks });
+  } else if (type === 'agentic_progress') {
+    // Real-time progress of the agentic tool loop
+    onEvent?.({
+      type: 'agentic_progress',
+      agenticProgress: {
+        currentTurn: (event.currentTurn as number) ?? 0,
+        maxTurns: (event.maxTurns as number) ?? 25,
+        toolCallCount: (event.toolCallCount as number) ?? 0,
+      },
+      blocks,
+    });
   } else if (type === 'error') {
     const errorMessage = (event.message as string) ?? 'Unknown error';
     onEvent?.({ type: 'error', error: errorMessage, blocks });

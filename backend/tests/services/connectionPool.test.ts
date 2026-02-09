@@ -63,7 +63,7 @@ describe('connectionPool', () => {
 
   describe('getAgent', () => {
     it('should return agent for existing provider', () => {
-      const agent = connectionPool.getAgent('groq');
+      const agent = connectionPool.getAgent('mistral');
       expect(agent).toBeDefined();
     });
 
@@ -83,13 +83,13 @@ describe('connectionPool', () => {
 
   describe('markFailure', () => {
     it('should track failures', () => {
-      connectionPool.markFailure('groq');
-      connectionPool.markFailure('groq');
+      connectionPool.markFailure('mistral');
+      connectionPool.markFailure('mistral');
 
       const stats = connectionPool.getStats();
-      const groqStat = stats.find(s => s.provider === 'groq');
+      const mistralStat = stats.find(s => s.provider === 'mistral');
 
-      expect(groqStat?.failures).toBeGreaterThanOrEqual(2);
+      expect(mistralStat?.failures).toBeGreaterThanOrEqual(2);
     });
 
     it('should warn on failure', () => {
@@ -105,14 +105,14 @@ describe('connectionPool', () => {
   describe('getStats', () => {
     it('should return stats array', () => {
       const stats = connectionPool.getStats();
-      
+
       expect(Array.isArray(stats)).toBe(true);
       expect(stats.length).toBeGreaterThan(0);
     });
 
     it('should include correct stat fields', () => {
       const stats = connectionPool.getStats();
-      
+
       if (stats.length > 0) {
         const stat = stats[0];
         expect(stat).toHaveProperty('provider');
@@ -131,7 +131,7 @@ describe('connectionPool', () => {
 
     it('should clear health check interval', () => {
       const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
-      
+
       connectionPool.destroy();
 
       expect(clearIntervalSpy).toHaveBeenCalled();
@@ -145,10 +145,10 @@ describe('connectionPool', () => {
         json: vi.fn(),
       });
 
-      await fetchWithPool('https://api.groq.com/v1/chat', 'groq', { method: 'POST' });
+      await fetchWithPool('https://api.mistral.ai/v1/chat', 'mistral', { method: 'POST' });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.groq.com/v1/chat',
+        'https://api.mistral.ai/v1/chat',
         expect.objectContaining({
           method: 'POST',
         })
@@ -167,7 +167,7 @@ describe('connectionPool', () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
       try {
-        await fetchWithPool('https://api.groq.com', 'groq', {});
+        await fetchWithPool('https://api.mistral.ai', 'mistral', {});
       } catch {
         // expected
       }

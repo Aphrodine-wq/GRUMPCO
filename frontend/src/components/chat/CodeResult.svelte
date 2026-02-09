@@ -185,11 +185,12 @@
 
 <style>
   .phase-result {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--color-border, #e9d5ff);
     border-radius: 12px;
     padding: 16px;
     margin: 12px 0;
+    box-shadow: var(--shadow-sm);
   }
 
   .result-header {
@@ -206,13 +207,13 @@
   }
 
   :global(.code-icon) {
-    color: var(--color-primary);
+    color: var(--color-primary, #7c3aed);
   }
 
   .result-title {
     font-size: 16px;
     font-weight: 600;
-    color: var(--color-text);
+    color: var(--color-text, #1f1147);
     margin: 0;
   }
 
@@ -227,19 +228,19 @@
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    background: var(--color-bg-subtle);
-    border: 1px solid var(--color-border);
+    background: var(--color-bg-subtle, #f5f3ff);
+    border: 1px solid var(--color-border, #e9d5ff);
     border-radius: 6px;
     font-size: 12px;
-    color: var(--color-text);
+    color: var(--color-text, #1f1147);
     cursor: pointer;
-    transition: all 50ms ease-out;
+    transition: all 120ms ease;
   }
 
   .download-btn:hover {
-    background: var(--color-bg-card-hover);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
+    background: var(--color-bg-card-hover, #f8f5ff);
+    border-color: var(--color-border-highlight, #d8b4fe);
+    color: var(--color-primary, #7c3aed);
   }
 
   .toggle-btn {
@@ -248,34 +249,34 @@
     justify-content: center;
     width: 32px;
     height: 32px;
-    background: var(--color-bg-subtle);
-    border: 1px solid var(--color-border);
+    background: var(--color-bg-subtle, #f5f3ff);
+    border: 1px solid var(--color-border, #e9d5ff);
     border-radius: 6px;
-    color: var(--color-text-muted);
+    color: var(--color-text-muted, #6b7280);
     cursor: pointer;
-    transition: all 50ms ease-out;
+    transition: all 120ms ease;
   }
 
   .toggle-btn:hover {
-    background: var(--color-bg-card-hover);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
+    background: var(--color-bg-card-hover, #f8f5ff);
+    border-color: var(--color-border-highlight, #d8b4fe);
+    color: var(--color-primary, #7c3aed);
   }
 
   .code-browser {
     display: grid;
     grid-template-columns: 240px 1fr;
-    gap: 12px;
+    gap: 0;
     margin-bottom: 16px;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-border, #e9d5ff);
     border-radius: 8px;
     overflow: hidden;
-    height: 300px;
+    height: 320px;
   }
 
   .file-tree {
-    background: var(--color-bg-subtle);
-    border-right: 1px solid var(--color-border);
+    background: var(--color-bg-subtle, #f5f3ff);
+    border-right: 1px solid var(--color-border, #e9d5ff);
     overflow-y: auto;
     padding: 8px;
   }
@@ -291,16 +292,17 @@
     border-radius: 6px;
     text-align: left;
     cursor: pointer;
-    transition: all 50ms ease-out;
-    color: var(--color-text);
+    transition: all 120ms ease;
+    color: var(--color-text, #1f1147);
+    font-size: 12px;
   }
 
   .file-item:hover {
-    background: var(--color-bg-card-hover);
+    background: var(--color-bg-card-hover, #f8f5ff);
   }
 
   .file-item.selected {
-    background: var(--color-primary);
+    background: var(--color-primary, #7c3aed);
     color: white;
   }
 
@@ -310,59 +312,68 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   }
 
   .file-language {
-    font-size: 10px;
+    font-size: 9px;
     padding: 2px 6px;
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
     border-radius: 4px;
     text-transform: uppercase;
+    color: var(--color-primary, #7c3aed);
+    font-weight: 600;
+    letter-spacing: 0.04em;
   }
 
   .file-item.selected .file-language {
     background: rgba(255, 255, 255, 0.2);
+    color: white;
   }
 
   .code-preview {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    background: var(--color-bg-card, #ffffff);
   }
 
   .preview-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 12px;
-    background: var(--color-bg-card-hover);
-    border-bottom: 1px solid var(--color-border-light);
+    padding: 10px 14px;
+    background: var(--color-bg-subtle, #f5f3ff);
+    border-bottom: 1px solid var(--color-border-light, #f3e8ff);
   }
 
   .preview-path {
     font-size: 12px;
     font-weight: 500;
-    color: var(--color-text);
+    color: var(--color-text, #1f1147);
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   }
 
   .preview-language {
-    font-size: 10px;
-    padding: 2px 8px;
-    background: var(--color-primary);
+    font-size: 9px;
+    padding: 3px 8px;
+    background: var(--color-primary, #7c3aed);
     color: white;
     border-radius: 4px;
     text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
   }
 
   .code-content {
     flex: 1;
     margin: 0;
-    padding: 12px;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 11px;
-    line-height: 1.5;
-    color: var(--color-text);
-    background: var(--color-bg-subtle);
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--color-text, #1f1147);
+    background: var(--color-bg-inset, #ede9fe);
     overflow: auto;
     white-space: pre;
   }
@@ -371,40 +382,41 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-text-muted);
+    color: var(--color-text-muted, #6b7280);
     font-size: 13px;
+    font-style: italic;
   }
 
   .files-summary {
     margin-bottom: 16px;
-    padding: 8px 12px;
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(34, 197, 94, 0.02) 100%);
+    padding: 8px 14px;
+    background: var(--color-success-subtle, rgba(34, 197, 94, 0.1));
     border-radius: 6px;
-    border-left: 3px solid #22c55e;
+    border-left: 3px solid var(--color-success, #22c55e);
   }
 
   .files-count {
     font-size: 13px;
     font-weight: 600;
-    color: #22c55e;
+    color: var(--color-success, #22c55e);
   }
 
   .empty-state {
     text-align: center;
     padding: 24px;
-    color: var(--color-text-muted);
+    color: var(--color-text-muted, #6b7280);
     font-size: 13px;
   }
 
   .approval-section {
-    border-top: 1px solid var(--color-border-light);
+    border-top: 1px solid var(--color-border-light, #f3e8ff);
     padding-top: 16px;
   }
 
   .approval-question {
     font-size: 14px;
     font-weight: 500;
-    color: var(--color-text);
+    color: var(--color-text, #1f1147);
     margin: 0 0 12px 0;
   }
 
@@ -419,18 +431,19 @@
     align-items: center;
     gap: 6px;
     padding: 10px 16px;
-    background: #22c55e;
+    background: var(--color-success, #22c55e);
     color: white;
     border: none;
     border-radius: 8px;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 50ms ease-out;
+    transition: all 120ms ease;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25);
   }
 
   .approve-btn:hover {
-    background: #16a34a;
+    filter: brightness(0.9);
     transform: translateY(-1px);
   }
 
@@ -439,20 +452,20 @@
     align-items: center;
     gap: 6px;
     padding: 10px 16px;
-    background: var(--color-bg-subtle);
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
+    background: var(--color-bg-subtle, #f5f3ff);
+    color: var(--color-text, #1f1147);
+    border: 1px solid var(--color-border, #e9d5ff);
     border-radius: 8px;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 50ms ease-out;
+    transition: all 120ms ease;
   }
 
   .changes-btn:hover {
-    background: var(--color-bg-card-hover);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
+    background: var(--color-bg-card-hover, #f8f5ff);
+    border-color: var(--color-border-highlight, #d8b4fe);
+    color: var(--color-primary, #7c3aed);
   }
 
   .feedback-input-section {
@@ -464,23 +477,24 @@
   textarea {
     width: 100%;
     padding: 12px;
-    background: var(--color-bg-input);
-    border: 1px solid var(--color-border);
+    background: var(--color-bg-input, #f3e8ff);
+    border: 1px solid var(--color-border, #e9d5ff);
     border-radius: 8px;
     font-size: 13px;
-    font-family: inherit;
-    color: var(--color-text);
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--color-text, #1f1147);
     resize: vertical;
-    transition: border-color 50ms ease-out;
+    transition: border-color 120ms ease;
   }
 
   textarea:focus {
     outline: none;
-    border-color: var(--color-primary);
+    border-color: var(--color-border-focus, #7c3aed);
+    box-shadow: var(--focus-ring);
   }
 
   textarea::placeholder {
-    color: var(--color-text-muted);
+    color: var(--color-text-muted, #6b7280);
   }
 
   .feedback-buttons {
@@ -491,18 +505,19 @@
   .submit-feedback-btn {
     flex: 1;
     padding: 10px 16px;
-    background: var(--color-primary);
+    background: var(--color-primary, #7c3aed);
     color: white;
     border: none;
     border-radius: 8px;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 50ms ease-out;
+    transition: all 120ms ease;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
   }
 
   .submit-feedback-btn:hover {
-    background: var(--color-primary-hover);
+    background: var(--color-primary-hover, #6d28d9);
   }
 
   .cancel-btn {
@@ -511,18 +526,18 @@
     gap: 6px;
     padding: 10px 16px;
     background: transparent;
-    color: var(--color-text-muted);
-    border: 1px solid var(--color-border);
+    color: var(--color-text-muted, #6b7280);
+    border: 1px solid var(--color-border, #e9d5ff);
     border-radius: 8px;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 50ms ease-out;
+    transition: all 120ms ease;
   }
 
   .cancel-btn:hover {
-    background: var(--color-bg-subtle);
-    color: var(--color-text);
+    background: var(--color-bg-subtle, #f5f3ff);
+    color: var(--color-text, #1f1147);
   }
 
   @media (max-width: 768px) {

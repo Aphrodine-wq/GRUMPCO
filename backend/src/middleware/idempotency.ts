@@ -8,7 +8,7 @@
 
 import { type Request, type Response, type NextFunction } from "express";
 import crypto from "crypto";
-import { getRedisClient } from "../services/redis.js";
+import { getRedisClient } from "../services/infra/redis.js";
 import { logger } from "../utils/logger.js";
 
 export interface IdempotencyOptions {

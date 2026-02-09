@@ -7,7 +7,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
-import { getStream, type StreamParams } from "../../services/llmGateway.js";
+import { getStream, type StreamParams } from "../../services/ai-providers/llmGateway.js";
 import {
   type SecurityScanResult,
   type SecurityVulnerability,

@@ -64,7 +64,7 @@ describe('hybridIntentCompiler', () => {
   describe('getHybridConfig', () => {
     it('should return default configuration when no env vars set', () => {
       const config = getHybridConfig();
-      
+
       expect(config.mode).toBe(DEFAULT_HYBRID_CONFIG.mode);
       expect(config.confidenceThreshold).toBe(DEFAULT_HYBRID_CONFIG.confidenceThreshold);
       expect(config.parallelProcessing).toBe(DEFAULT_HYBRID_CONFIG.parallelProcessing);
@@ -78,7 +78,7 @@ describe('hybridIntentCompiler', () => {
       process.env.HYBRID_CONFIDENCE_THRESHOLD = '0.8';
       process.env.HYBRID_PARALLEL_PROCESSING = 'false';
       process.env.HYBRID_CACHING_ENABLED = 'false';
-      process.env.HYBRID_LLM_PROVIDER = 'groq';
+      process.env.HYBRID_LLM_PROVIDER = 'openrouter';
       process.env.HYBRID_LLM_MODEL = 'llama-3.1-70b';
 
       const config = getHybridConfig();
@@ -87,7 +87,7 @@ describe('hybridIntentCompiler', () => {
       expect(config.confidenceThreshold).toBe(0.8);
       expect(config.parallelProcessing).toBe(false);
       expect(config.cachingEnabled).toBe(false);
-      expect(config.llmProvider).toBe('groq');
+      expect(config.llmProvider).toBe('openrouter');
       expect(config.llmModel).toBe('llama-3.1-70b');
     });
 
@@ -107,7 +107,7 @@ describe('hybridIntentCompiler', () => {
   describe('detectAmbiguity', () => {
     it('should detect vague nouns', () => {
       const result = detectAmbiguity('Create something for the user');
-      
+
       expect(result.score).toBeGreaterThan(0);
       expect(result.reasons).toContain('Contains vague nouns');
       // Score may or may not exceed 0.5 threshold depending on other factors
@@ -116,28 +116,28 @@ describe('hybridIntentCompiler', () => {
 
     it('should detect vague action phrases', () => {
       const result = detectAmbiguity('Make it better');
-      
+
       expect(result.score).toBeGreaterThan(0);
       expect(result.reasons).toContain('Contains vague action phrases');
     });
 
     it('should detect improvement requests', () => {
       const result = detectAmbiguity('Improve the system');
-      
+
       expect(result.score).toBeGreaterThan(0);
       expect(result.reasons).toContain('Contains vague improvement requests');
     });
 
     it('should detect short inputs', () => {
       const result = detectAmbiguity('Fix bug');
-      
+
       expect(result.score).toBeGreaterThan(0);
       expect(result.reasons).toContain('Very short input (< 5 words)');
     });
 
     it('should detect lack of technical specificity', () => {
       const result = detectAmbiguity('Build a website');
-      
+
       expect(result.score).toBeGreaterThan(0);
       expect(result.reasons).toContain('Lacks technical specificity');
     });
@@ -146,7 +146,7 @@ describe('hybridIntentCompiler', () => {
       const result = detectAmbiguity(
         'Create a REST API endpoint /api/users using Node.js and Express with JWT authentication and PostgreSQL database'
       );
-      
+
       expect(result.score).toBeLessThan(0.5);
       expect(result.needsLLM).toBe(false);
     });
@@ -154,13 +154,13 @@ describe('hybridIntentCompiler', () => {
     it('should cap score at 1.0', () => {
       // Very ambiguous input with multiple issues
       const result = detectAmbiguity('Do something with stuff');
-      
+
       expect(result.score).toBeLessThanOrEqual(1.0);
     });
 
     it('should handle empty input', () => {
       const result = detectAmbiguity('');
-      
+
       expect(result.score).toBeGreaterThan(0);
       expect(result.reasons.length).toBeGreaterThan(0);
     });
@@ -178,7 +178,7 @@ describe('hybridIntentCompiler', () => {
       };
 
       const score = scoreRustConfidence(intent);
-      
+
       expect(score).toBeGreaterThan(0.7);
     });
 
@@ -193,7 +193,7 @@ describe('hybridIntentCompiler', () => {
       };
 
       const score = scoreRustConfidence(intent);
-      
+
       expect(score).toBeLessThan(0.5);
     });
 
@@ -208,7 +208,7 @@ describe('hybridIntentCompiler', () => {
       };
 
       const score = scoreRustConfidence(intent);
-      
+
       expect(score).toBeGreaterThan(0.3);
       expect(score).toBeLessThan(0.7);
     });
@@ -224,7 +224,7 @@ describe('hybridIntentCompiler', () => {
       } as unknown as StructuredIntent;
 
       const score = scoreRustConfidence(intent);
-      
+
       expect(score).toBeGreaterThanOrEqual(0);
       expect(score).toBeLessThanOrEqual(1);
     });
@@ -249,7 +249,7 @@ describe('hybridIntentCompiler', () => {
       };
 
       const score = scoreLLMConfidence(intent);
-      
+
       expect(score).toBeGreaterThan(0.5);
     });
 
@@ -271,7 +271,7 @@ describe('hybridIntentCompiler', () => {
       };
 
       const score = scoreLLMConfidence(intent);
-      
+
       expect(score).toBeLessThan(0.6);
     });
 
@@ -286,7 +286,7 @@ describe('hybridIntentCompiler', () => {
       };
 
       const score = scoreLLMConfidence(intent);
-      
+
       expect(score).toBeGreaterThan(0);
       expect(score).toBeLessThanOrEqual(1);
     });
@@ -330,9 +330,9 @@ describe('hybridIntentCompiler', () => {
     it('should fallback to LLM when Rust fails in rust-first mode', async () => {
       // Mock LLM stream
       const mockStream = async function* () {
-        yield { 
-          type: 'content_block_delta' as const, 
-          delta: { type: 'text_delta' as const, text: JSON.stringify(mockEnrichedIntent) } 
+        yield {
+          type: 'content_block_delta' as const,
+          delta: { type: 'text_delta' as const, text: JSON.stringify(mockEnrichedIntent) }
         };
         yield { type: 'message_stop' as const };
       };
@@ -351,7 +351,7 @@ describe('hybridIntentCompiler', () => {
 
     it('should throw when both methods fail and fallback is disabled', async () => {
       vi.mocked(parseIntentWithFallback).mockRejectedValue(new Error('Rust compiler failed'));
-      
+
       // Mock LLM to also fail
       const mockStream = async function* () {
         yield { type: 'error' as const, error: new Error('LLM failed') };
@@ -400,8 +400,8 @@ describe('hybridIntentCompiler', () => {
       vi.mocked(parseIntentWithFallback).mockResolvedValue(mockIntent);
 
       const result = await parseIntentHybridWithCache(
-        'Create login API', 
-        {}, 
+        'Create login API',
+        {},
         { mode: 'rust-first', cachingEnabled: false }
       );
 
@@ -521,9 +521,9 @@ describe('hybridIntentCompiler', () => {
 
       // Mock LLM stream
       const mockStream = async function* () {
-        yield { 
-          type: 'content_block_delta' as const, 
-          delta: { type: 'text_delta' as const, text: JSON.stringify(mockLLMIntent) } 
+        yield {
+          type: 'content_block_delta' as const,
+          delta: { type: 'text_delta' as const, text: JSON.stringify(mockLLMIntent) }
         };
         yield { type: 'message_stop' as const };
       };
@@ -550,7 +550,7 @@ describe('hybridIntentCompiler', () => {
 
     it('should respect timeout settings', async () => {
       // Mock a slow Rust parser
-      vi.mocked(parseIntentWithFallback).mockImplementation(() => 
+      vi.mocked(parseIntentWithFallback).mockImplementation(() =>
         new Promise((resolve) => setTimeout(() => resolve({
           actors: ['user'],
           features: ['login'],
@@ -562,10 +562,10 @@ describe('hybridIntentCompiler', () => {
       );
 
       const startTime = Date.now();
-      
+
       try {
-        await parseIntentHybrid('Create login API', {}, { 
-          mode: 'rust-first', 
+        await parseIntentHybrid('Create login API', {}, {
+          mode: 'rust-first',
           rustTimeout: 100, // Very short timeout
         });
       } catch {

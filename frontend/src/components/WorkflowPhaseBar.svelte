@@ -7,13 +7,22 @@
     phase: WorkflowPhase;
     progress?: number;
     agents?: Record<AgentType, AgentTask>;
+    /** When phase is codegen, show failed state and message. */
+    codegenStatus?: 'initializing' | 'running' | 'completed' | 'failed';
+    codegenError?: string;
+    generatedFileCount?: number;
   }
 
   let {
     phase = $bindable('idle'),
     progress = $bindable(undefined),
     agents = $bindable(undefined),
+    codegenStatus,
+    codegenError,
+    generatedFileCount,
   }: Props = $props();
+
+  const isCodegenFailed = $derived(phase === 'codegen' && codegenStatus === 'failed');
 
   const phaseOrder: WorkflowPhase[] = ['idle', 'architecture', 'prd', 'codegen', 'complete'];
 
@@ -103,6 +112,7 @@
         class="phase-step"
         class:active={phase === 'codegen'}
         class:complete={isPhaseComplete('codegen')}
+        class:failed={isCodegenFailed}
       >
         <div class="phase-icon">
           {#if isPhaseComplete('codegen')}
@@ -117,6 +127,8 @@
             >
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
+          {:else if isCodegenFailed}
+            <span class="phase-icon-failed" title={codegenError ?? 'Failed'}>!</span>
           {:else if phase === 'codegen' && (progress ?? 0) > 0}
             <span>{progress}%</span>
           {:else}
@@ -124,6 +136,12 @@
           {/if}
         </div>
         <span class="phase-label">Code</span>
+        {#if phase === 'codegen' && (generatedFileCount ?? 0) > 0}
+          <span class="phase-meta">{generatedFileCount} file{(generatedFileCount ?? 0) === 1 ? '' : 's'}</span>
+        {/if}
+        {#if isCodegenFailed && codegenError}
+          <span class="phase-error" title={codegenError}>{codegenError.length > 40 ? codegenError.slice(0, 37) + '…' : codegenError}</span>
+        {/if}
       </div>
     </div>
 
@@ -199,6 +217,33 @@
   .phase-step.complete .phase-icon {
     background: #059669;
     color: white;
+  }
+
+  .phase-step.failed .phase-icon {
+    background: #dc2626;
+    color: white;
+  }
+
+  .phase-icon-failed {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .phase-meta {
+    font-size: 0.65rem;
+    color: #71717a;
+    margin-top: -0.25rem;
+  }
+
+  .phase-error {
+    display: block;
+    font-size: 0.65rem;
+    color: #dc2626;
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 0.25rem;
   }
 
   .phase-label {

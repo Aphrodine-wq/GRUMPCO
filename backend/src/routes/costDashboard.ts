@@ -4,11 +4,11 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { getCostAnalytics } from "../services/costAnalytics.js";
-import { getCostOptimizer } from "../services/costOptimizer.js";
-import { getTieredCache } from "../services/tieredCache.js";
-import { getWorkerPool } from "../services/workerPool.js";
-import { getNIMAccelerator } from "../services/nimAccelerator.js";
+import { getCostAnalytics } from "../services/ai-providers/costAnalytics.js";
+import { getCostOptimizer } from "../services/ai-providers/costOptimizer.js";
+import { getTieredCache } from "../services/caching/tieredCache.js";
+import { getWorkerPool } from "../services/infra/workerPool.js";
+import { getNIMAccelerator } from "../services/ai-providers/nimAccelerator.js";
 import logger from "../middleware/logger.js";
 
 const router = Router();

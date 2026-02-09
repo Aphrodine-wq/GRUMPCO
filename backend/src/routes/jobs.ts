@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { processShipJob, processCodegenJob } from "../services/jobQueue.js";
+import { processShipJob, processCodegenJob } from "../services/infra/jobQueue.js";
 import logger from "../middleware/logger.js";
 import { timingSafeEqualString } from "../utils/security.js";
 

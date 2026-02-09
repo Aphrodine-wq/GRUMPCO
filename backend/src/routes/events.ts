@@ -4,8 +4,8 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { subscribeToEvents } from "../services/eventsStreamService.js";
-import { db as supabaseDb, isMockMode } from "../services/supabaseClient.js";
+import { subscribeToEvents } from "../services/platform/eventsStreamService.js";
+import { db as supabaseDb, isMockMode } from "../services/platform/supabaseClient.js";
 import { isServerlessRuntime } from "../config/runtime.js";
 
 const router = Router();

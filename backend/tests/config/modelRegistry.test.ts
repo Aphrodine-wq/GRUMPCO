@@ -180,10 +180,8 @@ describe('Model Registry (re-exports)', () => {
 
     it('should return empty array for removed providers', () => {
       const openrouterModels = getModelsByProvider('openrouter' as LLMProvider);
-      const groqModels = getModelsByProvider('groq' as LLMProvider);
 
       expect(openrouterModels.length).toBe(0);
-      expect(groqModels.length).toBe(0);
     });
   });
 

@@ -14,12 +14,7 @@ describe('viewRegistry', () => {
         'voiceCode',
         'talkMode',
         'canvas',
-        'skills',
-        'swarm',
         'designToCode',
-        'freeAgent',
-        'gAgent',
-        'advancedAI',
       ];
 
       coreScreens.forEach((screen) => {
@@ -32,7 +27,7 @@ describe('viewRegistry', () => {
     });
 
     it('should contain integration and platform screens', () => {
-      const integrationScreens = ['integrations', 'approvals', 'heartbeats', 'memory', 'auditLog'];
+      const integrationScreens = ['integrations', 'approvals', 'memory', 'auditLog'];
 
       integrationScreens.forEach((screen) => {
         expect(VIEW_REGISTRY[screen as keyof typeof VIEW_REGISTRY]).toBeDefined();

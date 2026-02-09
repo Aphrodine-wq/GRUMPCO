@@ -18,6 +18,7 @@
   import PRDResult from './PRDResult.svelte';
   import PlanResult from './PlanResult.svelte';
   import CodeResult from './CodeResult.svelte';
+  import FilesChangedSummary from './FilesChangedSummary.svelte';
   import { Tooltip } from '../../lib/design-system';
   import { parseMessageContent as parseContentBlocks } from '../../utils/contentParser';
   import { showToast } from '../../stores/toastStore';
@@ -76,7 +77,7 @@
   let feedbackSent = $state<'up' | 'down' | null>(null);
 
   let isHovered = $state(false);
-  let showActions = $derived(isHovered && !streaming);
+  let showActions = $derived(!streaming);
 
   type PhaseWithData = 'architecture' | 'prd' | 'plan' | 'code';
 
@@ -111,7 +112,29 @@
   function parseMessageContent(content: string | ContentBlock[]): ContentBlock[] {
     if (Array.isArray(content)) return content;
     // Use proper parser for structured content blocks
-    return parseContentBlocks(content);
+    const blocks = parseContentBlocks(content);
+    // Strip markdown bold markers from text blocks for cleaner display
+    return blocks.map((block) => {
+      if (block.type === 'text' && block.content) {
+        return { ...block, content: stripBoldMarkers(block.content) };
+      }
+      return block;
+    });
+  }
+
+  /** Remove markdown emphasis markers for natural display */
+  function stripBoldMarkers(text: string): string {
+    // Strip ***bold italic*** markers (must come before ** and *)
+    let cleaned = text.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
+    // Strip **bold** markers
+    cleaned = cleaned.replace(/\*\*(.+?)\*\*/g, '$1');
+    // Strip *italic* markers (but not bullet points: only match mid-line or wrapped text)
+    cleaned = cleaned.replace(/(?<!\n)\*([^\n*]+?)\*(?!\*)/g, '$1');
+    // Strip __bold__ markers
+    cleaned = cleaned.replace(/__(.+?)__/g, '$1');
+    // Strip bare *** or --- horizontal rules (standalone on a line)
+    cleaned = cleaned.replace(/^\s*(\*{3,}|-{3,}|_{3,})\s*$/gm, '');
+    return cleaned;
   }
 
   function getPlainTextContent(): string {
@@ -272,9 +295,9 @@
               <DiagramRenderer
                 code={block.content}
                 compact={true}
-                on:generate-code={(e) =>
+                onGenerateCode={(detail) =>
                   onGenerateCode?.({
-                    mermaidCode: e.detail.mermaidCode,
+                    mermaidCode: detail.mermaidCode,
                     framework: 'react',
                     language: 'typescript',
                   })}
@@ -327,9 +350,9 @@
               <DiagramRenderer
                 code={block.content}
                 compact={true}
-                on:generate-code={(e) =>
+                onGenerateCode={(detail) =>
                   onGenerateCode?.({
-                    mermaidCode: e.detail.mermaidCode,
+                    mermaidCode: detail.mermaidCode,
                     framework: 'react',
                     language: 'typescript',
                   })}
@@ -370,14 +393,21 @@
                 onRequestChanges={(feedback) => handlePhaseRequestChanges('code', feedback)}
               />
             {/if}
+          {:else if (block as any).type === 'files_summary'}
+            <FilesChangedSummary
+              files={(block as any).files ?? []}
+              commandsRun={(block as any).commandsRun ?? 0}
+              commandsPassed={(block as any).commandsPassed ?? 0}
+              totalTurns={(block as any).totalTurns ?? 0}
+            />
           {/if}
         {/each}
       {/if}
     </div>
 
-    <!-- Hover actions -->
+    <!-- Message actions (always visible) -->
     {#if showActions}
-      <div class="message-actions" class:visible={showActions}>
+      <div class="message-actions visible">
         <Tooltip content="Copy" position="top">
           <button type="button" class="action-btn" onclick={handleCopy} aria-label="Copy message">
             <svg
@@ -503,25 +533,31 @@
 <style>
   .message-wrapper {
     display: flex;
-    gap: 0.75rem;
-    padding: 1rem 1.5rem;
-    border-radius: 0.75rem;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-lg);
     position: relative;
     contain: layout style;
     content-visibility: auto;
-    contain-intrinsic-size: 0 80px;
+    contain-intrinsic-size: 0 60px;
   }
 
-  .message-wrapper:hover {
-    background-color: rgba(0, 0, 0, 0.02);
+  .message-wrapper.assistant {
+    animation: fadeSlideIn 0.1s ease-out both;
+  }
+
+  @keyframes fadeSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .message-wrapper.user {
     flex-direction: row-reverse;
-  }
-
-  .message-wrapper.user:hover {
-    background-color: rgba(124, 58, 237, 0.02);
   }
 
   /* Avatar */
@@ -553,20 +589,7 @@
       rgba(124, 58, 237, 0.05) 50%,
       transparent 70%
     );
-    animation: frowny-glow 3s ease-in-out infinite;
     pointer-events: none;
-  }
-
-  @keyframes frowny-glow {
-    0%,
-    100% {
-      opacity: 0.8;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.05);
-    }
   }
 
   /* Content wrapper */
@@ -574,7 +597,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: var(--spacing-xs);
     max-width: 80%;
     min-width: 0;
   }
@@ -659,10 +682,10 @@
     font-weight: 500;
   }
 
-  /* Message bubble */
+  /* Message content — flat inline style (no bubbles) */
   .message-bubble {
-    font-size: 0.875rem;
-    line-height: 1.55;
+    font-size: 0.9375rem;
+    line-height: 1.65;
     color: var(--color-text);
     white-space: pre-wrap;
     word-break: break-word;
@@ -679,81 +702,81 @@
   }
 
   .message-wrapper.user .message-bubble {
-    background: linear-gradient(135deg, var(--color-primary, #7c3aed), #8b5cf6);
-    color: white;
-    padding: 0.75rem 1rem;
-    border-radius: 1.25rem;
-    border-bottom-right-radius: 0.375rem;
+    color: var(--color-text);
+    padding: 0.375rem 0;
   }
 
   .message-wrapper.assistant .message-bubble {
-    background: rgba(0, 0, 0, 0.03);
-    padding: 0.625rem 0.875rem;
-    border-left: 3px solid var(--color-primary, #7c3aed);
-    border-radius: 0 0.5rem 0.5rem 0;
-    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
-    font-size: 0.8125rem;
-    line-height: 1.65;
+    padding: var(--spacing-xs) 0;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.7;
     letter-spacing: -0.01em;
-  }
-
-  :global(.dark) .message-wrapper.assistant .message-bubble {
-    background: rgba(255, 255, 255, 0.03);
   }
 
   .text-block {
     margin: 0;
     letter-spacing: -0.008em;
+    line-height: 1.7;
+  }
+
+  .text-block + .text-block {
+    margin-top: 0.5rem;
   }
 
   /* Code blocks */
   .code-card {
-    background: #1e1e2e;
-    border: 1px solid var(--color-border, #e5e7eb);
+    background: var(--color-bg-inset, #ede9fe);
+    border: 1px solid var(--color-border, #e9d5ff);
     border-radius: 0.75rem;
     overflow: hidden;
-    margin: 0.25rem 0;
+    margin: 0.5rem 0;
     font-size: 0.8125rem;
+    box-shadow: var(--shadow-sm);
   }
   .code-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.375rem 0.75rem;
-    background: #181825;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 0.5rem 0.875rem;
+    background: var(--color-bg-subtle, #f5f3ff);
+    border-bottom: 1px solid var(--color-border-light, #f3e8ff);
   }
   .code-lang {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    color: #a6adc8;
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: var(--color-primary, #7c3aed);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
+    padding: 0.125rem 0.5rem;
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
+    border-radius: 4px;
+    border: 1px solid var(--color-border, #e9d5ff);
   }
   .code-copy-btn {
-    padding: 0.2rem 0.5rem;
+    padding: 0.25rem 0.625rem;
     font-size: 0.6875rem;
     font-weight: 600;
-    color: #a6adc8;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+    color: var(--color-text-muted, #6b7280);
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--color-border, #e9d5ff);
+    border-radius: 5px;
     cursor: pointer;
-    transition: all 50ms ease-out;
+    transition: all 120ms ease;
   }
   .code-copy-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: #cdd6f4;
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
+    border-color: var(--color-border-highlight, #d8b4fe);
+    color: var(--color-primary, #7c3aed);
   }
   .code-content {
     margin: 0;
-    padding: 0.75rem 1rem;
+    padding: 0.875rem 1.125rem;
     overflow-x: auto;
-    color: #cdd6f4;
+    color: var(--color-text, #1f1147);
     font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 0.8125rem;
-    line-height: 1.6;
+    line-height: 1.65;
     white-space: pre;
     tab-size: 2;
   }
@@ -768,9 +791,10 @@
   .text-block :global(code) {
     font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 0.8125em;
-    padding: 0.125em 0.3em;
-    background: rgba(124, 58, 237, 0.06);
-    border-radius: 0.25rem;
+    padding: 0.15em 0.4em;
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
+    border: 1px solid var(--color-border-light, #f3e8ff);
+    border-radius: 0.3rem;
     color: var(--color-primary, #7c3aed);
   }
 
@@ -783,7 +807,8 @@
   .intent-block {
     margin: 0.25rem 0;
     padding: 0.5rem 0.75rem;
-    background: var(--color-bg-secondary);
+    background: var(--color-bg-subtle, #f5f3ff);
+    border: 1px solid var(--color-border-light, #f3e8ff);
     border-radius: 0.5rem;
     font-size: 0.8125rem;
   }
@@ -792,44 +817,42 @@
   .intent-block summary {
     cursor: pointer;
     font-weight: 500;
-    color: var(--color-text-muted);
+    color: var(--color-text-muted, #6b7280);
   }
 
   .context-capabilities {
     margin: 0.5rem 0 0;
     font-size: 0.75rem;
-    color: var(--color-text-muted);
+    color: var(--color-text-muted, #6b7280);
   }
 
   .intent-content {
     margin: 0.5rem 0 0;
     padding: 0.5rem;
-    background: var(--color-bg-card);
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--color-border-light, #f3e8ff);
     border-radius: 0.25rem;
     font-size: 0.6875rem;
     overflow-x: auto;
     white-space: pre-wrap;
     max-height: 200px;
     overflow-y: auto;
+    color: var(--color-text, #1f1147);
   }
 
-  /* Hover actions */
+  /* Message actions — always visible at reduced opacity, full on hover */
   .message-actions {
     display: flex;
     gap: 0.25rem;
     margin-top: 0.375rem;
-    opacity: 0;
-    transform: translateY(-4px);
-    transition:
-      opacity 15ms ease-out,
-      transform 15ms ease-out;
-    pointer-events: none;
+    opacity: 0.4;
+    pointer-events: auto;
+    transition: opacity 0.15s ease;
   }
 
-  .message-actions.visible {
+  .message-wrapper:hover .message-actions,
+  .message-actions.visible:hover {
     opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
   }
 
   .message-wrapper.user .message-actions {

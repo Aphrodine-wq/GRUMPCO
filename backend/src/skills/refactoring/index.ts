@@ -26,7 +26,7 @@ import type {
   CodeChange,
 } from "./types.js";
 import logger from "../../middleware/logger.js";
-import { withResilience } from "../../services/resilience.js";
+import { withResilience } from "../../services/infra/resilience.js";
 
 // Load manifest
 

@@ -1,5 +1,5 @@
 /**
- * G-Agent Deduplication Store Tests
+ * Agent Deduplication Store Tests
  *
  * Tests for semantic deduplication and pattern management
  */

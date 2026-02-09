@@ -5,13 +5,13 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { enqueueShipJob } from "../services/jobQueue.js";
+import { enqueueShipJob } from "../services/infra/jobQueue.js";
 import { getRequestLogger } from "../middleware/logger.js";
 import { sendServerError } from "../utils/errorResponse.js";
 import {
   registerWebhook,
   type WebhookEvent,
-} from "../services/webhookService.js";
+} from "../services/integrations/webhookService.js";
 import { timingSafeEqualString } from "../utils/security.js";
 
 const router = Router();
