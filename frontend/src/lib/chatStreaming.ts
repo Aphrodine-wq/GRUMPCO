@@ -103,6 +103,28 @@ export interface ChatStreamOptions {
   enabledSkillIds?: string[];
   /** User memory context to provide to the AI (from Memory page) */
   memoryContext?: string[];
+  /** Temperature for LLM (0.0 - 2.0) */
+  temperature?: number;
+  /** Maximum number of turns for agentic conversation */
+  maxTurns?: number;
+  /** Budget limit in dollars */
+  budgetLimit?: number;
+  /** System prompt / custom instructions */
+  systemPrompt?: string;
+  /** Tool allowlist - only these tools can be used */
+  toolAllowlist?: string[];
+  /** Tool denylist - these tools cannot be used */
+  toolDenylist?: string[];
+  /** Guardrail options for file system access */
+  guardRailOptions?: { allowedDirs?: string[] };
+  /** Agent profile for specialized behavior */
+  agentProfile?: 'general' | 'router' | 'frontend' | 'backend' | 'devops' | 'test';
+  /** Include RAG context in the conversation */
+  includeRagContext?: boolean;
+  /** Model preset for quick configuration */
+  modelPreset?: 'fast' | 'balanced' | 'quality';
+  /** Enable large context mode for extended message limits */
+  largeContext?: boolean;
 }
 
 /**
@@ -210,6 +232,17 @@ export async function streamChat(
     lastUserMessageImage,
     enabledSkillIds,
     memoryContext,
+    temperature,
+    maxTurns,
+    budgetLimit,
+    systemPrompt,
+    toolAllowlist,
+    toolDenylist,
+    guardRailOptions,
+    agentProfile,
+    includeRagContext,
+    modelPreset,
+    largeContext,
   } = options;
 
   const apiMessages = prepareMessagesForApi(messages, { provider, lastUserMessageImage });
@@ -229,10 +262,24 @@ export async function streamChat(
   if (enabledSkillIds && enabledSkillIds.length > 0) body.enabledSkillIds = enabledSkillIds;
   if (memoryContext && memoryContext.length > 0) body.memoryContext = memoryContext;
 
+  // New agent settings
+  if (temperature !== undefined) body.temperature = temperature;
+  if (maxTurns !== undefined) body.maxTurns = maxTurns;
+  if (budgetLimit !== undefined) body.budgetLimit = budgetLimit;
+  if (systemPrompt) body.systemPrompt = systemPrompt;
+  if (toolAllowlist && toolAllowlist.length > 0) body.toolAllowlist = toolAllowlist;
+  if (toolDenylist && toolDenylist.length > 0) body.toolDenylist = toolDenylist;
+  if (guardRailOptions) body.guardRailOptions = guardRailOptions;
+  if (agentProfile) body.agentProfile = agentProfile;
+  if (includeRagContext !== undefined) body.includeRagContext = includeRagContext;
+  if (modelPreset) body.modelPreset = modelPreset;
+  if (largeContext !== undefined) body.largeContext = largeContext;
+
   const response = await fetchApi('/api/chat/stream', {
     method: 'POST',
     body: JSON.stringify(body),
     signal,
+    keepalive: true,
   });
 
   if (!response.ok) {

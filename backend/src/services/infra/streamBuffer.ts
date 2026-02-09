@@ -14,6 +14,8 @@ export class StreamBuffer {
   private readonly maxBufferSize: number;
   /** Max total chars to hold before forcing flush (avoids holding huge chunks). */
   private readonly maxBufferChars: number;
+  /** Running char count — avoids O(n) reduce on every push */
+  private bufferChars = 0;
   /** Tracks whether we have sent the very first token yet */
   private firstChunkSent = false;
 
@@ -37,9 +39,9 @@ export class StreamBuffer {
     }
 
     this.buffer.push(chunk);
+    this.bufferChars += chunk.length;
 
-    const totalChars = this.buffer.reduce((s, c) => s + c.length, 0);
-    if (this.buffer.length >= this.maxBufferSize || totalChars >= this.maxBufferChars) {
+    if (this.buffer.length >= this.maxBufferSize || this.bufferChars >= this.maxBufferChars) {
       this.flush();
       return;
     }
@@ -54,6 +56,7 @@ export class StreamBuffer {
 
     const combined = this.buffer.join("");
     this.buffer = [];
+    this.bufferChars = 0;
 
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
@@ -76,6 +79,7 @@ export class StreamBuffer {
   /** Reset buffer state (e.g. between requests) */
   reset(): void {
     this.buffer = [];
+    this.bufferChars = 0;
     this.firstChunkSent = false;
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);

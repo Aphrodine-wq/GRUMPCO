@@ -26,11 +26,15 @@
     StreamingIndicator,
     PhaseProgressBar,
   } from './chat';
-  
+
   // Import from new modular components
   import ChatStreamingStatus from './chat/ChatStreamingStatus.svelte';
   import { detectNumberedQuestions, type ParsedQuestion } from './chat/ChatQuestionDetector.svelte';
-  import { extractActiveFiles, type ActiveFile, type FileAction } from '../lib/chat/FileActivityTracker';
+  import {
+    extractActiveFiles,
+    type ActiveFile,
+    type FileAction,
+  } from '../lib/chat/FileActivityTracker';
   import { createStreamEventHandler } from '../lib/chat/ChatStreamEventHandler';
 
   // Existing components
@@ -582,7 +586,15 @@
   }
 
   // ── Unified streaming core ────────────────────────────────────────────
-  type StreamMode = 'normal' | 'plan' | 'spec' | 'ship' | 'execute' | 'design' | 'argument' | 'code';
+  type StreamMode =
+    | 'normal'
+    | 'plan'
+    | 'spec'
+    | 'ship'
+    | 'execute'
+    | 'design'
+    | 'argument'
+    | 'code';
 
   /**
    * Core streaming function used by both normal chat and section-code-gen.
@@ -599,7 +611,7 @@
       modeOverride?: StreamMode;
       imageForReq?: string;
       detectModals?: boolean;
-    } = {},
+    } = {}
   ) {
     const s = settingsStore.getCurrent();
     const provider = s?.models?.defaultProvider ?? 'nim';
@@ -623,11 +635,20 @@
         .join(' ')
         .toLowerCase();
       const codeCtxKw = [
-        'file_write', 'file_edit', 'bash_execute', 'list_directory',
-        'exploring the workspace', 'build the', 'creating file',
-        'section now', 'template engine', 'implement',
-        'architecture approved', 'let me pull up the sections',
-        'start by exploring', 'create files',
+        'file_write',
+        'file_edit',
+        'bash_execute',
+        'list_directory',
+        'exploring the workspace',
+        'build the',
+        'creating file',
+        'section now',
+        'template engine',
+        'implement',
+        'architecture approved',
+        'let me pull up the sections',
+        'start by exploring',
+        'create files',
       ];
       if (codeCtxKw.some((kw) => recentTexts.includes(kw))) mode = 'code';
     }
@@ -637,19 +658,33 @@
     function queueScroll() {
       if (!scrollQueued) {
         scrollQueued = true;
-        requestAnimationFrame(() => { scrollToBottom(); scrollQueued = false; });
+        requestAnimationFrame(() => {
+          scrollToBottom();
+          scrollQueued = false;
+        });
       }
     }
 
     // Unified event handler via ChatStreamEventHandler
+    const MAX_STREAMING_BLOCKS = 100; // Prevent DOM bloat during long agentic runs
     const handleEvent = createStreamEventHandler({
-      onBlocksUpdate: (blocks) => { streamingBlocks = blocks; },
-      onStatusUpdate: (status) => { streamingStatus = status; },
+      onBlocksUpdate: (blocks) => {
+        streamingBlocks =
+          blocks.length > MAX_STREAMING_BLOCKS ? blocks.slice(-MAX_STREAMING_BLOCKS) : blocks;
+      },
+      onStatusUpdate: (status) => {
+        streamingStatus = status;
+      },
       onThinkingUpdate: (thinking) => {
         streamingThinking = thinking === '' ? '' : (streamingThinking || '') + thinking;
       },
-      onToolNamesUpdate: (names) => { streamingToolNames = names; },
-      onError: (error) => { streamError = error; showToast(error, 'error', 5000); },
+      onToolNamesUpdate: (names) => {
+        streamingToolNames = names;
+      },
+      onError: (error) => {
+        streamError = error;
+        showToast(error, 'error', 5000);
+      },
       isMounted: () => streamMountedRef.current,
       queueScroll,
     });
@@ -668,7 +703,9 @@
       if (mems.length > 0) {
         memoryContext = mems.map((m) => `[${m.type.toUpperCase()}] ${m.content}`);
       }
-    } catch { /* continue without memory */ }
+    } catch {
+      /* continue without memory */
+    }
 
     const blocks = await streamChat(apiMessages, {
       mode,
@@ -707,7 +744,9 @@
         const mermaidMatch = finalContent.match(/```mermaid\s*([\s\S]*?)```/);
         if (mermaidMatch && mermaidMatch[1]) {
           lastMermaidCode = mermaidMatch[1].trim();
-          setTimeout(() => { showApprovalModal = true; }, 300);
+          setTimeout(() => {
+            showApprovalModal = true;
+          }, 300);
         }
       }
       if (!hasMermaid) {
@@ -716,7 +755,9 @@
           chatQuestionsParsed = detected.questions;
           chatQuestionsIntro = detected.intro;
           chatQuestionsOutro = detected.outro;
-          setTimeout(() => { showChatQuestionModal = true; }, 100);
+          setTimeout(() => {
+            showChatQuestionModal = true;
+          }, 100);
         }
       }
     }
@@ -734,7 +775,7 @@
   async function runStreamingChatWithMessages(
     signal: AbortSignal,
     apiMessages: Message[],
-    modeOverride?: StreamMode,
+    modeOverride?: StreamMode
   ) {
     await runStreamingChatCore(signal, apiMessages, { modeOverride, detectModals: false });
   }

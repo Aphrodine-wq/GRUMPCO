@@ -18,15 +18,18 @@ export {
   fileReadTool,
   fileWriteTool,
   fileEditTool,
+  searchAndReplaceTool,
   listDirectoryTool,
   fileReadInputSchema,
   fileWriteInputSchema,
   fileEditInputSchema,
   fileEditOperationSchema,
+  searchAndReplaceInputSchema,
   listDirectoryInputSchema,
   type FileReadInput,
   type FileWriteInput,
   type FileEditInput,
+  type SearchAndReplaceInput,
   type ListDirectoryInput,
   FILE_TOOLS,
 } from "./file/index.js";
@@ -34,8 +37,11 @@ export {
 // Codebase tools
 export {
   codebaseSearchTool,
+  grepSearchTool,
   codebaseSearchInputSchema,
+  grepSearchInputSchema,
   type CodebaseSearchInput,
+  type GrepSearchInput,
   CODEBASE_TOOLS,
 } from "./codebase/index.js";
 
@@ -144,6 +150,14 @@ export {
   ELECTRON_TOOLS,
 } from "./electron/index.js";
 
+// Outline / code navigation tools
+export {
+  fileOutlineTool,
+  fileOutlineInputSchema,
+  type FileOutlineInput,
+  OUTLINE_TOOLS,
+} from "./outline/index.js";
+
 // ============================================================================
 // ALL TOOLS AGGREGATION
 // ============================================================================
@@ -157,6 +171,7 @@ import { TERMINAL_TOOLS } from "./terminal/index.js";
 import { SKILL_TOOLS } from "./skill/index.js";
 import { PLANNING_TOOLS } from "./planning/index.js";
 import { ELECTRON_TOOLS } from "./electron/index.js";
+import { OUTLINE_TOOLS } from "./outline/index.js";
 
 /**
  * All available base tools. Can be extended by MCP or dynamic registration.
@@ -172,6 +187,7 @@ export const AVAILABLE_TOOLS = [
   ...SKILL_TOOLS,
   ...PLANNING_TOOLS,
   ...ELECTRON_TOOLS,
+  ...OUTLINE_TOOLS,
 ];
 
 /**
@@ -187,4 +203,5 @@ export const ToolCategories = {
   skill: SKILL_TOOLS,
   planning: PLANNING_TOOLS,
   electron: ELECTRON_TOOLS,
+  outline: OUTLINE_TOOLS,
 } as const;

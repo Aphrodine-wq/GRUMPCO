@@ -568,3 +568,18 @@ export {
   type HierarchicalChunk,
   type SemanticChunkerOptions,
 } from './semanticChunker.js';
+
+export {
+  TreeSitterChunker,
+  createSmartChunker,
+  type ASTChunkMetadata,
+  type TreeSitterChunkerOptions,
+} from './treeSitterChunker.js';
+
+export {
+  DependencyMapper,
+  type ImportEdge,
+  type FileExports,
+  type DependencyGraph,
+  type DependencyMapperOptions,
+} from './dependencyMapper.js';

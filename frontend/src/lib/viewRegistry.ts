@@ -121,6 +121,12 @@ export const VIEW_REGISTRY = {
     backTo: 'chat',
   },
 
+  gAgent: {
+    loader: () => import('../components/AgentScreen.svelte'),
+    loadingLabel: 'Loading Agent…',
+    backTo: 'chat',
+  },
+
 
   // ── Settings sub-screens ───────────────────────────────────────────────
   troubleshooting: {

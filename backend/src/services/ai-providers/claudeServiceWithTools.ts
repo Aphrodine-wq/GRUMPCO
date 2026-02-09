@@ -82,6 +82,8 @@ import {
   executeFileEdit,
   executeListDirectory,
   executeCodebaseSearch,
+  executeGrepSearch,
+  executeSearchAndReplace,
   executeTerminalExecute,
   executeGitStatus,
   executeGitDiff,
@@ -107,6 +109,7 @@ import {
   executeLocationGet,
   executeSystemExec,
   executeCanvasUpdate,
+  executeFileOutline,
 } from "./tools/toolExecutors.js";
 import {
   executeSkillTool,
@@ -533,10 +536,31 @@ export class ClaudeServiceWithTools {
       const FILE_WRITE_TOOLS = new Set(["file_write", "write_file", "write_to_file"]);
       const FILE_EDIT_TOOLS = new Set(["file_edit", "edit_file", "replace_file_content", "multi_replace_file_content"]);
       const EXEC_TOOLS = new Set(["bash_execute", "terminal_execute", "run_command"]);
+      const READ_TOOLS = new Set(["file_read", "grep_search", "codebase_search", "list_directory", "file_outline"]);
       const fileChanges: FileChangeRecord[] = [];
       let commandsRun = 0;
       let commandsPassed = 0;
       let totalTextEmitted = 0; // Track total text chars emitted across all turns
+
+      // ── Smart tool output compression for LLM context ──────────────────
+      const compressToolOutput = (toolName: string, raw: string, result: ToolExecutionResult): string => {
+        // Write/edit tools: LLM doesn't need file content echoed back
+        if (FILE_WRITE_TOOLS.has(toolName) || FILE_EDIT_TOOLS.has(toolName)) {
+          const p = result.diff?.filePath ?? "file";
+          const lines = result.diff?.afterContent?.split("\n").length ?? 0;
+          return result.success ? `✓ Written: ${p} (${lines} lines)` : raw.slice(0, 2000);
+        }
+        // Exec tools: keep last 100 lines of output
+        if (EXEC_TOOLS.has(toolName)) {
+          if (raw.length > 4000) {
+            const lines = raw.split("\n");
+            return lines.length > 100 ? lines.slice(-100).join("\n") : raw.slice(-4000);
+          }
+          return raw;
+        }
+        // Read/search tools get full context for accurate code gen
+        return raw.slice(0, 16000);
+      };
 
       agenticLoop:
       while (turnCount < MAX_TOOL_TURNS) {
@@ -577,7 +601,12 @@ export class ClaudeServiceWithTools {
         );
 
         let currentTextBlock = "";
-        // Collect tool calls from this turn for the agentic loop
+        // Collect tool calls from this turn — execute in parallel after stream completes
+        const pendingToolCalls: Array<{
+          id: string;
+          name: string;
+          input: Record<string, unknown>;
+        }> = [];
         const turnToolCalls: Array<{
           id: string;
           name: string;
@@ -614,7 +643,7 @@ export class ClaudeServiceWithTools {
             yield { type: "text", text: filterOutput(raw) };
           }
 
-          // Handle tool use blocks
+          // Handle tool use blocks — collect, don't execute yet
           if (event.type === "content_block_start") {
             const contentBlock = event.content_block;
             if (contentBlock?.type === "tool_use") {
@@ -626,9 +655,9 @@ export class ClaudeServiceWithTools {
               const toolUse = contentBlock;
               const toolId = toolUse.id ?? "";
               const toolName = toolUse.name ?? "";
-              logger.debug({ toolName, toolId, turn: turnCount }, "Tool use started");
+              logger.debug({ toolName, toolId, turn: turnCount }, "Tool use discovered");
 
-              // Emit tool call event
+              // Emit tool call event immediately (shows in UI)
               yield {
                 type: "tool_call",
                 id: toolId,
@@ -636,67 +665,122 @@ export class ClaudeServiceWithTools {
                 input: (toolUse.input ?? {}) as Record<string, unknown>,
               };
 
-              // Execute tool (uses request-scoped TES when workspaceRoot provided)
-              // HANG-PROOF: Wrap with timeout so a stuck tool doesn't block the agentic loop
-              const TOOL_TIMEOUT_MS = Number(process.env.TOOL_EXECUTION_TIMEOUT_MS ?? 120_000);
-              const result = await Promise.race([
-                this._executeTool(
-                  toolName,
-                  (toolUse.input ?? {}) as Record<string, unknown>,
-                  workspaceRoot,
-                ),
-                new Promise<ToolExecutionResult>((resolve) =>
-                  setTimeout(() => resolve({
-                    success: false,
-                    output: "",
-                    error: `Tool '${toolName}' timed out after ${TOOL_TIMEOUT_MS / 1000}s`,
-                    executionTime: TOOL_TIMEOUT_MS,
-                  } as ToolExecutionResult), TOOL_TIMEOUT_MS),
-                ),
-              ]);
-
-              // Emit tool result event (filter output for secrets/PII)
-              const rawOutput = result.output || result.error || "";
-              yield {
-                type: "tool_result",
-                id: toolId,
-                toolName,
-                output: filterOutput(rawOutput),
-                success: result.success,
-                executionTime: result.executionTime,
-                diff: result.diff,
-              };
-
-              // Collect for agentic loop continuation
-              turnToolCalls.push({
+              // Queue for parallel execution after stream completes
+              pendingToolCalls.push({
                 id: toolId,
                 name: toolName,
                 input: (toolUse.input ?? {}) as Record<string, unknown>,
-                resultOutput: rawOutput.slice(0, 4000), // Cap to avoid huge context
-                resultSuccess: result.success,
               });
-              totalToolCallCount++;
+            }
+          }
+        }
 
-              // ── Track file changes for summary ───────────────────────────
-              if (FILE_WRITE_TOOLS.has(toolName) || FILE_EDIT_TOOLS.has(toolName)) {
-                const filePath = result.diff?.filePath
-                  || (toolUse.input as Record<string, unknown>)?.path as string
-                  || (toolUse.input as Record<string, unknown>)?.file_path as string
-                  || "unknown";
-                const changeType = FILE_WRITE_TOOLS.has(toolName) ? "created" as const : "modified" as const;
-                const beforeLines = result.diff?.beforeContent?.split("\n").length ?? 0;
-                const afterLines = result.diff?.afterContent?.split("\n").length ?? 0;
-                fileChanges.push({
-                  path: filePath,
-                  changeType: result.diff?.changeType ?? changeType,
-                  linesAdded: Math.max(0, afterLines - beforeLines) || afterLines,
-                  linesRemoved: Math.max(0, beforeLines - afterLines),
-                  toolName,
+        // ── PARALLEL TOOL EXECUTION ─────────────────────────────────────
+        // Execute all collected tool calls in parallel (up to PARALLEL_LIMIT)
+        // This reduces multi-tool latency from sum(times) to max(times)
+        if (pendingToolCalls.length > 0) {
+          const TOOL_TIMEOUT_MS = Number(process.env.TOOL_EXECUTION_TIMEOUT_MS ?? 120_000);
+          const PARALLEL_LIMIT = Number(process.env.TOOL_PARALLEL_LIMIT ?? 5);
+
+          logger.info(
+            { turn: turnCount, toolCount: pendingToolCalls.length, tools: pendingToolCalls.map(t => t.name) },
+            "Agentic loop: executing tools in parallel",
+          );
+
+          // Split into chunks of PARALLEL_LIMIT for controlled concurrency
+          const chunks: typeof pendingToolCalls[] = [];
+          for (let i = 0; i < pendingToolCalls.length; i += PARALLEL_LIMIT) {
+            chunks.push(pendingToolCalls.slice(i, i + PARALLEL_LIMIT));
+          }
+
+          for (const chunk of chunks) {
+            const settled = await Promise.allSettled(
+              chunk.map(async (tc) => {
+                const result = await Promise.race([
+                  this._executeTool(tc.name, tc.input, workspaceRoot),
+                  new Promise<ToolExecutionResult>((resolve) =>
+                    setTimeout(() => resolve({
+                      success: false,
+                      output: "",
+                      error: `Tool '${tc.name}' timed out after ${TOOL_TIMEOUT_MS / 1000}s`,
+                      executionTime: TOOL_TIMEOUT_MS,
+                    } as ToolExecutionResult), TOOL_TIMEOUT_MS),
+                  ),
+                ]);
+                return { tc, result };
+              }),
+            );
+
+            // Process results and emit events
+            for (const outcome of settled) {
+              if (outcome.status === "fulfilled") {
+                const { tc, result } = outcome.value;
+                const rawOutput = result.output || result.error || "";
+
+                // Emit tool result event (filter output for secrets/PII)
+                yield {
+                  type: "tool_result",
+                  id: tc.id,
+                  toolName: tc.name,
+                  output: filterOutput(rawOutput),
+                  success: result.success,
+                  executionTime: result.executionTime,
+                  diff: result.diff,
+                };
+
+                // Collect for agentic loop continuation with smart compression
+                turnToolCalls.push({
+                  id: tc.id,
+                  name: tc.name,
+                  input: tc.input,
+                  resultOutput: compressToolOutput(tc.name, rawOutput, result),
+                  resultSuccess: result.success,
                 });
-              }
-              if (EXEC_TOOLS.has(toolName)) {
-                commandsRun++;
-                if (result.success) commandsPassed++;
+                totalToolCallCount++;
+
+                // ── Track file changes for summary ───────────────────────────
+                if (FILE_WRITE_TOOLS.has(tc.name) || FILE_EDIT_TOOLS.has(tc.name)) {
+                  const filePath = result.diff?.filePath
+                    || (tc.input as Record<string, unknown>)?.path as string
+                    || (tc.input as Record<string, unknown>)?.file_path as string
+                    || "unknown";
+                  const changeType = FILE_WRITE_TOOLS.has(tc.name) ? "created" as const : "modified" as const;
+                  const beforeLines = result.diff?.beforeContent?.split("\n").length ?? 0;
+                  const afterLines = result.diff?.afterContent?.split("\n").length ?? 0;
+                  fileChanges.push({
+                    path: filePath,
+                    changeType: result.diff?.changeType ?? changeType,
+                    linesAdded: Math.max(0, afterLines - beforeLines) || afterLines,
+                    linesRemoved: Math.max(0, beforeLines - afterLines),
+                    toolName: tc.name,
+                  });
+                }
+                if (EXEC_TOOLS.has(tc.name)) {
+                  commandsRun++;
+                  if (result.success) commandsPassed++;
+                }
+              } else {
+                // Promise rejected (shouldn't happen with Promise.race timeout, but be safe)
+                const tc = chunk[settled.indexOf(outcome)];
+                logger.error({ toolName: tc?.name, error: outcome.reason }, "Tool execution promise rejected");
+                if (tc) {
+                  yield {
+                    type: "tool_result",
+                    id: tc.id,
+                    toolName: tc.name,
+                    output: `Error: ${outcome.reason?.message ?? String(outcome.reason)}`,
+                    success: false,
+                    executionTime: 0,
+                  };
+                  turnToolCalls.push({
+                    id: tc.id,
+                    name: tc.name,
+                    input: tc.input,
+                    resultOutput: `Error: ${outcome.reason?.message ?? String(outcome.reason)}`,
+                    resultSuccess: false,
+                  });
+                  totalToolCallCount++;
+                }
               }
             }
           }
@@ -951,11 +1035,20 @@ export class ClaudeServiceWithTools {
           case "file_edit":
             result = await executeFileEdit(input, tes);
             break;
+          case "search_and_replace":
+            result = await executeSearchAndReplace(input, tes);
+            break;
           case "list_directory":
             result = await executeListDirectory(input, tes);
             break;
           case "codebase_search":
             result = await executeCodebaseSearch(input, tes);
+            break;
+          case "grep_search":
+            result = await executeGrepSearch(input, tes);
+            break;
+          case "file_outline":
+            result = await executeFileOutline(input, tes);
             break;
           case "generate_db_schema":
             result = await executeGenerateDbSchema(input);

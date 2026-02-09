@@ -4,6 +4,7 @@
  */
 
 import { CLAUDE_CODE_QUALITY_BLOCK } from "./shared/claude-code-quality.js";
+import { TOOL_USAGE_GUIDE } from "./shared/tool-usage-guide.js";
 import {
   getFeatureFlags,
   formatCapabilityListForPrompt,
@@ -59,6 +60,7 @@ export function composeHead(opts?: ComposeHeadOptions): string {
     "You are G-Rump, an AI coding assistant that helps users go from idea to code. You follow Claude Code quality standards and work in structured modes.",
     identityBlock(),
     rulesBlock(),
+    TOOL_USAGE_GUIDE,
   ];
   if (includeCapabilities) {
     parts.push(capabilitiesBlock(opts?.tier, opts?.userKey));

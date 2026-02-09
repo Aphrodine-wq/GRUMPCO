@@ -16,6 +16,8 @@ import {
     fileEditInputSchema,
     listDirectoryInputSchema,
     codebaseSearchInputSchema,
+    grepSearchInputSchema,
+    searchAndReplaceInputSchema,
     generateDbSchemaInputSchema,
     generateMigrationsInputSchema,
     screenshotUrlInputSchema,
@@ -81,8 +83,8 @@ export async function executeFileRead(
             executionTime: 0,
         };
     }
-    const { path, encoding } = validation.data;
-    return await tes.readFile(path, encoding);
+    const { path, encoding, startLine, endLine } = validation.data;
+    return await tes.readFile(path, encoding, startLine, endLine);
 }
 
 export async function executeFileWrite(
@@ -157,6 +159,40 @@ export async function executeCodebaseSearch(
     }
     const { query, workingDirectory, maxResults } = validation.data;
     return await tes.searchCodebase(query, workingDirectory, maxResults);
+}
+
+export async function executeGrepSearch(
+    input: Record<string, unknown>,
+    tes: ToolExecutionService,
+): Promise<ToolExecutionResult> {
+    const validation = grepSearchInputSchema.safeParse(input);
+    if (!validation.success) {
+        return {
+            success: false,
+            error: `Invalid input: ${validation.error.message}`,
+            toolName: "grep_search",
+            executionTime: 0,
+        };
+    }
+    const { pattern, path, isRegex, includes, maxResults, caseSensitive } = validation.data;
+    return await tes.grepSearch(pattern, path, isRegex, includes, maxResults, caseSensitive);
+}
+
+export async function executeSearchAndReplace(
+    input: Record<string, unknown>,
+    tes: ToolExecutionService,
+): Promise<ToolExecutionResult> {
+    const validation = searchAndReplaceInputSchema.safeParse(input);
+    if (!validation.success) {
+        return {
+            success: false,
+            error: `Invalid input: ${validation.error.message}`,
+            toolName: "search_and_replace",
+            executionTime: 0,
+        };
+    }
+    const { path, search, replace, allowMultiple } = validation.data;
+    return await tes.searchAndReplace(path, search, replace, allowMultiple);
 }
 
 export async function executeTerminalExecute(
@@ -804,4 +840,26 @@ export async function executeCanvasUpdate(
             executionTime: Date.now() - start,
         };
     }
+}
+
+// ============================================================================
+// Code Navigation Tools
+// ============================================================================
+
+export async function executeFileOutline(
+    input: Record<string, unknown>,
+    tes: ToolExecutionService,
+): Promise<ToolExecutionResult> {
+    const { fileOutlineInputSchema } = await import("../../../tools/outline/index.js");
+    const validation = fileOutlineInputSchema.safeParse(input);
+    if (!validation.success) {
+        return {
+            success: false,
+            error: `Invalid input: ${validation.error.message}`,
+            toolName: "file_outline",
+            executionTime: 0,
+        };
+    }
+    const { path, maxItems } = validation.data;
+    return await tes.fileOutline(path, maxItems);
 }

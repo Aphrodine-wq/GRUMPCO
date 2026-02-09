@@ -522,6 +522,8 @@ export class ToolExecutionService {
   async readFile(
     filePath: string,
     encoding: "utf8" | "base64" = "utf8",
+    startLine?: number,
+    endLine?: number,
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
 
@@ -547,9 +549,39 @@ export class ToolExecutionService {
       }
       const content = await fs.readFile(resolvedPath, encoding);
 
+      // If line range requested and encoding is utf8, return only the requested slice
+      if (encoding === "utf8" && (startLine !== undefined || endLine !== undefined)) {
+        const allLines = content.split("\n");
+        const totalLines = allLines.length;
+        const start = Math.max(1, startLine ?? 1);
+        const end = Math.min(totalLines, endLine ?? totalLines);
+
+        if (start > totalLines) {
+          return {
+            success: false,
+            error: `startLine ${start} exceeds file length (${totalLines} lines)`,
+            toolName: "file_read",
+            executionTime: Date.now() - startTime,
+          };
+        }
+
+        const slicedLines = allLines.slice(start - 1, end);
+        const numbered = slicedLines.map(
+          (line, i) => `${start + i}: ${line}`,
+        );
+        const header = `Showing lines ${start}-${end} of ${totalLines} total`;
+
+        return {
+          success: true,
+          output: `${header}\n${numbered.join("\n")}`,
+          toolName: "file_read",
+          executionTime: Date.now() - startTime,
+        };
+      }
+
       return {
         success: true,
-        output: encoding === "base64" ? content : content,
+        output: content,
         toolName: "file_read",
         executionTime: Date.now() - startTime,
       };
@@ -950,6 +982,400 @@ export class ToolExecutionService {
         success: false,
         error: (err as Error).message,
         toolName: "codebase_search",
+        executionTime: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
+   * Search file contents for a pattern (like ripgrep/grep).
+   * Returns matching lines with file:line: content format.
+   *
+   * @param {string} pattern - Search pattern (literal or regex)
+   * @param {string} [searchPath] - Directory or file to search
+   * @param {boolean} [isRegex=false] - Treat pattern as regex
+   * @param {string[]} [includes] - Glob patterns to filter files
+   * @param {number} [maxResults=50] - Max matching lines
+   * @param {boolean} [caseSensitive=true] - Case-sensitive search
+   * @returns {Promise<ToolExecutionResult>} Matching lines
+   */
+  async grepSearch(
+    pattern: string,
+    searchPath?: string,
+    isRegex: boolean = false,
+    includes?: string[],
+    maxResults: number = 50,
+    caseSensitive: boolean = true,
+  ): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+    const dir = searchPath ?? ".";
+    const validation = this.validatePath(dir, "list");
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: validation.error,
+        toolName: "grep_search",
+        executionTime: Date.now() - startTime,
+      };
+    }
+    try {
+      const basePath = validation.resolvedPath;
+      if (!basePath) {
+        return {
+          success: false,
+          error: "Path validation did not return resolved path",
+          toolName: "grep_search",
+          executionTime: Date.now() - startTime,
+        };
+      }
+
+      // Build the matcher
+      let regex: RegExp;
+      try {
+        const flags = caseSensitive ? "" : "i";
+        regex = isRegex
+          ? new RegExp(pattern, flags)
+          : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), flags);
+      } catch (e) {
+        return {
+          success: false,
+          error: `Invalid regex pattern: ${(e as Error).message}`,
+          toolName: "grep_search",
+          executionTime: Date.now() - startTime,
+        };
+      }
+
+      // Build include globs matcher (simple extension matching)
+      const includeExts: string[] | null = includes?.length
+        ? includes.map((g) => g.replace(/^\*\.?/, ".").toLowerCase())
+        : null;
+
+      const matches: string[] = [];
+      const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", "__pycache__"]);
+      const BINARY_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2", ".ttf", ".eot", ".zip", ".tar", ".gz", ".pdf", ".exe", ".dll", ".so", ".dylib"]);
+
+      // Check if basePath is a file (not a directory)
+      const baseStat = await fs.stat(basePath).catch(() => null);
+      if (!baseStat) {
+        return {
+          success: false,
+          error: `Path not found: ${dir}`,
+          toolName: "grep_search",
+          executionTime: Date.now() - startTime,
+        };
+      }
+
+      const searchFile = async (filePath: string): Promise<void> => {
+        if (matches.length >= maxResults) return;
+        const ext = path.extname(filePath).toLowerCase();
+        if (BINARY_EXTS.has(ext)) return;
+        if (includeExts && !includeExts.includes(ext)) return;
+
+        try {
+          const content = await fs.readFile(filePath, "utf8");
+          const lines = content.split("\n");
+          const rel = filePath
+            .replace(this.workspaceRoot, "")
+            .replace(/^[/\\]/, "");
+          for (let i = 0; i < lines.length && matches.length < maxResults; i++) {
+            if (regex.test(lines[i])) {
+              matches.push(`${rel}:${i + 1}: ${lines[i].trimEnd()}`);
+            }
+          }
+        } catch {
+          // Skip files we can't read (binary, permission, etc.)
+        }
+      };
+
+      if (baseStat.isFile()) {
+        await searchFile(basePath);
+      } else {
+        const walk = async (p: string): Promise<void> => {
+          if (matches.length >= maxResults) return;
+          const entries = await fs
+            .readdir(p, { withFileTypes: true })
+            .catch(() => []);
+          for (const e of entries) {
+            if (matches.length >= maxResults) return;
+            const full = path.join(p, e.name);
+            if (e.isDirectory()) {
+              if (!SKIP_DIRS.has(e.name)) {
+                await walk(full);
+              }
+            } else {
+              await searchFile(full);
+            }
+          }
+        };
+        await walk(basePath);
+      }
+
+      return {
+        success: true,
+        output: matches.length
+          ? `Found ${matches.length} match${matches.length === 1 ? "" : "es"}:\n${matches.join("\n")}`
+          : `No matches for "${pattern}" in ${dir}.`,
+        toolName: "grep_search",
+        executionTime: Date.now() - startTime,
+      };
+    } catch (err: unknown) {
+      return {
+        success: false,
+        error: (err as Error).message,
+        toolName: "grep_search",
+        executionTime: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
+   * Find exact text in a file and replace it.
+   * More reliable than line-number-based editing because it doesn't break
+   * when lines shift.
+   *
+   * @param {string} filePath - Path to the file
+   * @param {string} search - Exact text to find
+   * @param {string} replace - Replacement text
+   * @param {boolean} [allowMultiple=false] - Replace all occurrences
+   * @returns {Promise<ToolExecutionResult>} Result with diff
+   */
+  async searchAndReplace(
+    filePath: string,
+    search: string,
+    replace: string,
+    allowMultiple: boolean = false,
+  ): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+
+    try {
+      const validation = this.validatePath(filePath, "write");
+      if (!validation.valid) {
+        return {
+          success: false,
+          error: validation.error,
+          toolName: "search_and_replace",
+          executionTime: Date.now() - startTime,
+        };
+      }
+
+      const resolvedPath = validation.resolvedPath;
+      if (!resolvedPath) {
+        return {
+          success: false,
+          error: "Path validation did not return resolved path",
+          toolName: "search_and_replace",
+          executionTime: Date.now() - startTime,
+        };
+      }
+
+      const beforeContent = await fs.readFile(resolvedPath, "utf8");
+
+      // Count occurrences
+      let count = 0;
+      let idx = 0;
+      while ((idx = beforeContent.indexOf(search, idx)) !== -1) {
+        count++;
+        idx += search.length;
+      }
+
+      if (count === 0) {
+        return {
+          success: false,
+          error: `Search text not found in file. Make sure the search text matches exactly, including whitespace and indentation.`,
+          toolName: "search_and_replace",
+          executionTime: Date.now() - startTime,
+        };
+      }
+
+      if (count > 1 && !allowMultiple) {
+        return {
+          success: false,
+          error: `Found ${count} occurrences of the search text. Set allowMultiple: true to replace all, or make the search text more specific to match only one occurrence.`,
+          toolName: "search_and_replace",
+          executionTime: Date.now() - startTime,
+        };
+      }
+
+      // Perform replacement
+      const afterContent = allowMultiple
+        ? beforeContent.split(search).join(replace)
+        : beforeContent.replace(search, replace);
+
+      await fs.writeFile(resolvedPath, afterContent, "utf8");
+
+      const displayPath =
+        path.relative(this.workspaceRoot, resolvedPath) || filePath;
+      return {
+        success: true,
+        output: `Replaced ${allowMultiple ? count : 1} occurrence(s) in ${displayPath}`,
+        toolName: "search_and_replace",
+        executionTime: Date.now() - startTime,
+        diff: {
+          filePath: displayPath,
+          beforeContent,
+          afterContent,
+          changeType: "modified",
+        },
+      };
+    } catch (error: unknown) {
+      logger.error({ error, filePath }, "Search and replace failed");
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        toolName: "search_and_replace",
+        executionTime: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
+   * Get the structural outline of a source file.
+   * Returns functions, classes, methods, interfaces, and their line numbers.
+   * Uses lightweight regex-based parsing — no external AST dependency.
+   *
+   * @param {string} filePath - Path to the file
+   * @param {number} [maxItems=100] - Maximum items to return
+   * @returns {Promise<ToolExecutionResult>} Outline with line numbers
+   */
+  async fileOutline(
+    filePath: string,
+    maxItems: number = 100,
+  ): Promise<ToolExecutionResult> {
+    const startTime = Date.now();
+
+    try {
+      const validation = this.validatePath(filePath, "read");
+      if (!validation.valid) {
+        return {
+          success: false,
+          error: validation.error,
+          toolName: "file_outline",
+          executionTime: Date.now() - startTime,
+        };
+      }
+
+      const resolvedPath = validation.resolvedPath;
+      if (!resolvedPath) {
+        return {
+          success: false,
+          error: "Path validation did not return resolved path",
+          toolName: "file_outline",
+          executionTime: Date.now() - startTime,
+        };
+      }
+
+      const content = await fs.readFile(resolvedPath, "utf8");
+      const lines = content.split("\n");
+      const ext = path.extname(resolvedPath).toLowerCase();
+
+      // Language-specific regex patterns for structural elements
+      const patterns: Array<{ label: string; regex: RegExp }> = [];
+
+      if ([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(ext)) {
+        // TypeScript / JavaScript
+        patterns.push(
+          { label: "class", regex: /^(?:export\s+)?(?:abstract\s+)?class\s+(\w+)/ },
+          { label: "interface", regex: /^(?:export\s+)?interface\s+(\w+)/ },
+          { label: "type", regex: /^(?:export\s+)?type\s+(\w+)\s*[=<]/ },
+          { label: "enum", regex: /^(?:export\s+)?(?:const\s+)?enum\s+(\w+)/ },
+          { label: "function", regex: /^(?:export\s+)?(?:async\s+)?function\s+(\w+)/ },
+          { label: "const fn", regex: /^(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|[a-zA-Z_]\w*)\s*(?:=>|:\s*\()/ },
+          { label: "method", regex: /^\s+(?:(?:public|private|protected|static|async|readonly|abstract|override|get|set)\s+)*(\w+)\s*(?:<[^>]*>)?\s*\(/ },
+        );
+      } else if ([".py"].includes(ext)) {
+        // Python
+        patterns.push(
+          { label: "class", regex: /^class\s+(\w+)/ },
+          { label: "function", regex: /^(?:async\s+)?def\s+(\w+)/ },
+          { label: "method", regex: /^\s+(?:async\s+)?def\s+(\w+)/ },
+        );
+      } else if ([".rs"].includes(ext)) {
+        // Rust
+        patterns.push(
+          { label: "struct", regex: /^(?:pub\s+)?struct\s+(\w+)/ },
+          { label: "enum", regex: /^(?:pub\s+)?enum\s+(\w+)/ },
+          { label: "trait", regex: /^(?:pub\s+)?trait\s+(\w+)/ },
+          { label: "impl", regex: /^impl(?:<[^>]*>)?\s+(\w+)/ },
+          { label: "function", regex: /^(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/ },
+          { label: "method", regex: /^\s+(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/ },
+        );
+      } else if ([".go"].includes(ext)) {
+        // Go
+        patterns.push(
+          { label: "struct", regex: /^type\s+(\w+)\s+struct/ },
+          { label: "interface", regex: /^type\s+(\w+)\s+interface/ },
+          { label: "function", regex: /^func\s+(\w+)\s*\(/ },
+          { label: "method", regex: /^func\s+\([^)]+\)\s+(\w+)\s*\(/ },
+        );
+      } else if ([".java", ".kt", ".scala"].includes(ext)) {
+        // JVM languages
+        patterns.push(
+          { label: "class", regex: /^(?:public\s+|private\s+|protected\s+)?(?:abstract\s+|final\s+)?(?:data\s+)?class\s+(\w+)/ },
+          { label: "interface", regex: /^(?:public\s+)?interface\s+(\w+)/ },
+          { label: "function", regex: /^(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(?:suspend\s+)?(?:fun|void|\w+)\s+(\w+)\s*\(/ },
+        );
+      } else if ([".c", ".cpp", ".cc", ".cxx", ".h", ".hpp"].includes(ext)) {
+        // C/C++
+        patterns.push(
+          { label: "class", regex: /^(?:template\s*<[^>]*>\s*)?class\s+(\w+)/ },
+          { label: "struct", regex: /^(?:typedef\s+)?struct\s+(\w+)/ },
+          { label: "function", regex: /^(?:(?:static|inline|virtual|extern)\s+)*(?:\w+(?:::\w+)*\s+)+(\w+)\s*\(/ },
+        );
+      } else if ([".svelte", ".vue"].includes(ext)) {
+        // Svelte/Vue — pick up script block functions
+        patterns.push(
+          { label: "function", regex: /^\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)/ },
+          { label: "const fn", regex: /^\s*(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|[a-zA-Z_]\w*)\s*(?:=>|:\s*\()/ },
+        );
+      } else {
+        // Generic: try to find function-like patterns
+        patterns.push(
+          { label: "function", regex: /^(?:(?:export|public|private|def|fn|func|function)\s+)+(\w+)/ },
+        );
+      }
+
+      const items: string[] = [];
+      for (let i = 0; i < lines.length && items.length < maxItems; i++) {
+        const line = lines[i];
+        for (const { label, regex } of patterns) {
+          const match = regex.exec(line);
+          if (match) {
+            const name = match[1];
+            // Include trimmed line for context (cap at 120 chars)
+            const preview = line.trimStart().slice(0, 120);
+            items.push(`L${i + 1} [${label}] ${name}: ${preview}`);
+            break; // Only match first pattern per line
+          }
+        }
+      }
+
+      const totalLines = lines.length;
+      const displayPath =
+        path.relative(this.workspaceRoot, resolvedPath) || filePath;
+
+      if (items.length === 0) {
+        return {
+          success: true,
+          output: `${displayPath} (${totalLines} lines) — no structural elements found. Try file_read instead.`,
+          toolName: "file_outline",
+          executionTime: Date.now() - startTime,
+        };
+      }
+
+      return {
+        success: true,
+        output: `${displayPath} (${totalLines} lines, ${items.length} items):\n${items.join("\n")}`,
+        toolName: "file_outline",
+        executionTime: Date.now() - startTime,
+      };
+    } catch (error: unknown) {
+      logger.error({ error, filePath }, "File outline failed");
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        toolName: "file_outline",
         executionTime: Date.now() - startTime,
       };
     }

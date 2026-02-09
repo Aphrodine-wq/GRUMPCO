@@ -16,6 +16,14 @@ export const fileReadInputSchema = z.object({
     .optional()
     .default("utf8")
     .describe("File encoding"),
+  startLine: z
+    .number()
+    .optional()
+    .describe("Start line number (1-indexed) to read from. Omit to read from beginning."),
+  endLine: z
+    .number()
+    .optional()
+    .describe("End line number (1-indexed, inclusive) to read to. Omit to read to end."),
 });
 
 export type FileReadInput = z.infer<typeof fileReadInputSchema>;
@@ -23,7 +31,7 @@ export type FileReadInput = z.infer<typeof fileReadInputSchema>;
 export const fileReadTool: Tool = {
   name: "file_read",
   description:
-    "Read the contents of a file. Use this to inspect code, configuration files, or any text content.",
+    "Read the contents of a file. Supports reading a specific line range with startLine/endLine to avoid reading large files entirely. Line numbers are 1-indexed.",
   input_schema: {
     type: "object",
     properties: {
@@ -32,6 +40,14 @@ export const fileReadTool: Tool = {
         type: "string",
         enum: ["utf8", "base64"],
         description: "File encoding",
+      },
+      startLine: {
+        type: "number",
+        description: "Start line number (1-indexed). Omit to read from beginning.",
+      },
+      endLine: {
+        type: "number",
+        description: "End line number (1-indexed, inclusive). Omit to read to end.",
       },
     },
     required: ["path"],
@@ -159,6 +175,53 @@ export const listDirectoryTool: Tool = {
 };
 
 // ============================================================================
+// SEARCH AND REPLACE TOOL
+// ============================================================================
+
+export const searchAndReplaceInputSchema = z.object({
+  path: z.string().describe("Absolute file path to edit"),
+  search: z
+    .string()
+    .describe(
+      "Exact text to find in the file. Must match precisely including whitespace and indentation.",
+    ),
+  replace: z.string().describe("Replacement text"),
+  allowMultiple: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe(
+      "Replace all occurrences. Default: false (replace first occurrence only, error if multiple found).",
+    ),
+});
+
+export type SearchAndReplaceInput = z.infer<typeof searchAndReplaceInputSchema>;
+
+export const searchAndReplaceTool: Tool = {
+  name: "search_and_replace",
+  description:
+    "Find an exact text match in a file and replace it. More reliable than line-number-based editing because it does not break when lines shift. The search text must match precisely.",
+  input_schema: {
+    type: "object",
+    properties: {
+      path: { type: "string", description: "Absolute file path to edit" },
+      search: {
+        type: "string",
+        description:
+          "Exact text to find (must match precisely including whitespace)",
+      },
+      replace: { type: "string", description: "Replacement text" },
+      allowMultiple: {
+        type: "boolean",
+        description:
+          "Replace all occurrences (default: false — errors if multiple found)",
+      },
+    },
+    required: ["path", "search", "replace"],
+  },
+};
+
+// ============================================================================
 // EXPORT ALL FILE TOOLS
 // ============================================================================
 
@@ -166,5 +229,6 @@ export const FILE_TOOLS: Tool[] = [
   fileReadTool,
   fileWriteTool,
   fileEditTool,
+  searchAndReplaceTool,
   listDirectoryTool,
 ];

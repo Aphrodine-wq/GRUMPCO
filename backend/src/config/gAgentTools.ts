@@ -18,6 +18,9 @@ const CAPABILITY_TO_TOOLS: Record<GAgentCapabilityKey, string[]> = {
     "file_edit",
     "list_directory",
     "codebase_search",
+    "grep_search",
+    "search_and_replace",
+    "file_outline",
   ],
   git: [
     "git_status",

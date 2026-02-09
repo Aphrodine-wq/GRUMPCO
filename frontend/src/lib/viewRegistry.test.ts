@@ -27,7 +27,7 @@ describe('viewRegistry', () => {
     });
 
     it('should contain integration and platform screens', () => {
-      const integrationScreens = ['integrations', 'approvals', 'memory', 'auditLog'];
+      const integrationScreens = ['integrations', 'approvals', 'memory', 'auditLog', 'gAgent'];
 
       integrationScreens.forEach((screen) => {
         expect(VIEW_REGISTRY[screen as keyof typeof VIEW_REGISTRY]).toBeDefined();

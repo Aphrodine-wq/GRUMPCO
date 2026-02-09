@@ -16,6 +16,10 @@ const CORE_TOOL_NAMES = new Set([
     "file_edit",
     "list_directory",
     "codebase_search",
+    "grep_search",
+    "search_and_replace",
+    "terminal_execute",
+    "file_outline",
 ]);
 
 /**

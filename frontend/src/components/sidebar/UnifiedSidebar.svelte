@@ -23,6 +23,7 @@
     LogOut,
     BookOpen,
     Brain,
+    Bot,
     FolderOpen,
     Clock,
     Cloud,
@@ -65,6 +66,7 @@
     label: string;
     icon:
       | 'chat'
+      | 'agent'
       | 'projects'
       | 'integrations'
       | 'skills'
@@ -79,6 +81,7 @@
 
   const primaryNav: NavItem[] = [
     { id: 'chat', label: 'Chat', icon: 'chat' },
+    { id: 'gAgent', label: 'Agent', icon: 'agent' },
     { id: 'projects', label: 'Projects', icon: 'projects' },
     { id: 'integrations', label: 'Integrations', icon: 'integrations' },
     { id: 'memory', label: 'Knowledge', icon: 'memory' },
@@ -282,6 +285,8 @@
       >
         {#if item.icon === 'chat'}
           <MessageSquare size={16} />
+        {:else if item.icon === 'agent'}
+          <Bot size={16} />
         {:else if item.icon === 'projects'}
           <FolderOpen size={16} />
         {:else if item.icon === 'integrations'}
