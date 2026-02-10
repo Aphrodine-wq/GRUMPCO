@@ -468,10 +468,8 @@
   >
     <div
       class="command-palette"
-      role="menu"
-      tabindex="0"
+      role="none"
       onclick={(e) => e.stopPropagation()}
-      onkeydown={handleKeydown}
     >
       <div class="command-palette-header">
         <input
@@ -485,6 +483,8 @@
           aria-expanded="true"
           aria-autocomplete="list"
           aria-controls="command-list"
+          aria-activedescendant={filteredCommands.length > 0 ? 'option-' + selectedIndex : undefined}
+          onkeydown={handleKeydown}
         />
       </div>
       <div class="command-palette-list" role="listbox" id="command-list">
@@ -496,6 +496,7 @@
               <div class="command-category-header">{categoryLabels[item.category]}</div>
             {:else}
               <button
+                id={'option-' + item.index}
                 class="command-item"
                 class:selected={item.index === selectedIndex}
                 onclick={() => executeCommand(item.command)}
