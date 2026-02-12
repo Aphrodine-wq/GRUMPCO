@@ -1,6 +1,6 @@
 /**
  * Chat Stream Manager
- * 
+ *
  * Handles stream lifecycle, abort handling, and error recovery
  * for the chat interface.
  */

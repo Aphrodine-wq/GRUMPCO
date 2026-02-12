@@ -6,10 +6,10 @@
  * Critical for payment processing, webhook handling, and mutations.
  */
 
-import { type Request, type Response, type NextFunction } from "express";
-import crypto from "crypto";
-import { getRedisClient } from "../services/infra/redis.js";
-import { logger } from "../utils/logger.js";
+import { type Request, type Response, type NextFunction } from 'express';
+import crypto from 'crypto';
+import { getRedisClient } from '../services/infra/redis.js';
+import { logger } from '../utils/logger.js';
 
 export interface IdempotencyOptions {
   ttl: number; // Time to live in seconds (default: 86400 = 24 hours)
@@ -20,8 +20,8 @@ export interface IdempotencyOptions {
 
 const DEFAULT_OPTIONS: IdempotencyOptions = {
   ttl: 86400, // 24 hours
-  keyHeader: "idempotency-key",
-  responseHeader: "idempotency-status",
+  keyHeader: 'idempotency-key',
+  responseHeader: 'idempotency-status',
   hashBody: true,
 };
 
@@ -36,18 +36,12 @@ interface IdempotencyRecord {
   lockExpiresAt: Date | null;
 }
 
-export function idempotencyMiddleware(
-  options: Partial<IdempotencyOptions> = {},
-) {
+export function idempotencyMiddleware(options: Partial<IdempotencyOptions> = {}) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  return async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     // Only apply to mutating methods
-    if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
       return next();
     }
 
@@ -62,14 +56,14 @@ export function idempotencyMiddleware(
     // Validate key format (UUID v4 recommended)
     if (!isValidIdempotencyKey(idempotencyKey)) {
       res.status(400).json({
-        error: "Invalid idempotency key format",
-        message: "Idempotency key must be a valid UUID",
+        error: 'Invalid idempotency key format',
+        message: 'Idempotency key must be a valid UUID',
       });
       return;
     }
 
     const redis = getRedisClient();
-    const requestHash = opts.hashBody ? hashRequest(req) : "";
+    const requestHash = opts.hashBody ? hashRequest(req) : '';
     const cacheKey = `idempotency:${idempotencyKey}`;
 
     try {
@@ -80,18 +74,11 @@ export function idempotencyMiddleware(
         const record: IdempotencyRecord = JSON.parse(existing);
 
         // Check if request is locked (concurrent processing)
-        if (
-          record.locked &&
-          record.lockExpiresAt &&
-          new Date() < new Date(record.lockExpiresAt)
-        ) {
+        if (record.locked && record.lockExpiresAt && new Date() < new Date(record.lockExpiresAt)) {
           res.status(409).json({
-            error: "Conflict",
-            message:
-              "Request with this idempotency key is already being processed",
-            retryAfter: Math.ceil(
-              (new Date(record.lockExpiresAt).getTime() - Date.now()) / 1000,
-            ),
+            error: 'Conflict',
+            message: 'Request with this idempotency key is already being processed',
+            retryAfter: Math.ceil((new Date(record.lockExpiresAt).getTime() - Date.now()) / 1000),
           });
           return;
         }
@@ -99,9 +86,8 @@ export function idempotencyMiddleware(
         // Check if request body matches (if hashing enabled)
         if (opts.hashBody && record.requestHash !== requestHash) {
           res.status(422).json({
-            error: "Idempotency key mismatch",
-            message:
-              "This idempotency key was used with different request parameters",
+            error: 'Idempotency key mismatch',
+            message: 'This idempotency key was used with different request parameters',
           });
           return;
         }
@@ -111,28 +97,20 @@ export function idempotencyMiddleware(
           {
             idempotencyKey,
             originalStatus: record.responseStatus,
-            age: Math.floor(
-              (Date.now() - new Date(record.createdAt).getTime()) / 1000,
-            ),
+            age: Math.floor((Date.now() - new Date(record.createdAt).getTime()) / 1000),
           },
-          "Returning idempotent cached response",
+          'Returning idempotent cached response'
         );
 
-        res.set(opts.responseHeader, "replay");
+        res.set(opts.responseHeader, 'replay');
         res.set(
-          "X-Idempotency-Age",
-          String(
-            Math.floor(
-              (Date.now() - new Date(record.createdAt).getTime()) / 1000,
-            ),
-          ),
+          'X-Idempotency-Age',
+          String(Math.floor((Date.now() - new Date(record.createdAt).getTime()) / 1000))
         );
 
         // Restore original headers
         Object.entries(record.responseHeaders).forEach(([key, value]) => {
-          if (
-            !["transfer-encoding", "content-length"].includes(key.toLowerCase())
-          ) {
+          if (!['transfer-encoding', 'content-length'].includes(key.toLowerCase())) {
             res.set(key, value);
           }
         });
@@ -146,7 +124,7 @@ export function idempotencyMiddleware(
         key: idempotencyKey,
         requestHash,
         responseStatus: 0,
-        responseBody: "",
+        responseBody: '',
         responseHeaders: {},
         createdAt: new Date(),
         locked: true,
@@ -173,7 +151,7 @@ export function idempotencyMiddleware(
       };
 
       res.send = (body: unknown) => {
-        if (typeof body === "string") {
+        if (typeof body === 'string') {
           responseBody = body;
         } else {
           responseBody = JSON.stringify(body);
@@ -182,7 +160,7 @@ export function idempotencyMiddleware(
       };
 
       // Store response after request completes
-      res.on("finish", async () => {
+      res.on('finish', async () => {
         try {
           if (responseBody) {
             const finalRecord: IdempotencyRecord = {
@@ -204,21 +182,18 @@ export function idempotencyMiddleware(
                 status: capturedStatus,
                 ttl: opts.ttl,
               },
-              "Idempotency response cached",
+              'Idempotency response cached'
             );
           }
         } catch (error) {
-          logger.error(
-            { error, idempotencyKey },
-            "Failed to cache idempotency response",
-          );
+          logger.error({ error, idempotencyKey }, 'Failed to cache idempotency response');
         }
       });
 
-      res.set(opts.responseHeader, "new");
+      res.set(opts.responseHeader, 'new');
       next();
     } catch (error) {
-      logger.error({ error, idempotencyKey }, "Idempotency middleware error");
+      logger.error({ error, idempotencyKey }, 'Idempotency middleware error');
       // Continue without idempotency on error
       next();
     }
@@ -227,8 +202,7 @@ export function idempotencyMiddleware(
 
 function isValidIdempotencyKey(key: string): boolean {
   // UUID v4 format validation
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(key);
 }
 
@@ -237,7 +211,7 @@ function hashRequest(req: Request): string {
   const path = req.path;
   const method = req.method;
   const data = `${method}:${path}:${body}`;
-  return crypto.createHash("sha256").update(data).digest("hex");
+  return crypto.createHash('sha256').update(data).digest('hex');
 }
 
 export async function clearIdempotencyKey(key: string): Promise<void> {
@@ -245,9 +219,7 @@ export async function clearIdempotencyKey(key: string): Promise<void> {
   await redis.del(`idempotency:${key}`);
 }
 
-export async function getIdempotencyStatus(
-  key: string,
-): Promise<IdempotencyRecord | null> {
+export async function getIdempotencyStatus(key: string): Promise<IdempotencyRecord | null> {
   const redis = getRedisClient();
   const data = await redis.get(`idempotency:${key}`);
   return data ? JSON.parse(data) : null;

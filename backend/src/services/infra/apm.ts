@@ -5,23 +5,23 @@
  * for production environments. Integrates with OpenTelemetry for distributed tracing.
  */
 
-import { trace, SpanStatusCode, type Span } from "@opentelemetry/api";
-import logger from "../../middleware/logger.js";
+import { trace, SpanStatusCode, type Span } from '@opentelemetry/api';
+import logger from '../../middleware/logger.js';
 import {
   recordDbOperation,
   recordLlmStreamMetrics,
   recordLlmCost,
   recordTieredCacheAccess,
-} from "../../middleware/metrics.js";
+} from '../../middleware/metrics.js';
 
-const tracer = trace.getTracer("grump-backend", "2.1.0");
+const tracer = trace.getTracer('grump-backend', '2.1.0');
 
 export interface APMTrace {
   operation: string;
   startTime: number;
   endTime?: number;
   duration?: number;
-  status: "success" | "error";
+  status: 'success' | 'error';
   error?: Error;
   metadata?: Record<string, string | number | boolean>;
 }
@@ -32,7 +32,7 @@ export class APMService {
   async trace<T>(
     name: string,
     fn: (span: Span) => Promise<T>,
-    attributes?: Record<string, string | number | boolean>,
+    attributes?: Record<string, string | number | boolean>
   ): Promise<T> {
     return tracer.startActiveSpan(name, async (span) => {
       try {
@@ -47,13 +47,13 @@ export class APMService {
         const duration = Date.now() - startTime;
 
         span.setStatus({ code: SpanStatusCode.OK });
-        span.setAttribute("duration_ms", duration);
+        span.setAttribute('duration_ms', duration);
 
         return result;
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : "Unknown error",
+          message: error instanceof Error ? error.message : 'Unknown error',
         });
 
         if (error instanceof Error) {
@@ -67,16 +67,13 @@ export class APMService {
     });
   }
 
-  startTrace(
-    operation: string,
-    metadata?: Record<string, string | number | boolean>,
-  ): string {
+  startTrace(operation: string, metadata?: Record<string, string | number | boolean>): string {
     const traceId = `${operation}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
     this.traces.set(traceId, {
       operation,
       startTime: Date.now(),
-      status: "success",
+      status: 'success',
       metadata,
     });
 
@@ -86,31 +83,27 @@ export class APMService {
   endTrace(traceId: string, error?: Error): void {
     const trace = this.traces.get(traceId);
     if (!trace) {
-      logger.warn({ traceId }, "Attempted to end non-existent trace");
+      logger.warn({ traceId }, 'Attempted to end non-existent trace');
       return;
     }
 
     trace.endTime = Date.now();
     trace.duration = trace.endTime - trace.startTime;
-    trace.status = error ? "error" : "success";
+    trace.status = error ? 'error' : 'success';
     trace.error = error;
 
     this.traces.delete(traceId);
   }
 
-  recordDatabaseQuery(
-    query: string,
-    duration: number,
-    result: "success" | "error",
-  ): void {
+  recordDatabaseQuery(query: string, duration: number, result: 'success' | 'error'): void {
     const queryType = this.inferQueryType(query);
-    recordDbOperation(queryType, "unknown", duration, result);
+    recordDbOperation(queryType, 'unknown', duration, result);
 
     // Also record as APM metric for tracking
-    this.recordMetric("db.query.duration", duration, {
+    this.recordMetric('db.query.duration', duration, {
       queryType,
       result,
-      sanitized: query.length > 100 ? "truncated" : "full",
+      sanitized: query.length > 100 ? 'truncated' : 'full',
     });
   }
 
@@ -122,46 +115,36 @@ export class APMService {
     cost: number;
     cached: boolean;
   }): void {
-    recordLlmStreamMetrics(
-      params.provider,
-      params.model,
-      params.duration,
-      0,
-      params.tokensUsed,
-    );
-    recordLlmCost(params.model, params.provider, "chat", params.cost);
+    recordLlmStreamMetrics(params.provider, params.model, params.duration, 0, params.tokensUsed);
+    recordLlmCost(params.model, params.provider, 'chat', params.cost);
 
     // Record APM metrics
-    this.recordMetric("llm.duration", params.duration, {
+    this.recordMetric('llm.duration', params.duration, {
       provider: params.provider,
       model: params.model,
       cached: String(params.cached),
     });
-    this.recordMetric("llm.tokens", params.tokensUsed, {
+    this.recordMetric('llm.tokens', params.tokensUsed, {
       provider: params.provider,
       model: params.model,
     });
-    this.recordMetric("llm.cost", params.cost, {
+    this.recordMetric('llm.cost', params.cost, {
       provider: params.provider,
       model: params.model,
       cached: String(params.cached),
     });
   }
 
-  recordCacheAccess(
-    tier: "l1" | "l2" | "l3",
-    hit: boolean,
-    duration?: number,
-  ): void {
+  recordCacheAccess(tier: 'l1' | 'l2' | 'l3', hit: boolean, duration?: number): void {
     recordTieredCacheAccess(tier, hit);
 
     // Record APM metric
-    this.recordMetric("cache.access", 1, {
+    this.recordMetric('cache.access', 1, {
       tier,
       hit: String(hit),
     });
     if (duration !== undefined) {
-      this.recordMetric("cache.duration", duration, { tier });
+      this.recordMetric('cache.duration', duration, { tier });
     }
   }
 
@@ -184,17 +167,13 @@ export class APMService {
     timestamp: number;
   }> = [];
 
-  recordMetric(
-    name: string,
-    value: number,
-    tags?: Record<string, string>,
-  ): void {
+  recordMetric(name: string, value: number, tags?: Record<string, string>): void {
     this.metricsBuffer.push({ name, value, tags, timestamp: Date.now() });
 
     // Flush if buffer gets too large
     if (this.metricsBuffer.length > 1000) {
       this.flushMetrics().catch((err) => {
-        logger.error({ error: err }, "Failed to flush metrics");
+        logger.error({ error: err }, 'Failed to flush metrics');
       });
     }
   }
@@ -207,22 +186,22 @@ export class APMService {
     // In production, this would send to metrics service
     // logger.debug is optional, some loggers may not have it
     if (logger.debug) {
-      logger.debug({ metricCount: batch.length }, "Metrics flushed");
+      logger.debug({ metricCount: batch.length }, 'Metrics flushed');
     }
   }
 
   async shutdown(): Promise<void> {
     await this.flushMetrics();
-    logger.info("APM service shutdown complete");
+    logger.info('APM service shutdown complete');
   }
 
   private inferQueryType(query: string): string {
     const normalized = query.trim().toLowerCase();
-    if (normalized.startsWith("select")) return "select";
-    if (normalized.startsWith("insert")) return "insert";
-    if (normalized.startsWith("update")) return "update";
-    if (normalized.startsWith("delete")) return "delete";
-    return "other";
+    if (normalized.startsWith('select')) return 'select';
+    if (normalized.startsWith('insert')) return 'insert';
+    if (normalized.startsWith('update')) return 'update';
+    if (normalized.startsWith('delete')) return 'delete';
+    return 'other';
   }
 }
 

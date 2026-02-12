@@ -3,17 +3,17 @@
  * Provides Redis-based caching for intent compilation, architectures, PRDs, and work reports
  */
 
-import { getRedisClient, isRedisConnected } from "../infra/redis.js";
-import logger from "../../middleware/logger.js";
-import crypto from "crypto";
+import { getRedisClient, isRedisConnected } from '../infra/redis.js';
+import logger from '../../middleware/logger.js';
+import crypto from 'crypto';
 
 export type CacheType =
-  | "intent"
-  | "architecture"
-  | "prd"
-  | "work_report"
-  | "context"
-  | "intent-optimization";
+  | 'intent'
+  | 'architecture'
+  | 'prd'
+  | 'work_report'
+  | 'context'
+  | 'intent-optimization';
 
 export interface CacheConfig {
   ttl: number; // Time to live in seconds
@@ -21,12 +21,12 @@ export interface CacheConfig {
 }
 
 const CACHE_CONFIGS: Record<CacheType, CacheConfig> = {
-  intent: { ttl: 3600, prefix: "cache:intent:" }, // 1 hour
-  architecture: { ttl: 7200, prefix: "cache:arch:" }, // 2 hours
-  prd: { ttl: 7200, prefix: "cache:prd:" }, // 2 hours
-  work_report: { ttl: 86400, prefix: "cache:report:" }, // 24 hours
-  context: { ttl: 1800, prefix: "cache:context:" }, // 30 minutes
-  "intent-optimization": { ttl: 3600, prefix: "cache:intent-opt:" }, // 1 hour
+  intent: { ttl: 3600, prefix: 'cache:intent:' }, // 1 hour
+  architecture: { ttl: 7200, prefix: 'cache:arch:' }, // 2 hours
+  prd: { ttl: 7200, prefix: 'cache:prd:' }, // 2 hours
+  work_report: { ttl: 86400, prefix: 'cache:report:' }, // 24 hours
+  context: { ttl: 1800, prefix: 'cache:context:' }, // 30 minutes
+  'intent-optimization': { ttl: 3600, prefix: 'cache:intent-opt:' }, // 1 hour
 };
 
 /**
@@ -34,23 +34,16 @@ const CACHE_CONFIGS: Record<CacheType, CacheConfig> = {
  */
 function generateCacheKey(type: CacheType, input: string): string {
   const config = CACHE_CONFIGS[type];
-  const hash = crypto
-    .createHash("sha256")
-    .update(input)
-    .digest("hex")
-    .substring(0, 16);
+  const hash = crypto.createHash('sha256').update(input).digest('hex').substring(0, 16);
   return `${config.prefix}${hash}`;
 }
 
 /**
  * Get value from cache
  */
-export async function getFromCache<T>(
-  type: CacheType,
-  input: string,
-): Promise<T | null> {
+export async function getFromCache<T>(type: CacheType, input: string): Promise<T | null> {
   if (!(await isRedisConnected())) {
-    logger.debug({ type }, "Redis not connected, cache miss");
+    logger.debug({ type }, 'Redis not connected, cache miss');
     return null;
   }
 
@@ -65,7 +58,7 @@ export async function getFromCache<T>(
 
     return JSON.parse(data) as T;
   } catch (error) {
-    logger.error({ error: (error as Error).message, type }, "Cache get failed");
+    logger.error({ error: (error as Error).message, type }, 'Cache get failed');
     return null;
   }
 }
@@ -73,13 +66,9 @@ export async function getFromCache<T>(
 /**
  * Set value in cache
  */
-export async function setInCache<T>(
-  type: CacheType,
-  input: string,
-  value: T,
-): Promise<boolean> {
+export async function setInCache<T>(type: CacheType, input: string, value: T): Promise<boolean> {
   if (!(await isRedisConnected())) {
-    logger.debug({ type }, "Redis not connected, skipping cache set");
+    logger.debug({ type }, 'Redis not connected, skipping cache set');
     return false;
   }
 
@@ -92,7 +81,7 @@ export async function setInCache<T>(
     await redis.setex(key, config.ttl, data);
     return true;
   } catch (error) {
-    logger.error({ error: (error as Error).message, type }, "Cache set failed");
+    logger.error({ error: (error as Error).message, type }, 'Cache set failed');
     return false;
   }
 }
@@ -100,10 +89,7 @@ export async function setInCache<T>(
 /**
  * Delete value from cache
  */
-export async function deleteFromCache(
-  type: CacheType,
-  input: string,
-): Promise<boolean> {
+export async function deleteFromCache(type: CacheType, input: string): Promise<boolean> {
   if (!(await isRedisConnected())) {
     return false;
   }
@@ -114,10 +100,7 @@ export async function deleteFromCache(
     await redis.del(key);
     return true;
   } catch (error) {
-    logger.error(
-      { error: (error as Error).message, type },
-      "Cache delete failed",
-    );
+    logger.error({ error: (error as Error).message, type }, 'Cache delete failed');
     return false;
   }
 }
@@ -142,10 +125,7 @@ export async function clearCacheType(type: CacheType): Promise<number> {
     await redis.del(...keys);
     return keys.length;
   } catch (error) {
-    logger.error(
-      { error: (error as Error).message, type },
-      "Cache clear failed",
-    );
+    logger.error({ error: (error as Error).message, type }, 'Cache clear failed');
     return 0;
   }
 }
@@ -161,7 +141,7 @@ export async function getCacheStats(): Promise<Record<CacheType, number>> {
       prd: 0,
       work_report: 0,
       context: 0,
-      "intent-optimization": 0,
+      'intent-optimization': 0,
     };
   }
 
@@ -173,27 +153,24 @@ export async function getCacheStats(): Promise<Record<CacheType, number>> {
       prd: 0,
       work_report: 0,
       context: 0,
-      "intent-optimization": 0,
+      'intent-optimization': 0,
     };
 
-    for (const [type, config] of Object.entries(CACHE_CONFIGS) as [
-      CacheType,
-      CacheConfig,
-    ][]) {
+    for (const [type, config] of Object.entries(CACHE_CONFIGS) as [CacheType, CacheConfig][]) {
       const keys = await redis.keys(`${config.prefix}*`);
       stats[type] = keys.length;
     }
 
     return stats;
   } catch (error) {
-    logger.error({ error: (error as Error).message }, "Cache stats failed");
+    logger.error({ error: (error as Error).message }, 'Cache stats failed');
     return {
       intent: 0,
       architecture: 0,
       prd: 0,
       work_report: 0,
       context: 0,
-      "intent-optimization": 0,
+      'intent-optimization': 0,
     };
   }
 }
@@ -205,7 +182,7 @@ export async function withCache<T>(
   type: CacheType,
   input: string,
   fn: () => Promise<T>,
-  options?: { skipCache?: boolean },
+  options?: { skipCache?: boolean }
 ): Promise<T> {
   // Skip cache if requested or Redis not available
   if (options?.skipCache || !(await isRedisConnected())) {
@@ -215,20 +192,17 @@ export async function withCache<T>(
   // Try to get from cache
   const cached = await getFromCache<T>(type, input);
   if (cached !== null) {
-    logger.debug({ type }, "Cache hit");
+    logger.debug({ type }, 'Cache hit');
     return cached;
   }
 
   // Cache miss, execute function
-  logger.debug({ type }, "Cache miss");
+  logger.debug({ type }, 'Cache miss');
   const result = await fn();
 
   // Store in cache (fire and forget)
   setInCache(type, input, result).catch((error) => {
-    logger.warn(
-      { error: (error as Error).message, type },
-      "Failed to cache result",
-    );
+    logger.warn({ error: (error as Error).message, type }, 'Failed to cache result');
   });
 
   return result;

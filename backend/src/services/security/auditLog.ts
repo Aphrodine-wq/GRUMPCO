@@ -5,10 +5,10 @@
  * Immutable, tamper-evident logging with structured data
  */
 
-import { type Request, type Response } from "express";
-import crypto from "crypto";
-import { getRedisClient } from "../infra/redis.js";
-import { logger } from "../../utils/logger.js";
+import { type Request, type Response } from 'express';
+import crypto from 'crypto';
+import { getRedisClient } from '../infra/redis.js';
+import { logger } from '../../utils/logger.js';
 
 // Extended request type for audit logging
 interface AuditRequest extends Request {
@@ -19,51 +19,51 @@ interface AuditRequest extends Request {
 
 export enum AuditEventType {
   // Authentication & Authorization
-  LOGIN_SUCCESS = "LOGIN_SUCCESS",
-  LOGIN_FAILURE = "LOGIN_FAILURE",
-  LOGOUT = "LOGOUT",
-  SESSION_CREATED = "SESSION_CREATED",
-  SESSION_TERMINATED = "SESSION_TERMINATED",
-  PASSWORD_CHANGED = "PASSWORD_CHANGED",
-  MFA_ENABLED = "MFA_ENABLED",
-  MFA_DISABLED = "MFA_DISABLED",
-  PERMISSION_GRANTED = "PERMISSION_GRANTED",
-  PERMISSION_REVOKED = "PERMISSION_REVOKED",
+  LOGIN_SUCCESS = 'LOGIN_SUCCESS',
+  LOGIN_FAILURE = 'LOGIN_FAILURE',
+  LOGOUT = 'LOGOUT',
+  SESSION_CREATED = 'SESSION_CREATED',
+  SESSION_TERMINATED = 'SESSION_TERMINATED',
+  PASSWORD_CHANGED = 'PASSWORD_CHANGED',
+  MFA_ENABLED = 'MFA_ENABLED',
+  MFA_DISABLED = 'MFA_DISABLED',
+  PERMISSION_GRANTED = 'PERMISSION_GRANTED',
+  PERMISSION_REVOKED = 'PERMISSION_REVOKED',
 
   // Data Access
-  DATA_READ = "DATA_READ",
-  DATA_CREATED = "DATA_CREATED",
-  DATA_UPDATED = "DATA_UPDATED",
-  DATA_DELETED = "DATA_DELETED",
-  DATA_EXPORTED = "DATA_EXPORTED",
-  DATA_IMPORTED = "DATA_IMPORTED",
+  DATA_READ = 'DATA_READ',
+  DATA_CREATED = 'DATA_CREATED',
+  DATA_UPDATED = 'DATA_UPDATED',
+  DATA_DELETED = 'DATA_DELETED',
+  DATA_EXPORTED = 'DATA_EXPORTED',
+  DATA_IMPORTED = 'DATA_IMPORTED',
 
   // AI/ML Operations
-  PROMPT_SENT = "PROMPT_SENT",
-  RESPONSE_RECEIVED = "RESPONSE_RECEIVED",
-  MODEL_CHANGED = "MODEL_CHANGED",
-  AGENT_EXECUTED = "AGENT_EXECUTED",
-  CODE_GENERATED = "CODE_GENERATED",
+  PROMPT_SENT = 'PROMPT_SENT',
+  RESPONSE_RECEIVED = 'RESPONSE_RECEIVED',
+  MODEL_CHANGED = 'MODEL_CHANGED',
+  AGENT_EXECUTED = 'AGENT_EXECUTED',
+  CODE_GENERATED = 'CODE_GENERATED',
 
   // Administrative
-  USER_CREATED = "USER_CREATED",
-  USER_UPDATED = "USER_UPDATED",
-  USER_DELETED = "USER_DELETED",
-  CONFIG_CHANGED = "CONFIG_CHANGED",
-  API_KEY_CREATED = "API_KEY_CREATED",
-  API_KEY_REVOKED = "API_KEY_REVOKED",
+  USER_CREATED = 'USER_CREATED',
+  USER_UPDATED = 'USER_UPDATED',
+  USER_DELETED = 'USER_DELETED',
+  CONFIG_CHANGED = 'CONFIG_CHANGED',
+  API_KEY_CREATED = 'API_KEY_CREATED',
+  API_KEY_REVOKED = 'API_KEY_REVOKED',
 
   // Security
-  RATE_LIMIT_HIT = "RATE_LIMIT_HIT",
-  SUSPICIOUS_ACTIVITY = "SUSPICIOUS_ACTIVITY",
-  IP_BLOCKED = "IP_BLOCKED",
-  WAF_TRIGGERED = "WAF_TRIGGERED",
+  RATE_LIMIT_HIT = 'RATE_LIMIT_HIT',
+  SUSPICIOUS_ACTIVITY = 'SUSPICIOUS_ACTIVITY',
+  IP_BLOCKED = 'IP_BLOCKED',
+  WAF_TRIGGERED = 'WAF_TRIGGERED',
 }
 
 export enum AuditSeverity {
-  INFO = "INFO",
-  WARNING = "WARNING",
-  CRITICAL = "CRITICAL",
+  INFO = 'INFO',
+  WARNING = 'WARNING',
+  CRITICAL = 'CRITICAL',
 }
 
 export interface AuditEvent {
@@ -77,7 +77,7 @@ export interface AuditEvent {
   userAgent: string;
   resource: string;
   action: string;
-  status: "SUCCESS" | "FAILURE" | "DENIED";
+  status: 'SUCCESS' | 'FAILURE' | 'DENIED';
   details: Record<string, unknown>;
   metadata: {
     requestId: string;
@@ -113,15 +113,7 @@ const DEFAULT_CONFIG: AuditLogConfig = {
   immutabilityEnabled: true,
   batchSize: 100,
   flushInterval: 5000,
-  sensitiveFields: [
-    "password",
-    "token",
-    "secret",
-    "key",
-    "creditCard",
-    "ssn",
-    "apiKey",
-  ],
+  sensitiveFields: ['password', 'token', 'secret', 'key', 'creditCard', 'ssn', 'apiKey'],
 };
 
 class AuditLogService {
@@ -145,7 +137,7 @@ class AuditLogService {
     res: Response,
     eventType: AuditEventType,
     severity: AuditSeverity = AuditSeverity.INFO,
-    details: Record<string, unknown> = {},
+    details: Record<string, unknown> = {}
   ): Promise<AuditEvent> {
     const auditReq = req as AuditRequest;
     const event = this.createEvent({
@@ -154,18 +146,16 @@ class AuditLogService {
       userId: auditReq.user?.id || null,
       sessionId: auditReq.sessionID || null,
       ipAddress: this.getClientIp(req),
-      userAgent: req.headers["user-agent"] || "unknown",
+      userAgent: req.headers['user-agent'] || 'unknown',
       resource: req.path,
       action: req.method,
-      status:
-        res.statusCode >= 200 && res.statusCode < 400 ? "SUCCESS" : "FAILURE",
+      status: res.statusCode >= 200 && res.statusCode < 400 ? 'SUCCESS' : 'FAILURE',
       details: this.sanitizeDetails(details),
       metadata: {
         requestId: auditReq.requestId || crypto.randomUUID(),
-        correlationId:
-          (req.headers["x-correlation-id"] as string) || crypto.randomUUID(),
-        geoLocation: req.headers["cf-ipcountry"] as string,
-        deviceFingerprint: req.headers["x-device-fingerprint"] as string,
+        correlationId: (req.headers['x-correlation-id'] as string) || crypto.randomUUID(),
+        geoLocation: req.headers['cf-ipcountry'] as string,
+        deviceFingerprint: req.headers['x-device-fingerprint'] as string,
       },
     });
 
@@ -187,8 +177,8 @@ class AuditLogService {
     const timestamp = new Date();
 
     // Create hash chain for immutability
-    const dataToHash = `${this.lastHash || "genesis"}:${eventId}:${timestamp.toISOString()}:${JSON.stringify(partial)}`;
-    const hash = crypto.createHash("sha256").update(dataToHash).digest("hex");
+    const dataToHash = `${this.lastHash || 'genesis'}:${eventId}:${timestamp.toISOString()}:${JSON.stringify(partial)}`;
+    const hash = crypto.createHash('sha256').update(dataToHash).digest('hex');
 
     const event: AuditEvent = {
       id: eventId,
@@ -197,11 +187,11 @@ class AuditLogService {
       severity: partial.severity || AuditSeverity.INFO,
       userId: partial.userId || null,
       sessionId: partial.sessionId || null,
-      ipAddress: partial.ipAddress || "unknown",
-      userAgent: partial.userAgent || "unknown",
-      resource: partial.resource || "unknown",
-      action: partial.action || "unknown",
-      status: partial.status || "SUCCESS",
+      ipAddress: partial.ipAddress || 'unknown',
+      userAgent: partial.userAgent || 'unknown',
+      resource: partial.resource || 'unknown',
+      action: partial.action || 'unknown',
+      status: partial.status || 'SUCCESS',
       details: partial.details || {},
       metadata: partial.metadata || {
         requestId: crypto.randomUUID(),
@@ -249,7 +239,7 @@ class AuditLogService {
         status: event.status,
         severity: event.severity,
       },
-      `Audit: ${event.eventType}`,
+      `Audit: ${event.eventType}`
     );
   }
 
@@ -266,7 +256,7 @@ class AuditLogService {
       const pipeline = redis.pipeline();
 
       for (const event of events) {
-        const key = `audit:${event.timestamp.toISOString().split("T")[0]}`;
+        const key = `audit:${event.timestamp.toISOString().split('T')[0]}`;
         const score = event.timestamp.getTime();
         pipeline.zadd(key, score, JSON.stringify(event));
 
@@ -275,22 +265,15 @@ class AuditLogService {
 
         // Also index by user for GDPR queries
         if (event.userId) {
-          pipeline.zadd(
-            `audit:user:${event.userId}`,
-            score,
-            JSON.stringify(event),
-          );
+          pipeline.zadd(`audit:user:${event.userId}`, score, JSON.stringify(event));
         }
       }
 
       await pipeline.exec();
 
-      logger.info({ count: events.length }, "Audit events flushed to storage");
+      logger.info({ count: events.length }, 'Audit events flushed to storage');
     } catch (error) {
-      logger.error(
-        { error, eventCount: events.length },
-        "Failed to flush audit events",
-      );
+      logger.error({ error, eventCount: events.length }, 'Failed to flush audit events');
       // Re-add events to buffer for retry
       this.eventBuffer.unshift(...events);
     }
@@ -299,7 +282,7 @@ class AuditLogService {
   private startFlushTimer(): void {
     this.flushTimer = setInterval(() => {
       this.flushBuffer().catch((error) => {
-        logger.error({ error }, "Audit buffer flush failed");
+        logger.error({ error }, 'Audit buffer flush failed');
       });
     }, this.config.flushInterval);
   }
@@ -316,7 +299,7 @@ class AuditLogService {
       severity?: AuditSeverity;
       limit?: number;
       offset?: number;
-    } = {},
+    } = {}
   ): Promise<AuditEvent[]> {
     const redis = getRedisClient();
     const results: AuditEvent[] = [];
@@ -329,22 +312,17 @@ class AuditLogService {
         results.push(...events.map((e: string) => JSON.parse(e)));
       } else {
         // Query by date range
-        const start =
-          options.startDate || new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const start = options.startDate || new Date(Date.now() - 24 * 60 * 60 * 1000);
         const end = options.endDate || new Date();
 
         // Get all date keys in range (from start date to end date)
         const dateKeys: string[] = [];
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          dateKeys.push(`audit:${d.toISOString().split("T")[0]}`);
+          dateKeys.push(`audit:${d.toISOString().split('T')[0]}`);
         }
 
         for (const key of dateKeys) {
-          const events = await redis.zrangebyscore(
-            key,
-            start.getTime(),
-            end.getTime(),
-          );
+          const events = await redis.zrangebyscore(key, start.getTime(), end.getTime());
           results.push(...events.map((e: string) => JSON.parse(e)));
         }
       }
@@ -369,7 +347,7 @@ class AuditLogService {
 
       return filtered.slice(offset, offset + limit);
     } catch (error) {
-      logger.error({ error, options }, "Audit query failed");
+      logger.error({ error, options }, 'Audit query failed');
       throw error;
     }
   }
@@ -389,9 +367,7 @@ class AuditLogService {
       userId,
       events,
       exportDate: new Date(),
-      retentionUntil: new Date(
-        Date.now() + this.config.retentionDays * 24 * 60 * 60 * 1000,
-      ),
+      retentionUntil: new Date(Date.now() + this.config.retentionDays * 24 * 60 * 60 * 1000),
     };
   }
 
@@ -408,43 +384,36 @@ class AuditLogService {
       const events = await redis.zrange(key, 0, -1);
       const anonymizedCount = events.length;
 
-      logger.info(
-        { userId, count: anonymizedCount },
-        "User audit data anonymized",
-      );
+      logger.info({ userId, count: anonymizedCount }, 'User audit data anonymized');
 
       return anonymizedCount;
     } catch (error) {
-      logger.error({ error, userId }, "Failed to anonymize user audit data");
+      logger.error({ error, userId }, 'Failed to anonymize user audit data');
       throw error;
     }
   }
 
   private getClientIp(req: Request): string {
-    const forwarded = req.headers["x-forwarded-for"];
-    if (typeof forwarded === "string") {
-      return forwarded.split(",")[0].trim();
+    const forwarded = req.headers['x-forwarded-for'];
+    if (typeof forwarded === 'string') {
+      return forwarded.split(',')[0].trim();
     }
-    return req.socket.remoteAddress || "unknown";
+    return req.socket.remoteAddress || 'unknown';
   }
 
-  private sanitizeDetails(
-    details: Record<string, unknown>,
-  ): Record<string, unknown> {
+  private sanitizeDetails(details: Record<string, unknown>): Record<string, unknown> {
     const sanitized = { ...details };
 
     for (const field of this.config.sensitiveFields) {
       if (field in sanitized) {
-        sanitized[field] = "[REDACTED]";
+        sanitized[field] = '[REDACTED]';
       }
     }
 
     return sanitized;
   }
 
-  private encryptSensitiveFields(
-    details: Record<string, unknown>,
-  ): Record<string, unknown> {
+  private encryptSensitiveFields(details: Record<string, unknown>): Record<string, unknown> {
     // Implementation would use actual encryption
     // For now, just mark as encrypted
     return {
@@ -455,16 +424,16 @@ class AuditLogService {
 
   private getGDPRCategory(eventType: AuditEventType | undefined): string {
     const categories: Record<string, string> = {
-      [AuditEventType.LOGIN_SUCCESS]: "authentication",
-      [AuditEventType.DATA_READ]: "data_processing",
-      [AuditEventType.DATA_CREATED]: "data_processing",
-      [AuditEventType.DATA_UPDATED]: "data_processing",
-      [AuditEventType.DATA_DELETED]: "data_processing",
-      [AuditEventType.USER_CREATED]: "user_management",
-      [AuditEventType.USER_DELETED]: "user_management",
+      [AuditEventType.LOGIN_SUCCESS]: 'authentication',
+      [AuditEventType.DATA_READ]: 'data_processing',
+      [AuditEventType.DATA_CREATED]: 'data_processing',
+      [AuditEventType.DATA_UPDATED]: 'data_processing',
+      [AuditEventType.DATA_DELETED]: 'data_processing',
+      [AuditEventType.USER_CREATED]: 'user_management',
+      [AuditEventType.USER_DELETED]: 'user_management',
     };
 
-    return categories[eventType || ""] || "other";
+    return categories[eventType || ''] || 'other';
   }
 
   /**
@@ -472,7 +441,7 @@ class AuditLogService {
    */
   async verifyIntegrity(
     startDate?: Date,
-    endDate?: Date,
+    endDate?: Date
   ): Promise<{
     valid: boolean;
     checked: number;
@@ -484,7 +453,7 @@ class AuditLogService {
     let previousHash: string | null = null;
 
     for (const event of events) {
-      const dataToHash: string = `${previousHash || "genesis"}:${event.id}:${new Date(event.timestamp).toISOString()}:${JSON.stringify(
+      const dataToHash: string = `${previousHash || 'genesis'}:${event.id}:${new Date(event.timestamp).toISOString()}:${JSON.stringify(
         {
           eventType: event.eventType,
           userId: event.userId,
@@ -492,13 +461,10 @@ class AuditLogService {
           action: event.action,
           status: event.status,
           details: event.details,
-        },
+        }
       )}`;
 
-      const calculatedHash: string = crypto
-        .createHash("sha256")
-        .update(dataToHash)
-        .digest("hex");
+      const calculatedHash: string = crypto.createHash('sha256').update(dataToHash).digest('hex');
 
       if (calculatedHash !== event.integrity.hash) {
         errors.push(`Hash mismatch for event ${event.id}`);
@@ -530,9 +496,7 @@ class AuditLogService {
 // Singleton instance
 let auditService: AuditLogService | null = null;
 
-export function getAuditService(
-  config?: Partial<AuditLogConfig>,
-): AuditLogService {
+export function getAuditService(config?: Partial<AuditLogConfig>): AuditLogService {
   if (!auditService) {
     auditService = new AuditLogService(config);
   }

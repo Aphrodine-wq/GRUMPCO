@@ -9,15 +9,15 @@
  * - Market Trends: relevant tech updates
  */
 
-import logger from "../../middleware/logger.js";
-import { getDatabase as _getDatabase } from "../../db/database.js";
-import { getCompletion } from "../ai-providers/llmGatewayHelper.js";
-import { writeAuditLog } from "../security/auditLogService.js";
-import { queueAgentTask, isAgentRunning } from "./persistentAgentService.js";
-import fs from "fs/promises";
-import path from "path";
-import { exec } from "child_process";
-import util from "util";
+import logger from '../../middleware/logger.js';
+import { getDatabase as _getDatabase } from '../../db/database.js';
+import { getCompletion } from '../ai-providers/llmGatewayHelper.js';
+import { writeAuditLog } from '../security/auditLogService.js';
+import { queueAgentTask, isAgentRunning } from './persistentAgentService.js';
+import fs from 'fs/promises';
+import path from 'path';
+import { exec } from 'child_process';
+import util from 'util';
 
 const execAsync = util.promisify(exec);
 
@@ -26,8 +26,8 @@ const execAsync = util.promisify(exec);
 export interface AnticipatoryInsight {
   id: string;
   userId: string;
-  category: "code_issue" | "project_health" | "user_pattern" | "market_trend";
-  severity: "info" | "warning" | "critical";
+  category: 'code_issue' | 'project_health' | 'user_pattern' | 'market_trend';
+  severity: 'info' | 'warning' | 'critical';
   title: string;
   description: string;
   suggestedAction?: string;
@@ -48,7 +48,7 @@ export interface ProjectHealthScore {
 
 export interface CodeScanResult {
   vulnerabilities: Array<{
-    severity: "low" | "medium" | "high" | "critical";
+    severity: 'low' | 'medium' | 'high' | 'critical';
     file: string;
     line?: number;
     message: string;
@@ -80,15 +80,16 @@ const userInsights = new Map<string, AnticipatoryInsight[]>();
 const projectHealthCache = new Map<string, ProjectHealthScore>();
 const userPatternHistory = new Map<string, string[]>();
 
-
 // ========== Helper Functions ==========
 
-async function detectPackageManager(workspacePath: string): Promise<"npm" | "pnpm" | "yarn" | null> {
+async function detectPackageManager(
+  workspacePath: string
+): Promise<'npm' | 'pnpm' | 'yarn' | null> {
   try {
     const files = await fs.readdir(workspacePath);
-    if (files.includes("pnpm-lock.yaml")) return "pnpm";
-    if (files.includes("yarn.lock")) return "yarn";
-    if (files.includes("package-lock.json")) return "npm";
+    if (files.includes('pnpm-lock.yaml')) return 'pnpm';
+    if (files.includes('yarn.lock')) return 'yarn';
+    if (files.includes('package-lock.json')) return 'npm';
     return null;
   } catch (_error) {
     return null;
@@ -107,8 +108,8 @@ async function runCommand(cmd: string, cwd: string): Promise<string> {
   }
 }
 
-function parseAuditOutput(jsonOutput: string): CodeScanResult["vulnerabilities"] {
-  const vulnerabilities: CodeScanResult["vulnerabilities"] = [];
+function parseAuditOutput(jsonOutput: string): CodeScanResult['vulnerabilities'] {
+  const vulnerabilities: CodeScanResult['vulnerabilities'] = [];
   try {
     const data = JSON.parse(jsonOutput);
 
@@ -117,12 +118,12 @@ function parseAuditOutput(jsonOutput: string): CodeScanResult["vulnerabilities"]
       for (const [pkgName, vuln] of Object.entries(data.vulnerabilities) as [string, any][]) {
         if (Array.isArray(vuln.via)) {
           for (const via of vuln.via) {
-            if (typeof via === "object") {
+            if (typeof via === 'object') {
               vulnerabilities.push({
-                severity: via.severity || vuln.severity || "low",
+                severity: via.severity || vuln.severity || 'low',
                 file: `package.json > ${pkgName}`,
-                message: via.title || "Vulnerability detected",
-                cwe: Array.isArray(via.cwe) ? via.cwe.join(", ") : via.cwe,
+                message: via.title || 'Vulnerability detected',
+                cwe: Array.isArray(via.cwe) ? via.cwe.join(', ') : via.cwe,
               });
             }
           }
@@ -132,9 +133,9 @@ function parseAuditOutput(jsonOutput: string): CodeScanResult["vulnerabilities"]
     // npm 6 / pnpm "advisories" object
     else if (data.advisories) {
       for (const advisory of Object.values(data.advisories) as any[]) {
-        const severity = advisory.severity || "low";
-        const message = advisory.title || "Vulnerability detected";
-        const cwe = Array.isArray(advisory.cwe) ? advisory.cwe.join(", ") : advisory.cwe;
+        const severity = advisory.severity || 'low';
+        const message = advisory.title || 'Vulnerability detected';
+        const cwe = Array.isArray(advisory.cwe) ? advisory.cwe.join(', ') : advisory.cwe;
 
         if (advisory.findings && Array.isArray(advisory.findings)) {
           for (const finding of advisory.findings) {
@@ -167,21 +168,21 @@ function parseAuditOutput(jsonOutput: string): CodeScanResult["vulnerabilities"]
       }
     }
   } catch (e) {
-    logger.error({ error: e }, "Failed to parse audit output");
+    logger.error({ error: e }, 'Failed to parse audit output');
   }
   return vulnerabilities;
 }
 
-function parseOutdatedOutput(jsonOutput: string): CodeScanResult["outdatedDeps"] {
-  const outdated: CodeScanResult["outdatedDeps"] = [];
+function parseOutdatedOutput(jsonOutput: string): CodeScanResult['outdatedDeps'] {
+  const outdated: CodeScanResult['outdatedDeps'] = [];
   try {
     const data = JSON.parse(jsonOutput);
     for (const [name, info] of Object.entries(data) as [string, any][]) {
-      const current = info.current || info.wanted || "unknown";
-      const latest = info.latest || "unknown";
+      const current = info.current || info.wanted || 'unknown';
+      const latest = info.latest || 'unknown';
 
       let breaking = false;
-      if (current !== "unknown" && latest !== "unknown") {
+      if (current !== 'unknown' && latest !== 'unknown') {
         const currentMajor = parseInt(current.split('.')[0]);
         const latestMajor = parseInt(latest.split('.')[0]);
         if (!isNaN(currentMajor) && !isNaN(latestMajor) && latestMajor > currentMajor) {
@@ -197,22 +198,21 @@ function parseOutdatedOutput(jsonOutput: string): CodeScanResult["outdatedDeps"]
       });
     }
   } catch (e) {
-    logger.error({ error: e }, "Failed to parse outdated output");
+    logger.error({ error: e }, 'Failed to parse outdated output');
   }
   return outdated;
 }
 
 // ========== Code Issues Detection ==========
 
-
 /**
  * Scan for code issues in a workspace
  */
 export async function scanForCodeIssues(
   userId: string,
-  workspacePath: string,
+  workspacePath: string
 ): Promise<CodeScanResult> {
-  logger.info({ userId, workspacePath }, "Starting code issue scan");
+  logger.info({ userId, workspacePath }, 'Starting code issue scan');
 
   const result: CodeScanResult = {
     vulnerabilities: [],
@@ -223,11 +223,11 @@ export async function scanForCodeIssues(
   try {
     const pm = await detectPackageManager(workspacePath);
     if (!pm) {
-      logger.warn({ userId, workspacePath }, "No supported package manager found (npm/pnpm/yarn)");
+      logger.warn({ userId, workspacePath }, 'No supported package manager found (npm/pnpm/yarn)');
       result.codeSmells.push({
         file: 'package.json',
         type: 'setup',
-        message: 'No lockfile found. Run npm/pnpm install to generate one for accurate scanning.'
+        message: 'No lockfile found. Run npm/pnpm install to generate one for accurate scanning.',
       });
       return result;
     }
@@ -251,44 +251,44 @@ export async function scanForCodeIssues(
     // Run in parallel
     const [auditRes, outdatedRes] = await Promise.allSettled([
       runCommand(auditCmd, workspacePath),
-      runCommand(outdatedCmd, workspacePath)
+      runCommand(outdatedCmd, workspacePath),
     ]);
 
     if (auditRes.status === 'fulfilled') {
       result.vulnerabilities = parseAuditOutput(auditRes.value);
     } else {
-      logger.warn({ error: auditRes.reason }, "Audit command failed");
+      logger.warn({ error: auditRes.reason }, 'Audit command failed');
     }
 
     if (outdatedRes.status === 'fulfilled') {
       result.outdatedDeps = parseOutdatedOutput(outdatedRes.value);
     } else {
-      logger.warn({ error: outdatedRes.reason }, "Outdated command failed");
+      logger.warn({ error: outdatedRes.reason }, 'Outdated command failed');
     }
 
     // Generate insights from scan results
     if (result.vulnerabilities.length > 0) {
-      const highSeverity = result.vulnerabilities.filter(v => ['high', 'critical'].includes(v.severity)).length;
+      const highSeverity = result.vulnerabilities.filter((v) =>
+        ['high', 'critical'].includes(v.severity)
+      ).length;
       await createInsight({
         userId,
-        category: "code_issue",
-        severity: highSeverity > 0 ? "critical" : "warning",
+        category: 'code_issue',
+        severity: highSeverity > 0 ? 'critical' : 'warning',
         title: `${result.vulnerabilities.length} security vulnerabilities detected`,
-        description:
-          `Security scan found ${result.vulnerabilities.length} potential vulnerabilities (${highSeverity} high/critical).`,
-        suggestedAction:
-          `Run \`${pm} audit fix\` to resolve automatically fixable issues.`,
+        description: `Security scan found ${result.vulnerabilities.length} potential vulnerabilities (${highSeverity} high/critical).`,
+        suggestedAction: `Run \`${pm} audit fix\` to resolve automatically fixable issues.`,
         metadata: { vulnerabilities: result.vulnerabilities.slice(0, 50) },
       });
     }
 
     if (result.outdatedDeps.length > 0) {
-      const breaking = result.outdatedDeps.filter(d => d.breaking).length;
+      const breaking = result.outdatedDeps.filter((d) => d.breaking).length;
       if (breaking > 0 || result.outdatedDeps.length > 5) {
         await createInsight({
           userId,
-          category: "code_issue",
-          severity: breaking > 0 ? "warning" : "info",
+          category: 'code_issue',
+          severity: breaking > 0 ? 'warning' : 'info',
           title: `${result.outdatedDeps.length} outdated dependencies`,
           description: `${result.outdatedDeps.length} dependencies can be updated (${breaking} breaking changes).`,
           suggestedAction: `Review and update dependencies with \`${pm} update\`.`,
@@ -303,10 +303,10 @@ export async function scanForCodeIssues(
         vulnerabilities: result.vulnerabilities.length,
         outdatedDeps: result.outdatedDeps.length,
       },
-      "Code issue scan complete",
+      'Code issue scan complete'
     );
   } catch (err) {
-    logger.error({ userId, err }, "Code issue scan failed");
+    logger.error({ userId, err }, 'Code issue scan failed');
   }
 
   return result;
@@ -370,22 +370,17 @@ function isBreakingChange(current: string, latest: string): boolean {
 export async function scheduleCodeScan(
   userId: string,
   workspacePath: string,
-  intervalHours: number = 24,
+  intervalHours: number = 24
 ): Promise<void> {
   if (!isAgentRunning(userId)) {
-    logger.warn(
-      { userId },
-      "Cannot schedule code scan - persistent agent not running",
-    );
+    logger.warn({ userId }, 'Cannot schedule code scan - persistent agent not running');
     return;
   }
 
-  await queueAgentTask(userId, "anticipatory", {
-    type: "code_scan",
+  await queueAgentTask(userId, 'anticipatory', {
+    type: 'code_scan',
     workspacePath,
-    scheduledFor: new Date(
-      Date.now() + intervalHours * 60 * 60 * 1000,
-    ).toISOString(),
+    scheduledFor: new Date(Date.now() + intervalHours * 60 * 60 * 1000).toISOString(),
   });
 }
 
@@ -396,24 +391,20 @@ export async function scheduleCodeScan(
  */
 export async function calculateProjectHealth(
   userId: string,
-  workspacePath: string,
+  workspacePath: string
 ): Promise<ProjectHealthScore> {
-  logger.info({ userId, workspacePath }, "Calculating project health");
+  logger.info({ userId, workspacePath }, 'Calculating project health');
 
   // Execute checks in parallel
-  const [testCoverage, docsFreshness, techDebt, securityScore] =
-    await Promise.all([
-      getTestCoverage(workspacePath),
-      getDocsFreshness(workspacePath),
-      getTechDebt(workspacePath),
-      getSecurityScore(workspacePath),
-    ]);
+  const [testCoverage, docsFreshness, techDebt, securityScore] = await Promise.all([
+    getTestCoverage(workspacePath),
+    getDocsFreshness(workspacePath),
+    getTechDebt(workspacePath),
+    getSecurityScore(workspacePath),
+  ]);
 
   const overall = Math.round(
-    testCoverage * 0.3 +
-    docsFreshness * 0.2 +
-    techDebt * 0.25 +
-    securityScore * 0.25,
+    testCoverage * 0.3 + docsFreshness * 0.2 + techDebt * 0.25 + securityScore * 0.25
   );
 
   const score: ProjectHealthScore = {
@@ -431,33 +422,33 @@ export async function calculateProjectHealth(
   if (score.testCoverage < 50) {
     await createInsight({
       userId,
-      category: "project_health",
-      severity: "warning",
-      title: "Low test coverage detected",
+      category: 'project_health',
+      severity: 'warning',
+      title: 'Low test coverage detected',
       description: `Test coverage is at ${score.testCoverage}%. Consider adding more tests.`,
-      suggestedAction: "Focus on testing critical paths and edge cases.",
+      suggestedAction: 'Focus on testing critical paths and edge cases.',
     });
   }
 
   if (score.docsFreshness < 50) {
     await createInsight({
       userId,
-      category: "project_health",
-      severity: "info",
-      title: "Documentation may be outdated",
+      category: 'project_health',
+      severity: 'info',
+      title: 'Documentation may be outdated',
       description: "Some documentation files haven't been updated recently.",
-      suggestedAction: "Review and update README and API documentation.",
+      suggestedAction: 'Review and update README and API documentation.',
     });
   }
 
   if (score.securityScore < 60) {
     await createInsight({
       userId,
-      category: "project_health",
-      severity: "critical",
-      title: "Security score needs attention",
-      description: "Security analysis indicates potential issues.",
-      suggestedAction: "Run security audit and address findings.",
+      category: 'project_health',
+      severity: 'critical',
+      title: 'Security score needs attention',
+      description: 'Security analysis indicates potential issues.',
+      suggestedAction: 'Run security audit and address findings.',
     });
   }
 
@@ -479,11 +470,11 @@ export function getProjectHealth(userId: string): ProjectHealthScore | null {
 export async function recordUserInteraction(
   userId: string,
   interaction: {
-    type: "chat" | "ship" | "codegen" | "plan";
+    type: 'chat' | 'ship' | 'codegen' | 'plan';
     prompt: string;
-    result?: "success" | "failure";
+    result?: 'success' | 'failure';
     context?: Record<string, unknown>;
-  },
+  }
 ): Promise<void> {
   const history = userPatternHistory.get(userId) || [];
 
@@ -492,7 +483,7 @@ export async function recordUserInteraction(
     JSON.stringify({
       ...interaction,
       timestamp: new Date().toISOString(),
-    }),
+    })
   );
 
   if (history.length > 100) {
@@ -507,7 +498,7 @@ export async function recordUserInteraction(
  */
 export async function predictUserIntent(
   userId: string,
-  _currentContext: Record<string, unknown>,
+  _currentContext: Record<string, unknown>
 ): Promise<UserPatternPrediction | null> {
   const history = userPatternHistory.get(userId);
   if (!history || history.length < 5) {
@@ -522,23 +513,22 @@ export async function predictUserIntent(
 
   // Simple pattern: if last 3 were 'chat', predict 'ship'
   const lastThreeTypes = interactionTypes.slice(-3);
-  if (lastThreeTypes.every((t) => t === "chat")) {
+  if (lastThreeTypes.every((t) => t === 'chat')) {
     return {
-      predictedIntent: "ship",
+      predictedIntent: 'ship',
       confidence: 0.6,
-      basedOn: ["frequent_chat_pattern"],
-      suggestedPrompt:
-        "Ready to build something? Try SHIP mode to generate code.",
+      basedOn: ['frequent_chat_pattern'],
+      suggestedPrompt: 'Ready to build something? Try SHIP mode to generate code.',
     };
   }
 
   // Pattern: after 'plan', usually 'codegen'
-  if (lastThreeTypes[lastThreeTypes.length - 1] === "plan") {
+  if (lastThreeTypes[lastThreeTypes.length - 1] === 'plan') {
     return {
-      predictedIntent: "codegen",
+      predictedIntent: 'codegen',
       confidence: 0.7,
-      basedOn: ["plan_to_code_pattern"],
-      suggestedPrompt: "Your plan is ready. Generate code to implement it?",
+      basedOn: ['plan_to_code_pattern'],
+      suggestedPrompt: 'Your plan is ready. Generate code to implement it?',
     };
   }
 
@@ -549,22 +539,21 @@ export async function predictUserIntent(
  * Get proactive suggestions based on user patterns
  */
 export async function getProactiveSuggestions(
-  userId: string,
+  userId: string
 ): Promise<Array<{ type: string; message: string; action?: string }>> {
-  const suggestions: Array<{ type: string; message: string; action?: string }> =
-    [];
+  const suggestions: Array<{ type: string; message: string; action?: string }> = [];
 
   // Check for pending insights
   const insights = getUserInsights(userId);
   const unacknowledged = insights.filter((i) => !i.acknowledgedAt);
 
   if (unacknowledged.length > 0) {
-    const critical = unacknowledged.filter((i) => i.severity === "critical");
+    const critical = unacknowledged.filter((i) => i.severity === 'critical');
     if (critical.length > 0) {
       suggestions.push({
-        type: "insight",
+        type: 'insight',
         message: `${critical.length} critical issues need attention`,
-        action: "View insights",
+        action: 'View insights',
       });
     }
   }
@@ -573,9 +562,9 @@ export async function getProactiveSuggestions(
   const health = getProjectHealth(userId);
   if (health && health.overall < 60) {
     suggestions.push({
-      type: "health",
+      type: 'health',
       message: `Project health score is ${health.overall}%`,
-      action: "View health report",
+      action: 'View health report',
     });
   }
 
@@ -583,9 +572,8 @@ export async function getProactiveSuggestions(
   const prediction = await predictUserIntent(userId, {});
   if (prediction && prediction.confidence > 0.5) {
     suggestions.push({
-      type: "prediction",
-      message:
-        prediction.suggestedPrompt || `Try ${prediction.predictedIntent}`,
+      type: 'prediction',
+      message: prediction.suggestedPrompt || `Try ${prediction.predictedIntent}`,
       action: prediction.predictedIntent,
     });
   }
@@ -598,7 +586,7 @@ export async function getProactiveSuggestions(
 interface RawTrendItem {
   title: string;
   url: string;
-  source: "dev.to" | "hacker-news";
+  source: 'dev.to' | 'hacker-news';
   summary?: string;
   score?: number;
   publishedAt: string;
@@ -608,20 +596,23 @@ async function fetchFromDevTo(tag: string): Promise<RawTrendItem[]> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`https://dev.to/api/articles?tag=${encodeURIComponent(tag)}&top=7&per_page=5`, { signal: controller.signal });
+    const res = await fetch(
+      `https://dev.to/api/articles?tag=${encodeURIComponent(tag)}&top=7&per_page=5`,
+      { signal: controller.signal }
+    );
     clearTimeout(timeout);
     if (!res.ok) return [];
     const json = (await res.json()) as any[];
     return json.map((item) => ({
       title: item.title,
       url: item.url,
-      source: "dev.to",
+      source: 'dev.to',
       summary: item.description,
       score: item.positive_reactions_count,
       publishedAt: item.published_at,
     }));
   } catch (e) {
-    logger.error({ error: e, tag }, "Failed to fetch from Dev.to");
+    logger.error({ error: e, tag }, 'Failed to fetch from Dev.to');
     return [];
   }
 }
@@ -630,19 +621,22 @@ async function fetchFromHN(query: string): Promise<RawTrendItem[]> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`http://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`, { signal: controller.signal });
+    const res = await fetch(
+      `http://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`,
+      { signal: controller.signal }
+    );
     clearTimeout(timeout);
     if (!res.ok) return [];
     const json = (await res.json()) as any;
     return json.hits.map((item: any) => ({
       title: item.title,
       url: item.url || `https://news.ycombinator.com/item?id=${item.objectID}`,
-      source: "hacker-news",
+      source: 'hacker-news',
       score: item.points,
       publishedAt: item.created_at,
     }));
   } catch (e) {
-    logger.error({ error: e, query }, "Failed to fetch from HN");
+    logger.error({ error: e, query }, 'Failed to fetch from HN');
     return [];
   }
 }
@@ -652,59 +646,50 @@ async function fetchFromHN(query: string): Promise<RawTrendItem[]> {
  */
 export async function fetchTechTrends(
   _userId: string,
-  techStack: string[],
-): Promise<
-  Array<{ title: string; summary: string; url?: string; relevance: number }>
-> {
-  logger.info({ techStack }, "Fetching tech trends");
+  techStack: string[]
+): Promise<Array<{ title: string; summary: string; url?: string; relevance: number }>> {
+  logger.info({ techStack }, 'Fetching tech trends');
 
   if (!techStack || techStack.length === 0) {
     return [];
   }
 
   // Parallel fetch for all technologies
-  const allPromises = techStack.flatMap((tech) => [
-    fetchFromDevTo(tech),
-    fetchFromHN(tech),
-  ]);
+  const allPromises = techStack.flatMap((tech) => [fetchFromDevTo(tech), fetchFromHN(tech)]);
 
   const results = await Promise.allSettled(allPromises);
   const rawItems: RawTrendItem[] = [];
 
   for (const res of results) {
-    if (res.status === "fulfilled") {
+    if (res.status === 'fulfilled') {
       rawItems.push(...res.value);
     }
   }
 
   // Deduplicate by URL
-  const uniqueItems = Array.from(
-    new Map(rawItems.map((item) => [item.url, item])).values(),
-  );
+  const uniqueItems = Array.from(new Map(rawItems.map((item) => [item.url, item])).values());
 
   if (uniqueItems.length === 0) {
     return [];
   }
 
   // Limit input to LLM to top 20 items to save context
-  const topItems = uniqueItems
-    .sort((a, b) => (b.score || 0) - (a.score || 0))
-    .slice(0, 20);
+  const topItems = uniqueItems.sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 20);
 
   // Construct Prompt
   const prompt = `
-    You are a tech trend analyst. I have a list of recent articles/stories for a developer interested in: ${techStack.join(", ")}.
+    You are a tech trend analyst. I have a list of recent articles/stories for a developer interested in: ${techStack.join(', ')}.
 
     Here are the top stories:
     ${JSON.stringify(
-    topItems.map((i) => ({
-      title: i.title,
-      source: i.source,
-      desc: i.summary,
-    })),
-    null,
-    2,
-  )}
+      topItems.map((i) => ({
+        title: i.title,
+        source: i.source,
+        desc: i.summary,
+      })),
+      null,
+      2
+    )}
 
     Please select the top 5 most relevant and interesting items.
     For each item, provide:
@@ -717,18 +702,22 @@ export async function fetchTechTrends(
   `;
 
   // Call LLM
-  const { text, error } = await getCompletion({
-    system: "You are a helpful tech trend analyst.", messages: [{ role: "user", content: prompt }],
-    model: 'nvidia/llama-3.1-nemotron-70b-instruct',
-    max_tokens: 1000,
-  }, { provider: 'nim' });
+  const { text, error } = await getCompletion(
+    {
+      system: 'You are a helpful tech trend analyst.',
+      messages: [{ role: 'user', content: prompt }],
+      model: 'nvidia/llama-3.1-nemotron-70b-instruct',
+      max_tokens: 1000,
+    },
+    { provider: 'nim' }
+  );
 
   if (error || !text) {
-    logger.error({ error }, "Failed to generate trend summary with LLM");
+    logger.error({ error }, 'Failed to generate trend summary with LLM');
     // Fallback: return raw items without summary if LLM fails
     return topItems.slice(0, 5).map((i) => ({
       title: i.title,
-      summary: i.summary || "No summary available",
+      summary: i.summary || 'No summary available',
       url: i.url,
       relevance: 0.5,
     }));
@@ -736,7 +725,10 @@ export async function fetchTechTrends(
 
   try {
     // Clean potential markdown blocks
-    let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    let cleanText = text
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
     // Try to find array bracket start/end
     const start = cleanText.indexOf('[');
     const end = cleanText.lastIndexOf(']');
@@ -744,14 +736,18 @@ export async function fetchTechTrends(
       cleanText = cleanText.substring(start, end + 1);
     }
 
-    const suggestions = JSON.parse(cleanText) as Array<{ title: string; summary: string; relevance: number }>;
+    const suggestions = JSON.parse(cleanText) as Array<{
+      title: string;
+      summary: string;
+      relevance: number;
+    }>;
 
     // Merge back URLs
     return suggestions
       .map((s) => {
         // Find original item by title (fuzzy match might be safer but trying exact first)
         const original = topItems.find(
-          (i) => i.title.includes(s.title) || s.title.includes(i.title),
+          (i) => i.title.includes(s.title) || s.title.includes(i.title)
         );
         return {
           ...s,
@@ -760,10 +756,10 @@ export async function fetchTechTrends(
       })
       .filter((s) => s.url);
   } catch (e) {
-    logger.error({ error: e, text }, "Failed to parse LLM response for trends");
+    logger.error({ error: e, text }, 'Failed to parse LLM response for trends');
     return topItems.slice(0, 5).map((i) => ({
       title: i.title,
-      summary: i.summary || "No summary available",
+      summary: i.summary || 'No summary available',
       url: i.url,
       relevance: 0.5,
     }));
@@ -773,16 +769,13 @@ export async function fetchTechTrends(
 /**
  * Schedule trend check
  */
-export async function scheduleTrendCheck(
-  userId: string,
-  techStack: string[],
-): Promise<void> {
+export async function scheduleTrendCheck(userId: string, techStack: string[]): Promise<void> {
   if (!isAgentRunning(userId)) {
     return;
   }
 
-  await queueAgentTask(userId, "anticipatory", {
-    type: "trend_check",
+  await queueAgentTask(userId, 'anticipatory', {
+    type: 'trend_check',
     techStack,
   });
 }
@@ -793,7 +786,7 @@ export async function scheduleTrendCheck(
  * Create a new insight
  */
 async function createInsight(
-  input: Omit<AnticipatoryInsight, "id" | "createdAt">,
+  input: Omit<AnticipatoryInsight, 'id' | 'createdAt'>
 ): Promise<AnticipatoryInsight> {
   const insight: AnticipatoryInsight = {
     id: `insight_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -813,15 +806,15 @@ async function createInsight(
 
   await writeAuditLog({
     userId: input.userId,
-    action: "anticipatory.insight_created",
-    category: "ai",
+    action: 'anticipatory.insight_created',
+    category: 'ai',
     target: input.title,
     metadata: { category: input.category, severity: input.severity },
   });
 
   logger.info(
     { userId: input.userId, insightId: insight.id, category: input.category },
-    "Anticipatory insight created",
+    'Anticipatory insight created'
   );
 
   return insight;
@@ -837,10 +830,7 @@ export function getUserInsights(userId: string): AnticipatoryInsight[] {
 /**
  * Acknowledge an insight
  */
-export async function acknowledgeInsight(
-  userId: string,
-  insightId: string,
-): Promise<void> {
+export async function acknowledgeInsight(userId: string, insightId: string): Promise<void> {
   const insights = userInsights.get(userId);
   if (!insights) return;
 
@@ -853,10 +843,7 @@ export async function acknowledgeInsight(
 /**
  * Mark insight as actioned
  */
-export async function markInsightActioned(
-  userId: string,
-  insightId: string,
-): Promise<void> {
+export async function markInsightActioned(userId: string, insightId: string): Promise<void> {
   const insights = userInsights.get(userId);
   if (!insights) return;
 
@@ -874,9 +861,7 @@ export function clearOldInsights(userId: string, maxAgeDays: number = 7): void {
   if (!insights) return;
 
   const cutoff = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000;
-  const filtered = insights.filter(
-    (i) => new Date(i.createdAt).getTime() > cutoff,
-  );
+  const filtered = insights.filter((i) => new Date(i.createdAt).getTime() > cutoff);
   userInsights.set(userId, filtered);
 }
 
@@ -888,14 +873,14 @@ export function clearOldInsights(userId: string, maxAgeDays: number = 7): void {
 export async function runAnticipatoryChecks(
   userId: string,
   workspacePath?: string,
-  techStack?: string[],
+  techStack?: string[]
 ): Promise<{
   codeIssues: CodeScanResult | null;
   projectHealth: ProjectHealthScore | null;
   predictions: UserPatternPrediction | null;
   suggestions: Array<{ type: string; message: string; action?: string }>;
 }> {
-  logger.info({ userId }, "Running anticipatory checks");
+  logger.info({ userId }, 'Running anticipatory checks');
 
   let codeIssues: CodeScanResult | null = null;
   let projectHealth: ProjectHealthScore | null = null;
@@ -930,17 +915,17 @@ export { createInsight };
  */
 async function getTestCoverage(workspacePath: string): Promise<number> {
   try {
-    const lcovPath = path.join(workspacePath, "coverage", "lcov.info");
-    const content = await fs.readFile(lcovPath, "utf-8");
+    const lcovPath = path.join(workspacePath, 'coverage', 'lcov.info');
+    const content = await fs.readFile(lcovPath, 'utf-8');
 
     let totalLines = 0;
     let coveredLines = 0;
 
-    const lines = content.split("\n");
+    const lines = content.split('\n');
     for (const line of lines) {
-      if (line.startsWith("LF:")) {
+      if (line.startsWith('LF:')) {
         totalLines += parseInt(line.substring(3), 10);
-      } else if (line.startsWith("LH:")) {
+      } else if (line.startsWith('LH:')) {
         coveredLines += parseInt(line.substring(3), 10);
       }
     }
@@ -958,10 +943,9 @@ async function getTestCoverage(workspacePath: string): Promise<number> {
  */
 async function getDocsFreshness(workspacePath: string): Promise<number> {
   try {
-    const { stdout } = await execAsync(
-      `git log -1 --format=%ct -- docs/ README.md`,
-      { cwd: workspacePath },
-    );
+    const { stdout } = await execAsync(`git log -1 --format=%ct -- docs/ README.md`, {
+      cwd: workspacePath,
+    });
 
     if (!stdout || !stdout.trim()) {
       return 0; // No commits found or not a git repo for docs
@@ -993,8 +977,8 @@ async function getTechDebt(workspacePath: string): Promise<number> {
     // But pipe to wc -l usually masks grep exit code unless pipefail is set
     const { stdout: todoCount } = await execAsync(
       `grep -r "TODO" src --exclude-dir=node_modules --exclude-dir=dist | wc -l`,
-      { cwd: workspacePath },
-    ).catch(() => ({ stdout: "0" }));
+      { cwd: workspacePath }
+    ).catch(() => ({ stdout: '0' }));
 
     const todos = parseInt(todoCount.trim(), 10) || 0;
 
@@ -1002,9 +986,9 @@ async function getTechDebt(workspacePath: string): Promise<number> {
     score -= Math.min(20, Math.floor(todos / 5));
 
     // 2. Check lint output if available
-    const lintPath = path.join(workspacePath, "lint_output.txt");
+    const lintPath = path.join(workspacePath, 'lint_output.txt');
     try {
-      const lintContent = await fs.readFile(lintPath, "utf-8");
+      const lintContent = await fs.readFile(lintPath, 'utf-8');
       const errors = (lintContent.match(/error/gi) || []).length;
       const warnings = (lintContent.match(/warning/gi) || []).length;
 
@@ -1044,7 +1028,7 @@ async function getSecurityScore(workspacePath: string): Promise<number> {
   try {
     // pnpm audit --json --prod
     // Increase maxBuffer for large audit outputs
-    const { stdout } = await execAsync("pnpm audit --json --prod", {
+    const { stdout } = await execAsync('pnpm audit --json --prod', {
       cwd: workspacePath,
       maxBuffer: 1024 * 1024 * 10,
     });

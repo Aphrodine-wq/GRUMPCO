@@ -2,32 +2,32 @@
  * Skill management tool definitions
  */
 
-import { z } from "zod";
-import type { Tool } from "../types.js";
+import { z } from 'zod';
+import type { Tool } from '../types.js';
 
 // ============================================================================
 // SKILL CREATE TOOL
 // ============================================================================
 
 export const skillCreateInputSchema = z.object({
-  name: z.string().describe("Unique skill name"),
-  description: z.string().describe("Skill description"),
+  name: z.string().describe('Unique skill name'),
+  description: z.string().describe('Skill description'),
   tools: z.array(z.record(z.unknown())).optional().default([]),
   prompts: z.record(z.string()).optional().default({}),
 });
 
 export const skillCreateTool: Tool = {
-  name: "skill_create",
-  description: "Create a new user skill.",
+  name: 'skill_create',
+  description: 'Create a new user skill.',
   input_schema: {
-    type: "object",
+    type: 'object',
     properties: {
-      name: { type: "string", description: "Skill name" },
-      description: { type: "string", description: "Skill description" },
-      tools: { type: "array", description: "Tool definitions" },
-      prompts: { type: "object", description: "System prompts" },
+      name: { type: 'string', description: 'Skill name' },
+      description: { type: 'string', description: 'Skill description' },
+      tools: { type: 'array', description: 'Tool definitions' },
+      prompts: { type: 'object', description: 'System prompts' },
     },
-    required: ["name", "description"],
+    required: ['name', 'description'],
   },
 };
 
@@ -36,7 +36,7 @@ export const skillCreateTool: Tool = {
 // ============================================================================
 
 export const skillEditInputSchema = z.object({
-  skillId: z.string().describe("Skill ID"),
+  skillId: z.string().describe('Skill ID'),
   updates: z.object({
     name: z.string().optional(),
     description: z.string().optional(),
@@ -46,15 +46,15 @@ export const skillEditInputSchema = z.object({
 });
 
 export const skillEditTool: Tool = {
-  name: "skill_edit",
-  description: "Edit an existing skill.",
+  name: 'skill_edit',
+  description: 'Edit an existing skill.',
   input_schema: {
-    type: "object",
+    type: 'object',
     properties: {
-      skillId: { type: "string", description: "Skill ID" },
-      updates: { type: "object", description: "Fields to update" },
+      skillId: { type: 'string', description: 'Skill ID' },
+      updates: { type: 'object', description: 'Fields to update' },
     },
-    required: ["skillId", "updates"],
+    required: ['skillId', 'updates'],
   },
 };
 
@@ -63,20 +63,20 @@ export const skillEditTool: Tool = {
 // ============================================================================
 
 export const skillRunTestInputSchema = z.object({
-  skillId: z.string().describe("Skill ID to test"),
+  skillId: z.string().describe('Skill ID to test'),
   input: z.record(z.unknown()).optional().default({}),
 });
 
 export const skillRunTestTool: Tool = {
-  name: "skill_run_test",
-  description: "Run a skill test.",
+  name: 'skill_run_test',
+  description: 'Run a skill test.',
   input_schema: {
-    type: "object",
+    type: 'object',
     properties: {
-      skillId: { type: "string", description: "Skill ID" },
-      input: { type: "object", description: "Test input" },
+      skillId: { type: 'string', description: 'Skill ID' },
+      input: { type: 'object', description: 'Test input' },
     },
-    required: ["skillId"],
+    required: ['skillId'],
   },
 };
 
@@ -85,9 +85,9 @@ export const skillRunTestTool: Tool = {
 // ============================================================================
 
 export const skillListTool: Tool = {
-  name: "skill_list",
-  description: "List all available skills.",
-  input_schema: { type: "object", properties: {} },
+  name: 'skill_list',
+  description: 'List all available skills.',
+  input_schema: { type: 'object', properties: {} },
 };
 
 // ============================================================================

@@ -8,23 +8,20 @@ export interface CachedRagContext {
   sources?: Array<{ source: string; type: string }>;
 }
 
-const prefetchCache = new Map<
-  string,
-  { result: CachedRagContext; expiresAt: number }
->();
+const prefetchCache = new Map<string, { result: CachedRagContext; expiresAt: number }>();
 const CACHE_TTL_MS = 60_000;
 
 export function cacheKey(
   query: string,
-  options?: { types?: string[]; namespace?: string },
+  options?: { types?: string[]; namespace?: string }
 ): string {
-  const opts = options ? JSON.stringify(options) : "";
+  const opts = options ? JSON.stringify(options) : '';
   return `${query.trim().toLowerCase()}|${opts}`;
 }
 
 export function getFromPrefetchCache(
   query: string,
-  options?: { types?: string[]; namespace?: string },
+  options?: { types?: string[]; namespace?: string }
 ): CachedRagContext | null {
   const key = cacheKey(query, options);
   const cached = prefetchCache.get(key);
@@ -36,7 +33,7 @@ export function getFromPrefetchCache(
 export function setPrefetchCache(
   query: string,
   result: CachedRagContext,
-  options?: { types?: string[]; namespace?: string },
+  options?: { types?: string[]; namespace?: string }
 ): void {
   const key = cacheKey(query, options);
   prefetchCache.set(key, { result, expiresAt: Date.now() + CACHE_TTL_MS });

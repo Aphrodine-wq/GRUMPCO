@@ -3,15 +3,15 @@
  * Provides unified interface for session storage (SQLite/Redis)
  */
 
-import { getDatabase } from "../../db/database.js";
-import { getRedisClient, isRedisConnected } from "../infra/redis.js";
-import logger from "../../middleware/logger.js";
-import type { GenerationSession } from "../../types/agents.js";
-import type { ShipSession } from "../../types/ship.js";
-import type { Plan } from "../../types/plan.js";
-import type { SpecSession } from "../../types/spec.js";
+import { getDatabase } from '../../db/database.js';
+import { getRedisClient, isRedisConnected } from '../infra/redis.js';
+import logger from '../../middleware/logger.js';
+import type { GenerationSession } from '../../types/agents.js';
+import type { ShipSession } from '../../types/ship.js';
+import type { Plan } from '../../types/plan.js';
+import type { SpecSession } from '../../types/spec.js';
 
-export type StorageType = "sqlite" | "redis" | "auto";
+export type StorageType = 'sqlite' | 'redis' | 'auto';
 
 export interface SessionStorage {
   saveSession(session: GenerationSession): Promise<void>;
@@ -90,10 +90,10 @@ class SQLiteSessionStorage implements SessionStorage {
  */
 class RedisSessionStorage implements SessionStorage {
   private redis = getRedisClient();
-  private readonly SESSION_PREFIX = "session:";
-  private readonly SHIP_SESSION_PREFIX = "ship:";
-  private readonly PLAN_PREFIX = "plan:";
-  private readonly SPEC_PREFIX = "spec:";
+  private readonly SESSION_PREFIX = 'session:';
+  private readonly SHIP_SESSION_PREFIX = 'ship:';
+  private readonly PLAN_PREFIX = 'plan:';
+  private readonly SPEC_PREFIX = 'spec:';
   private readonly SESSION_TTL = 86400; // 24 hours in seconds
 
   private getSessionKey(sessionId: string): string {
@@ -133,9 +133,7 @@ class RedisSessionStorage implements SessionStorage {
 
   async listSessions(limit = 100): Promise<string[]> {
     const keys = await this.redis.keys(`${this.SESSION_PREFIX}*`);
-    return keys
-      .slice(0, limit)
-      .map((key) => key.replace(this.SESSION_PREFIX, ""));
+    return keys.slice(0, limit).map((key) => key.replace(this.SESSION_PREFIX, ''));
   }
 
   async saveShipSession(session: ShipSession): Promise<void> {
@@ -186,31 +184,31 @@ class RedisSessionStorage implements SessionStorage {
  */
 let storageInstance: SessionStorage | null = null;
 
-export function getSessionStorage(type: StorageType = "auto"): SessionStorage {
+export function getSessionStorage(type: StorageType = 'auto'): SessionStorage {
   if (storageInstance) {
     return storageInstance;
   }
 
   // Auto-detect storage type
-  if (type === "auto") {
+  if (type === 'auto') {
     const useRedis =
-      process.env.SESSION_STORAGE === "redis" ||
-      (process.env.REDIS_HOST && process.env.NODE_ENV === "production");
+      process.env.SESSION_STORAGE === 'redis' ||
+      (process.env.REDIS_HOST && process.env.NODE_ENV === 'production');
 
     if (useRedis) {
       // Check if Redis is available
       isRedisConnected()
         .then((connected) => {
           if (connected) {
-            logger.info("Using Redis for session storage");
+            logger.info('Using Redis for session storage');
             storageInstance = new RedisSessionStorage();
           } else {
-            logger.warn("Redis not available, falling back to SQLite");
+            logger.warn('Redis not available, falling back to SQLite');
             storageInstance = new SQLiteSessionStorage();
           }
         })
         .catch(() => {
-          logger.warn("Redis check failed, falling back to SQLite");
+          logger.warn('Redis check failed, falling back to SQLite');
           storageInstance = new SQLiteSessionStorage();
         });
 
@@ -219,7 +217,7 @@ export function getSessionStorage(type: StorageType = "auto"): SessionStorage {
     } else {
       storageInstance = new SQLiteSessionStorage();
     }
-  } else if (type === "redis") {
+  } else if (type === 'redis') {
     storageInstance = new RedisSessionStorage();
   } else {
     storageInstance = new SQLiteSessionStorage();
@@ -232,20 +230,15 @@ export function getSessionStorage(type: StorageType = "auto"): SessionStorage {
  * Initialize session storage
  */
 export async function initializeSessionStorage(
-  type: StorageType = "auto",
+  type: StorageType = 'auto'
 ): Promise<SessionStorage> {
   const storage = getSessionStorage(type);
 
   // If using Redis, verify connection
-  if (
-    type === "redis" ||
-    (type === "auto" && process.env.SESSION_STORAGE === "redis")
-  ) {
+  if (type === 'redis' || (type === 'auto' && process.env.SESSION_STORAGE === 'redis')) {
     const connected = await isRedisConnected();
     if (!connected) {
-      logger.warn(
-        "Redis not connected, session storage may not work correctly",
-      );
+      logger.warn('Redis not connected, session storage may not work correctly');
     }
   }
 

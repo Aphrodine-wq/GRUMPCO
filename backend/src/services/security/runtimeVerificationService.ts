@@ -10,13 +10,13 @@
  * @module services/runtimeVerificationService
  */
 
-import { spawn, type ChildProcess } from "child_process";
-import { promises as fs } from "fs";
-import path from "path";
-import http from "http";
-import logger from "../../middleware/logger.js";
-import { getGuardrailsConfig } from "../../config/guardrailsConfig.js";
-import { writeAuditLog } from "./auditLogService.js";
+import { spawn, type ChildProcess } from 'child_process';
+import { promises as fs } from 'fs';
+import path from 'path';
+import http from 'http';
+import logger from '../../middleware/logger.js';
+import { getGuardrailsConfig } from '../../config/guardrailsConfig.js';
+import { writeAuditLog } from './auditLogService.js';
 
 // ============================================================================
 // TYPES
@@ -109,7 +109,7 @@ export interface FullVerificationResult {
  */
 export async function verifyNpmInstall(
   workspaceRoot: string,
-  timeoutMs?: number,
+  timeoutMs?: number
 ): Promise<VerificationResult> {
   const config = getGuardrailsConfig();
   const startTime = Date.now();
@@ -119,34 +119,28 @@ export async function verifyNpmInstall(
   if (!config.runtimeVerification.verifyNpmInstall) {
     return {
       passed: true,
-      message: "npm install verification skipped (disabled in config)",
+      message: 'npm install verification skipped (disabled in config)',
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: "Disabled in guardrails config",
+      skipReason: 'Disabled in guardrails config',
     };
   }
 
   // Check if package.json exists
-  const packageJsonPath = path.join(workspaceRoot, "package.json");
+  const packageJsonPath = path.join(workspaceRoot, 'package.json');
   try {
     await fs.access(packageJsonPath);
   } catch {
     return {
       passed: true,
-      message: "npm install skipped (no package.json found)",
+      message: 'npm install skipped (no package.json found)',
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: "No package.json found",
+      skipReason: 'No package.json found',
     };
   }
 
-  return runCommand(
-    "npm",
-    ["install", "--prefer-offline"],
-    workspaceRoot,
-    timeout,
-    "npm install",
-  );
+  return runCommand('npm', ['install', '--prefer-offline'], workspaceRoot, timeout, 'npm install');
 }
 
 /**
@@ -154,32 +148,32 @@ export async function verifyNpmInstall(
  */
 export async function verifyPnpmInstall(
   workspaceRoot: string,
-  timeoutMs?: number,
+  timeoutMs?: number
 ): Promise<VerificationResult> {
   const config = getGuardrailsConfig();
   const startTime = Date.now();
   const timeout = timeoutMs ?? config.runtimeVerification.npmInstallTimeoutMs;
 
   // Check if pnpm-lock.yaml exists
-  const lockPath = path.join(workspaceRoot, "pnpm-lock.yaml");
+  const lockPath = path.join(workspaceRoot, 'pnpm-lock.yaml');
   try {
     await fs.access(lockPath);
   } catch {
     return {
       passed: true,
-      message: "pnpm install skipped (no pnpm-lock.yaml found)",
+      message: 'pnpm install skipped (no pnpm-lock.yaml found)',
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: "No pnpm-lock.yaml found",
+      skipReason: 'No pnpm-lock.yaml found',
     };
   }
 
   return runCommand(
-    "pnpm",
-    ["install", "--frozen-lockfile"],
+    'pnpm',
+    ['install', '--frozen-lockfile'],
     workspaceRoot,
     timeout,
-    "pnpm install",
+    'pnpm install'
   );
 }
 
@@ -188,22 +182,21 @@ export async function verifyPnpmInstall(
  */
 export async function verifyPackageInstall(
   workspaceRoot: string,
-  timeoutMs?: number,
+  timeoutMs?: number
 ): Promise<VerificationResult> {
   // Detect package manager by lock file
   const lockFiles = [
-    { file: "pnpm-lock.yaml", cmd: "pnpm", args: ["install"] },
-    { file: "yarn.lock", cmd: "yarn", args: ["install", "--frozen-lockfile"] },
-    { file: "package-lock.json", cmd: "npm", args: ["ci"] },
-    { file: "package.json", cmd: "npm", args: ["install"] }, // Fallback
+    { file: 'pnpm-lock.yaml', cmd: 'pnpm', args: ['install'] },
+    { file: 'yarn.lock', cmd: 'yarn', args: ['install', '--frozen-lockfile'] },
+    { file: 'package-lock.json', cmd: 'npm', args: ['ci'] },
+    { file: 'package.json', cmd: 'npm', args: ['install'] }, // Fallback
   ];
 
   for (const { file, cmd, args } of lockFiles) {
     try {
       await fs.access(path.join(workspaceRoot, file));
       const config = getGuardrailsConfig();
-      const timeout =
-        timeoutMs ?? config.runtimeVerification.npmInstallTimeoutMs;
+      const timeout = timeoutMs ?? config.runtimeVerification.npmInstallTimeoutMs;
       return runCommand(cmd, args, workspaceRoot, timeout, `${cmd} install`);
     } catch {
       // Try next lock file
@@ -212,10 +205,10 @@ export async function verifyPackageInstall(
 
   return {
     passed: true,
-    message: "Package install skipped (no package.json found)",
+    message: 'Package install skipped (no package.json found)',
     durationMs: 0,
     skipped: true,
-    skipReason: "No package.json found",
+    skipReason: 'No package.json found',
   };
 }
 
@@ -231,30 +224,29 @@ export async function verifyTests(
   options?: {
     testCommand?: string;
     timeoutMs?: number;
-  },
+  }
 ): Promise<VerificationResult & { testResult?: TestResult }> {
   const config = getGuardrailsConfig();
   const startTime = Date.now();
-  const timeout =
-    options?.timeoutMs ?? config.runtimeVerification.testTimeoutMs;
+  const timeout = options?.timeoutMs ?? config.runtimeVerification.testTimeoutMs;
 
   // Check if test verification is enabled
   if (!config.runtimeVerification.runTests) {
     return {
       passed: true,
-      message: "Test verification skipped (disabled in config)",
+      message: 'Test verification skipped (disabled in config)',
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: "Disabled in guardrails config",
+      skipReason: 'Disabled in guardrails config',
     };
   }
 
   // Check if package.json exists and has test script
-  const packageJsonPath = path.join(workspaceRoot, "package.json");
+  const packageJsonPath = path.join(workspaceRoot, 'package.json');
   let hasTestScript = false;
 
   try {
-    const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf-8"));
+    const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
     hasTestScript = !!(
       packageJson.scripts?.test &&
       packageJson.scripts.test !== 'echo "Error: no test specified" && exit 1'
@@ -266,27 +258,21 @@ export async function verifyTests(
   if (!hasTestScript && !options?.testCommand) {
     return {
       passed: true,
-      message: "Test verification skipped (no test script found)",
+      message: 'Test verification skipped (no test script found)',
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: "No test script in package.json",
+      skipReason: 'No test script in package.json',
     };
   }
 
   // Run tests
-  const testCmd = options?.testCommand ?? "npm test";
-  const [cmd, ...args] = testCmd.split(" ");
+  const testCmd = options?.testCommand ?? 'npm test';
+  const [cmd, ...args] = testCmd.split(' ');
 
-  const result = await runCommand(
-    cmd,
-    args,
-    workspaceRoot,
-    timeout,
-    "test execution",
-  );
+  const result = await runCommand(cmd, args, workspaceRoot, timeout, 'test execution');
 
   // Parse test results from output
-  const testResult = parseTestOutput(result.stdout ?? "", result.stderr ?? "");
+  const testResult = parseTestOutput(result.stdout ?? '', result.stderr ?? '');
 
   // Check pass rate
   const minPassRate = config.runtimeVerification.minTestPassRate;
@@ -309,7 +295,7 @@ export async function verifyTests(
  * Supports Jest, Mocha, Vitest output formats
  */
 function parseTestOutput(stdout: string, stderr: string): TestResult {
-  const output = stdout + "\n" + stderr;
+  const output = stdout + '\n' + stderr;
 
   // Default result
   let total = 0;
@@ -320,12 +306,12 @@ function parseTestOutput(stdout: string, stderr: string): TestResult {
 
   // Jest format: Tests: X passed, Y failed, Z total
   const jestMatch = output.match(
-    /Tests:\s+(?:(\d+)\s+passed,?\s*)?(?:(\d+)\s+failed,?\s*)?(?:(\d+)\s+skipped,?\s*)?(\d+)\s+total/i,
+    /Tests:\s+(?:(\d+)\s+passed,?\s*)?(?:(\d+)\s+failed,?\s*)?(?:(\d+)\s+skipped,?\s*)?(\d+)\s+total/i
   );
   if (jestMatch) {
-    passed = parseInt(jestMatch[1] ?? "0", 10);
-    failed = parseInt(jestMatch[2] ?? "0", 10);
-    skipped = parseInt(jestMatch[3] ?? "0", 10);
+    passed = parseInt(jestMatch[1] ?? '0', 10);
+    failed = parseInt(jestMatch[2] ?? '0', 10);
+    skipped = parseInt(jestMatch[3] ?? '0', 10);
     total = parseInt(jestMatch[4], 10);
   }
 
@@ -333,7 +319,7 @@ function parseTestOutput(stdout: string, stderr: string): TestResult {
   const vitestMatch = output.match(/(\d+)\s+passed.*?(\d+)?\s*failed/i);
   if (vitestMatch && !jestMatch) {
     passed = parseInt(vitestMatch[1], 10);
-    failed = parseInt(vitestMatch[2] ?? "0", 10);
+    failed = parseInt(vitestMatch[2] ?? '0', 10);
     total = passed + failed;
   }
 
@@ -341,7 +327,7 @@ function parseTestOutput(stdout: string, stderr: string): TestResult {
   const mochaMatch = output.match(/(\d+)\s+passing.*?(\d+)?\s*failing/is);
   if (mochaMatch && !jestMatch && !vitestMatch) {
     passed = parseInt(mochaMatch[1], 10);
-    failed = parseInt(mochaMatch[2] ?? "0", 10);
+    failed = parseInt(mochaMatch[2] ?? '0', 10);
     total = passed + failed;
   }
 
@@ -352,7 +338,7 @@ function parseTestOutput(stdout: string, stderr: string): TestResult {
   }
 
   // If we couldn't parse, assume based on exit code parsing would happen elsewhere
-  if (total === 0 && output.includes("passed") && !output.includes("failed")) {
+  if (total === 0 && output.includes('passed') && !output.includes('failed')) {
     passed = 1;
     total = 1;
   }
@@ -382,31 +368,30 @@ export async function verifyAppStart(
     startCommand?: string;
     port?: number;
     timeoutMs?: number;
-  },
+  }
 ): Promise<VerificationResult> {
   const config = getGuardrailsConfig();
   const startTime = Date.now();
-  const timeout =
-    options?.timeoutMs ?? config.runtimeVerification.appStartTimeoutMs;
+  const timeout = options?.timeoutMs ?? config.runtimeVerification.appStartTimeoutMs;
   const port = options?.port ?? config.runtimeVerification.appVerifyPort;
 
   // Check if app startup verification is enabled
   if (!config.runtimeVerification.verifyAppStart) {
     return {
       passed: true,
-      message: "App startup verification skipped (disabled in config)",
+      message: 'App startup verification skipped (disabled in config)',
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: "Disabled in guardrails config",
+      skipReason: 'Disabled in guardrails config',
     };
   }
 
   // Check if package.json has start script
-  const packageJsonPath = path.join(workspaceRoot, "package.json");
+  const packageJsonPath = path.join(workspaceRoot, 'package.json');
   let hasStartScript = false;
 
   try {
-    const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf-8"));
+    const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
     hasStartScript = !!(packageJson.scripts?.start || packageJson.scripts?.dev);
   } catch {
     // No package.json
@@ -415,19 +400,19 @@ export async function verifyAppStart(
   if (!hasStartScript && !options?.startCommand) {
     return {
       passed: true,
-      message: "App startup verification skipped (no start script found)",
+      message: 'App startup verification skipped (no start script found)',
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: "No start script in package.json",
+      skipReason: 'No start script in package.json',
     };
   }
 
-  const startCmd = options?.startCommand ?? "npm start";
-  const [cmd, ...args] = startCmd.split(" ");
+  const startCmd = options?.startCommand ?? 'npm start';
+  const [cmd, ...args] = startCmd.split(' ');
 
   let proc: ChildProcess | null = null;
-  let stdout = "";
-  let stderr = "";
+  let stdout = '';
+  let stderr = '';
 
   return new Promise((resolve) => {
     proc = spawn(cmd, args, {
@@ -436,11 +421,11 @@ export async function verifyAppStart(
       detached: false,
     });
 
-    proc.stdout?.on("data", (data) => {
+    proc.stdout?.on('data', (data) => {
       stdout += data.toString();
     });
 
-    proc.stderr?.on("data", (data) => {
+    proc.stderr?.on('data', (data) => {
       stderr += data.toString();
     });
 
@@ -450,7 +435,7 @@ export async function verifyAppStart(
 
     const checkPort = async () => {
       if (elapsed >= timeout) {
-        proc?.kill("SIGTERM");
+        proc?.kill('SIGTERM');
         resolve({
           passed: false,
           message: `App did not start within ${timeout}ms`,
@@ -467,7 +452,7 @@ export async function verifyAppStart(
         if (isListening) {
           // Try to make a request
           const responds = await checkHttpResponse(port);
-          proc?.kill("SIGTERM");
+          proc?.kill('SIGTERM');
 
           resolve({
             passed: responds,
@@ -492,7 +477,7 @@ export async function verifyAppStart(
     // Start polling after a brief delay
     setTimeout(checkPort, 1000);
 
-    proc.on("close", (code) => {
+    proc.on('close', (code) => {
       // Process exited before we could verify
       if (code !== 0) {
         resolve({
@@ -507,7 +492,7 @@ export async function verifyAppStart(
       }
     });
 
-    proc.on("error", (err) => {
+    proc.on('error', (err) => {
       resolve({
         passed: false,
         message: `Failed to start app: ${err.message}`,
@@ -523,14 +508,14 @@ export async function verifyAppStart(
  */
 async function checkPortListening(port: number): Promise<boolean> {
   return new Promise((resolve) => {
-    const socket = require("net").createConnection({ port, host: "localhost" });
+    const socket = require('net').createConnection({ port, host: 'localhost' });
 
-    socket.on("connect", () => {
+    socket.on('connect', () => {
       socket.destroy();
       resolve(true);
     });
 
-    socket.on("error", () => {
+    socket.on('error', () => {
       resolve(false);
     });
 
@@ -547,14 +532,14 @@ async function checkPortListening(port: number): Promise<boolean> {
 async function checkHttpResponse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const req = http.request(
-      { hostname: "localhost", port, path: "/", method: "GET", timeout: 3000 },
+      { hostname: 'localhost', port, path: '/', method: 'GET', timeout: 3000 },
       (res) => {
         resolve(res.statusCode !== undefined && res.statusCode < 500);
-      },
+      }
     );
 
-    req.on("error", () => resolve(false));
-    req.on("timeout", () => {
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => {
       req.destroy();
       resolve(false);
     });
@@ -575,19 +560,18 @@ export async function verifyBuild(
   options?: {
     buildCommand?: string;
     timeoutMs?: number;
-  },
+  }
 ): Promise<VerificationResult> {
   const config = getGuardrailsConfig();
   const startTime = Date.now();
-  const timeout =
-    options?.timeoutMs ?? config.runtimeVerification.testTimeoutMs;
+  const timeout = options?.timeoutMs ?? config.runtimeVerification.testTimeoutMs;
 
   // Check if package.json has build script
-  const packageJsonPath = path.join(workspaceRoot, "package.json");
+  const packageJsonPath = path.join(workspaceRoot, 'package.json');
   let hasBuildScript = false;
 
   try {
-    const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf-8"));
+    const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
     hasBuildScript = !!packageJson.scripts?.build;
   } catch {
     // No package.json
@@ -596,17 +580,17 @@ export async function verifyBuild(
   if (!hasBuildScript && !options?.buildCommand) {
     return {
       passed: true,
-      message: "Build verification skipped (no build script found)",
+      message: 'Build verification skipped (no build script found)',
       durationMs: Date.now() - startTime,
       skipped: true,
-      skipReason: "No build script in package.json",
+      skipReason: 'No build script in package.json',
     };
   }
 
-  const buildCmd = options?.buildCommand ?? "npm run build";
-  const [cmd, ...args] = buildCmd.split(" ");
+  const buildCmd = options?.buildCommand ?? 'npm run build';
+  const [cmd, ...args] = buildCmd.split(' ');
 
-  return runCommand(cmd, args, workspaceRoot, timeout, "build");
+  return runCommand(cmd, args, workspaceRoot, timeout, 'build');
 }
 
 // ============================================================================
@@ -617,24 +601,21 @@ export async function verifyBuild(
  * Run full runtime verification pipeline
  */
 export async function runFullVerification(
-  options: RuntimeVerificationOptions,
+  options: RuntimeVerificationOptions
 ): Promise<FullVerificationResult> {
   const startTime = Date.now();
   // Config is available via getGuardrailsConfig() in child functions
 
-  logger.info(
-    { workspaceRoot: options.workspaceRoot },
-    "Starting runtime verification",
-  );
+  logger.info({ workspaceRoot: options.workspaceRoot }, 'Starting runtime verification');
 
   // Step 1: npm install
   const npmResult = options.skipNpmInstall
     ? {
         passed: true,
-        message: "npm install skipped by option",
+        message: 'npm install skipped by option',
         durationMs: 0,
         skipped: true,
-        skipReason: "Skipped by caller",
+        skipReason: 'Skipped by caller',
       }
     : await verifyPackageInstall(options.workspaceRoot, options.npmTimeoutMs);
 
@@ -645,10 +626,10 @@ export async function runFullVerification(
       })
     : {
         passed: false,
-        message: "Build skipped (npm install failed)",
+        message: 'Build skipped (npm install failed)',
         durationMs: 0,
         skipped: true,
-        skipReason: "npm install failed",
+        skipReason: 'npm install failed',
       };
 
   // Step 3: Tests (if build passed or skipped successfully)
@@ -660,12 +641,10 @@ export async function runFullVerification(
         })
       : {
           passed: buildResult.passed || buildResult.skipped,
-          message: options.skipTests
-            ? "Tests skipped by option"
-            : "Tests skipped (build failed)",
+          message: options.skipTests ? 'Tests skipped by option' : 'Tests skipped (build failed)',
           durationMs: 0,
           skipped: true,
-          skipReason: options.skipTests ? "Skipped by caller" : "Build failed",
+          skipReason: options.skipTests ? 'Skipped by caller' : 'Build failed',
         };
 
   // Step 4: App startup (if requested and previous steps passed)
@@ -678,38 +657,32 @@ export async function runFullVerification(
         })
       : {
           passed: testResult.passed,
-          message: options.skipAppStart
-            ? "App startup skipped by option"
-            : "App startup skipped",
+          message: options.skipAppStart ? 'App startup skipped by option' : 'App startup skipped',
           durationMs: 0,
           skipped: true,
           skipReason: options.skipAppStart
-            ? "Skipped by caller"
-            : "Previous step failed or skipped",
+            ? 'Skipped by caller'
+            : 'Previous step failed or skipped',
         };
 
   const totalDurationMs = Date.now() - startTime;
-  const passed =
-    npmResult.passed &&
-    buildResult.passed &&
-    testResult.passed &&
-    appResult.passed;
+  const passed = npmResult.passed && buildResult.passed && testResult.passed && appResult.passed;
 
   const summary = [
-    `npm: ${npmResult.passed ? "PASS" : "FAIL"}`,
-    `build: ${buildResult.passed ? "PASS" : buildResult.skipped ? "SKIP" : "FAIL"}`,
-    `tests: ${testResult.passed ? "PASS" : testResult.skipped ? "SKIP" : "FAIL"}`,
-    `app: ${appResult.passed ? "PASS" : appResult.skipped ? "SKIP" : "FAIL"}`,
-  ].join(", ");
+    `npm: ${npmResult.passed ? 'PASS' : 'FAIL'}`,
+    `build: ${buildResult.passed ? 'PASS' : buildResult.skipped ? 'SKIP' : 'FAIL'}`,
+    `tests: ${testResult.passed ? 'PASS' : testResult.skipped ? 'SKIP' : 'FAIL'}`,
+    `app: ${appResult.passed ? 'PASS' : appResult.skipped ? 'SKIP' : 'FAIL'}`,
+  ].join(', ');
 
   // Audit log
   if (options.userId) {
     await writeAuditLog({
       userId: options.userId,
       action: passed
-        ? "guardrails.runtime_verification_passed"
-        : "guardrails.runtime_verification_failed",
-      category: "security",
+        ? 'guardrails.runtime_verification_passed'
+        : 'guardrails.runtime_verification_failed',
+      category: 'security',
       target: options.workspaceRoot,
       metadata: {
         passed,
@@ -729,7 +702,7 @@ export async function runFullVerification(
       summary,
       durationMs: totalDurationMs,
     },
-    "Runtime verification complete",
+    'Runtime verification complete'
   );
 
   return {
@@ -739,7 +712,7 @@ export async function runFullVerification(
     appStart: appResult,
     build: buildResult,
     totalDurationMs,
-    summary: `Runtime verification ${passed ? "PASSED" : "FAILED"}: ${summary}`,
+    summary: `Runtime verification ${passed ? 'PASSED' : 'FAILED'}: ${summary}`,
   };
 }
 
@@ -755,13 +728,13 @@ async function runCommand(
   args: string[],
   cwd: string,
   timeoutMs: number,
-  description: string,
+  description: string
 ): Promise<VerificationResult> {
   const startTime = Date.now();
 
   return new Promise((resolve) => {
-    let stdout = "";
-    let stderr = "";
+    let stdout = '';
+    let stderr = '';
     let timedOut = false;
 
     const proc = spawn(cmd, args, {
@@ -772,18 +745,18 @@ async function runCommand(
 
     const timer = setTimeout(() => {
       timedOut = true;
-      proc.kill("SIGTERM");
+      proc.kill('SIGTERM');
     }, timeoutMs);
 
-    proc.stdout.on("data", (data) => {
+    proc.stdout.on('data', (data) => {
       stdout += data.toString();
     });
 
-    proc.stderr.on("data", (data) => {
+    proc.stderr.on('data', (data) => {
       stderr += data.toString();
     });
 
-    proc.on("close", (code) => {
+    proc.on('close', (code) => {
       clearTimeout(timer);
       const durationMs = Date.now() - startTime;
 
@@ -813,7 +786,7 @@ async function runCommand(
       });
     });
 
-    proc.on("error", (err) => {
+    proc.on('error', (err) => {
       clearTimeout(timer);
       resolve({
         passed: false,

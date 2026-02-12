@@ -11,9 +11,9 @@
  * @module services/budgetEnforcementService
  */
 
-import logger from "../../middleware/logger.js";
-import { getGuardrailsConfig } from "../../config/guardrailsConfig.js";
-import { writeAuditLog } from "./auditLogService.js";
+import logger from '../../middleware/logger.js';
+import { getGuardrailsConfig } from '../../config/guardrailsConfig.js';
+import { writeAuditLog } from './auditLogService.js';
 
 // ============================================================================
 // TYPES
@@ -116,7 +116,7 @@ setInterval(
       }
     }
   },
-  60 * 60 * 1000,
+  60 * 60 * 1000
 );
 
 // ============================================================================
@@ -126,23 +126,23 @@ setInterval(
 // Cost per 1M tokens in cents for common models
 const MODEL_COSTS: Record<string, { input: number; output: number }> = {
   // OpenAI
-  "gpt-4-turbo": { input: 1000, output: 3000 },
-  "gpt-4": { input: 3000, output: 6000 },
-  "gpt-4o": { input: 500, output: 1500 },
-  "gpt-4o-mini": { input: 15, output: 60 },
-  "gpt-3.5-turbo": { input: 50, output: 150 },
+  'gpt-4-turbo': { input: 1000, output: 3000 },
+  'gpt-4': { input: 3000, output: 6000 },
+  'gpt-4o': { input: 500, output: 1500 },
+  'gpt-4o-mini': { input: 15, output: 60 },
+  'gpt-3.5-turbo': { input: 50, output: 150 },
 
   // Anthropic
-  "claude-3-opus": { input: 1500, output: 7500 },
-  "claude-3-sonnet": { input: 300, output: 1500 },
-  "claude-3-haiku": { input: 25, output: 125 },
-  "claude-3-5-sonnet": { input: 300, output: 1500 },
-  "claude-sonnet-4": { input: 300, output: 1500 },
+  'claude-3-opus': { input: 1500, output: 7500 },
+  'claude-3-sonnet': { input: 300, output: 1500 },
+  'claude-3-haiku': { input: 25, output: 125 },
+  'claude-3-5-sonnet': { input: 300, output: 1500 },
+  'claude-sonnet-4': { input: 300, output: 1500 },
 
   // Google
-  "gemini-pro": { input: 50, output: 150 },
-  "gemini-1.5-pro": { input: 125, output: 375 },
-  "gemini-1.5-flash": { input: 10, output: 30 },
+  'gemini-pro': { input: 50, output: 150 },
+  'gemini-1.5-pro': { input: 125, output: 375 },
+  'gemini-1.5-flash': { input: 10, output: 30 },
 
   // Default for unknown models
   default: { input: 100, output: 300 },
@@ -153,7 +153,7 @@ const MODEL_COSTS: Record<string, { input: number; output: number }> = {
  */
 export function estimateCost(usage: TokenUsage, model?: string): CostEstimate {
   // Find model cost (try partial match)
-  let modelCost = MODEL_COSTS["default"];
+  let modelCost = MODEL_COSTS['default'];
 
   if (model) {
     const lowerModel = model.toLowerCase();
@@ -186,7 +186,7 @@ export function estimateCost(usage: TokenUsage, model?: string): CostEstimate {
  */
 function getTracker(userId: string, sessionId: string): BudgetTracker {
   const key = `${userId}:${sessionId}`;
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split('T')[0];
 
   let tracker = budgetTrackers.get(key);
 
@@ -241,7 +241,7 @@ export function recordUsage(
   userId: string,
   sessionId: string,
   usage: TokenUsage,
-  model?: string,
+  model?: string
 ): BudgetCheckResult {
   const tracker = getTracker(userId, sessionId);
   const cost = estimateCost(usage, model);
@@ -277,26 +277,18 @@ export function recordUsage(
 /**
  * Check if request is within budget limits
  */
-export function checkBudgetLimits(
-  userId: string,
-  sessionId: string,
-): BudgetCheckResult {
+export function checkBudgetLimits(userId: string, sessionId: string): BudgetCheckResult {
   const config = getGuardrailsConfig();
   const limits = config.budgetLimits;
   const tracker = getTracker(userId, sessionId);
 
   // Calculate percentages
   const percentUsed = {
-    requestTokens:
-      (tracker.requestTokens.totalTokens / limits.maxTokensPerRequest) * 100,
-    sessionTokens:
-      (tracker.sessionTokens.totalTokens / limits.maxTokensPerSession) * 100,
-    dailyTokens:
-      (tracker.dailyTokens.totalTokens / limits.maxTokensPerUserDaily) * 100,
-    requestCost:
-      (tracker.requestCostCents / limits.maxCostPerRequestCents) * 100,
-    sessionCost:
-      (tracker.sessionCostCents / limits.maxCostPerSessionCents) * 100,
+    requestTokens: (tracker.requestTokens.totalTokens / limits.maxTokensPerRequest) * 100,
+    sessionTokens: (tracker.sessionTokens.totalTokens / limits.maxTokensPerSession) * 100,
+    dailyTokens: (tracker.dailyTokens.totalTokens / limits.maxTokensPerUserDaily) * 100,
+    requestCost: (tracker.requestCostCents / limits.maxCostPerRequestCents) * 100,
+    sessionCost: (tracker.sessionCostCents / limits.maxCostPerSessionCents) * 100,
     dailyCost: (tracker.dailyCostCents / limits.maxCostPerUserDailyCents) * 100,
   };
 
@@ -344,43 +336,43 @@ export function checkBudgetLimits(
 
   if (tracker.requestTokens.totalTokens > limits.maxTokensPerRequest) {
     violations.push(
-      `Request token limit exceeded (${tracker.requestTokens.totalTokens}/${limits.maxTokensPerRequest})`,
+      `Request token limit exceeded (${tracker.requestTokens.totalTokens}/${limits.maxTokensPerRequest})`
     );
   }
 
   if (tracker.sessionTokens.totalTokens > limits.maxTokensPerSession) {
     violations.push(
-      `Session token limit exceeded (${tracker.sessionTokens.totalTokens}/${limits.maxTokensPerSession})`,
+      `Session token limit exceeded (${tracker.sessionTokens.totalTokens}/${limits.maxTokensPerSession})`
     );
   }
 
   if (tracker.dailyTokens.totalTokens > limits.maxTokensPerUserDaily) {
     violations.push(
-      `Daily token limit exceeded (${tracker.dailyTokens.totalTokens}/${limits.maxTokensPerUserDaily})`,
+      `Daily token limit exceeded (${tracker.dailyTokens.totalTokens}/${limits.maxTokensPerUserDaily})`
     );
   }
 
   if (tracker.requestCostCents > limits.maxCostPerRequestCents) {
     violations.push(
-      `Request cost limit exceeded ($${(tracker.requestCostCents / 100).toFixed(2)}/$${(limits.maxCostPerRequestCents / 100).toFixed(2)})`,
+      `Request cost limit exceeded ($${(tracker.requestCostCents / 100).toFixed(2)}/$${(limits.maxCostPerRequestCents / 100).toFixed(2)})`
     );
   }
 
   if (tracker.sessionCostCents > limits.maxCostPerSessionCents) {
     violations.push(
-      `Session cost limit exceeded ($${(tracker.sessionCostCents / 100).toFixed(2)}/$${(limits.maxCostPerSessionCents / 100).toFixed(2)})`,
+      `Session cost limit exceeded ($${(tracker.sessionCostCents / 100).toFixed(2)}/$${(limits.maxCostPerSessionCents / 100).toFixed(2)})`
     );
   }
 
   if (tracker.dailyCostCents > limits.maxCostPerUserDailyCents) {
     violations.push(
-      `Daily cost limit exceeded ($${(tracker.dailyCostCents / 100).toFixed(2)}/$${(limits.maxCostPerUserDailyCents / 100).toFixed(2)})`,
+      `Daily cost limit exceeded ($${(tracker.dailyCostCents / 100).toFixed(2)}/$${(limits.maxCostPerUserDailyCents / 100).toFixed(2)})`
     );
   }
 
   if (violations.length > 0 && limits.hardCutoffEnabled) {
     result.allowed = false;
-    result.reason = violations.join("; ");
+    result.reason = violations.join('; ');
 
     logger.warn(
       {
@@ -389,7 +381,7 @@ export function checkBudgetLimits(
         violations,
         usage: tracker,
       },
-      "Budget limit exceeded",
+      'Budget limit exceeded'
     );
   }
 
@@ -397,39 +389,24 @@ export function checkBudgetLimits(
   const warnings: string[] = [];
   const warningThreshold = limits.warningThresholdPercent;
 
-  if (
-    percentUsed.requestTokens >= warningThreshold &&
-    percentUsed.requestTokens < 100
-  ) {
+  if (percentUsed.requestTokens >= warningThreshold && percentUsed.requestTokens < 100) {
     warnings.push(`Request tokens at ${percentUsed.requestTokens.toFixed(0)}%`);
   }
-  if (
-    percentUsed.sessionTokens >= warningThreshold &&
-    percentUsed.sessionTokens < 100
-  ) {
+  if (percentUsed.sessionTokens >= warningThreshold && percentUsed.sessionTokens < 100) {
     warnings.push(`Session tokens at ${percentUsed.sessionTokens.toFixed(0)}%`);
   }
-  if (
-    percentUsed.dailyTokens >= warningThreshold &&
-    percentUsed.dailyTokens < 100
-  ) {
+  if (percentUsed.dailyTokens >= warningThreshold && percentUsed.dailyTokens < 100) {
     warnings.push(`Daily tokens at ${percentUsed.dailyTokens.toFixed(0)}%`);
   }
-  if (
-    percentUsed.sessionCost >= warningThreshold &&
-    percentUsed.sessionCost < 100
-  ) {
+  if (percentUsed.sessionCost >= warningThreshold && percentUsed.sessionCost < 100) {
     warnings.push(`Session cost at ${percentUsed.sessionCost.toFixed(0)}%`);
   }
-  if (
-    percentUsed.dailyCost >= warningThreshold &&
-    percentUsed.dailyCost < 100
-  ) {
+  if (percentUsed.dailyCost >= warningThreshold && percentUsed.dailyCost < 100) {
     warnings.push(`Daily cost at ${percentUsed.dailyCost.toFixed(0)}%`);
   }
 
   if (warnings.length > 0) {
-    result.warning = `Approaching limits: ${warnings.join(", ")}`;
+    result.warning = `Approaching limits: ${warnings.join(', ')}`;
   }
 
   return result;
@@ -442,7 +419,7 @@ export function preCheckBudget(
   userId: string,
   sessionId: string,
   estimatedTokens: number,
-  model?: string,
+  model?: string
 ): BudgetCheckResult {
   const tracker = getTracker(userId, sessionId);
   const config = getGuardrailsConfig();
@@ -457,12 +434,9 @@ export function preCheckBudget(
   const estimatedCost = estimateCost(estimatedUsage, model);
 
   // Check if adding this would exceed limits
-  const projectedRequestTokens =
-    tracker.requestTokens.totalTokens + estimatedTokens;
-  const projectedSessionTokens =
-    tracker.sessionTokens.totalTokens + estimatedTokens;
-  const projectedDailyTokens =
-    tracker.dailyTokens.totalTokens + estimatedTokens;
+  const projectedRequestTokens = tracker.requestTokens.totalTokens + estimatedTokens;
+  const projectedSessionTokens = tracker.sessionTokens.totalTokens + estimatedTokens;
+  const projectedDailyTokens = tracker.dailyTokens.totalTokens + estimatedTokens;
   const projectedRequestCost = tracker.requestCostCents + estimatedCost.cents;
   const projectedSessionCost = tracker.sessionCostCents + estimatedCost.cents;
   const projectedDailyCost = tracker.dailyCostCents + estimatedCost.cents;
@@ -523,10 +497,10 @@ export async function getBudgetStatus(userId: string): Promise<{
   };
   let dailyCostCents = 0;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split('T')[0];
 
   for (const [key, tracker] of budgetTrackers.entries()) {
-    if (key.startsWith(userId + ":")) {
+    if (key.startsWith(userId + ':')) {
       sessions.set(tracker.sessionId, tracker);
 
       if (tracker.dailyResetDate === today) {
@@ -544,14 +518,11 @@ export async function getBudgetStatus(userId: string): Promise<{
 /**
  * Force reset daily budget for a user (admin function)
  */
-export async function resetDailyBudget(
-  userId: string,
-  adminId: string,
-): Promise<void> {
-  const today = new Date().toISOString().split("T")[0];
+export async function resetDailyBudget(userId: string, adminId: string): Promise<void> {
+  const today = new Date().toISOString().split('T')[0];
 
   for (const [key, tracker] of budgetTrackers.entries()) {
-    if (key.startsWith(userId + ":")) {
+    if (key.startsWith(userId + ':')) {
       tracker.dailyTokens = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
       tracker.dailyCostCents = 0;
       tracker.dailyResetDate = today;
@@ -560,13 +531,13 @@ export async function resetDailyBudget(
 
   await writeAuditLog({
     userId: adminId,
-    action: "guardrails.budget_reset",
-    category: "security",
+    action: 'guardrails.budget_reset',
+    category: 'security',
     target: userId,
-    metadata: { resetType: "daily" },
+    metadata: { resetType: 'daily' },
   });
 
-  logger.info({ userId, adminId }, "Daily budget reset for user");
+  logger.info({ userId, adminId }, 'Daily budget reset for user');
 }
 
 // ============================================================================
@@ -584,10 +555,10 @@ export function budgetEnforcementMiddleware() {
       body?: { estimatedTokens?: number; model?: string };
     },
     res: { status: (code: number) => { json: (body: unknown) => void } },
-    next: () => void,
+    next: () => void
   ) => {
-    const userId = req.userId ?? "anonymous";
-    const sessionId = req.sessionId ?? "default";
+    const userId = req.userId ?? 'anonymous';
+    const sessionId = req.sessionId ?? 'default';
     const estimatedTokens = req.body?.estimatedTokens ?? 1000;
     const model = req.body?.model;
 
@@ -596,9 +567,9 @@ export function budgetEnforcementMiddleware() {
     if (!check.allowed) {
       await writeAuditLog({
         userId,
-        action: "guardrails.budget_exceeded",
-        category: "security",
-        target: "request",
+        action: 'guardrails.budget_exceeded',
+        category: 'security',
+        target: 'request',
         metadata: {
           reason: check.reason,
           usage: check.currentUsage,
@@ -609,7 +580,7 @@ export function budgetEnforcementMiddleware() {
       res.status(429).json({
         success: false,
         error: {
-          code: "BUDGET_EXCEEDED",
+          code: 'BUDGET_EXCEEDED',
           message: check.reason,
           usage: check.currentUsage,
           limits: check.limits,
@@ -621,7 +592,7 @@ export function budgetEnforcementMiddleware() {
     // Add warning header if approaching limit
     if (check.warning) {
       // Would add header here in real implementation
-      logger.debug({ userId, warning: check.warning }, "Budget warning");
+      logger.debug({ userId, warning: check.warning }, 'Budget warning');
     }
 
     next();

@@ -3,17 +3,17 @@
  */
 
 export type CommitType =
-  | "feat"
-  | "fix"
-  | "docs"
-  | "style"
-  | "refactor"
-  | "perf"
-  | "test"
-  | "build"
-  | "ci"
-  | "chore"
-  | "revert";
+  | 'feat'
+  | 'fix'
+  | 'docs'
+  | 'style'
+  | 'refactor'
+  | 'perf'
+  | 'test'
+  | 'build'
+  | 'ci'
+  | 'chore'
+  | 'revert';
 
 export interface CommitMessageRequest {
   diff?: string;
@@ -46,7 +46,7 @@ export interface GitStatusResult {
 
 export interface FileChange {
   path: string;
-  status: "added" | "modified" | "deleted" | "renamed" | "copied";
+  status: 'added' | 'modified' | 'deleted' | 'renamed' | 'copied';
   oldPath?: string;
 }
 
@@ -62,7 +62,7 @@ export interface GitLogEntry {
 
 export interface BranchSuggestion {
   name: string;
-  type: "feature" | "fix" | "refactor" | "docs" | "test" | "chore";
+  type: 'feature' | 'fix' | 'refactor' | 'docs' | 'test' | 'chore';
   description: string;
 }
 
@@ -78,5 +78,5 @@ export interface ConflictInfo {
   ours: string;
   theirs: string;
   base?: string;
-  resolution?: "ours" | "theirs" | "both" | "custom";
+  resolution?: 'ours' | 'theirs' | 'both' | 'custom';
 }

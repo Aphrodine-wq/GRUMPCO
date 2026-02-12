@@ -9,8 +9,8 @@
  * - Early metadata delivery
  */
 
-import type { Response } from "express";
-import logger from "../../middleware/logger.js";
+import type { Response } from 'express';
+import logger from '../../middleware/logger.js';
 
 interface FirstByteConfig {
   sendProgress: boolean;
@@ -21,10 +21,7 @@ class FirstByteOptimizer {
   /**
    * Send headers immediately to establish connection
    */
-  sendHeadersImmediately(
-    res: Response,
-    config: Partial<FirstByteConfig> = {},
-  ): void {
+  sendHeadersImmediately(res: Response, config: Partial<FirstByteConfig> = {}): void {
     const fullConfig: FirstByteConfig = {
       sendProgress: true,
       metadata: {},
@@ -32,14 +29,14 @@ class FirstByteOptimizer {
     };
 
     // Set headers for streaming
-    res.setHeader("Content-Type", "application/x-ndjson");
-    res.setHeader("Transfer-Encoding", "chunked");
-    res.setHeader("X-Accel-Buffering", "no"); // Disable Nginx buffering
-    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
+    res.setHeader('Cache-Control', 'no-cache');
 
     // Send immediate TTFB optimization headers
-    res.setHeader("X-TTFB-Optimization", "enabled");
-    res.setHeader("X-Response-Start", Date.now().toString());
+    res.setHeader('X-TTFB-Optimization', 'enabled');
+    res.setHeader('X-Response-Start', Date.now().toString());
 
     // Flush headers immediately
     res.flushHeaders();
@@ -48,14 +45,14 @@ class FirstByteOptimizer {
     if (fullConfig.sendProgress) {
       res.write(
         JSON.stringify({
-          type: "init",
+          type: 'init',
           timestamp: Date.now(),
           metadata: fullConfig.metadata,
-        }) + "\n",
+        }) + '\n'
       );
     }
 
-    logger.debug("Headers flushed for TTFB optimization");
+    logger.debug('Headers flushed for TTFB optimization');
   }
 
   /**
@@ -64,11 +61,11 @@ class FirstByteOptimizer {
   sendProgress(res: Response, progress: number, message?: string): void {
     res.write(
       JSON.stringify({
-        type: "progress",
+        type: 'progress',
         progress: Math.min(100, Math.max(0, progress)),
         message,
         timestamp: Date.now(),
-      }) + "\n",
+      }) + '\n'
     );
   }
 
@@ -78,10 +75,10 @@ class FirstByteOptimizer {
   sendChunk(res: Response, data: unknown): void {
     res.write(
       JSON.stringify({
-        type: "data",
+        type: 'data',
         data,
         timestamp: Date.now(),
-      }) + "\n",
+      }) + '\n'
     );
   }
 
@@ -91,11 +88,11 @@ class FirstByteOptimizer {
   sendError(res: Response, error: string, code?: string): void {
     res.write(
       JSON.stringify({
-        type: "error",
+        type: 'error',
         error,
         code,
         timestamp: Date.now(),
-      }) + "\n",
+      }) + '\n'
     );
   }
 
@@ -105,10 +102,10 @@ class FirstByteOptimizer {
   complete(res: Response, metadata?: Record<string, unknown>): void {
     res.write(
       JSON.stringify({
-        type: "complete",
+        type: 'complete',
         timestamp: Date.now(),
         metadata,
-      }) + "\n",
+      }) + '\n'
     );
 
     res.end();

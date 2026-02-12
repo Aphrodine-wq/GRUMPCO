@@ -2,8 +2,8 @@
  * Architect Agent Prompt
  * Validates PRD and creates code generation plan. When creativeDesignDoc is provided (e.g. from Ship), plan must align with its layout and UI/UX.
  */
-import type { CreativeDesignDoc } from "../../types/creativeDesignDoc.js";
-import { CLAUDE_CODE_QUALITY_BLOCK } from "../shared/claude-code-quality.js";
+import type { CreativeDesignDoc } from '../../types/creativeDesignDoc.js';
+import { CLAUDE_CODE_QUALITY_BLOCK } from '../shared/claude-code-quality.js';
 
 export function getArchitectAgentPrompt(): string {
   return `You are a Senior Solutions Architect specializing in code generation and project planning, optimized for Claude Code.
@@ -118,7 +118,7 @@ Return a JSON object containing:
 export function getArchitectAgentPromptWithContext(
   prdJson: string,
   contextSummary?: string,
-  creativeDesignDoc?: CreativeDesignDoc,
+  creativeDesignDoc?: CreativeDesignDoc
 ): string {
   let prompt = `${getArchitectAgentPrompt()}`;
 
@@ -130,9 +130,9 @@ export function getArchitectAgentPromptWithContext(
     prompt += `
 ## Creative Design Document (mandatory alignment):
 A Creative Design Document exists for this project. Your plan MUST align with its layout and UI/UX so implementation can follow it.
-- Layout: ${creativeDesignDoc.layout?.gridDescription || "See regions/breakpoints in CDD"}
-- Key screens: ${(creativeDesignDoc.keyScreens ?? []).map((s) => s.name).join(", ") || "See CDD"}
-- UX flows: ${(creativeDesignDoc.uxFlows ?? []).map((f) => f.name).join(", ") || "See CDD"}
+- Layout: ${creativeDesignDoc.layout?.gridDescription || 'See regions/breakpoints in CDD'}
+- Key screens: ${(creativeDesignDoc.keyScreens ?? []).map((s) => s.name).join(', ') || 'See CDD'}
+- UX flows: ${(creativeDesignDoc.uxFlows ?? []).map((f) => f.name).join(', ') || 'See CDD'}
 Do not contradict the CDD; frontend and layout tasks must reflect it.
 `;
   }

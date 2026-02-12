@@ -4,9 +4,9 @@
  * Maps intent features to G-Agent capabilities, checks constraint satisfiability.
  */
 
-import type { EnrichedIntent } from "./intentCompilerService.js";
-import type { GAgentCapabilityKey } from "../../types/settings.js";
-import { getToolsForCapability } from "../../config/gAgentTools.js";
+import type { EnrichedIntent } from './intentCompilerService.js';
+import type { GAgentCapabilityKey } from '../../types/settings.js';
+import { getToolsForCapability } from '../../config/gAgentTools.js';
 
 export interface FeasibilityResult {
   feasible: boolean;
@@ -18,69 +18,62 @@ export interface FeasibilityResult {
 }
 
 const FEATURE_TO_CAPABILITY: Record<string, GAgentCapabilityKey[]> = {
-  auth: ["file", "bash", "database"],
-  authentication: ["file", "bash", "database"],
-  api: ["file", "bash", "api_call"],
-  rest: ["file", "bash", "api_call"],
-  graphql: ["file", "bash", "api_call"],
-  database: ["file", "bash", "database"],
-  postgresql: ["file", "bash", "database"],
-  mysql: ["file", "bash", "database"],
-  mongodb: ["file", "bash", "database"],
-  docker: ["docker", "bash"],
-  kubernetes: ["cloud", "cicd"],
-  k8s: ["cloud", "cicd"],
-  deploy: ["docker", "cloud", "cicd"],
-  ci: ["cicd"],
-  "ci/cd": ["cicd"],
-  cicd: ["cicd"],
-  testing: ["file", "bash"],
-  tests: ["file", "bash"],
-  frontend: ["file", "bash", "npm"],
-  backend: ["file", "bash", "npm"],
-  react: ["file", "bash", "npm"],
-  vue: ["file", "bash", "npm"],
-  svelte: ["file", "bash", "npm"],
-  typescript: ["file", "bash", "npm"],
-  python: ["file", "bash"],
-  rust: ["file", "bash"],
-  go: ["file", "bash"],
-  websocket: ["file", "bash", "api_call"],
-  realtime: ["file", "bash", "api_call"],
-  websockets: ["file", "bash", "api_call"],
+  auth: ['file', 'bash', 'database'],
+  authentication: ['file', 'bash', 'database'],
+  api: ['file', 'bash', 'api_call'],
+  rest: ['file', 'bash', 'api_call'],
+  graphql: ['file', 'bash', 'api_call'],
+  database: ['file', 'bash', 'database'],
+  postgresql: ['file', 'bash', 'database'],
+  mysql: ['file', 'bash', 'database'],
+  mongodb: ['file', 'bash', 'database'],
+  docker: ['docker', 'bash'],
+  kubernetes: ['cloud', 'cicd'],
+  k8s: ['cloud', 'cicd'],
+  deploy: ['docker', 'cloud', 'cicd'],
+  ci: ['cicd'],
+  'ci/cd': ['cicd'],
+  cicd: ['cicd'],
+  testing: ['file', 'bash'],
+  tests: ['file', 'bash'],
+  frontend: ['file', 'bash', 'npm'],
+  backend: ['file', 'bash', 'npm'],
+  react: ['file', 'bash', 'npm'],
+  vue: ['file', 'bash', 'npm'],
+  svelte: ['file', 'bash', 'npm'],
+  typescript: ['file', 'bash', 'npm'],
+  python: ['file', 'bash'],
+  rust: ['file', 'bash'],
+  go: ['file', 'bash'],
+  websocket: ['file', 'bash', 'api_call'],
+  realtime: ['file', 'bash', 'api_call'],
+  websockets: ['file', 'bash', 'api_call'],
 };
 
 const KNOWN_UNSUPPORTED = new Set([
-  "hardware",
-  "iot",
-  "blockchain",
-  "cryptocurrency",
-  "crypto",
-  "mobile-app",
-  "ios",
-  "android",
-  "native-mobile",
-  "embedded",
-  "kernel",
-  "driver",
+  'hardware',
+  'iot',
+  'blockchain',
+  'cryptocurrency',
+  'crypto',
+  'mobile-app',
+  'ios',
+  'android',
+  'native-mobile',
+  'embedded',
+  'kernel',
+  'driver',
 ]);
 
 const SUPPORTED_DATABASES = new Set([
-  "postgresql",
-  "postgres",
-  "mysql",
-  "mongodb",
-  "sqlite",
-  "redis",
+  'postgresql',
+  'postgres',
+  'mysql',
+  'mongodb',
+  'sqlite',
+  'redis',
 ]);
-const SUPPORTED_RUNTIMES = new Set([
-  "node",
-  "nodejs",
-  "python",
-  "go",
-  "rust",
-  "bun",
-]);
+const SUPPORTED_RUNTIMES = new Set(['node', 'nodejs', 'python', 'go', 'rust', 'bun']);
 
 /**
  * Verify intent can be executed with the given capabilities.
@@ -88,7 +81,7 @@ const SUPPORTED_RUNTIMES = new Set([
 export function verifyIntentFeasibility(
   intent: EnrichedIntent,
   availableCapabilities: GAgentCapabilityKey[],
-  userTier = "free",
+  userTier = 'free'
 ): FeasibilityResult {
   const supportedFeatures: string[] = [];
   const unsupportedFeatures: Array<{ feature: string; reason: string }> = [];
@@ -117,8 +110,8 @@ export function verifyIntentFeasibility(
     const caps = FEATURE_TO_CAPABILITY[f];
     if (!caps) {
       supportedFeatures.push(f);
-      requiredCapabilities.add("file");
-      requiredCapabilities.add("bash");
+      requiredCapabilities.add('file');
+      requiredCapabilities.add('bash');
       continue;
     }
 
@@ -131,12 +124,12 @@ export function verifyIntentFeasibility(
     if (missing.length > 0) {
       unsupportedFeatures.push({
         feature: f,
-        reason: `Requires capabilities not enabled: ${missing.join(", ")}. Enable these in G-Agent settings.`,
+        reason: `Requires capabilities not enabled: ${missing.join(', ')}. Enable these in G-Agent settings.`,
       });
     } else if (tierBlocked.length > 0) {
       unsupportedFeatures.push({
         feature: f,
-        reason: `Requires ${tierBlocked.join(", ")} (upgrade to PRO or TEAM tier).`,
+        reason: `Requires ${tierBlocked.join(', ')} (upgrade to PRO or TEAM tier).`,
       });
     } else {
       supportedFeatures.push(f);
@@ -144,45 +137,39 @@ export function verifyIntentFeasibility(
     }
   }
 
-  const constraints =
-    intent.constraints ?? intent.enriched?.code_quality_requirements;
-  if (constraints && typeof constraints === "object") {
+  const constraints = intent.constraints ?? intent.enriched?.code_quality_requirements;
+  if (constraints && typeof constraints === 'object') {
     const dbConstraint =
       (constraints as Record<string, unknown>).database ??
       (constraints as Record<string, unknown>).db;
-    if (typeof dbConstraint === "string") {
+    if (typeof dbConstraint === 'string') {
       const db = String(dbConstraint).toLowerCase();
       if (!SUPPORTED_DATABASES.has(db)) {
         constraintWarnings.push(
-          `Database "${db}" may not have first-class support. We support PostgreSQL, MySQL, MongoDB, SQLite, Redis.`,
+          `Database "${db}" may not have first-class support. We support PostgreSQL, MySQL, MongoDB, SQLite, Redis.`
         );
       }
     }
   }
 
-  const techHints = [
-    ...(intent.tech_stack_hints ?? []),
-    ...(intent.enriched?.tech_stack ?? []),
-  ];
+  const techHints = [...(intent.tech_stack_hints ?? []), ...(intent.enriched?.tech_stack ?? [])];
   for (const t of techHints) {
     const tl = t.toLowerCase();
-    if (tl.includes("kubernetes") || tl.includes("k8s")) {
-      if (!availableCapabilities.includes("cloud")) {
-        constraintWarnings.push(
-          "Kubernetes deployment requires cloud capability (PRO+ tier).",
-        );
+    if (tl.includes('kubernetes') || tl.includes('k8s')) {
+      if (!availableCapabilities.includes('cloud')) {
+        constraintWarnings.push('Kubernetes deployment requires cloud capability (PRO+ tier).');
       }
     }
   }
 
-  let actionableFeedback = "";
+  let actionableFeedback = '';
   if (unsupportedFeatures.length > 0) {
-    actionableFeedback = `We can build: ${supportedFeatures.join(", ") || "core features"}. `;
-    actionableFeedback += `The following would require manual setup or capability changes: ${unsupportedFeatures.map((u) => u.feature).join(", ")}.`;
+    actionableFeedback = `We can build: ${supportedFeatures.join(', ') || 'core features'}. `;
+    actionableFeedback += `The following would require manual setup or capability changes: ${unsupportedFeatures.map((u) => u.feature).join(', ')}.`;
   } else if (constraintWarnings.length > 0) {
-    actionableFeedback = `We can proceed. Note: ${constraintWarnings.join(" ")}`;
+    actionableFeedback = `We can proceed. Note: ${constraintWarnings.join(' ')}`;
   } else if (supportedFeatures.length > 0) {
-    actionableFeedback = `All requested features are feasible. We can build: ${supportedFeatures.join(", ")}.`;
+    actionableFeedback = `All requested features are feasible. We can build: ${supportedFeatures.join(', ')}.`;
   }
 
   return {
@@ -190,7 +177,7 @@ export function verifyIntentFeasibility(
     supportedFeatures,
     unsupportedFeatures,
     constraintWarnings,
-    actionableFeedback: actionableFeedback || "Intent appears feasible.",
+    actionableFeedback: actionableFeedback || 'Intent appears feasible.',
     requiredCapabilities: [...requiredCapabilities],
   };
 }

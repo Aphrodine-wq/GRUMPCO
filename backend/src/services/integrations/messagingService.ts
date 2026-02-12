@@ -5,47 +5,47 @@
  * Uses persistent conversation memory from conversationMemoryService.
  */
 
-import { claudeServiceWithTools } from "../ai-providers/claudeServiceWithTools.js";
-import { startShipMode } from "../ship/shipModeService.js";
-import { enqueueShipJob } from "../infra/jobQueue.js";
+import { claudeServiceWithTools } from '../ai-providers/claudeServiceWithTools.js';
+import { startShipMode } from '../ship/shipModeService.js';
+import { enqueueShipJob } from '../infra/jobQueue.js';
 import {
   subscribe as subscribeShipNotifier,
   type MessagingPlatform,
-} from "./messagingShipNotifier.js";
+} from './messagingShipNotifier.js';
 import {
   getOrCreateConversation as getOrCreateConversationMem,
   saveConversation,
   type ConversationMessage,
-} from "../session/conversationMemoryService.js";
-import logger from "../../middleware/logger.js";
-import { getDatabase } from "../../db/database.js";
+} from '../session/conversationMemoryService.js';
+import logger from '../../middleware/logger.js';
+import { getDatabase } from '../../db/database.js';
 import {
   getEffectivePermissions,
   checkRateLimit,
   confirmRequest,
   cancelRequest,
   getUserPermissions,
-} from "../../config/messagingPermissions.js";
-import type { GAgentCapabilityKey } from "../../types/settings.js";
+} from '../../config/messagingPermissions.js';
+import type { GAgentCapabilityKey } from '../../types/settings.js';
 
 /** @deprecated Use getOrCreateConversationMem from conversationMemoryService */
 export async function getOrCreateConversation(
   platform: MessagingPlatform,
   platformUserId: string,
-  userId?: string | null,
+  userId?: string | null
 ): Promise<ConversationMessage[]> {
   return getOrCreateConversationMem(platform, platformUserId, userId);
 }
 
 export type MessageIntent =
-  | { action: "ship"; projectDescription: string }
-  | { action: "chat" }
-  | { action: "freeagent"; command: string }
-  | { action: "confirm"; confirmationId: string }
-  | { action: "cancel"; confirmationId?: string }
-  | { action: "status" }
-  | { action: "remind"; content: string; dueAt?: string }
-  | { action: "code"; description: string };
+  | { action: 'ship'; projectDescription: string }
+  | { action: 'chat' }
+  | { action: 'freeagent'; command: string }
+  | { action: 'confirm'; confirmationId: string }
+  | { action: 'cancel'; confirmationId?: string }
+  | { action: 'status' }
+  | { action: 'remind'; content: string; dueAt?: string }
+  | { action: 'code'; description: string };
 
 export function parseIntent(text: string): MessageIntent {
   const t = text.trim().toLowerCase();
@@ -53,40 +53,39 @@ export function parseIntent(text: string): MessageIntent {
   // SHIP command
   const shipMatch = t.match(/^ship\s*:?\s*(.+)/s) || t.match(/^\/ship\s+(.+)/s);
   if (shipMatch && shipMatch[1]?.trim()) {
-    return { action: "ship", projectDescription: shipMatch[1].trim() };
+    return { action: 'ship', projectDescription: shipMatch[1].trim() };
   }
 
   // G-Agent command: /fa or /freeagent
   const faMatch = t.match(/^\/(?:fa|freeagent)\s+(.+)/s);
   if (faMatch && faMatch[1]?.trim()) {
-    return { action: "freeagent", command: faMatch[1].trim() };
+    return { action: 'freeagent', command: faMatch[1].trim() };
   }
 
   // Code / G-Agent: /code or run code:
-  const codeMatch =
-    t.match(/^\/(?:code|agent)\s+(.+)/s) || t.match(/^run\s+code\s*:?\s*(.+)/s);
+  const codeMatch = t.match(/^\/(?:code|agent)\s+(.+)/s) || t.match(/^run\s+code\s*:?\s*(.+)/s);
   if (codeMatch && codeMatch[1]?.trim()) {
-    return { action: "code", description: codeMatch[1].trim() };
+    return { action: 'code', description: codeMatch[1].trim() };
   }
 
   // Confirmation response
   const confirmMatch = t.match(/^yes\s+(confirm_\w+)/i);
   if (confirmMatch) {
-    return { action: "confirm", confirmationId: confirmMatch[1] };
+    return { action: 'confirm', confirmationId: confirmMatch[1] };
   }
 
   // Cancel response
-  if (t === "no" || t === "cancel") {
-    return { action: "cancel" };
+  if (t === 'no' || t === 'cancel') {
+    return { action: 'cancel' };
   }
   const cancelMatch = t.match(/^(?:no|cancel)\s+(confirm_\w+)/i);
   if (cancelMatch) {
-    return { action: "cancel", confirmationId: cancelMatch[1] };
+    return { action: 'cancel', confirmationId: cancelMatch[1] };
   }
 
   // Status check
-  if (t === "/status" || t === "status") {
-    return { action: "status" };
+  if (t === '/status' || t === 'status') {
+    return { action: 'status' };
   }
 
   // Reminder: "remind me at 3pm" or "remind me in 2 hours" or "/remind X"
@@ -95,45 +94,44 @@ export function parseIntent(text: string): MessageIntent {
     t.match(/^\/remind\s+(.+)/i) ||
     t.match(/^remind\s+(.+)/i);
   if (remindMatch && remindMatch[1]?.trim()) {
-    return { action: "remind", content: remindMatch[1].trim() };
+    return { action: 'remind', content: remindMatch[1].trim() };
   }
 
-  return { action: "chat" };
+  return { action: 'chat' };
 }
 
 export async function runChatAndGetReply(
-  messages: Array<{ role: "user" | "assistant"; content: string }>,
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>
 ): Promise<string> {
-  let lastText = "";
+  let lastText = '';
   try {
     const stream = claudeServiceWithTools.generateChatStream(
       messages,
       undefined,
       undefined,
-      "normal",
+      'normal',
       undefined,
       undefined,
       undefined,
       undefined,
-      undefined,
+      undefined
     );
     for await (const ev of stream) {
-      if (ev.type === "text" && ev.text) lastText += ev.text;
-      if (ev.type === "error")
-        lastText += (ev as { message?: string }).message ?? "Error.";
-      if (ev.type === "done") break;
+      if (ev.type === 'text' && ev.text) lastText += ev.text;
+      if (ev.type === 'error') lastText += (ev as { message?: string }).message ?? 'Error.';
+      if (ev.type === 'done') break;
     }
   } catch (err) {
-    logger.warn({ err }, "Messaging chat stream error");
-    lastText = "Sorry, something went wrong.";
+    logger.warn({ err }, 'Messaging chat stream error');
+    lastText = 'Sorry, something went wrong.';
   }
-  return lastText.trim().slice(0, 1600) || "Done.";
+  return lastText.trim().slice(0, 1600) || 'Done.';
 }
 
 export async function executeShipFromMessaging(
   projectDescription: string,
   platform: MessagingPlatform,
-  platformUserId: string,
+  platformUserId: string
 ): Promise<{ sessionId: string; ok: boolean; error?: string }> {
   try {
     const session = await startShipMode({
@@ -146,11 +144,8 @@ export async function executeShipFromMessaging(
     return { sessionId: session.id, ok: true };
   } catch (err) {
     const msg = (err as Error).message;
-    logger.warn(
-      { err: msg, platform, platformUserId },
-      "Messaging ship start failed",
-    );
-    return { sessionId: "", ok: false, error: msg };
+    logger.warn({ err: msg, platform, platformUserId }, 'Messaging ship start failed');
+    return { sessionId: '', ok: false, error: msg };
   }
 }
 
@@ -169,15 +164,13 @@ async function getUserGAgentPrefs(userId: string): Promise<{
     const prefs = settings?.preferences;
 
     return {
-      enabled: !!(
-        prefs?.gAgentCapabilities && prefs.gAgentCapabilities.length > 0
-      ),
+      enabled: !!(prefs?.gAgentCapabilities && prefs.gAgentCapabilities.length > 0),
       capabilities: prefs?.gAgentCapabilities || [],
       allowlist: prefs?.gAgentExternalAllowlist || [],
-      tier: settings?.tier || "free",
+      tier: settings?.tier || 'free',
     };
   } catch {
-    return { enabled: false, capabilities: [], allowlist: [], tier: "free" };
+    return { enabled: false, capabilities: [], allowlist: [], tier: 'free' };
   }
 }
 
@@ -187,25 +180,18 @@ async function getUserGAgentPrefs(userId: string): Promise<{
 async function processGAgentCommand(
   platform: MessagingPlatform,
   userId: string,
-  command: string,
+  command: string
 ): Promise<string> {
   // Get effective permissions for this platform
   const userPerms = getUserPermissions(userId);
-  const effective = getEffectivePermissions(
-    platform as MessagingPlatform,
-    userPerms || undefined,
-  );
+  const effective = getEffectivePermissions(platform as MessagingPlatform, userPerms || undefined);
 
   if (!effective.gAgentEnabled) {
     return `G-Agent is not enabled for ${platform}. Enable it in settings or ask an admin.`;
   }
 
   // Check rate limit
-  const rateCheck = checkRateLimit(
-    platform as MessagingPlatform,
-    userId,
-    userPerms || undefined,
-  );
+  const rateCheck = checkRateLimit(platform as MessagingPlatform, userId, userPerms || undefined);
   if (!rateCheck.allowed) {
     const resetMin = Math.ceil(rateCheck.resetIn / 60000);
     return `Rate limit exceeded. Try again in ${resetMin} minutes.`;
@@ -214,22 +200,16 @@ async function processGAgentCommand(
   // Get user's G-Agent preferences
   const userPrefs = await getUserGAgentPrefs(userId);
 
-  const conv = await getOrCreateConversationMem(
-    platform as MessagingPlatform,
-    userId,
-  );
-  const messages: ConversationMessage[] = [
-    ...conv,
-    { role: "user" as const, content: command },
-  ];
+  const conv = await getOrCreateConversationMem(platform as MessagingPlatform, userId);
+  const messages: ConversationMessage[] = [...conv, { role: 'user' as const, content: command }];
 
   try {
-    let lastText = "";
+    let lastText = '';
     const stream = claudeServiceWithTools.generateChatStream(
       messages,
       undefined,
       undefined,
-      "normal",
+      'normal',
       undefined,
       undefined,
       undefined,
@@ -238,38 +218,34 @@ async function processGAgentCommand(
       undefined,
       undefined,
       undefined,
-      "gAgent",
+      'gAgent',
       effective.allowedCapabilities,
-      userPrefs.allowlist,
+      userPrefs.allowlist
     );
 
     for await (const ev of stream) {
-      if (ev.type === "text" && ev.text) lastText += ev.text;
-      if (ev.type === "tool_call") {
+      if (ev.type === 'text' && ev.text) lastText += ev.text;
+      if (ev.type === 'tool_call') {
         // Log tool usage
         logger.info(
           { platform, userId, tool: (ev as { name?: string }).name },
-          "G-Agent tool use via messaging",
+          'G-Agent tool use via messaging'
         );
       }
-      if (ev.type === "error")
-        lastText += (ev as { message?: string }).message ?? "Error.";
-      if (ev.type === "done") break;
+      if (ev.type === 'error') lastText += (ev as { message?: string }).message ?? 'Error.';
+      if (ev.type === 'done') break;
     }
 
-    const reply = lastText.trim().slice(0, 1600) || "Done.";
+    const reply = lastText.trim().slice(0, 1600) || 'Done.';
 
     // Persist conversation
-    const updated = [
-      ...messages,
-      { role: "assistant" as const, content: reply },
-    ];
+    const updated = [...messages, { role: 'assistant' as const, content: reply }];
     await saveConversation(platform as MessagingPlatform, userId, updated);
 
     return reply;
   } catch (err) {
-    logger.error({ err, platform, userId }, "G-Agent messaging error");
-    return "Sorry, an error occurred while processing your request.";
+    logger.error({ err, platform, userId }, 'G-Agent messaging error');
+    return 'Sorry, an error occurred while processing your request.';
   }
 }
 
@@ -279,17 +255,13 @@ async function processGAgentCommand(
 async function handleCodeIntent(
   platform: MessagingPlatform,
   platformUserId: string,
-  description: string,
+  description: string
 ): Promise<string> {
-  const result = await executeShipFromMessaging(
-    description,
-    platform,
-    platformUserId,
-  );
+  const result = await executeShipFromMessaging(description, platform, platformUserId);
   if (result.ok) {
     return "Code task started! I'll message you when it's done.";
   }
-  return `Failed to start: ${result.error ?? "Unknown error"}`;
+  return `Failed to start: ${result.error ?? 'Unknown error'}`;
 }
 
 /**
@@ -298,9 +270,9 @@ async function handleCodeIntent(
 async function handleReminderIntent(
   platform: MessagingPlatform,
   platformUserId: string,
-  content: string,
+  content: string
 ): Promise<string> {
-  const reminderModule = await import("../platform/reminderService.js");
+  const reminderModule = await import('../platform/reminderService.js');
   const createReminder = reminderModule.createReminder;
 
   // Parse "at 3pm" / "in 2 hours" / "tomorrow 9am" or plain text
@@ -308,17 +280,15 @@ async function handleReminderIntent(
   const lower = content.toLowerCase();
 
   const inMatch = content.match(
-    /in\s+(\d+)\s*(min|mins|minute|minutes|hr|hrs|hour|hours|day|days)/i,
+    /in\s+(\d+)\s*(min|mins|minute|minutes|hr|hrs|hour|hours|day|days)/i
   );
   if (inMatch) {
     const n = parseInt(inMatch[1], 10);
     const unit = inMatch[2].toLowerCase();
-    if (unit.startsWith("min")) dueAt = new Date(Date.now() + n * 60 * 1000);
-    else if (unit.startsWith("hr"))
-      dueAt = new Date(Date.now() + n * 60 * 60 * 1000);
-    else if (unit.startsWith("day"))
-      dueAt = new Date(Date.now() + n * 24 * 60 * 60 * 1000);
-    content = content.replace(inMatch[0], "").trim() || "Reminder";
+    if (unit.startsWith('min')) dueAt = new Date(Date.now() + n * 60 * 1000);
+    else if (unit.startsWith('hr')) dueAt = new Date(Date.now() + n * 60 * 60 * 1000);
+    else if (unit.startsWith('day')) dueAt = new Date(Date.now() + n * 24 * 60 * 60 * 1000);
+    content = content.replace(inMatch[0], '').trim() || 'Reminder';
   }
 
   const atMatch = content.match(/at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
@@ -326,100 +296,91 @@ async function handleReminderIntent(
     let h = parseInt(atMatch[1], 10);
     const m = atMatch[2] ? parseInt(atMatch[2], 10) : 0;
     const ampm = atMatch[3]?.toLowerCase();
-    if (ampm === "pm" && h < 12) h += 12;
-    if (ampm === "am" && h === 12) h = 0;
+    if (ampm === 'pm' && h < 12) h += 12;
+    if (ampm === 'am' && h === 12) h = 0;
     dueAt = new Date();
     dueAt.setHours(h, m, 0, 0);
     if (dueAt <= new Date()) dueAt.setDate(dueAt.getDate() + 1);
-    content = content.replace(atMatch[0], "").trim() || "Reminder";
+    content = content.replace(atMatch[0], '').trim() || 'Reminder';
   }
 
   const userId = platformUserId; // Use platform user as fallback
-  await createReminder(
-    userId,
-    content || "Reminder",
-    dueAt,
-    platform,
-    platformUserId,
-  );
-  return `Reminder set for ${dueAt.toLocaleString()}: ${content || "Reminder"}`;
+  await createReminder(userId, content || 'Reminder', dueAt, platform, platformUserId);
+  return `Reminder set for ${dueAt.toLocaleString()}: ${content || 'Reminder'}`;
 }
 
 /**
  * Get status for messaging user
  */
-async function getMessagingStatus(
-  platform: MessagingPlatform,
-  userId: string,
-): Promise<string> {
+async function getMessagingStatus(platform: MessagingPlatform, userId: string): Promise<string> {
   const userPerms = getUserPermissions(userId);
   const effective = getEffectivePermissions(platform, userPerms || undefined);
 
   const lines = [
     `Platform: ${platform}`,
-    `G-Agent: ${effective.gAgentEnabled ? "Enabled" : "Disabled"}`,
-    `Capabilities: ${effective.allowedCapabilities.join(", ") || "None"}`,
+    `G-Agent: ${effective.gAgentEnabled ? 'Enabled' : 'Disabled'}`,
+    `Capabilities: ${effective.allowedCapabilities.join(', ') || 'None'}`,
     `Rate limit: ${effective.rateLimitPerHour}/hour`,
   ];
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 export async function processMessage(
   platform: MessagingPlatform,
   platformUserId: string,
-  text: string,
+  text: string
 ): Promise<string> {
   const intent = parseIntent(text);
 
   // SHIP command
-  if (intent.action === "ship") {
+  if (intent.action === 'ship') {
     const result = await executeShipFromMessaging(
       intent.projectDescription,
       platform,
-      platformUserId,
+      platformUserId
     );
     if (result.ok) {
       return "SHIP started! I'll message you when it's done.";
     }
-    return `Failed to start SHIP: ${result.error ?? "Unknown error"}`;
+    return `Failed to start SHIP: ${result.error ?? 'Unknown error'}`;
   }
 
   // G-Agent command
-  if (intent.action === "freeagent") {
+  if (intent.action === 'freeagent') {
     return processGAgentCommand(platform, platformUserId, intent.command);
   }
 
   // Confirmation response
-  if (intent.action === "confirm") {
+  if (intent.action === 'confirm') {
     const confirmed = confirmRequest(intent.confirmationId, platformUserId);
     if (confirmed) {
       // Execute the confirmed action
       return `Confirmed. Executing ${confirmed.tool}...`;
     }
-    return "Confirmation not found or expired.";
+    return 'Confirmation not found or expired.';
   }
 
   // Cancel response
-  if (intent.action === "cancel") {
+  if (intent.action === 'cancel') {
     if (intent.confirmationId) {
       cancelRequest(intent.confirmationId, platformUserId);
     }
-    return "Cancelled.";
+    return 'Cancelled.';
   }
 
   // Status check
-  if (intent.action === "status") {
+  if (intent.action === 'status') {
     return getMessagingStatus(platform, platformUserId);
   }
 
   // Reminder
-  if (intent.action === "remind") {
+  if (intent.action === 'remind') {
     return handleReminderIntent(platform, platformUserId, intent.content);
   }
 
   // Code / G-Agent
-  if (intent.action === "code") {
+  if (intent.action === 'code') {
     return handleCodeIntent(platform, platformUserId, intent.description);
   }
 
@@ -436,14 +397,11 @@ export async function processMessage(
   const conv = await getOrCreateConversationMem(platform, platformUserId);
   const nextMessages: ConversationMessage[] = [
     ...conv,
-    { role: "user" as const, content: text || "(empty)" },
+    { role: 'user' as const, content: text || '(empty)' },
   ];
 
   const reply = await runChatAndGetReply(nextMessages);
-  const updated = [
-    ...nextMessages,
-    { role: "assistant" as const, content: reply },
-  ];
+  const updated = [...nextMessages, { role: 'assistant' as const, content: reply }];
   await saveConversation(platform, platformUserId, updated);
   return reply;
 }

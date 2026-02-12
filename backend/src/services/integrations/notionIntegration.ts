@@ -6,7 +6,7 @@
 const NOTION_CLIENT_ID = process.env.NOTION_CLIENT_ID;
 const NOTION_CLIENT_SECRET = process.env.NOTION_CLIENT_SECRET;
 const NOTION_REDIRECT_URI =
-  process.env.NOTION_REDIRECT_URI || "http://localhost:5173/notion/callback";
+  process.env.NOTION_REDIRECT_URI || 'http://localhost:5173/notion/callback';
 
 export function isNotionConfigured(): boolean {
   return !!(NOTION_CLIENT_ID && NOTION_CLIENT_SECRET);
@@ -17,13 +17,13 @@ export function isNotionConfigured(): boolean {
  */
 export function getNotionAuthUrl(state: string): string {
   if (!NOTION_CLIENT_ID) {
-    throw new Error("NOTION_CLIENT_ID is not configured");
+    throw new Error('NOTION_CLIENT_ID is not configured');
   }
   const params = new URLSearchParams({
     client_id: NOTION_CLIENT_ID,
     redirect_uri: NOTION_REDIRECT_URI,
-    response_type: "code",
-    owner: "user",
+    response_type: 'code',
+    owner: 'user',
     state,
   });
   return `https://api.notion.com/v1/oauth/authorize?${params}`;
@@ -33,18 +33,18 @@ export function getNotionAuthUrl(state: string): string {
  * Exchange Notion OAuth code for access token.
  */
 export async function exchangeNotionCode(
-  code: string,
+  code: string
 ): Promise<{ access_token?: string; error?: string }> {
-  if (!isNotionConfigured()) return { error: "Notion not configured" };
+  if (!isNotionConfigured()) return { error: 'Notion not configured' };
   try {
-    const r = await fetch("https://api.notion.com/v1/oauth/token", {
-      method: "POST",
+    const r = await fetch('https://api.notion.com/v1/oauth/token', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${Buffer.from(`${NOTION_CLIENT_ID}:${NOTION_CLIENT_SECRET}`).toString("base64")}`,
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${Buffer.from(`${NOTION_CLIENT_ID}:${NOTION_CLIENT_SECRET}`).toString('base64')}`,
       },
       body: JSON.stringify({
-        grant_type: "authorization_code",
+        grant_type: 'authorization_code',
         code,
         redirect_uri: NOTION_REDIRECT_URI,
       }),

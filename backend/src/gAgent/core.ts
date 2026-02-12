@@ -10,10 +10,10 @@
  * - modeHandlers.ts - Contains mode-specific logic
  */
 
-import { EventEmitter } from "events";
-import { supervisor } from "./supervisor.js";
-import { detectIntent } from "./intentDetector.js";
-import { sessionManager, type Session } from "./sessionManager.js";
+import { EventEmitter } from 'events';
+import { supervisor } from './supervisor.js';
+import { detectIntent } from './intentDetector.js';
+import { sessionManager, type Session } from './sessionManager.js';
 import {
   handleGoalMode,
   handlePlanMode,
@@ -23,7 +23,7 @@ import {
   handleAutonomousMode,
   handleChatMode,
   type HandlerContext,
-} from "./modeHandlers.js";
+} from './modeHandlers.js';
 import type {
   AgentMode,
   AgentRequest,
@@ -31,7 +31,7 @@ import type {
   AgentEvent,
   AgentTier,
   Plan,
-} from "./types.js";
+} from './types.js';
 
 // ============================================================================
 // TYPES
@@ -45,7 +45,7 @@ export interface CoreOptions {
 }
 
 // Re-export Session type for backwards compatibility
-export type { Session } from "./sessionManager.js";
+export type { Session } from './sessionManager.js';
 
 // ============================================================================
 // G-AGENT CORE CLASS
@@ -58,7 +58,7 @@ export class GAgentCore {
 
   private constructor(options?: Partial<CoreOptions>) {
     this.options = {
-      defaultTier: "free",
+      defaultTier: 'free',
       maxConcurrentGoals: 10,
       sessionTimeoutMs: 30 * 60 * 1000, // 30 minutes
       enableAutonomous: true,
@@ -100,12 +100,12 @@ export class GAgentCore {
     const mode = request.mode ?? detectedIntent.mode;
 
     // Add user message to session
-    sessionManager.addMessage(session.id, "user", request.message);
+    sessionManager.addMessage(session.id, 'user', request.message);
     sessionManager.setMode(session.id, mode);
 
     // Emit session start event
     this.emitEvent({
-      type: "session_start",
+      type: 'session_start',
       sessionId: session.id,
       mode,
     });
@@ -124,38 +124,38 @@ export class GAgentCore {
       let response: AgentResponse;
 
       switch (mode) {
-        case "goal":
+        case 'goal':
           response = await handleGoalMode(request, ctx);
           break;
 
-        case "plan":
+        case 'plan':
           response = await handlePlanMode(request, ctx);
           break;
 
-        case "execute":
+        case 'execute':
           response = await handleExecuteMode(request, ctx);
           break;
 
-        case "swarm":
+        case 'swarm':
           response = await handleSwarmMode(request, ctx);
           break;
 
-        case "codegen":
+        case 'codegen':
           response = await handleCodegenMode(request, ctx);
           break;
 
-        case "autonomous":
+        case 'autonomous':
           response = await handleAutonomousMode(request, ctx);
           break;
 
-        case "chat":
+        case 'chat':
         default:
           response = await handleChatMode(request, ctx);
           break;
       }
 
       // Add assistant response to session
-      sessionManager.addMessage(session.id, "assistant", response.message);
+      sessionManager.addMessage(session.id, 'assistant', response.message);
 
       // Add usage stats
       response.usage = {
@@ -167,7 +167,7 @@ export class GAgentCore {
       };
 
       this.emitEvent({
-        type: "session_end",
+        type: 'session_end',
         sessionId: session.id,
         success: response.success,
       });
@@ -177,9 +177,9 @@ export class GAgentCore {
       const error = err as Error;
 
       this.emitEvent({
-        type: "error",
+        type: 'error',
         message: error.message,
-        code: "PROCESS_ERROR",
+        code: 'PROCESS_ERROR',
       });
 
       return {
@@ -189,7 +189,7 @@ export class GAgentCore {
         success: false,
         message: `Error processing request: ${error.message}`,
         error: {
-          code: "PROCESS_ERROR",
+          code: 'PROCESS_ERROR',
           message: error.message,
           retryable: true,
         },
@@ -210,9 +210,7 @@ export class GAgentCore {
   /**
    * Process request with streaming events
    */
-  async *processStream(
-    request: AgentRequest,
-  ): AsyncGenerator<AgentEvent, AgentResponse> {
+  async *processStream(request: AgentRequest): AsyncGenerator<AgentEvent, AgentResponse> {
     const startTime = Date.now();
     const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -225,16 +223,16 @@ export class GAgentCore {
     const mode = request.mode ?? detectedIntent.mode;
 
     yield {
-      type: "session_start",
+      type: 'session_start',
       sessionId: session.id,
       mode,
     };
 
-    sessionManager.addMessage(session.id, "user", request.message);
+    sessionManager.addMessage(session.id, 'user', request.message);
 
     try {
       // For modes that support streaming, yield events as they come
-      if (mode === "execute" && session.context.plan) {
+      if (mode === 'execute' && session.context.plan) {
         const plan = session.context.plan as Plan;
 
         const events = supervisor.executePlan(plan, {
@@ -250,7 +248,7 @@ export class GAgentCore {
       }
 
       yield {
-        type: "session_end",
+        type: 'session_end',
         sessionId: session.id,
         success: true,
       };
@@ -260,7 +258,7 @@ export class GAgentCore {
         mode,
         sessionId: session.id,
         success: true,
-        message: "Stream completed",
+        message: 'Stream completed',
         usage: {
           tokensIn: 0,
           tokensOut: 0,
@@ -270,9 +268,9 @@ export class GAgentCore {
       };
     } catch (err) {
       yield {
-        type: "error",
+        type: 'error',
         message: (err as Error).message,
-        code: "STREAM_ERROR",
+        code: 'STREAM_ERROR',
       };
 
       return {
@@ -282,7 +280,7 @@ export class GAgentCore {
         success: false,
         message: (err as Error).message,
         error: {
-          code: "STREAM_ERROR",
+          code: 'STREAM_ERROR',
           message: (err as Error).message,
           retryable: true,
         },
@@ -303,12 +301,12 @@ export class GAgentCore {
   // ============================================================================
 
   private emitEvent(event: AgentEvent): void {
-    this.eventEmitter.emit("event", event);
+    this.eventEmitter.emit('event', event);
   }
 
   onEvent(handler: (event: AgentEvent) => void): () => void {
-    this.eventEmitter.on("event", handler);
-    return () => this.eventEmitter.off("event", handler);
+    this.eventEmitter.on('event', handler);
+    return () => this.eventEmitter.off('event', handler);
   }
 
   // ============================================================================

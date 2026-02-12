@@ -3,8 +3,8 @@
  * Used after codegen so every generated app has basic docs and env template.
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface GenerateProjectDocsResult {
   readmeWritten: boolean;
@@ -18,26 +18,22 @@ export interface GenerateProjectDocsResult {
  */
 export async function generateProjectDocs(
   workspaceRoot: string,
-  options: { projectName?: string; hasBackend?: boolean } = {},
+  options: { projectName?: string; hasBackend?: boolean } = {}
 ): Promise<GenerateProjectDocsResult> {
   const resolvedRoot = path.resolve(workspaceRoot);
-  const projectName =
-    (options.projectName ?? path.basename(resolvedRoot)) || "Generated App";
+  const projectName = (options.projectName ?? path.basename(resolvedRoot)) || 'Generated App';
   const result: GenerateProjectDocsResult = {
     readmeWritten: false,
     envExampleWritten: false,
   };
 
   try {
-    if (
-      !fs.existsSync(resolvedRoot) ||
-      !fs.statSync(resolvedRoot).isDirectory()
-    ) {
-      result.error = "Workspace root is not a directory";
+    if (!fs.existsSync(resolvedRoot) || !fs.statSync(resolvedRoot).isDirectory()) {
+      result.error = 'Workspace root is not a directory';
       return result;
     }
 
-    const readmePath = path.join(resolvedRoot, "README.md");
+    const readmePath = path.join(resolvedRoot, 'README.md');
     if (!fs.existsSync(readmePath)) {
       const readme = `# ${projectName}
 
@@ -58,18 +54,18 @@ npm run dev
 
 Copy \`.env.example\` to \`.env\` and set required variables.
 `;
-      fs.writeFileSync(readmePath, readme, "utf-8");
+      fs.writeFileSync(readmePath, readme, 'utf-8');
       result.readmeWritten = true;
     }
 
-    const envExamplePath = path.join(resolvedRoot, ".env.example");
+    const envExamplePath = path.join(resolvedRoot, '.env.example');
     if (!fs.existsSync(envExamplePath)) {
-      const lines = ["# Required environment variables", ""];
+      const lines = ['# Required environment variables', ''];
       if (options.hasBackend !== false) {
-        lines.push("# API_URL=http://localhost:3000");
+        lines.push('# API_URL=http://localhost:3000');
       }
-      lines.push("");
-      fs.writeFileSync(envExamplePath, lines.join("\n"), "utf-8");
+      lines.push('');
+      fs.writeFileSync(envExamplePath, lines.join('\n'), 'utf-8');
       result.envExampleWritten = true;
     }
 

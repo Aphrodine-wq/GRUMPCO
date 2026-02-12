@@ -1,85 +1,75 @@
-import logger from "../../middleware/logger.js";
-import { handleProcessGmailWebhook } from "../jobHandlers/gmail.js";
-import {
-  getRedisConnectionConfig,
-  sanitizeQueueName,
-  useRedis,
-} from "../infra/redisConnection.js";
+import logger from '../../middleware/logger.js';
+import { handleProcessGmailWebhook } from '../jobHandlers/gmail.js';
+import { getRedisConnectionConfig, sanitizeQueueName, useRedis } from '../infra/redisConnection.js';
 
-const GMAIL_QUEUE_NAME = "grump-gmail";
+const GMAIL_QUEUE_NAME = 'grump-gmail';
 
-let bullQueue: import("bullmq").Queue | null = null;
-let bullWorker: import("bullmq").Worker | null = null;
+let bullQueue: import('bullmq').Queue | null = null;
+let bullWorker: import('bullmq').Worker | null = null;
 
 function useRedisQueue(): boolean {
   return useRedis();
 }
 
-async function getGmailQueue(): Promise<import("bullmq").Queue> {
+async function getGmailQueue(): Promise<import('bullmq').Queue> {
   if (bullQueue) return bullQueue;
   if (!useRedisQueue()) {
-    throw new Error("Redis is required for the Gmail queue.");
+    throw new Error('Redis is required for the Gmail queue.');
   }
-  const { Queue } = await import("bullmq");
+  const { Queue } = await import('bullmq');
   const conn = getRedisConnectionConfig();
   bullQueue = new Queue(sanitizeQueueName(GMAIL_QUEUE_NAME), {
     connection: conn,
   });
-  logger.info("BullMQ gmail queue initialized");
+  logger.info('BullMQ gmail queue initialized');
   return bullQueue;
 }
 
-export async function enqueueGmailJob(
-  jobName: string,
-  data: any,
-): Promise<void> {
+export async function enqueueGmailJob(jobName: string, data: any): Promise<void> {
   const q = await getGmailQueue();
   await q.add(jobName, data);
-  logger.info({ jobName, data }, "Gmail job enqueued");
+  logger.info({ jobName, data }, 'Gmail job enqueued');
 }
 
 export async function startGmailWorker(): Promise<void> {
   if (!useRedisQueue()) {
-    logger.info("Gmail worker disabled (Redis not configured)");
+    logger.info('Gmail worker disabled (Redis not configured)');
     return;
   }
   if (bullWorker) return;
 
-  const { Worker } = await import("bullmq");
+  const { Worker } = await import('bullmq');
   const conn = getRedisConnectionConfig();
 
   bullWorker = new Worker(
     sanitizeQueueName(GMAIL_QUEUE_NAME),
     async (job) => {
-      if (job.name === "process-gmail-webhook") {
+      if (job.name === 'process-gmail-webhook') {
         await handleProcessGmailWebhook(job);
       }
     },
-    { connection: conn, concurrency: 5 },
+    { connection: conn, concurrency: 5 }
   );
 
-  bullWorker.on("completed", (job) =>
-    logger.info(
-      { jobId: job.id, jobName: job.name },
-      "BullMQ gmail job completed",
-    ),
+  bullWorker.on('completed', (job) =>
+    logger.info({ jobId: job.id, jobName: job.name }, 'BullMQ gmail job completed')
   );
 
-  bullWorker.on("failed", (job, err) =>
+  bullWorker.on('failed', (job, err) =>
     logger.error(
       { jobId: job?.id, jobName: job?.name, err: err.message },
-      "BullMQ gmail job failed",
-    ),
+      'BullMQ gmail job failed'
+    )
   );
 
-  logger.info("BullMQ gmail worker started");
+  logger.info('BullMQ gmail worker started');
 }
 
 export async function stopGmailWorker(): Promise<void> {
   if (bullWorker) {
     await bullWorker.close();
     bullWorker = null;
-    logger.info("BullMQ gmail worker stopped");
+    logger.info('BullMQ gmail worker stopped');
   }
   if (bullQueue) {
     await bullQueue.close();

@@ -6,11 +6,7 @@
  * @module lib/keyboardShortcuts
  */
 
-import {
-    commandPaletteOpen,
-    sidebarCollapsed,
-    focusChatTrigger,
-} from '../stores/uiStore';
+import { commandPaletteOpen, sidebarCollapsed, focusChatTrigger } from '../stores/uiStore';
 
 /**
  * Register all global keyboard shortcuts.
@@ -25,33 +21,33 @@ import {
  * @returns A cleanup function that removes the listener.
  */
 export function registerKeyboardShortcuts(): () => void {
-    function onKeydown(e: KeyboardEvent) {
-        const mod = e.metaKey || e.ctrlKey;
+  function onKeydown(e: KeyboardEvent) {
+    const mod = e.metaKey || e.ctrlKey;
 
-        if (mod && e.key === 'k') {
-            e.preventDefault();
-            commandPaletteOpen.update((v) => !v);
-            return;
-        }
-
-        if (mod && e.key === 'b') {
-            e.preventDefault();
-            sidebarCollapsed.update((v) => !v);
-            return;
-        }
-
-        if (
-            (mod && e.shiftKey && e.key === 'L') ||
-            (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey)
-        ) {
-            const target = e.target as HTMLElement;
-            if (target?.tagName !== 'INPUT' && target?.tagName !== 'TEXTAREA') {
-                e.preventDefault();
-                focusChatTrigger.update((n) => n + 1);
-            }
-        }
+    if (mod && e.key === 'k') {
+      e.preventDefault();
+      commandPaletteOpen.update((v) => !v);
+      return;
     }
 
-    window.addEventListener('keydown', onKeydown);
-    return () => window.removeEventListener('keydown', onKeydown);
+    if (mod && e.key === 'b') {
+      e.preventDefault();
+      sidebarCollapsed.update((v) => !v);
+      return;
+    }
+
+    if (
+      (mod && e.shiftKey && e.key === 'L') ||
+      (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey)
+    ) {
+      const target = e.target as HTMLElement;
+      if (target?.tagName !== 'INPUT' && target?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        focusChatTrigger.update((n) => n + 1);
+      }
+    }
+  }
+
+  window.addEventListener('keydown', onKeydown);
+  return () => window.removeEventListener('keydown', onKeydown);
 }

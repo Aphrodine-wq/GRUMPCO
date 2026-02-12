@@ -3,10 +3,10 @@
  * Monitors system health and sends alerts for critical issues
  */
 
-import logger from "../../middleware/logger.js";
-import { getAllServiceStates } from "./bulkheads.js";
-import { getDatabase, databaseSupportsRawDb } from "../../db/database.js";
-import { register } from "../../middleware/metrics.js";
+import logger from '../../middleware/logger.js';
+import { getAllServiceStates } from './bulkheads.js';
+import { getDatabase, databaseSupportsRawDb } from '../../db/database.js';
+import { register } from '../../middleware/metrics.js';
 
 // Type for metrics from getMetricsAsJSON()
 interface MetricValue {
@@ -23,7 +23,7 @@ interface MetricObject {
 
 interface Alert {
   id: string;
-  severity: "critical" | "warning" | "info";
+  severity: 'critical' | 'warning' | 'info';
   title: string;
   message: string;
   component: string;
@@ -73,17 +73,17 @@ const DEFAULT_CONFIG: AlertConfig = {
 function getConfigFromEnv(): Partial<AlertConfig> {
   const envThreshold = process.env.ALERTING_HIGH_MEMORY_THRESHOLD;
   const memoryThreshold =
-    envThreshold !== undefined && envThreshold !== ""
+    envThreshold !== undefined && envThreshold !== ''
       ? Math.min(100, Math.max(0, parseInt(envThreshold, 10) || 85))
       : undefined;
   const errorThreshold = process.env.ALERTING_HIGH_ERROR_RATE_THRESHOLD;
   const errorRateThreshold =
-    errorThreshold !== undefined && errorThreshold !== ""
+    errorThreshold !== undefined && errorThreshold !== ''
       ? Math.min(100, Math.max(0, parseInt(errorThreshold, 10)))
       : undefined;
   const dbFailure =
     process.env.ALERTING_DATABASE_FAILURE !== undefined
-      ? process.env.ALERTING_DATABASE_FAILURE === "true"
+      ? process.env.ALERTING_DATABASE_FAILURE === 'true'
       : undefined;
   return {
     ...(memoryThreshold !== undefined && {
@@ -119,7 +119,7 @@ class AlertingService {
    */
   updateConfig(config: Partial<AlertConfig>): void {
     this.config = { ...this.config, ...config };
-    logger.info({ config: this.config }, "Alerting configuration updated");
+    logger.info({ config: this.config }, 'Alerting configuration updated');
   }
 
   /**
@@ -134,7 +134,7 @@ class AlertingService {
     const openCircuits: string[] = [];
 
     for (const [serviceName, state] of Object.entries(serviceStates)) {
-      if (state.state === "open") {
+      if (state.state === 'open') {
         openCircuits.push(serviceName);
       }
     }
@@ -142,14 +142,13 @@ class AlertingService {
     if (openCircuits.length > 0) {
       for (const serviceName of openCircuits) {
         await this.sendAlert({
-          severity: "critical",
-          title: "Circuit Breaker Open",
+          severity: 'critical',
+          title: 'Circuit Breaker Open',
           message: `Circuit breaker for ${serviceName} is open. Service is unavailable.`,
           component: serviceName,
           metadata: {
             service: serviceName,
-            state:
-              serviceStates[serviceName as keyof typeof serviceStates].state,
+            state: serviceStates[serviceName as keyof typeof serviceStates].state,
           },
         });
       }
@@ -165,11 +164,8 @@ class AlertingService {
     }
 
     try {
-      const metrics =
-        (await register.getMetricsAsJSON()) as unknown as MetricObject[];
-      const httpRequestsMetric = metrics.find(
-        (m) => m.name === "http_requests_total",
-      );
+      const metrics = (await register.getMetricsAsJSON()) as unknown as MetricObject[];
+      const httpRequestsMetric = metrics.find((m) => m.name === 'http_requests_total');
 
       if (!httpRequestsMetric || !httpRequestsMetric.values) {
         return;
@@ -177,14 +173,11 @@ class AlertingService {
 
       // Calculate error rate from metrics
       // This is a simplified version - in production, you'd query Prometheus
-      const totalRequests = httpRequestsMetric.values.reduce(
-        (sum, v) => sum + (v.value || 0),
-        0,
-      );
+      const totalRequests = httpRequestsMetric.values.reduce((sum, v) => sum + (v.value || 0), 0);
 
       const errorRequests = httpRequestsMetric.values
         .filter((v) => {
-          const status = parseInt(v.labels?.status_code || "200", 10);
+          const status = parseInt(v.labels?.status_code || '200', 10);
           return status >= 400;
         })
         .reduce((sum, v) => sum + (v.value || 0), 0);
@@ -194,10 +187,10 @@ class AlertingService {
 
         if (errorRate > this.config.highErrorRate.threshold) {
           await this.sendAlert({
-            severity: "warning",
-            title: "High Error Rate Detected",
+            severity: 'warning',
+            title: 'High Error Rate Detected',
             message: `Error rate is ${errorRate.toFixed(2)}%, exceeding threshold of ${this.config.highErrorRate.threshold}%`,
-            component: "http",
+            component: 'http',
             metadata: {
               errorRate,
               threshold: this.config.highErrorRate.threshold,
@@ -208,10 +201,7 @@ class AlertingService {
         }
       }
     } catch (error) {
-      logger.error(
-        { error: (error as Error).message },
-        "Failed to check error rates",
-      );
+      logger.error({ error: (error as Error).message }, 'Failed to check error rates');
     }
   }
 
@@ -224,11 +214,8 @@ class AlertingService {
     }
 
     try {
-      const metrics =
-        (await register.getMetricsAsJSON()) as unknown as MetricObject[];
-      const httpDurationMetric = metrics.find(
-        (m) => m.name === "http_request_duration_seconds",
-      );
+      const metrics = (await register.getMetricsAsJSON()) as unknown as MetricObject[];
+      const httpDurationMetric = metrics.find((m) => m.name === 'http_request_duration_seconds');
 
       if (!httpDurationMetric || !httpDurationMetric.values) {
         return;
@@ -244,10 +231,10 @@ class AlertingService {
 
         if (p95Ms > this.config.performanceDegradation.p95ThresholdMs) {
           await this.sendAlert({
-            severity: "warning",
-            title: "Performance Degradation",
+            severity: 'warning',
+            title: 'Performance Degradation',
             message: `P95 latency is ${p95Ms.toFixed(0)}ms, exceeding threshold of ${this.config.performanceDegradation.p95ThresholdMs}ms`,
-            component: "http",
+            component: 'http',
             metadata: {
               p95LatencyMs: p95Ms,
               threshold: this.config.performanceDegradation.p95ThresholdMs,
@@ -256,10 +243,7 @@ class AlertingService {
         }
       }
     } catch (error) {
-      logger.error(
-        { error: (error as Error).message },
-        "Failed to check performance",
-      );
+      logger.error({ error: (error as Error).message }, 'Failed to check performance');
     }
   }
 
@@ -280,13 +264,13 @@ class AlertingService {
     try {
       const db = getDatabase();
       const dbInstance = db.getDb();
-      dbInstance.prepare("SELECT 1").get();
+      dbInstance.prepare('SELECT 1').get();
     } catch (error) {
       await this.sendAlert({
-        severity: "critical",
-        title: "Database Connection Failure",
+        severity: 'critical',
+        title: 'Database Connection Failure',
         message: `Database is unreachable: ${(error as Error).message}`,
-        component: "database",
+        component: 'database',
         metadata: {
           error: (error as Error).message,
         },
@@ -318,10 +302,10 @@ class AlertingService {
 
     if (heapPercentage > this.config.highMemoryUsage.threshold) {
       await this.sendAlert({
-        severity: "warning",
-        title: "High Memory Usage",
+        severity: 'warning',
+        title: 'High Memory Usage',
         message: `Memory usage is ${heapPercentage.toFixed(1)}%, exceeding threshold of ${this.config.highMemoryUsage.threshold}%`,
-        component: "system",
+        component: 'system',
         metadata: {
           heapUsedMB: Math.round(heapUsedMB),
           heapTotalMB: Math.round(heapTotalMB),
@@ -347,7 +331,7 @@ class AlertingService {
   /**
    * Send an alert
    */
-  async sendAlert(alert: Omit<Alert, "id" | "timestamp">): Promise<void> {
+  async sendAlert(alert: Omit<Alert, 'id' | 'timestamp'>): Promise<void> {
     const alertId = `${alert.component}_${alert.severity}_${Date.now()}`;
     const fullAlert: Alert = {
       ...alert,
@@ -360,11 +344,11 @@ class AlertingService {
       (a) =>
         a.component === alert.component &&
         a.title === alert.title &&
-        Date.now() - new Date(a.timestamp).getTime() < 60000, // 1 minute
+        Date.now() - new Date(a.timestamp).getTime() < 60000 // 1 minute
     );
 
     if (recentAlert) {
-      logger.debug({ alertId }, "Skipping duplicate alert");
+      logger.debug({ alertId }, 'Skipping duplicate alert');
       return;
     }
 
@@ -378,8 +362,8 @@ class AlertingService {
     }
 
     // Log alert
-    const logLevel = alert.severity === "critical" ? "error" : "warn";
-    logger[logLevel](fullAlert, "Alert triggered");
+    const logLevel = alert.severity === 'critical' ? 'error' : 'warn';
+    logger[logLevel](fullAlert, 'Alert triggered');
 
     // Send to webhook if configured
     if (this.config.webhookUrl) {
@@ -398,21 +382,18 @@ class AlertingService {
   private async sendWebhookAlert(alert: Alert): Promise<void> {
     try {
       const response = await fetch(this.config.webhookUrl!, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(alert),
       });
 
       if (!response.ok) {
-        logger.warn({ status: response.status }, "Webhook alert failed");
+        logger.warn({ status: response.status }, 'Webhook alert failed');
       }
     } catch (error) {
-      logger.error(
-        { error: (error as Error).message },
-        "Failed to send webhook alert",
-      );
+      logger.error({ error: (error as Error).message }, 'Failed to send webhook alert');
     }
   }
 
@@ -422,7 +403,7 @@ class AlertingService {
   private async sendEmailAlert(alert: Alert): Promise<void> {
     logger.debug(
       { alertId: alert.id, recipients: this.config.emailRecipients },
-      "Email alerting deferred; configure email service to enable",
+      'Email alerting deferred; configure email service to enable'
     );
   }
 
@@ -470,11 +451,11 @@ export function initializeAlerting(intervalMs = 60000): void {
   // Run health checks periodically
   setInterval(() => {
     service.runHealthChecks().catch((error) => {
-      logger.error({ error: (error as Error).message }, "Health check failed");
+      logger.error({ error: (error as Error).message }, 'Health check failed');
     });
   }, intervalMs);
 
-  logger.info({ intervalMs }, "Alerting service initialized");
+  logger.info({ intervalMs }, 'Alerting service initialized');
 }
 
 export { AlertingService, type Alert, type AlertConfig };

@@ -3,10 +3,10 @@
  * Stub implementation for persistent conversation memory.
  */
 
-import logger from "../../middleware/logger.js";
+import logger from '../../middleware/logger.js';
 
 export interface ConversationMessage {
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
   timestamp?: string;
 }
@@ -31,7 +31,7 @@ function getConversationKey(platform: string, platformUserId: string): string {
 export async function getOrCreateConversation(
   platform: string,
   platformUserId: string,
-  _userId?: string | null,
+  _userId?: string | null
 ): Promise<ConversationMessage[]> {
   const key = getConversationKey(platform, platformUserId);
 
@@ -47,7 +47,7 @@ export async function getOrCreateConversation(
   };
 
   conversations.set(key, store);
-  logger.debug({ platform, platformUserId }, "Created new conversation");
+  logger.debug({ platform, platformUserId }, 'Created new conversation');
 
   return store.messages;
 }
@@ -60,7 +60,7 @@ export async function saveConversation(
   platformUserId: string,
   messages: ConversationMessage[],
   _userId?: string | null,
-  _metadata?: Record<string, unknown>,
+  _metadata?: Record<string, unknown>
 ): Promise<void> {
   const key = getConversationKey(platform, platformUserId);
   const existing = conversations.get(key);
@@ -73,12 +73,12 @@ export async function saveConversation(
   };
 
   conversations.set(key, store);
-  logger.debug({ key, messageCount: messages.length }, "Saved conversation");
+  logger.debug({ key, messageCount: messages.length }, 'Saved conversation');
 }
 
 export async function deleteConversation(
   platform: string,
-  platformUserId: string,
+  platformUserId: string
 ): Promise<boolean> {
   const key = getConversationKey(platform, platformUserId);
   return conversations.delete(key);
@@ -87,7 +87,7 @@ export async function deleteConversation(
 export async function getConversationHistory(
   platform: string,
   platformUserId: string,
-  limit = 50,
+  limit = 50
 ): Promise<ConversationMessage[]> {
   const messages = await getOrCreateConversation(platform, platformUserId);
   return messages.slice(-limit);
@@ -96,7 +96,7 @@ export async function getConversationHistory(
 export async function addMessage(
   platform: string,
   platformUserId: string,
-  message: ConversationMessage,
+  message: ConversationMessage
 ): Promise<void> {
   const messages = await getOrCreateConversation(platform, platformUserId);
   messages.push({
@@ -105,10 +105,7 @@ export async function addMessage(
   });
 }
 
-export async function clearConversation(
-  platform: string,
-  platformUserId: string,
-): Promise<void> {
+export async function clearConversation(platform: string, platformUserId: string): Promise<void> {
   const key = getConversationKey(platform, platformUserId);
   const existing = conversations.get(key);
   if (existing) {

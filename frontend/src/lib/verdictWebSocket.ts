@@ -118,7 +118,6 @@ export class VerdictWebSocketClient {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
-
       setTimeout(() => {
         this.connect().catch(() => {
           // Retry on failure
@@ -216,8 +215,6 @@ export class RealTimeDashboard {
     this.wsClient.on('batch:progress', (_msg: WebSocketMessage) => {
       this.notifyUpdate();
     });
-
-
   }
 
   /// Register update listener
@@ -301,7 +298,6 @@ export class VerdictSSEClient {
       this.eventSource.onopen = () => {
         this.reconnectAttempts = 0;
       };
-
     } catch (error) {
       console.error('Failed to create SSE connection:', error);
     }

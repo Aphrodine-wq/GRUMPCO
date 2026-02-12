@@ -20,9 +20,6 @@ export {
   applyAutoFixes,
   validateFixes,
   regenerateAgentOutput,
-} from "./agentOrchestrator/index.js";
+} from './agentOrchestrator/index.js';
 
-export type {
-  CodeGenerationOptions,
-  SpecUiContext,
-} from "./agentOrchestrator/index.js";
+export type { CodeGenerationOptions, SpecUiContext } from './agentOrchestrator/index.js';

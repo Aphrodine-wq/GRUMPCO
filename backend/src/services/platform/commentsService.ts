@@ -3,10 +3,10 @@
  * Uses DatabaseService when available (SQLite with migration 010); in-memory fallback otherwise.
  */
 
-import { getDatabase, type DatabaseService } from "../../db/database.js";
-import logger from "../../middleware/logger.js";
+import { getDatabase, type DatabaseService } from '../../db/database.js';
+import logger from '../../middleware/logger.js';
 
-export type EntityType = "diagram" | "spec" | "plan" | "code" | "session";
+export type EntityType = 'diagram' | 'spec' | 'plan' | 'code' | 'session';
 
 export interface Comment {
   id: string;
@@ -29,7 +29,7 @@ export interface VersionSnapshot {
 }
 
 function isDatabaseService(db: unknown): db is DatabaseService {
-  return typeof (db as DatabaseService).insertComment === "function";
+  return typeof (db as DatabaseService).insertComment === 'function';
 }
 
 function randomId(): string {
@@ -91,15 +91,12 @@ export function addComment(p: {
   inMemoryComments.set(key, list);
   logger.info(
     { entity_type: p.entity_type, entity_id: p.entity_id, commentId: id },
-    "Comment added",
+    'Comment added'
   );
   return comment;
 }
 
-export function listComments(
-  entity_type: string,
-  entity_id: string,
-): Comment[] {
+export function listComments(entity_type: string, entity_id: string): Comment[] {
   const db = getDatabase();
   if (isDatabaseService(db)) {
     return db.listComments(entity_type, entity_id) as Comment[];
@@ -110,7 +107,7 @@ export function listComments(
 
 export function addVersion(p: {
   project_id: string;
-  entity_type: "spec" | "plan" | "diagram";
+  entity_type: 'spec' | 'plan' | 'diagram';
   entity_id: string;
   data: string;
   created_by?: string | null;
@@ -153,17 +150,14 @@ export function addVersion(p: {
   };
   list.unshift(snap);
   inMemoryVersions.set(key, list.slice(0, 100));
-  logger.info(
-    { entity_type: p.entity_type, entity_id: p.entity_id, version },
-    "Version saved",
-  );
+  logger.info({ entity_type: p.entity_type, entity_id: p.entity_id, version }, 'Version saved');
   return snap;
 }
 
 export function listVersions(
   entity_type: string,
   entity_id: string,
-  limit = 50,
+  limit = 50
 ): VersionSnapshot[] {
   const db = getDatabase();
   if (isDatabaseService(db)) {

@@ -3,34 +3,31 @@
  * Endpoints for system architecture generation
  */
 
-import { createHash } from "crypto";
-import express, { type Request, type Response, type Router } from "express";
+import { createHash } from 'crypto';
+import express, { type Request, type Response, type Router } from 'express';
 import {
   generateArchitecture,
   generateArchitectureStream,
-} from "../services/ship/architectureService.js";
-import { getRequestLogger } from "../middleware/logger.js";
-import { sendServerError, writeSSEError } from "../utils/errorResponse.js";
+} from '../services/ship/architectureService.js';
+import { getRequestLogger } from '../middleware/logger.js';
+import { sendServerError, writeSSEError } from '../utils/errorResponse.js';
 import {
   validateArchitectureRequest,
   handleArchitectureValidationErrors,
-} from "../middleware/validator.js";
-import { dispatchWebhook } from "../services/integrations/webhookService.js";
-import { getTieredCache } from "../services/caching/tieredCache.js";
-import { logOnError } from "../utils/safeAsync.js";
-import { DEMO_ARCHITECTURE } from "../demo/sampleData.js";
-import type {
-  ArchitectureRequest,
-  ConversationMessage,
-} from "../types/index.js";
-import type { EnrichedIntent } from "../services/intent/intentCompilerService.js";
+} from '../middleware/validator.js';
+import { dispatchWebhook } from '../services/integrations/webhookService.js';
+import { getTieredCache } from '../services/caching/tieredCache.js';
+import { logOnError } from '../utils/safeAsync.js';
+import { DEMO_ARCHITECTURE } from '../demo/sampleData.js';
+import type { ArchitectureRequest, ConversationMessage } from '../types/index.js';
+import type { EnrichedIntent } from '../services/intent/intentCompilerService.js';
 
 const ARCHITECTURE_CACHE_TTL_SEC = 60 * 60; // 1 hour (seconds for tiered cache)
 
 function architectureCacheKey(
   req: ArchitectureRequest,
   conversationHistory?: ConversationMessage[],
-  enrichedIntent?: EnrichedIntent,
+  enrichedIntent?: EnrichedIntent
 ): string {
   const payload = JSON.stringify({
     projectDescription: req.projectDescription?.trim(),
@@ -41,7 +38,7 @@ function architectureCacheKey(
     historyLen: conversationHistory?.length ?? 0,
     enrichedRaw: enrichedIntent?.raw?.trim().slice(0, 500),
   });
-  return createHash("sha256").update(payload).digest("hex").substring(0, 32);
+  return createHash('sha256').update(payload).digest('hex').substring(0, 32);
 }
 
 const router: Router = express.Router();
@@ -57,7 +54,7 @@ interface ArchitectureRequestBody extends ArchitectureRequest {
  * Generate system architecture from project description
  */
 router.post(
-  "/generate",
+  '/generate',
   validateArchitectureRequest,
   handleArchitectureValidationErrors,
   async (req: Request, res: Response): Promise<void> => {
@@ -66,10 +63,10 @@ router.post(
 
     try {
       if (body.demo === true) {
-        log.info({}, "Demo mode: returning sample architecture");
+        log.info({}, 'Demo mode: returning sample architecture');
         res.json({
           id: DEMO_ARCHITECTURE.id,
-          status: "complete",
+          status: 'complete',
           architecture: DEMO_ARCHITECTURE,
           timestamp: new Date().toISOString(),
         });
@@ -103,40 +100,32 @@ router.post(
           refinementsLength: refinements?.length,
           hasEnrichedIntent: !!enrichedIntent,
         },
-        "Architecture generation requested",
+        'Architecture generation requested'
       );
 
-      const key = architectureCacheKey(
-        archRequest,
-        conversationHistory,
-        enrichedIntent,
-      );
+      const key = architectureCacheKey(archRequest, conversationHistory, enrichedIntent);
       const cache = getTieredCache();
       const cached = await cache.get<ReturnType<typeof generateArchitecture>>(
-        "architecture:generate",
-        key,
+        'architecture:generate',
+        key
       );
-      if (cached && cached.status !== "error") {
+      if (cached && cached.status !== 'error') {
         res.json(cached);
         return;
       }
 
       let response;
       try {
-        response = await generateArchitecture(
-          archRequest,
-          conversationHistory,
-          enrichedIntent,
-        );
+        response = await generateArchitecture(archRequest, conversationHistory, enrichedIntent);
       } catch (error) {
         log.warn(
           { error: (error as Error).message },
-          "Architecture generation failed, using demo fallback",
+          'Architecture generation failed, using demo fallback'
         );
         // Return demo architecture as fallback
         res.json({
           id: DEMO_ARCHITECTURE.id,
-          status: "complete",
+          status: 'complete',
           architecture: DEMO_ARCHITECTURE,
           timestamp: new Date().toISOString(),
           fallback: true,
@@ -145,15 +134,15 @@ router.post(
         return;
       }
 
-      if (response.status === "error") {
+      if (response.status === 'error') {
         log.warn(
           { error: response.error },
-          "Architecture generation returned error, using demo fallback",
+          'Architecture generation returned error, using demo fallback'
         );
         // Return demo architecture as fallback
         res.json({
           id: DEMO_ARCHITECTURE.id,
-          status: "complete",
+          status: 'complete',
           architecture: DEMO_ARCHITECTURE,
           timestamp: new Date().toISOString(),
           fallback: true,
@@ -163,17 +152,12 @@ router.post(
       }
 
       logOnError(
-        cache.set(
-          "architecture:generate",
-          key,
-          response,
-          ARCHITECTURE_CACHE_TTL_SEC,
-        ),
-        "Architecture cache set",
-        { key },
+        cache.set('architecture:generate', key, response, ARCHITECTURE_CACHE_TTL_SEC),
+        'Architecture cache set',
+        { key }
       );
 
-      dispatchWebhook("architecture.generated", {
+      dispatchWebhook('architecture.generated', {
         architectureId: response.architecture?.id,
         projectName: response.architecture?.projectName,
         hasDiagram: !!(
@@ -185,13 +169,10 @@ router.post(
       res.json(response);
     } catch (error) {
       const err = error as Error;
-      log.error(
-        { error: err.message },
-        "Architecture generation endpoint error",
-      );
+      log.error({ error: err.message }, 'Architecture generation endpoint error');
       sendServerError(res, err);
     }
-  },
+  }
 );
 
 /**
@@ -199,7 +180,7 @@ router.post(
  * Generate architecture with streaming response
  */
 router.post(
-  "/generate-stream",
+  '/generate-stream',
   validateArchitectureRequest,
   handleArchitectureValidationErrors,
   async (req: Request, res: Response): Promise<void> => {
@@ -208,13 +189,13 @@ router.post(
 
     try {
       if (body.demo === true) {
-        log.info({}, "Demo mode: returning sample architecture stream");
-        res.setHeader("Content-Type", "text/event-stream");
-        res.setHeader("Cache-Control", "no-cache");
-        res.setHeader("Connection", "keep-alive");
-        res.setHeader("Access-Control-Allow-Origin", "*");
+        log.info({}, 'Demo mode: returning sample architecture stream');
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('Access-Control-Allow-Origin', '*');
         res.write(
-          `data: ${JSON.stringify({ type: "complete", architecture: DEMO_ARCHITECTURE })}\n\n`,
+          `data: ${JSON.stringify({ type: 'complete', architecture: DEMO_ARCHITECTURE })}\n\n`
         );
         res.end();
         return;
@@ -232,16 +213,13 @@ router.post(
 
       const desc = (projectDescription ?? enrichedIntent?.raw) as string;
 
-      log.info(
-        { hasEnrichedIntent: !!enrichedIntent },
-        "Architecture stream generation requested",
-      );
+      log.info({ hasEnrichedIntent: !!enrichedIntent }, 'Architecture stream generation requested');
 
       // Set up SSE headers
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
-      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('Access-Control-Allow-Origin', '*');
 
       const generator = generateArchitectureStream(
         {
@@ -252,7 +230,7 @@ router.post(
           refinements,
         },
         conversationHistory,
-        enrichedIntent,
+        enrichedIntent
       );
 
       for await (const chunk of generator) {
@@ -262,11 +240,11 @@ router.post(
       res.end();
     } catch (error) {
       const err = error as Error;
-      log.error({ error: err.message }, "Architecture stream endpoint error");
+      log.error({ error: err.message }, 'Architecture stream endpoint error');
       writeSSEError(res, err);
       res.end();
     }
-  },
+  }
 );
 
 /**
@@ -274,50 +252,42 @@ router.post(
  * Refine existing architecture
  */
 router.post(
-  "/refine",
+  '/refine',
   async (
-    req: Request<
-      Record<string, never>,
-      object,
-      { architectureId?: string; refinements: string[] }
-    >,
-    res: Response,
+    req: Request<Record<string, never>, object, { architectureId?: string; refinements: string[] }>,
+    res: Response
   ): Promise<void> => {
     const log = getRequestLogger();
 
     try {
       const { architectureId, refinements } = req.body;
 
-      if (
-        !refinements ||
-        !Array.isArray(refinements) ||
-        refinements.length === 0
-      ) {
+      if (!refinements || !Array.isArray(refinements) || refinements.length === 0) {
         res.status(400).json({
-          error: "Missing or invalid refinements",
-          type: "validation_error",
+          error: 'Missing or invalid refinements',
+          type: 'validation_error',
         });
         return;
       }
 
       log.info(
         { architectureId, refinementCount: refinements.length },
-        "Architecture refinement requested",
+        'Architecture refinement requested'
       );
 
       // For now, just return success - refinements will be used in PRD generation
       res.json({
         id: architectureId,
-        status: "refined",
-        message: "Architecture refinement noted. Use in PRD generation.",
+        status: 'refined',
+        message: 'Architecture refinement noted. Use in PRD generation.',
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
       const err = error as Error;
-      log.error({ error: err.message }, "Architecture refine endpoint error");
+      log.error({ error: err.message }, 'Architecture refine endpoint error');
       sendServerError(res, err);
     }
-  },
+  }
 );
 
 export default router;

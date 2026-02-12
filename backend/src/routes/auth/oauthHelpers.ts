@@ -7,9 +7,9 @@
  * @module routes/auth/oauthHelpers
  */
 
-import type { Response } from "express";
-import { auth } from "../../services/platform/supabaseClient.js";
-import { getRequestLogger } from "../../middleware/logger.js";
+import type { Response } from 'express';
+import { auth } from '../../services/platform/supabaseClient.js';
+import { getRequestLogger } from '../../middleware/logger.js';
 
 // =============================================================================
 // TYPES
@@ -18,7 +18,7 @@ import { getRequestLogger } from "../../middleware/logger.js";
 /**
  * Supported OAuth providers
  */
-export type OAuthProvider = "discord" | "google" | "github";
+export type OAuthProvider = 'discord' | 'google' | 'github';
 
 /**
  * Common query parameters for OAuth initiation
@@ -68,19 +68,19 @@ export interface ProviderConfig {
  */
 export const PROVIDER_CONFIGS: Record<OAuthProvider, ProviderConfig> = {
   discord: {
-    scopes: "identify email",
-    redirectEnvVar: "DISCORD_OAUTH_REDIRECT_URL",
-    displayName: "Discord",
+    scopes: 'identify email',
+    redirectEnvVar: 'DISCORD_OAUTH_REDIRECT_URL',
+    displayName: 'Discord',
   },
   google: {
-    scopes: "openid email profile",
-    redirectEnvVar: "GOOGLE_OAUTH_REDIRECT_URL",
-    displayName: "Google",
+    scopes: 'openid email profile',
+    redirectEnvVar: 'GOOGLE_OAUTH_REDIRECT_URL',
+    displayName: 'Google',
   },
   github: {
-    scopes: "read:user user:email",
-    redirectEnvVar: "GITHUB_OAUTH_REDIRECT_URL",
-    displayName: "GitHub",
+    scopes: 'read:user user:email',
+    redirectEnvVar: 'GITHUB_OAUTH_REDIRECT_URL',
+    displayName: 'GitHub',
   },
 };
 
@@ -93,7 +93,7 @@ export const PROVIDER_CONFIGS: Record<OAuthProvider, ProviderConfig> = {
  */
 export function buildOAuthState(query: OAuthInitQuery): OAuthState {
   const state: OAuthState = {};
-  const isCli = query.cli === "true";
+  const isCli = query.cli === 'true';
 
   if (isCli && query.redirect_uri) {
     state.cli = true;
@@ -111,7 +111,7 @@ export function buildOAuthState(query: OAuthInitQuery): OAuthState {
  * Encode OAuth state for URL transmission
  */
 export function encodeState(state: OAuthState): string {
-  return Buffer.from(JSON.stringify(state)).toString("base64");
+  return Buffer.from(JSON.stringify(state)).toString('base64');
 }
 
 /**
@@ -119,7 +119,7 @@ export function encodeState(state: OAuthState): string {
  */
 export function decodeState(encodedState: string): OAuthState | null {
   try {
-    const decoded = Buffer.from(encodedState, "base64").toString("utf-8");
+    const decoded = Buffer.from(encodedState, 'base64').toString('utf-8');
     return JSON.parse(decoded) as OAuthState;
   } catch {
     return null;
@@ -132,7 +132,7 @@ export function decodeState(encodedState: string): OAuthState | null {
 export function getCallbackUrl(provider: OAuthProvider): string {
   const config = PROVIDER_CONFIGS[provider];
   const envUrl = process.env[config.redirectEnvVar];
-  const baseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
   return envUrl || `${baseUrl}/auth/${provider}/callback`;
 }
 
@@ -140,7 +140,7 @@ export function getCallbackUrl(provider: OAuthProvider): string {
  * Check if request is from CLI
  */
 export function isCli(query: OAuthInitQuery): boolean {
-  return query.cli === "true";
+  return query.cli === 'true';
 }
 
 /**
@@ -150,7 +150,7 @@ export function handleOAuthInitError(
   res: Response,
   provider: OAuthProvider,
   errorMessage: string,
-  query: OAuthInitQuery,
+  query: OAuthInitQuery
 ): void {
   const log = getRequestLogger();
   const config = PROVIDER_CONFIGS[provider];
@@ -158,15 +158,13 @@ export function handleOAuthInitError(
   log.error({ error: errorMessage }, `${config.displayName} OAuth init failed`);
 
   if (isCli(query) && query.redirect_uri) {
-    res.redirect(
-      `${query.redirect_uri}?error=${encodeURIComponent(errorMessage)}`,
-    );
+    res.redirect(`${query.redirect_uri}?error=${encodeURIComponent(errorMessage)}`);
     return;
   }
 
   res.status(500).json({
     error: `Failed to initiate ${config.displayName} authentication`,
-    type: "oauth_init_error",
+    type: 'oauth_init_error',
   });
 }
 
@@ -177,11 +175,11 @@ export function handleOAuthUrl(
   res: Response,
   oauthUrl: string,
   query: OAuthInitQuery,
-  state: OAuthState,
+  state: OAuthState
 ): void {
   if (isCli(query) && query.redirect_uri) {
     const url = new URL(oauthUrl);
-    url.searchParams.set("state", encodeState(state));
+    url.searchParams.set('state', encodeState(state));
     res.redirect(url.toString());
   } else {
     res.redirect(oauthUrl);
@@ -195,11 +193,11 @@ export function handleCallbackError(
   res: Response,
   redirectUri: string,
   errorMessage: string,
-  originalState?: string,
+  originalState?: string
 ): void {
   const params = new URLSearchParams({ error: errorMessage });
   if (originalState) {
-    params.set("state", originalState);
+    params.set('state', originalState);
   }
   res.redirect(`${redirectUri}?${params.toString()}`);
 }
@@ -211,16 +209,16 @@ export function handleCallbackSuccess(
   res: Response,
   redirectUri: string,
   tokens: { accessToken: string; refreshToken?: string },
-  originalState?: string,
+  originalState?: string
 ): void {
   const params = new URLSearchParams({
     access_token: tokens.accessToken,
   });
   if (tokens.refreshToken) {
-    params.set("refresh_token", tokens.refreshToken);
+    params.set('refresh_token', tokens.refreshToken);
   }
   if (originalState) {
-    params.set("state", originalState);
+    params.set('state', originalState);
   }
   res.redirect(`${redirectUri}?${params.toString()}`);
 }
@@ -235,7 +233,7 @@ export function handleCallbackSuccess(
 export async function initiateOAuthFlow(
   provider: OAuthProvider,
   res: Response,
-  query: OAuthInitQuery,
+  query: OAuthInitQuery
 ): Promise<void> {
   const config = PROVIDER_CONFIGS[provider];
   const state = buildOAuthState(query);
@@ -258,8 +256,8 @@ export async function initiateOAuthFlow(
     handleOAuthUrl(res, data.url, query, state);
   } else {
     res.status(500).json({
-      error: "No OAuth URL returned",
-      type: "oauth_init_error",
+      error: 'No OAuth URL returned',
+      type: 'oauth_init_error',
     });
   }
 }

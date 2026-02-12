@@ -30,10 +30,13 @@ const mockFetchApi = fetchApi as ReturnType<typeof vi.fn>;
 describe('chatStreaming', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal('requestAnimationFrame', vi.fn((cb) => {
-      cb(0);
-      return 0;
-    }));
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((cb) => {
+        cb(0);
+        return 0;
+      })
+    );
   });
 
   afterEach(() => {
@@ -95,9 +98,7 @@ describe('chatStreaming', () => {
     });
 
     it('should convert string content to text', () => {
-      const messages: Message[] = [
-        { role: 'user', content: 'Hello world' },
-      ];
+      const messages: Message[] = [{ role: 'user', content: 'Hello world' }];
       const result = prepareMessagesForApi(messages);
       expect(result[0].content).toBe('Hello world');
     });
@@ -128,43 +129,44 @@ describe('chatStreaming', () => {
     });
 
     it('should handle NIM provider with image attachment', () => {
-      const messages: Message[] = [
-        { role: 'user', content: 'Describe this image' },
-      ];
+      const messages: Message[] = [{ role: 'user', content: 'Describe this image' }];
       const result = prepareMessagesForApi(messages, {
         provider: 'nim',
         lastUserMessageImage: 'data:image/png;base64,abc123',
       });
-      
+
       expect(Array.isArray(result[0].content)).toBe(true);
-      const parts = result[0].content as Array<{ type: string; text?: string; image_url?: { url: string } }>;
+      const parts = result[0].content as Array<{
+        type: string;
+        text?: string;
+        image_url?: { url: string };
+      }>;
       expect(parts).toHaveLength(2);
       expect(parts[0]).toEqual({ type: 'text', text: 'Describe this image' });
-      expect(parts[1]).toEqual({ type: 'image_url', image_url: { url: 'data:image/png;base64,abc123' } });
+      expect(parts[1]).toEqual({
+        type: 'image_url',
+        image_url: { url: 'data:image/png;base64,abc123' },
+      });
     });
 
     it('should not add image for non-NIM providers', () => {
-      const messages: Message[] = [
-        { role: 'user', content: 'Describe this image' },
-      ];
+      const messages: Message[] = [{ role: 'user', content: 'Describe this image' }];
       const result = prepareMessagesForApi(messages, {
         provider: 'openai',
         lastUserMessageImage: 'data:image/png;base64,abc123',
       });
-      
+
       expect(typeof result[0].content).toBe('string');
       expect(result[0].content).toBe('Describe this image');
     });
 
     it('should handle empty text with image for NIM', () => {
-      const messages: Message[] = [
-        { role: 'user', content: '' },
-      ];
+      const messages: Message[] = [{ role: 'user', content: '' }];
       const result = prepareMessagesForApi(messages, {
         provider: 'nim',
         lastUserMessageImage: 'data:image/png;base64,abc123',
       });
-      
+
       const parts = result[0].content as Array<{ type: string }>;
       expect(parts).toHaveLength(1);
       expect(parts[0].type).toBe('image_url');
@@ -232,7 +234,7 @@ describe('chatStreaming', () => {
 
       const messages: Message[] = [{ role: 'user', content: 'Hi' }];
       const onEvent = vi.fn();
-      
+
       const blocks = await streamChat(messages, { onEvent });
 
       expect(blocks).toHaveLength(1);
@@ -290,7 +292,7 @@ describe('chatStreaming', () => {
 
       const messages: Message[] = [{ role: 'user', content: 'Solve this' }];
       const onEvent = vi.fn();
-      
+
       await streamChat(messages, { onEvent });
 
       expect(onEvent).toHaveBeenCalledWith(
@@ -310,7 +312,7 @@ describe('chatStreaming', () => {
 
       const messages: Message[] = [{ role: 'user', content: 'Do something' }];
       const onEvent = vi.fn();
-      
+
       await streamChat(messages, { onEvent });
 
       expect(onEvent).toHaveBeenCalledWith(
@@ -330,7 +332,7 @@ describe('chatStreaming', () => {
 
       const messages: Message[] = [{ role: 'user', content: 'Create a diagram' }];
       const onEvent = vi.fn();
-      
+
       await streamChat(messages, { onEvent });
 
       expect(onEvent).toHaveBeenCalledWith(
@@ -358,11 +360,7 @@ describe('chatStreaming', () => {
     });
 
     it('should handle incomplete chunks across reads', async () => {
-      const chunks = [
-        'data: {"type": "text", "text": "Hel',
-        'lo"}\n',
-        'data: {"type": "done"}\n',
-      ];
+      const chunks = ['data: {"type": "text", "text": "Hel', 'lo"}\n', 'data: {"type": "done"}\n'];
       mockFetchApi.mockResolvedValue(createMockResponse(chunks));
 
       const messages: Message[] = [{ role: 'user', content: 'Hi' }];
@@ -417,7 +415,7 @@ describe('chatStreaming', () => {
         'data: {"type": "text", "text": " world"}\n',
         'data: {"type": "done"}\n',
       ];
-      
+
       let chunkIndex = 0;
       const reader = {
         read: vi.fn().mockImplementation(async () => {
@@ -442,7 +440,7 @@ describe('chatStreaming', () => {
 
       const messages: Message[] = [{ role: 'user', content: 'Hi' }];
       const events: Array<{ type: string }> = [];
-      
+
       for await (const event of streamChatGenerator(messages)) {
         events.push(event);
       }
@@ -458,7 +456,7 @@ describe('chatStreaming', () => {
 
       const messages: Message[] = [{ role: 'user', content: 'Hi' }];
       const events: Array<{ type: string; error?: string }> = [];
-      
+
       for await (const event of streamChatGenerator(messages)) {
         events.push(event);
       }
@@ -515,9 +513,7 @@ describe('chatStreaming', () => {
     });
 
     it('should handle messages with undefined content', () => {
-      const messages: Message[] = [
-        { role: 'user', content: undefined as unknown as string },
-      ];
+      const messages: Message[] = [{ role: 'user', content: undefined as unknown as string }];
       const result = calculateMessageChars(messages);
       expect(result).toBe(0);
     });

@@ -4,12 +4,12 @@
  * Tier-based limits: free < pro < team < enterprise (when X-Tier header or tier context is set).
  */
 
-import rateLimit, { type RateLimitRequestHandler } from "express-rate-limit";
-import { RedisStore } from "rate-limit-redis";
-import type { Request, Response } from "express";
-import logger from "./logger.js";
-import { getRedisClient, isRedisConnected } from "../services/infra/redis.js";
-import type { TierId } from "../services/platform/featureFlagsService.js";
+import rateLimit, { type RateLimitRequestHandler } from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
+import type { Request, Response } from 'express';
+import logger from './logger.js';
+import { getRedisClient, isRedisConnected } from '../services/infra/redis.js';
+import type { TierId } from '../services/platform/featureFlagsService.js';
 
 interface RateLimitConfig {
   windowMs: number;
@@ -43,53 +43,53 @@ function getTierFromRequest(req: Request): TierId {
   // The tier must be set by auth middleware after verifying JWT claims or database lookup
   const authReq = req as RequestWithAuth;
   const userTier = authReq.user?.tier as TierId | undefined;
-  if (userTier && ["starter", "pro", "team", "enterprise"].includes(userTier)) {
+  if (userTier && ['starter', 'pro', 'team', 'enterprise'].includes(userTier)) {
     return userTier;
   }
   // Fallback: check if tier was set by auth middleware on session
   const sessionTier = authReq.session?.tier as TierId | undefined;
-  if (sessionTier && ["starter", "pro", "team", "enterprise"].includes(sessionTier)) {
+  if (sessionTier && ['starter', 'pro', 'team', 'enterprise'].includes(sessionTier)) {
     return sessionTier;
   }
-  return "free";
+  return 'free';
 }
 
 // Per-endpoint base rate limit configurations (max is per-tier: base * TIER_MULTIPLIERS)
 const ENDPOINT_LIMITS: Record<string, RateLimitConfig> = {
-  "/api/chat": {
+  '/api/chat': {
     windowMs: 60 * 1000, // 1 minute
     max: 10,
-    message: "Too many chat requests. Please wait a moment.",
+    message: 'Too many chat requests. Please wait a moment.',
   },
-  "/api/codegen": {
+  '/api/codegen': {
     windowMs: 60 * 1000, // 1 minute
     max: 5,
-    message: "Too many code generation requests. Please wait a moment.",
+    message: 'Too many code generation requests. Please wait a moment.',
   },
-  "/api/diagram": {
+  '/api/diagram': {
     windowMs: 60 * 1000, // 1 minute
     max: 20,
-    message: "Too many diagram requests. Please wait a moment.",
+    message: 'Too many diagram requests. Please wait a moment.',
   },
-  "/api/intent": {
+  '/api/intent': {
     windowMs: 60 * 1000, // 1 minute
     max: 15,
-    message: "Too many intent requests. Please wait a moment.",
+    message: 'Too many intent requests. Please wait a moment.',
   },
-  "/api/architecture": {
+  '/api/architecture': {
     windowMs: 60 * 1000, // 1 minute
     max: 10,
-    message: "Too many architecture requests. Please wait a moment.",
+    message: 'Too many architecture requests. Please wait a moment.',
   },
-  "/api/prd": {
+  '/api/prd': {
     windowMs: 60 * 1000, // 1 minute
     max: 10,
-    message: "Too many PRD requests. Please wait a moment.",
+    message: 'Too many PRD requests. Please wait a moment.',
   },
-  "/api/voice": {
+  '/api/voice': {
     windowMs: 60 * 1000, // 1 minute
     max: 20,
-    message: "Too many voice requests. Please wait a moment.",
+    message: 'Too many voice requests. Please wait a moment.',
   },
 };
 
@@ -97,17 +97,11 @@ const ENDPOINT_LIMITS: Record<string, RateLimitConfig> = {
 const GLOBAL_LIMIT: RateLimitConfig = {
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 500,
-  message: "Too many requests. Please wait a moment.",
+  message: 'Too many requests. Please wait a moment.',
 };
 
 // Read-only metadata endpoints exempt from strict rate limiting
-const EXEMPT_PREFIXES = [
-  "/api/skills",
-  "/api/models",
-  "/api/settings",
-  "/api/mcp",
-  "/health",
-];
+const EXEMPT_PREFIXES = ['/api/skills', '/api/models', '/api/settings', '/api/mcp', '/health'];
 
 interface RequestWithAuth extends Request {
   user?: { id?: string; tier?: TierId };
@@ -135,9 +129,7 @@ async function getRedisStoreIfConfigured(): Promise<Store | undefined> {
     const client = getRedisClient();
     const connected = await isRedisConnected();
     if (!connected) {
-      logger.debug(
-        "Redis not connected, rate limiting will use in-memory store",
-      );
+      logger.debug('Redis not connected, rate limiting will use in-memory store');
       return undefined;
     }
     return new RedisStore({
@@ -147,7 +139,7 @@ async function getRedisStoreIfConfigured(): Promise<Store | undefined> {
   } catch (err) {
     logger.warn(
       { err: (err as Error).message },
-      "Redis store for rate limiting unavailable, using in-memory",
+      'Redis store for rate limiting unavailable, using in-memory'
     );
     return undefined;
   }
@@ -159,15 +151,15 @@ async function getRedisStoreIfConfigured(): Promise<Store | undefined> {
 function createRateLimiter(
   config: RateLimitConfig,
   keyGenerator?: (req: Request) => string,
-  store?: Store,
+  store?: Store
 ): RateLimitRequestHandler {
   return rateLimit({
     windowMs: config.windowMs,
     max: config.max,
     ...(store && { store }),
     message: {
-      error: config.message || "Too many requests",
-      type: "rate_limit",
+      error: config.message || 'Too many requests',
+      type: 'rate_limit',
       retryAfter: Math.ceil(config.windowMs / 1000),
     },
     standardHeaders: true,
@@ -182,21 +174,21 @@ function createRateLimiter(
       keyGenerator ||
       ((req: Request) => {
         // Default: use IP address
-        const forwarded = req.headers["x-forwarded-for"];
-        if (forwarded && typeof forwarded === "string") {
-          return `ip:${forwarded.split(",")[0].trim()}`;
+        const forwarded = req.headers['x-forwarded-for'];
+        if (forwarded && typeof forwarded === 'string') {
+          return `ip:${forwarded.split(',')[0].trim()}`;
         }
-        let ip = req.ip || req.socket.remoteAddress || "unknown";
+        let ip = req.ip || req.socket.remoteAddress || 'unknown';
         // Sanitize IPv6 localhost
-        if (ip === "::1") {
-          ip = "127.0.0.1";
+        if (ip === '::1') {
+          ip = '127.0.0.1';
         }
         return `ip:${ip}`;
       }),
     skip: (req: Request) => {
       // Skip rate limiting for health checks and read-only metadata endpoints
-      if (req.path.startsWith("/health")) return true;
-      if (req.method === "GET" && EXEMPT_PREFIXES.some(p => req.path.startsWith(p))) return true;
+      if (req.path.startsWith('/health')) return true;
+      if (req.method === 'GET' && EXEMPT_PREFIXES.some((p) => req.path.startsWith(p))) return true;
       return false;
     },
     handler: (req: Request, res: Response) => {
@@ -207,12 +199,12 @@ function createRateLimiter(
           ip: req.ip,
           userId: getUserId(req),
         },
-        "Rate limit exceeded",
+        'Rate limit exceeded'
       );
 
       res.status(429).json({
-        error: config.message || "Too many requests",
-        type: "rate_limit",
+        error: config.message || 'Too many requests',
+        type: 'rate_limit',
         retryAfter: Math.ceil(config.windowMs / 1000),
       });
     },
@@ -223,22 +215,20 @@ function createRateLimiter(
  * Create per-user rate limiter
  * Uses user ID from auth, falls back to IP if no user
  */
-export function createUserRateLimiter(
-  config: RateLimitConfig,
-): RateLimitRequestHandler {
+export function createUserRateLimiter(config: RateLimitConfig): RateLimitRequestHandler {
   return createRateLimiter(config, (req: Request) => {
     const userId = getUserId(req);
     if (userId) {
       return `user:${userId}`;
     }
     // Fallback to IP
-    const forwarded = req.headers["x-forwarded-for"];
-    if (forwarded && typeof forwarded === "string") {
-      return `ip:${forwarded.split(",")[0].trim()}`;
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded && typeof forwarded === 'string') {
+      return `ip:${forwarded.split(',')[0].trim()}`;
     }
-    let ip = req.ip || req.socket.remoteAddress || "unknown";
-    if (ip === "::1") {
-      ip = "127.0.0.1";
+    let ip = req.ip || req.socket.remoteAddress || 'unknown';
+    if (ip === '::1') {
+      ip = '127.0.0.1';
     }
     return `ip:${ip}`;
   });
@@ -251,7 +241,7 @@ function createEndpointRateLimiter(
   path: string,
   config: RateLimitConfig,
   tier: TierId,
-  store?: Store,
+  store?: Store
 ): RateLimitRequestHandler {
   const scaled = {
     ...config,
@@ -261,10 +251,10 @@ function createEndpointRateLimiter(
     scaled,
     (req: Request) => {
       const userId = getUserId(req);
-      const base = userId ? `user:${userId}` : `ip:${req.ip || "unknown"}`;
+      const base = userId ? `user:${userId}` : `ip:${req.ip || 'unknown'}`;
       return `endpoint:${path}:tier:${tier}:${base}`;
     },
-    store,
+    store
   );
 }
 
@@ -274,7 +264,7 @@ function createEndpointRateLimiter(
 export function getEndpointRateLimiter(
   path: string,
   tier: TierId,
-  store?: Store,
+  store?: Store
 ): RateLimitRequestHandler | null {
   const config = ENDPOINT_LIMITS[path];
   if (!config) return null;
@@ -288,38 +278,33 @@ export function getEndpointRateLimiter(
 function normalizePathForRateLimit(path: string): string {
   const bases = Object.keys(ENDPOINT_LIMITS);
   for (const base of bases) {
-    if (path === base || path.startsWith(base + "/")) return base;
+    if (path === base || path.startsWith(base + '/')) return base;
   }
   return path;
 }
 
 /** Build limiters per tier for global and each endpoint. */
-function buildTierLimiters(
-  store?: Store,
-): Map<string, RateLimitRequestHandler> {
+function buildTierLimiters(store?: Store): Map<string, RateLimitRequestHandler> {
   const limiters = new Map<string, RateLimitRequestHandler>();
-  const tiers: TierId[] = ["free", "starter", "pro", "team", "enterprise"];
+  const tiers: TierId[] = ['free', 'starter', 'pro', 'team', 'enterprise'];
   for (const tier of tiers) {
-    const globalMax = Math.max(
-      1,
-      Math.floor(GLOBAL_LIMIT.max * (TIER_MULTIPLIERS[tier] ?? 1)),
-    );
+    const globalMax = Math.max(1, Math.floor(GLOBAL_LIMIT.max * (TIER_MULTIPLIERS[tier] ?? 1)));
     limiters.set(
       `global:${tier}`,
       createRateLimiter(
         { ...GLOBAL_LIMIT, max: globalMax },
         (req: Request) => {
           const userId = getUserId(req);
-          const base = userId ? `user:${userId}` : `ip:${req.ip || "unknown"}`;
+          const base = userId ? `user:${userId}` : `ip:${req.ip || 'unknown'}`;
           return `global:tier:${tier}:${base}`;
         },
-        store,
-      ),
+        store
+      )
     );
     for (const path of Object.keys(ENDPOINT_LIMITS)) {
       limiters.set(
         `${path}:${tier}`,
-        createEndpointRateLimiter(path, ENDPOINT_LIMITS[path], tier, store),
+        createEndpointRateLimiter(path, ENDPOINT_LIMITS[path], tier, store)
       );
     }
   }
@@ -334,7 +319,7 @@ function buildTierLimiters(
 export async function applyRateLimiting(): Promise<RateLimitRequestHandler> {
   const store = await getRedisStoreIfConfigured();
   if (store) {
-    logger.info("Rate limiting using Redis store (tier-aware)");
+    logger.info('Rate limiting using Redis store (tier-aware)');
   }
   const tierLimiters = buildTierLimiters(store);
   const handler = (req: Request, res: Response, next: () => void) => {
@@ -355,7 +340,7 @@ export async function applyRateLimiting(): Promise<RateLimitRequestHandler> {
  */
 export async function createRedisRateLimiter(
   config: RateLimitConfig,
-  _redisClient?: unknown,
+  _redisClient?: unknown
 ): Promise<RateLimitRequestHandler | null> {
   try {
     // Try to get Redis store if configured
@@ -365,7 +350,7 @@ export async function createRedisRateLimiter(
       // Redis is available - use it for distributed rate limiting
       logger.info(
         { windowMs: config.windowMs, max: config.max },
-        "Creating Redis-backed rate limiter for multi-instance consistency",
+        'Creating Redis-backed rate limiter for multi-instance consistency'
       );
 
       return rateLimit({
@@ -383,14 +368,14 @@ export async function createRedisRateLimiter(
       // This is safe for single-instance deployments, but will not share limits across instances
       logger.info(
         { windowMs: config.windowMs, max: config.max },
-        "Using in-memory rate limiter (configure REDIS_HOST for multi-instance deployments)",
+        'Using in-memory rate limiter (configure REDIS_HOST for multi-instance deployments)'
       );
       return createRateLimiter(config);
     }
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error) },
-      "Failed to create Redis rate limiter, falling back to in-memory",
+      'Failed to create Redis rate limiter, falling back to in-memory'
     );
     return createRateLimiter(config);
   }
@@ -406,21 +391,12 @@ export function getEndpointLimitConfig(path: string): RateLimitConfig | null {
 /**
  * Update endpoint rate limit configuration
  */
-export function updateEndpointLimit(
-  path: string,
-  config: Partial<RateLimitConfig>,
-): void {
+export function updateEndpointLimit(path: string, config: Partial<RateLimitConfig>): void {
   if (ENDPOINT_LIMITS[path]) {
     ENDPOINT_LIMITS[path] = { ...ENDPOINT_LIMITS[path], ...config };
-    logger.info(
-      { path, config: ENDPOINT_LIMITS[path] },
-      "Endpoint rate limit updated",
-    );
+    logger.info({ path, config: ENDPOINT_LIMITS[path] }, 'Endpoint rate limit updated');
   } else {
     ENDPOINT_LIMITS[path] = { ...GLOBAL_LIMIT, ...config };
-    logger.info(
-      { path, config: ENDPOINT_LIMITS[path] },
-      "Endpoint rate limit created",
-    );
+    logger.info({ path, config: ENDPOINT_LIMITS[path] }, 'Endpoint rate limit created');
   }
 }

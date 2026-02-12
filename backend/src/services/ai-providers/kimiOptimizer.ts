@@ -13,17 +13,17 @@
  * This module provides optimizations to leverage Kimi K2.5's unique strengths.
  */
 
-import type { StreamParams } from "./llmGateway.js";
+import type { StreamParams } from './llmGateway.js';
 
 // Message type from StreamParams
-type Message = StreamParams["messages"][number];
-import logger from "../../middleware/logger.js";
+type Message = StreamParams['messages'][number];
+import logger from '../../middleware/logger.js';
 
 /**
  * Kimi K2.5 Configuration
  */
 export const KIMI_K25_CONFIG = {
-  modelId: "moonshotai/kimi-k2.5",
+  modelId: 'moonshotai/kimi-k2.5',
   contextWindow: 256_000,
   // Reserve tokens for response
   maxInputTokens: 240_000,
@@ -50,8 +50,7 @@ export function containsNonEnglish(text: string): boolean {
   // Check for CJK characters (Chinese, Japanese, Korean)
   const cjkRegex = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
   // Check for other non-Latin scripts
-  const nonLatinRegex =
-    /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\u0900-\u097f\u0400-\u04ff]/;
+  const nonLatinRegex = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\u0900-\u097f\u0400-\u04ff]/;
 
   return cjkRegex.test(text) || nonLatinRegex.test(text);
 }
@@ -62,7 +61,7 @@ export function containsNonEnglish(text: string): boolean {
  */
 export function calculateKimiContextRetention(
   currentTokens: number,
-  maxTokens: number = 200_000,
+  maxTokens: number = 200_000
 ): {
   retainTokens: number;
   advantageUsed: number;
@@ -75,7 +74,7 @@ export function calculateKimiContextRetention(
     return {
       retainTokens: currentTokens,
       advantageUsed: 0,
-      recommendation: "Can add up to 56K more tokens of context",
+      recommendation: 'Can add up to 56K more tokens of context',
     };
   }
 
@@ -102,7 +101,7 @@ export function calculateKimiContextRetention(
  */
 export function optimizePromptForKimi(
   systemPrompt: string,
-  userContent: string,
+  userContent: string
 ): {
   optimizedSystem: string;
   optimizedUser: string;
@@ -119,28 +118,28 @@ export function optimizePromptForKimi(
   // Add multilingual instruction if needed
   if (hasNonEnglish) {
     optimizedSystem += `\n\n## Multilingual Support\nYou can understand and respond in multiple languages. Match the user's language and maintain technical accuracy across languages.`;
-    optimizations.push("Added multilingual support instruction");
+    optimizations.push('Added multilingual support instruction');
   }
 
   // Kimi prefers explicit formatting instructions
-  if (!optimizedSystem.includes("## Output Format")) {
+  if (!optimizedSystem.includes('## Output Format')) {
     optimizedSystem += `\n\n## Output Format\nProvide clear, well-structured responses. Use markdown formatting appropriately. For code, always include language tags and ensure syntax correctness.`;
-    optimizations.push("Added output format guidance");
+    optimizations.push('Added output format guidance');
   }
 
   // Optimize user content if very long
   const optimizedUser = userContent;
   if (userContent.length > 10000 && !hasNonEnglish) {
     // For long English content, ensure clear structure
-    if (!userContent.includes("#") && !userContent.includes("##")) {
+    if (!userContent.includes('#') && !userContent.includes('##')) {
       // No headers - might benefit from structure
-      optimizations.push("Content is long but lacks structure");
+      optimizations.push('Content is long but lacks structure');
     }
   }
 
   // If Chinese detected, ensure proper handling
   if (hasNonEnglish && /[\u4e00-\u9fff]/.test(userContent)) {
-    optimizations.push("Chinese content detected - using optimized processing");
+    optimizations.push('Chinese content detected - using optimized processing');
   }
 
   return {
@@ -170,13 +169,13 @@ export function shouldRouteToKimi(request: {
   // Multilingual content - Kimi excels here
   if (containsNonEnglish(request.content)) {
     confidence += 0.3;
-    reasons.push("Multilingual content detected");
+    reasons.push('Multilingual content detected');
   }
 
   // Code generation - Kimi is strong and cheaper
   if (request.isCodeGeneration && !request.requiresTools) {
     confidence += 0.25;
-    reasons.push("Code generation without tools - Kimi is 5x cheaper");
+    reasons.push('Code generation without tools - Kimi is 5x cheaper');
   }
 
   // Long context - use Kimi's extra 56K
@@ -188,21 +187,19 @@ export function shouldRouteToKimi(request: {
   // Simple tasks - Kimi is cost-effective
   if (!request.isComplex && !request.requiresTools) {
     confidence += 0.25;
-    reasons.push("Simple task - cost optimization with Kimi");
+    reasons.push('Simple task - cost optimization with Kimi');
   }
 
   // Vision tasks - Kimi supports vision
   if (request.hasImage) {
     confidence += 0.15;
-    reasons.push("Vision task - Kimi has vision capabilities");
+    reasons.push('Vision task - Kimi has vision capabilities');
   }
 
   // Tool requirements reduce confidence (Llama 405B may be better for complex tool use)
   if (request.requiresTools) {
     confidence -= 0.2;
-    reasons.push(
-      "Note: Tool use may benefit from Llama 405B for complex scenarios",
-    );
+    reasons.push('Note: Tool use may benefit from Llama 405B for complex scenarios');
   }
 
   const useKimi = confidence > 0.4;
@@ -220,7 +217,7 @@ export function shouldRouteToKimi(request: {
 export function estimateKimiSavings(
   inputTokens: number,
   outputTokens: number,
-  requestCount: number = 1,
+  requestCount: number = 1
 ): {
   llama405bCost: number;
   kimiCost: number;
@@ -229,17 +226,14 @@ export function estimateKimiSavings(
 } {
   // Llama 405B pricing estimate: $5/M input, $15/M output
   const llama405bCost =
-    ((inputTokens / 1_000_000) * 5.0 + (outputTokens / 1_000_000) * 15.0) *
-    requestCount;
+    ((inputTokens / 1_000_000) * 5.0 + (outputTokens / 1_000_000) * 15.0) * requestCount;
 
   // Kimi K2.5 pricing: $0.6/M input, $0.6/M output
   const kimiCost =
-    ((inputTokens / 1_000_000) * 0.6 + (outputTokens / 1_000_000) * 0.6) *
-    requestCount;
+    ((inputTokens / 1_000_000) * 0.6 + (outputTokens / 1_000_000) * 0.6) * requestCount;
 
   const savings = llama405bCost - kimiCost;
-  const savingsPercent =
-    llama405bCost > 0 ? (savings / llama405bCost) * 100 : 0;
+  const savingsPercent = llama405bCost > 0 ? (savings / llama405bCost) * 100 : 0;
 
   return {
     llama405bCost,
@@ -255,7 +249,7 @@ export function estimateKimiSavings(
  */
 export function optimizeConversationForKimi(
   messages: Message[],
-  currentTokenCount: number,
+  currentTokenCount: number
 ): {
   optimizedMessages: Message[];
   tokensRetained: number;
@@ -281,7 +275,7 @@ export function optimizeConversationForKimi(
         tokens: currentTokenCount,
         advantage: currentTokenCount - standardLimit,
       },
-      "Using Kimi K2.5 extended context",
+      'Using Kimi K2.5 extended context'
     );
 
     return {
@@ -306,9 +300,7 @@ export function optimizeConversationForKimi(
 /**
  * Get Kimi K2.5 specific configuration for different task types
  */
-export function getKimiTaskConfig(
-  taskType: "coding" | "chat" | "analysis" | "creative",
-) {
+export function getKimiTaskConfig(taskType: 'coding' | 'chat' | 'analysis' | 'creative') {
   const configs = {
     coding: {
       temperature: 0.1,
@@ -360,7 +352,7 @@ export interface KimiRoutingInput {
 }
 
 export function getKimiRoutingDecision(input: KimiRoutingInput): {
-  recommendedModel: "kimi" | "llama405b" | "either";
+  recommendedModel: 'kimi' | 'llama405b' | 'either';
   confidence: number;
   estimatedSavings?: number;
   rationale: string[];
@@ -369,14 +361,9 @@ export function getKimiRoutingDecision(input: KimiRoutingInput): {
   let kimiScore = 0;
 
   // Language preference
-  if (
-    input.detectedLanguage &&
-    !["en", "english"].includes(input.detectedLanguage.toLowerCase())
-  ) {
+  if (input.detectedLanguage && !['en', 'english'].includes(input.detectedLanguage.toLowerCase())) {
     kimiScore += 30;
-    rationale.push(
-      `Multilingual content (${input.detectedLanguage}) - Kimi excels here`,
-    );
+    rationale.push(`Multilingual content (${input.detectedLanguage}) - Kimi excels here`);
   }
 
   // Context size advantage
@@ -388,51 +375,46 @@ export function getKimiRoutingDecision(input: KimiRoutingInput): {
   // Code generation (Kimi is strong and cheaper)
   if (input.hasCode && !input.toolsRequested) {
     kimiScore += 20;
-    rationale.push("Code generation - Kimi is capable and 5x cheaper");
+    rationale.push('Code generation - Kimi is capable and 5x cheaper');
   }
 
   // Simple tasks
   if (!input.isComplex && !input.toolsRequested && input.messageChars < 5000) {
     kimiScore += 15;
-    rationale.push("Simple task - cost-effective with Kimi");
+    rationale.push('Simple task - cost-effective with Kimi');
   }
 
   // Tool requirements favor Llama 405B for complex scenarios
   if (input.toolsRequested) {
     kimiScore -= 20;
-    rationale.push(
-      "Tool use required - Llama 405B may be more reliable for complex tool chains",
-    );
+    rationale.push('Tool use required - Llama 405B may be more reliable for complex tool chains');
   }
 
   // Very complex tasks may favor larger models
   if (input.isComplex && input.messageChars > 10000) {
     kimiScore -= 15;
-    rationale.push("Complex task - Llama 405B reasoning may be superior");
+    rationale.push('Complex task - Llama 405B reasoning may be superior');
   }
 
   // Calculate confidence and recommendation
-  let recommendedModel: "kimi" | "llama405b" | "either";
+  let recommendedModel: 'kimi' | 'llama405b' | 'either';
   let confidence: number;
 
   if (kimiScore >= 40) {
-    recommendedModel = "kimi";
+    recommendedModel = 'kimi';
     confidence = Math.min(kimiScore / 100, 0.95);
   } else if (kimiScore <= -20) {
-    recommendedModel = "llama405b";
+    recommendedModel = 'llama405b';
     confidence = Math.min(Math.abs(kimiScore) / 100, 0.95);
   } else {
-    recommendedModel = "either";
+    recommendedModel = 'either';
     confidence = 0.5;
   }
 
   // Estimate savings
   const estimatedInputTokens = Math.ceil(input.messageChars * 0.25);
   const estimatedOutputTokens = Math.ceil(estimatedInputTokens * 0.5);
-  const savings = estimateKimiSavings(
-    estimatedInputTokens,
-    estimatedOutputTokens,
-  );
+  const savings = estimateKimiSavings(estimatedInputTokens, estimatedOutputTokens);
 
   return {
     recommendedModel,

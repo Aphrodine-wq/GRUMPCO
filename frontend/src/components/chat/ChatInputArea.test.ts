@@ -96,8 +96,6 @@ describe('ChatInputArea', () => {
     expect(mockOnSubmit).toHaveBeenCalled();
   });
 
-
-
   it('should disable send button when input is empty', () => {
     const { container } = render(ChatInputArea, {
       props: { inputText: '' },
@@ -268,7 +266,7 @@ describe('ChatInputArea', () => {
     });
 
     const fileInput = container.querySelector('input.hidden-file-input') as HTMLInputElement;
-    
+
     // Mock FileReader
     const mockResult = 'data:image/png;base64,test';
     const mockFileReader = {
@@ -277,12 +275,14 @@ describe('ChatInputArea', () => {
       onerror: null as (() => void) | null,
       result: mockResult,
     };
-    
-    vi.spyOn(global, 'FileReader').mockImplementation(() => mockFileReader as unknown as FileReader);
+
+    vi.spyOn(global, 'FileReader').mockImplementation(
+      () => mockFileReader as unknown as FileReader
+    );
 
     // Trigger file selection
     await fireEvent.change(fileInput, { target: { files: [file] } });
-    
+
     // Simulate successful file read
     if (mockFileReader.onload) {
       mockFileReader.onload();
@@ -308,8 +308,6 @@ describe('ChatInputArea', () => {
 
     expect(mockOnImageSelect).not.toHaveBeenCalled();
   });
-
-
 
   it('should handle keyboard enter to submit', async () => {
     const { container } = render(ChatInputArea, {
@@ -372,5 +370,4 @@ describe('ChatInputArea', () => {
     const sendButton = container.querySelector('button.send-button');
     expect(sendButton?.getAttribute('aria-label')).toBe('Cancel');
   });
-
 });

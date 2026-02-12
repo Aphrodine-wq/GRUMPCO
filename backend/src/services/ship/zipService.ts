@@ -1,15 +1,15 @@
-import archiver from "archiver";
-import { PassThrough } from "stream";
-import type { FileDefinition, TechStack } from "../../types/index.js";
-import type { GeneratedFile } from "../../types/agents.js";
+import archiver from 'archiver';
+import { PassThrough } from 'stream';
+import type { FileDefinition, TechStack } from '../../types/index.js';
+import type { GeneratedFile } from '../../types/agents.js';
 
 function generateReadme(
   files: FileDefinition[],
   projectName: string,
-  techStack: TechStack,
+  techStack: TechStack
 ): string {
   const stackInstructions: Record<TechStack, string> = {
-    "react-express-prisma": `## Setup
+    'react-express-prisma': `## Setup
 
 ### Prerequisites
 - Node.js 18+
@@ -39,7 +39,7 @@ npx prisma migrate dev
 npm run dev
 \`\`\``,
 
-    "fastapi-sqlalchemy": `## Setup
+    'fastapi-sqlalchemy': `## Setup
 
 ### Prerequisites
 - Python 3.11+
@@ -69,7 +69,7 @@ cp .env.example .env
 uvicorn main:app --reload
 \`\`\``,
 
-    "nextjs-prisma": `## Setup
+    'nextjs-prisma': `## Setup
 
 ### Prerequisites
 - Node.js 18+
@@ -100,7 +100,7 @@ npm run dev
 \`\`\``,
   };
 
-  const fileList = files.map((f) => `- \`${f.path}\``).join("\n");
+  const fileList = files.map((f) => `- \`${f.path}\``).join('\n');
 
   return `# ${projectName}
 
@@ -130,9 +130,9 @@ ${files.length} files generated for ${techStack} stack.
 export function createProjectZip(
   files: FileDefinition[],
   projectName: string,
-  techStack: TechStack,
+  techStack: TechStack
 ): PassThrough {
-  const archive = archiver("zip", {
+  const archive = archiver('zip', {
     zlib: { level: 9 },
   });
 
@@ -161,11 +161,8 @@ export function createProjectZip(
 /**
  * Create ZIP from codegen GeneratedFile[]. Stream-only; no README.
  */
-export function createCodegenZip(
-  files: GeneratedFile[],
-  projectName: string,
-): PassThrough {
-  const archive = archiver("zip", { zlib: { level: 9 } });
+export function createCodegenZip(files: GeneratedFile[], projectName: string): PassThrough {
+  const archive = archiver('zip', { zlib: { level: 9 } });
   const passThrough = new PassThrough();
   archive.pipe(passThrough);
 

@@ -9,10 +9,10 @@
  * - Provider performance tracking
  */
 
-import { connectionPool as _connectionPool } from "../infra/connectionPool.js";
-import { getTieredCache } from "../caching/tieredCache.js";
-import logger from "../../middleware/logger.js";
-import type { LLMProvider, StreamParams, StreamEvent } from "./llmGateway.js";
+import { connectionPool as _connectionPool } from '../infra/connectionPool.js';
+import { getTieredCache } from '../caching/tieredCache.js';
+import logger from '../../middleware/logger.js';
+import type { LLMProvider, StreamParams, StreamEvent } from './llmGateway.js';
 
 export interface RaceResult {
   provider: LLMProvider;
@@ -38,10 +38,7 @@ class ProviderRacingService {
   async race(
     providers: LLMProvider[],
     params: StreamParams,
-    streamFactory: (
-      provider: LLMProvider,
-      params: StreamParams,
-    ) => AsyncGenerator<StreamEvent>,
+    streamFactory: (provider: LLMProvider, params: StreamParams) => AsyncGenerator<StreamEvent>
   ): Promise<RaceResult> {
     // Select top providers to race
     const racers = this.selectRacers(providers);
@@ -51,66 +48,62 @@ class ProviderRacingService {
         racers,
         model: params.model,
       },
-      "Starting provider race",
+      'Starting provider race'
     );
 
     const abortControllers = new Map<LLMProvider, AbortController>();
 
     // Create promises that resolve on first byte
     const racePromises = racers.map(async (provider) => {
-        const controller = new AbortController();
-        abortControllers.set(provider, controller);
+      const controller = new AbortController();
+      abortControllers.set(provider, controller);
 
-        // Merge signals: either params.signal (user cancel) or controller.signal (we cancel)
-        const signals = [controller.signal];
-        if (params.signal) signals.push(params.signal);
+      // Merge signals: either params.signal (user cancel) or controller.signal (we cancel)
+      const signals = [controller.signal];
+      if (params.signal) signals.push(params.signal);
 
-        // Use AbortSignal.any (Node 20+)
-        const signal = AbortSignal.any(signals);
+      // Use AbortSignal.any (Node 20+)
+      const signal = AbortSignal.any(signals);
 
-        const raceParams = { ...params, signal };
-        const startTime = Date.now();
+      const raceParams = { ...params, signal };
+      const startTime = Date.now();
 
-        try {
-            const generator = streamFactory(provider, raceParams);
-            const iterator = generator[Symbol.asyncIterator]();
+      try {
+        const generator = streamFactory(provider, raceParams);
+        const iterator = generator[Symbol.asyncIterator]();
 
-            // Wait for the first chunk
-            const firstResult = await iterator.next();
+        // Wait for the first chunk
+        const firstResult = await iterator.next();
 
-            if (firstResult.done) {
-                 // Empty stream is a failure for racing purposes
-                 throw new Error(`Provider ${provider} returned empty stream`);
-            }
-
-            const timeToFirstByte = Date.now() - startTime;
-
-            // Create a new generator that yields the first chunk then the rest
-            const stream = async function* () {
-                yield firstResult.value;
-                yield* { [Symbol.asyncIterator]: () => iterator };
-            };
-
-            return {
-                provider,
-                stream: stream(),
-                timeToFirstByte
-            } as RaceResult;
-
-        } catch (error) {
-             logger.warn(
-                { provider, error: (error as Error).message },
-                "Provider failed in race",
-              );
-              return null;
+        if (firstResult.done) {
+          // Empty stream is a failure for racing purposes
+          throw new Error(`Provider ${provider} returned empty stream`);
         }
+
+        const timeToFirstByte = Date.now() - startTime;
+
+        // Create a new generator that yields the first chunk then the rest
+        const stream = async function* () {
+          yield firstResult.value;
+          yield* { [Symbol.asyncIterator]: () => iterator };
+        };
+
+        return {
+          provider,
+          stream: stream(),
+          timeToFirstByte,
+        } as RaceResult;
+      } catch (error) {
+        logger.warn({ provider, error: (error as Error).message }, 'Provider failed in race');
+        return null;
+      }
     });
 
     // Race to first success
     const winner = await this.raceToSuccess(racePromises);
 
     if (!winner) {
-      throw new Error("All providers failed in race");
+      throw new Error('All providers failed in race');
     }
 
     // Cancel losers
@@ -132,38 +125,38 @@ class ProviderRacingService {
         timeToFirstByte: winner.timeToFirstByte,
         racers: racers.length,
       },
-      "Provider race completed",
+      'Provider race completed'
     );
 
     return winner;
   }
 
-    /**
+  /**
    * Race promises to first success (ignoring failures until all fail)
    */
   private async raceToSuccess<T>(promises: Promise<T | null>[]): Promise<T | null> {
     return new Promise((resolve) => {
-        let failureCount = 0;
-        let resolved = false;
+      let failureCount = 0;
+      let resolved = false;
 
-        promises.forEach(p => {
-            p.then(result => {
-                if (resolved) return;
-                if (result) {
-                    resolved = true;
-                    resolve(result);
-                } else {
-                    failureCount++;
-                    if (failureCount === promises.length) resolve(null);
-                }
-            }).catch(() => {
-                if (resolved) return;
-                failureCount++;
-                if (failureCount === promises.length) resolve(null);
-            });
+      promises.forEach((p) => {
+        p.then((result) => {
+          if (resolved) return;
+          if (result) {
+            resolved = true;
+            resolve(result);
+          } else {
+            failureCount++;
+            if (failureCount === promises.length) resolve(null);
+          }
+        }).catch(() => {
+          if (resolved) return;
+          failureCount++;
+          if (failureCount === promises.length) resolve(null);
         });
+      });
 
-        if (promises.length === 0) resolve(null);
+      if (promises.length === 0) resolve(null);
     });
   }
 
@@ -210,8 +203,7 @@ class ProviderRacingService {
     perf.wins++;
     perf.totalRequests++;
     perf.avgTimeToFirstByte =
-      (perf.avgTimeToFirstByte * (perf.totalRequests - 1) +
-        winner.timeToFirstByte) /
+      (perf.avgTimeToFirstByte * (perf.totalRequests - 1) + winner.timeToFirstByte) /
       perf.totalRequests;
     perf.lastUsed = Date.now();
 
@@ -221,20 +213,17 @@ class ProviderRacingService {
   /**
    * Cache winner for future identical requests
    */
-  private async cacheWinner(
-    params: StreamParams,
-    winner: RaceResult,
-  ): Promise<void> {
+  private async cacheWinner(params: StreamParams, winner: RaceResult): Promise<void> {
     const cacheKey = this.createCacheKey(params);
 
     await this.cache.set(
-      "race-winner",
+      'race-winner',
       cacheKey,
       {
         provider: winner.provider,
         timestamp: Date.now(),
       },
-      300,
+      300
     ); // 5 min cache
   }
 
@@ -246,7 +235,7 @@ class ProviderRacingService {
     const cached = await this.cache.get<{
       provider: LLMProvider;
       timestamp: number;
-    }>("race-winner", cacheKey);
+    }>('race-winner', cacheKey);
 
     if (cached && Date.now() - cached.timestamp < 300000) {
       // 5 min
@@ -261,10 +250,8 @@ class ProviderRacingService {
    */
   private createCacheKey(params: StreamParams): string {
     const content =
-      typeof params.messages[0]?.content === "string"
-        ? params.messages[0].content
-        : "";
-    return content.slice(0, 100).replace(/[^a-zA-Z0-9]/g, "");
+      typeof params.messages[0]?.content === 'string' ? params.messages[0].content : '';
+    return content.slice(0, 100).replace(/[^a-zA-Z0-9]/g, '');
   }
 
   /**

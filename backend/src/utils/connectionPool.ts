@@ -3,7 +3,7 @@
  * Optimizes database and external service connections
  */
 
-import { LRUCache } from "lru-cache";
+import { LRUCache } from 'lru-cache';
 
 interface PoolConfig {
   minConnections?: number;
@@ -35,7 +35,7 @@ export class ConnectionPool<T> {
     factory: () => Promise<T>,
     validator: (conn: T) => Promise<boolean>,
     destroyer: (conn: T) => Promise<void>,
-    config: PoolConfig = {},
+    config: PoolConfig = {}
   ) {
     this.factory = factory;
     this.validator = validator;
@@ -72,7 +72,7 @@ export class ConnectionPool<T> {
         isHealthy: true,
       });
     } catch (error) {
-      console.error("Failed to create connection:", error);
+      console.error('Failed to create connection:', error);
     }
   }
 
@@ -100,7 +100,7 @@ export class ConnectionPool<T> {
         if (index > -1) {
           this.waiting.splice(index, 1);
         }
-        reject(new Error("Connection acquisition timeout"));
+        reject(new Error('Connection acquisition timeout'));
       }, this.config.acquireTimeoutMs);
 
       this.waiting.push((conn: T) => {
@@ -227,7 +227,7 @@ export class RequestBatcher<T, R> {
 
   constructor(
     processor: (items: T[]) => Promise<R[]>,
-    config: { maxBatchSize?: number; batchWindowMs?: number } = {},
+    config: { maxBatchSize?: number; batchWindowMs?: number } = {}
   ) {
     this.processor = processor;
     this.config = {

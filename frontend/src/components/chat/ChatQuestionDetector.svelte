@@ -132,10 +132,12 @@
    * Component wrapper for question detection display (if needed).
    * Main exports are the detectNumberedQuestions and extractOptions functions above.
    */
-  
+
   interface Props {
     text: string;
-    onDetect?: (result: { questions: ParsedQuestion[]; intro: string; outro: string } | null) => void;
+    onDetect?: (
+      result: { questions: ParsedQuestion[]; intro: string; outro: string } | null
+    ) => void;
   }
 
   let { text, onDetect }: Props = $props();

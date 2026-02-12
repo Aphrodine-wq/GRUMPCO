@@ -16,7 +16,7 @@ export interface Feature {
   id: string;
   name: string;
   description: string;
-  priority: "must" | "should" | "could" | "wont";
+  priority: 'must' | 'should' | 'could' | 'wont';
   userStories: string[];
   acceptanceCriteria: string[];
   estimatedEffort?: string;
@@ -33,10 +33,10 @@ export interface UserStory {
 }
 
 export interface APIEndpointSpec {
-  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   path: string;
   description: string;
-  authentication?: "none" | "bearer" | "api_key";
+  authentication?: 'none' | 'bearer' | 'api_key';
   requestBody?: {
     type: string;
     required: boolean;
@@ -51,12 +51,7 @@ export interface APIEndpointSpec {
 
 export interface NonFunctionalRequirement {
   id: string;
-  category:
-    | "performance"
-    | "security"
-    | "scalability"
-    | "reliability"
-    | "usability";
+  category: 'performance' | 'security' | 'scalability' | 'reliability' | 'usability';
   requirement: string;
   metric?: string;
   targetValue?: string;
@@ -112,7 +107,7 @@ export interface PRDRequest {
 
 export interface PRDResponse {
   id: string;
-  status: "generating" | "complete" | "error";
+  status: 'generating' | 'complete' | 'error';
   prd?: PRD;
   error?: string;
   timestamp: string;

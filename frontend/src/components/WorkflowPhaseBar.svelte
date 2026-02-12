@@ -137,10 +137,14 @@
         </div>
         <span class="phase-label">Code</span>
         {#if phase === 'codegen' && (generatedFileCount ?? 0) > 0}
-          <span class="phase-meta">{generatedFileCount} file{(generatedFileCount ?? 0) === 1 ? '' : 's'}</span>
+          <span class="phase-meta"
+            >{generatedFileCount} file{(generatedFileCount ?? 0) === 1 ? '' : 's'}</span
+          >
         {/if}
         {#if isCodegenFailed && codegenError}
-          <span class="phase-error" title={codegenError}>{codegenError.length > 40 ? codegenError.slice(0, 37) + '…' : codegenError}</span>
+          <span class="phase-error" title={codegenError}
+            >{codegenError.length > 40 ? codegenError.slice(0, 37) + '…' : codegenError}</span
+          >
         {/if}
       </div>
     </div>

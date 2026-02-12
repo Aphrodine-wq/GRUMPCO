@@ -25,7 +25,7 @@ Always provide specific, actionable recommendations with code examples when poss
 
 export const generateSecurityScanPrompt = (
   codeSnippets: string,
-  packageJson: string | null,
+  packageJson: string | null
 ): string => {
   return `Perform a comprehensive security analysis of this codebase.
 
@@ -38,7 +38,7 @@ ${
 \`\`\`json
 ${packageJson}
 \`\`\``
-    : ""
+    : ''
 }
 
 Analyze for the following security issues:
@@ -136,7 +136,7 @@ Respond in JSON format:
 export const generateCompliancePrompt = (
   standard: string,
   projectInfo: string,
-  codeSnippets: string,
+  codeSnippets: string
 ): string => {
   const standardDetails: Record<string, string> = {
     soc2: `SOC 2 Type II compliance requirements:
@@ -164,7 +164,7 @@ export const generateCompliancePrompt = (
 - Documentation requirements
 - Breach notification`,
 
-    "pci-dss": `PCI DSS compliance requirements:
+    'pci-dss': `PCI DSS compliance requirements:
 - Build and maintain secure networks
 - Protect cardholder data
 - Maintain vulnerability management
@@ -188,7 +188,7 @@ export const generateCompliancePrompt = (
 - Business continuity management
 - Compliance`,
 
-    "owasp-top10": `OWASP Top 10 2021 requirements:
+    'owasp-top10': `OWASP Top 10 2021 requirements:
 - A01: Broken Access Control
 - A02: Cryptographic Failures
 - A03: Injection
@@ -204,7 +204,7 @@ export const generateCompliancePrompt = (
   return `Generate a compliance assessment for ${standard.toUpperCase()}.
 
 ## Standard Requirements:
-${standardDetails[standard] || "General security compliance"}
+${standardDetails[standard] || 'General security compliance'}
 
 ## Project Information:
 ${projectInfo}
@@ -246,10 +246,7 @@ Respond in JSON format:
 \`\`\``;
 };
 
-export const generateSBOMPrompt = (
-  dependencies: string,
-  projectInfo: string,
-): string => {
+export const generateSBOMPrompt = (dependencies: string, projectInfo: string): string => {
   return `Generate a Software Bill of Materials (SBOM) for this project.
 
 ## Project Information:

@@ -45,7 +45,7 @@
  * @module services/intentParser
  */
 
-import type { C4Level } from "../../prompts/shared/c4-examples.js";
+import type { C4Level } from '../../prompts/shared/c4-examples.js';
 
 // =============================================================================
 // Type Definitions
@@ -56,30 +56,24 @@ import type { C4Level } from "../../prompts/shared/c4-examples.js";
  * Includes standard Mermaid types plus C4 architecture diagrams.
  */
 export type DiagramType =
-  | "flowchart"
-  | "sequence"
-  | "class"
-  | "er"
-  | "state"
-  | "gantt"
-  | "c4-context"
-  | "c4-container"
-  | "c4-component"
-  | "mindmap"
-  | "pie"
-  | "journey";
+  | 'flowchart'
+  | 'sequence'
+  | 'class'
+  | 'er'
+  | 'state'
+  | 'gantt'
+  | 'c4-context'
+  | 'c4-container'
+  | 'c4-component'
+  | 'mindmap'
+  | 'pie'
+  | 'journey';
 
 /** Software project categories for vibe coder mode */
-export type ProjectType =
-  | "web"
-  | "mobile"
-  | "api"
-  | "fullstack"
-  | "saas"
-  | "general";
+export type ProjectType = 'web' | 'mobile' | 'api' | 'fullstack' | 'saas' | 'general';
 
 /** Development phase for project requests */
-export type ProjectPhase = "intent" | "architecture" | "coding";
+export type ProjectPhase = 'intent' | 'architecture' | 'coding';
 
 /**
  * User-specified constraints for diagram generation.
@@ -87,13 +81,13 @@ export type ProjectPhase = "intent" | "architecture" | "coding";
  */
 export interface Constraints {
   /** Desired level of detail */
-  complexity?: "simple" | "detailed" | "mvp" | "standard" | "enterprise";
+  complexity?: 'simple' | 'detailed' | 'mvp' | 'standard' | 'enterprise';
   /** Specific areas to emphasize */
   focusAreas?: string[];
   /** Areas to exclude from the diagram */
   excludeAreas?: string[];
   /** Target audience style */
-  style?: "technical" | "business";
+  style?: 'technical' | 'business';
 }
 
 /**
@@ -174,16 +168,16 @@ const DIAGRAM_PATTERNS: Record<DiagramType, RegExp[]> = {
     /\b(gantt|timeline|schedule|project\s*plan|milestone)\b/i,
     /\b(duration|deadline|task|phase|sprint)\b/i,
   ],
-  "c4-context": [
+  'c4-context': [
     /\b(system\s*context|high\s*level|external\s*system|actor)\b/i,
     /\b(c4\s*context|big\s*picture|overview)\b/i,
   ],
-  "c4-container": [
+  'c4-container': [
     /\b(container|microservice|service|application|api\s*server)\b/i,
     /\b(c4\s*container|internal\s*service|deployment)\b/i,
     /\b(docker|kubernetes|backend|frontend)\b/i,
   ],
-  "c4-component": [
+  'c4-component': [
     /\b(component|module|controller|service\s*layer|repository)\b/i,
     /\b(c4\s*component|internal\s*structure)\b/i,
   ],
@@ -191,10 +185,7 @@ const DIAGRAM_PATTERNS: Record<DiagramType, RegExp[]> = {
     /\b(mindmap|mind\s*map|brainstorm|ideas?|hierarchy)\b/i,
     /\b(concept|topic|branch\s*out)\b/i,
   ],
-  pie: [
-    /\b(pie|percentage|proportion|distribution|breakdown)\b/i,
-    /\b(share|ratio|part\s*of)\b/i,
-  ],
+  pie: [/\b(pie|percentage|proportion|distribution|breakdown)\b/i, /\b(share|ratio|part\s*of)\b/i],
   journey: [
     /\b(user\s*journey|customer\s*journey|experience|touchpoint)\b/i,
     /\b(satisfaction|emotion|feeling)\b/i,
@@ -220,10 +211,7 @@ const C4_LEVEL_PATTERNS: Record<C4Level, RegExp[]> = {
     /\b(components?|modules?|internal|controllers?|handlers?)\b/i,
     /\b(layers?|repository|service\s*layer)\b/i,
   ],
-  code: [
-    /\b(code|class|implementation|method|function)\b/i,
-    /\b(detail|specific|exact)\b/i,
-  ],
+  code: [/\b(code|class|implementation|method|function)\b/i, /\b(detail|specific|exact)\b/i],
 };
 
 // =============================================================================
@@ -237,11 +225,9 @@ const ARCHITECTURE_KEYWORDS =
 // Complexity level patterns
 const COMPLEXITY_PATTERNS = {
   simple: /\b(simple|minimal|basic|quick|brief|just|only|overview)\b/i,
-  detailed:
-    /\b(detailed|comprehensive|complete|thorough|full|in-depth|elaborate)\b/i,
+  detailed: /\b(detailed|comprehensive|complete|thorough|full|in-depth|elaborate)\b/i,
   mvp: /\b(mvp|minimum\s*viable|prototype|quick|fast|basic\s*version)\b/i,
-  enterprise:
-    /\b(enterprise|production|scalable|robust|secure|comprehensive)\b/i,
+  enterprise: /\b(enterprise|production|scalable|robust|secure|comprehensive)\b/i,
 };
 
 const STYLE_PATTERNS = {
@@ -279,16 +265,15 @@ const PROJECT_PATTERNS: Record<ProjectType, RegExp[]> = {
 };
 
 // Project intent indicators
-const BUILD_VERBS =
-  /\b(build|create|make|develop|implement|design|architect)\b/i;
+const BUILD_VERBS = /\b(build|create|make|develop|implement|design|architect)\b/i;
 
 // Tech stack detection patterns
 const TECH_STACK_PATTERNS: Record<string, RegExp> = {
   react: /\breact\b/i,
   vue: /\bvue(\.?js)?\b/i,
   angular: /\bangular\b/i,
-  "next.js": /\bnext\.?js\b/i,
-  "node.js": /\bnode(\.?js)?\b/i,
+  'next.js': /\bnext\.?js\b/i,
+  'node.js': /\bnode(\.?js)?\b/i,
   express: /\bexpress(\.?js)?\b/i,
   python: /\bpython\b/i,
   fastapi: /\bfastapi\b/i,
@@ -413,12 +398,12 @@ export function detectC4Level(message: string): C4Level | null {
 
   const isArchitectureRequest =
     ARCHITECTURE_KEYWORDS.test(lowerMessage) ||
-    lowerMessage.includes("c4") ||
+    lowerMessage.includes('c4') ||
     /(container|component|context)\s*(diagram|view|level)/i.test(lowerMessage);
 
   // Default to container for general architecture requests
   if (isArchitectureRequest) {
-    return "container";
+    return 'container';
   }
 
   return null;
@@ -452,16 +437,16 @@ export function extractConstraints(message: string): Constraints {
 
   // Detect complexity preference
   if (COMPLEXITY_PATTERNS.simple.test(lowerMessage)) {
-    constraints.complexity = "simple";
+    constraints.complexity = 'simple';
   } else if (COMPLEXITY_PATTERNS.detailed.test(lowerMessage)) {
-    constraints.complexity = "detailed";
+    constraints.complexity = 'detailed';
   }
 
   // Detect style preference
   if (STYLE_PATTERNS.business.test(lowerMessage)) {
-    constraints.style = "business";
+    constraints.style = 'business';
   } else if (STYLE_PATTERNS.technical.test(lowerMessage)) {
-    constraints.style = "technical";
+    constraints.style = 'technical';
   }
 
   // Extract focus areas (quoted strings or "focus on X" patterns)
@@ -471,9 +456,7 @@ export function extractConstraints(message: string): Constraints {
   }
 
   // Extract exclusions
-  const excludeMatch = message.match(
-    /(?:without|exclude|skip|ignore)\s+([^,.]+)/i,
-  );
+  const excludeMatch = message.match(/(?:without|exclude|skip|ignore)\s+([^,.]+)/i);
   if (excludeMatch) {
     constraints.excludeAreas = [excludeMatch[1].trim()];
   }
@@ -493,8 +476,7 @@ export function extractConstraints(message: string): Constraints {
 export function isDiagramRequest(message: string): boolean {
   const diagramIndicators =
     /\b(diagram|chart|visual|draw|create|show|generate|make|build|map|model)\b/i;
-  const contextIndicators =
-    /\b(architecture|flow|process|system|database|class|sequence|state)\b/i;
+  const contextIndicators = /\b(architecture|flow|process|system|database|class|sequence|state)\b/i;
 
   return diagramIndicators.test(message) || contextIndicators.test(message);
 }
@@ -522,7 +504,7 @@ export function detectProjectType(message: string): {
   const scores: Record<string, number> = {};
 
   for (const [type, patterns] of Object.entries(PROJECT_PATTERNS)) {
-    if (type === "general") continue;
+    if (type === 'general') continue;
     let matchCount = 0;
     for (const pattern of patterns) {
       if (pattern.test(lowerMessage)) {
@@ -538,7 +520,7 @@ export function detectProjectType(message: string): {
   if (entries.length === 0) {
     // Check if it's a general build request
     if (BUILD_VERBS.test(lowerMessage)) {
-      return { type: "general", confidence: 0.3 };
+      return { type: 'general', confidence: 0.3 };
     }
     return { type: null, confidence: 0 };
   }
@@ -599,27 +581,19 @@ export function detectPhase(message: string): ProjectPhase {
 
   // Check for coding phase indicators
   if (
-    /\b(code|implement|write|create\s*the|build\s*the|start\s*coding)\b/i.test(
-      lowerMessage,
-    ) &&
-    /\b(frontend|backend|database|api|auth|component|service)\b/i.test(
-      lowerMessage,
-    )
+    /\b(code|implement|write|create\s*the|build\s*the|start\s*coding)\b/i.test(lowerMessage) &&
+    /\b(frontend|backend|database|api|auth|component|service)\b/i.test(lowerMessage)
   ) {
-    return "coding";
+    return 'coding';
   }
 
   // Check for architecture phase indicators
-  if (
-    /\b(architect|design|plan|structure|diagram|flow|overview)\b/i.test(
-      lowerMessage,
-    )
-  ) {
-    return "architecture";
+  if (/\b(architect|design|plan|structure|diagram|flow|overview)\b/i.test(lowerMessage)) {
+    return 'architecture';
   }
 
   // Default to intent phase for new requests
-  return "intent";
+  return 'intent';
 }
 
 /**
@@ -734,14 +708,14 @@ export function analyzeProjectIntent(message: string): ProjectAnalysis {
  * ```
  */
 export function analyzeIntent(message: string): IntentAnalysis {
-  if (!message || typeof message !== "string") {
+  if (!message || typeof message !== 'string') {
     return {
       isValid: false,
       confidence: 0,
       suggestedType: null,
       constraints: {},
       requiresClarification: true,
-      clarificationContext: "Empty or invalid input",
+      clarificationContext: 'Empty or invalid input',
     };
   }
 
@@ -766,37 +740,32 @@ export function analyzeIntent(message: string): IntentAnalysis {
   // Add complexity from project context
   if (project.isProjectRequest && !constraints.complexity) {
     if (COMPLEXITY_PATTERNS.mvp.test(trimmedMessage)) {
-      constraints.complexity = "mvp";
+      constraints.complexity = 'mvp';
     } else if (COMPLEXITY_PATTERNS.enterprise.test(trimmedMessage)) {
-      constraints.complexity = "enterprise";
+      constraints.complexity = 'enterprise';
     } else {
-      constraints.complexity = "standard";
+      constraints.complexity = 'standard';
     }
   }
 
   // Determine if clarification is needed (less aggressive for project requests)
-  const requiresClarification =
-    !project.isProjectRequest && confidence < 0.6 && isValid;
+  const requiresClarification = !project.isProjectRequest && confidence < 0.6 && isValid;
 
   // Generate clarification context
   let clarificationContext: string | undefined;
   if (requiresClarification) {
     if (type === null) {
-      clarificationContext =
-        "Unable to determine appropriate diagram type from the request";
+      clarificationContext = 'Unable to determine appropriate diagram type from the request';
     } else if (confidence < 0.4) {
       clarificationContext = `Low confidence (${Math.round(confidence * 100)}%) in diagram type selection`;
     } else {
-      clarificationContext =
-        "Multiple diagram types could work for this request";
+      clarificationContext = 'Multiple diagram types could work for this request';
     }
   }
 
   return {
     isValid,
-    confidence: project.isProjectRequest
-      ? Math.max(confidence, 0.7)
-      : confidence,
+    confidence: project.isProjectRequest ? Math.max(confidence, 0.7) : confidence,
     suggestedType: type,
     c4Level: c4Level ?? undefined,
     constraints,
@@ -834,7 +803,7 @@ export function getIntentAugmentation(analysis: IntentAnalysis): string | null {
 
   const parts: string[] = [];
 
-  parts.push("[Intent Analysis Context]");
+  parts.push('[Intent Analysis Context]');
   parts.push(`Confidence: ${Math.round(analysis.confidence * 100)}%`);
 
   if (analysis.suggestedType) {
@@ -849,9 +818,7 @@ export function getIntentAugmentation(analysis: IntentAnalysis): string | null {
     parts.push(`Note: ${analysis.clarificationContext}`);
   }
 
-  parts.push(
-    "Action: Ask the user to clarify their requirements before generating the diagram.",
-  );
+  parts.push('Action: Ask the user to clarify their requirements before generating the diagram.');
 
-  return parts.join("\n");
+  return parts.join('\n');
 }

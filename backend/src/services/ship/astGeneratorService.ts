@@ -4,18 +4,18 @@
  * Guarantees zero syntax errors through AST validation before emission
  */
 
-import { Project, StructureKind, Scope } from "ts-morph";
-import type { SourceFile } from "ts-morph";
-import logger from "../../middleware/logger.js";
+import { Project, StructureKind, Scope } from 'ts-morph';
+import type { SourceFile } from 'ts-morph';
+import logger from '../../middleware/logger.js';
 
 /**
  * Code generation options
  */
 export interface GenerationOptions {
   /** Target TypeScript version */
-  target?: "ES2020" | "ES2021" | "ES2022" | "ESNext";
+  target?: 'ES2020' | 'ES2021' | 'ES2022' | 'ESNext';
   /** Module system */
-  module?: "CommonJS" | "ESNext" | "NodeNext";
+  module?: 'CommonJS' | 'ESNext' | 'NodeNext';
   /** Include declaration files */
   declaration?: boolean;
   /** Strict mode */
@@ -41,10 +41,10 @@ export class CodeGenerationError extends Error {
   constructor(
     message: string,
     public readonly diagnostics: string[],
-    public readonly filePath?: string,
+    public readonly filePath?: string
   ) {
     super(message);
-    this.name = "CodeGenerationError";
+    this.name = 'CodeGenerationError';
   }
 }
 
@@ -58,11 +58,11 @@ export class AstGeneratorService {
 
   constructor(options: GenerationOptions = {}) {
     this.options = {
-      target: "ES2022",
-      module: "ESNext",
+      target: 'ES2022',
+      module: 'ESNext',
       declaration: true,
       strict: true,
-      outDir: "./dist",
+      outDir: './dist',
       ...options,
     };
 
@@ -96,12 +96,10 @@ export class AstGeneratorService {
   } {
     const diagnostics = sourceFile.getPreEmitDiagnostics();
     const errors = diagnostics.map(
-      (d: {
-        getMessageText: () => string | { getMessageText: () => string };
-      }) => {
+      (d: { getMessageText: () => string | { getMessageText: () => string } }) => {
         const message = d.getMessageText();
-        return typeof message === "string" ? message : message.getMessageText();
-      },
+        return typeof message === 'string' ? message : message.getMessageText();
+      }
     );
 
     return {
@@ -121,7 +119,7 @@ export class AstGeneratorService {
         throw new CodeGenerationError(
           `Source file '${sourceFile.getFilePath()}' has syntax errors`,
           validation.diagnostics,
-          sourceFile.getFilePath(),
+          sourceFile.getFilePath()
         );
       }
     }
@@ -199,7 +197,7 @@ export class AstGeneratorService {
         body?: string | any;
       }>;
       imports?: Array<{ module: string; named?: string[]; default?: string }>;
-    } = {},
+    } = {}
   ): GeneratedFile {
     const sourceFile = this.createSourceFile(filePath);
 
@@ -218,8 +216,8 @@ export class AstGeneratorService {
     // Add logger import by default
     this.createImport(sourceFile, {
       kind: StructureKind.ImportDeclaration,
-      moduleSpecifier: "../middleware/logger.js",
-      defaultImport: "logger",
+      moduleSpecifier: '../middleware/logger.js',
+      defaultImport: 'logger',
     });
 
     // Build class structure
@@ -243,8 +241,7 @@ export class AstGeneratorService {
         })),
         returnType: method.returnType,
         isAsync: method.isAsync,
-        statements:
-          typeof method.body === "string" ? [method.body] : method.body,
+        statements: typeof method.body === 'string' ? [method.body] : method.body,
         scope: Scope.Public,
       })),
     };
@@ -259,9 +256,7 @@ export class AstGeneratorService {
             name: dep.name,
             type: dep.type,
           })),
-          statements: options.dependencies.map(
-            (dep) => `this.${dep.name} = ${dep.name};`,
-          ),
+          statements: options.dependencies.map((dep) => `this.${dep.name} = ${dep.name};`),
         },
       ];
     }
@@ -277,12 +272,12 @@ export class AstGeneratorService {
     filePath: string,
     routeName: string,
     options: {
-      method: "get" | "post" | "put" | "delete" | "patch";
+      method: 'get' | 'post' | 'put' | 'delete' | 'patch';
       path: string;
       handler: string | any;
       imports?: Array<{ module: string; named?: string[]; default?: string }>;
       middleware?: string[];
-    },
+    }
   ): GeneratedFile {
     const sourceFile = this.createSourceFile(filePath);
 
@@ -301,12 +296,8 @@ export class AstGeneratorService {
     // Add Express imports
     this.createImport(sourceFile, {
       kind: StructureKind.ImportDeclaration,
-      moduleSpecifier: "express",
-      namedImports: [
-        { name: "Request" },
-        { name: "Response" },
-        { name: "Router" },
-      ],
+      moduleSpecifier: 'express',
+      namedImports: [{ name: 'Request' }, { name: 'Response' }, { name: 'Router' }],
     });
 
     // Create router
@@ -315,8 +306,8 @@ export class AstGeneratorService {
       declarations: [
         {
           kind: StructureKind.VariableDeclaration,
-          name: "router",
-          initializer: "Router()",
+          name: 'router',
+          initializer: 'Router()',
         },
       ],
     });
@@ -327,7 +318,7 @@ export class AstGeneratorService {
       : [options.handler];
 
     sourceFile.addStatements(
-      `router.${options.method}('${options.path}', ${methodStatements.join(", ")});`,
+      `router.${options.method}('${options.path}', ${methodStatements.join(', ')});`
     );
 
     // Export router
@@ -344,27 +335,20 @@ export class AstGeneratorService {
     schemaName: string,
     fields: Array<{
       name: string;
-      type:
-        | "string"
-        | "number"
-        | "boolean"
-        | "date"
-        | "array"
-        | "object"
-        | "enum";
+      type: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object' | 'enum';
       required?: boolean;
       validations?: Array<{ method: string; args?: unknown[] }>;
       enumValues?: string[];
       itemType?: string;
-    }>,
+    }>
   ): GeneratedFile {
     const sourceFile = this.createSourceFile(filePath);
 
     // Import zod
     this.createImport(sourceFile, {
       kind: StructureKind.ImportDeclaration,
-      moduleSpecifier: "zod",
-      namedImports: [{ name: "z" }],
+      moduleSpecifier: 'zod',
+      namedImports: [{ name: 'z' }],
     });
 
     // Build schema object
@@ -372,41 +356,40 @@ export class AstGeneratorService {
       let zodCall = `z.`;
 
       switch (field.type) {
-        case "string":
-          zodCall += "string()";
+        case 'string':
+          zodCall += 'string()';
           break;
-        case "number":
-          zodCall += "number()";
+        case 'number':
+          zodCall += 'number()';
           break;
-        case "boolean":
-          zodCall += "boolean()";
+        case 'boolean':
+          zodCall += 'boolean()';
           break;
-        case "date":
-          zodCall += "date()";
+        case 'date':
+          zodCall += 'date()';
           break;
-        case "array":
-          zodCall += `array(${field.itemType ?? "z.any()"})`;
+        case 'array':
+          zodCall += `array(${field.itemType ?? 'z.any()'})`;
           break;
-        case "object":
-          zodCall += "object({})";
+        case 'object':
+          zodCall += 'object({})';
           break;
-        case "enum":
-          zodCall += `enum([${field.enumValues?.map((v) => `'${v}'`).join(", ") ?? ""}])`;
+        case 'enum':
+          zodCall += `enum([${field.enumValues?.map((v) => `'${v}'`).join(', ') ?? ''}])`;
           break;
       }
 
       // Add validations
       if (field.validations) {
         for (const validation of field.validations) {
-          const args =
-            validation.args?.map((a) => JSON.stringify(a)).join(", ") ?? "";
+          const args = validation.args?.map((a) => JSON.stringify(a)).join(', ') ?? '';
           zodCall += `.${validation.method}(${args})`;
         }
       }
 
       // Make optional if not required
       if (field.required === false) {
-        zodCall += ".optional()";
+        zodCall += '.optional()';
       }
 
       return `${field.name}: ${zodCall}`;
@@ -414,12 +397,12 @@ export class AstGeneratorService {
 
     // Create schema export
     sourceFile.addStatements(
-      `export const ${schemaName} = z.object({\n  ${fieldDefinitions.join(",\n  ")}\n});`,
+      `export const ${schemaName} = z.object({\n  ${fieldDefinitions.join(',\n  ')}\n});`
     );
 
     // Add inferred type
     sourceFile.addStatements(
-      `export type ${schemaName.replace("Schema", "")} = z.infer<typeof ${schemaName}>;`,
+      `export type ${schemaName.replace('Schema', '')} = z.infer<typeof ${schemaName}>;`
     );
 
     return this.emitSourceFile(sourceFile);
@@ -429,7 +412,7 @@ export class AstGeneratorService {
    * Batch generate multiple files
    */
   async generateBatch(
-    generators: Array<() => GeneratedFile | Promise<GeneratedFile>>,
+    generators: Array<() => GeneratedFile | Promise<GeneratedFile>>
   ): Promise<GeneratedFile[]> {
     const results: GeneratedFile[] = [];
 
@@ -441,7 +424,7 @@ export class AstGeneratorService {
         if (error instanceof CodeGenerationError) {
           logger.error(
             { error: error.message, diagnostics: error.diagnostics },
-            "Code generation failed",
+            'Code generation failed'
           );
         }
         throw error;
@@ -474,9 +457,7 @@ export class AstGeneratorService {
  */
 let defaultService: AstGeneratorService | null = null;
 
-export function getAstGeneratorService(
-  options?: GenerationOptions,
-): AstGeneratorService {
+export function getAstGeneratorService(options?: GenerationOptions): AstGeneratorService {
   if (!defaultService) {
     defaultService = new AstGeneratorService(options);
   }
@@ -492,8 +473,8 @@ export function resetAstGeneratorService(): void {
  */
 export function generateService(
   className: string,
-  options: Parameters<AstGeneratorService["generateServiceClass"]>[2],
-  filePath?: string,
+  options: Parameters<AstGeneratorService['generateServiceClass']>[2],
+  filePath?: string
 ): GeneratedFile {
   const service = getAstGeneratorService();
   const path = filePath ?? `src/services/${className.toLowerCase()}.ts`;
@@ -505,8 +486,8 @@ export function generateService(
  */
 export function generateRoute(
   routeName: string,
-  options: Parameters<AstGeneratorService["generateRouteHandler"]>[2],
-  filePath?: string,
+  options: Parameters<AstGeneratorService['generateRouteHandler']>[2],
+  filePath?: string
 ): GeneratedFile {
   const service = getAstGeneratorService();
   const path = filePath ?? `src/routes/${routeName.toLowerCase()}.ts`;
@@ -518,12 +499,10 @@ export function generateRoute(
  */
 export function generateSchema(
   schemaName: string,
-  fields: Parameters<AstGeneratorService["generateZodSchema"]>[2],
-  filePath?: string,
+  fields: Parameters<AstGeneratorService['generateZodSchema']>[2],
+  filePath?: string
 ): GeneratedFile {
   const service = getAstGeneratorService();
-  const path =
-    filePath ??
-    `src/schemas/${schemaName.toLowerCase().replace("schema", "")}.ts`;
+  const path = filePath ?? `src/schemas/${schemaName.toLowerCase().replace('schema', '')}.ts`;
   return service.generateZodSchema(path, schemaName, fields);
 }

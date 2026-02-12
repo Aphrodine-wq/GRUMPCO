@@ -12,12 +12,12 @@
  * @module gAgent/powerExpansion
  */
 
-import { EventEmitter } from "events";
-import { calculateRiskLevel } from "./systemPrompt.js";
-import type { Pattern } from "./types.js";
+import { EventEmitter } from 'events';
+import { calculateRiskLevel } from './systemPrompt.js';
+import type { Pattern } from './types.js';
 
 // Re-export constants and types
-export { MAX_HEALING_RETRIES, STRATEGIES } from "./powerExpansion.types.js";
+export { MAX_HEALING_RETRIES, STRATEGIES } from './powerExpansion.types.js';
 export type {
   Strategy,
   ConfidenceAnalysis,
@@ -31,26 +31,26 @@ export type {
   StrategySelection,
   LearningRecord,
   PowerEvent,
-} from "./powerExpansion.types.js";
+} from './powerExpansion.types.js';
 
 // Re-export extracted classes
-export { ConfidenceRouter } from "./confidenceRouter.js";
-export { SelfHealingEngine } from "./selfHealingEngine.js";
-export { TaskDecomposer } from "./taskDecomposer.js";
-export { StrategySelector } from "./strategySelector.js";
-export { PatternMatcher } from "./patternMatcher.js";
+export { ConfidenceRouter } from './confidenceRouter.js';
+export { SelfHealingEngine } from './selfHealingEngine.js';
+export { TaskDecomposer } from './taskDecomposer.js';
+export { StrategySelector } from './strategySelector.js';
+export { PatternMatcher } from './patternMatcher.js';
 
 // Import classes for facade
-import { ConfidenceRouter } from "./confidenceRouter.js";
-import { SelfHealingEngine } from "./selfHealingEngine.js";
-import { TaskDecomposer } from "./taskDecomposer.js";
-import { StrategySelector } from "./strategySelector.js";
-import { PatternMatcher } from "./patternMatcher.js";
+import { ConfidenceRouter } from './confidenceRouter.js';
+import { SelfHealingEngine } from './selfHealingEngine.js';
+import { TaskDecomposer } from './taskDecomposer.js';
+import { StrategySelector } from './strategySelector.js';
+import { PatternMatcher } from './patternMatcher.js';
 import type {
   ConfidenceAnalysis,
   TaskDecomposition,
   StrategySelection,
-} from "./powerExpansion.types.js";
+} from './powerExpansion.types.js';
 
 // ============================================================================
 // POWER EXPANSION ENGINE (MAIN CLASS)
@@ -75,8 +75,8 @@ export class PowerExpansion extends EventEmitter {
     this.patternMatcher = new PatternMatcher();
 
     // Forward events from sub-engines
-    this.selfHealing.on("power", (event) => this.emit("power", event));
-    this.patternMatcher.on("power", (event) => this.emit("power", event));
+    this.selfHealing.on('power', (event) => this.emit('power', event));
+    this.patternMatcher.on('power', (event) => this.emit('power', event));
   }
 
   /**
@@ -94,14 +94,10 @@ export class PowerExpansion extends EventEmitter {
     matchedPattern?: { pattern: Pattern; confidence: number };
   } {
     // Check for matching pattern
-    const matchedPattern = this.patternMatcher.findMatch(
-      params.taskDescription,
-    );
+    const matchedPattern = this.patternMatcher.findMatch(params.taskDescription);
 
     // Analyze task complexity
-    const complexity = this.taskDecomposer.analyzeComplexity(
-      params.taskDescription,
-    );
+    const complexity = this.taskDecomposer.analyzeComplexity(params.taskDescription);
 
     // Calculate context quality from message history
     const contextQuality = params.previousMessages
@@ -119,16 +115,13 @@ export class PowerExpansion extends EventEmitter {
       historyAvailable: (params.previousMessages?.length ?? 0) > 0,
     });
 
-    this.emit("power", { type: "confidence_analyzed", analysis: confidence });
+    this.emit('power', { type: 'confidence_analyzed', analysis: confidence });
 
     // Decompose if needed
     let decomposition: TaskDecomposition | undefined;
-    if (complexity > 0.6 || confidence.action === "decompose") {
-      decomposition = this.taskDecomposer.decompose(
-        params.taskDescription,
-        params.context,
-      );
-      this.emit("power", { type: "task_decomposed", decomposition });
+    if (complexity > 0.6 || confidence.action === 'decompose') {
+      decomposition = this.taskDecomposer.decompose(params.taskDescription, params.context);
+      this.emit('power', { type: 'task_decomposed', decomposition });
     }
 
     // Select strategy
@@ -140,7 +133,7 @@ export class PowerExpansion extends EventEmitter {
       hasPattern: !!matchedPattern,
     });
 
-    this.emit("power", { type: "strategy_selected", selection: strategy });
+    this.emit('power', { type: 'strategy_selected', selection: strategy });
 
     return {
       confidence,

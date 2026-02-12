@@ -34,31 +34,22 @@
  * └─────────────────────────────────────────────────────────────────────────┘
  */
 
-import { EventEmitter } from "events";
-import type { HRRVector as _HRRVector } from "./holographicMemory.js";
-import {
-  ContextCompressor,
-  type CompressedContext,
-} from "../rag/contextCompressor.js";
+import { EventEmitter } from 'events';
+import type { HRRVector as _HRRVector } from './holographicMemory.js';
+import { ContextCompressor, type CompressedContext } from '../rag/contextCompressor.js';
 
 // Agent types
 export type AgentRole =
-  | "analyst" // Breaks down problems
-  | "researcher" // Gathers information
-  | "coder" // Writes code
-  | "reviewer" // Reviews and critiques
-  | "synthesizer" // Combines insights
-  | "validator" // Checks correctness
-  | "creative" // Generates alternatives
-  | "optimizer"; // Improves solutions
+  | 'analyst' // Breaks down problems
+  | 'researcher' // Gathers information
+  | 'coder' // Writes code
+  | 'reviewer' // Reviews and critiques
+  | 'synthesizer' // Combines insights
+  | 'validator' // Checks correctness
+  | 'creative' // Generates alternatives
+  | 'optimizer'; // Improves solutions
 
-export type AgentStatus =
-  | "idle"
-  | "thinking"
-  | "working"
-  | "waiting"
-  | "completed"
-  | "failed";
+export type AgentStatus = 'idle' | 'thinking' | 'working' | 'waiting' | 'completed' | 'failed';
 
 /**
  * Message passed between agents via gossip protocol
@@ -67,7 +58,7 @@ export interface GossipMessage {
   id: string;
   fromAgentId: string;
   timestamp: number;
-  type: "discovery" | "question" | "answer" | "alert" | "pheromone";
+  type: 'discovery' | 'question' | 'answer' | 'alert' | 'pheromone';
   payload: {
     content: string;
     confidence: number;
@@ -119,7 +110,7 @@ export interface SwarmTask {
   id: string;
   query: string;
   context?: string;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   assignedAgents: string[];
   results: GossipMessage[];
   synthesizedResult?: string;
@@ -174,14 +165,14 @@ export class SwarmOrchestrator extends EventEmitter {
 
     // Create diverse agent pool
     const roles: AgentRole[] = [
-      "analyst",
-      "researcher",
-      "coder",
-      "reviewer",
-      "synthesizer",
-      "validator",
-      "creative",
-      "optimizer",
+      'analyst',
+      'researcher',
+      'coder',
+      'reviewer',
+      'synthesizer',
+      'validator',
+      'creative',
+      'optimizer',
     ];
 
     for (let i = 0; i < count; i++) {
@@ -192,7 +183,7 @@ export class SwarmOrchestrator extends EventEmitter {
     // Create small-world network topology
     this.buildTopology();
 
-    this.emit("initialized", { agentCount: this.agents.size });
+    this.emit('initialized', { agentCount: this.agents.size });
   }
 
   /**
@@ -204,7 +195,7 @@ export class SwarmOrchestrator extends EventEmitter {
     const agent: SwarmAgent = {
       id,
       role,
-      status: "idle",
+      status: 'idle',
       neighbors: [],
       inbox: [],
       outbox: [],
@@ -221,7 +212,7 @@ export class SwarmOrchestrator extends EventEmitter {
     };
 
     this.agents.set(id, agent);
-    this.emit("agentSpawned", { agent });
+    this.emit('agentSpawned', { agent });
 
     // Re-wire topology if swarm is already running
     if (this.agents.size > 1) {
@@ -262,11 +253,10 @@ export class SwarmOrchestrator extends EventEmitter {
         if (Math.random() < p) {
           // Rewire to random non-neighbor
           const candidates = agentIds.filter(
-            (id) => id !== agent.id && !agent.neighbors.includes(id),
+            (id) => id !== agent.id && !agent.neighbors.includes(id)
           );
           if (candidates.length > 0) {
-            const newNeighbor =
-              candidates[Math.floor(Math.random() * candidates.length)];
+            const newNeighbor = candidates[Math.floor(Math.random() * candidates.length)];
             agent.neighbors[i] = newNeighbor;
           }
         }
@@ -281,9 +271,7 @@ export class SwarmOrchestrator extends EventEmitter {
     const agent = this.agents.get(agentId);
     if (!agent) return;
 
-    const agentIds = Array.from(this.agents.keys()).filter(
-      (id) => id !== agentId,
-    );
+    const agentIds = Array.from(this.agents.keys()).filter((id) => id !== agentId);
     const numNeighbors = Math.min(3, agentIds.length);
 
     // Connect to random subset
@@ -309,7 +297,7 @@ export class SwarmOrchestrator extends EventEmitter {
       id: taskId,
       query,
       context,
-      status: "pending",
+      status: 'pending',
       assignedAgents: [],
       results: [],
       createdAt: Date.now(),
@@ -330,18 +318,18 @@ export class SwarmOrchestrator extends EventEmitter {
     // Create initial gossip messages
     for (const agent of initialAgents) {
       const message = this.createGossipMessage(
-        "system",
-        "discovery",
+        'system',
+        'discovery',
         query,
         1.0,
-        ["task", "initial"],
-        compressedContext,
+        ['task', 'initial'],
+        compressedContext
       );
       agent.inbox.push(message);
     }
 
-    task.status = "processing";
-    this.emit("taskSubmitted", { task });
+    task.status = 'processing';
+    this.emit('taskSubmitted', { task });
 
     // Start gossip if not already running
     if (!this.isRunning) {
@@ -359,48 +347,48 @@ export class SwarmOrchestrator extends EventEmitter {
     const selected: SwarmAgent[] = [];
 
     // Always include analyst for task breakdown
-    const analyst = this.findAgentByRole("analyst");
+    const analyst = this.findAgentByRole('analyst');
     if (analyst) selected.push(analyst);
 
     // Role-based selection
     if (
-      queryLower.includes("code") ||
-      queryLower.includes("implement") ||
-      queryLower.includes("function")
+      queryLower.includes('code') ||
+      queryLower.includes('implement') ||
+      queryLower.includes('function')
     ) {
-      const coder = this.findAgentByRole("coder");
+      const coder = this.findAgentByRole('coder');
       if (coder) selected.push(coder);
     }
 
     if (
-      queryLower.includes("review") ||
-      queryLower.includes("check") ||
-      queryLower.includes("bug")
+      queryLower.includes('review') ||
+      queryLower.includes('check') ||
+      queryLower.includes('bug')
     ) {
-      const reviewer = this.findAgentByRole("reviewer");
+      const reviewer = this.findAgentByRole('reviewer');
       if (reviewer) selected.push(reviewer);
     }
 
     if (
-      queryLower.includes("research") ||
-      queryLower.includes("find") ||
-      queryLower.includes("search")
+      queryLower.includes('research') ||
+      queryLower.includes('find') ||
+      queryLower.includes('search')
     ) {
-      const researcher = this.findAgentByRole("researcher");
+      const researcher = this.findAgentByRole('researcher');
       if (researcher) selected.push(researcher);
     }
 
     if (
-      queryLower.includes("idea") ||
-      queryLower.includes("alternative") ||
-      queryLower.includes("creative")
+      queryLower.includes('idea') ||
+      queryLower.includes('alternative') ||
+      queryLower.includes('creative')
     ) {
-      const creative = this.findAgentByRole("creative");
+      const creative = this.findAgentByRole('creative');
       if (creative) selected.push(creative);
     }
 
     // Always include synthesizer for final aggregation
-    const synthesizer = this.findAgentByRole("synthesizer");
+    const synthesizer = this.findAgentByRole('synthesizer');
     if (synthesizer && !selected.includes(synthesizer)) {
       selected.push(synthesizer);
     }
@@ -420,7 +408,7 @@ export class SwarmOrchestrator extends EventEmitter {
 
   private findAgentByRole(role: AgentRole): SwarmAgent | undefined {
     for (const agent of this.agents.values()) {
-      if (agent.role === role && agent.status === "idle") {
+      if (agent.role === role && agent.status === 'idle') {
         return agent;
       }
     }
@@ -440,11 +428,8 @@ export class SwarmOrchestrator extends EventEmitter {
     if (this.isRunning) return;
 
     this.isRunning = true;
-    this.gossipTimer = setInterval(
-      () => this.gossipRound(),
-      this.config.gossipInterval,
-    );
-    this.emit("gossipStarted");
+    this.gossipTimer = setInterval(() => this.gossipRound(), this.config.gossipInterval);
+    this.emit('gossipStarted');
   }
 
   /**
@@ -456,7 +441,7 @@ export class SwarmOrchestrator extends EventEmitter {
       this.gossipTimer = null;
     }
     this.isRunning = false;
-    this.emit("gossipStopped");
+    this.emit('gossipStopped');
   }
 
   /**
@@ -484,10 +469,8 @@ export class SwarmOrchestrator extends EventEmitter {
     // 5. Check for convergence on active tasks
     this.checkConvergence();
 
-    this.emit("gossipRound", {
-      activeAgents: Array.from(this.agents.values()).filter(
-        (a) => a.status !== "idle",
-      ).length,
+    this.emit('gossipRound', {
+      activeAgents: Array.from(this.agents.values()).filter((a) => a.status !== 'idle').length,
       totalMessages: this.countActiveMessages(),
     });
   }
@@ -495,7 +478,7 @@ export class SwarmOrchestrator extends EventEmitter {
   private processAgentInbox(agent: SwarmAgent): void {
     if (agent.inbox.length === 0) return;
 
-    agent.status = "thinking";
+    agent.status = 'thinking';
     agent.lastActiveAt = Date.now();
 
     for (const message of agent.inbox) {
@@ -507,12 +490,8 @@ export class SwarmOrchestrator extends EventEmitter {
       }
 
       // Update pheromone trails
-      if (message.type === "discovery" || message.type === "answer") {
-        this.updatePheromone(
-          message.fromAgentId,
-          agent.id,
-          message.payload.confidence,
-        );
+      if (message.type === 'discovery' || message.type === 'answer') {
+        this.updatePheromone(message.fromAgentId, agent.id, message.payload.confidence);
       }
     }
 
@@ -521,16 +500,16 @@ export class SwarmOrchestrator extends EventEmitter {
   }
 
   private agentThink(agent: SwarmAgent): void {
-    if (agent.status !== "thinking") return;
+    if (agent.status !== 'thinking') return;
 
     // Simulate agent processing (in real impl, this would call LLM)
     const discoveries = agent.discoveries;
     if (discoveries.length === 0) {
-      agent.status = "idle";
+      agent.status = 'idle';
       return;
     }
 
-    agent.status = "working";
+    agent.status = 'working';
 
     // Aggregate discoveries based on role
     const aggregated = this.aggregateByRole(agent, discoveries);
@@ -540,55 +519,51 @@ export class SwarmOrchestrator extends EventEmitter {
       agent.stats.messagesSent++;
     }
 
-    agent.status = "idle";
+    agent.status = 'idle';
   }
 
-  private aggregateByRole(
-    agent: SwarmAgent,
-    discoveries: GossipMessage[],
-  ): GossipMessage | null {
+  private aggregateByRole(agent: SwarmAgent, discoveries: GossipMessage[]): GossipMessage | null {
     if (discoveries.length === 0) return null;
 
     // Calculate average confidence
     const avgConfidence =
-      discoveries.reduce((sum, d) => sum + d.payload.confidence, 0) /
-      discoveries.length;
+      discoveries.reduce((sum, d) => sum + d.payload.confidence, 0) / discoveries.length;
 
     // Combine content based on role
-    let combinedContent = "";
+    let combinedContent = '';
     const newTags: string[] = [agent.role];
 
     switch (agent.role) {
-      case "analyst":
-        combinedContent = `[Analysis] Breaking down: ${discoveries.map((d) => d.payload.content).join(" | ")}`;
-        newTags.push("analysis", "breakdown");
+      case 'analyst':
+        combinedContent = `[Analysis] Breaking down: ${discoveries.map((d) => d.payload.content).join(' | ')}`;
+        newTags.push('analysis', 'breakdown');
         break;
-      case "synthesizer":
-        combinedContent = `[Synthesis] Combining insights: ${discoveries.map((d) => d.payload.content.slice(0, 100)).join(" + ")}`;
-        newTags.push("synthesis", "aggregation");
+      case 'synthesizer':
+        combinedContent = `[Synthesis] Combining insights: ${discoveries.map((d) => d.payload.content.slice(0, 100)).join(' + ')}`;
+        newTags.push('synthesis', 'aggregation');
         break;
-      case "coder":
-        combinedContent = `[Code] Implementation consideration: ${discoveries.map((d) => d.payload.content.slice(0, 100)).join("; ")}`;
-        newTags.push("code", "implementation");
+      case 'coder':
+        combinedContent = `[Code] Implementation consideration: ${discoveries.map((d) => d.payload.content.slice(0, 100)).join('; ')}`;
+        newTags.push('code', 'implementation');
         break;
-      case "reviewer":
-        combinedContent = `[Review] Quality check: ${discoveries.map((d) => d.payload.content.slice(0, 100)).join("; ")}`;
-        newTags.push("review", "quality");
+      case 'reviewer':
+        combinedContent = `[Review] Quality check: ${discoveries.map((d) => d.payload.content.slice(0, 100)).join('; ')}`;
+        newTags.push('review', 'quality');
         break;
-      case "creative":
-        combinedContent = `[Creative] Alternative approaches: ${discoveries.map((d) => d.payload.content.slice(0, 100)).join("; ")}`;
-        newTags.push("creative", "alternatives");
+      case 'creative':
+        combinedContent = `[Creative] Alternative approaches: ${discoveries.map((d) => d.payload.content.slice(0, 100)).join('; ')}`;
+        newTags.push('creative', 'alternatives');
         break;
       default:
-        combinedContent = discoveries.map((d) => d.payload.content).join(" ");
+        combinedContent = discoveries.map((d) => d.payload.content).join(' ');
     }
 
     return this.createGossipMessage(
       agent.id,
-      "discovery",
+      'discovery',
       combinedContent,
       Math.min(avgConfidence * 1.05, 1.0), // Slight confidence boost for aggregation
-      newTags,
+      newTags
     );
   }
 
@@ -617,15 +592,9 @@ export class SwarmOrchestrator extends EventEmitter {
     agent.outbox = [];
   }
 
-  private updatePheromone(
-    fromId: string,
-    toId: string,
-    strength: number,
-  ): void {
+  private updatePheromone(fromId: string, toId: string, strength: number): void {
     // Find existing trail
-    const trail = this.pheromones.find(
-      (p) => p.fromAgentId === fromId && p.toAgentId === toId,
-    );
+    const trail = this.pheromones.find((p) => p.fromAgentId === fromId && p.toAgentId === toId);
 
     if (trail) {
       // Reinforce existing trail
@@ -638,7 +607,7 @@ export class SwarmOrchestrator extends EventEmitter {
         toAgentId: toId,
         strength: strength * 0.5,
         lastUpdate: Date.now(),
-        associatedTask: "",
+        associatedTask: '',
       });
     }
   }
@@ -654,7 +623,7 @@ export class SwarmOrchestrator extends EventEmitter {
 
   private checkConvergence(): void {
     for (const task of this.tasks.values()) {
-      if (task.status !== "processing") continue;
+      if (task.status !== 'processing') continue;
 
       // Collect all discoveries from assigned agents
       const allDiscoveries: GossipMessage[] = [];
@@ -666,9 +635,7 @@ export class SwarmOrchestrator extends EventEmitter {
       }
 
       // Check if we have enough high-confidence discoveries
-      const highConfidence = allDiscoveries.filter(
-        (d) => d.payload.confidence > 0.7,
-      );
+      const highConfidence = allDiscoveries.filter((d) => d.payload.confidence > 0.7);
 
       if (highConfidence.length >= 3) {
         // Attempt synthesis
@@ -676,10 +643,10 @@ export class SwarmOrchestrator extends EventEmitter {
         if (synthesized) {
           task.results = allDiscoveries;
           task.synthesizedResult = synthesized;
-          task.status = "completed";
+          task.status = 'completed';
           task.completedAt = Date.now();
 
-          this.emit("taskCompleted", { task });
+          this.emit('taskCompleted', { task });
 
           // Mark agents as completed
           for (const agentId of task.assignedAgents) {
@@ -694,14 +661,9 @@ export class SwarmOrchestrator extends EventEmitter {
     }
   }
 
-  private synthesizeResults(
-    task: SwarmTask,
-    discoveries: GossipMessage[],
-  ): string {
+  private synthesizeResults(task: SwarmTask, discoveries: GossipMessage[]): string {
     // Sort by confidence
-    const sorted = discoveries.sort(
-      (a, b) => b.payload.confidence - a.payload.confidence,
-    );
+    const sorted = discoveries.sort((a, b) => b.payload.confidence - a.payload.confidence);
 
     // Take top discoveries
     const top = sorted.slice(0, 5);
@@ -709,47 +671,42 @@ export class SwarmOrchestrator extends EventEmitter {
     // Build synthesized response
     const parts: string[] = [];
     parts.push(`# Swarm Analysis: ${task.query.slice(0, 50)}...`);
-    parts.push("");
-    parts.push("## Key Insights");
+    parts.push('');
+    parts.push('## Key Insights');
 
     for (const discovery of top) {
       const roleTag =
         discovery.payload.tags.find((t) =>
           [
-            "analyst",
-            "coder",
-            "reviewer",
-            "synthesizer",
-            "creative",
-            "researcher",
-            "validator",
-            "optimizer",
-          ].includes(t),
-        ) || "agent";
-      parts.push(
-        `- **[${roleTag}]** ${discovery.payload.content.slice(0, 200)}`,
-      );
+            'analyst',
+            'coder',
+            'reviewer',
+            'synthesizer',
+            'creative',
+            'researcher',
+            'validator',
+            'optimizer',
+          ].includes(t)
+        ) || 'agent';
+      parts.push(`- **[${roleTag}]** ${discovery.payload.content.slice(0, 200)}`);
     }
 
-    parts.push("");
-    parts.push("## Confidence");
-    const avgConfidence =
-      top.reduce((sum, d) => sum + d.payload.confidence, 0) / top.length;
+    parts.push('');
+    parts.push('## Confidence');
+    const avgConfidence = top.reduce((sum, d) => sum + d.payload.confidence, 0) / top.length;
     parts.push(`Overall confidence: ${(avgConfidence * 100).toFixed(1)}%`);
-    parts.push(
-      `Contributing agents: ${new Set(discoveries.map((d) => d.fromAgentId)).size}`,
-    );
+    parts.push(`Contributing agents: ${new Set(discoveries.map((d) => d.fromAgentId)).size}`);
 
-    return parts.join("\n");
+    return parts.join('\n');
   }
 
   private createGossipMessage(
     fromAgentId: string,
-    type: GossipMessage["type"],
+    type: GossipMessage['type'],
     content: string,
     confidence: number,
     tags: string[],
-    context?: CompressedContext,
+    context?: CompressedContext
   ): GossipMessage {
     return {
       id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -779,18 +736,11 @@ export class SwarmOrchestrator extends EventEmitter {
   /**
    * Inject a discovery directly into the swarm
    */
-  injectDiscovery(
-    content: string,
-    confidence: number = 0.8,
-    tags: string[] = [],
-  ): void {
-    const message = this.createGossipMessage(
-      "external",
-      "discovery",
-      content,
-      confidence,
-      ["external", ...tags],
-    );
+  injectDiscovery(content: string, confidence: number = 0.8, tags: string[] = []): void {
+    const message = this.createGossipMessage('external', 'discovery', content, confidence, [
+      'external',
+      ...tags,
+    ]);
 
     // Inject into random subset of agents
     const agents = Array.from(this.agents.values());
@@ -838,14 +788,13 @@ export class SwarmOrchestrator extends EventEmitter {
 
     for (const agent of this.agents.values()) {
       roleCount[agent.role]++;
-      if (agent.status !== "idle") activeCount++;
+      if (agent.status !== 'idle') activeCount++;
       totalMessages += agent.stats.messagesReceived + agent.stats.messagesSent;
     }
 
     const avgPheromone =
       this.pheromones.length > 0
-        ? this.pheromones.reduce((sum, p) => sum + p.strength, 0) /
-          this.pheromones.length
+        ? this.pheromones.reduce((sum, p) => sum + p.strength, 0) / this.pheromones.length
         : 0;
 
     const tasks = Array.from(this.tasks.values());
@@ -857,10 +806,8 @@ export class SwarmOrchestrator extends EventEmitter {
       totalMessages,
       pheromoneTrails: this.pheromones.length,
       avgPheromoneStrength: avgPheromone,
-      pendingTasks: tasks.filter(
-        (t) => t.status === "pending" || t.status === "processing",
-      ).length,
-      completedTasks: tasks.filter((t) => t.status === "completed").length,
+      pendingTasks: tasks.filter((t) => t.status === 'pending' || t.status === 'processing').length,
+      completedTasks: tasks.filter((t) => t.status === 'completed').length,
     };
   }
 
@@ -882,7 +829,7 @@ export class SwarmOrchestrator extends EventEmitter {
 
     for (const agent of this.agents.values()) {
       for (const neighborId of agent.neighbors) {
-        const edgeKey = [agent.id, neighborId].sort().join("|");
+        const edgeKey = [agent.id, neighborId].sort().join('|');
         if (!edgeSet.has(edgeKey)) {
           edgeSet.add(edgeKey);
 
@@ -890,7 +837,7 @@ export class SwarmOrchestrator extends EventEmitter {
           const trail = this.pheromones.find(
             (p) =>
               (p.fromAgentId === agent.id && p.toAgentId === neighborId) ||
-              (p.fromAgentId === neighborId && p.toAgentId === agent.id),
+              (p.fromAgentId === neighborId && p.toAgentId === agent.id)
           );
 
           edges.push({
@@ -913,7 +860,7 @@ export class SwarmOrchestrator extends EventEmitter {
     this.agents.clear();
     this.pheromones = [];
     this.tasks.clear();
-    this.emit("shutdown");
+    this.emit('shutdown');
   }
 }
 
@@ -951,7 +898,7 @@ export class SwarmOrchestratorService {
    */
   listSwarms(): {
     name: string;
-    stats: ReturnType<SwarmOrchestrator["getStats"]>;
+    stats: ReturnType<SwarmOrchestrator['getStats']>;
   }[] {
     return Array.from(this.swarms.entries()).map(([name, swarm]) => ({
       name,

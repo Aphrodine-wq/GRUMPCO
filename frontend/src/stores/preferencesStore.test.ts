@@ -34,7 +34,7 @@ vi.mock('./authStore.js', () => ({
   session: {
     subscribe: vi.fn((cb: (value: null) => void) => {
       cb(null); // Default to logged out
-      return () => { };
+      return () => {};
     }),
   },
 }));

@@ -3,9 +3,9 @@
  * Uses estimatedCostUsd from usage_records; limits from tier.monthlyBudgetUsd.
  */
 
-import { getTier, type TierId } from "../../config/pricing.js";
-import { getMonthlyCostForUser } from "./usageTracker.js";
-import { licenseService } from "../security/licenseService.js";
+import { getTier, type TierId } from '../../config/pricing.js';
+import { getMonthlyCostForUser } from './usageTracker.js';
+import { licenseService } from '../security/licenseService.js';
 
 /**
  * Get cost used (USD) by a user for the current month.
@@ -42,8 +42,7 @@ export async function getCreditUsageSummary(userId: string): Promise<{
     licenseService.getLicenseStatus(userId),
   ]);
 
-  const percentageUsed =
-    creditsLimit > 0 ? Math.min(100, (creditsUsed / creditsLimit) * 100) : 0;
+  const percentageUsed = creditsLimit > 0 ? Math.min(100, (creditsUsed / creditsLimit) * 100) : 0;
 
   return {
     creditsUsed,
@@ -59,9 +58,6 @@ export async function getCreditUsageSummary(userId: string): Promise<{
  * Check if user has credits remaining.
  */
 export async function hasCreditsRemaining(userId: string): Promise<boolean> {
-  const [used, limit] = await Promise.all([
-    getCreditsUsed(userId),
-    getCreditsLimit(userId),
-  ]);
+  const [used, limit] = await Promise.all([getCreditsUsed(userId), getCreditsLimit(userId)]);
   return used < limit;
 }

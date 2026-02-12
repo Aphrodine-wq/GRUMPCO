@@ -7,16 +7,12 @@
  * @module routes/expoTest
  */
 
-import { Router, type Request, type Response } from "express";
-import { z } from "zod";
-import { enqueueExpoTestJob } from "../services/infra/jobQueue.js";
-import { getDatabase } from "../db/database.js";
-import { getRequestLogger } from "../middleware/logger.js";
-import {
-  sendServerError,
-  sendErrorResponse,
-  ErrorCode,
-} from "../utils/errorResponse.js";
+import { Router, type Request, type Response } from 'express';
+import { z } from 'zod';
+import { enqueueExpoTestJob } from '../services/infra/jobQueue.js';
+import { getDatabase } from '../db/database.js';
+import { getRequestLogger } from '../middleware/logger.js';
+import { sendServerError, sendErrorResponse, ErrorCode } from '../utils/errorResponse.js';
 
 const router = Router();
 
@@ -26,11 +22,11 @@ const router = Router();
 const expoTestRunSchema = z.object({
   projectPath: z
     .string({
-      required_error: "projectPath is required",
-      invalid_type_error: "projectPath must be a string",
+      required_error: 'projectPath is required',
+      invalid_type_error: 'projectPath must be a string',
     })
-    .min(1, "projectPath cannot be empty")
-    .max(500, "projectPath must be at most 500 characters"),
+    .min(1, 'projectPath cannot be empty')
+    .max(500, 'projectPath must be at most 500 characters'),
 });
 
 /**
@@ -69,11 +65,8 @@ interface ExpoTestJobRow {
  * { "jobId": "abc123" }
  */
 router.post(
-  "/run",
-  async (
-    req: Request<Record<string, never>, object, ExpoTestRunBody>,
-    res: Response,
-  ) => {
+  '/run',
+  async (req: Request<Record<string, never>, object, ExpoTestRunBody>, res: Response) => {
     const log = getRequestLogger();
 
     // Validate request body
@@ -81,12 +74,9 @@ router.post(
 
     if (!validation.success) {
       const firstError = validation.error.errors[0];
-      log.warn(
-        { errors: validation.error.errors },
-        "Invalid Expo test run request",
-      );
+      log.warn({ errors: validation.error.errors }, 'Invalid Expo test run request');
       sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, firstError.message, {
-        field: firstError.path.join("."),
+        field: firstError.path.join('.'),
       });
       return;
     }
@@ -95,13 +85,13 @@ router.post(
 
     try {
       const jobId = await enqueueExpoTestJob(projectPath);
-      log.info({ jobId, projectPath }, "Expo test job enqueued");
+      log.info({ jobId, projectPath }, 'Expo test job enqueued');
       res.json({ jobId });
     } catch (error: unknown) {
-      log.error({ err: error }, "Expo test enqueue failed");
-      sendServerError(res, error, { type: "expo_test_error" });
+      log.error({ err: error }, 'Expo test enqueue failed');
+      sendServerError(res, error, { type: 'expo_test_error' });
     }
-  },
+  }
 );
 
 /**
@@ -122,45 +112,42 @@ router.post(
  *   "result": { "passed": 10, "failed": 0 }
  * }
  */
-router.get(
-  "/status/:jobId",
-  (req: Request<{ jobId: string }>, res: Response) => {
-    const log = getRequestLogger();
-    const { jobId } = req.params;
+router.get('/status/:jobId', (req: Request<{ jobId: string }>, res: Response) => {
+  const log = getRequestLogger();
+  const { jobId } = req.params;
 
-    if (!jobId || jobId.length < 1) {
-      sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, "jobId is required");
+  if (!jobId || jobId.length < 1) {
+    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, 'jobId is required');
+    return;
+  }
+
+  try {
+    const db = getDatabase().getDb();
+    const row = db
+      .prepare(
+        `SELECT id, project_path, status, error, result_json, created_at, updated_at 
+       FROM expo_test_jobs WHERE id = ?`
+      )
+      .get(jobId) as ExpoTestJobRow | undefined;
+
+    if (!row) {
+      sendErrorResponse(res, ErrorCode.RESOURCE_NOT_FOUND, 'Job not found');
       return;
     }
 
-    try {
-      const db = getDatabase().getDb();
-      const row = db
-        .prepare(
-          `SELECT id, project_path, status, error, result_json, created_at, updated_at 
-       FROM expo_test_jobs WHERE id = ?`,
-        )
-        .get(jobId) as ExpoTestJobRow | undefined;
-
-      if (!row) {
-        sendErrorResponse(res, ErrorCode.RESOURCE_NOT_FOUND, "Job not found");
-        return;
-      }
-
-      res.json({
-        id: row.id,
-        project_path: row.project_path,
-        status: row.status,
-        error: row.error ?? undefined,
-        result: row.result_json ? JSON.parse(row.result_json) : undefined,
-        created_at: row.created_at,
-        updated_at: row.updated_at ?? undefined,
-      });
-    } catch (error: unknown) {
-      log.error({ err: error, jobId }, "Failed to get Expo test job status");
-      sendServerError(res, error, { type: "database_error" });
-    }
-  },
-);
+    res.json({
+      id: row.id,
+      project_path: row.project_path,
+      status: row.status,
+      error: row.error ?? undefined,
+      result: row.result_json ? JSON.parse(row.result_json) : undefined,
+      created_at: row.created_at,
+      updated_at: row.updated_at ?? undefined,
+    });
+  } catch (error: unknown) {
+    log.error({ err: error, jobId }, 'Failed to get Expo test job status');
+    sendServerError(res, error, { type: 'database_error' });
+  }
+});
 
 export default router;

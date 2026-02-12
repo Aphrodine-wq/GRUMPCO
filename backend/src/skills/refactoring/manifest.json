@@ -6,14 +6,7 @@
   "author": "G-Rump Team",
   "category": "code",
   "icon": "arrows-rotate",
-  "tags": [
-    "refactor",
-    "extract",
-    "rename",
-    "restructure",
-    "patterns",
-    "clean-code"
-  ],
+  "tags": ["refactor", "extract", "rename", "restructure", "patterns", "clean-code"],
   "capabilities": {
     "providesTools": true,
     "providesRoutes": true,
@@ -39,15 +32,6 @@
       "rename\\s+\\w+"
     ],
     "commands": ["/refactor", "/extract", "/rename"],
-    "fileExtensions": [
-      ".ts",
-      ".js",
-      ".tsx",
-      ".jsx",
-      ".py",
-      ".go",
-      ".rs",
-      ".java"
-    ]
+    "fileExtensions": [".ts", ".js", ".tsx", ".jsx", ".py", ".go", ".rs", ".java"]
   }
 }

@@ -398,8 +398,12 @@ describe('ArtifactViewer', () => {
 
   it('should download files when download button clicked', async () => {
     const createElementMock = vi.spyOn(document, 'createElement');
-    const appendChildMock = vi.spyOn(document.body, 'appendChild').mockImplementation(() => document.createElement('div'));
-    const removeChildMock = vi.spyOn(document.body, 'removeChild').mockImplementation(() => document.createElement('div'));
+    const appendChildMock = vi
+      .spyOn(document.body, 'appendChild')
+      .mockImplementation(() => document.createElement('div'));
+    const removeChildMock = vi
+      .spyOn(document.body, 'removeChild')
+      .mockImplementation(() => document.createElement('div'));
     const clickMock = vi.fn();
 
     createElementMock.mockImplementation((tag) => {
@@ -420,7 +424,7 @@ describe('ArtifactViewer', () => {
     const downloadButton = getByText('Download All Files').closest('button');
     if (downloadButton) {
       await fireEvent.click(downloadButton);
-      
+
       await waitFor(() => {
         expect(clickMock).toHaveBeenCalled();
         expect(showToast).toHaveBeenCalledWith('All files downloaded!', 'success');
@@ -450,7 +454,7 @@ describe('ArtifactViewer', () => {
 
   it('should handle download error', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    
+
     const { getByText } = render(ArtifactViewer, {
       props: {
         open: true,
@@ -491,7 +495,7 @@ describe('ArtifactViewer', () => {
     const completeButton = getByText('Workflow Completed').closest('button');
     if (completeButton) {
       await fireEvent.click(completeButton);
-      
+
       await waitFor(() => {
         expect(completeDesignWorkflow).toHaveBeenCalledWith('test-session');
       });
@@ -526,7 +530,7 @@ describe('ArtifactViewer', () => {
     const completeButton = getByText('Workflow Completed').closest('button');
     if (completeButton) {
       await fireEvent.click(completeButton);
-      
+
       await waitFor(() => {
         expect(showToast).toHaveBeenCalledWith('Failed to complete workflow', 'error');
       });

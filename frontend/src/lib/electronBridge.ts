@@ -15,43 +15,43 @@ import { setUserAndSession } from '../stores/authStore';
 // ─── Type helpers ─────────────────────────────────────────────────────────────
 
 interface GrumpBridge {
-    isElectron?: boolean;
-    onAppCommand?: (event: string, callback: () => void) => () => void;
-    onProtocolUrl?: (callback: (url: string) => void) => () => void;
-    openPath?: (path: string) => Promise<{ error?: string }>;
+  isElectron?: boolean;
+  onAppCommand?: (event: string, callback: () => void) => () => void;
+  onProtocolUrl?: (callback: (url: string) => void) => () => void;
+  openPath?: (path: string) => Promise<{ error?: string }>;
 }
 
 interface GrumpWithWakeWord extends GrumpBridge {
-    wakeWord?: { onDetected?: (cb: () => void) => () => void };
+  wakeWord?: { onDetected?: (cb: () => void) => () => void };
 }
 
 function getGrump(): GrumpBridge | undefined {
-    return (window as { grump?: GrumpBridge }).grump;
+  return (window as { grump?: GrumpBridge }).grump;
 }
 
 // ─── Protocol handler ─────────────────────────────────────────────────────────
 
 function handleProtocolUrl(url: string): void {
-    if (url.startsWith('grump://auth/done')) {
-        try {
-            const parsed = new URL(url);
-            const accessToken = parsed.searchParams.get('access_token');
-            const userId = parsed.searchParams.get('user_id');
-            const email = parsed.searchParams.get('email') ?? '';
-            if (accessToken && userId) {
-                setUserAndSession(
-                    { id: userId, email, name: email.split('@')[0] },
-                    { access_token: accessToken },
-                );
-            }
-        } catch (_) {
-            /* ignore parse errors */
-        }
-        return;
+  if (url.startsWith('grump://auth/done')) {
+    try {
+      const parsed = new URL(url);
+      const accessToken = parsed.searchParams.get('access_token');
+      const userId = parsed.searchParams.get('user_id');
+      const email = parsed.searchParams.get('email') ?? '';
+      if (accessToken && userId) {
+        setUserAndSession(
+          { id: userId, email, name: email.split('@')[0] },
+          { access_token: accessToken }
+        );
+      }
+    } catch (_) {
+      /* ignore parse errors */
     }
-    const path = url.replace(/^grump:\/\//i, '').split('/')[0] || '';
-    if (path === 'settings') setCurrentView('settings');
-    else if (path === 'chat' || !path) setCurrentView('chat');
+    return;
+  }
+  const path = url.replace(/^grump:\/\//i, '').split('/')[0] || '';
+  if (path === 'settings') setCurrentView('settings');
+  else if (path === 'chat' || !path) setCurrentView('chat');
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -68,33 +68,33 @@ function handleProtocolUrl(url: string): void {
  * @returns A cleanup function that removes all subscriptions.
  */
 export function initElectronBridge(): () => void {
-    const grump = getGrump();
-    if (!grump?.isElectron) return () => { };
+  const grump = getGrump();
+  if (!grump?.isElectron) return () => {};
 
-    const unsubs: (() => void)[] = [];
+  const unsubs: (() => void)[] = [];
 
-    // Wake word → Talk Mode
-    const grumpAny = grump as GrumpWithWakeWord;
-    if (grumpAny.wakeWord?.onDetected) {
-        unsubs.push(grumpAny.wakeWord.onDetected(() => setCurrentView('talkMode')));
-    }
+  // Wake word → Talk Mode
+  const grumpAny = grump as GrumpWithWakeWord;
+  if (grumpAny.wakeWord?.onDetected) {
+    unsubs.push(grumpAny.wakeWord.onDetected(() => setCurrentView('talkMode')));
+  }
 
-    // Tray quick actions
-    if (grump.onAppCommand) {
-        unsubs.push(grump.onAppCommand('app:focus-chat', () => setCurrentView('chat')));
-        unsubs.push(grump.onAppCommand('app:focus-settings', () => setCurrentView('settings')));
-        unsubs.push(
-            grump.onAppCommand('app:open-workspace', () => {
-                const root = get(workspaceStore).root;
-                if (root && grump.openPath) grump.openPath(root).catch(() => { });
-            }),
-        );
-    }
+  // Tray quick actions
+  if (grump.onAppCommand) {
+    unsubs.push(grump.onAppCommand('app:focus-chat', () => setCurrentView('chat')));
+    unsubs.push(grump.onAppCommand('app:focus-settings', () => setCurrentView('settings')));
+    unsubs.push(
+      grump.onAppCommand('app:open-workspace', () => {
+        const root = get(workspaceStore).root;
+        if (root && grump.openPath) grump.openPath(root).catch(() => {});
+      })
+    );
+  }
 
-    // Protocol URL handler
-    if (grump.onProtocolUrl) {
-        unsubs.push(grump.onProtocolUrl(handleProtocolUrl));
-    }
+  // Protocol URL handler
+  if (grump.onProtocolUrl) {
+    unsubs.push(grump.onProtocolUrl(handleProtocolUrl));
+  }
 
-    return () => unsubs.forEach((u) => u());
+  return () => unsubs.forEach((u) => u());
 }

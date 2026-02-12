@@ -3,10 +3,10 @@
  * Uses tiered cache namespace `chat:completion` to avoid re-calling the LLM for identical plan requests.
  */
 
-import { createHash } from "crypto";
-import { getTieredCache } from "./tieredCache.js";
+import { createHash } from 'crypto';
+import { getTieredCache } from './tieredCache.js';
 
-const CHAT_CACHE_NAMESPACE = "chat:completion";
+const CHAT_CACHE_NAMESPACE = 'chat:completion';
 const CHAT_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 export interface CachedChatResponse {
@@ -19,10 +19,10 @@ export interface CachedChatResponse {
  */
 export function getChatCacheKey(
   mode: string,
-  messages: Array<{ role: string; content: string | unknown }>,
+  messages: Array<{ role: string; content: string | unknown }>
 ): string {
   const payload = JSON.stringify({ mode, messages });
-  return createHash("sha256").update(payload).digest("hex").substring(0, 32);
+  return createHash('sha256').update(payload).digest('hex').substring(0, 32);
 }
 
 /**
@@ -30,7 +30,7 @@ export function getChatCacheKey(
  */
 export async function getCachedChatResponse(
   mode: string,
-  messages: Array<{ role: string; content: string | unknown }>,
+  messages: Array<{ role: string; content: string | unknown }>
 ): Promise<CachedChatResponse | null> {
   const key = getChatCacheKey(mode, messages);
   const cache = getTieredCache();
@@ -44,7 +44,7 @@ export async function getCachedChatResponse(
 export async function setCachedChatResponse(
   mode: string,
   messages: Array<{ role: string; content: string | unknown }>,
-  text: string,
+  text: string
 ): Promise<void> {
   const key = getChatCacheKey(mode, messages);
   const cache = getTieredCache();
@@ -52,6 +52,6 @@ export async function setCachedChatResponse(
     CHAT_CACHE_NAMESPACE,
     key,
     { text, fromCache: true } as CachedChatResponse,
-    CHAT_CACHE_TTL_MS,
+    CHAT_CACHE_TTL_MS
   );
 }

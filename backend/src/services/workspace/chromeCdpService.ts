@@ -6,19 +6,18 @@
  * when Playwright is not installed.
  */
 
-import path from "path";
-import fs from "fs/promises";
-import logger from "../../middleware/logger.js";
+import path from 'path';
+import fs from 'fs/promises';
+import logger from '../../middleware/logger.js';
 
 const CHROME_USER_DATA_BASE =
-  process.env.CHROME_USER_DATA_DIR ||
-  path.join(process.cwd(), "data", "browser-profiles");
-const PROFILES_ENABLED = process.env.BROWSER_PROFILES_ENABLED !== "false";
+  process.env.CHROME_USER_DATA_DIR || path.join(process.cwd(), 'data', 'browser-profiles');
+const PROFILES_ENABLED = process.env.BROWSER_PROFILES_ENABLED !== 'false';
 
 // Use 'any' types since Playwright is optional and types may not be available
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let browserInstance: any = null;
-let currentProfile: string = "default";
+let currentProfile: string = 'default';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const profileContexts = new Map<string, any>();
 
@@ -30,7 +29,7 @@ async function ensureProfilesDir(): Promise<string> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getPlaywright(): Promise<any> {
   try {
-    return await import("playwright");
+    return await import('playwright');
   } catch {
     return null;
   }
@@ -40,13 +39,13 @@ async function getPlaywright(): Promise<any> {
  * Get or create a persistent browser context for a profile.
  */
 export async function getBrowserContext(
-  profile: string = "default",
+  profile: string = 'default'
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<{ page: any; context: any } | null> {
   try {
     const pw = await getPlaywright();
     if (!pw) {
-      logger.warn({}, "Playwright not available - browser features disabled");
+      logger.warn({}, 'Playwright not available - browser features disabled');
       return null;
     }
     const profileDir = path.join(CHROME_USER_DATA_BASE, profile);
@@ -56,20 +55,17 @@ export async function getBrowserContext(
     if (!context) {
       context = await pw.chromium.launchPersistentContext(profileDir, {
         headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
       });
       profileContexts.set(profile, context);
-      logger.debug({ profile }, "Browser profile context created");
+      logger.debug({ profile }, 'Browser profile context created');
     }
 
     const pages = context.pages();
     const page = pages.length > 0 ? pages[0] : await context.newPage();
     return { page, context };
   } catch (e) {
-    logger.warn(
-      { profile, err: (e as Error).message },
-      "Browser context failed",
-    );
+    logger.warn({ profile, err: (e as Error).message }, 'Browser context failed');
     return null;
   }
 }
@@ -79,15 +75,15 @@ export async function getBrowserContext(
  */
 export async function browserSnapshot(
   url?: string,
-  profile?: string,
+  profile?: string
 ): Promise<{ ok: boolean; snapshot?: string; error?: string }> {
   const ctx = await getBrowserContext(profile ?? currentProfile);
-  if (!ctx) return { ok: false, error: "Browser not available" };
+  if (!ctx) return { ok: false, error: 'Browser not available' };
 
   try {
     const { page } = ctx;
     if (url) {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
     }
     // Simplified DOM structure (tag, role, name, children) for agent consumption
     // Note: The function passed to evaluate runs in browser context where DOM types exist
@@ -97,8 +93,8 @@ export async function browserSnapshot(
         if (node.nodeType !== 1) return null; // Node.ELEMENT_NODE = 1
         const el = node;
         const tag = el.tagName.toLowerCase();
-        const role = el.getAttribute("role") || el.type || "";
-        const name = el.value ?? el.textContent?.slice(0, 100) ?? "";
+        const role = el.getAttribute('role') || el.type || '';
+        const name = el.value ?? el.textContent?.slice(0, 100) ?? '';
         const children = Array.from(el.children).map(nodeToObj).filter(Boolean);
         return {
           tag,
@@ -122,16 +118,16 @@ export async function browserSnapshot(
 export async function browserUpload(
   selector: string,
   filePath: string,
-  options?: { url?: string; profile?: string },
+  options?: { url?: string; profile?: string }
 ): Promise<{ ok: boolean; error?: string }> {
   const ctx = await getBrowserContext(options?.profile ?? currentProfile);
-  if (!ctx) return { ok: false, error: "Browser not available" };
+  if (!ctx) return { ok: false, error: 'Browser not available' };
 
   try {
     const { page } = ctx;
     if (options?.url) {
       await page.goto(options.url, {
-        waitUntil: "domcontentloaded",
+        waitUntil: 'domcontentloaded',
         timeout: 30000,
       });
     }
@@ -148,7 +144,7 @@ export async function browserUpload(
  * List available profiles (directories in user data base)
  */
 export async function listProfiles(): Promise<string[]> {
-  if (!PROFILES_ENABLED) return ["default"];
+  if (!PROFILES_ENABLED) return ['default'];
   try {
     await ensureProfilesDir();
     const entries = await fs.readdir(CHROME_USER_DATA_BASE, {
@@ -156,7 +152,7 @@ export async function listProfiles(): Promise<string[]> {
     });
     return entries.filter((e) => e.isDirectory()).map((e) => e.name);
   } catch {
-    return ["default"];
+    return ['default'];
   }
 }
 
@@ -175,15 +171,12 @@ export async function shutdown(): Promise<void> {
     try {
       await ctx.close();
     } catch (e) {
-      logger.warn(
-        { profile: name, err: (e as Error).message },
-        "Profile close error",
-      );
+      logger.warn({ profile: name, err: (e as Error).message }, 'Profile close error');
     }
   }
   profileContexts.clear();
   if (browserInstance) {
-    await browserInstance.close().catch(() => { });
+    await browserInstance.close().catch(() => {});
     browserInstance = null;
   }
 }

@@ -15,24 +15,21 @@
  * @module gAgent/semanticCompiler
  */
 
-import { EventEmitter } from "events";
-import { HRRVector, HolographicMemory } from "../services/agents/holographicMemory.js";
-import logger from "../middleware/logger.js";
-import {
-  ContextCompressor,
-  CompressedContext,
-} from "../services/rag/contextCompressor.js";
-import { messageBus, CHANNELS } from "./messageBus.js";
-import { budgetManager } from "./budgetManager.js";
+import { EventEmitter } from 'events';
+import { HRRVector, HolographicMemory } from '../services/agents/holographicMemory.js';
+import logger from '../middleware/logger.js';
+import { ContextCompressor, CompressedContext } from '../services/rag/contextCompressor.js';
+import { messageBus, CHANNELS } from './messageBus.js';
+import { budgetManager } from './budgetManager.js';
 import {
   getNeuralEmbedding,
   type NeuralEmbeddingService,
-} from "../services/ai-providers/neuralEmbedding.js";
+} from '../services/ai-providers/neuralEmbedding.js';
 import {
   getPredictivePrefetch,
   type PredictivePrefetchService,
   type PrefetchMetrics,
-} from "../services/caching/predictivePrefetch.js";
+} from '../services/caching/predictivePrefetch.js';
 import {
   getMultiModalCompiler,
   type MultiModalCompilerService,
@@ -40,13 +37,13 @@ import {
   type UserIntent,
   type MultiModalResult,
   MultiModalRequest,
-} from "../services/intent/multiModalCompiler.js";
+} from '../services/intent/multiModalCompiler.js';
 import {
   getHierarchicalCache,
   type HierarchicalCacheService,
   type CacheMetrics as HierarchicalCacheMetrics,
   type CacheEntry,
-} from "../services/caching/hierarchicalCache.js";
+} from '../services/caching/hierarchicalCache.js';
 import {
   getRealTimeLearning,
   type RealTimeLearningService,
@@ -54,12 +51,12 @@ import {
   type FeedbackType,
   type LearningMetrics,
   type LearningSignal,
-} from "../services/agents/realTimeLearning.js";
+} from '../services/agents/realTimeLearning.js';
 
 // Extracted modules
-import { SemanticCacheDelegate } from "./semanticCache.js";
-import { SemanticMultiModalDelegate } from "./semanticMultiModal.js";
-import { SemanticLearningDelegate } from "./semanticLearning.js";
+import { SemanticCacheDelegate } from './semanticCache.js';
+import { SemanticMultiModalDelegate } from './semanticMultiModal.js';
+import { SemanticLearningDelegate } from './semanticLearning.js';
 
 // Types (re-exported from dedicated types module)
 export type {
@@ -74,9 +71,9 @@ export type {
   ParsedIntent,
   ParsedChunk,
   SemanticCompilerConfig,
-} from "./semanticCompiler.types.js";
+} from './semanticCompiler.types.js';
 
-export { DEFAULT_COMPILER_CONFIG } from "./semanticCompiler.types.js";
+export { DEFAULT_COMPILER_CONFIG } from './semanticCompiler.types.js';
 
 import type {
   SemanticUnit,
@@ -89,9 +86,9 @@ import type {
   ParsedIntent,
   ParsedChunk,
   SemanticCompilerConfig,
-} from "./semanticCompiler.types.js";
+} from './semanticCompiler.types.js';
 
-import { DEFAULT_COMPILER_CONFIG } from "./semanticCompiler.types.js";
+import { DEFAULT_COMPILER_CONFIG } from './semanticCompiler.types.js';
 
 // ============================================================================
 // SEMANTIC COMPILER CLASS
@@ -149,7 +146,7 @@ export class SemanticCompiler extends EventEmitter {
 
     // Initialize NVIDIA Neural Embedding Service
     this.neuralEmbedding = getNeuralEmbedding({
-      model: "nvidia/nv-embedqa-e5-v5",
+      model: 'nvidia/nv-embedqa-e5-v5',
       dimension: 512,
       cacheSize: 10000,
       enableFallback: true,
@@ -167,7 +164,7 @@ export class SemanticCompiler extends EventEmitter {
     this.predictivePrefetch.setCompileFunction((query, context) =>
       this.compile({
         query,
-        context: context as CompilationRequest["context"],
+        context: context as CompilationRequest['context'],
         constraints: {
           maxTokens: 6000,
           maxCost: 50,
@@ -175,10 +172,10 @@ export class SemanticCompiler extends EventEmitter {
           qualityThreshold: 0.3,
         },
         options: { speculative: false, cacheResults: true },
-      }),
+      })
     );
     this.predictivePrefetch.setIndexFileFunction((filePath) =>
-      this.indexFile(filePath, "", { forceReindex: false }).then(() => { }),
+      this.indexFile(filePath, '', { forceReindex: false }).then(() => {})
     );
 
     // Initialize Multi-Modal delegate
@@ -209,7 +206,7 @@ export class SemanticCompiler extends EventEmitter {
     hierarchicalCache.initialize().catch((err) => {
       logger.warn(
         { err: (err as Error).message },
-        "[SemanticCompiler] Failed to initialize hierarchical cache",
+        '[SemanticCompiler] Failed to initialize hierarchical cache'
       );
     });
     this.cacheDelegate = new SemanticCacheDelegate(hierarchicalCache);
@@ -240,13 +237,12 @@ export class SemanticCompiler extends EventEmitter {
     this.metrics.compilations++;
 
     // 0. Check predictive prefetch cache first (ML-based predictions)
-    const prefetchedResult =
-      this.predictivePrefetch.getFromCache<CompilationResult>(
-        `query:${request.query}`,
-      );
+    const prefetchedResult = this.predictivePrefetch.getFromCache<CompilationResult>(
+      `query:${request.query}`
+    );
     if (prefetchedResult) {
-      this.emit("cache_hit", { type: "prefetch", key: request.query });
-      this.predictivePrefetch.recordPredictionHit("", request.query);
+      this.emit('cache_hit', { type: 'prefetch', key: request.query });
+      this.predictivePrefetch.recordPredictionHit('', request.query);
       return prefetchedResult;
     }
 
@@ -256,14 +252,14 @@ export class SemanticCompiler extends EventEmitter {
     const speculative = this.speculativeCache.get(cacheKey);
     if (speculative) {
       this.metrics.speculativeHits++;
-      this.emit("cache_hit", { type: "speculative", key: cacheKey });
+      this.emit('cache_hit', { type: 'speculative', key: cacheKey });
       return speculative;
     }
 
     const cached = this.cache.get(cacheKey);
     if (cached && this.isCacheValid(cached)) {
       this.metrics.cacheHits++;
-      this.emit("cache_hit", { type: "regular", key: cacheKey });
+      this.emit('cache_hit', { type: 'regular', key: cacheKey });
       return cached;
     }
 
@@ -277,24 +273,19 @@ export class SemanticCompiler extends EventEmitter {
     const relevantUnits = await this.progressiveRetrieve(
       intent,
       request.constraints.maxTokens,
-      request.constraints.qualityThreshold,
+      request.constraints.qualityThreshold
     );
     const retrievalTime = performance.now() - retrievalStart;
 
     // 4. Compile units into optimized context
     const compileStart = performance.now();
-    const compiled = this.compileUnits(
-      relevantUnits,
-      request.constraints.maxTokens,
-      intent,
-    );
+    const compiled = this.compileUnits(relevantUnits, request.constraints.maxTokens, intent);
     const compileTime = performance.now() - compileStart;
 
     // 5. Calculate statistics
     const originalTokens = relevantUnits.reduce(
-      (sum, u) =>
-        sum + this.estimateTokens(u.levels.detailed || u.levels.summary),
-      0,
+      (sum, u) => sum + this.estimateTokens(u.levels.detailed || u.levels.summary),
+      0
     );
     const compiledTokens = this.estimateTokens(compiled.context);
     const compressionRatio = originalTokens / Math.max(1, compiledTokens);
@@ -320,9 +311,7 @@ export class SemanticCompiler extends EventEmitter {
     // 7. Track savings
     this.metrics.tokensCompiled += compiledTokens;
     this.metrics.tokensSaved += originalTokens - compiledTokens;
-    this.metrics.totalCostSaved += this.estimateCost(
-      originalTokens - compiledTokens,
-    );
+    this.metrics.totalCostSaved += this.estimateCost(originalTokens - compiledTokens);
 
     // 8. Cache the result
     if (request.options.cacheResults !== false) {
@@ -340,10 +329,10 @@ export class SemanticCompiler extends EventEmitter {
         intent: intent.intentType,
         files: intent.entities.files,
       })
-      .catch(() => { });
+      .catch(() => {});
 
     // 11. Emit telemetry
-    this.emit("compilation_complete", {
+    this.emit('compilation_complete', {
       id: result.id,
       stats: result.stats,
       duration: performance.now() - startTime,
@@ -356,13 +345,11 @@ export class SemanticCompiler extends EventEmitter {
   /**
    * Stream progressive compilation - start abstract, drill down
    */
-  async *compileStream(
-    request: CompilationRequest,
-  ): AsyncGenerator<ProgressiveLoadState> {
+  async *compileStream(request: CompilationRequest): AsyncGenerator<ProgressiveLoadState> {
     const intent = await this.parseIntent(request.query, request.context);
 
     const state: ProgressiveLoadState = {
-      currentLevel: "abstract",
+      currentLevel: 'abstract',
       loadedUnits: new Map(),
       pendingUnits: [],
       tokenBudgetUsed: 0,
@@ -371,7 +358,9 @@ export class SemanticCompiler extends EventEmitter {
 
     // Phase 1: Abstract level
     const abstractUnits = await this.retrieveAtLevel(
-      intent, "abstract", state.tokenBudgetRemaining * 0.1,
+      intent,
+      'abstract',
+      state.tokenBudgetRemaining * 0.1
     );
     for (const unit of abstractUnits) {
       state.loadedUnits.set(unit.id, unit);
@@ -381,10 +370,11 @@ export class SemanticCompiler extends EventEmitter {
     yield state;
 
     // Phase 2: Summary level
-    state.currentLevel = "summary";
+    state.currentLevel = 'summary';
     const summaryUnits = await this.expandToLevel(
       abstractUnits.filter((u) => (u.meta.importance || 0) > 0.5),
-      "summary", state.tokenBudgetRemaining * 0.3,
+      'summary',
+      state.tokenBudgetRemaining * 0.3
     );
     for (const unit of summaryUnits) {
       state.loadedUnits.set(unit.id, unit);
@@ -394,10 +384,11 @@ export class SemanticCompiler extends EventEmitter {
     yield state;
 
     // Phase 3: Detailed level
-    state.currentLevel = "detailed";
+    state.currentLevel = 'detailed';
     const detailedUnits = await this.expandToLevel(
       summaryUnits.filter((u) => (u.meta.importance || 0) > 0.7),
-      "detailed", state.tokenBudgetRemaining * 0.5,
+      'detailed',
+      state.tokenBudgetRemaining * 0.5
     );
     for (const unit of detailedUnits) {
       state.loadedUnits.set(unit.id, unit);
@@ -407,13 +398,13 @@ export class SemanticCompiler extends EventEmitter {
     yield state;
 
     // Phase 4: Source level
-    state.currentLevel = "source";
+    state.currentLevel = 'source';
     const sourceUnits = detailedUnits
       .filter((u) => this.needsSourceCode(intent, u) && u.levels.source)
       .slice(0, 3);
     for (const unit of sourceUnits) {
       state.loadedUnits.set(unit.id, { ...unit });
-      state.tokenBudgetUsed += this.estimateTokens(unit.levels.source || "");
+      state.tokenBudgetUsed += this.estimateTokens(unit.levels.source || '');
     }
     state.tokenBudgetRemaining = request.constraints.maxTokens - state.tokenBudgetUsed;
     yield state;
@@ -426,7 +417,7 @@ export class SemanticCompiler extends EventEmitter {
   async indexFile(
     filePath: string,
     content: string,
-    options: { type?: SemanticType; forceReindex?: boolean } = {},
+    options: { type?: SemanticType; forceReindex?: boolean } = {}
   ): Promise<SemanticUnit[]> {
     const existingUnits = this.index.byFile.get(filePath);
     if (existingUnits && !options.forceReindex) {
@@ -440,7 +431,12 @@ export class SemanticCompiler extends EventEmitter {
 
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
-      const unit = this.createSemanticUnitWithEmbedding(chunk, filePath, embeddings[i], options.type);
+      const unit = this.createSemanticUnitWithEmbedding(
+        chunk,
+        filePath,
+        embeddings[i],
+        options.type
+      );
       this.addToIndex(unit);
       units.push(unit);
     }
@@ -449,13 +445,13 @@ export class SemanticCompiler extends EventEmitter {
     this.addToIndex(fileUnit);
     units.unshift(fileUnit);
 
-    this.emit("file_indexed", { filePath, unitCount: units.length });
+    this.emit('file_indexed', { filePath, unitCount: units.length });
     return units;
   }
 
   async indexConversation(
     sessionId: string,
-    messages: Array<{ role: string; content: string; timestamp?: string }>,
+    messages: Array<{ role: string; content: string; timestamp?: string }>
   ): Promise<SemanticUnit[]> {
     const units: SemanticUnit[] = [];
     const topicChunks = this.detectTopicShifts(messages);
@@ -466,7 +462,7 @@ export class SemanticCompiler extends EventEmitter {
       const chunk = topicChunks[i];
       const unit: SemanticUnit = {
         id: `conv_${sessionId}_${units.length}`,
-        type: "conversation",
+        type: 'conversation',
         levels: {
           abstract: this.summarize(chunk.content, 20),
           summary: this.summarize(chunk.content, 100),
@@ -489,7 +485,10 @@ export class SemanticCompiler extends EventEmitter {
   }
 
   private createSemanticUnitWithEmbedding(
-    chunk: ParsedChunk, filePath: string, embedding: number[], typeOverride?: SemanticType,
+    chunk: ParsedChunk,
+    filePath: string,
+    embedding: number[],
+    typeOverride?: SemanticType
   ): SemanticUnit {
     const inferredType = typeOverride || this.inferType(chunk);
     return {
@@ -528,9 +527,7 @@ export class SemanticCompiler extends EventEmitter {
       this.index.byFile.get(unit.meta.sourceFile)!.add(unit.id);
     }
     this.index.byImportance.push(unit);
-    this.index.byImportance.sort(
-      (a, b) => (b.meta.importance || 0) - (a.meta.importance || 0),
-    );
+    this.index.byImportance.sort((a, b) => (b.meta.importance || 0) - (a.meta.importance || 0));
     if (unit.vectors.semantic.length > 0) {
       const keyVec = HRRVector.fromEmbedding(unit.vectors.semantic, 4096);
       this.index.holoMemory.store(unit.id, keyVec);
@@ -545,7 +542,9 @@ export class SemanticCompiler extends EventEmitter {
   // --------------------------------------------------------------------------
 
   private async progressiveRetrieve(
-    intent: ParsedIntent, maxTokens: number, qualityThreshold: number,
+    intent: ParsedIntent,
+    maxTokens: number,
+    qualityThreshold: number
   ): Promise<SemanticUnit[]> {
     const retrieved: SemanticUnit[] = [];
     let tokensUsed = 0;
@@ -592,30 +591,36 @@ export class SemanticCompiler extends EventEmitter {
   }
 
   private async retrieveAtLevel(
-    intent: ParsedIntent, level: "abstract" | "summary" | "detailed" | "source", maxTokens: number,
+    intent: ParsedIntent,
+    level: 'abstract' | 'summary' | 'detailed' | 'source',
+    maxTokens: number
   ): Promise<SemanticUnit[]> {
     const units = await this.progressiveRetrieve(intent, maxTokens * 3, 0.3);
     return units.map((u) => ({
       ...u,
       levels: {
-        abstract: level === "abstract" ? u.levels.abstract : "",
-        summary: level === "summary" ? u.levels.summary : "",
-        detailed: level === "detailed" ? u.levels.detailed : "",
-        source: level === "source" ? u.levels.source : undefined,
+        abstract: level === 'abstract' ? u.levels.abstract : '',
+        summary: level === 'summary' ? u.levels.summary : '',
+        detailed: level === 'detailed' ? u.levels.detailed : '',
+        source: level === 'source' ? u.levels.source : undefined,
       },
     }));
   }
 
   private async expandToLevel(
-    units: SemanticUnit[], level: "summary" | "detailed" | "source", maxTokens: number,
+    units: SemanticUnit[],
+    level: 'summary' | 'detailed' | 'source',
+    maxTokens: number
   ): Promise<SemanticUnit[]> {
     let tokensUsed = 0;
     const expanded: SemanticUnit[] = [];
     for (const unit of units) {
       const content =
-        level === "summary" ? unit.levels.summary
-          : level === "detailed" ? unit.levels.detailed
-            : unit.levels.source || "";
+        level === 'summary'
+          ? unit.levels.summary
+          : level === 'detailed'
+            ? unit.levels.detailed
+            : unit.levels.source || '';
       const tokenCost = this.estimateTokens(content);
       if (tokensUsed + tokenCost > maxTokens) break;
       expanded.push({ ...unit, levels: { ...unit.levels, [level]: content } });
@@ -629,14 +634,16 @@ export class SemanticCompiler extends EventEmitter {
   // --------------------------------------------------------------------------
 
   private compileUnits(
-    units: SemanticUnit[], maxTokens: number, intent: ParsedIntent,
+    units: SemanticUnit[],
+    maxTokens: number,
+    intent: ParsedIntent
   ): {
     context: string;
-    included: CompilationResult["includedUnits"];
-    excluded: CompilationResult["excludedUnits"];
+    included: CompilationResult['includedUnits'];
+    excluded: CompilationResult['excludedUnits'];
   } {
-    const included: CompilationResult["includedUnits"] = [];
-    const excluded: CompilationResult["excludedUnits"] = [];
+    const included: CompilationResult['includedUnits'] = [];
+    const excluded: CompilationResult['excludedUnits'] = [];
     const sections: string[] = [];
     let tokensUsed = 0;
 
@@ -646,50 +653,63 @@ export class SemanticCompiler extends EventEmitter {
 
     for (const unit of sorted) {
       const relevance = this.computeRelevance(unit, intent);
-      let detailLevel: "abstract" | "summary" | "detailed" | "source";
+      let detailLevel: 'abstract' | 'summary' | 'detailed' | 'source';
       let content: string;
       if (relevance > 0.8 && tokensUsed < maxTokens * 0.5) {
-        detailLevel = "detailed"; content = unit.levels.detailed;
+        detailLevel = 'detailed';
+        content = unit.levels.detailed;
       } else if (relevance > 0.5) {
-        detailLevel = "summary"; content = unit.levels.summary;
+        detailLevel = 'summary';
+        content = unit.levels.summary;
       } else {
-        detailLevel = "abstract"; content = unit.levels.abstract;
+        detailLevel = 'abstract';
+        content = unit.levels.abstract;
       }
       const tokenCost = this.estimateTokens(content);
       if (tokensUsed + tokenCost > maxTokens) {
-        excluded.push({ id: unit.id, reason: "token_limit" }); continue;
+        excluded.push({ id: unit.id, reason: 'token_limit' });
+        continue;
       }
       if (this.isRedundant(content, sections)) {
-        excluded.push({ id: unit.id, reason: "redundant" }); continue;
+        excluded.push({ id: unit.id, reason: 'redundant' });
+        continue;
       }
       sections.push(this.formatSection(unit, content, detailLevel));
       tokensUsed += tokenCost;
-      included.push({ id: unit.id, type: unit.type, relevance, detailLevel, tokenCount: tokenCost });
+      included.push({
+        id: unit.id,
+        type: unit.type,
+        relevance,
+        detailLevel,
+        tokenCount: tokenCost,
+      });
     }
 
     const header = this.buildContextHeader(intent, included);
-    const context = [header, ...sections].join("\n\n");
+    const context = [header, ...sections].join('\n\n');
     return { context, included, excluded };
   }
 
   private formatSection(unit: SemanticUnit, content: string, level: string): string {
     const typeLabel = this.getTypeLabel(unit.type);
     const locationHint = unit.meta.sourceFile
-      ? ` (${unit.meta.sourceFile}${unit.meta.lineRange ? `:${unit.meta.lineRange[0]}` : ""})`
-      : "";
+      ? ` (${unit.meta.sourceFile}${unit.meta.lineRange ? `:${unit.meta.lineRange[0]}` : ''})`
+      : '';
     return `## ${typeLabel}${locationHint}\n${content}`;
   }
 
   private buildContextHeader(
-    intent: ParsedIntent, included: CompilationResult["includedUnits"],
+    intent: ParsedIntent,
+    included: CompilationResult['includedUnits']
   ): string {
     const typeBreakdown = new Map<SemanticType, number>();
     for (const item of included) {
       typeBreakdown.set(item.type, (typeBreakdown.get(item.type) || 0) + 1);
     }
     const breakdown = Array.from(typeBreakdown.entries())
-      .map(([type, count]) => `${count} ${type}s`).join(", ");
-    return `# Context Summary\nQuery: "${intent.queryText.slice(0, 100)}${intent.queryText.length > 100 ? "..." : ""}"\nIntent: ${intent.intentType}\nIncluded: ${breakdown}\n---`;
+      .map(([type, count]) => `${count} ${type}s`)
+      .join(', ');
+    return `# Context Summary\nQuery: "${intent.queryText.slice(0, 100)}${intent.queryText.length > 100 ? '...' : ''}"\nIntent: ${intent.intentType}\nIncluded: ${breakdown}\n---`;
   }
 
   // --------------------------------------------------------------------------
@@ -697,7 +717,9 @@ export class SemanticCompiler extends EventEmitter {
   // --------------------------------------------------------------------------
 
   private async speculativeCompile(
-    request: CompilationRequest, intent: ParsedIntent, result: CompilationResult,
+    request: CompilationRequest,
+    intent: ParsedIntent,
+    result: CompilationResult
   ): Promise<void> {
     const predictions = this.predictFollowUps(intent, result);
     for (const prediction of predictions.slice(0, 3)) {
@@ -716,29 +738,36 @@ export class SemanticCompiler extends EventEmitter {
             if (firstKey) this.speculativeCache.delete(firstKey);
           }
         })
-        .catch(() => { });
+        .catch(() => {});
     }
   }
 
   private predictFollowUps(
-    intent: ParsedIntent, result: CompilationResult,
+    intent: ParsedIntent,
+    result: CompilationResult
   ): Array<{ query: string; confidence: number }> {
     const predictions: Array<{ query: string; confidence: number }> = [];
 
-    if (intent.intentType === "explore") {
-      predictions.push({ query: `How do I modify ${intent.entities.concepts[0] || "this"}?`, confidence: 0.7 });
-      predictions.push({ query: `What are the dependencies of ${intent.entities.concepts[0] || "this"}?`, confidence: 0.6 });
+    if (intent.intentType === 'explore') {
+      predictions.push({
+        query: `How do I modify ${intent.entities.concepts[0] || 'this'}?`,
+        confidence: 0.7,
+      });
+      predictions.push({
+        query: `What are the dependencies of ${intent.entities.concepts[0] || 'this'}?`,
+        confidence: 0.6,
+      });
     }
-    if (intent.intentType === "debug") {
+    if (intent.intentType === 'debug') {
       predictions.push({ query: `How do I fix this error?`, confidence: 0.8 });
       predictions.push({ query: `What could cause this issue?`, confidence: 0.7 });
     }
-    if (intent.intentType === "implement") {
+    if (intent.intentType === 'implement') {
       predictions.push({ query: `How do I test this?`, confidence: 0.75 });
       predictions.push({ query: `What are best practices for this?`, confidence: 0.65 });
     }
     for (const included of result.includedUnits.slice(0, 2)) {
-      if (included.type === "function") {
+      if (included.type === 'function') {
         predictions.push({ query: `What uses ${included.id}?`, confidence: 0.5 });
       }
     }
@@ -750,41 +779,57 @@ export class SemanticCompiler extends EventEmitter {
   // --------------------------------------------------------------------------
 
   computeDelta(
-    previous: CompilationResult | null, current: CompilationResult,
-  ): CompilationResult["delta"] {
+    previous: CompilationResult | null,
+    current: CompilationResult
+  ): CompilationResult['delta'] {
     if (!previous) {
-      return { added: current.includedUnits.map((u) => u.id), removed: [], modified: [], unchanged: [] };
+      return {
+        added: current.includedUnits.map((u) => u.id),
+        removed: [],
+        modified: [],
+        unchanged: [],
+      };
     }
     const prevIds = new Set(previous.includedUnits.map((u) => u.id));
     const currIds = new Set(current.includedUnits.map((u) => u.id));
-    const added: string[] = [], removed: string[] = [], modified: string[] = [], unchanged: string[] = [];
-    for (const id of currIds) { if (!prevIds.has(id)) added.push(id); }
-    for (const id of prevIds) { if (!currIds.has(id)) removed.push(id); }
+    const added: string[] = [],
+      removed: string[] = [],
+      modified: string[] = [],
+      unchanged: string[] = [];
+    for (const id of currIds) {
+      if (!prevIds.has(id)) added.push(id);
+    }
+    for (const id of prevIds) {
+      if (!currIds.has(id)) removed.push(id);
+    }
     for (const curr of current.includedUnits) {
       if (!prevIds.has(curr.id)) continue;
       const prev = previous.includedUnits.find((p) => p.id === curr.id);
       if (!prev) continue;
-      if (prev.detailLevel !== curr.detailLevel) { modified.push(curr.id); }
-      else { unchanged.push(curr.id); }
+      if (prev.detailLevel !== curr.detailLevel) {
+        modified.push(curr.id);
+      } else {
+        unchanged.push(curr.id);
+      }
     }
     return { added, removed, modified, unchanged };
   }
 
-  generateDeltaUpdate(delta: CompilationResult["delta"]): string {
-    if (!delta) return "";
+  generateDeltaUpdate(delta: CompilationResult['delta']): string {
+    if (!delta) return '';
     const parts: string[] = [];
     if (delta.added.length > 0) {
       const addedUnits = delta.added.map((id) => this.index.byId.get(id)).filter(Boolean);
-      parts.push(`## NEW CONTEXT\n${addedUnits.map((u) => u!.levels.summary).join("\n\n")}`);
+      parts.push(`## NEW CONTEXT\n${addedUnits.map((u) => u!.levels.summary).join('\n\n')}`);
     }
     if (delta.removed.length > 0) {
-      parts.push(`## REMOVED FROM CONTEXT\n${delta.removed.join(", ")}`);
+      parts.push(`## REMOVED FROM CONTEXT\n${delta.removed.join(', ')}`);
     }
     if (delta.modified.length > 0) {
       const modifiedUnits = delta.modified.map((id) => this.index.byId.get(id)).filter(Boolean);
-      parts.push(`## UPDATED CONTEXT\n${modifiedUnits.map((u) => u!.levels.summary).join("\n\n")}`);
+      parts.push(`## UPDATED CONTEXT\n${modifiedUnits.map((u) => u!.levels.summary).join('\n\n')}`);
     }
-    return parts.join("\n\n---\n\n");
+    return parts.join('\n\n---\n\n');
   }
 
   // --------------------------------------------------------------------------
@@ -792,23 +837,33 @@ export class SemanticCompiler extends EventEmitter {
   // --------------------------------------------------------------------------
 
   private async parseIntent(
-    query: string, context?: CompilationRequest["context"],
+    query: string,
+    context?: CompilationRequest['context']
   ): Promise<ParsedIntent> {
     const lowerQuery = query.toLowerCase();
-    let intentType: ParsedIntent["intentType"] = "explore";
-    if (lowerQuery.match(/\b(how|implement|create|build|add|make)\b/)) { intentType = "implement"; }
-    else if (lowerQuery.match(/\b(fix|debug|error|bug|issue|problem|wrong)\b/)) { intentType = "debug"; }
-    else if (lowerQuery.match(/\b(change|modify|update|refactor|rename)\b/)) { intentType = "modify"; }
-    else if (lowerQuery.match(/\b(what|where|find|show|explain|understand)\b/)) { intentType = "explore"; }
-    else if (lowerQuery.match(/\b(test|spec|coverage|assert)\b/)) { intentType = "test"; }
-    else if (lowerQuery.match(/\b(review|check|validate|verify)\b/)) { intentType = "review"; }
+    let intentType: ParsedIntent['intentType'] = 'explore';
+    if (lowerQuery.match(/\b(how|implement|create|build|add|make)\b/)) {
+      intentType = 'implement';
+    } else if (lowerQuery.match(/\b(fix|debug|error|bug|issue|problem|wrong)\b/)) {
+      intentType = 'debug';
+    } else if (lowerQuery.match(/\b(change|modify|update|refactor|rename)\b/)) {
+      intentType = 'modify';
+    } else if (lowerQuery.match(/\b(what|where|find|show|explain|understand)\b/)) {
+      intentType = 'explore';
+    } else if (lowerQuery.match(/\b(test|spec|coverage|assert)\b/)) {
+      intentType = 'test';
+    } else if (lowerQuery.match(/\b(review|check|validate|verify)\b/)) {
+      intentType = 'review';
+    }
 
     const files: string[] = [];
     const functions: string[] = [];
     const concepts: string[] = [];
     const fileMatches = query.match(/[\w\/]+\.(ts|js|tsx|jsx|py|go|rs|vue|svelte)/g);
     if (fileMatches) files.push(...fileMatches);
-    const funcMatches = query.match(/\b[a-z][a-zA-Z0-9]*(?:[A-Z][a-zA-Z0-9]*)+\b|\b[a-z]+(?:_[a-z]+)+\b/g);
+    const funcMatches = query.match(
+      /\b[a-z][a-zA-Z0-9]*(?:[A-Z][a-zA-Z0-9]*)+\b|\b[a-z]+(?:_[a-z]+)+\b/g
+    );
     if (funcMatches) functions.push(...funcMatches);
     if (context?.currentFile) files.unshift(context.currentFile);
     if (context?.currentFunction) functions.unshift(context.currentFunction);
@@ -822,7 +877,9 @@ export class SemanticCompiler extends EventEmitter {
   }
 
   private async createSemanticUnit(
-    chunk: ParsedChunk, filePath: string, type?: SemanticType,
+    chunk: ParsedChunk,
+    filePath: string,
+    type?: SemanticType
   ): Promise<SemanticUnit> {
     const inferredType = type || this.inferType(chunk);
     return {
@@ -837,32 +894,43 @@ export class SemanticCompiler extends EventEmitter {
       relationships: { children: [], related: [], dependencies: chunk.dependencies || [] },
       meta: {
         importance: this.computeImportance(chunk),
-        volatility: 0.5, accessCount: 0,
-        lastAccessed: new Date().toISOString(), createdAt: new Date().toISOString(),
-        sourceFile: filePath, lineRange: chunk.lineRange,
+        volatility: 0.5,
+        accessCount: 0,
+        lastAccessed: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        sourceFile: filePath,
+        lineRange: chunk.lineRange,
       },
       vectors: { semantic: await this.embed(chunk.content), structural: [], contextual: [] },
     };
   }
 
   private async createFileUnit(
-    filePath: string, content: string, childUnits: SemanticUnit[],
+    filePath: string,
+    content: string,
+    childUnits: SemanticUnit[]
   ): Promise<SemanticUnit> {
     return {
-      id: `file_${filePath.replace(/[^a-zA-Z0-9]/g, "_")}`,
-      type: "module",
+      id: `file_${filePath.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      type: 'module',
       levels: {
-        abstract: `File: ${filePath.split("/").pop()} - ${childUnits.length} components`,
+        abstract: `File: ${filePath.split('/').pop()} - ${childUnits.length} components`,
         summary: this.summarize(content, 150),
         detailed: this.summarize(content, 500),
         source: content,
       },
       relationships: {
-        children: childUnits.map((u) => u.id), related: [], dependencies: this.extractImports(content),
+        children: childUnits.map((u) => u.id),
+        related: [],
+        dependencies: this.extractImports(content),
       },
       meta: {
-        importance: 0.6, volatility: 0.3, accessCount: 0,
-        lastAccessed: new Date().toISOString(), createdAt: new Date().toISOString(), sourceFile: filePath,
+        importance: 0.6,
+        volatility: 0.3,
+        accessCount: 0,
+        lastAccessed: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        sourceFile: filePath,
       },
       vectors: { semantic: await this.embed(content), structural: [], contextual: [] },
     };
@@ -870,29 +938,39 @@ export class SemanticCompiler extends EventEmitter {
 
   private parseIntoChunks(content: string, filePath: string): ParsedChunk[] {
     const chunks: ParsedChunk[] = [];
-    const ext = filePath.split(".").pop()?.toLowerCase();
+    const ext = filePath.split('.').pop()?.toLowerCase();
     const patterns: Record<string, RegExp> = {
       ts: /(?:export\s+)?(?:async\s+)?(?:function|class|interface|type|const|let|var)\s+(\w+)/g,
       js: /(?:export\s+)?(?:async\s+)?(?:function|class|const|let|var)\s+(\w+)/g,
       svelte: /<script[^>]*>[\s\S]*?<\/script>|<style[^>]*>[\s\S]*?<\/style>/g,
       py: /(?:def|class|async\s+def)\s+(\w+)/g,
     };
-    const pattern = patterns[ext || ""] || /\n\n+/;
+    const pattern = patterns[ext || ''] || /\n\n+/;
 
     if (pattern.global) {
       let match;
       while ((match = pattern.exec(content)) !== null) {
-        const startLine = content.slice(0, match.index).split("\n").length;
-        const endLine = content.slice(0, match.index + match[0].length).split("\n").length;
-        chunks.push({ content: match[0], name: match[1] || `chunk_${chunks.length}`, lineRange: [startLine, endLine], dependencies: [] });
+        const startLine = content.slice(0, match.index).split('\n').length;
+        const endLine = content.slice(0, match.index + match[0].length).split('\n').length;
+        chunks.push({
+          content: match[0],
+          name: match[1] || `chunk_${chunks.length}`,
+          lineRange: [startLine, endLine],
+          dependencies: [],
+        });
       }
     } else {
       const parts = content.split(/\n\n+/);
       let currentLine = 1;
       for (const part of parts) {
         if (part.trim()) {
-          const lineCount = part.split("\n").length;
-          chunks.push({ content: part, name: `chunk_${chunks.length}`, lineRange: [currentLine, currentLine + lineCount - 1], dependencies: [] });
+          const lineCount = part.split('\n').length;
+          chunks.push({
+            content: part,
+            name: `chunk_${chunks.length}`,
+            lineRange: [currentLine, currentLine + lineCount - 1],
+            dependencies: [],
+          });
           currentLine += lineCount + 1;
         }
       }
@@ -913,7 +991,7 @@ export class SemanticCompiler extends EventEmitter {
       result.push(sentence.trim());
       wordCount += sentenceWords;
     }
-    return result.join(" ") || text.slice(0, maxTokens * 4);
+    return result.join(' ') || text.slice(0, maxTokens * 4);
   }
 
   // --------------------------------------------------------------------------
@@ -923,18 +1001,28 @@ export class SemanticCompiler extends EventEmitter {
   private async embed(text: string): Promise<number[]> {
     const result = await this.neuralEmbedding.embed(text);
     if (!result.cached) {
-      this.emit("embedding", { model: result.model, tokensUsed: result.tokensUsed, latencyMs: result.latencyMs, cached: result.cached });
+      this.emit('embedding', {
+        model: result.model,
+        tokensUsed: result.tokensUsed,
+        latencyMs: result.latencyMs,
+        cached: result.cached,
+      });
     }
     return result.embedding;
   }
 
   private async embedBatch(texts: string[]): Promise<number[][]> {
     const result = await this.neuralEmbedding.embedBatch(texts);
-    this.emit("batch_embedding", { count: texts.length, cachedCount: result.cachedCount, model: result.model, latencyMs: result.latencyMs });
+    this.emit('batch_embedding', {
+      count: texts.length,
+      cachedCount: result.cachedCount,
+      model: result.model,
+      latencyMs: result.latencyMs,
+    });
     return result.embeddings;
   }
 
-  getEmbeddingMetrics(): ReturnType<NeuralEmbeddingService["getMetrics"]> {
+  getEmbeddingMetrics(): ReturnType<NeuralEmbeddingService['getMetrics']> {
     return this.neuralEmbedding.getMetrics();
   }
 
@@ -954,15 +1042,15 @@ export class SemanticCompiler extends EventEmitter {
     this.predictivePrefetch.queueBackgroundIndex(filePath);
   }
 
-  getQueryPatterns(): ReturnType<PredictivePrefetchService["getPatterns"]> {
+  getQueryPatterns(): ReturnType<PredictivePrefetchService['getPatterns']> {
     return this.predictivePrefetch.getPatterns();
   }
 
-  exportPrefetchPatterns(): ReturnType<PredictivePrefetchService["exportPatterns"]> {
+  exportPrefetchPatterns(): ReturnType<PredictivePrefetchService['exportPatterns']> {
     return this.predictivePrefetch.exportPatterns();
   }
 
-  importPrefetchPatterns(data: Parameters<PredictivePrefetchService["importPatterns"]>[0]): void {
+  importPrefetchPatterns(data: Parameters<PredictivePrefetchService['importPatterns']>[0]): void {
     this.predictivePrefetch.importPatterns(data);
   }
 
@@ -971,28 +1059,35 @@ export class SemanticCompiler extends EventEmitter {
   // --------------------------------------------------------------------------
 
   indexMultiModal(
-    filePath: string, content: string,
-    options: { modality?: ContentModality; embedding?: number[]; importance?: number } = {},
+    filePath: string,
+    content: string,
+    options: { modality?: ContentModality; embedding?: number[]; importance?: number } = {}
   ): { unitId: string; modality: ContentModality; crossRefs: number } {
     return this.multiModalDelegate.indexMultiModal(filePath, content, options);
   }
 
   compileMultiModal(request: {
-    query: string; intent?: UserIntent; modalities?: ContentModality[];
-    maxTokens?: number; includeCrossRefs?: boolean; balanceModalities?: boolean;
+    query: string;
+    intent?: UserIntent;
+    modalities?: ContentModality[];
+    maxTokens?: number;
+    includeCrossRefs?: boolean;
+    balanceModalities?: boolean;
   }): MultiModalResult {
     return this.multiModalDelegate.compileMultiModal(request);
   }
 
-  getUnitsByModality(modality: ContentModality): ReturnType<MultiModalCompilerService["getUnitsByModality"]> {
+  getUnitsByModality(
+    modality: ContentModality
+  ): ReturnType<MultiModalCompilerService['getUnitsByModality']> {
     return this.multiModalDelegate.getUnitsByModality(modality);
   }
 
-  getCrossReferences(unitId: string): ReturnType<MultiModalCompilerService["getCrossRefs"]> {
+  getCrossReferences(unitId: string): ReturnType<MultiModalCompilerService['getCrossRefs']> {
     return this.multiModalDelegate.getCrossReferences(unitId);
   }
 
-  getMultiModalMetrics(): ReturnType<MultiModalCompilerService["getMetrics"]> {
+  getMultiModalMetrics(): ReturnType<MultiModalCompilerService['getMetrics']> {
     return this.multiModalDelegate.getMultiModalMetrics();
   }
 
@@ -1004,22 +1099,31 @@ export class SemanticCompiler extends EventEmitter {
   // HIERARCHICAL CACHE (delegated)
   // --------------------------------------------------------------------------
 
-  async getCached<T = unknown>(key: string, namespace: string = "compilation"): Promise<T | undefined> {
+  async getCached<T = unknown>(
+    key: string,
+    namespace: string = 'compilation'
+  ): Promise<T | undefined> {
     return this.cacheDelegate.getCached<T>(key, namespace);
   }
 
   async setCached<T = unknown>(
-    key: string, value: T,
-    options: { namespace?: string; ttl?: number; importance?: number; tier?: "l1" | "l2" | "l3" } = {},
+    key: string,
+    value: T,
+    options: {
+      namespace?: string;
+      ttl?: number;
+      importance?: number;
+      tier?: 'l1' | 'l2' | 'l3';
+    } = {}
   ): Promise<void> {
     return this.cacheDelegate.setCached(key, value, options);
   }
 
-  async deleteCached(key: string, namespace: string = "compilation"): Promise<boolean> {
+  async deleteCached(key: string, namespace: string = 'compilation'): Promise<boolean> {
     return this.cacheDelegate.deleteCached(key, namespace);
   }
 
-  async hasCached(key: string, namespace: string = "compilation"): Promise<boolean> {
+  async hasCached(key: string, namespace: string = 'compilation'): Promise<boolean> {
     return this.cacheDelegate.hasCached(key, namespace);
   }
 
@@ -1027,7 +1131,9 @@ export class SemanticCompiler extends EventEmitter {
     return this.cacheDelegate.getHierarchicalCacheMetrics();
   }
 
-  async clearHierarchicalCache(options: { l1?: boolean; l2?: boolean; l3?: boolean } = {}): Promise<void> {
+  async clearHierarchicalCache(
+    options: { l1?: boolean; l2?: boolean; l3?: boolean } = {}
+  ): Promise<void> {
     return this.cacheDelegate.clearHierarchicalCache(options);
   }
 
@@ -1040,7 +1146,7 @@ export class SemanticCompiler extends EventEmitter {
   }
 
   async preloadCache<T = unknown>(
-    entries: Array<{ key: string; value: T; namespace?: string; importance?: number }>,
+    entries: Array<{ key: string; value: T; namespace?: string; importance?: number }>
   ): Promise<void> {
     return this.cacheDelegate.preloadCache(entries);
   }
@@ -1049,13 +1155,16 @@ export class SemanticCompiler extends EventEmitter {
     return this.cacheDelegate.getCacheEntriesByNamespace(namespace);
   }
 
-  async getCachedMany<T = unknown>(keys: string[], namespace: string = "compilation"): Promise<Map<string, T>> {
+  async getCachedMany<T = unknown>(
+    keys: string[],
+    namespace: string = 'compilation'
+  ): Promise<Map<string, T>> {
     return this.cacheDelegate.getCachedMany<T>(keys, namespace);
   }
 
   async setCachedMany<T = unknown>(
     entries: Array<{ key: string; value: T; importance?: number }>,
-    options: { namespace?: string; ttl?: number; tier?: "l1" | "l2" | "l3" } = {},
+    options: { namespace?: string; ttl?: number; tier?: 'l1' | 'l2' | 'l3' } = {}
   ): Promise<void> {
     return this.cacheDelegate.setCachedMany(entries, options);
   }
@@ -1069,9 +1178,15 @@ export class SemanticCompiler extends EventEmitter {
   // --------------------------------------------------------------------------
 
   processFeedback(feedback: {
-    query: string; compiledContext: string; includedUnits: string[];
-    type: FeedbackType; rating?: number; correction?: string;
-    missingFiles?: string[]; unwantedFiles?: string[]; userComment?: string;
+    query: string;
+    compiledContext: string;
+    includedUnits: string[];
+    type: FeedbackType;
+    rating?: number;
+    correction?: string;
+    missingFiles?: string[];
+    unwantedFiles?: string[];
+    userComment?: string;
   }): LearningSignal[] {
     return this.learningDelegate.processFeedback(feedback);
   }
@@ -1108,7 +1223,7 @@ export class SemanticCompiler extends EventEmitter {
     return this.learningDelegate.getLearningMetrics();
   }
 
-  getLearningPreferences(): ReturnType<RealTimeLearningService["getPreferences"]> {
+  getLearningPreferences(): ReturnType<RealTimeLearningService['getPreferences']> {
     return this.learningDelegate.getLearningPreferences();
   }
 
@@ -1147,17 +1262,23 @@ export class SemanticCompiler extends EventEmitter {
     }
   }
 
-  private searchSimilar(queryVec: number[], topK: number): Array<{ id: string; similarity: number }> {
+  private searchSimilar(
+    queryVec: number[],
+    topK: number
+  ): Array<{ id: string; similarity: number }> {
     return this.neuralEmbedding.findSimilar(queryVec, this.index.vectorIndex.vectors, topK);
   }
 
   private computeRelevance(unit: SemanticUnit, intent: ParsedIntent): number {
     let score = 0;
-    if (intent.entities.files.includes(unit.meta.sourceFile || "")) score += 0.4;
-    const typeRelevance: Record<ParsedIntent["intentType"], SemanticType[]> = {
-      explore: ["module", "class", "concept"], implement: ["function", "class", "pattern"],
-      debug: ["function", "constraint"], modify: ["function", "class", "component"],
-      test: ["function", "class"], review: ["module", "class", "function"],
+    if (intent.entities.files.includes(unit.meta.sourceFile || '')) score += 0.4;
+    const typeRelevance: Record<ParsedIntent['intentType'], SemanticType[]> = {
+      explore: ['module', 'class', 'concept'],
+      implement: ['function', 'class', 'pattern'],
+      debug: ['function', 'constraint'],
+      modify: ['function', 'class', 'component'],
+      test: ['function', 'class'],
+      review: ['module', 'class', 'function'],
     };
     if (typeRelevance[intent.intentType]?.includes(unit.type)) score += 0.2;
     score += (unit.meta.importance || 0) * 0.2;
@@ -1181,23 +1302,24 @@ export class SemanticCompiler extends EventEmitter {
   }
 
   private needsSourceCode(intent: ParsedIntent, unit: SemanticUnit): boolean {
-    if (intent.intentType === "modify" || intent.intentType === "debug") return true;
-    if (unit.type === "function" && intent.intentType === "implement") return true;
+    if (intent.intentType === 'modify' || intent.intentType === 'debug') return true;
+    if (unit.type === 'function' && intent.intentType === 'implement') return true;
     return false;
   }
 
   private detectTopicShifts(
-    messages: Array<{ role: string; content: string }>,
+    messages: Array<{ role: string; content: string }>
   ): Array<{ content: string; importance: number }> {
     const chunks: Array<{ content: string; importance: number }> = [];
-    let currentChunk = "";
+    let currentChunk = '';
     let messageCount = 0;
     for (const msg of messages) {
       currentChunk += `${msg.role}: ${msg.content}\n`;
       messageCount++;
       if (messageCount >= 5 || msg.content.length > 500) {
         chunks.push({ content: currentChunk, importance: 0.5 + messageCount * 0.05 });
-        currentChunk = ""; messageCount = 0;
+        currentChunk = '';
+        messageCount = 0;
       }
     }
     if (currentChunk) {
@@ -1208,29 +1330,31 @@ export class SemanticCompiler extends EventEmitter {
 
   private inferType(chunk: ParsedChunk): SemanticType {
     const content = chunk.content.toLowerCase();
-    if (content.includes("class ")) return "class";
-    if (content.includes("function ") || (content.includes("const ") && content.includes("=>"))) return "function";
-    if (content.includes("interface ") || content.includes("type ")) return "class";
-    if (content.includes("import ") || content.includes("export ")) return "module";
-    if (content.includes("<template>") || content.includes("<script")) return "component";
-    if (content.includes("pattern") || content.includes("strategy")) return "pattern";
-    return "concept";
+    if (content.includes('class ')) return 'class';
+    if (content.includes('function ') || (content.includes('const ') && content.includes('=>')))
+      return 'function';
+    if (content.includes('interface ') || content.includes('type ')) return 'class';
+    if (content.includes('import ') || content.includes('export ')) return 'module';
+    if (content.includes('<template>') || content.includes('<script')) return 'component';
+    if (content.includes('pattern') || content.includes('strategy')) return 'pattern';
+    return 'concept';
   }
 
   private computeImportance(chunk: ParsedChunk): number {
     let importance = 0.5;
     const content = chunk.content;
-    if (content.includes("export ")) importance += 0.2;
-    if (content.includes("main") || content.includes("init") || content.includes("entry")) importance += 0.15;
-    if (content.includes("public ") || content.includes("api")) importance += 0.1;
-    if (content.includes("test") || content.includes("spec")) importance -= 0.1;
+    if (content.includes('export ')) importance += 0.2;
+    if (content.includes('main') || content.includes('init') || content.includes('entry'))
+      importance += 0.15;
+    if (content.includes('public ') || content.includes('api')) importance += 0.1;
+    if (content.includes('test') || content.includes('spec')) importance -= 0.1;
     return Math.max(0, Math.min(1, importance));
   }
 
   private extractImports(content: string): string[] {
     const imports: string[] = [];
     const jsImports = content.match(/import\s+.*?from\s+['"]([^'"]+)['"]/g);
-    if (jsImports) imports.push(...jsImports.map((i) => i.match(/['"]([^'"]+)['"]/)?.[1] || ""));
+    if (jsImports) imports.push(...jsImports.map((i) => i.match(/['"]([^'"]+)['"]/)?.[1] || ''));
     const pyImports = content.match(/(?:from|import)\s+(\w+)/g);
     if (pyImports) imports.push(...pyImports.map((i) => i.split(/\s+/)[1]));
     return imports.filter(Boolean);
@@ -1247,28 +1371,44 @@ export class SemanticCompiler extends EventEmitter {
   }
 
   private computeCacheKey(request: CompilationRequest): string {
-    const keyParts = [request.query, request.context?.currentFile || "", request.constraints.maxTokens.toString()];
-    return this.hashString(keyParts.join("|")).toString(16);
+    const keyParts = [
+      request.query,
+      request.context?.currentFile || '',
+      request.constraints.maxTokens.toString(),
+    ];
+    return this.hashString(keyParts.join('|')).toString(16);
   }
 
   private isCacheValid(result: CompilationResult): boolean {
-    const cacheTime = parseInt(result.id.split("_")[1], 10);
+    const cacheTime = parseInt(result.id.split('_')[1], 10);
     return Date.now() - cacheTime < 5 * 60 * 1000;
   }
 
   private reportToBudgetManager(result: CompilationResult): void {
     budgetManager.recordTokens(
-      this.sessionId, result.stats.compiledTokens, 0,
-      "claude-3.5-sonnet", "Semantic compilation",
-      result.stats.retrievalTimeMs + result.stats.compilationTimeMs,
+      this.sessionId,
+      result.stats.compiledTokens,
+      0,
+      'claude-3.5-sonnet',
+      'Semantic compilation',
+      result.stats.retrievalTimeMs + result.stats.compilationTimeMs
     );
   }
 
   private getTypeLabel(type: SemanticType): string {
     const labels: Record<SemanticType, string> = {
-      concept: "Concept", function: "Function", class: "Class/Type", module: "Module",
-      component: "Component", pattern: "Pattern", requirement: "Requirement", constraint: "Constraint",
-      decision: "Decision", conversation: "Context", task: "Task", memory: "Memory",
+      concept: 'Concept',
+      function: 'Function',
+      class: 'Class/Type',
+      module: 'Module',
+      component: 'Component',
+      pattern: 'Pattern',
+      requirement: 'Requirement',
+      constraint: 'Constraint',
+      decision: 'Decision',
+      conversation: 'Context',
+      task: 'Task',
+      memory: 'Memory',
     };
     return labels[type] || type;
   }
@@ -1286,14 +1426,20 @@ export class SemanticCompiler extends EventEmitter {
   // --------------------------------------------------------------------------
 
   getStats(): typeof this.metrics & {
-    indexSize: number; cacheSize: number; speculativeCacheSize: number; compressionEfficiency: number;
+    indexSize: number;
+    cacheSize: number;
+    speculativeCacheSize: number;
+    compressionEfficiency: number;
   } {
     return {
       ...this.metrics,
       indexSize: this.index.byId.size,
       cacheSize: this.cache.size,
       speculativeCacheSize: this.speculativeCache.size,
-      compressionEfficiency: this.metrics.tokensCompiled > 0 ? this.metrics.tokensSaved / this.metrics.tokensCompiled : 0,
+      compressionEfficiency:
+        this.metrics.tokensCompiled > 0
+          ? this.metrics.tokensSaved / this.metrics.tokensCompiled
+          : 0,
     };
   }
 

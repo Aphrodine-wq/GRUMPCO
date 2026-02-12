@@ -4,12 +4,12 @@
  */
 
 export function getBackendAgentPrompt(
-  runtime: "node" | "python" | "go" = "node",
-  database: "postgres" | "mongodb" = "postgres",
-  contextSummary?: string,
+  runtime: 'node' | 'python' | 'go' = 'node',
+  database: 'postgres' | 'mongodb' = 'postgres',
+  contextSummary?: string
 ): string {
   const runtimeGuide =
-    runtime === "node"
+    runtime === 'node'
       ? `- Node.js/Express.js
      - TypeScript for type safety
      - Prisma ORM (for relational) or Mongoose (for MongoDB)
@@ -17,7 +17,7 @@ export function getBackendAgentPrompt(
      - JWT for authentication
      - Winston for logging
      - Jest for testing`
-      : runtime === "python"
+      : runtime === 'python'
         ? `- Python 3.11+
      - FastAPI or Django REST Framework
      - SQLAlchemy or Django ORM
@@ -33,7 +33,7 @@ export function getBackendAgentPrompt(
      - Testing with Go's built-in testing`;
 
   const dbGuide =
-    database === "postgres"
+    database === 'postgres'
       ? `- PostgreSQL with schema migrations
      - ACID transactions
      - Indexes for performance

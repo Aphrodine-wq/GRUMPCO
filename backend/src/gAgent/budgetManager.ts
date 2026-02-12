@@ -14,9 +14,9 @@
  * @module gAgent/budgetManager
  */
 
-import { EventEmitter } from "events";
-import { messageBus, CHANNELS } from "./messageBus.js";
-import logger from "../middleware/logger.js";
+import { EventEmitter } from 'events';
+import { messageBus, CHANNELS } from './messageBus.js';
+import logger from '../middleware/logger.js';
 
 // ============================================================================
 // CONSTANTS - Token Costs (per 1M tokens, in cents)
@@ -26,21 +26,20 @@ import logger from "../middleware/logger.js";
  * Token pricing for different models (cents per 1M tokens)
  * Updated: 2024 pricing
  */
-export const MODEL_PRICING: Record<string, { input: number; output: number }> =
-{
+export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   // Claude models (Anthropic)
-  "claude-3-opus": { input: 1500, output: 7500 }, // $15/$75
-  "claude-3-sonnet": { input: 300, output: 1500 }, // $3/$15
-  "claude-3-haiku": { input: 25, output: 125 }, // $0.25/$1.25
-  "claude-3.5-sonnet": { input: 300, output: 1500 }, // $3/$15
-  "claude-3.5-haiku": { input: 100, output: 500 }, // $1/$5
+  'claude-3-opus': { input: 1500, output: 7500 }, // $15/$75
+  'claude-3-sonnet': { input: 300, output: 1500 }, // $3/$15
+  'claude-3-haiku': { input: 25, output: 125 }, // $0.25/$1.25
+  'claude-3.5-sonnet': { input: 300, output: 1500 }, // $3/$15
+  'claude-3.5-haiku': { input: 100, output: 500 }, // $1/$5
 
   // GPT models (OpenAI)
-  "gpt-4-turbo": { input: 1000, output: 3000 }, // $10/$30
-  "gpt-4": { input: 3000, output: 6000 }, // $30/$60
-  "gpt-4o": { input: 500, output: 1500 }, // $5/$15
-  "gpt-4o-mini": { input: 15, output: 60 }, // $0.15/$0.60
-  "gpt-3.5-turbo": { input: 50, output: 150 }, // $0.50/$1.50
+  'gpt-4-turbo': { input: 1000, output: 3000 }, // $10/$30
+  'gpt-4': { input: 3000, output: 6000 }, // $30/$60
+  'gpt-4o': { input: 500, output: 1500 }, // $5/$15
+  'gpt-4o-mini': { input: 15, output: 60 }, // $0.15/$0.60
+  'gpt-3.5-turbo': { input: 50, output: 150 }, // $0.50/$1.50
 
   // Default for unknown models
   default: { input: 300, output: 1500 },
@@ -89,7 +88,7 @@ export interface BudgetConfig {
 
 export interface CostOperation {
   id: string;
-  type: "llm_call" | "tool_call" | "agent_spawn" | "file_op" | "network";
+  type: 'llm_call' | 'tool_call' | 'agent_spawn' | 'file_op' | 'network';
   description: string;
   tokensIn: number;
   tokensOut: number;
@@ -119,7 +118,7 @@ export interface CostTracker {
   operations: CostOperation[];
 
   // Status
-  status: "active" | "warning" | "critical" | "stopped" | "completed";
+  status: 'active' | 'warning' | 'critical' | 'stopped' | 'completed';
   lastOperationAt: string;
 
   // Runaway detection
@@ -158,7 +157,7 @@ export interface BudgetStatus {
   monthlyUsed: number;
   monthlyRemaining: number;
   monthlyPercent: number;
-  status: "ok" | "warning" | "critical" | "exceeded";
+  status: 'ok' | 'warning' | 'critical' | 'exceeded';
   canProceed: boolean;
   message?: string;
 }
@@ -174,17 +173,17 @@ export interface ApprovalRequest {
   reason: string;
   createdAt: string;
   expiresAt: string;
-  status: "pending" | "approved" | "denied" | "expired";
+  status: 'pending' | 'approved' | 'denied' | 'expired';
 }
 
 export type BudgetEvent =
-  | { type: "cost_recorded"; operation: CostOperation; total: number }
-  | { type: "budget_warning"; status: BudgetStatus; message: string }
-  | { type: "budget_critical"; status: BudgetStatus; message: string }
-  | { type: "budget_exceeded"; status: BudgetStatus; message: string }
-  | { type: "approval_required"; request: ApprovalRequest }
-  | { type: "runaway_detected"; reason: string; metrics: RunawayMetrics }
-  | { type: "session_stopped"; sessionId: string; reason: string };
+  | { type: 'cost_recorded'; operation: CostOperation; total: number }
+  | { type: 'budget_warning'; status: BudgetStatus; message: string }
+  | { type: 'budget_critical'; status: BudgetStatus; message: string }
+  | { type: 'budget_exceeded'; status: BudgetStatus; message: string }
+  | { type: 'approval_required'; request: ApprovalRequest }
+  | { type: 'runaway_detected'; reason: string; metrics: RunawayMetrics }
+  | { type: 'session_stopped'; sessionId: string; reason: string };
 
 export interface RunawayMetrics {
   loopsPerMinute: number;
@@ -249,7 +248,7 @@ export class BudgetManager extends EventEmitter {
       totalCost: 0,
       estimatedRemainingCost: 0,
       operations: [],
-      status: "active",
+      status: 'active',
       lastOperationAt: new Date().toISOString(),
       loopCount: 0,
       errorCount: 0,
@@ -274,7 +273,7 @@ export class BudgetManager extends EventEmitter {
   endSession(sessionId: string): CostTracker | undefined {
     const tracker = this.trackers.get(sessionId);
     if (tracker) {
-      tracker.status = "completed";
+      tracker.status = 'completed';
     }
     return tracker;
   }
@@ -289,13 +288,13 @@ export class BudgetManager extends EventEmitter {
    */
   estimateCost(
     operations: Array<{
-      type: "llm_call" | "tool_call" | "agent_spawn";
+      type: 'llm_call' | 'tool_call' | 'agent_spawn';
       model?: string;
       estimatedInputTokens: number;
       estimatedOutputTokens: number;
       description?: string;
     }>,
-    sessionId?: string,
+    sessionId?: string
   ): CostEstimate {
     const breakdown: CostBreakdown[] = [];
     let totalIn = 0;
@@ -304,18 +303,16 @@ export class BudgetManager extends EventEmitter {
     let totalDuration = 0;
 
     for (const op of operations) {
-      const model = op.model || "default";
-      const pricing = MODEL_PRICING[model] || MODEL_PRICING["default"];
+      const model = op.model || 'default';
+      const pricing = MODEL_PRICING[model] || MODEL_PRICING['default'];
 
       const cost = Math.ceil(
         (op.estimatedInputTokens * pricing.input) / 1_000_000 +
-        (op.estimatedOutputTokens * pricing.output) / 1_000_000,
+          (op.estimatedOutputTokens * pricing.output) / 1_000_000
       );
 
       // Estimate duration (rough: 50 tokens/sec)
-      const duration =
-        Math.ceil((op.estimatedInputTokens + op.estimatedOutputTokens) / 50) *
-        1000;
+      const duration = Math.ceil((op.estimatedInputTokens + op.estimatedOutputTokens) / 50) * 1000;
 
       breakdown.push({
         operation: op.description || op.type,
@@ -368,12 +365,12 @@ export class BudgetManager extends EventEmitter {
   estimateLLMCall(
     inputTokens: number,
     expectedOutputTokens: number,
-    model: string = "claude-3.5-sonnet",
+    model: string = 'claude-3.5-sonnet'
   ): { cost: number; formatted: string } {
-    const pricing = MODEL_PRICING[model] || MODEL_PRICING["default"];
+    const pricing = MODEL_PRICING[model] || MODEL_PRICING['default'];
     const cost = Math.ceil(
       (inputTokens * pricing.input) / 1_000_000 +
-      (expectedOutputTokens * pricing.output) / 1_000_000,
+        (expectedOutputTokens * pricing.output) / 1_000_000
     );
 
     return {
@@ -391,11 +388,11 @@ export class BudgetManager extends EventEmitter {
    */
   recordCost(
     sessionId: string,
-    operation: Omit<CostOperation, "id" | "timestamp">,
+    operation: Omit<CostOperation, 'id' | 'timestamp'>
   ): CostOperation | null {
     const tracker = this.trackers.get(sessionId);
     if (!tracker) {
-      logger.warn({ sessionId }, "[BudgetManager] No tracker for session");
+      logger.warn({ sessionId }, '[BudgetManager] No tracker for session');
       return null;
     }
 
@@ -417,18 +414,15 @@ export class BudgetManager extends EventEmitter {
     const dayKey = this.getDayKey(tracker.userId);
     const monthKey = this.getMonthKey(tracker.userId);
     this.dailyTotals.set(dayKey, (this.dailyTotals.get(dayKey) || 0) + op.cost);
-    this.monthlyTotals.set(
-      monthKey,
-      (this.monthlyTotals.get(monthKey) || 0) + op.cost,
-    );
+    this.monthlyTotals.set(monthKey, (this.monthlyTotals.get(monthKey) || 0) + op.cost);
 
     // Emit event
     const event: BudgetEvent = {
-      type: "cost_recorded",
+      type: 'cost_recorded',
       operation: op,
       total: tracker.totalCost,
     };
-    this.emit("cost", event);
+    this.emit('cost', event);
 
     // Check budget status
     this.checkBudgetStatus(sessionId);
@@ -438,13 +432,13 @@ export class BudgetManager extends EventEmitter {
 
     // Publish to message bus via broadcast
     messageBus.broadcast(
-      "budget_update",
+      'budget_update',
       {
         sessionId,
         cost: op.cost,
         total: tracker.totalCost,
       },
-      "budgetManager",
+      'budgetManager'
     );
 
     return op;
@@ -457,20 +451,19 @@ export class BudgetManager extends EventEmitter {
     sessionId: string,
     tokensIn: number,
     tokensOut: number,
-    model: string = "claude-3.5-sonnet",
-    description: string = "LLM call",
+    model: string = 'claude-3.5-sonnet',
+    description: string = 'LLM call',
     durationMs: number = 0,
     goalId?: string,
-    agentId?: string,
+    agentId?: string
   ): CostOperation | null {
-    const pricing = MODEL_PRICING[model] || MODEL_PRICING["default"];
+    const pricing = MODEL_PRICING[model] || MODEL_PRICING['default'];
     const cost = Math.ceil(
-      (tokensIn * pricing.input) / 1_000_000 +
-      (tokensOut * pricing.output) / 1_000_000,
+      (tokensIn * pricing.input) / 1_000_000 + (tokensOut * pricing.output) / 1_000_000
     );
 
     return this.recordCost(sessionId, {
-      type: "llm_call",
+      type: 'llm_call',
       description,
       tokensIn,
       tokensOut,
@@ -506,28 +499,28 @@ export class BudgetManager extends EventEmitter {
 
     const maxPercent = Math.max(sessionPercent, dailyPercent, monthlyPercent);
 
-    let status: BudgetStatus["status"];
+    let status: BudgetStatus['status'];
     let canProceed = true;
     let message: string | undefined;
 
     if (maxPercent >= 1) {
-      status = "exceeded";
+      status = 'exceeded';
       canProceed = !config.hardStop;
-      message = "Budget exceeded. Operations paused.";
+      message = 'Budget exceeded. Operations paused.';
     } else if (maxPercent >= config.criticalThreshold) {
-      status = "critical";
+      status = 'critical';
       message = `Budget ${Math.round(maxPercent * 100)}% used. Approaching limit.`;
     } else if (maxPercent >= config.warningThreshold) {
-      status = "warning";
+      status = 'warning';
       message = `Budget ${Math.round(maxPercent * 100)}% used.`;
     } else {
-      status = "ok";
+      status = 'ok';
     }
 
     // Check if globally paused
     if (this.globalPaused) {
       canProceed = false;
-      message = "All operations paused by administrator.";
+      message = 'All operations paused by administrator.';
     }
 
     return {
@@ -549,35 +542,29 @@ export class BudgetManager extends EventEmitter {
   /**
    * Check if an operation can proceed
    */
-  canProceed(
-    sessionId: string,
-    estimatedCost: number = 0,
-  ): { allowed: boolean; reason?: string } {
+  canProceed(sessionId: string, estimatedCost: number = 0): { allowed: boolean; reason?: string } {
     if (this.globalPaused) {
-      return { allowed: false, reason: "Global pause active" };
+      return { allowed: false, reason: 'Global pause active' };
     }
 
     const tracker = this.trackers.get(sessionId);
     if (!tracker) {
-      return { allowed: false, reason: "No session tracker" };
+      return { allowed: false, reason: 'No session tracker' };
     }
 
-    if (tracker.status === "stopped") {
-      return { allowed: false, reason: "Session stopped" };
+    if (tracker.status === 'stopped') {
+      return { allowed: false, reason: 'Session stopped' };
     }
 
     const config = this.getConfig(tracker.userId);
     const status = this.getBudgetStatus(sessionId);
 
     if (!status) {
-      return { allowed: false, reason: "Cannot determine budget status" };
+      return { allowed: false, reason: 'Cannot determine budget status' };
     }
 
     // Check if we'd exceed budget with this operation
-    if (
-      tracker.totalCost + estimatedCost > config.sessionLimit &&
-      config.hardStop
-    ) {
+    if (tracker.totalCost + estimatedCost > config.sessionLimit && config.hardStop) {
       return {
         allowed: false,
         reason: `Would exceed session budget ($${(config.sessionLimit / 100).toFixed(2)})`,
@@ -608,30 +595,30 @@ export class BudgetManager extends EventEmitter {
 
     const config = this.getConfig(tracker.userId);
 
-    if (status.status === "exceeded") {
-      tracker.status = "stopped";
+    if (status.status === 'exceeded') {
+      tracker.status = 'stopped';
       const event: BudgetEvent = {
-        type: "budget_exceeded",
+        type: 'budget_exceeded',
         status,
-        message: status.message || "Budget exceeded",
+        message: status.message || 'Budget exceeded',
       };
-      this.emit("budget", event);
-    } else if (status.status === "critical" && tracker.status !== "critical") {
-      tracker.status = "critical";
+      this.emit('budget', event);
+    } else if (status.status === 'critical' && tracker.status !== 'critical') {
+      tracker.status = 'critical';
       const event: BudgetEvent = {
-        type: "budget_critical",
+        type: 'budget_critical',
         status,
-        message: status.message || "Budget critical",
+        message: status.message || 'Budget critical',
       };
-      this.emit("budget", event);
-    } else if (status.status === "warning" && tracker.status === "active") {
-      tracker.status = "warning";
+      this.emit('budget', event);
+    } else if (status.status === 'warning' && tracker.status === 'active') {
+      tracker.status = 'warning';
       const event: BudgetEvent = {
-        type: "budget_warning",
+        type: 'budget_warning',
         status,
-        message: status.message || "Budget warning",
+        message: status.message || 'Budget warning',
       };
-      this.emit("budget", event);
+      this.emit('budget', event);
     }
   }
 
@@ -651,13 +638,10 @@ export class BudgetManager extends EventEmitter {
 
     // Count operations in the last minute
     const recentOps = tracker.operations.filter(
-      (op) => new Date(op.timestamp).getTime() > oneMinuteAgo,
+      (op) => new Date(op.timestamp).getTime() > oneMinuteAgo
     );
 
-    const lastMinuteTokens = recentOps.reduce(
-      (sum, op) => sum + op.tokensIn + op.tokensOut,
-      0,
-    );
+    const lastMinuteTokens = recentOps.reduce((sum, op) => sum + op.tokensIn + op.tokensOut, 0);
     const lastMinuteCost = recentOps.reduce((sum, op) => sum + op.cost, 0);
 
     tracker.lastMinuteTokens = lastMinuteTokens;
@@ -676,39 +660,32 @@ export class BudgetManager extends EventEmitter {
 
     if (metrics.loopsPerMinute > RUNAWAY_THRESHOLDS.maxLoopsPerMinute) {
       runawayReason = `Too many operations per minute (${metrics.loopsPerMinute})`;
-    } else if (
-      metrics.tokensPerMinute > RUNAWAY_THRESHOLDS.maxTokensPerMinute
-    ) {
+    } else if (metrics.tokensPerMinute > RUNAWAY_THRESHOLDS.maxTokensPerMinute) {
       runawayReason = `Excessive tokens per minute (${metrics.tokensPerMinute})`;
     } else if (metrics.costPerMinute > RUNAWAY_THRESHOLDS.maxCostPerMinute) {
       runawayReason = `Excessive cost per minute ($${(metrics.costPerMinute / 100).toFixed(2)})`;
-    } else if (
-      tracker.totalTokensIn + tracker.totalTokensOut >
-      RUNAWAY_THRESHOLDS.maxTotalTokens
-    ) {
+    } else if (tracker.totalTokensIn + tracker.totalTokensOut > RUNAWAY_THRESHOLDS.maxTotalTokens) {
       runawayReason = `Total tokens exceeded (${tracker.totalTokensIn + tracker.totalTokensOut})`;
-    } else if (
-      metrics.consecutiveErrors > RUNAWAY_THRESHOLDS.maxConsecutiveErrors
-    ) {
+    } else if (metrics.consecutiveErrors > RUNAWAY_THRESHOLDS.maxConsecutiveErrors) {
       runawayReason = `Too many consecutive errors (${metrics.consecutiveErrors})`;
     }
 
     if (runawayReason) {
-      tracker.status = "stopped";
+      tracker.status = 'stopped';
       tracker.loopCount++;
 
       const event: BudgetEvent = {
-        type: "runaway_detected",
+        type: 'runaway_detected',
         reason: runawayReason,
         metrics,
       };
-      this.emit("runaway", event);
+      this.emit('runaway', event);
 
       // Publish emergency stop via system error channel
       messageBus.systemError(
         `Runaway detected: ${runawayReason}`,
-        "RUNAWAY_DETECTED",
-        `session:${sessionId}`,
+        'RUNAWAY_DETECTED',
+        `session:${sessionId}`
       );
     }
   }
@@ -744,7 +721,7 @@ export class BudgetManager extends EventEmitter {
   requestApproval(
     sessionId: string,
     operation: string,
-    estimatedCost: number,
+    estimatedCost: number
   ): ApprovalRequest | null {
     const tracker = this.trackers.get(sessionId);
     if (!tracker) return null;
@@ -763,16 +740,16 @@ export class BudgetManager extends EventEmitter {
       reason: `Operation estimated at $${(estimatedCost / 100).toFixed(2)}`,
       createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5 min expiry
-      status: "pending",
+      status: 'pending',
     };
 
     this.approvalRequests.set(request.id, request);
 
     const event: BudgetEvent = {
-      type: "approval_required",
+      type: 'approval_required',
       request,
     };
-    this.emit("approval", event);
+    this.emit('approval', event);
 
     return request;
   }
@@ -782,15 +759,15 @@ export class BudgetManager extends EventEmitter {
    */
   approveRequest(requestId: string): boolean {
     const request = this.approvalRequests.get(requestId);
-    if (!request || request.status !== "pending") return false;
+    if (!request || request.status !== 'pending') return false;
 
     // Check if expired
     if (new Date(request.expiresAt) < new Date()) {
-      request.status = "expired";
+      request.status = 'expired';
       return false;
     }
 
-    request.status = "approved";
+    request.status = 'approved';
     return true;
   }
 
@@ -799,9 +776,9 @@ export class BudgetManager extends EventEmitter {
    */
   denyRequest(requestId: string): boolean {
     const request = this.approvalRequests.get(requestId);
-    if (!request || request.status !== "pending") return false;
+    if (!request || request.status !== 'pending') return false;
 
-    request.status = "denied";
+    request.status = 'denied';
     return true;
   }
 
@@ -810,7 +787,7 @@ export class BudgetManager extends EventEmitter {
    */
   isApproved(requestId: string): boolean {
     const request = this.approvalRequests.get(requestId);
-    return request?.status === "approved";
+    return request?.status === 'approved';
   }
 
   // --------------------------------------------------------------------------
@@ -822,7 +799,7 @@ export class BudgetManager extends EventEmitter {
    */
   pauseAll(): void {
     this.globalPaused = true;
-    this.emit("global", { type: "global_pause", paused: true });
+    this.emit('global', { type: 'global_pause', paused: true });
   }
 
   /**
@@ -830,7 +807,7 @@ export class BudgetManager extends EventEmitter {
    */
   resumeAll(): void {
     this.globalPaused = false;
-    this.emit("global", { type: "global_pause", paused: false });
+    this.emit('global', { type: 'global_pause', paused: false });
   }
 
   /**
@@ -846,13 +823,13 @@ export class BudgetManager extends EventEmitter {
   stopSession(sessionId: string, reason: string): void {
     const tracker = this.trackers.get(sessionId);
     if (tracker) {
-      tracker.status = "stopped";
+      tracker.status = 'stopped';
       const event: BudgetEvent = {
-        type: "session_stopped",
+        type: 'session_stopped',
         sessionId,
         reason,
       };
-      this.emit("stopped", event);
+      this.emit('stopped', event);
     }
   }
 
@@ -932,7 +909,7 @@ export class BudgetManager extends EventEmitter {
   // --------------------------------------------------------------------------
 
   private getDayKey(userId: string): string {
-    const date = new Date().toISOString().split("T")[0];
+    const date = new Date().toISOString().split('T')[0];
     return `${userId}:${date}`;
   }
 
@@ -955,10 +932,10 @@ export class BudgetManager extends EventEmitter {
    * Parse cost from string
    */
   parseCost(str: string): number {
-    if (str.endsWith("¢")) {
+    if (str.endsWith('¢')) {
       return parseInt(str.slice(0, -1), 10);
     }
-    if (str.startsWith("$")) {
+    if (str.startsWith('$')) {
       return Math.round(parseFloat(str.slice(1)) * 100);
     }
     return parseInt(str, 10);
@@ -980,13 +957,13 @@ export const budgetManager = new BudgetManager();
  */
 export function prophecyCost(
   operations: Array<{
-    type: "llm_call" | "tool_call" | "agent_spawn";
+    type: 'llm_call' | 'tool_call' | 'agent_spawn';
     model?: string;
     estimatedInputTokens: number;
     estimatedOutputTokens: number;
     description?: string;
   }>,
-  sessionId?: string,
+  sessionId?: string
 ): CostEstimate {
   return budgetManager.estimateCost(operations, sessionId);
 }
@@ -997,7 +974,7 @@ export function prophecyCost(
 export function quickCostCheck(
   inputTokens: number,
   outputTokens: number,
-  model?: string,
+  model?: string
 ): { cost: number; formatted: string } {
   return budgetManager.estimateLLMCall(inputTokens, outputTokens, model);
 }
@@ -1005,10 +982,7 @@ export function quickCostCheck(
 /**
  * Check if we can proceed with an operation
  */
-export function canAfford(
-  sessionId: string,
-  estimatedCost: number = 0,
-): boolean {
+export function canAfford(sessionId: string, estimatedCost: number = 0): boolean {
   return budgetManager.canProceed(sessionId, estimatedCost).allowed;
 }
 
@@ -1017,16 +991,16 @@ export function canAfford(
  */
 export function formatBudgetMessage(sessionId: string): string {
   const status = budgetManager.getBudgetStatus(sessionId);
-  if (!status) return "No budget info available";
+  if (!status) return 'No budget info available';
 
   const icon =
-    status.status === "ok"
-      ? "✅"
-      : status.status === "warning"
-        ? "⚠️"
-        : status.status === "critical"
-          ? "🚨"
-          : "❌";
+    status.status === 'ok'
+      ? '✅'
+      : status.status === 'warning'
+        ? '⚠️'
+        : status.status === 'critical'
+          ? '🚨'
+          : '❌';
 
   return `${icon} Session: ${budgetManager.formatCost(status.sessionUsed)}/${budgetManager.formatCost(status.sessionUsed + status.sessionRemaining)} | Daily: ${Math.round(status.dailyPercent * 100)}%`;
 }

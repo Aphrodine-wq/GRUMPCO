@@ -16,16 +16,16 @@
  * @module routes/gagent
  */
 
-import { Router } from "express";
-import goalsRouter from "./gagentGoals.js";
-import budgetRouter from "./gagentBudget.js";
-import controlRouter from "./gagentControl.js";
+import { Router } from 'express';
+import goalsRouter from './gagentGoals.js';
+import budgetRouter from './gagentBudget.js';
+import controlRouter from './gagentControl.js';
 
-import configRouter from "./gagentConfig.js";
-import streamRouter from "./gagentStream.js";
-import compilerRouter from "./gagentCompiler.js";
-import dedupRouter from "./gagentDedup.js";
-import learningRouter from "./gagentLearning.js";
+import configRouter from './gagentConfig.js';
+import streamRouter from './gagentStream.js';
+import compilerRouter from './gagentCompiler.js';
+import dedupRouter from './gagentDedup.js';
+import learningRouter from './gagentLearning.js';
 
 const router = Router();
 

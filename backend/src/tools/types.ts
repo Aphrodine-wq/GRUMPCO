@@ -6,7 +6,7 @@ export interface Tool {
   name: string;
   description: string;
   input_schema: {
-    type: "object";
+    type: 'object';
     properties?: Record<string, unknown>;
     required?: string[];
   };
@@ -16,7 +16,7 @@ export interface FileDiff {
   filePath: string;
   beforeContent: string;
   afterContent: string;
-  changeType: "created" | "modified" | "deleted";
+  changeType: 'created' | 'modified' | 'deleted';
   operations?: Array<{ type: string; lineStart: number; lineEnd?: number }>;
 }
 
@@ -40,10 +40,10 @@ export interface ToolExecutionResult {
 }
 
 export interface ToolExecutionEvent {
-  type: "tool_call" | "tool_result" | "tool_progress";
+  type: 'tool_call' | 'tool_result' | 'tool_progress';
   toolName: string;
   toolId: string;
   input?: Record<string, unknown>;
   result?: ToolExecutionResult;
-  status?: "pending" | "executing" | "success" | "error";
+  status?: 'pending' | 'executing' | 'success' | 'error';
 }

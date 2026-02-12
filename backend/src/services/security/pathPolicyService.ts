@@ -4,9 +4,9 @@
  * and optional per-operation checks for read/write/delete.
  */
 
-import path from "path";
+import path from 'path';
 
-export type PathOperation = "read" | "write" | "delete" | "list";
+export type PathOperation = 'read' | 'write' | 'delete' | 'list';
 
 export interface PathPolicyOptions {
   workspaceRoot: string;
@@ -15,9 +15,7 @@ export interface PathPolicyOptions {
   allowlistOnly?: boolean;
 }
 
-export type ResolvePathResult =
-  | { ok: true; resolved: string }
-  | { ok: false; reason: string };
+export type ResolvePathResult = { ok: true; resolved: string } | { ok: false; reason: string };
 
 /** Paths/patterns that are always blocked (sensitive or dangerous). */
 const BLOCKLIST_PATTERNS: Array<string | RegExp> = [
@@ -46,7 +44,7 @@ const BLOCKLIST_PATTERNS: Array<string | RegExp> = [
 export function resolvePath(
   requestedPath: string,
   operation: PathOperation,
-  options: PathPolicyOptions,
+  options: PathPolicyOptions
 ): ResolvePathResult {
   const { workspaceRoot, allowedDirs = [], allowlistOnly = true } = options;
   const normalizedRoot = path.resolve(workspaceRoot);
@@ -57,9 +55,9 @@ export function resolvePath(
     : path.resolve(normalizedRoot, normalized);
 
   // Blocklist: sensitive paths
-  const pathForBlock = resolved.replace(/\\/g, "/");
+  const pathForBlock = resolved.replace(/\\/g, '/');
   for (const p of BLOCKLIST_PATTERNS) {
-    if (typeof p === "string") {
+    if (typeof p === 'string') {
       if (pathForBlock.includes(p) || pathForBlock.endsWith(p)) {
         return {
           ok: false,
@@ -71,7 +69,7 @@ export function resolvePath(
         return {
           ok: false,
           reason:
-            "Access blocked: path matches sensitive blocklist (e.g. .env, .git, node_modules, .ssh)",
+            'Access blocked: path matches sensitive blocklist (e.g. .env, .git, node_modules, .ssh)',
         };
       }
     }
@@ -80,8 +78,7 @@ export function resolvePath(
   // Allowlist: must be under workspace or explicitly allowed
   if (allowlistOnly) {
     const underWorkspace =
-      resolved === normalizedRoot ||
-      resolved.startsWith(normalizedRoot + path.sep);
+      resolved === normalizedRoot || resolved.startsWith(normalizedRoot + path.sep);
     let allowed = underWorkspace;
     if (!allowed && allowedDirs.length > 0) {
       for (const dir of allowedDirs) {
@@ -96,14 +93,14 @@ export function resolvePath(
       return {
         ok: false,
         reason:
-          "Path is outside workspace and not in allowed directories. Use a path under the workspace root or add the directory to allowed dirs in settings.",
+          'Path is outside workspace and not in allowed directories. Use a path under the workspace root or add the directory to allowed dirs in settings.',
       };
     }
   }
 
   // Traversal: no .. escaping
-  if (normalized.includes("..")) {
-    return { ok: false, reason: "Invalid path: cannot use .. in paths" };
+  if (normalized.includes('..')) {
+    return { ok: false, reason: 'Invalid path: cannot use .. in paths' };
   }
 
   return { ok: true, resolved };
@@ -114,9 +111,9 @@ export function resolvePath(
  * Useful for UI to pre-warn.
  */
 export function isPathBlocked(requestedPath: string): boolean {
-  const pathForBlock = path.resolve(requestedPath).replace(/\\/g, "/");
+  const pathForBlock = path.resolve(requestedPath).replace(/\\/g, '/');
   for (const p of BLOCKLIST_PATTERNS) {
-    if (typeof p === "string") {
+    if (typeof p === 'string') {
       if (pathForBlock.includes(p) || pathForBlock.endsWith(p)) return true;
     } else {
       if (p.test(pathForBlock)) return true;

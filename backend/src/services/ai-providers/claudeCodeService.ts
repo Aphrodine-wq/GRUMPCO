@@ -4,10 +4,10 @@
  * Uses LLM Gateway with Kimi K2.5 for all operations
  */
 
-import { getRequestLogger, default as logger } from "../../middleware/logger.js";
-import { createApiTimer } from "../../middleware/metrics.js";
-import { withResilience } from "../infra/resilience.js";
-import { getCompletion, type CompletionResult } from "./llmGatewayHelper.js";
+import { getRequestLogger, default as logger } from '../../middleware/logger.js';
+import { createApiTimer } from '../../middleware/metrics.js';
+import { withResilience } from '../infra/resilience.js';
+import { getCompletion, type CompletionResult } from './llmGatewayHelper.js';
 import type {
   CodeAnalysis,
   RefactoringSuggestion,
@@ -17,17 +17,15 @@ import type {
   Documentation,
   CodeContext,
   PerformanceMetrics,
-} from "../../types/claudeCode.js";
+} from '../../types/claudeCode.js';
 
 if (!process.env.MOCK_AI_MODE && !process.env.NVIDIA_NIM_API_KEY) {
-  logger.error(
-    "NVIDIA_NIM_API_KEY is not set (set MOCK_AI_MODE=true for zero-config testing)",
-  );
+  logger.error('NVIDIA_NIM_API_KEY is not set (set MOCK_AI_MODE=true for zero-config testing)');
   process.exit(1);
 }
 
-const DEFAULT_MODEL = "moonshotai/kimi-k2.5";
-const DEFAULT_PROVIDER = "nim" as const;
+const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
+const DEFAULT_PROVIDER = 'nim' as const;
 
 // Type assertion: since we use getCompletion which returns non-streaming response
 const resilientLlmCall = withResilience(
@@ -35,11 +33,11 @@ const resilientLlmCall = withResilience(
     model: string;
     max_tokens: number;
     system: string;
-    messages: Array<{ role: "user" | "assistant"; content: string }>;
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
   }): Promise<CompletionResult> => {
     return await getCompletion(params, DEFAULT_PROVIDER);
   },
-  "llm-code",
+  'llm-code'
 );
 
 const CODE_ANALYSIS_PROMPT = `You are an expert code analyst specializing in code quality, patterns, and architecture. Analyze the provided code and return a comprehensive analysis.
@@ -99,15 +97,15 @@ Return a JSON object:
 export async function analyzeCode(
   code: string,
   language: string,
-  context?: CodeContext,
+  context?: CodeContext
 ): Promise<CodeAnalysis> {
   const log = getRequestLogger();
-  const timer = createApiTimer("llm_code_analyze");
+  const timer = createApiTimer('llm_code_analyze');
 
   try {
     const contextInfo = context
-      ? `\n\nContext:\n- Project Type: ${context.projectType || "N/A"}\n- Framework: ${context.framework || "N/A"}\n- Language: ${context.language || language}`
-      : "";
+      ? `\n\nContext:\n- Project Type: ${context.projectType || 'N/A'}\n- Framework: ${context.framework || 'N/A'}\n- Language: ${context.language || language}`
+      : '';
 
     const response = await resilientLlmCall({
       model: DEFAULT_MODEL,
@@ -115,7 +113,7 @@ export async function analyzeCode(
       system: CODE_ANALYSIS_PROMPT,
       messages: [
         {
-          role: "user",
+          role: 'user',
           content: `Language: ${language}${contextInfo}\n\nCode to analyze:\n\`\`\`${language}\n${code}\n\`\`\`\n\nAnalyze this code comprehensively.`,
         },
       ],
@@ -129,17 +127,14 @@ export async function analyzeCode(
     jsonText = extractJSON(jsonText);
 
     const analysis = JSON.parse(jsonText) as CodeAnalysis;
-    log.info(
-      { language, patterns: analysis.patterns.length },
-      "Code analysis completed",
-    );
+    log.info({ language, patterns: analysis.patterns.length }, 'Code analysis completed');
     timer.success();
 
     return analysis;
   } catch (error) {
-    timer.failure("code_analysis_error");
+    timer.failure('code_analysis_error');
     const err = error as Error;
-    log.error({ error: err.message }, "Code analysis failed");
+    log.error({ error: err.message }, 'Code analysis failed');
     throw error;
   }
 }
@@ -177,10 +172,10 @@ Return a JSON array of refactoring suggestions:
  */
 export async function suggestRefactoring(
   code: string,
-  language: string,
+  language: string
 ): Promise<RefactoringSuggestion[]> {
   const log = getRequestLogger();
-  const timer = createApiTimer("llm_code_refactor");
+  const timer = createApiTimer('llm_code_refactor');
 
   try {
     const response = await resilientLlmCall({
@@ -189,7 +184,7 @@ export async function suggestRefactoring(
       system: REFACTORING_PROMPT,
       messages: [
         {
-          role: "user",
+          role: 'user',
           content: `Language: ${language}\n\nCode to refactor:\n\`\`\`${language}\n${code}\n\`\`\`\n\nSuggest refactoring improvements.`,
         },
       ],
@@ -203,17 +198,14 @@ export async function suggestRefactoring(
     jsonText = extractJSON(jsonText);
 
     const suggestions = JSON.parse(jsonText) as RefactoringSuggestion[];
-    log.info(
-      { language, suggestions: suggestions.length },
-      "Refactoring suggestions generated",
-    );
+    log.info({ language, suggestions: suggestions.length }, 'Refactoring suggestions generated');
     timer.success();
 
     return suggestions;
   } catch (error) {
-    timer.failure("refactoring_error");
+    timer.failure('refactoring_error');
     const err = error as Error;
-    log.warn({ error: err.message }, "Refactoring suggestion failed");
+    log.warn({ error: err.message }, 'Refactoring suggestion failed');
     return [];
   }
 }
@@ -251,15 +243,15 @@ Return a JSON array:
 export async function optimizePerformance(
   code: string,
   language: string,
-  metrics?: PerformanceMetrics,
+  metrics?: PerformanceMetrics
 ): Promise<PerformanceOptimization[]> {
   const log = getRequestLogger();
-  const timer = createApiTimer("llm_code_performance");
+  const timer = createApiTimer('llm_code_performance');
 
   try {
     const metricsInfo = metrics
       ? `\n\nCurrent Metrics:\n- Response Time: ${metrics.responseTime}ms\n- Throughput: ${metrics.throughput} req/s\n- Memory: ${metrics.memoryUsage}MB`
-      : "";
+      : '';
 
     const response = await resilientLlmCall({
       model: DEFAULT_MODEL,
@@ -267,7 +259,7 @@ export async function optimizePerformance(
       system: PERFORMANCE_PROMPT,
       messages: [
         {
-          role: "user",
+          role: 'user',
           content: `Language: ${language}${metricsInfo}\n\nCode to optimize:\n\`\`\`${language}\n${code}\n\`\`\`\n\nSuggest performance optimizations.`,
         },
       ],
@@ -283,15 +275,15 @@ export async function optimizePerformance(
     const optimizations = JSON.parse(jsonText) as PerformanceOptimization[];
     log.info(
       { language, optimizations: optimizations.length },
-      "Performance optimizations generated",
+      'Performance optimizations generated'
     );
     timer.success();
 
     return optimizations;
   } catch (error) {
-    timer.failure("performance_error");
+    timer.failure('performance_error');
     const err = error as Error;
-    log.warn({ error: err.message }, "Performance optimization failed");
+    log.warn({ error: err.message }, 'Performance optimization failed');
     return [];
   }
 }
@@ -339,12 +331,9 @@ Return a JSON array:
 /**
  * Scan code for security vulnerabilities
  */
-export async function scanSecurity(
-  code: string,
-  language: string,
-): Promise<SecurityIssue[]> {
+export async function scanSecurity(code: string, language: string): Promise<SecurityIssue[]> {
   const log = getRequestLogger();
-  const timer = createApiTimer("llm_code_security");
+  const timer = createApiTimer('llm_code_security');
 
   try {
     const response = await resilientLlmCall({
@@ -353,7 +342,7 @@ export async function scanSecurity(
       system: SECURITY_PROMPT,
       messages: [
         {
-          role: "user",
+          role: 'user',
           content: `Language: ${language}\n\nCode to scan:\n\`\`\`${language}\n${code}\n\`\`\`\n\nScan for security vulnerabilities.`,
         },
       ],
@@ -367,14 +356,14 @@ export async function scanSecurity(
     jsonText = extractJSON(jsonText);
 
     const issues = JSON.parse(jsonText) as SecurityIssue[];
-    log.info({ language, issues: issues.length }, "Security scan completed");
+    log.info({ language, issues: issues.length }, 'Security scan completed');
     timer.success();
 
     return issues;
   } catch (error) {
-    timer.failure("security_error");
+    timer.failure('security_error');
     const err = error as Error;
-    log.warn({ error: err.message }, "Security scan failed");
+    log.warn({ error: err.message }, 'Security scan failed');
     return [];
   }
 }
@@ -437,15 +426,13 @@ Return a JSON object:
 export async function generateTests(
   code: string,
   language: string,
-  testFramework?: string,
+  testFramework?: string
 ): Promise<TestSuite> {
   const log = getRequestLogger();
-  const timer = createApiTimer("llm_code_tests");
+  const timer = createApiTimer('llm_code_tests');
 
   try {
-    const frameworkInfo = testFramework
-      ? `\n\nTest Framework: ${testFramework}`
-      : "";
+    const frameworkInfo = testFramework ? `\n\nTest Framework: ${testFramework}` : '';
 
     const response = await resilientLlmCall({
       model: DEFAULT_MODEL,
@@ -453,7 +440,7 @@ export async function generateTests(
       system: TEST_GENERATION_PROMPT,
       messages: [
         {
-          role: "user",
+          role: 'user',
           content: `Language: ${language}${frameworkInfo}\n\nCode to test:\n\`\`\`${language}\n${code}\n\`\`\`\n\nGenerate comprehensive test suite.`,
         },
       ],
@@ -467,17 +454,14 @@ export async function generateTests(
     jsonText = extractJSON(jsonText);
 
     const testSuite = JSON.parse(jsonText) as TestSuite;
-    log.info(
-      { language, unitTests: testSuite.unitTests.length },
-      "Test suite generated",
-    );
+    log.info({ language, unitTests: testSuite.unitTests.length }, 'Test suite generated');
     timer.success();
 
     return testSuite;
   } catch (error) {
-    timer.failure("test_generation_error");
+    timer.failure('test_generation_error');
     const err = error as Error;
-    log.error({ error: err.message }, "Test generation failed");
+    log.error({ error: err.message }, 'Test generation failed');
     throw error;
   }
 }
@@ -541,10 +525,10 @@ Return a JSON object:
  */
 export async function generateDocumentation(
   code: string,
-  language: string,
+  language: string
 ): Promise<Documentation> {
   const log = getRequestLogger();
-  const timer = createApiTimer("llm_code_docs");
+  const timer = createApiTimer('llm_code_docs');
 
   try {
     const response = await resilientLlmCall({
@@ -553,7 +537,7 @@ export async function generateDocumentation(
       system: DOCUMENTATION_PROMPT,
       messages: [
         {
-          role: "user",
+          role: 'user',
           content: `Language: ${language}\n\nCode to document:\n\`\`\`${language}\n${code}\n\`\`\`\n\nGenerate comprehensive documentation.`,
         },
       ],
@@ -567,17 +551,14 @@ export async function generateDocumentation(
     jsonText = extractJSON(jsonText);
 
     const documentation = JSON.parse(jsonText) as Documentation;
-    log.info(
-      { language, functions: documentation.functions.length },
-      "Documentation generated",
-    );
+    log.info({ language, functions: documentation.functions.length }, 'Documentation generated');
     timer.success();
 
     return documentation;
   } catch (error) {
-    timer.failure("documentation_error");
+    timer.failure('documentation_error');
     const err = error as Error;
-    log.error({ error: err.message }, "Documentation generation failed");
+    log.error({ error: err.message }, 'Documentation generation failed');
     throw error;
   }
 }
@@ -612,10 +593,10 @@ Generate only the JSON. Use the exact tech stack and diagram type. Produce runna
 export async function generateCodeFromDiagram(
   diagramType: string,
   mermaidCode: string,
-  techStack: string,
+  techStack: string
 ): Promise<GenerateCodeFromDiagramResult> {
   const log = getRequestLogger();
-  const timer = createApiTimer("llm_code_from_diagram");
+  const timer = createApiTimer('llm_code_from_diagram');
 
   try {
     const response = await resilientLlmCall({
@@ -624,7 +605,7 @@ export async function generateCodeFromDiagram(
       system: GENERATE_CODE_FROM_DIAGRAM_PROMPT,
       messages: [
         {
-          role: "user",
+          role: 'user',
           content: `Diagram type: ${diagramType}\nTech stack: ${techStack}\n\nMermaid diagram:\n\`\`\`mermaid\n${mermaidCode}\n\`\`\`\n\nGenerate the code as JSON with "files" and optional "warnings".`,
         },
       ],
@@ -642,20 +623,14 @@ export async function generateCodeFromDiagram(
     const files = Array.isArray(parsed.files) ? parsed.files : [];
     const warnings = Array.isArray(parsed.warnings) ? parsed.warnings : [];
 
-    log.info(
-      { diagramType, techStack, fileCount: files.length },
-      "Code from diagram generated",
-    );
+    log.info({ diagramType, techStack, fileCount: files.length }, 'Code from diagram generated');
     timer.success();
 
     return { files, warnings };
   } catch (error) {
-    timer.failure("code_from_diagram_error");
+    timer.failure('code_from_diagram_error');
     const err = error as Error;
-    log.error(
-      { error: err.message, diagramType, techStack },
-      "Generate code from diagram failed",
-    );
+    log.error({ error: err.message, diagramType, techStack }, 'Generate code from diagram failed');
     throw error;
   }
 }
@@ -664,10 +639,10 @@ export async function generateCodeFromDiagram(
  * Helper function to extract JSON from LLM response
  */
 function extractJSON(text: string): string {
-  if (text.includes("```json")) {
+  if (text.includes('```json')) {
     const match = text.match(/```json\n?([\s\S]*?)\n?```/);
     if (match) return match[1];
-  } else if (text.includes("```")) {
+  } else if (text.includes('```')) {
     const match = text.match(/```\n?([\s\S]*?)\n?```/);
     if (match) return match[1];
   } else {

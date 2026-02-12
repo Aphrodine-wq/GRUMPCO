@@ -14,7 +14,7 @@
  * @module services/predictivePrefetch
  */
 
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -52,12 +52,12 @@ export interface QueryPattern {
 }
 
 export type PatternTriggerType =
-  | "exact" // Exact query match
-  | "prefix" // Query starts with this
-  | "intent" // Same intent type (explore, implement, etc.)
-  | "file" // Accessing specific file
-  | "topic" // Related topic cluster
-  | "semantic"; // Semantic similarity > threshold
+  | 'exact' // Exact query match
+  | 'prefix' // Query starts with this
+  | 'intent' // Same intent type (explore, implement, etc.)
+  | 'file' // Accessing specific file
+  | 'topic' // Related topic cluster
+  | 'semantic'; // Semantic similarity > threshold
 
 /**
  * File access prediction
@@ -79,11 +79,11 @@ export interface FileAccessPattern {
 }
 
 export type FileRelationship =
-  | "import" // File imports the other
-  | "export" // File exports to the other
-  | "test" // File is a test for the other
-  | "sibling" // Files in same directory
-  | "temporal"; // Co-accessed in time
+  | 'import' // File imports the other
+  | 'export' // File exports to the other
+  | 'test' // File is a test for the other
+  | 'sibling' // Files in same directory
+  | 'temporal'; // Co-accessed in time
 
 /**
  * Topic cluster for batch prefetching
@@ -98,7 +98,7 @@ export interface TopicCluster {
   // Members of this cluster
   members: Array<{
     id: string;
-    type: "query" | "file" | "concept";
+    type: 'query' | 'file' | 'concept';
     content: string;
     embedding: number[];
   }>;
@@ -115,9 +115,9 @@ export interface TopicCluster {
  * Prefetch request
  */
 export interface PrefetchRequest {
-  type: "query" | "file" | "topic";
+  type: 'query' | 'file' | 'topic';
   value: string;
-  priority: "high" | "medium" | "low";
+  priority: 'high' | 'medium' | 'low';
   context?: {
     sessionId: string;
     currentFile?: string;
@@ -130,12 +130,12 @@ export interface PrefetchRequest {
  */
 export interface PrefetchResult {
   requestId: string;
-  type: "query" | "file" | "topic";
+  type: 'query' | 'file' | 'topic';
   value: string;
 
   // Prefetched items
   prefetched: Array<{
-    type: "compiled_context" | "indexed_file" | "cached_embedding";
+    type: 'compiled_context' | 'indexed_file' | 'cached_embedding';
     key: string;
     size: number; // Bytes or tokens
     latencyMs: number;
@@ -298,9 +298,7 @@ export class PredictivePrefetchService extends EventEmitter {
 
   // Embedding function (injected)
   private embedFn: ((text: string) => Promise<number[]>) | null = null;
-  private compileFn:
-    | ((query: string, context?: object) => Promise<unknown>)
-    | null = null;
+  private compileFn: ((query: string, context?: object) => Promise<unknown>) | null = null;
   private indexFileFn: ((filePath: string) => Promise<void>) | null = null;
 
   constructor(sessionId: string, config: Partial<PrefetchConfig> = {}) {
@@ -329,9 +327,7 @@ export class PredictivePrefetchService extends EventEmitter {
   /**
    * Set the compile function (from semantic compiler)
    */
-  setCompileFunction(
-    fn: (query: string, context?: object) => Promise<unknown>,
-  ): void {
+  setCompileFunction(fn: (query: string, context?: object) => Promise<unknown>): void {
     this.compileFn = fn;
   }
 
@@ -355,7 +351,7 @@ export class PredictivePrefetchService extends EventEmitter {
       intent?: string;
       files?: string[];
       embedding?: number[];
-    },
+    }
   ): Promise<void> {
     const timestamp = Date.now();
 
@@ -396,7 +392,7 @@ export class PredictivePrefetchService extends EventEmitter {
     // Trigger prefetch for predicted follow-ups
     await this.prefetchPredictedFollowUps(query, embedding);
 
-    this.emit("query_recorded", { query, timestamp });
+    this.emit('query_recorded', { query, timestamp });
   }
 
   /**
@@ -424,7 +420,7 @@ export class PredictivePrefetchService extends EventEmitter {
         pattern = {
           id: patternKey,
           trigger: {
-            type: trigger.intent ? "intent" : "semantic",
+            type: trigger.intent ? 'intent' : 'semantic',
             value: trigger.intent || trigger.query.slice(0, 50),
             embedding: trigger.embedding,
           },
@@ -441,15 +437,14 @@ export class PredictivePrefetchService extends EventEmitter {
 
       // Update or add prediction
       const existingPred = pattern.predictions.find(
-        (p) => this.querySimilarity(p.query, followUp.query) > 0.8,
+        (p) => this.querySimilarity(p.query, followUp.query) > 0.8
       );
 
       if (existingPred) {
         // Update existing prediction
         const count = pattern.stats.observations + 1;
         existingPred.avgDelayMs =
-          (existingPred.avgDelayMs * pattern.stats.observations + delay) /
-          count;
+          (existingPred.avgDelayMs * pattern.stats.observations + delay) / count;
         existingPred.confidence = Math.min(1, existingPred.confidence + 0.1);
       } else {
         // Add new prediction
@@ -477,10 +472,8 @@ export class PredictivePrefetchService extends EventEmitter {
 
     // Update metrics
     this.metrics.totalPatterns = this.queryPatterns.size;
-    this.metrics.activePatterns = Array.from(
-      this.queryPatterns.values(),
-    ).filter(
-      (p) => p.stats.observations >= this.config.minObservationsForPattern,
+    this.metrics.activePatterns = Array.from(this.queryPatterns.values()).filter(
+      (p) => p.stats.observations >= this.config.minObservationsForPattern
     ).length;
   }
 
@@ -532,21 +525,17 @@ export class PredictivePrefetchService extends EventEmitter {
    */
   private inferRelationship(file1: string, file2: string): FileRelationship {
     // Simple heuristics
-    if (
-      file2.includes(".test.") ||
-      file2.includes(".spec.") ||
-      file2.includes("__tests__")
-    ) {
-      return "test";
+    if (file2.includes('.test.') || file2.includes('.spec.') || file2.includes('__tests__')) {
+      return 'test';
     }
 
-    const dir1 = file1.split("/").slice(0, -1).join("/");
-    const dir2 = file2.split("/").slice(0, -1).join("/");
+    const dir1 = file1.split('/').slice(0, -1).join('/');
+    const dir2 = file2.split('/').slice(0, -1).join('/');
     if (dir1 === dir2) {
-      return "sibling";
+      return 'sibling';
     }
 
-    return "temporal";
+    return 'temporal';
   }
 
   // --------------------------------------------------------------------------
@@ -558,7 +547,7 @@ export class PredictivePrefetchService extends EventEmitter {
    */
   async predictFollowUps(
     query: string,
-    embedding?: number[],
+    embedding?: number[]
   ): Promise<Array<{ query: string; confidence: number }>> {
     const predictions: Array<{ query: string; confidence: number }> = [];
 
@@ -573,8 +562,7 @@ export class PredictivePrefetchService extends EventEmitter {
 
     // Check all patterns for matches
     for (const pattern of this.queryPatterns.values()) {
-      if (pattern.stats.observations < this.config.minObservationsForPattern)
-        continue;
+      if (pattern.stats.observations < this.config.minObservationsForPattern) continue;
 
       // Check if pattern matches
       const matchScore = await this.matchPattern(query, embedding, pattern);
@@ -585,19 +573,13 @@ export class PredictivePrefetchService extends EventEmitter {
         if (pred.confidence < this.config.patternConfidenceThreshold) continue;
 
         const adjustedConfidence =
-          pred.confidence * matchScore * pattern.stats.hitRate ||
-          pred.confidence * matchScore;
+          pred.confidence * matchScore * pattern.stats.hitRate || pred.confidence * matchScore;
 
         // Check if already in predictions
-        const existing = predictions.find(
-          (p) => this.querySimilarity(p.query, pred.query) > 0.8,
-        );
+        const existing = predictions.find((p) => this.querySimilarity(p.query, pred.query) > 0.8);
 
         if (existing) {
-          existing.confidence = Math.max(
-            existing.confidence,
-            adjustedConfidence,
-          );
+          existing.confidence = Math.max(existing.confidence, adjustedConfidence);
         } else {
           predictions.push({
             query: pred.query,
@@ -610,9 +592,7 @@ export class PredictivePrefetchService extends EventEmitter {
     // Add heuristic predictions
     const heuristicPreds = this.getHeuristicPredictions(query);
     for (const pred of heuristicPreds) {
-      const existing = predictions.find(
-        (p) => this.querySimilarity(p.query, pred.query) > 0.8,
-      );
+      const existing = predictions.find((p) => this.querySimilarity(p.query, pred.query) > 0.8);
 
       if (!existing) {
         predictions.push(pred);
@@ -625,19 +605,14 @@ export class PredictivePrefetchService extends EventEmitter {
   /**
    * Predict files likely to be accessed next
    */
-  predictFilesToAccess(
-    currentFile?: string,
-  ): Array<{ path: string; confidence: number }> {
+  predictFilesToAccess(currentFile?: string): Array<{ path: string; confidence: number }> {
     const predictions: Array<{ path: string; confidence: number }> = [];
 
     if (currentFile) {
       const pattern = this.filePatterns.get(currentFile);
       if (pattern) {
         for (const related of pattern.relatedFiles) {
-          const confidence = Math.min(
-            1,
-            related.coAccessCount / pattern.accessCount,
-          );
+          const confidence = Math.min(1, related.coAccessCount / pattern.accessCount);
           if (confidence >= 0.3) {
             predictions.push({
               path: related.path,
@@ -672,24 +647,22 @@ export class PredictivePrefetchService extends EventEmitter {
   private async matchPattern(
     query: string,
     embedding: number[] | undefined,
-    pattern: QueryPattern,
+    pattern: QueryPattern
   ): Promise<number> {
     switch (pattern.trigger.type) {
-      case "exact":
+      case 'exact':
         return query === pattern.trigger.value ? 1 : 0;
 
-      case "prefix":
-        return query
-          .toLowerCase()
-          .startsWith(String(pattern.trigger.value).toLowerCase())
+      case 'prefix':
+        return query.toLowerCase().startsWith(String(pattern.trigger.value).toLowerCase())
           ? 0.9
           : 0;
 
-      case "intent":
+      case 'intent':
         // Would need intent parsing
         return 0.5;
 
-      case "semantic":
+      case 'semantic':
         if (embedding && pattern.trigger.embedding) {
           return this.cosineSimilarity(embedding, pattern.trigger.embedding);
         }
@@ -704,64 +677,62 @@ export class PredictivePrefetchService extends EventEmitter {
   /**
    * Heuristic predictions based on query patterns
    */
-  private getHeuristicPredictions(
-    query: string,
-  ): Array<{ query: string; confidence: number }> {
+  private getHeuristicPredictions(query: string): Array<{ query: string; confidence: number }> {
     const predictions: Array<{ query: string; confidence: number }> = [];
     const lowerQuery = query.toLowerCase();
 
     // "How" questions often lead to "Can you" or implementation questions
-    if (lowerQuery.startsWith("how")) {
+    if (lowerQuery.startsWith('how')) {
       predictions.push({
-        query: "Can you show me an example?",
+        query: 'Can you show me an example?',
         confidence: 0.6,
       });
       predictions.push({
-        query: "What are the best practices?",
+        query: 'What are the best practices?',
         confidence: 0.5,
       });
     }
 
     // Error/debug questions lead to fix questions
     if (
-      lowerQuery.includes("error") ||
-      lowerQuery.includes("bug") ||
-      lowerQuery.includes("not working")
+      lowerQuery.includes('error') ||
+      lowerQuery.includes('bug') ||
+      lowerQuery.includes('not working')
     ) {
       predictions.push({
-        query: "How do I fix this?",
+        query: 'How do I fix this?',
         confidence: 0.7,
       });
       predictions.push({
-        query: "Why is this happening?",
+        query: 'Why is this happening?',
         confidence: 0.6,
       });
     }
 
     // Exploration leads to modification
-    if (lowerQuery.includes("what does") || lowerQuery.includes("explain")) {
+    if (lowerQuery.includes('what does') || lowerQuery.includes('explain')) {
       predictions.push({
-        query: "How do I modify this?",
+        query: 'How do I modify this?',
         confidence: 0.5,
       });
       predictions.push({
-        query: "What are the dependencies?",
+        query: 'What are the dependencies?',
         confidence: 0.5,
       });
     }
 
     // Implementation leads to testing
     if (
-      lowerQuery.includes("implement") ||
-      lowerQuery.includes("create") ||
-      lowerQuery.includes("add")
+      lowerQuery.includes('implement') ||
+      lowerQuery.includes('create') ||
+      lowerQuery.includes('add')
     ) {
       predictions.push({
-        query: "How do I test this?",
+        query: 'How do I test this?',
         confidence: 0.6,
       });
       predictions.push({
-        query: "What should I consider?",
+        query: 'What should I consider?',
         confidence: 0.5,
       });
     }
@@ -776,24 +747,16 @@ export class PredictivePrefetchService extends EventEmitter {
   /**
    * Prefetch predicted follow-up queries
    */
-  private async prefetchPredictedFollowUps(
-    query: string,
-    embedding?: number[],
-  ): Promise<void> {
+  private async prefetchPredictedFollowUps(query: string, embedding?: number[]): Promise<void> {
     const predictions = await this.predictFollowUps(query, embedding);
 
     for (const pred of predictions) {
       if (pred.confidence < this.config.patternConfidenceThreshold) continue;
 
       this.queuePrefetch({
-        type: "query",
+        type: 'query',
         value: pred.query,
-        priority:
-          pred.confidence > 0.7
-            ? "high"
-            : pred.confidence > 0.5
-              ? "medium"
-              : "low",
+        priority: pred.confidence > 0.7 ? 'high' : pred.confidence > 0.5 ? 'medium' : 'low',
         context: { sessionId: this.sessionId },
       });
     }
@@ -804,21 +767,15 @@ export class PredictivePrefetchService extends EventEmitter {
    */
   queuePrefetch(request: PrefetchRequest): void {
     // Check if already in queue
-    if (
-      this.prefetchQueue.find(
-        (r) => r.type === request.type && r.value === request.value,
-      )
-    ) {
+    if (this.prefetchQueue.find((r) => r.type === request.type && r.value === request.value)) {
       return;
     }
 
     // Check queue size limit
     if (this.prefetchQueue.length >= this.config.maxPrefetchQueueSize) {
       // Remove lowest priority item
-      const lowestIdx = this.prefetchQueue.findIndex(
-        (r) => r.priority === "low",
-      );
-      if (lowestIdx >= 0 && request.priority !== "low") {
+      const lowestIdx = this.prefetchQueue.findIndex((r) => r.priority === 'low');
+      if (lowestIdx >= 0 && request.priority !== 'low') {
         this.prefetchQueue.splice(lowestIdx, 1);
       } else {
         return; // Queue full
@@ -826,12 +783,10 @@ export class PredictivePrefetchService extends EventEmitter {
     }
 
     // Insert based on priority
-    if (request.priority === "high") {
+    if (request.priority === 'high') {
       this.prefetchQueue.unshift(request);
-    } else if (request.priority === "medium") {
-      const highCount = this.prefetchQueue.filter(
-        (r) => r.priority === "high",
-      ).length;
+    } else if (request.priority === 'medium') {
+      const highCount = this.prefetchQueue.filter((r) => r.priority === 'high').length;
       this.prefetchQueue.splice(highCount, 0, request);
     } else {
       this.prefetchQueue.push(request);
@@ -875,7 +830,7 @@ export class PredictivePrefetchService extends EventEmitter {
 
       this.executePrefetch(request)
         .catch((err) => {
-          this.emit("prefetch_error", { request, error: err });
+          this.emit('prefetch_error', { request, error: err });
         })
         .finally(() => {
           this.activePrefetches--;
@@ -886,9 +841,7 @@ export class PredictivePrefetchService extends EventEmitter {
   /**
    * Execute a single prefetch
    */
-  private async executePrefetch(
-    request: PrefetchRequest,
-  ): Promise<PrefetchResult> {
+  private async executePrefetch(request: PrefetchRequest): Promise<PrefetchResult> {
     const startTime = performance.now();
     const requestId = `pf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -907,15 +860,15 @@ export class PredictivePrefetchService extends EventEmitter {
 
     try {
       switch (request.type) {
-        case "query":
+        case 'query':
           await this.prefetchQuery(request, result);
           break;
 
-        case "file":
+        case 'file':
           await this.prefetchFile(request, result);
           break;
 
-        case "topic":
+        case 'topic':
           await this.prefetchTopic(request, result);
           break;
       }
@@ -923,7 +876,7 @@ export class PredictivePrefetchService extends EventEmitter {
       this.metrics.prefetchesSuccessful++;
     } catch (error) {
       this.metrics.prefetchesFailed++;
-      this.emit("prefetch_failed", { request, error });
+      this.emit('prefetch_failed', { request, error });
     }
 
     result.totalLatencyMs = performance.now() - startTime;
@@ -931,25 +884,20 @@ export class PredictivePrefetchService extends EventEmitter {
     // Update average latency
     const total = this.metrics.prefetchesAttempted;
     this.metrics.avgPrefetchLatencyMs =
-      (this.metrics.avgPrefetchLatencyMs * (total - 1) +
-        result.totalLatencyMs) /
-      total;
+      (this.metrics.avgPrefetchLatencyMs * (total - 1) + result.totalLatencyMs) / total;
 
     // Update hit rate
     this.metrics.prefetchHitRate =
       this.metrics.prefetchesSuccessful / this.metrics.prefetchesAttempted;
 
-    this.emit("prefetch_complete", result);
+    this.emit('prefetch_complete', result);
     return result;
   }
 
   /**
    * Prefetch context for a query
    */
-  private async prefetchQuery(
-    request: PrefetchRequest,
-    result: PrefetchResult,
-  ): Promise<void> {
+  private async prefetchQuery(request: PrefetchRequest, result: PrefetchResult): Promise<void> {
     const cacheKey = `query:${request.value}`;
 
     // Check cache first
@@ -966,19 +914,16 @@ export class PredictivePrefetchService extends EventEmitter {
       const compiled = await Promise.race([
         this.compileFn(request.value, request.context),
         new Promise((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Prefetch timeout")),
-            this.config.prefetchTimeoutMs,
-          ),
+          setTimeout(() => reject(new Error('Prefetch timeout')), this.config.prefetchTimeoutMs)
         ),
       ]);
 
       const size = JSON.stringify(compiled).length;
 
-      this.addToCache(cacheKey, compiled, "compiled_context", size);
+      this.addToCache(cacheKey, compiled, 'compiled_context', size);
 
       result.prefetched.push({
-        type: "compiled_context",
+        type: 'compiled_context',
         key: cacheKey,
         size,
         latencyMs: performance.now() - startTime,
@@ -990,10 +935,7 @@ export class PredictivePrefetchService extends EventEmitter {
   /**
    * Prefetch/index a file
    */
-  private async prefetchFile(
-    request: PrefetchRequest,
-    result: PrefetchResult,
-  ): Promise<void> {
+  private async prefetchFile(request: PrefetchRequest, result: PrefetchResult): Promise<void> {
     const cacheKey = `file:${request.value}`;
 
     if (this.prefetchCache.has(cacheKey)) {
@@ -1009,17 +951,14 @@ export class PredictivePrefetchService extends EventEmitter {
       await Promise.race([
         this.indexFileFn(request.value),
         new Promise((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Index timeout")),
-            this.config.prefetchTimeoutMs,
-          ),
+          setTimeout(() => reject(new Error('Index timeout')), this.config.prefetchTimeoutMs)
         ),
       ]);
 
-      this.addToCache(cacheKey, true, "indexed_file", 1);
+      this.addToCache(cacheKey, true, 'indexed_file', 1);
 
       result.prefetched.push({
-        type: "indexed_file",
+        type: 'indexed_file',
         key: cacheKey,
         size: 1,
         latencyMs: performance.now() - startTime,
@@ -1030,19 +969,16 @@ export class PredictivePrefetchService extends EventEmitter {
   /**
    * Prefetch all items in a topic cluster
    */
-  private async prefetchTopic(
-    request: PrefetchRequest,
-    result: PrefetchResult,
-  ): Promise<void> {
+  private async prefetchTopic(request: PrefetchRequest, result: PrefetchResult): Promise<void> {
     const cluster = this.topicClusters.get(request.value);
     if (!cluster) return;
 
     // Prefetch relevant files
     for (const file of cluster.relevantFiles.slice(0, 5)) {
       this.queuePrefetch({
-        type: "file",
+        type: 'file',
         value: file,
-        priority: "medium",
+        priority: 'medium',
         context: request.context,
       });
       result.pending.push(`file:${file}`);
@@ -1064,17 +1000,14 @@ export class PredictivePrefetchService extends EventEmitter {
   private async processBackgroundIndex(): Promise<void> {
     if (!this.indexFileFn || this.backgroundIndexQueue.length === 0) return;
 
-    const batch = this.backgroundIndexQueue.splice(
-      0,
-      this.config.backgroundIndexBatchSize,
-    );
+    const batch = this.backgroundIndexQueue.splice(0, this.config.backgroundIndexBatchSize);
 
     for (const filePath of batch) {
       try {
         await this.indexFileFn(filePath);
-        this.emit("background_indexed", { filePath });
+        this.emit('background_indexed', { filePath });
       } catch (error) {
-        this.emit("background_index_error", { filePath, error });
+        this.emit('background_index_error', { filePath, error });
       }
     }
 
@@ -1088,12 +1021,7 @@ export class PredictivePrefetchService extends EventEmitter {
   /**
    * Add item to prefetch cache
    */
-  private addToCache(
-    key: string,
-    data: unknown,
-    type: string,
-    size: number,
-  ): void {
+  private addToCache(key: string, data: unknown, type: string, size: number): void {
     // Check memory limit
     this.enforceMemoryLimit(size);
 
@@ -1155,19 +1083,13 @@ export class PredictivePrefetchService extends EventEmitter {
    * Enforce memory limit by evicting entries
    */
   private enforceMemoryLimit(newSize: number): void {
-    let currentSize = Array.from(this.prefetchCache.values()).reduce(
-      (sum, e) => sum + e.size,
-      0,
-    );
+    let currentSize = Array.from(this.prefetchCache.values()).reduce((sum, e) => sum + e.size, 0);
 
     const maxBytes = this.config.maxMemoryMb * 1024 * 1024;
 
     while (currentSize + newSize > maxBytes && this.prefetchCache.size > 0) {
       this.evictLeastUsed();
-      currentSize = Array.from(this.prefetchCache.values()).reduce(
-        (sum, e) => sum + e.size,
-        0,
-      );
+      currentSize = Array.from(this.prefetchCache.values()).reduce((sum, e) => sum + e.size, 0);
     }
 
     this.metrics.memoryUsageMb = currentSize / (1024 * 1024);
@@ -1211,10 +1133,7 @@ export class PredictivePrefetchService extends EventEmitter {
   recordPredictionHit(triggerQuery: string, predictedQuery: string): void {
     // Find the pattern
     for (const pattern of this.queryPatterns.values()) {
-      const matchScore = this.querySimilarity(
-        String(pattern.trigger.value),
-        triggerQuery,
-      );
+      const matchScore = this.querySimilarity(String(pattern.trigger.value), triggerQuery);
       if (matchScore > 0.7) {
         // Update hit stats
         pattern.stats.hits++;
@@ -1222,7 +1141,7 @@ export class PredictivePrefetchService extends EventEmitter {
 
         // Boost prediction confidence
         const pred = pattern.predictions.find(
-          (p) => this.querySimilarity(p.query, predictedQuery) > 0.8,
+          (p) => this.querySimilarity(p.query, predictedQuery) > 0.8
         );
         if (pred) {
           pred.confidence = Math.min(1, pred.confidence + 0.05);
@@ -1235,10 +1154,7 @@ export class PredictivePrefetchService extends EventEmitter {
     // Update overall pattern hit rate
     const allPatterns = Array.from(this.queryPatterns.values());
     const totalHits = allPatterns.reduce((sum, p) => sum + p.stats.hits, 0);
-    const totalObs = allPatterns.reduce(
-      (sum, p) => sum + p.stats.observations,
-      0,
-    );
+    const totalObs = allPatterns.reduce((sum, p) => sum + p.stats.observations, 0);
     this.metrics.patternHitRate = totalObs > 0 ? totalHits / totalObs : 0;
   }
 
@@ -1248,10 +1164,7 @@ export class PredictivePrefetchService extends EventEmitter {
   recordPredictionMiss(triggerQuery: string): void {
     // Slightly decay confidence on patterns that matched the trigger
     for (const pattern of this.queryPatterns.values()) {
-      const matchScore = this.querySimilarity(
-        String(pattern.trigger.value),
-        triggerQuery,
-      );
+      const matchScore = this.querySimilarity(String(pattern.trigger.value), triggerQuery);
       if (matchScore > 0.7) {
         for (const pred of pattern.predictions) {
           pred.confidence *= 0.98;
@@ -1438,7 +1351,7 @@ const prefetchInstances = new Map<string, PredictivePrefetchService>();
  */
 export function getPredictivePrefetch(
   sessionId: string,
-  config?: Partial<PrefetchConfig>,
+  config?: Partial<PrefetchConfig>
 ): PredictivePrefetchService {
   let instance = prefetchInstances.get(sessionId);
   if (!instance) {
@@ -1453,7 +1366,7 @@ export function getPredictivePrefetch(
  */
 export function createPredictivePrefetch(
   sessionId: string,
-  config?: Partial<PrefetchConfig>,
+  config?: Partial<PrefetchConfig>
 ): PredictivePrefetchService {
   const existing = prefetchInstances.get(sessionId);
   if (existing) {

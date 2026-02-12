@@ -4,26 +4,22 @@
  * GET /api/share/:id - Retrieve shared content
  */
 
-import { Router, type Request, type Response } from "express";
-import { getRequestLogger } from "../middleware/logger.js";
-import {
-  sendServerError,
-  sendErrorResponse,
-  ErrorCode,
-} from "../utils/errorResponse.js";
-import { randomBytes } from "crypto";
+import { Router, type Request, type Response } from 'express';
+import { getRequestLogger } from '../middleware/logger.js';
+import { sendServerError, sendErrorResponse, ErrorCode } from '../utils/errorResponse.js';
+import { randomBytes } from 'crypto';
 
 const router = Router();
 
 interface BundleItem {
-  type: "diagram" | "architecture" | "prd" | "plan" | "code";
+  type: 'diagram' | 'architecture' | 'prd' | 'plan' | 'code';
   content: string;
   title?: string;
   mermaidCode?: string;
 }
 
 interface SharePayload {
-  type: "diagram" | "architecture" | "prd" | "code" | "bundle";
+  type: 'diagram' | 'architecture' | 'prd' | 'code' | 'bundle';
   content: string;
   title?: string;
   description?: string;
@@ -35,7 +31,7 @@ interface SharePayload {
 
 interface SharedItem {
   id: string;
-  type: SharePayload["type"];
+  type: SharePayload['type'];
   content: string;
   title?: string;
   description?: string;
@@ -52,7 +48,7 @@ const sharedItems = new Map<string, SharedItem>();
  * Generate a unique share ID
  */
 function generateShareId(): string {
-  return randomBytes(8).toString("base64url");
+  return randomBytes(8).toString('base64url');
 }
 
 /**
@@ -75,41 +71,27 @@ setInterval(cleanupExpiredItems, 10 * 60 * 1000);
  * Create a shareable link for content
  */
 router.post(
-  "/",
-  async (
-    req: Request<Record<string, never>, object, SharePayload>,
-    res: Response,
-  ) => {
+  '/',
+  async (req: Request<Record<string, never>, object, SharePayload>, res: Response) => {
     const log = getRequestLogger();
-    const {
-      type,
-      content,
-      title,
-      description,
-      mermaidCode,
-      expiresIn = 168,
-    } = req.body;
+    const { type, content, title, description, mermaidCode, expiresIn = 168 } = req.body;
 
     if (!type || !content) {
-      sendErrorResponse(
-        res,
-        ErrorCode.VALIDATION_ERROR,
-        "type and content are required",
-      );
+      sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, 'type and content are required');
       return;
     }
 
-    if (!["diagram", "architecture", "prd", "code", "bundle"].includes(type)) {
+    if (!['diagram', 'architecture', 'prd', 'code', 'bundle'].includes(type)) {
       sendErrorResponse(
         res,
         ErrorCode.VALIDATION_ERROR,
-        "type must be one of: diagram, architecture, prd, code, bundle",
+        'type must be one of: diagram, architecture, prd, code, bundle'
       );
       return;
     }
 
     let payloadContent = content;
-    if (type === "bundle" && req.body.items && Array.isArray(req.body.items)) {
+    if (type === 'bundle' && req.body.items && Array.isArray(req.body.items)) {
       payloadContent = JSON.stringify({ items: req.body.items, title });
     }
 
@@ -118,7 +100,7 @@ router.post(
       sendErrorResponse(
         res,
         ErrorCode.VALIDATION_ERROR,
-        "expiresIn must be between 1 and 720 hours",
+        'expiresIn must be between 1 and 720 hours'
       );
       return;
     }
@@ -143,7 +125,7 @@ router.post(
       // Store in memory
       sharedItems.set(shareId, sharedItem);
 
-      log.info({ shareId, type, expiresIn }, "Shareable link created");
+      log.info({ shareId, type, expiresIn }, 'Shareable link created');
 
       res.status(201).json({
         success: true,
@@ -152,25 +134,22 @@ router.post(
         expiresAt: sharedItem.expiresAt,
       });
     } catch (e) {
-      log.error(
-        { error: (e as Error).message },
-        "Failed to create shareable link",
-      );
+      log.error({ error: (e as Error).message }, 'Failed to create shareable link');
       sendServerError(res, e as Error);
     }
-  },
+  }
 );
 
 /**
  * GET /api/share/:id
  * Retrieve shared content
  */
-router.get("/:id", async (req: Request<{ id: string }>, res: Response) => {
+router.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
   const log = getRequestLogger();
   const { id } = req.params;
 
   if (!id || id.length < 4) {
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, "Invalid share ID");
+    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, 'Invalid share ID');
     return;
   }
 
@@ -178,18 +157,14 @@ router.get("/:id", async (req: Request<{ id: string }>, res: Response) => {
     const sharedItem = sharedItems.get(id);
 
     if (!sharedItem) {
-      sendErrorResponse(
-        res,
-        ErrorCode.NOT_FOUND,
-        "Shared content not found or has expired",
-      );
+      sendErrorResponse(res, ErrorCode.NOT_FOUND, 'Shared content not found or has expired');
       return;
     }
 
     // Check expiration
     if (new Date(sharedItem.expiresAt) < new Date()) {
       sharedItems.delete(id);
-      sendErrorResponse(res, ErrorCode.GONE, "This shared link has expired");
+      sendErrorResponse(res, ErrorCode.GONE, 'This shared link has expired');
       return;
     }
 
@@ -198,7 +173,7 @@ router.get("/:id", async (req: Request<{ id: string }>, res: Response) => {
 
     log.info(
       { shareId: id, type: sharedItem.type, views: sharedItem.views },
-      "Shared item accessed",
+      'Shared item accessed'
     );
 
     res.json({
@@ -215,10 +190,7 @@ router.get("/:id", async (req: Request<{ id: string }>, res: Response) => {
       },
     });
   } catch (e) {
-    log.error(
-      { error: (e as Error).message },
-      "Failed to retrieve shared content",
-    );
+    log.error({ error: (e as Error).message }, 'Failed to retrieve shared content');
     sendServerError(res, e as Error);
   }
 });
@@ -227,12 +199,12 @@ router.get("/:id", async (req: Request<{ id: string }>, res: Response) => {
  * DELETE /api/share/:id
  * Delete a shared item
  */
-router.delete("/:id", async (req: Request<{ id: string }>, res: Response) => {
+router.delete('/:id', async (req: Request<{ id: string }>, res: Response) => {
   const log = getRequestLogger();
   const { id } = req.params;
 
   if (!id) {
-    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, "Share ID is required");
+    sendErrorResponse(res, ErrorCode.VALIDATION_ERROR, 'Share ID is required');
     return;
   }
 
@@ -241,13 +213,13 @@ router.delete("/:id", async (req: Request<{ id: string }>, res: Response) => {
     sharedItems.delete(id);
 
     if (existed) {
-      log.info({ shareId: id }, "Shared item deleted");
-      res.json({ success: true, message: "Shared item deleted" });
+      log.info({ shareId: id }, 'Shared item deleted');
+      res.json({ success: true, message: 'Shared item deleted' });
     } else {
-      sendErrorResponse(res, ErrorCode.NOT_FOUND, "Shared item not found");
+      sendErrorResponse(res, ErrorCode.NOT_FOUND, 'Shared item not found');
     }
   } catch (e) {
-    log.error({ error: (e as Error).message }, "Failed to delete shared item");
+    log.error({ error: (e as Error).message }, 'Failed to delete shared item');
     sendServerError(res, e as Error);
   }
 });
@@ -256,7 +228,7 @@ router.delete("/:id", async (req: Request<{ id: string }>, res: Response) => {
  * GET /api/share
  * List all shared items (for admin/debugging)
  */
-router.get("/", async (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   const log = getRequestLogger();
 
   try {
@@ -272,7 +244,7 @@ router.get("/", async (_req: Request, res: Response) => {
       views: item.views,
     }));
 
-    log.debug({ count: items.length }, "Listed shared items");
+    log.debug({ count: items.length }, 'Listed shared items');
 
     res.json({
       success: true,
@@ -280,7 +252,7 @@ router.get("/", async (_req: Request, res: Response) => {
       items,
     });
   } catch (e) {
-    log.error({ error: (e as Error).message }, "Failed to list shared items");
+    log.error({ error: (e as Error).message }, 'Failed to list shared items');
     sendServerError(res, e as Error);
   }
 });

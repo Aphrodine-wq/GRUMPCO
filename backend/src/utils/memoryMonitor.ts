@@ -3,7 +3,7 @@
  * Helps identify memory leaks and optimize garbage collection
  */
 
-import logger from "../middleware/logger.js";
+import logger from '../middleware/logger.js';
 
 interface MemorySnapshot {
   timestamp: number;
@@ -25,10 +25,7 @@ export class MemoryMonitor {
   private snapshots: MemorySnapshot[] = [];
   private config: LeakDetectionConfig;
   private checkTimer?: NodeJS.Timeout;
-  private alertCallbacks: ((info: {
-    growth: number;
-    snapshots: MemorySnapshot[];
-  }) => void)[] = [];
+  private alertCallbacks: ((info: { growth: number; snapshots: MemorySnapshot[] }) => void)[] = [];
 
   constructor(config: Partial<LeakDetectionConfig> = {}) {
     this.config = {
@@ -46,7 +43,7 @@ export class MemoryMonitor {
       this.analyze();
     }, this.config.checkIntervalMs);
 
-    logger.info("Memory monitor started");
+    logger.info('Memory monitor started');
   }
 
   stop(): void {
@@ -93,7 +90,7 @@ export class MemoryMonitor {
           snapshots: recent.length,
           duration: `${((last.timestamp - first.timestamp) / 1000).toFixed(0)}s`,
         },
-        "Potential memory leak detected",
+        'Potential memory leak detected'
       );
 
       // Trigger alerts
@@ -101,29 +98,26 @@ export class MemoryMonitor {
     }
   }
 
-  onLeakDetected(
-    callback: (info: { growth: number; snapshots: MemorySnapshot[] }) => void,
-  ): void {
+  onLeakDetected(callback: (info: { growth: number; snapshots: MemorySnapshot[] }) => void): void {
     this.alertCallbacks.push(callback);
   }
 
   getStats(): {
     current: MemorySnapshot;
-    trend: "growing" | "stable" | "shrinking";
+    trend: 'growing' | 'stable' | 'shrinking';
     growthRate: number;
   } {
-    const current =
-      this.snapshots[this.snapshots.length - 1] ?? this.takeSnapshot();
+    const current = this.snapshots[this.snapshots.length - 1] ?? this.takeSnapshot();
 
-    let trend: "growing" | "stable" | "shrinking" = "stable";
+    let trend: 'growing' | 'stable' | 'shrinking' = 'stable';
     let growthRate = 0;
 
     if (this.snapshots.length >= 2) {
       const prev = this.snapshots[this.snapshots.length - 2];
       growthRate = ((current.heapUsed - prev.heapUsed) / prev.heapUsed) * 100;
 
-      if (growthRate > 5) trend = "growing";
-      else if (growthRate < -5) trend = "shrinking";
+      if (growthRate > 5) trend = 'growing';
+      else if (growthRate < -5) trend = 'shrinking';
     }
 
     return { current, trend, growthRate };
@@ -131,11 +125,11 @@ export class MemoryMonitor {
 
   forceGC(): void {
     if (globalThis.gc) {
-      logger.info("Forcing garbage collection");
+      logger.info('Forcing garbage collection');
       globalThis.gc();
       this.takeSnapshot();
     } else {
-      logger.warn("Garbage collection not exposed. Run with --expose-gc flag");
+      logger.warn('Garbage collection not exposed. Run with --expose-gc flag');
     }
   }
 }
@@ -168,7 +162,7 @@ export class StreamCleaner {
       try {
         stream.destroy();
       } catch (error) {
-        logger.error({ error }, "Error destroying stream");
+        logger.error({ error }, 'Error destroying stream');
       }
     }
     this.activeStreams.clear();
@@ -185,10 +179,7 @@ export const streamCleaner = new StreamCleaner();
  * Resource tracking for cleanup
  */
 export class ResourceTracker {
-  private resources = new Map<
-    string,
-    { cleanup: () => void; createdAt: number }
-  >();
+  private resources = new Map<string, { cleanup: () => void; createdAt: number }>();
 
   track(id: string, cleanup: () => void): void {
     // Clean up existing resource with same id
@@ -206,7 +197,7 @@ export class ResourceTracker {
       try {
         resource.cleanup();
       } catch (error) {
-        logger.error({ error, id }, "Error cleaning up resource");
+        logger.error({ error, id }, 'Error cleaning up resource');
       }
       this.resources.delete(id);
       return true;
@@ -219,7 +210,7 @@ export class ResourceTracker {
       try {
         resource.cleanup();
       } catch (error) {
-        logger.error({ error, id }, "Error cleaning up resource");
+        logger.error({ error, id }, 'Error cleaning up resource');
       }
     }
     this.resources.clear();

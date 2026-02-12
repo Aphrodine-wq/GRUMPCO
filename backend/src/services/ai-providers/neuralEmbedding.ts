@@ -21,8 +21,8 @@
  * @module services/neuralEmbedding
  */
 
-import { getNimEmbedUrl } from "../../config/nim.js";
-import { logger } from "../../utils/logger.js";
+import { getNimEmbedUrl } from '../../config/nim.js';
+import { logger } from '../../utils/logger.js';
 
 // ============================================================================
 // TYPES
@@ -60,23 +60,23 @@ export interface EmbeddingConfig {
 }
 
 export type NvidiaEmbeddingModel =
-  | "nvidia/nv-embedqa-e5-v5" // 1024 dims, fast, good for Q&A
-  | "nvidia/nv-embedqa-mistral-7b-v2" // 4096 dims, highest quality
-  | "nvidia/nv-embed-v2" // 4096 dims, general purpose
-  | "snowflake/arctic-embed-l-v2.0" // 1024 dims, efficient
-  | "baai/bge-m3"; // 1024 dims, multilingual
+  | 'nvidia/nv-embedqa-e5-v5' // 1024 dims, fast, good for Q&A
+  | 'nvidia/nv-embedqa-mistral-7b-v2' // 4096 dims, highest quality
+  | 'nvidia/nv-embed-v2' // 4096 dims, general purpose
+  | 'snowflake/arctic-embed-l-v2.0' // 1024 dims, efficient
+  | 'baai/bge-m3'; // 1024 dims, multilingual
 
 // Model dimension mapping
 const MODEL_DIMENSIONS: Record<NvidiaEmbeddingModel, number> = {
-  "nvidia/nv-embedqa-e5-v5": 1024,
-  "nvidia/nv-embedqa-mistral-7b-v2": 4096,
-  "nvidia/nv-embed-v2": 4096,
-  "snowflake/arctic-embed-l-v2.0": 1024,
-  "baai/bge-m3": 1024,
+  'nvidia/nv-embedqa-e5-v5': 1024,
+  'nvidia/nv-embedqa-mistral-7b-v2': 4096,
+  'nvidia/nv-embed-v2': 4096,
+  'snowflake/arctic-embed-l-v2.0': 1024,
+  'baai/bge-m3': 1024,
 };
 
 const DEFAULT_CONFIG: EmbeddingConfig = {
-  model: "nvidia/nv-embedqa-e5-v5", // Good balance of quality and speed
+  model: 'nvidia/nv-embedqa-e5-v5', // Good balance of quality and speed
   dimension: 512, // Reduced for memory efficiency
   batchSize: 50, // NVIDIA supports up to 96
   cacheSize: 10000, // Cache 10K embeddings
@@ -213,14 +213,14 @@ export class NeuralEmbeddingService {
       this.cache.set(cacheKey, embedding);
       return {
         embedding,
-        model: "hash-fallback",
+        model: 'hash-fallback',
         tokensUsed: 0,
         cached: false,
         latencyMs: performance.now() - startTime,
       };
     }
 
-    throw new Error("Embedding API unavailable and fallback disabled");
+    throw new Error('Embedding API unavailable and fallback disabled');
   }
 
   /**
@@ -254,10 +254,7 @@ export class NeuralEmbeddingService {
         // Process in batches
         for (let i = 0; i < uncachedTexts.length; i += this.config.batchSize) {
           const batchTexts = uncachedTexts.slice(i, i + this.config.batchSize);
-          const batchIndices = uncachedIndices.slice(
-            i,
-            i + this.config.batchSize,
-          );
+          const batchIndices = uncachedIndices.slice(i, i + this.config.batchSize);
 
           const batchResult = await this.callEmbeddingApi(batchTexts);
 
@@ -295,7 +292,7 @@ export class NeuralEmbeddingService {
 
     return {
       embeddings: results,
-      model: this.apiAvailable ? this.config.model : "hash-fallback",
+      model: this.apiAvailable ? this.config.model : 'hash-fallback',
       totalTokens: this.metrics.totalTokens,
       cachedCount,
       latencyMs: performance.now() - startTime,
@@ -308,9 +305,7 @@ export class NeuralEmbeddingService {
    */
   cosineSimilarity(a: ArrayLike<number>, b: ArrayLike<number>): number {
     if (a.length !== b.length) {
-      throw new Error(
-        `Embedding dimension mismatch: ${a.length} vs ${b.length}`,
-      );
+      throw new Error(`Embedding dimension mismatch: ${a.length} vs ${b.length}`);
     }
 
     let dot = 0;
@@ -334,7 +329,7 @@ export class NeuralEmbeddingService {
   findSimilar(
     query: ArrayLike<number>,
     candidates: Map<string, ArrayLike<number>>,
-    topK: number = 10,
+    topK: number = 10
   ): Array<{ id: string; similarity: number }> {
     const results: Array<{ id: string; similarity: number }> = [];
 
@@ -382,11 +377,11 @@ export class NeuralEmbeddingService {
    * Call NVIDIA embedding API
    */
   private async callEmbeddingApi(
-    texts: string[],
+    texts: string[]
   ): Promise<{ embeddings: number[][]; totalTokens: number }> {
     const apiKey = process.env.NVIDIA_NIM_API_KEY;
     if (!apiKey) {
-      throw new Error("NVIDIA_NIM_API_KEY not configured");
+      throw new Error('NVIDIA_NIM_API_KEY not configured');
     }
 
     const startTime = performance.now();
@@ -396,26 +391,26 @@ export class NeuralEmbeddingService {
     const truncatedTexts = texts.map((t) => this.truncateText(t));
 
     const response = await fetch(getNimEmbedUrl(), {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         input: truncatedTexts,
         model: this.config.model,
-        encoding_format: "float",
+        encoding_format: 'float',
         // Request truncated dimensions if supported
         ...(this.config.dimension < MODEL_DIMENSIONS[this.config.model] && {
-          truncate: "END",
+          truncate: 'END',
         }),
       }),
     });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => "Unknown error");
+      const errorText = await response.text().catch(() => 'Unknown error');
       throw new Error(
-        `NVIDIA Embedding API error: ${response.status} - ${errorText.slice(0, 200)}`,
+        `NVIDIA Embedding API error: ${response.status} - ${errorText.slice(0, 200)}`
       );
     }
 
@@ -439,7 +434,7 @@ export class NeuralEmbeddingService {
         tokens: data.usage?.total_tokens,
         latencyMs: latency,
       },
-      "[NeuralEmbedding] API call complete",
+      '[NeuralEmbedding] API call complete'
     );
 
     this.apiAvailable = true;
@@ -530,7 +525,7 @@ export class NeuralEmbeddingService {
       {
         error: error instanceof Error ? error.message : String(error),
       },
-      "[NeuralEmbedding] API error, falling back to hash embeddings",
+      '[NeuralEmbedding] API error, falling back to hash embeddings'
     );
   }
 
@@ -593,7 +588,7 @@ export class NeuralEmbeddingService {
    */
   private extractNgrams(text: string, n: number): string[] {
     const ngrams: string[] = [];
-    const cleaned = text.toLowerCase().replace(/\s+/g, " ");
+    const cleaned = text.toLowerCase().replace(/\s+/g, ' ');
     for (let i = 0; i <= cleaned.length - n; i++) {
       ngrams.push(cleaned.slice(i, i + n));
     }
@@ -622,9 +617,7 @@ let defaultInstance: NeuralEmbeddingService | null = null;
 /**
  * Get the default Neural Embedding Service instance
  */
-export function getNeuralEmbedding(
-  config?: Partial<EmbeddingConfig>,
-): NeuralEmbeddingService {
+export function getNeuralEmbedding(config?: Partial<EmbeddingConfig>): NeuralEmbeddingService {
   if (!defaultInstance || config) {
     defaultInstance = new NeuralEmbeddingService(config);
   }
@@ -635,7 +628,7 @@ export function getNeuralEmbedding(
  * Create a new Neural Embedding Service instance with custom config
  */
 export function createNeuralEmbedding(
-  config: Partial<EmbeddingConfig> = {},
+  config: Partial<EmbeddingConfig> = {}
 ): NeuralEmbeddingService {
   return new NeuralEmbeddingService(config);
 }

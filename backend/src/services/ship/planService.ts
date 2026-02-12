@@ -3,8 +3,8 @@
  * Generates structured plans with multi-phase support and approval workflow
  */
 
-import { getCompletion } from "../ai-providers/llmGatewayHelper.js";
-import { getIntentGuidedRagContext } from "../rag/ragService.js";
+import { getCompletion } from '../ai-providers/llmGatewayHelper.js';
+import { getIntentGuidedRagContext } from '../rag/ragService.js';
 import type {
   Plan,
   PlanStep,
@@ -12,22 +12,17 @@ import type {
   PlanGenerationRequest,
   PlanEditRequest,
   PlanPhase,
-} from "../../types/plan.js";
-import logger from "../../middleware/logger.js";
-import { getDatabase } from "../../db/database.js";
+} from '../../types/plan.js';
+import logger from '../../middleware/logger.js';
+import { getDatabase } from '../../db/database.js';
 
 /**
  * Generate a structured plan from user request
  */
-export async function generatePlan(
-  request: PlanGenerationRequest,
-): Promise<Plan> {
+export async function generatePlan(request: PlanGenerationRequest): Promise<Plan> {
   const planId = `plan_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
-  logger.info(
-    { planId, workspaceRoot: request.workspaceRoot },
-    "Generating plan",
-  );
+  logger.info({ planId, workspaceRoot: request.workspaceRoot }, 'Generating plan');
 
   const basePlanPrompt = `You are a planning assistant that creates detailed, structured implementation plans.
 
@@ -96,25 +91,25 @@ Be specific about file paths and changes. Include all necessary steps.`;
 
 ${request.userRequest}
 
-${request.workspaceRoot ? `Workspace root: ${request.workspaceRoot}` : ""}
-${request.agentProfile ? `Agent profile: ${request.agentProfile}` : ""}
+${request.workspaceRoot ? `Workspace root: ${request.workspaceRoot}` : ''}
+${request.agentProfile ? `Agent profile: ${request.agentProfile}` : ''}
 
 Generate a comprehensive plan with all necessary steps, file changes, and phases.`;
 
   try {
     const response = await getCompletion(
       {
-        model: "moonshotai/kimi-k2.5",
+        model: 'moonshotai/kimi-k2.5',
         max_tokens: 4096,
         system: systemPrompt,
         messages: [
           {
-            role: "user",
+            role: 'user',
             content: userPrompt,
           },
         ],
       },
-      "nim",
+      'nim'
     );
 
     if (response.error) {
@@ -124,10 +119,10 @@ Generate a comprehensive plan with all necessary steps, file changes, and phases
     let jsonText = response.text.trim();
 
     // Extract JSON from markdown code blocks if present
-    if (jsonText.includes("```json")) {
+    if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
-    } else if (jsonText.includes("```")) {
+    } else if (jsonText.includes('```')) {
       const match = jsonText.match(/```\n?([\s\S]*?)\n?```/);
       if (match) jsonText = match[1];
     }
@@ -137,31 +132,29 @@ Generate a comprehensive plan with all necessary steps, file changes, and phases
     // Validate and structure the plan
     const plan: Plan = {
       id: planId,
-      title: planData.title || "Implementation Plan",
-      description: planData.description || "",
-      steps: (planData.steps || []).map(
-        (step: Record<string, unknown>, index: number) => ({
-          id: step.id || `step_${index + 1}`,
-          title: step.title || `Step ${index + 1}`,
-          description: step.description || "",
-          fileChanges: step.fileChanges || [],
-          dependencies: step.dependencies || [],
-          estimatedTime: step.estimatedTime || 15,
-          risk: step.risk || "medium",
-          phase: step.phase || "implementation",
-          order: step.order || index + 1,
-        }),
-      ),
+      title: planData.title || 'Implementation Plan',
+      description: planData.description || '',
+      steps: (planData.steps || []).map((step: Record<string, unknown>, index: number) => ({
+        id: step.id || `step_${index + 1}`,
+        title: step.title || `Step ${index + 1}`,
+        description: step.description || '',
+        fileChanges: step.fileChanges || [],
+        dependencies: step.dependencies || [],
+        estimatedTime: step.estimatedTime || 15,
+        risk: step.risk || 'medium',
+        phase: step.phase || 'implementation',
+        order: step.order || index + 1,
+      })),
       phases: (planData.phases || []).map((phase: Record<string, unknown>) => ({
-        id: phase.id || "implementation",
-        name: phase.name || "Implementation",
-        description: phase.description || "",
+        id: phase.id || 'implementation',
+        name: phase.name || 'Implementation',
+        description: phase.description || '',
         steps: phase.steps || [],
         checkpoint: phase.checkpoint !== undefined ? phase.checkpoint : false,
-        status: "pending" as const,
+        status: 'pending' as const,
       })),
       totalEstimatedTime: planData.totalEstimatedTime || 0,
-      status: "draft",
+      status: 'draft',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       workspaceRoot: request.workspaceRoot,
@@ -173,10 +166,7 @@ Generate a comprehensive plan with all necessary steps, file changes, and phases
 
     // Calculate total time if not provided
     if (plan.totalEstimatedTime === 0) {
-      plan.totalEstimatedTime = plan.steps.reduce(
-        (sum, step) => sum + step.estimatedTime,
-        0,
-      );
+      plan.totalEstimatedTime = plan.steps.reduce((sum, step) => sum + step.estimatedTime, 0);
     }
 
     // Ensure phases are properly structured
@@ -186,14 +176,11 @@ Generate a comprehensive plan with all necessary steps, file changes, and phases
 
     const db = getDatabase();
     await db.savePlan(plan);
-    logger.info(
-      { planId, stepCount: plan.steps.length },
-      "Plan generated successfully",
-    );
+    logger.info({ planId, stepCount: plan.steps.length }, 'Plan generated successfully');
 
     return plan;
   } catch (error) {
-    logger.error({ error, planId }, "Plan generation failed");
+    logger.error({ error, planId }, 'Plan generation failed');
     throw error;
   }
 }
@@ -204,36 +191,36 @@ Generate a comprehensive plan with all necessary steps, file changes, and phases
 function createDefaultPhases(steps: PlanStep[]): Phase[] {
   const phases: Phase[] = [
     {
-      id: "exploration",
-      name: "Exploration",
-      description: "Understanding the codebase and requirements",
-      steps: steps.filter((s) => s.phase === "exploration").map((s) => s.id),
+      id: 'exploration',
+      name: 'Exploration',
+      description: 'Understanding the codebase and requirements',
+      steps: steps.filter((s) => s.phase === 'exploration').map((s) => s.id),
       checkpoint: true,
-      status: "pending",
+      status: 'pending',
     },
     {
-      id: "preparation",
-      name: "Preparation",
-      description: "Setting up scaffolding and dependencies",
-      steps: steps.filter((s) => s.phase === "preparation").map((s) => s.id),
+      id: 'preparation',
+      name: 'Preparation',
+      description: 'Setting up scaffolding and dependencies',
+      steps: steps.filter((s) => s.phase === 'preparation').map((s) => s.id),
       checkpoint: true,
-      status: "pending",
+      status: 'pending',
     },
     {
-      id: "implementation",
-      name: "Implementation",
-      description: "Making code changes",
-      steps: steps.filter((s) => s.phase === "implementation").map((s) => s.id),
+      id: 'implementation',
+      name: 'Implementation',
+      description: 'Making code changes',
+      steps: steps.filter((s) => s.phase === 'implementation').map((s) => s.id),
       checkpoint: false,
-      status: "pending",
+      status: 'pending',
     },
     {
-      id: "validation",
-      name: "Validation",
-      description: "Testing and verification",
-      steps: steps.filter((s) => s.phase === "validation").map((s) => s.id),
+      id: 'validation',
+      name: 'Validation',
+      description: 'Testing and verification',
+      steps: steps.filter((s) => s.phase === 'validation').map((s) => s.id),
       checkpoint: true,
-      status: "pending",
+      status: 'pending',
     },
   ];
 
@@ -256,29 +243,24 @@ export async function getPlan(planId: string): Promise<Plan | null> {
 /**
  * Approve plan
  */
-export async function approvePlan(
-  planId: string,
-  approvedBy?: string,
-): Promise<Plan> {
+export async function approvePlan(planId: string, approvedBy?: string): Promise<Plan> {
   const db = getDatabase();
   const plan = await db.getPlan(planId);
   if (!plan) {
     throw new Error(`Plan ${planId} not found`);
   }
 
-  if (plan.status !== "draft" && plan.status !== "pending_approval") {
-    throw new Error(
-      `Plan ${planId} cannot be approved in status ${plan.status}`,
-    );
+  if (plan.status !== 'draft' && plan.status !== 'pending_approval') {
+    throw new Error(`Plan ${planId} cannot be approved in status ${plan.status}`);
   }
 
-  plan.status = "approved";
+  plan.status = 'approved';
   plan.approvedAt = new Date().toISOString();
   plan.approvedBy = approvedBy;
   plan.updatedAt = new Date().toISOString();
 
   await db.savePlan(plan);
-  logger.info({ planId }, "Plan approved");
+  logger.info({ planId }, 'Plan approved');
 
   return plan;
 }
@@ -286,17 +268,14 @@ export async function approvePlan(
 /**
  * Reject plan
  */
-export async function rejectPlan(
-  planId: string,
-  comments?: string,
-): Promise<Plan> {
+export async function rejectPlan(planId: string, comments?: string): Promise<Plan> {
   const db = getDatabase();
   const plan = await db.getPlan(planId);
   if (!plan) {
     throw new Error(`Plan ${planId} not found`);
   }
 
-  plan.status = "rejected";
+  plan.status = 'rejected';
   plan.updatedAt = new Date().toISOString();
   if (comments) {
     plan.metadata = plan.metadata || {};
@@ -304,7 +283,7 @@ export async function rejectPlan(
   }
 
   await db.savePlan(plan);
-  logger.info({ planId }, "Plan rejected");
+  logger.info({ planId }, 'Plan rejected');
 
   return plan;
 }
@@ -312,17 +291,14 @@ export async function rejectPlan(
 /**
  * Edit plan
  */
-export async function editPlan(
-  planId: string,
-  edits: PlanEditRequest,
-): Promise<Plan> {
+export async function editPlan(planId: string, edits: PlanEditRequest): Promise<Plan> {
   const db = getDatabase();
   const plan = await db.getPlan(planId);
   if (!plan) {
     throw new Error(`Plan ${planId} not found`);
   }
 
-  if (plan.status === "executing" || plan.status === "completed") {
+  if (plan.status === 'executing' || plan.status === 'completed') {
     throw new Error(`Cannot edit plan ${planId} in status ${plan.status}`);
   }
 
@@ -351,16 +327,13 @@ export async function editPlan(
   }
 
   // Recalculate total time
-  plan.totalEstimatedTime = plan.steps.reduce(
-    (sum, step) => sum + step.estimatedTime,
-    0,
-  );
+  plan.totalEstimatedTime = plan.steps.reduce((sum, step) => sum + step.estimatedTime, 0);
 
-  plan.status = "draft"; // Reset to draft after editing
+  plan.status = 'draft'; // Reset to draft after editing
   plan.updatedAt = new Date().toISOString();
 
   await db.savePlan(plan);
-  logger.info({ planId }, "Plan edited");
+  logger.info({ planId }, 'Plan edited');
 
   return plan;
 }
@@ -375,21 +348,21 @@ export async function startPlanExecution(planId: string): Promise<Plan> {
     throw new Error(`Plan ${planId} not found`);
   }
 
-  if (plan.status !== "approved") {
+  if (plan.status !== 'approved') {
     throw new Error(`Plan ${planId} must be approved before execution`);
   }
 
-  plan.status = "executing";
+  plan.status = 'executing';
   plan.startedAt = new Date().toISOString();
   plan.updatedAt = new Date().toISOString();
 
   // Mark first phase as in_progress
   if (plan.phases.length > 0) {
-    plan.phases[0].status = "in_progress";
+    plan.phases[0].status = 'in_progress';
   }
 
   await db.savePlan(plan);
-  logger.info({ planId }, "Plan execution started");
+  logger.info({ planId }, 'Plan execution started');
 
   return plan;
 }
@@ -404,19 +377,19 @@ export async function completePlanExecution(planId: string): Promise<Plan> {
     throw new Error(`Plan ${planId} not found`);
   }
 
-  plan.status = "completed";
+  plan.status = 'completed';
   plan.completedAt = new Date().toISOString();
   plan.updatedAt = new Date().toISOString();
 
   // Mark all phases as completed
   plan.phases.forEach((phase) => {
-    if (phase.status !== "skipped") {
-      phase.status = "completed";
+    if (phase.status !== 'skipped') {
+      phase.status = 'completed';
     }
   });
 
   await db.savePlan(plan);
-  logger.info({ planId }, "Plan execution completed");
+  logger.info({ planId }, 'Plan execution completed');
 
   return plan;
 }
@@ -427,7 +400,7 @@ export async function completePlanExecution(planId: string): Promise<Plan> {
 export async function updatePhaseStatus(
   planId: string,
   phaseId: PlanPhase,
-  status: Phase["status"],
+  status: Phase['status']
 ): Promise<Plan> {
   const db = getDatabase();
   const plan = await db.getPlan(planId);
@@ -444,7 +417,7 @@ export async function updatePhaseStatus(
   plan.updatedAt = new Date().toISOString();
 
   await db.savePlan(plan);
-  logger.info({ planId, phaseId, status }, "Phase status updated");
+  logger.info({ planId, phaseId, status }, 'Phase status updated');
 
   return plan;
 }

@@ -3,11 +3,11 @@
  * Automatically deploys user-generated applications to Docker containers
  */
 
-import { exec } from "child_process";
-import { promisify } from "util";
-import { promises as fs } from "fs";
-import path from "path";
-import logger from "../../middleware/logger.js";
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { promises as fs } from 'fs';
+import path from 'path';
+import logger from '../../middleware/logger.js';
 
 const execAsync = promisify(exec);
 
@@ -33,8 +33,8 @@ export class AutoDeployService {
   private readonly generatedAppsDir: string;
 
   constructor() {
-    this.scriptsDir = path.join(process.cwd(), "..", "scripts");
-    this.generatedAppsDir = path.join(process.cwd(), "..", "generated-apps");
+    this.scriptsDir = path.join(process.cwd(), '..', 'scripts');
+    this.generatedAppsDir = path.join(process.cwd(), '..', 'generated-apps');
   }
 
   /**
@@ -42,11 +42,11 @@ export class AutoDeployService {
    */
   async isDockerAvailable(): Promise<boolean> {
     try {
-      await execAsync("docker --version");
-      await execAsync("docker info");
+      await execAsync('docker --version');
+      await execAsync('docker info');
       return true;
     } catch (error) {
-      logger.error({ error }, "Docker is not available");
+      logger.error({ error }, 'Docker is not available');
       return false;
     }
   }
@@ -60,10 +60,10 @@ export class AutoDeployService {
       if (!(await this.isDockerAvailable())) {
         return {
           success: false,
-          appName: config.appName || "unknown",
+          appName: config.appName || 'unknown',
           port: config.port || 8080,
-          url: "",
-          error: "Docker is not available on this system",
+          url: '',
+          error: 'Docker is not available on this system',
         };
       }
 
@@ -74,9 +74,9 @@ export class AutoDeployService {
       } catch {
         return {
           success: false,
-          appName: config.appName || "unknown",
+          appName: config.appName || 'unknown',
           port: config.port || 8080,
-          url: "",
+          url: '',
           error: `App directory not found: ${appDir}`,
         };
       }
@@ -85,10 +85,10 @@ export class AutoDeployService {
       const appName = config.appName || `user-app-${Date.now()}`;
       const port = config.port || 8080;
 
-      logger.info({ appName, appDir, port }, "Starting auto-deployment");
+      logger.info({ appName, appDir, port }, 'Starting auto-deployment');
 
       // Run the auto-deploy script
-      const scriptPath = path.join(this.scriptsDir, "auto-deploy-user-app.sh");
+      const scriptPath = path.join(this.scriptsDir, 'auto-deploy-user-app.sh');
       const command = `bash "${scriptPath}" "${appDir}" "${appName}" ${port}`;
 
       const { stdout, stderr } = await execAsync(command, {
@@ -96,12 +96,10 @@ export class AutoDeployService {
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       });
 
-      logger.info({ appName, stdout, stderr }, "Deployment completed");
+      logger.info({ appName, stdout, stderr }, 'Deployment completed');
 
       // Get container ID
-      const { stdout: containerId } = await execAsync(
-        `docker ps -q -f name=${appName}`,
-      );
+      const { stdout: containerId } = await execAsync(`docker ps -q -f name=${appName}`);
 
       return {
         success: true,
@@ -112,14 +110,14 @@ export class AutoDeployService {
         logs: stdout,
       };
     } catch (error: any) {
-      logger.error({ error, config }, "Deployment failed");
+      logger.error({ error, config }, 'Deployment failed');
 
       return {
         success: false,
-        appName: config.appName || "unknown",
+        appName: config.appName || 'unknown',
         port: config.port || 8080,
-        url: "",
-        error: error.message || "Unknown deployment error",
+        url: '',
+        error: error.message || 'Unknown deployment error',
         logs: error.stdout || error.stderr,
       };
     }
@@ -128,15 +126,13 @@ export class AutoDeployService {
   /**
    * Stop a deployed app
    */
-  async stopApp(
-    appName: string,
-  ): Promise<{ success: boolean; error?: string }> {
+  async stopApp(appName: string): Promise<{ success: boolean; error?: string }> {
     try {
       await execAsync(`docker stop ${appName}`);
-      logger.info({ appName }, "App stopped");
+      logger.info({ appName }, 'App stopped');
       return { success: true };
     } catch (error: any) {
-      logger.error({ appName, error }, "Failed to stop app");
+      logger.error({ appName, error }, 'Failed to stop app');
       return { success: false, error: error.message };
     }
   }
@@ -144,16 +140,14 @@ export class AutoDeployService {
   /**
    * Remove a deployed app
    */
-  async removeApp(
-    appName: string,
-  ): Promise<{ success: boolean; error?: string }> {
+  async removeApp(appName: string): Promise<{ success: boolean; error?: string }> {
     try {
       await execAsync(`docker stop ${appName}`);
       await execAsync(`docker rm ${appName}`);
-      logger.info({ appName }, "App removed");
+      logger.info({ appName }, 'App removed');
       return { success: true };
     } catch (error: any) {
-      logger.error({ appName, error }, "Failed to remove app");
+      logger.error({ appName, error }, 'Failed to remove app');
       return { success: false, error: error.message };
     }
   }
@@ -163,12 +157,10 @@ export class AutoDeployService {
    */
   async getAppLogs(appName: string, lines: number = 100): Promise<string> {
     try {
-      const { stdout } = await execAsync(
-        `docker logs --tail ${lines} ${appName}`,
-      );
+      const { stdout } = await execAsync(`docker logs --tail ${lines} ${appName}`);
       return stdout;
     } catch (error: any) {
-      logger.error({ appName, error }, "Failed to get app logs");
+      logger.error({ appName, error }, 'Failed to get app logs');
       return `Error getting logs: ${error.message}`;
     }
   }
@@ -186,19 +178,19 @@ export class AutoDeployService {
   > {
     try {
       const { stdout } = await execAsync(
-        'docker ps -a --filter "name=user-app" --format "{{.Names}}|{{.Status}}|{{.Ports}}|{{.Image}}"',
+        'docker ps -a --filter "name=user-app" --format "{{.Names}}|{{.Status}}|{{.Ports}}|{{.Image}}"'
       );
 
       return stdout
         .trim()
-        .split("\n")
+        .split('\n')
         .filter((line) => line)
         .map((line) => {
-          const [name, status, ports, image] = line.split("|");
+          const [name, status, ports, image] = line.split('|');
           return { name, status, port: ports, image };
         });
     } catch (error: any) {
-      logger.error({ error }, "Failed to list deployed apps");
+      logger.error({ error }, 'Failed to list deployed apps');
       return [];
     }
   }
@@ -213,19 +205,19 @@ export class AutoDeployService {
   }> {
     try {
       const { stdout } = await execAsync(
-        `docker ps -a -f name=${appName} --format "{{.Status}}|{{.ID}}"`,
+        `docker ps -a -f name=${appName} --format "{{.Status}}|{{.ID}}"`
       );
 
       if (!stdout.trim()) {
         return { running: false };
       }
 
-      const [status, containerId] = stdout.trim().split("|");
-      const running = status.toLowerCase().includes("up");
+      const [status, containerId] = stdout.trim().split('|');
+      const running = status.toLowerCase().includes('up');
 
       return { running, status, containerId };
     } catch (error: any) {
-      logger.error({ appName, error }, "Failed to get app status");
+      logger.error({ appName, error }, 'Failed to get app status');
       return { running: false };
     }
   }

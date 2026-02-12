@@ -11,8 +11,8 @@
  * ```
  */
 
-import type { Request, Response, NextFunction } from "express";
-import { analytics } from "../services/platform/analytics.js";
+import type { Request, Response, NextFunction } from 'express';
+import { analytics } from '../services/platform/analytics.js';
 
 interface AnalyticsMiddlewareOptions {
   /** Track all requests or only specific paths */
@@ -30,7 +30,7 @@ const requestTimings = new Map<string, number>();
 
 export function analyticsMiddleware(options: AnalyticsMiddlewareOptions = {}) {
   const {
-    excludePaths = ["/health", "/metrics", "/_next", "/favicon.ico"],
+    excludePaths = ['/health', '/metrics', '/_next', '/favicon.ico'],
     includeBody = false,
     getProperties,
   } = options;
@@ -50,36 +50,27 @@ export function analyticsMiddleware(options: AnalyticsMiddlewareOptions = {}) {
 
     // Track request start
     analytics.track(
-      "api_request_started",
+      'api_request_started',
       {
         method: req.method,
         path: req.path,
         route: req.route?.path,
-        user_agent: req.get("user-agent"),
+        user_agent: req.get('user-agent'),
         ip: req.ip,
-        ...(includeBody && req.body
-          ? { body_size: JSON.stringify(req.body).length }
-          : {}),
+        ...(includeBody && req.body ? { body_size: JSON.stringify(req.body).length } : {}),
       },
-      userId,
+      userId
     );
 
     // Override res.end to track completion
     const originalEnd = res.end.bind(res);
-    res.end = function (
-      this: Response,
-      chunk?: unknown,
-      encoding?: unknown,
-      callback?: unknown,
-    ) {
+    res.end = function (this: Response, chunk?: unknown, encoding?: unknown, callback?: unknown) {
       const endTime = Date.now();
       const duration = endTime - (requestTimings.get(requestId) || endTime);
       requestTimings.delete(requestId);
 
       const success = res.statusCode < 400;
-      const eventName = success
-        ? "api_request_completed"
-        : "api_request_failed";
+      const eventName = success ? 'api_request_completed' : 'api_request_failed';
 
       const properties: Record<string, unknown> = {
         method: req.method,
@@ -106,90 +97,81 @@ export function analyticsMiddleware(options: AnalyticsMiddlewareOptions = {}) {
   };
 }
 
-function trackSpecificEvents(
-  req: Request,
-  res: Response,
-  duration: number,
-  userId?: string,
-) {
+function trackSpecificEvents(req: Request, res: Response, duration: number, userId?: string) {
   const path = req.path.toLowerCase();
   const method = req.method.toUpperCase();
 
   // Track intent submissions
-  if (path.includes("/intent") && method === "POST" && res.statusCode < 400) {
+  if (path.includes('/intent') && method === 'POST' && res.statusCode < 400) {
     analytics.track(
-      "intent_submitted",
+      'intent_submitted',
       {
-        source: "api",
+        source: 'api',
         duration_ms: duration,
       },
-      userId,
+      userId
     );
   }
 
   // Track architecture generation
-  if (
-    path.includes("/architecture") &&
-    method === "POST" &&
-    res.statusCode < 400
-  ) {
+  if (path.includes('/architecture') && method === 'POST' && res.statusCode < 400) {
     analytics.track(
-      "architecture_viewed",
+      'architecture_viewed',
       {
-        source: "api",
+        source: 'api',
         duration_ms: duration,
       },
-      userId,
+      userId
     );
   }
 
   // Track code generation
-  if (path.includes("/code") && method === "POST" && res.statusCode < 400) {
+  if (path.includes('/code') && method === 'POST' && res.statusCode < 400) {
     analytics.track(
-      "code_generated",
+      'code_generated',
       {
-        source: "api",
+        source: 'api',
         duration_ms: duration,
       },
-      userId,
+      userId
     );
   }
 
   // Track project downloads
-  if (path.includes("/download") && method === "GET" && res.statusCode < 400) {
+  if (path.includes('/download') && method === 'GET' && res.statusCode < 400) {
     analytics.track(
-      "project_downloaded",
+      'project_downloaded',
       {
-        source: "api",
+        source: 'api',
         path: req.path,
       },
-      userId,
+      userId
     );
   }
 
   // Track chat messages
-  if (path.includes("/chat") && method === "POST" && res.statusCode < 400) {
+  if (path.includes('/chat') && method === 'POST' && res.statusCode < 400) {
     analytics.track(
-      "chat_message_sent",
+      'chat_message_sent',
       {
-        source: "api",
-        message_type: "user",
+        source: 'api',
+        message_type: 'user',
       },
-      userId,
+      userId
     );
   }
 
   // Track errors
   if (res.statusCode >= 500) {
     analytics.track(
-      "error_occurred",
+      'error_occurred',
       {
-        source: "api",
+        source: 'api',
         path: req.path,
         method: req.method,
         status_code: res.statusCode,
       },
-      userId,
+      userId
     );
   }
 }

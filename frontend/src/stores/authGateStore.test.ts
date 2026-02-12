@@ -16,7 +16,7 @@ describe('authGateStore', () => {
     // Clear localStorage before each test
     localStorage.clear();
     vi.resetModules();
-    
+
     // Import fresh module after clearing storage
     const module = await import('./authGateStore');
     authGateStore = module.authGateStore;
@@ -40,26 +40,26 @@ describe('authGateStore', () => {
   describe('markAuthSkipped', () => {
     it('should mark auth as skipped', () => {
       authGateStore.markAuthSkipped();
-      
+
       expect(authGateStore.isAuthSkippedOnDevice()).toBe(true);
     });
 
     it('should persist to localStorage', () => {
       authGateStore.markAuthSkipped();
-      
+
       expect(localStorage.getItem('g-rump-auth-skipped')).toBe('true');
     });
 
     it('should update derived store', () => {
       authGateStore.markAuthSkipped();
-      
+
       expect(get(authSkippedOnDevice)).toBe(true);
     });
 
     it('should remain skipped after multiple calls', () => {
       authGateStore.markAuthSkipped();
       authGateStore.markAuthSkipped();
-      
+
       expect(authGateStore.isAuthSkippedOnDevice()).toBe(true);
       expect(localStorage.getItem('g-rump-auth-skipped')).toBe('true');
     });
@@ -69,34 +69,34 @@ describe('authGateStore', () => {
     it('should reset auth skipped state', () => {
       authGateStore.markAuthSkipped();
       expect(authGateStore.isAuthSkippedOnDevice()).toBe(true);
-      
+
       authGateStore.resetAuthSkipped();
-      
+
       expect(authGateStore.isAuthSkippedOnDevice()).toBe(false);
     });
 
     it('should remove from localStorage', () => {
       authGateStore.markAuthSkipped();
       expect(localStorage.getItem('g-rump-auth-skipped')).toBe('true');
-      
+
       authGateStore.resetAuthSkipped();
-      
+
       expect(localStorage.getItem('g-rump-auth-skipped')).toBeNull();
     });
 
     it('should update derived store', () => {
       authGateStore.markAuthSkipped();
       expect(get(authSkippedOnDevice)).toBe(true);
-      
+
       authGateStore.resetAuthSkipped();
-      
+
       expect(get(authSkippedOnDevice)).toBe(false);
     });
 
     it('should remain reset after multiple calls', () => {
       authGateStore.resetAuthSkipped();
       authGateStore.resetAuthSkipped();
-      
+
       expect(authGateStore.isAuthSkippedOnDevice()).toBe(false);
     });
   });
@@ -105,31 +105,31 @@ describe('authGateStore', () => {
     it('should load skipped state from localStorage on fresh import', async () => {
       // Set localStorage directly
       localStorage.setItem('g-rump-auth-skipped', 'true');
-      
+
       // Reset modules and re-import
       vi.resetModules();
       const module = await import('./authGateStore');
-      
+
       expect(module.authGateStore.isAuthSkippedOnDevice()).toBe(true);
       expect(get(module.default)).toBe(true);
     });
 
     it('should load non-skipped state from localStorage on fresh import', async () => {
       localStorage.setItem('g-rump-auth-skipped', 'false');
-      
+
       vi.resetModules();
       const module = await import('./authGateStore');
-      
+
       expect(module.authGateStore.isAuthSkippedOnDevice()).toBe(false);
     });
 
     it('should handle missing localStorage key on fresh import', async () => {
       // Ensure key is not set
       localStorage.removeItem('g-rump-auth-skipped');
-      
+
       vi.resetModules();
       const module = await import('./authGateStore');
-      
+
       expect(module.authGateStore.isAuthSkippedOnDevice()).toBe(false);
     });
   });
@@ -138,10 +138,10 @@ describe('authGateStore', () => {
     it('should handle skip -> reset -> skip cycle', () => {
       authGateStore.markAuthSkipped();
       expect(authGateStore.isAuthSkippedOnDevice()).toBe(true);
-      
+
       authGateStore.resetAuthSkipped();
       expect(authGateStore.isAuthSkippedOnDevice()).toBe(false);
-      
+
       authGateStore.markAuthSkipped();
       expect(authGateStore.isAuthSkippedOnDevice()).toBe(true);
     });
@@ -151,7 +151,7 @@ describe('authGateStore', () => {
       authGateStore.resetAuthSkipped();
       authGateStore.resetAuthSkipped();
       authGateStore.resetAuthSkipped();
-      
+
       expect(authGateStore.isAuthSkippedOnDevice()).toBe(false);
       expect(localStorage.getItem('g-rump-auth-skipped')).toBeNull();
     });
@@ -163,13 +163,13 @@ describe('authGateStore', () => {
       localStorage.getItem = vi.fn(() => {
         throw new Error('localStorage not available');
       });
-      
+
       vi.resetModules();
       const module = await import('./authGateStore');
-      
+
       // Should default to false on error
       expect(module.authGateStore.isAuthSkippedOnDevice()).toBe(false);
-      
+
       localStorage.getItem = originalGetItem;
     });
 
@@ -178,69 +178,63 @@ describe('authGateStore', () => {
       localStorage.setItem = vi.fn(() => {
         throw new Error('QuotaExceededError');
       });
-      
+
       // Should not throw
       expect(() => authGateStore.markAuthSkipped()).not.toThrow();
-      
+
       // In-memory state should still update even if persistence fails
       expect(authGateStore.isAuthSkippedOnDevice()).toBe(true);
-      
+
       localStorage.setItem = originalSetItem;
     });
 
     it('should handle removeItem errors gracefully', () => {
       authGateStore.markAuthSkipped();
-      
+
       const originalRemoveItem = localStorage.removeItem;
       localStorage.removeItem = vi.fn(() => {
         throw new Error('localStorage error');
       });
-      
+
       // Should not throw
       expect(() => authGateStore.resetAuthSkipped()).not.toThrow();
-      
+
       // In-memory state should still update
       expect(authGateStore.isAuthSkippedOnDevice()).toBe(false);
-      
+
       localStorage.removeItem = originalRemoveItem;
     });
 
     it('should warn when setItem fails', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      
+
       const originalSetItem = localStorage.setItem;
       localStorage.setItem = vi.fn(() => {
         throw new Error('Storage error');
       });
-      
+
       authGateStore.markAuthSkipped();
-      
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to persist auth skipped:',
-        expect.any(Error)
-      );
-      
+
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to persist auth skipped:', expect.any(Error));
+
       localStorage.setItem = originalSetItem;
       consoleSpy.mockRestore();
     });
 
     it('should warn when removeItem fails', () => {
       authGateStore.markAuthSkipped();
-      
+
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      
+
       const originalRemoveItem = localStorage.removeItem;
       localStorage.removeItem = vi.fn(() => {
         throw new Error('Storage error');
       });
-      
+
       authGateStore.resetAuthSkipped();
-      
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to reset auth skipped:',
-        expect.any(Error)
-      );
-      
+
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to reset auth skipped:', expect.any(Error));
+
       localStorage.removeItem = originalRemoveItem;
       consoleSpy.mockRestore();
     });
@@ -250,13 +244,13 @@ describe('authGateStore', () => {
     it('should notify subscribers when state changes', () => {
       const values: boolean[] = [];
       const unsubscribe = authSkippedOnDevice.subscribe((v) => values.push(v));
-      
+
       authGateStore.markAuthSkipped();
       authGateStore.resetAuthSkipped();
       authGateStore.markAuthSkipped();
-      
+
       unsubscribe();
-      
+
       // Initial + 3 updates
       expect(values).toEqual([false, true, false, true]);
     });
@@ -264,11 +258,11 @@ describe('authGateStore', () => {
     it('should not notify after unsubscribe', () => {
       const values: boolean[] = [];
       const unsubscribe = authSkippedOnDevice.subscribe((v) => values.push(v));
-      
+
       unsubscribe();
-      
+
       authGateStore.markAuthSkipped();
-      
+
       // Should only have initial value
       expect(values).toEqual([false]);
     });
@@ -280,17 +274,17 @@ describe('authGateStore', () => {
       const originalWindow = global.window;
       // @ts-expect-error - Simulating SSR
       delete global.window;
-      
+
       vi.resetModules();
       const module = await import('./authGateStore');
-      
+
       // Should default to false without window
       expect(module.authGateStore.isAuthSkippedOnDevice()).toBe(false);
-      
+
       // Operations should not throw
       expect(() => module.authGateStore.markAuthSkipped()).not.toThrow();
       expect(() => module.authGateStore.resetAuthSkipped()).not.toThrow();
-      
+
       // Restore window
       global.window = originalWindow;
     });

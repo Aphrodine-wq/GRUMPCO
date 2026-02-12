@@ -5,8 +5,8 @@
  * Each handler processes requests for a specific agent mode.
  */
 
-import { agentRegistry } from "./registry.js";
-import { supervisor } from "./supervisor.js";
+import { agentRegistry } from './registry.js';
+import { supervisor } from './supervisor.js';
 import type {
   AgentMode,
   AgentType,
@@ -15,8 +15,8 @@ import type {
   AgentEvent,
   Plan,
   Goal,
-} from "./types.js";
-import type { Session } from "./sessionManager.js";
+} from './types.js';
+import type { Session } from './sessionManager.js';
 
 // ============================================================================
 // TYPES
@@ -42,9 +42,7 @@ export function formatPlanMessage(plan: {
   id: string;
   tasks: Array<{ id: string; description: string }>;
 }): string {
-  const taskList = plan.tasks
-    .map((t, i) => `${i + 1}. ${t.description}`)
-    .join("\n");
+  const taskList = plan.tasks.map((t, i) => `${i + 1}. ${t.description}`).join('\n');
 
   return (
     `I've created a plan with ${plan.tasks.length} tasks:\n\n${taskList}\n\n` +
@@ -72,7 +70,7 @@ export function getCapabilitiesMessage(): string {
 ${agentRegistry
   .getAll()
   .map((a) => `- **${a.name}**: ${a.description}`)
-  .join("\n")}
+  .join('\n')}
 
 Just tell me what you want to accomplish, and I'll figure out the best approach!`;
 }
@@ -86,12 +84,12 @@ Just tell me what you want to accomplish, and I'll figure out the best approach!
  */
 export async function handleGoalMode(
   request: AgentRequest,
-  ctx: HandlerContext,
+  ctx: HandlerContext
 ): Promise<AgentResponse> {
   const { requestId, session, emitEvent } = ctx;
 
   // Import goal queue lazily to avoid circular deps
-  const { gAgentGoalQueue } = await import("../services/agents/gAgentGoalQueue.js");
+  const { gAgentGoalQueue } = await import('../services/agents/gAgentGoalQueue.js');
 
   const goal = await gAgentGoalQueue.createGoal({
     userId: request.userId,
@@ -103,17 +101,17 @@ export async function handleGoalMode(
   session.goalId = goal.id;
 
   emitEvent({
-    type: "goal_created",
+    type: 'goal_created',
     goalId: goal.id,
     description: request.message,
   });
 
-  const { messageBus } = await import("./messageBus.js");
+  const { messageBus } = await import('./messageBus.js');
   messageBus.goalCreated(goal as unknown as Goal);
 
   return {
     requestId,
-    mode: "goal",
+    mode: 'goal',
     sessionId: session.id,
     goalId: goal.id,
     success: true,
@@ -126,32 +124,32 @@ export async function handleGoalMode(
  */
 export async function handlePlanMode(
   request: AgentRequest,
-  ctx: HandlerContext,
+  ctx: HandlerContext
 ): Promise<AgentResponse> {
   const { requestId, session, emitEvent } = ctx;
 
   // Use planner agent to decompose
-  const planner = agentRegistry.getByType("planner");
+  const planner = agentRegistry.getByType('planner');
   if (!planner) {
-    throw new Error("Planner agent not available");
+    throw new Error('Planner agent not available');
   }
 
   // Generate plan using intent CLI (existing infrastructure)
-  const { runPlanCli } = await import("../services/intent/intentCliRunner.js");
+  const { runPlanCli } = await import('../services/intent/intentCliRunner.js');
   const plan = await runPlanCli(request.message);
 
   session.planId = plan.id;
   session.context.plan = plan;
 
   emitEvent({
-    type: "plan_generated",
+    type: 'plan_generated',
     planId: plan.id,
     taskCount: plan.tasks.length,
   });
 
   return {
     requestId,
-    mode: "plan",
+    mode: 'plan',
     sessionId: session.id,
     planId: plan.id,
     success: true,
@@ -167,7 +165,7 @@ export async function handlePlanMode(
  */
 export async function handleExecuteMode(
   request: AgentRequest,
-  ctx: HandlerContext,
+  ctx: HandlerContext
 ): Promise<AgentResponse> {
   const { requestId, session, emitEvent } = ctx;
   const planId = request.planId ?? session.planId;
@@ -175,14 +173,13 @@ export async function handleExecuteMode(
   if (!planId && !session.context.plan) {
     return {
       requestId,
-      mode: "execute",
+      mode: 'execute',
       sessionId: session.id,
       success: false,
-      message:
-        "No plan to execute. Please generate a plan first using plan mode.",
+      message: 'No plan to execute. Please generate a plan first using plan mode.',
       error: {
-        code: "NO_PLAN",
-        message: "No plan available for execution",
+        code: 'NO_PLAN',
+        message: 'No plan available for execution',
         retryable: false,
       },
     };
@@ -191,7 +188,7 @@ export async function handleExecuteMode(
   const plan = session.context.plan as Plan;
 
   emitEvent({
-    type: "plan_approved",
+    type: 'plan_approved',
     planId: plan.id,
   });
 
@@ -205,19 +202,19 @@ export async function handleExecuteMode(
   });
 
   // Collect results
-  let lastTaskOutput = "";
+  let lastTaskOutput = '';
 
   for await (const event of events) {
     emitEvent(event);
 
-    if (event.type === "task_completed") {
+    if (event.type === 'task_completed') {
       lastTaskOutput = event.output;
     }
   }
 
   return {
     requestId,
-    mode: "execute",
+    mode: 'execute',
     sessionId: session.id,
     planId: plan.id,
     success: true,
@@ -230,38 +227,38 @@ export async function handleExecuteMode(
  */
 export async function handleSwarmMode(
   request: AgentRequest,
-  ctx: HandlerContext,
+  ctx: HandlerContext
 ): Promise<AgentResponse> {
   const { requestId, session, emitEvent } = ctx;
 
   // Import swarm service lazily
-  const { runSwarm } = await import("../services/agents/swarmService.js");
+  const { runSwarm } = await import('../services/agents/swarmService.js');
 
   const results: Array<{ agentId: string; output: string }> = [];
-  let summaryText = "";
+  let summaryText = '';
 
   const generator = runSwarm(request.message, {
     workspaceRoot: request.workspaceRoot,
-    userTier: request.userTier as "free" | "pro" | "team" | "enterprise",
+    userTier: request.userTier as 'free' | 'pro' | 'team' | 'enterprise',
     userId: request.userId,
   });
 
   for await (const event of generator) {
-    if (event.type === "agent_done") {
+    if (event.type === 'agent_done') {
       results.push({
         agentId: event.agentId,
         output: event.output,
       });
       emitEvent({
-        type: "agent_message",
+        type: 'agent_message',
         agentId: event.agentId,
         message: event.output,
       });
-    } else if (event.type === "summary_done") {
+    } else if (event.type === 'summary_done') {
       summaryText = event.text;
-    } else if (event.type === "agent_start") {
+    } else if (event.type === 'agent_start') {
       emitEvent({
-        type: "agent_spawned",
+        type: 'agent_spawned',
         agentId: event.agentId,
         agentType: event.agentId as AgentType,
       });
@@ -270,7 +267,7 @@ export async function handleSwarmMode(
 
   return {
     requestId,
-    mode: "swarm",
+    mode: 'swarm',
     sessionId: session.id,
     success: true,
     message: summaryText || `Swarm completed with ${results.length} agents.`,
@@ -285,28 +282,28 @@ export async function handleSwarmMode(
  */
 export async function handleCodegenMode(
   request: AgentRequest,
-  ctx: HandlerContext,
+  ctx: HandlerContext
 ): Promise<AgentResponse> {
   const { requestId, session, emitEvent } = ctx;
 
   // Import Agent Lightning bridge lazily
-  const { generateCodeFromGoal } = await import("./agentLightningBridge.js");
+  const { generateCodeFromGoal } = await import('./agentLightningBridge.js');
 
   // Create a goal to track this codegen request
-  const { gAgentGoalQueue } = await import("../services/agents/gAgentGoalQueue.js");
+  const { gAgentGoalQueue } = await import('../services/agents/gAgentGoalQueue.js');
 
   const goal = await gAgentGoalQueue.createGoal({
     userId: request.userId,
     description: `Code Generation: ${request.message.slice(0, 200)}`,
-    priority: request.priority ?? "normal",
+    priority: request.priority ?? 'normal',
     workspaceRoot: request.workspaceRoot,
-    tags: ["codegen", "agent-lightning"],
+    tags: ['codegen', 'agent-lightning'],
   });
 
   session.goalId = goal.id;
 
   emitEvent({
-    type: "goal_created",
+    type: 'goal_created',
     goalId: goal.id,
     description: `Code Generation: ${request.message.slice(0, 100)}...`,
   });
@@ -318,33 +315,33 @@ export async function handleCodegenMode(
     userTier: request.userTier,
     workspaceRoot: request.workspaceRoot,
     projectType: request.context?.projectType as
-      | "web-app"
-      | "api"
-      | "cli"
-      | "library"
-      | "mobile"
-      | "fullstack"
+      | 'web-app'
+      | 'api'
+      | 'cli'
+      | 'library'
+      | 'mobile'
+      | 'fullstack'
       | undefined,
     techStack: request.context?.techStack as string[] | undefined,
     autonomous: request.autonomous,
     onProgress: (event) => {
       // Emit progress events to the session
-      if (event.type === "agent_start" && event.agent) {
+      if (event.type === 'agent_start' && event.agent) {
         emitEvent({
-          type: "agent_spawned",
+          type: 'agent_spawned',
           agentId: `${event.agent}_${goal.id}`,
           agentType: event.agent,
         });
-      } else if (event.type === "agent_end" && event.agent) {
+      } else if (event.type === 'agent_end' && event.agent) {
         emitEvent({
-          type: "agent_message",
+          type: 'agent_message',
           agentId: `${event.agent}_${goal.id}`,
           message: event.message,
         });
-      } else if (event.type === "file_generated" && event.artifacts) {
+      } else if (event.type === 'file_generated' && event.artifacts) {
         emitEvent({
-          type: "text",
-          text: `Generated: ${event.artifacts.map((a) => a.path).join(", ")}`,
+          type: 'text',
+          text: `Generated: ${event.artifacts.map((a) => a.path).join(', ')}`,
         });
       }
     },
@@ -354,20 +351,16 @@ export async function handleCodegenMode(
   const fileList = result.files
     .slice(0, 10)
     .map((f) => `- ${f.path}`)
-    .join("\n");
+    .join('\n');
 
   const moreFiles =
-    result.files.length > 10
-      ? `\n... and ${result.files.length - 10} more files`
-      : "";
+    result.files.length > 10 ? `\n... and ${result.files.length - 10} more files` : '';
 
-  const successAgents = result.agents.filter(
-    (a) => a.status === "completed",
-  ).length;
+  const successAgents = result.agents.filter((a) => a.status === 'completed').length;
 
   if (result.success) {
     emitEvent({
-      type: "goal_completed",
+      type: 'goal_completed',
       goalId: goal.id,
       result: result.summary,
     });
@@ -379,14 +372,11 @@ export async function handleCodegenMode(
     let lintOutput: string | undefined;
     let securitySummary: string | undefined;
 
-    let docsGenerated:
-      | { readmeWritten: boolean; envExampleWritten: boolean }
-      | undefined;
+    let docsGenerated: { readmeWritten: boolean; envExampleWritten: boolean } | undefined;
     let bundleSize: string | undefined;
 
     if (request.workspaceRoot) {
-      const { generateProjectDocs } =
-        await import("../services/ship/generateProjectDocs.js");
+      const { generateProjectDocs } = await import('../services/ship/generateProjectDocs.js');
       const docResult = await generateProjectDocs(request.workspaceRoot, {
         projectName: result.projectName,
       });
@@ -397,15 +387,13 @@ export async function handleCodegenMode(
         };
       }
 
-      const { runProjectTests } =
-        await import("../services/ship/runProjectTests.js");
-      const { runProjectLint } = await import("../services/ship/runProjectLint.js");
+      const { runProjectTests } = await import('../services/ship/runProjectTests.js');
+      const { runProjectLint } = await import('../services/ship/runProjectLint.js');
       const testResult = await runProjectTests(request.workspaceRoot);
       testsPassed = testResult.passed;
       testsOutput = testResult.stdout ?? testResult.stderr ?? testResult.error;
       if (!testResult.passed && testResult.error) {
-        testsOutput =
-          (testsOutput ? testsOutput + "\n" : "") + testResult.error;
+        testsOutput = (testsOutput ? testsOutput + '\n' : '') + testResult.error;
       }
 
       const lintResult = await runProjectLint(request.workspaceRoot);
@@ -413,29 +401,23 @@ export async function handleCodegenMode(
       lintOutput = lintResult.output ?? lintResult.error;
 
       try {
-        const { auditSecrets } =
-          await import("../features/security-compliance/service.js");
+        const { auditSecrets } = await import('../features/security-compliance/service.js');
         const { validateWorkspacePath } =
-          await import("../features/security-compliance/service.js");
+          await import('../features/security-compliance/service.js');
         const pathCheck = validateWorkspacePath(request.workspaceRoot);
         if (pathCheck.ok) {
           const audit = await auditSecrets({
             workspacePath: pathCheck.resolved!,
           });
-          const critical = audit.findings.filter(
-            (f) => f.severity === "critical",
-          ).length;
-          const high = audit.findings.filter(
-            (f) => f.severity === "high",
-          ).length;
+          const critical = audit.findings.filter((f) => f.severity === 'critical').length;
+          const high = audit.findings.filter((f) => f.severity === 'high').length;
           securitySummary = `${critical} critical, ${high} high`;
         }
       } catch (_err) {
-        securitySummary = "Scan skipped";
+        securitySummary = 'Scan skipped';
       }
 
-      const { runProjectBundleReport } =
-        await import("../services/ship/runProjectBundleReport.js");
+      const { runProjectBundleReport } = await import('../services/ship/runProjectBundleReport.js');
       const bundleResult = await runProjectBundleReport(request.workspaceRoot);
       if (bundleResult.success && bundleResult.summary) {
         bundleSize = bundleResult.summary;
@@ -444,10 +426,10 @@ export async function handleCodegenMode(
 
     const validationLines: string[] = [];
     if (testsPassed !== undefined) {
-      validationLines.push(`**Tests:** ${testsPassed ? "Passed" : "Failed"}`);
+      validationLines.push(`**Tests:** ${testsPassed ? 'Passed' : 'Failed'}`);
     }
     if (lintPassed !== undefined) {
-      validationLines.push(`**Lint:** ${lintPassed ? "Passed" : "Failed"}`);
+      validationLines.push(`**Lint:** ${lintPassed ? 'Passed' : 'Failed'}`);
     }
     if (securitySummary !== undefined) {
       validationLines.push(`**Security (secrets):** ${securitySummary}`);
@@ -455,23 +437,18 @@ export async function handleCodegenMode(
     if (bundleSize !== undefined) {
       validationLines.push(`**Bundle:** ${bundleSize}`);
     }
-    if (
-      docsGenerated &&
-      (docsGenerated.readmeWritten || docsGenerated.envExampleWritten)
-    ) {
+    if (docsGenerated && (docsGenerated.readmeWritten || docsGenerated.envExampleWritten)) {
       const parts: string[] = [];
-      if (docsGenerated.readmeWritten) parts.push("README");
-      if (docsGenerated.envExampleWritten) parts.push(".env.example");
-      validationLines.push(`**Docs:** ${parts.join(", ")} added`);
+      if (docsGenerated.readmeWritten) parts.push('README');
+      if (docsGenerated.envExampleWritten) parts.push('.env.example');
+      validationLines.push(`**Docs:** ${parts.join(', ')} added`);
     }
     const validationBlock =
-      validationLines.length > 0
-        ? "\n" + validationLines.join(" | ") + "\n"
-        : "";
+      validationLines.length > 0 ? '\n' + validationLines.join(' | ') + '\n' : '';
 
     return {
       requestId,
-      mode: "codegen",
+      mode: 'codegen',
       sessionId: session.id,
       goalId: goal.id,
       success: true,
@@ -496,27 +473,27 @@ export async function handleCodegenMode(
     };
   } else {
     emitEvent({
-      type: "goal_failed",
+      type: 'goal_failed',
       goalId: goal.id,
-      error: result.error || "Unknown error",
+      error: result.error || 'Unknown error',
     });
 
     return {
       requestId,
-      mode: "codegen",
+      mode: 'codegen',
       sessionId: session.id,
       goalId: goal.id,
       success: false,
       message:
-        `❌ **Code Generation Failed**\n\n${result.error || "Unknown error"}\n\n` +
+        `❌ **Code Generation Failed**\n\n${result.error || 'Unknown error'}\n\n` +
         `**Partial Results:** ${result.files.length} files generated before failure.\n\n` +
         `You can try:\n` +
         `1. Breaking down the request into smaller goals\n` +
         `2. Using "swarm" mode for a simpler multi-agent approach\n` +
         `3. Using "goal" mode to queue the task for retry`,
       error: {
-        code: "CODEGEN_FAILED",
-        message: result.error || "Code generation failed",
+        code: 'CODEGEN_FAILED',
+        message: result.error || 'Code generation failed',
         retryable: true,
       },
     };
@@ -528,32 +505,32 @@ export async function handleCodegenMode(
  */
 export async function handleAutonomousMode(
   request: AgentRequest,
-  ctx: HandlerContext,
+  ctx: HandlerContext
 ): Promise<AgentResponse> {
   const { requestId, session, options } = ctx;
 
   if (!options.enableAutonomous) {
     return {
       requestId,
-      mode: "autonomous",
+      mode: 'autonomous',
       sessionId: session.id,
       success: false,
-      message: "Autonomous mode is not enabled.",
+      message: 'Autonomous mode is not enabled.',
       error: {
-        code: "AUTONOMOUS_DISABLED",
-        message: "Autonomous mode is disabled in configuration",
+        code: 'AUTONOMOUS_DISABLED',
+        message: 'Autonomous mode is disabled in configuration',
         retryable: false,
       },
     };
   }
 
   // Create goal with autonomous flag
-  const { gAgentGoalQueue } = await import("../services/agents/gAgentGoalQueue.js");
+  const { gAgentGoalQueue } = await import('../services/agents/gAgentGoalQueue.js');
 
   const goal = await gAgentGoalQueue.createGoal({
     userId: request.userId,
     description: request.message,
-    priority: "high",
+    priority: 'high',
     workspaceRoot: request.workspaceRoot,
   });
 
@@ -564,7 +541,7 @@ export async function handleAutonomousMode(
 
   return {
     requestId,
-    mode: "autonomous",
+    mode: 'autonomous',
     sessionId: session.id,
     goalId: goal.id,
     success: true,
@@ -577,7 +554,7 @@ export async function handleAutonomousMode(
  */
 export async function handleChatMode(
   request: AgentRequest,
-  ctx: HandlerContext,
+  ctx: HandlerContext
 ): Promise<AgentResponse> {
   const { requestId, session } = ctx;
 
@@ -587,24 +564,24 @@ export async function handleChatMode(
   // Check if this is asking about capabilities
   const message = request.message.toLowerCase();
 
-  if (message.includes("what can you do") || message.includes("help")) {
+  if (message.includes('what can you do') || message.includes('help')) {
     return {
       requestId,
-      mode: "chat",
+      mode: 'chat',
       sessionId: session.id,
       success: true,
       message: getCapabilitiesMessage(),
     };
   }
 
-  if (message.includes("status") && session.goalId) {
-    const { gAgentGoalQueue } = await import("../services/agents/gAgentGoalQueue.js");
+  if (message.includes('status') && session.goalId) {
+    const { gAgentGoalQueue } = await import('../services/agents/gAgentGoalQueue.js');
     const goal = await gAgentGoalQueue.getGoal(session.goalId);
 
     if (goal) {
       return {
         requestId,
-        mode: "chat",
+        mode: 'chat',
         sessionId: session.id,
         success: true,
         message: `Goal "${goal.description.slice(0, 50)}..." is currently ${goal.status}.`,
@@ -613,12 +590,12 @@ export async function handleChatMode(
   }
 
   // Default: suggest appropriate mode
-  const { detectIntent } = await import("./intentDetector.js");
+  const { detectIntent } = await import('./intentDetector.js');
   const intent = detectIntent(request.message);
 
   return {
     requestId,
-    mode: "chat",
+    mode: 'chat',
     sessionId: session.id,
     success: true,
     message:

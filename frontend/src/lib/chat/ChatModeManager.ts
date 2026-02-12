@@ -1,17 +1,17 @@
 /**
  * Chat Mode Manager
- * 
+ *
  * Manages chat mode state (normal/plan/spec/ship/design/argument/code)
  */
 
-export type ChatMode = 
-  | 'normal' 
-  | 'plan' 
-  | 'spec' 
-  | 'ship' 
-  | 'execute' 
-  | 'design' 
-  | 'argument' 
+export type ChatMode =
+  | 'normal'
+  | 'plan'
+  | 'spec'
+  | 'ship'
+  | 'execute'
+  | 'design'
+  | 'argument'
   | 'code';
 
 export interface ModeState {

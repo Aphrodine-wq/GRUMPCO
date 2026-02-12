@@ -18,13 +18,15 @@ export interface MermaidSection {
  * Sanitize a string to a stable id: alphanumeric and hyphens only, lowercase.
  */
 function toStableId(raw: string): string {
-  return raw
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '') || 'section';
+  return (
+    raw
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || 'section'
+  );
 }
 
 /**
@@ -41,7 +43,10 @@ export function parseMermaidSections(mermaidCode: string): MermaidSection[] {
 
   const code = mermaidCode.trim();
   // Strip leading diagram type (flowchart, graph, etc.) for consistent parsing
-  const body = code.replace(/^\s*(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram)\s+/i, '');
+  const body = code.replace(
+    /^\s*(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram)\s+/i,
+    ''
+  );
 
   // 1) Subgraphs: subgraph id["label"] or subgraph id or subgraph label
   const subgraphRe = /subgraph\s+([^\n[\]]+)(?:\[([^\]]*)\])?\s*[\n\s]*([\s\S]*?)end/g;
@@ -99,7 +104,10 @@ export function parseMermaidNodes(mermaidCode: string): Record<string, MermaidNo
   const code = mermaidCode.trim();
   if (!code) return nodes;
 
-  const body = code.replace(/^\s*(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram)\s+/i, '');
+  const body = code.replace(
+    /^\s*(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram)\s+/i,
+    ''
+  );
 
   function setNode(id: string, label: string, type?: string) {
     const key = id.trim();
@@ -108,7 +116,8 @@ export function parseMermaidNodes(mermaidCode: string): Record<string, MermaidNo
   }
 
   // C4: C4Container(id, "Label") or C4Context, etc.
-  const c4Re = /C4(?:Context|Container|Component|Deployment|Dynamic)\s*\(\s*([^,)]+)\s*,\s*["']([^"']*)["']\s*\)/gi;
+  const c4Re =
+    /C4(?:Context|Container|Component|Deployment|Dynamic)\s*\(\s*([^,)]+)\s*,\s*["']([^"']*)["']\s*\)/gi;
   let m: RegExpExecArray | null;
   while ((m = c4Re.exec(code)) !== null) {
     const id = m[1].trim();
@@ -117,7 +126,8 @@ export function parseMermaidNodes(mermaidCode: string): Record<string, MermaidNo
   }
 
   // Edges first so edge-only nodes get created: A --> B, A[Start] --> UndefinedTarget, etc.
-  const edgeRe = /(\w+)(?:\s*\[[^\]]*\])?(?:\s*\([^)]*\))?(?:\s*\{[^}]*\})?\s*[-=.]*>\s*(\w+)|(\w+)\s*---\s*(\w+)/g;
+  const edgeRe =
+    /(\w+)(?:\s*\[[^\]]*\])?(?:\s*\([^)]*\))?(?:\s*\{[^}]*\})?\s*[-=.]*>\s*(\w+)|(\w+)\s*---\s*(\w+)/g;
   while ((m = edgeRe.exec(body)) !== null) {
     const a = m[1] ?? m[3];
     const b = m[2] ?? m[4];
@@ -167,10 +177,14 @@ export function findComponentByNodeId(
   const byLabel = components.find((c) => c.name.toLowerCase() === nlabel);
   if (byLabel) return byLabel;
 
-  const byPartialLabel = components.find((c) => c.name.toLowerCase().includes(nlabel) || nlabel.includes(c.name.toLowerCase()));
+  const byPartialLabel = components.find(
+    (c) => c.name.toLowerCase().includes(nlabel) || nlabel.includes(c.name.toLowerCase())
+  );
   if (byPartialLabel) return byPartialLabel;
 
-  const byPartialId = components.find((c) => c.id.toLowerCase().includes(nid) || nid.includes(c.id.toLowerCase()));
+  const byPartialId = components.find(
+    (c) => c.id.toLowerCase().includes(nid) || nid.includes(c.id.toLowerCase())
+  );
   if (byPartialId) return byPartialId;
 
   return null;
@@ -186,7 +200,10 @@ export function findSvgNodeElement(svg: SVGElement | null, nodeId: string): Elem
   const byClass = svg.querySelector(`g.node-${id}, g[class*="node-${id}"]`);
   if (byClass) return byClass;
 
-  const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : id.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+  const escapedId =
+    typeof CSS !== 'undefined' && CSS.escape
+      ? CSS.escape(id)
+      : id.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
   const byId = svg.querySelector(`#${escapedId}`);
   if (byId) return byId;
 

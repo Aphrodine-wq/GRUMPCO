@@ -8,15 +8,15 @@ import type {
   CodePattern,
   OptimizationOpportunity,
   CodeQualityRequirements,
-} from "../services/intent/intentCompilerService.js";
-import type { SystemArchitecture } from "./architecture.js";
-import type { PRD } from "./prd.js";
-import type { AgentType } from "./agents.js";
+} from '../services/intent/intentCompilerService.js';
+import type { SystemArchitecture } from './architecture.js';
+import type { PRD } from './prd.js';
+import type { AgentType } from './agents.js';
 
 export interface ArchitectureHint {
   pattern: string;
   description: string;
-  applicability: "high" | "medium" | "low";
+  applicability: 'high' | 'medium' | 'low';
 }
 
 export interface MasterContext {

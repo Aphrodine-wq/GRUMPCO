@@ -5,20 +5,20 @@
 export interface SecurityVulnerability {
   id: string;
   type:
-    | "sql-injection"
-    | "xss"
-    | "csrf"
-    | "auth-bypass"
-    | "path-traversal"
-    | "command-injection"
-    | "sensitive-data-exposure"
-    | "insecure-deserialization"
-    | "broken-access-control"
-    | "security-misconfiguration"
-    | "dependency-vulnerability"
-    | "secret-exposure"
-    | "other";
-  severity: "critical" | "high" | "medium" | "low" | "info";
+    | 'sql-injection'
+    | 'xss'
+    | 'csrf'
+    | 'auth-bypass'
+    | 'path-traversal'
+    | 'command-injection'
+    | 'sensitive-data-exposure'
+    | 'insecure-deserialization'
+    | 'broken-access-control'
+    | 'security-misconfiguration'
+    | 'dependency-vulnerability'
+    | 'secret-exposure'
+    | 'other';
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
   title: string;
   description: string;
   file: string;
@@ -45,7 +45,7 @@ export interface SecurityScanResult {
     low: number;
     info: number;
     score: number; // 0-100 security score
-    grade: "A" | "B" | "C" | "D" | "F";
+    grade: 'A' | 'B' | 'C' | 'D' | 'F';
   };
 
   vulnerabilities: SecurityVulnerability[];
@@ -64,13 +64,7 @@ export interface SecurityScanResult {
 export interface SBOMComponent {
   name: string;
   version: string;
-  type:
-    | "library"
-    | "framework"
-    | "application"
-    | "file"
-    | "container"
-    | "operating-system";
+  type: 'library' | 'framework' | 'application' | 'file' | 'container' | 'operating-system';
   purl?: string; // Package URL
   licenses: string[];
   supplier?: string;
@@ -79,7 +73,7 @@ export interface SBOMComponent {
 }
 
 export interface SBOMResult {
-  format: "cyclonedx" | "spdx";
+  format: 'cyclonedx' | 'spdx';
   version: string;
   metadata: {
     timestamp: string;
@@ -104,19 +98,14 @@ export interface ComplianceRequirement {
   category: string;
   title: string;
   description: string;
-  status:
-    | "compliant"
-    | "non-compliant"
-    | "partial"
-    | "not-applicable"
-    | "needs-review";
+  status: 'compliant' | 'non-compliant' | 'partial' | 'not-applicable' | 'needs-review';
   evidence?: string;
   remediation?: string;
-  priority: "critical" | "high" | "medium" | "low";
+  priority: 'critical' | 'high' | 'medium' | 'low';
 }
 
 export interface ComplianceReport {
-  standard: "soc2" | "gdpr" | "hipaa" | "pci-dss" | "iso27001" | "owasp-top10";
+  standard: 'soc2' | 'gdpr' | 'hipaa' | 'pci-dss' | 'iso27001' | 'owasp-top10';
   generatedAt: string;
   projectName: string;
 
@@ -136,14 +125,14 @@ export interface ComplianceReport {
 
 export interface SecretFinding {
   type:
-    | "api-key"
-    | "password"
-    | "private-key"
-    | "token"
-    | "credential"
-    | "connection-string"
-    | "other";
-  severity: "critical" | "high" | "medium" | "low";
+    | 'api-key'
+    | 'password'
+    | 'private-key'
+    | 'token'
+    | 'credential'
+    | 'connection-string'
+    | 'other';
+  severity: 'critical' | 'high' | 'medium' | 'low';
   file: string;
   line: number;
   match: string; // Redacted version
@@ -161,20 +150,20 @@ export interface SecretsAuditResult {
 
 export interface SecurityScanRequest {
   workspacePath: string;
-  scanTypes?: ("sast" | "deps" | "secrets" | "config")[];
-  severity?: ("critical" | "high" | "medium" | "low" | "info")[];
+  scanTypes?: ('sast' | 'deps' | 'secrets' | 'config')[];
+  severity?: ('critical' | 'high' | 'medium' | 'low' | 'info')[];
   excludePatterns?: string[];
 }
 
 export interface SBOMRequest {
   workspacePath: string;
-  format?: "cyclonedx" | "spdx";
+  format?: 'cyclonedx' | 'spdx';
   includeDevDeps?: boolean;
 }
 
 export interface ComplianceRequest {
   workspacePath: string;
-  standard: "soc2" | "gdpr" | "hipaa" | "pci-dss" | "iso27001" | "owasp-top10";
+  standard: 'soc2' | 'gdpr' | 'hipaa' | 'pci-dss' | 'iso27001' | 'owasp-top10';
   projectType?: string;
 }
 
@@ -185,6 +174,4 @@ export interface SecretsAuditRequest {
 }
 
 /** Result of workspace path validation */
-export type PathValidationResult =
-  | { ok: true; resolved: string }
-  | { ok: false; reason: string };
+export type PathValidationResult = { ok: true; resolved: string } | { ok: false; reason: string };

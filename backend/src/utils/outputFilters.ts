@@ -3,7 +3,7 @@
  * Used in chat stream (text deltas, tool results).
  */
 
-const REDACTED = "[REDACTED]";
+const REDACTED = '[REDACTED]';
 
 // Common secret patterns (heuristic; may have false positives)
 const SECRET_PATTERNS: Array<{ pattern: RegExp; replace: string }> = [
@@ -33,9 +33,9 @@ const SECRET_PATTERNS: Array<{ pattern: RegExp; replace: string }> = [
 const PII_PATTERNS: Array<{ pattern: RegExp; replace: string }> = [
   {
     pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
-    replace: "[EMAIL]",
+    replace: '[EMAIL]',
   },
-  { pattern: /\b\d{3}-\d{2}-\d{4}\b/g, replace: "[SSN]" },
+  { pattern: /\b\d{3}-\d{2}-\d{4}\b/g, replace: '[SSN]' },
 ];
 
 // Harmful code patterns – conservative; we flag but don't strip by default
@@ -48,7 +48,7 @@ const HARMFUL_PATTERNS: RegExp[] = [
 
 function applyPatterns(
   text: string,
-  patterns: Array<{ pattern: RegExp; replace: string }>,
+  patterns: Array<{ pattern: RegExp; replace: string }>
 ): string {
   let out = text;
   for (const { pattern, replace } of patterns) {
@@ -68,7 +68,7 @@ export function redactSecrets(text: string): string {
  * Redact PII (emails, SSN-like) when OUTPUT_FILTER_PII=true.
  */
 export function redactPii(text: string): string {
-  if (process.env.OUTPUT_FILTER_PII !== "true") return text;
+  if (process.env.OUTPUT_FILTER_PII !== 'true') return text;
   return applyPatterns(text, PII_PATTERNS);
 }
 
@@ -80,13 +80,12 @@ export function filterHarmfulCode(text: string): {
   filtered: string;
   flagged: boolean;
 } {
-  if (process.env.OUTPUT_FILTER_HARMFUL !== "true")
-    return { filtered: text, flagged: false };
+  if (process.env.OUTPUT_FILTER_HARMFUL !== 'true') return { filtered: text, flagged: false };
   let flagged = false;
   let out = text;
   for (const p of HARMFUL_PATTERNS) {
     const before = out;
-    out = out.replace(p, () => "[FLAGGED]");
+    out = out.replace(p, () => '[FLAGGED]');
     if (out !== before) flagged = true;
   }
   return { filtered: out, flagged };

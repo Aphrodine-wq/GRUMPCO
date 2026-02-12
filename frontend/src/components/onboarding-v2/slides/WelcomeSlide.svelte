@@ -83,9 +83,21 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(ellipse 80% 50% at 20% 40%, var(--onboarding-welcome-radial-1) 0%, transparent 50%),
-      radial-gradient(ellipse 60% 80% at 80% 20%, var(--onboarding-welcome-radial-2) 0%, transparent 45%),
-      radial-gradient(ellipse 50% 50% at 50% 80%, var(--onboarding-welcome-radial-3) 0%, transparent 50%),
+      radial-gradient(
+        ellipse 80% 50% at 20% 40%,
+        var(--onboarding-welcome-radial-1) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse 60% 80% at 80% 20%,
+        var(--onboarding-welcome-radial-2) 0%,
+        transparent 45%
+      ),
+      radial-gradient(
+        ellipse 50% 50% at 50% 80%,
+        var(--onboarding-welcome-radial-3) 0%,
+        transparent 50%
+      ),
       var(--onboarding-welcome-linear);
     animation: gradient-shift 10s ease-in-out infinite;
   }
@@ -236,7 +248,6 @@
       transform: translateY(0);
     }
   }
-
 
   .tagline {
     font-size: 1.25rem;

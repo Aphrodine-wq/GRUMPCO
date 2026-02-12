@@ -4,7 +4,7 @@
  * Manages G-Agent sessions - creation, retrieval, cleanup, and persistence.
  */
 
-import type { AgentMode } from "./types.js";
+import type { AgentMode } from './types.js';
 
 /**
  * Session structure
@@ -22,7 +22,7 @@ export interface Session {
   planId?: string;
   /** Conversation history */
   messages: Array<{
-    role: "user" | "assistant";
+    role: 'user' | 'assistant';
     content: string;
     timestamp: string;
   }>;
@@ -90,12 +90,8 @@ export class SessionManager {
   /**
    * Get or create a session
    */
-  getOrCreate(params: {
-    sessionId?: string;
-    userId: string;
-    mode?: AgentMode;
-  }): Session {
-    const { sessionId, userId, mode = "chat" } = params;
+  getOrCreate(params: { sessionId?: string; userId: string; mode?: AgentMode }): Session {
+    const { sessionId, userId, mode = 'chat' } = params;
 
     // Return existing session if found
     if (sessionId) {
@@ -127,11 +123,7 @@ export class SessionManager {
   /**
    * Add a message to a session
    */
-  addMessage(
-    sessionId: string,
-    role: "user" | "assistant",
-    content: string,
-  ): void {
+  addMessage(sessionId: string, role: 'user' | 'assistant', content: string): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 

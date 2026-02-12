@@ -10,8 +10,8 @@
  * - Automatic reconnection
  */
 
-import { Agent } from "https";
-import logger from "../../middleware/logger.js";
+import { Agent } from 'https';
+import logger from '../../middleware/logger.js';
 
 interface PoolConfig {
   maxSockets: number;
@@ -52,19 +52,16 @@ class ConnectionPoolManager {
    */
   private initializePools(): void {
     const providers = [
-      { name: "nim", url: "https://integrate.api.nvidia.com" },
-      { name: "openrouter", url: "https://openrouter.ai" },
-      { name: "openai", url: "https://api.openai.com" },
+      { name: 'nim', url: 'https://integrate.api.nvidia.com' },
+      { name: 'openrouter', url: 'https://openrouter.ai' },
+      { name: 'openai', url: 'https://api.openai.com' },
     ];
 
     for (const provider of providers) {
       this.createPool(provider.name, provider.url);
     }
 
-    logger.info(
-      { providers: providers.length },
-      "Connection pools initialized",
-    );
+    logger.info({ providers: providers.length }, 'Connection pools initialized');
   }
 
   /**
@@ -88,7 +85,7 @@ class ConnectionPoolManager {
       failures: 0,
     });
 
-    logger.debug({ provider }, "Connection pool created");
+    logger.debug({ provider }, 'Connection pool created');
   }
 
   /**
@@ -125,10 +122,7 @@ class ConnectionPoolManager {
     const pool = this.pools.get(provider);
     if (pool) {
       pool.failures++;
-      logger.warn(
-        { provider, failures: pool.failures },
-        "Provider connection failure",
-      );
+      logger.warn({ provider, failures: pool.failures }, 'Provider connection failure');
 
       if (pool.failures >= 3) {
         this.recreatePool(provider);
@@ -149,7 +143,7 @@ class ConnectionPoolManager {
     // Create new pool
     this.createPool(provider, pool.baseUrl);
 
-    logger.info({ provider }, "Connection pool recreated");
+    logger.info({ provider }, 'Connection pool recreated');
   }
 
   /**
@@ -168,7 +162,7 @@ class ConnectionPoolManager {
     for (const [_provider, pool] of this.pools.entries()) {
       try {
         // Simple health check via DNS resolution
-        const dns = await import("dns");
+        const dns = await import('dns');
         const hostname = new URL(pool.baseUrl).hostname;
 
         await new Promise<void>((resolve, reject) => {
@@ -222,7 +216,7 @@ class ConnectionPoolManager {
     }
 
     this.pools.clear();
-    logger.info("All connection pools destroyed");
+    logger.info('All connection pools destroyed');
   }
 }
 
@@ -238,7 +232,7 @@ export { ConnectionPoolManager };
 export async function fetchWithPool(
   url: string,
   provider: string,
-  options: RequestInit = {},
+  options: RequestInit = {}
 ): Promise<Response> {
   const agent = connectionPool.getAgent(provider);
 

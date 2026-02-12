@@ -12,7 +12,8 @@ function getApiKey(): string | null {
 function getAsrUrl(): string | null {
   const full = process.env.NVIDIA_ASR_URL;
   if (full) return full;
-  const base = process.env.NVIDIA_BUILD_SPEECH_URL || 'https://api.nvcf.nvidia.com/v2/nvcf/exec/functions';
+  const base =
+    process.env.NVIDIA_BUILD_SPEECH_URL || 'https://api.nvcf.nvidia.com/v2/nvcf/exec/functions';
   const id = process.env.NVIDIA_ASR_FUNCTION_ID;
   if (!id) return null;
   return `${base}/${id}`;
@@ -21,7 +22,8 @@ function getAsrUrl(): string | null {
 function getTtsUrl(): string | null {
   const full = process.env.NVIDIA_TTS_URL;
   if (full) return full;
-  const base = process.env.NVIDIA_BUILD_SPEECH_URL || 'https://api.nvcf.nvidia.com/v2/nvcf/exec/functions';
+  const base =
+    process.env.NVIDIA_BUILD_SPEECH_URL || 'https://api.nvcf.nvidia.com/v2/nvcf/exec/functions';
   const id = process.env.NVIDIA_TTS_FUNCTION_ID;
   if (!id) return null;
   return `${base}/${id}`;

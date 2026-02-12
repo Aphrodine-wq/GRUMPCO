@@ -1,10 +1,10 @@
-import { TIERS, type TierId, getTier } from "../../config/pricing.js";
-import { getTierForUser } from "../platform/featureFlagsService.js";
+import { TIERS, type TierId, getTier } from '../../config/pricing.js';
+import { getTierForUser } from '../platform/featureFlagsService.js';
 
 export interface LicenseStatus {
   active: boolean;
   tier: TierId;
-  type: "subscription" | "lifetime_license" | "trial";
+  type: 'subscription' | 'lifetime_license' | 'trial';
   expiresAt?: Date;
   features: string[];
 }
@@ -19,10 +19,7 @@ function tierFromKey(key: string): TierId | null {
 }
 
 // In-memory store (replace with DB in production)
-const activatedLicenses = new Map<
-  string,
-  { key: string; tier: TierId; activatedAt: Date }
->();
+const activatedLicenses = new Map<string, { key: string; tier: TierId; activatedAt: Date }>();
 
 /**
  * Service to handle license validation and entitlement checks.
@@ -36,8 +33,8 @@ class LicenseService {
     if (!userId) {
       return {
         active: true,
-        tier: "free",
-        type: "trial",
+        tier: 'free',
+        type: 'trial',
         features: TIERS.free.features,
       };
     }
@@ -54,7 +51,7 @@ class LicenseService {
         return {
           active: true,
           tier: activated.tier,
-          type: "lifetime_license",
+          type: 'lifetime_license',
           expiresAt,
           features: getTier(activated.tier).features,
         };
@@ -68,7 +65,7 @@ class LicenseService {
     return {
       active: true,
       tier: tierId,
-      type: "subscription",
+      type: 'subscription',
       features: getTier(tierId).features,
     };
   }
@@ -79,11 +76,11 @@ class LicenseService {
    * JWT verification. Set LICENSE_VERIFY_ENABLED=true when backend validation is available.
    */
   async validateLicenseKey(
-    key: string,
+    key: string
   ): Promise<{ valid: boolean; tier?: TierId; message?: string }> {
     const tier = tierFromKey(key);
     if (!tier) {
-      return { valid: false, message: "Invalid license key format" };
+      return { valid: false, message: 'Invalid license key format' };
     }
 
     // Format valid. When LICENSE_VERIFY_ENABLED=true, add DB lookup or JWT verify here.

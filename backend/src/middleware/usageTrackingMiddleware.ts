@@ -6,12 +6,12 @@
  * billing/credit tracking via isLocalModel check in usageTracker.
  */
 
-import { type Request, type Response, type NextFunction } from "express";
-import logger from "./logger.js";
-import { recordApiCall } from "../services/platform/usageTracker.js";
+import { type Request, type Response, type NextFunction } from 'express';
+import logger from './logger.js';
+import { recordApiCall } from '../services/platform/usageTracker.js';
 
 // Track which endpoints to skip (health checks, metrics, etc.)
-const SKIP_TRACKING = ["/health", "/metrics", "/api/health"];
+const SKIP_TRACKING = ['/health', '/metrics', '/api/health'];
 
 // Extend Express Request type to track response data (user/userId from auth middleware)
 interface AuthRequest extends Request {
@@ -34,11 +34,7 @@ interface TrackingRequest extends Request {
  * Local AI models (Ollama, local LLMs) are automatically excluded from
  * credit tracking via the isLocalModel check in usageTracker.
  */
-export function usageTrackingMiddleware(
-  req: TrackingRequest,
-  res: Response,
-  next: NextFunction,
-) {
+export function usageTrackingMiddleware(req: TrackingRequest, res: Response, next: NextFunction) {
   // Skip tracking for certain endpoints
   if (SKIP_TRACKING.some((skip) => req.path.startsWith(skip))) {
     return next();
@@ -49,7 +45,7 @@ export function usageTrackingMiddleware(
 
   // Try to extract user ID from request
   const authReq = req as AuthRequest;
-  req.userId = authReq.user?.id ?? authReq.userId ?? "anonymous";
+  req.userId = authReq.user?.id ?? authReq.userId ?? 'anonymous';
 
   // Intercept response to capture status and data
   const originalJson = res.json.bind(res);
@@ -62,7 +58,7 @@ export function usageTrackingMiddleware(
   };
 
   res.send = function (data: string | object) {
-    if (typeof data === "string") {
+    if (typeof data === 'string') {
       try {
         responseBody = JSON.parse(data);
       } catch {
@@ -75,7 +71,7 @@ export function usageTrackingMiddleware(
   };
 
   // Hook into response finish event to record usage
-  res.on("finish", async () => {
+  res.on('finish', async () => {
     const latencyMs = Date.now() - (req.startTime || Date.now());
     const success = res.statusCode >= 200 && res.statusCode < 400;
 
@@ -85,14 +81,12 @@ export function usageTrackingMiddleware(
       let estimatedOutputTokens = req.estimatedOutputTokens;
 
       const usage =
-        responseBody &&
-          typeof responseBody === "object" &&
-          "usage" in responseBody
+        responseBody && typeof responseBody === 'object' && 'usage' in responseBody
           ? (
-            responseBody as {
-              usage?: { input_tokens?: number; output_tokens?: number };
-            }
-          ).usage
+              responseBody as {
+                usage?: { input_tokens?: number; output_tokens?: number };
+              }
+            ).usage
           : undefined;
       if (usage) {
         estimatedInputTokens = usage.input_tokens;
@@ -101,9 +95,9 @@ export function usageTrackingMiddleware(
 
       // Record the API call (local models are auto-excluded in recordApiCall)
       await recordApiCall({
-        userId: req.userId ?? "anonymous",
+        userId: req.userId ?? 'anonymous',
         endpoint: req.path,
-        method: req.method ?? "GET",
+        method: req.method ?? 'GET',
         model: req.model,
         provider: req.provider,
         inputTokens: estimatedInputTokens,
@@ -119,7 +113,7 @@ export function usageTrackingMiddleware(
           userId: req.userId,
           endpoint: req.path,
         },
-        "Failed to record API usage",
+        'Failed to record API usage'
       );
     }
   });
@@ -142,7 +136,7 @@ export function setTokenInfo(
   inputTokens: number,
   outputTokens: number,
   model?: string,
-  provider?: string,
+  provider?: string
 ) {
   req.estimatedInputTokens = inputTokens;
   req.estimatedOutputTokens = outputTokens;

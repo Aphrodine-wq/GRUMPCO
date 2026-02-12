@@ -1,37 +1,14 @@
 {
-    "id": "api-builder",
-    "name": "API Builder",
-    "version": "1.0.0",
-    "description": "Scaffold REST and GraphQL APIs, generate endpoint boilerplate, create request/response validators, and produce OpenAPI specifications.",
-    "category": "development",
-    "icon": "🔌",
-    "tags": [
-        "api",
-        "rest",
-        "graphql",
-        "openapi",
-        "swagger",
-        "endpoint"
-    ],
-    "capabilities": [
-        "api-scaffolding",
-        "endpoint-generation",
-        "openapi-spec"
-    ],
-    "triggers": {
-        "keywords": [
-            "api",
-            "endpoint",
-            "rest",
-            "graphql",
-            "openapi",
-            "swagger",
-            "route"
-        ],
-        "commands": [
-            "/api",
-            "/endpoint",
-            "/scaffold-api"
-        ]
-    }
+  "id": "api-builder",
+  "name": "API Builder",
+  "version": "1.0.0",
+  "description": "Scaffold REST and GraphQL APIs, generate endpoint boilerplate, create request/response validators, and produce OpenAPI specifications.",
+  "category": "development",
+  "icon": "🔌",
+  "tags": ["api", "rest", "graphql", "openapi", "swagger", "endpoint"],
+  "capabilities": ["api-scaffolding", "endpoint-generation", "openapi-spec"],
+  "triggers": {
+    "keywords": ["api", "endpoint", "rest", "graphql", "openapi", "swagger", "route"],
+    "commands": ["/api", "/endpoint", "/scaffold-api"]
+  }
 }

@@ -4,7 +4,7 @@
  * Tier can come from env (TIER_DEFAULT), from settings, or from a future billing API.
  */
 
-export type TierId = "free" | "starter" | "pro" | "team" | "enterprise";
+export type TierId = 'free' | 'starter' | 'pro' | 'team' | 'enterprise';
 
 export interface FeatureFlags {
   has_design: boolean;
@@ -78,8 +78,8 @@ const TIER_FLAGS: Record<TierId, FeatureFlags> = {
 };
 
 function parseTier(s: string | undefined): TierId {
-  if (s === "starter" || s === "pro" || s === "team" || s === "enterprise") return s;
-  return "free";
+  if (s === 'starter' || s === 'pro' || s === 'team' || s === 'enterprise') return s;
+  return 'free';
 }
 
 /**
@@ -89,7 +89,7 @@ function parseTier(s: string | undefined): TierId {
 export function getTierForUser(_userKey?: string): TierId {
   const fromEnv = process.env.TIER_DEFAULT;
   if (fromEnv) return parseTier(fromEnv);
-  return "free";
+  return 'free';
 }
 
 /**
@@ -102,10 +102,7 @@ export function getFeatureFlagsForTier(tier: TierId): FeatureFlags {
 /**
  * Resolve feature flags for a user (tier + overrides). Use when building prompts or deciding routes/tools.
  */
-export function getFeatureFlags(
-  userKey?: string,
-  tierOverride?: TierId,
-): FeatureFlags {
+export function getFeatureFlags(userKey?: string, tierOverride?: TierId): FeatureFlags {
   const tier = tierOverride ?? getTierForUser(userKey);
   return getFeatureFlagsForTier(tier);
 }
@@ -115,17 +112,16 @@ export function getFeatureFlags(
  */
 export function formatCapabilityListForPrompt(flags: FeatureFlags): string {
   const list: string[] = [];
-  if (flags.has_design) list.push("Design (intent, architecture, Mermaid)");
-  if (flags.has_plan) list.push("Plan (generate and execute plans)");
-  if (flags.has_spec) list.push("Spec (Q&A spec generation)");
-  if (flags.has_argument)
-    list.push("Argument (discuss, then implement on confirmation)");
-  if (flags.has_code) list.push("Code (implement with file/bash tools)");
-  if (flags.has_ship) list.push("SHIP (design→spec→plan→code pipeline)");
-  if (flags.has_codegen) list.push("Codegen (multi-agent code generation)");
-  if (flags.has_mcp_browser) list.push("MCP/browser tools");
-  if (flags.has_github) list.push("GitHub (create repo, push)");
+  if (flags.has_design) list.push('Design (intent, architecture, Mermaid)');
+  if (flags.has_plan) list.push('Plan (generate and execute plans)');
+  if (flags.has_spec) list.push('Spec (Q&A spec generation)');
+  if (flags.has_argument) list.push('Argument (discuss, then implement on confirmation)');
+  if (flags.has_code) list.push('Code (implement with file/bash tools)');
+  if (flags.has_ship) list.push('SHIP (design→spec→plan→code pipeline)');
+  if (flags.has_codegen) list.push('Codegen (multi-agent code generation)');
+  if (flags.has_mcp_browser) list.push('MCP/browser tools');
+  if (flags.has_github) list.push('GitHub (create repo, push)');
   return list.length
-    ? list.map((l) => `- ${l}`).join("\n")
-    : "- Design, Plan, Spec, Argument, Code (basic)";
+    ? list.map((l) => `- ${l}`).join('\n')
+    : '- Design, Plan, Spec, Argument, Code (basic)';
 }

@@ -7,8 +7,8 @@
  * @module config/rateLimits
  */
 
-import { z } from "zod";
-import logger from "../middleware/logger.js";
+import { z } from 'zod';
+import logger from '../middleware/logger.js';
 
 // =============================================================================
 // SCHEMA DEFINITION
@@ -31,7 +31,7 @@ const rateLimitConfigSchema = z.object({
       windowMs: z.number().int().positive(),
       maxRequests: z.number().int().positive(),
       message: z.string().optional(),
-    }),
+    })
   ),
 
   // Tier multipliers (how much to scale limits by tier)
@@ -59,50 +59,50 @@ const DEFAULT_CONFIG: RateLimitConfig = {
     maxRequests: 100,
   },
   endpoints: {
-    "/api/chat": {
+    '/api/chat': {
       windowMs: 60 * 1000,
       maxRequests: 10,
-      message: "Too many chat requests. Please wait a moment.",
+      message: 'Too many chat requests. Please wait a moment.',
     },
-    "/api/codegen": {
+    '/api/codegen': {
       windowMs: 60 * 1000,
       maxRequests: 5,
-      message: "Too many code generation requests. Please wait a moment.",
+      message: 'Too many code generation requests. Please wait a moment.',
     },
-    "/api/diagram": {
+    '/api/diagram': {
       windowMs: 60 * 1000,
       maxRequests: 20,
-      message: "Too many diagram requests. Please wait a moment.",
+      message: 'Too many diagram requests. Please wait a moment.',
     },
-    "/api/intent": {
+    '/api/intent': {
       windowMs: 60 * 1000,
       maxRequests: 15,
-      message: "Too many intent requests. Please wait a moment.",
+      message: 'Too many intent requests. Please wait a moment.',
     },
-    "/api/architecture": {
+    '/api/architecture': {
       windowMs: 60 * 1000,
       maxRequests: 10,
-      message: "Too many architecture requests. Please wait a moment.",
+      message: 'Too many architecture requests. Please wait a moment.',
     },
-    "/api/prd": {
+    '/api/prd': {
       windowMs: 60 * 1000,
       maxRequests: 10,
-      message: "Too many PRD requests. Please wait a moment.",
+      message: 'Too many PRD requests. Please wait a moment.',
     },
-    "/api/voice": {
+    '/api/voice': {
       windowMs: 60 * 1000,
       maxRequests: 20,
-      message: "Too many voice requests. Please wait a moment.",
+      message: 'Too many voice requests. Please wait a moment.',
     },
-    "/api/ship": {
+    '/api/ship': {
       windowMs: 60 * 1000,
       maxRequests: 5,
-      message: "Too many ship requests. Please wait a moment.",
+      message: 'Too many ship requests. Please wait a moment.',
     },
-    "/api/gagent": {
+    '/api/gagent': {
       windowMs: 60 * 1000,
       maxRequests: 10,
-      message: "Too many G-Agent requests. Please wait a moment.",
+      message: 'Too many G-Agent requests. Please wait a moment.',
     },
   },
   tierMultipliers: {
@@ -137,13 +137,10 @@ export function loadRateLimitConfig(): RateLimitConfig {
     try {
       const parsed = JSON.parse(jsonConfig);
       const validated = rateLimitConfigSchema.parse(parsed);
-      logger.info("Rate limit config loaded from RATE_LIMIT_CONFIG env var");
+      logger.info('Rate limit config loaded from RATE_LIMIT_CONFIG env var');
       return validated;
     } catch (err) {
-      logger.warn(
-        { err },
-        "Failed to parse RATE_LIMIT_CONFIG, using defaults with overrides",
-      );
+      logger.warn({ err }, 'Failed to parse RATE_LIMIT_CONFIG, using defaults with overrides');
     }
   }
 
@@ -152,10 +149,7 @@ export function loadRateLimitConfig(): RateLimitConfig {
 
   // Global overrides
   if (process.env.RATE_LIMIT_GLOBAL_WINDOW_MS) {
-    config.global.windowMs = parseInt(
-      process.env.RATE_LIMIT_GLOBAL_WINDOW_MS,
-      10,
-    );
+    config.global.windowMs = parseInt(process.env.RATE_LIMIT_GLOBAL_WINDOW_MS, 10);
   }
   if (process.env.RATE_LIMIT_GLOBAL_MAX) {
     config.global.maxRequests = parseInt(process.env.RATE_LIMIT_GLOBAL_MAX, 10);
@@ -163,33 +157,26 @@ export function loadRateLimitConfig(): RateLimitConfig {
 
   // Tier multiplier overrides
   if (process.env.RATE_LIMIT_TIER_MULTIPLIER_FREE) {
-    config.tierMultipliers.free = parseFloat(
-      process.env.RATE_LIMIT_TIER_MULTIPLIER_FREE,
-    );
+    config.tierMultipliers.free = parseFloat(process.env.RATE_LIMIT_TIER_MULTIPLIER_FREE);
   }
   if (process.env.RATE_LIMIT_TIER_MULTIPLIER_PRO) {
-    config.tierMultipliers.pro = parseFloat(
-      process.env.RATE_LIMIT_TIER_MULTIPLIER_PRO,
-    );
+    config.tierMultipliers.pro = parseFloat(process.env.RATE_LIMIT_TIER_MULTIPLIER_PRO);
   }
   if (process.env.RATE_LIMIT_TIER_MULTIPLIER_TEAM) {
-    config.tierMultipliers.team = parseFloat(
-      process.env.RATE_LIMIT_TIER_MULTIPLIER_TEAM,
-    );
+    config.tierMultipliers.team = parseFloat(process.env.RATE_LIMIT_TIER_MULTIPLIER_TEAM);
   }
   if (process.env.RATE_LIMIT_TIER_MULTIPLIER_ENTERPRISE) {
     config.tierMultipliers.enterprise = parseFloat(
-      process.env.RATE_LIMIT_TIER_MULTIPLIER_ENTERPRISE,
+      process.env.RATE_LIMIT_TIER_MULTIPLIER_ENTERPRISE
     );
   }
 
   // Feature flags
   if (process.env.RATE_LIMIT_USE_REDIS !== undefined) {
-    config.useRedis = process.env.RATE_LIMIT_USE_REDIS === "true";
+    config.useRedis = process.env.RATE_LIMIT_USE_REDIS === 'true';
   }
   if (process.env.RATE_LIMIT_SKIP_HEALTH_CHECKS !== undefined) {
-    config.skipHealthChecks =
-      process.env.RATE_LIMIT_SKIP_HEALTH_CHECKS === "true";
+    config.skipHealthChecks = process.env.RATE_LIMIT_SKIP_HEALTH_CHECKS === 'true';
   }
 
   return config;
@@ -216,7 +203,7 @@ export function getRateLimitConfig(): RateLimitConfig {
  */
 export function reloadRateLimitConfig(): RateLimitConfig {
   _config = loadRateLimitConfig();
-  logger.info("Rate limit configuration reloaded");
+  logger.info('Rate limit configuration reloaded');
   return _config;
 }
 
@@ -224,8 +211,8 @@ export function reloadRateLimitConfig(): RateLimitConfig {
  * Get endpoint-specific rate limit config.
  */
 export function getEndpointRateLimitConfig(
-  path: string,
-): RateLimitConfig["endpoints"][string] | undefined {
+  path: string
+): RateLimitConfig['endpoints'][string] | undefined {
   const config = getRateLimitConfig();
 
   // Exact match
@@ -235,7 +222,7 @@ export function getEndpointRateLimitConfig(
 
   // Prefix match (e.g., /api/chat/stream -> /api/chat)
   for (const basePath of Object.keys(config.endpoints)) {
-    if (path.startsWith(basePath + "/")) {
+    if (path.startsWith(basePath + '/')) {
       return config.endpoints[basePath];
     }
   }
@@ -246,9 +233,7 @@ export function getEndpointRateLimitConfig(
 /**
  * Get tier multiplier.
  */
-export function getTierMultiplier(
-  tier: "free" | "pro" | "team" | "enterprise",
-): number {
+export function getTierMultiplier(tier: 'free' | 'pro' | 'team' | 'enterprise'): number {
   const config = getRateLimitConfig();
   return config.tierMultipliers[tier] ?? 1;
 }

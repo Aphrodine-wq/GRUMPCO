@@ -31,7 +31,7 @@ class FFT {
 
   constructor(size: number) {
     if (size < 1 || (size & (size - 1)) !== 0) {
-      throw new Error("FFT size must be a power of 2");
+      throw new Error('FFT size must be a power of 2');
     }
     this.size = size;
     this.cosTable = new Float64Array(size / 2);
@@ -70,19 +70,11 @@ class FFT {
       const tableStep = n / size;
 
       for (let i = 0; i < n; i += size) {
-        for (
-          let k = 0, tableIdx = 0;
-          k < halfSize;
-          k++, tableIdx += tableStep
-        ) {
+        for (let k = 0, tableIdx = 0; k < halfSize; k++, tableIdx += tableStep) {
           const l = i + k;
           const r = l + halfSize;
-          const tpre =
-            real[r] * this.cosTable[tableIdx] +
-            imag[r] * this.sinTable[tableIdx];
-          const tpim =
-            -real[r] * this.sinTable[tableIdx] +
-            imag[r] * this.cosTable[tableIdx];
+          const tpre = real[r] * this.cosTable[tableIdx] + imag[r] * this.sinTable[tableIdx];
+          const tpim = -real[r] * this.sinTable[tableIdx] + imag[r] * this.cosTable[tableIdx];
           real[r] = real[l] - tpre;
           imag[r] = imag[l] - tpim;
           real[l] += tpre;
@@ -166,10 +158,7 @@ export class HRRVector {
   /**
    * Create from raw embedding (e.g., from OpenAI embeddings)
    */
-  static fromEmbedding(
-    embedding: number[],
-    dimension: number = 4096,
-  ): HRRVector {
+  static fromEmbedding(embedding: number[], dimension: number = 4096): HRRVector {
     const vec = new HRRVector(dimension);
 
     // Pad or truncate embedding to match dimension
@@ -206,7 +195,7 @@ export class HRRVector {
    */
   bind(other: HRRVector): HRRVector {
     if (this.dimension !== other.dimension) {
-      throw new Error("Vectors must have same dimension");
+      throw new Error('Vectors must have same dimension');
     }
 
     const result = new HRRVector(this.dimension);
@@ -344,11 +333,7 @@ export class HRRVector {
   /**
    * Deserialize from JSON
    */
-  static fromJSON(data: {
-    dimension: number;
-    real: number[];
-    imag: number[];
-  }): HRRVector {
+  static fromJSON(data: { dimension: number; real: number[]; imag: number[] }): HRRVector {
     const vec = new HRRVector(data.dimension);
     vec.real = new Float64Array(data.real);
     vec.imag = new Float64Array(data.imag);
@@ -396,12 +381,8 @@ export class HolographicMemory {
    * The value can be retrieved later using the key
    */
   store(key: string | HRRVector, value: string | HRRVector): void {
-    const keyVec =
-      typeof key === "string" ? HRRVector.fromText(key, this.dimension) : key;
-    const valueVec =
-      typeof value === "string"
-        ? HRRVector.fromText(value, this.dimension)
-        : value;
+    const keyVec = typeof key === 'string' ? HRRVector.fromText(key, this.dimension) : key;
+    const valueVec = typeof value === 'string' ? HRRVector.fromText(value, this.dimension) : value;
 
     // Apply decay to existing memory (prevents saturation over time)
     if (this.decayFactor < 1) {
@@ -422,8 +403,7 @@ export class HolographicMemory {
    * Returns the reconstructed vector (approximate)
    */
   retrieve(key: string | HRRVector): HRRVector {
-    const keyVec =
-      typeof key === "string" ? HRRVector.fromText(key, this.dimension) : key;
+    const keyVec = typeof key === 'string' ? HRRVector.fromText(key, this.dimension) : key;
     return this.memory.unbind(keyVec);
   }
 
@@ -433,13 +413,13 @@ export class HolographicMemory {
    */
   retrieveWithSimilarity(
     key: string | HRRVector,
-    expectedValue: string | HRRVector,
+    expectedValue: string | HRRVector
   ): {
     retrieved: HRRVector;
     similarity: number;
   } {
     const valueVec =
-      typeof expectedValue === "string"
+      typeof expectedValue === 'string'
         ? HRRVector.fromText(expectedValue, this.dimension)
         : expectedValue;
     const retrieved = this.retrieve(key);
@@ -551,19 +531,15 @@ export class HoloKVCache {
     layerIdx: number,
     position: number,
     key: number[] | HRRVector,
-    value: number[] | HRRVector,
+    value: number[] | HRRVector
   ): void {
     const layer = this.layers.get(layerIdx);
     if (!layer) throw new Error(`Layer ${layerIdx} not found`);
 
     // Create position-aware key (include positional encoding)
     const positionVec = HRRVector.fromText(`pos_${position}`, this.dimension);
-    const keyVec = Array.isArray(key)
-      ? HRRVector.fromEmbedding(key, this.dimension)
-      : key;
-    const valueVec = Array.isArray(value)
-      ? HRRVector.fromEmbedding(value, this.dimension)
-      : value;
+    const keyVec = Array.isArray(key) ? HRRVector.fromEmbedding(key, this.dimension) : key;
+    const valueVec = Array.isArray(value) ? HRRVector.fromEmbedding(value, this.dimension) : value;
 
     // Bind position with key to create unique retrieval key
     const boundKey = positionVec.bind(keyVec);
@@ -580,7 +556,7 @@ export class HoloKVCache {
   retrieveForAttention(
     layerIdx: number,
     queryPositions: number[],
-    queries: (number[] | HRRVector)[],
+    queries: (number[] | HRRVector)[]
   ): HRRVector[] {
     const layer = this.layers.get(layerIdx);
     if (!layer) throw new Error(`Layer ${layerIdx} not found`);
@@ -588,10 +564,7 @@ export class HoloKVCache {
     const results: HRRVector[] = [];
 
     for (let i = 0; i < queryPositions.length; i++) {
-      const positionVec = HRRVector.fromText(
-        `pos_${queryPositions[i]}`,
-        this.dimension,
-      );
+      const positionVec = HRRVector.fromText(`pos_${queryPositions[i]}`, this.dimension);
       const queryVec = Array.isArray(queries[i])
         ? HRRVector.fromEmbedding(queries[i] as number[], this.dimension)
         : (queries[i] as HRRVector);
@@ -624,8 +597,7 @@ export class HoloKVCache {
 
     // Compare to traditional KV cache
     // Traditional: 2 (K+V) × seq_len × d_model × 2 bytes (fp16) × layers
-    const traditionalBytes =
-      2 * this.tokenCount * this.dimension * 2 * this.numLayers;
+    const traditionalBytes = 2 * this.tokenCount * this.dimension * 2 * this.numLayers;
 
     return {
       numLayers: this.numLayers,
@@ -634,8 +606,7 @@ export class HoloKVCache {
       totalMemoryBytes: totalMemory,
       memoryPerLayer,
       traditionalKVCacheBytes: traditionalBytes,
-      compressionRatio:
-        traditionalBytes > 0 ? traditionalBytes / totalMemory : 0,
+      compressionRatio: traditionalBytes > 0 ? traditionalBytes / totalMemory : 0,
     };
   }
 
@@ -682,11 +653,7 @@ export class HolographicMemoryService {
   /**
    * Create or get a named HoloKV cache
    */
-  getKVCache(
-    name: string,
-    numLayers: number = 32,
-    dimension: number = 4096,
-  ): HoloKVCache {
+  getKVCache(name: string, numLayers: number = 32, dimension: number = 4096): HoloKVCache {
     let cache = this.kvCaches.get(name);
     if (!cache) {
       cache = new HoloKVCache(numLayers, dimension);
@@ -701,9 +668,9 @@ export class HolographicMemoryService {
   listAll(): {
     memories: {
       name: string;
-      stats: ReturnType<HolographicMemory["getStats"]>;
+      stats: ReturnType<HolographicMemory['getStats']>;
     }[];
-    kvCaches: { name: string; stats: ReturnType<HoloKVCache["getStats"]> }[];
+    kvCaches: { name: string; stats: ReturnType<HoloKVCache['getStats']> }[];
   } {
     return {
       memories: Array.from(this.memories.entries()).map(([name, mem]) => ({
