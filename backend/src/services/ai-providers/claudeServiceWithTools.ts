@@ -23,58 +23,51 @@
 
 /** Tool input schema shape for LLM gateway (default when tool has no input_schema). */
 const _DEFAULT_TOOL_INPUT_SCHEMA = {
-  type: "object" as const,
+  type: 'object' as const,
   properties: undefined as Record<string, unknown> | undefined,
   required: undefined as string[] | undefined,
 };
 
-import { AVAILABLE_TOOLS, type ToolExecutionResult } from "../../tools/index.js";
-import {
-  toolExecutionService,
-  ToolExecutionService,
-} from "../workspace/toolExecutionService.js";
-import logger from "../../middleware/logger.js";
-import { getPlan, startPlanExecution } from "../ship/planService.js";
-import { getSpecSession } from "../ship/specService.js";
+import { AVAILABLE_TOOLS, type ToolExecutionResult } from '../../tools/index.js';
+import { toolExecutionService, ToolExecutionService } from '../workspace/toolExecutionService.js';
+import logger from '../../middleware/logger.js';
+import { getPlan, startPlanExecution } from '../ship/planService.js';
+import { getSpecSession } from '../ship/specService.js';
 import {
   withRetry as _withRetry,
   type ErrorWithStatus as _ErrorWithStatus,
-} from "../infra/resilience.js";
-import { checkRateLimit as _checkRateLimit } from "../infra/bulkheads.js";
-import { checkInput, checkOutput } from "../security/guardrailsService.js";
-import { getMcpTools } from "../../mcp/registry.js";
+} from '../infra/resilience.js';
+import { checkRateLimit as _checkRateLimit } from '../infra/bulkheads.js';
+import { checkInput, checkOutput } from '../security/guardrailsService.js';
+import { getMcpTools } from '../../mcp/registry.js';
 import {
   getUserToolDefinitions,
   executeUserTool,
   isUserTool,
-} from "../../skills/userToolsRegistry.js";
-import { createSkillContext } from "../../skills/base/SkillContext.js";
-import { skillRegistry } from "../../skills/index.js";
-import { getHeadSystemPrompt } from "../../prompts/head.js";
-import { wrapModeContext } from "../../prompts/compose.js";
+} from '../../skills/userToolsRegistry.js';
+import { createSkillContext } from '../../skills/base/SkillContext.js';
+import { skillRegistry } from '../../skills/index.js';
+import { getHeadSystemPrompt } from '../../prompts/head.js';
+import { wrapModeContext } from '../../prompts/compose.js';
 import {
   getChatModePrompt,
   getGAgentModePrompt,
   type ChatModeName,
   type CodeSpecialist,
-} from "../../prompts/chat/index.js";
-import {
-  getStream,
-  type LLMProvider,
-  type MultimodalContentPart,
-} from "./llmGateway.js";
-import { getIntentGuidedRagContext } from "../rag/ragService.js";
-import { filterOutput } from "../../utils/outputFilters.js";
-import { getAllowedToolNames } from "../../config/gAgentTools.js";
-import { parseAndEnrichIntent } from "../intent/intentCompilerService.js";
-import { isMcpTool, executeMcpTool } from "../../mcp/client.js";
+} from '../../prompts/chat/index.js';
+import { getStream, type LLMProvider, type MultimodalContentPart } from './llmGateway.js';
+import { getIntentGuidedRagContext } from '../rag/ragService.js';
+import { filterOutput } from '../../utils/outputFilters.js';
+import { getAllowedToolNames } from '../../config/gAgentTools.js';
+import { parseAndEnrichIntent } from '../intent/intentCompilerService.js';
+import { isMcpTool, executeMcpTool } from '../../mcp/client.js';
 
 // Re-export types so existing consumers don't break
-export type { ChatStreamEvent, FileChangeRecord } from "./chatStreamTypes.js";
-import type { ChatStreamEvent, FileChangeRecord } from "./chatStreamTypes.js";
+export type { ChatStreamEvent, FileChangeRecord } from './chatStreamTypes.js';
+import type { ChatStreamEvent, FileChangeRecord } from './chatStreamTypes.js';
 
 // Extracted modules
-import { filterToolsByContext } from "./tools/toolFiltering.js";
+import { filterToolsByContext } from './tools/toolFiltering.js';
 import {
   executeBash,
   executeFileRead,
@@ -110,7 +103,7 @@ import {
   executeSystemExec,
   executeCanvasUpdate,
   executeFileOutline,
-} from "./tools/toolExecutors.js";
+} from './tools/toolExecutors.js';
 import {
   executeSkillTool,
   executeSkillCreate,
@@ -120,7 +113,7 @@ import {
   executeSessionsList,
   executeSessionsHistory,
   executeSessionsSend,
-} from "./tools/skillExecutors.js";
+} from './tools/skillExecutors.js';
 
 // ============================================================================
 // CLAUDE SERVICE WITH TOOLS
@@ -134,7 +127,7 @@ import {
  */
 export class ClaudeServiceWithTools {
   /** Default model for API calls */
-  private model: string = "moonshotai/kimi-k2.5";
+  private model: string = 'moonshotai/kimi-k2.5';
   /** Shared tool execution service */
   private toolExecutionService: ToolExecutionService;
   /** Request-scoped tool execution service (for isolation) */
@@ -155,20 +148,15 @@ export class ClaudeServiceWithTools {
   /**
    * Helper to collect stream events into a complete response
    */
-  private async collectStreamResponse(
-    stream: AsyncIterable<unknown>,
-  ): Promise<string> {
-    let fullText = "";
+  private async collectStreamResponse(stream: AsyncIterable<unknown>): Promise<string> {
+    let fullText = '';
     for await (const event of stream) {
       const ev = event as {
         type?: string;
         delta?: { type?: string; text?: string };
       };
-      if (
-        ev.type === "content_block_delta" &&
-        ev.delta?.type === "text_delta"
-      ) {
-        fullText += ev.delta.text ?? "";
+      if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+        fullText += ev.delta.text ?? '';
       }
     }
     return fullText;
@@ -186,35 +174,35 @@ export class ClaudeServiceWithTools {
    * autonomous: when true (Yolo mode), emit { type: 'autonomous', value: true } so client can skip tool confirmations.
    */
   async *generateChatStream(
-    messages: Array<{ role: "user" | "assistant"; content: string }>,
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>,
     abortSignal?: AbortSignal,
     workspaceRoot?: string,
-    mode: "normal" | "plan" | "spec" | "execute" | "design" | "code" = "normal",
+    mode: 'normal' | 'plan' | 'spec' | 'execute' | 'design' | 'code' = 'normal',
     agentProfile?: string,
     planId?: string,
     specSessionId?: string,
     provider?: LLMProvider,
     modelId?: string,
     guardRailOptions?: { allowedDirs?: string[] },
-    tierOverride?: "free" | "pro" | "team" | "enterprise",
+    tierOverride?: 'free' | 'pro' | 'team' | 'enterprise',
     autonomous?: boolean,
-    sessionType?: "chat" | "gAgent",
-    gAgentCapabilities?: import("../../types/settings.js").GAgentCapabilityKey[],
+    sessionType?: 'chat' | 'gAgent',
+    gAgentCapabilities?: import('../../types/settings.js').GAgentCapabilityKey[],
     gAgentExternalAllowlist?: string[],
     includeRagContext?: boolean,
     toolAllowlist?: string[],
     toolDenylist?: string[],
-    userId?: string,
+    userId?: string
   ): AsyncGenerator<ChatStreamEvent, void, unknown> {
     // Handle execute mode - load plan and execute it
-    if (mode === "execute" && planId) {
+    if (mode === 'execute' && planId) {
       const plan = await getPlan(planId);
       if (!plan) {
-        yield { type: "error", message: `Plan ${planId} not found` };
+        yield { type: 'error', message: `Plan ${planId} not found` };
         return;
       }
-      if (plan.status !== "approved") {
-        yield { type: "error", message: `Plan ${planId} is not approved` };
+      if (plan.status !== 'approved') {
+        yield { type: 'error', message: `Plan ${planId} is not approved` };
         return;
       }
 
@@ -222,39 +210,39 @@ export class ClaudeServiceWithTools {
       startPlanExecution(planId);
 
       // Add plan context to messages
-      const planContext = `Execute this approved plan:\n\n${plan.title}\n${plan.description}\n\nSteps:\n${plan.steps.map((s) => `${s.order}. ${s.title}: ${s.description}`).join("\n")}`;
+      const planContext = `Execute this approved plan:\n\n${plan.title}\n${plan.description}\n\nSteps:\n${plan.steps.map((s) => `${s.order}. ${s.title}: ${s.description}`).join('\n')}`;
       messages = [
         ...messages,
         {
-          role: "assistant",
+          role: 'assistant',
           content: planContext,
         },
       ];
-      mode = "normal"; // Continue in normal mode to execute
+      mode = 'normal'; // Continue in normal mode to execute
     }
 
     // Handle spec mode - load spec session context
-    if (mode === "spec" && specSessionId) {
+    if (mode === 'spec' && specSessionId) {
       const session = await getSpecSession(specSessionId);
       if (session && session.specification) {
-        const specContext = `Generate code based on this specification:\n\n${session.specification.title}\n${session.specification.description}\n\nRequirements:\n${session.specification.sections.requirements?.map((r) => `- ${r.title}: ${r.description}`).join("\n") || "None"}`;
+        const specContext = `Generate code based on this specification:\n\n${session.specification.title}\n${session.specification.description}\n\nRequirements:\n${session.specification.sections.requirements?.map((r) => `- ${r.title}: ${r.description}`).join('\n') || 'None'}`;
         messages = [
           ...messages,
           {
-            role: "assistant",
+            role: 'assistant',
             content: specContext,
           },
         ];
-        mode = "normal"; // Continue in normal mode to implement
+        mode = 'normal'; // Continue in normal mode to implement
       }
     }
 
-    if (workspaceRoot && mode !== "plan") {
+    if (workspaceRoot && mode !== 'plan') {
       this.requestScopedTes = new ToolExecutionService(workspaceRoot, {
         allowedDirs: guardRailOptions?.allowedDirs,
       });
     }
-    if (sessionType === "gAgent") {
+    if (sessionType === 'gAgent') {
       this.gAgentSession = true;
       if (gAgentExternalAllowlist?.length) {
         this.gAgentExternalAllowlist = gAgentExternalAllowlist;
@@ -262,51 +250,45 @@ export class ClaudeServiceWithTools {
     }
     try {
       if (autonomous) {
-        yield { type: "autonomous", value: true };
+        yield { type: 'autonomous', value: true };
       }
 
-      const chatMode: ChatModeName =
-        mode === "execute" ? "execute" : (mode as ChatModeName);
+      const chatMode: ChatModeName = mode === 'execute' ? 'execute' : (mode as ChatModeName);
       const specialist: CodeSpecialist | undefined =
         agentProfile &&
-          agentProfile !== "general" &&
-          /^(router|frontend|backend|devops|test)$/.test(agentProfile)
+        agentProfile !== 'general' &&
+        /^(router|frontend|backend|devops|test)$/.test(agentProfile)
           ? (agentProfile as CodeSpecialist)
           : undefined;
-      const headPrompt = getHeadSystemPrompt({ tier: tierOverride });
+      const headPrompt = getHeadSystemPrompt({ tier: tierOverride, workspaceRoot });
       const modePrompt =
-        sessionType === "gAgent"
+        sessionType === 'gAgent'
           ? getGAgentModePrompt({
-            workspaceRoot,
-            specialist,
-            enabledCapabilities: gAgentCapabilities,
-            allowlistDomains: gAgentExternalAllowlist,
-            runInDocker: undefined,
-          })
+              workspaceRoot,
+              specialist,
+              enabledCapabilities: gAgentCapabilities,
+              allowlistDomains: gAgentExternalAllowlist,
+              runInDocker: undefined,
+            })
           : getChatModePrompt(chatMode, { workspaceRoot, specialist });
       let systemPrompt = `${headPrompt}\n\n${wrapModeContext(modePrompt)}`;
 
       // RAG context: DISABLED by default for instant response; use 200ms ultra-aggressive timeout
       const ragContextEnabled =
-        process.env.RAG_CONTEXT_ENABLED === "true" &&
-        includeRagContext === true; // Require BOTH conditions, not OR
+        process.env.RAG_CONTEXT_ENABLED === 'true' && includeRagContext === true; // Require BOTH conditions, not OR
       if (ragContextEnabled && messages.length > 0) {
-        const lastUser = [...messages].reverse().find((m) => m.role === "user");
-        const lastUserText =
-          typeof lastUser?.content === "string" ? lastUser.content : undefined;
+        const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+        const lastUserText = typeof lastUser?.content === 'string' ? lastUser.content : undefined;
         if (lastUserText?.trim().length) {
           try {
             // Ultra-aggressive: 200ms timeout, minimal chunks for speed
             const RAG_TIMEOUT_MS = 200;
-            const ragPromise = getIntentGuidedRagContext(
-              lastUserText.trim(),
-              {
-                namespace: workspaceRoot ?? undefined,
-                maxChunks: 2, // Minimal context for maximum speed
-              },
-            );
+            const ragPromise = getIntentGuidedRagContext(lastUserText.trim(), {
+              namespace: workspaceRoot ?? undefined,
+              maxChunks: 2, // Minimal context for maximum speed
+            });
             const timeoutPromise = new Promise<null>((resolve) =>
-              setTimeout(() => resolve(null), RAG_TIMEOUT_MS),
+              setTimeout(() => resolve(null), RAG_TIMEOUT_MS)
             );
             const ragResult = await Promise.race([ragPromise, timeoutPromise]);
             if (ragResult?.context) {
@@ -315,7 +297,7 @@ export class ClaudeServiceWithTools {
           } catch (e) {
             logger.debug(
               { error: (e as Error).message },
-              "RAG context for prompt failed (non-blocking)",
+              'RAG context for prompt failed (non-blocking)'
             );
           }
         }
@@ -323,96 +305,86 @@ export class ClaudeServiceWithTools {
 
       // Get tools: base + user-defined + MCP + skills; filter by G-Agent capabilities when applicable
       let allTools =
-        mode !== "plan"
+        mode !== 'plan'
           ? [
-            ...AVAILABLE_TOOLS,
-            ...getUserToolDefinitions(),
-            ...getMcpTools(),
-            ...skillRegistry.getAllTools(),
-          ]
+              ...AVAILABLE_TOOLS,
+              ...getUserToolDefinitions(),
+              ...getMcpTools(),
+              ...skillRegistry.getAllTools(),
+            ]
           : [];
-      if (
-        (sessionType === "gAgent") &&
-        gAgentCapabilities?.length
-      ) {
+      if (sessionType === 'gAgent' && gAgentCapabilities?.length) {
         const allowedNames = getAllowedToolNames(gAgentCapabilities);
         if (allowedNames) {
-          allTools = allTools.filter((t: { name: string }) =>
-            allowedNames.has(t.name),
-          );
+          allTools = allTools.filter((t: { name: string }) => allowedNames.has(t.name));
           logger.debug(
             { allowedCount: allTools.length, allowedNames: [...allowedNames] },
-            "G-Agent tools filtered by capabilities",
+            'G-Agent tools filtered by capabilities'
           );
         }
       }
       // Per-session tool allowlist/denylist
       if (toolAllowlist?.length) {
-        const allowSet = new Set(
-          toolAllowlist.map((n) => String(n).trim()).filter(Boolean),
-        );
-        allTools = allTools.filter((t: { name: string }) =>
-          allowSet.has(t.name),
-        );
+        const allowSet = new Set(toolAllowlist.map((n) => String(n).trim()).filter(Boolean));
+        allTools = allTools.filter((t: { name: string }) => allowSet.has(t.name));
       }
       if (toolDenylist?.length) {
-        const denySet = new Set(
-          toolDenylist.map((n) => String(n).trim()).filter(Boolean),
-        );
-        allTools = allTools.filter(
-          (t: { name: string }) => !denySet.has(t.name),
-        );
+        const denySet = new Set(toolDenylist.map((n) => String(n).trim()).filter(Boolean));
+        allTools = allTools.filter((t: { name: string }) => !denySet.has(t.name));
       }
 
       // Emit context at start (mode, capabilities, tool count)
-      const toolCount = mode !== "plan" ? allTools.length : 0;
+      const toolCount = mode !== 'plan' ? allTools.length : 0;
       yield {
-        type: "context",
+        type: 'context',
         value: {
           mode: chatMode,
-          capabilities:
-            sessionType === "gAgent"
-              ? gAgentCapabilities
-              : undefined,
+          capabilities: sessionType === 'gAgent' ? gAgentCapabilities : undefined,
           toolCount,
         },
       };
 
       // When mode is design, parse intent from last user message and emit (non-blocking)
-      if (mode === "design") {
-        const lastUser = [...messages].reverse().find((m) => m.role === "user");
-        const raw =
-          typeof lastUser?.content === "string" ? lastUser.content : undefined;
+      if (mode === 'design') {
+        const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+        const raw = typeof lastUser?.content === 'string' ? lastUser.content : undefined;
         if (raw && raw.trim().length > 10) {
           // Fire-and-forget: don't await intent parsing — let stream start immediately
           parseAndEnrichIntent(raw.trim(), undefined)
             .then((enriched) => {
               // Intent will be emitted separately if needed
-              logger.debug({ enriched }, "Intent parsed (async)");
+              logger.debug({ enriched }, 'Intent parsed (async)');
             })
             .catch((err) => {
-              logger.warn(
-                { err },
-                "Intent parse failed; continuing without intent",
-              );
+              logger.warn({ err }, 'Intent parse failed; continuing without intent');
             });
         }
       }
 
-      // SPEED OPTIMIZATION: Truncate conversation history to limit context window.
-      // More input tokens = slower TTFT. Keep only the most recent messages.
-      const MAX_CONTEXT_MESSAGES = Number(process.env.CHAT_MAX_CONTEXT_MESSAGES ?? 20);
-      const truncatedMessages = messages.length > MAX_CONTEXT_MESSAGES
-        ? messages.slice(-MAX_CONTEXT_MESSAGES)
-        : messages;
+      // SPEED: Limit context window — every message adds latency.
+      // 12 messages is enough for the model to understand context while keeping TTFT low.
+      const MAX_CONTEXT_MESSAGES = Number(process.env.CHAT_MAX_CONTEXT_MESSAGES ?? 12);
+      let truncatedMessages = messages;
+      if (messages.length > MAX_CONTEXT_MESSAGES) {
+        // Preserve the original user intent (first user message) + most recent messages
+        const firstUserIdx = messages.findIndex((m) => m.role === 'user');
+        const firstUser = firstUserIdx >= 0 ? [messages[firstUserIdx]] : [];
+        const recent = messages.slice(-(MAX_CONTEXT_MESSAGES - firstUser.length));
+        // Avoid duplication if first user message is already in the recent window
+        if (firstUser.length && recent[0] !== messages[firstUserIdx]) {
+          truncatedMessages = [...firstUser, ...recent];
+        } else {
+          truncatedMessages = recent;
+        }
+      }
 
-      // SPEED OPTIMIZATION: Truncate very long individual messages (e.g. pasted code blocks)
-      const MAX_MSG_CHARS = Number(process.env.CHAT_MAX_MSG_CHARS ?? 12000);
+      // SPEED: Truncate very long individual messages — pasted code blocks kill latency
+      const MAX_MSG_CHARS = Number(process.env.CHAT_MAX_MSG_CHARS ?? 8000);
       const trimmedMessages = truncatedMessages.map((msg) => {
-        if (typeof msg.content === "string" && msg.content.length > MAX_MSG_CHARS) {
+        if (typeof msg.content === 'string' && msg.content.length > MAX_MSG_CHARS) {
           return {
             ...msg,
-            content: msg.content.slice(0, MAX_MSG_CHARS) + "\n\n[...truncated for speed]",
+            content: msg.content.slice(0, MAX_MSG_CHARS) + '\n\n[...truncated for speed]',
           };
         }
         return msg;
@@ -430,14 +402,14 @@ export class ClaudeServiceWithTools {
           autonomous,
           sessionType,
         },
-        "Starting chat stream",
+        'Starting chat stream'
       );
 
       const gwMessages = trimmedMessages.map((msg) => {
-        const role = msg.role as "user" | "assistant";
+        const role = msg.role as 'user' | 'assistant';
         const content: string | unknown = msg.content as string | unknown;
         // Handle string content
-        if (typeof content === "string") {
+        if (typeof content === 'string') {
           return { role, content };
         }
         // Handle array content (multimodal)
@@ -449,71 +421,63 @@ export class ClaudeServiceWithTools {
                 text?: string;
                 source?: { type: string; url?: string };
               };
-              if (b.type === "text") {
-                return { type: "text" as const, text: b.text ?? "" };
-              } else if (
-                b.type === "image" &&
-                b.source?.type === "url" &&
-                b.source?.url
-              ) {
+              if (b.type === 'text') {
+                return { type: 'text' as const, text: b.text ?? '' };
+              } else if (b.type === 'image' && b.source?.type === 'url' && b.source?.url) {
                 return {
-                  type: "image_url" as const,
+                  type: 'image_url' as const,
                   image_url: { url: b.source.url },
                 };
               }
-              logger.warn(
-                { block },
-                "Unsupported content block type for LLM Gateway, skipping.",
-              );
+              logger.warn({ block }, 'Unsupported content block type for LLM Gateway, skipping.');
               return null;
             })
-            .filter(
-              (p: MultimodalContentPart | null): p is MultimodalContentPart =>
-                p !== null,
-            );
+            .filter((p: MultimodalContentPart | null): p is MultimodalContentPart => p !== null);
           return { role, content: transformedContent };
         }
         // Fallback for other types
         return { role, content: JSON.stringify(content) };
       });
 
-      const finalProvider = (provider ?? "nim") as LLMProvider;
+      const finalProvider = (provider ?? 'nim') as LLMProvider;
       const finalModelId = modelId ?? this.model;
 
       // Map tools to gateway format
       const mappedTools =
         allTools.length > 0
           ? allTools.map((t: unknown) => {
-            const tool = t as {
-              name: string;
-              description?: string;
-              input_schema?: {
-                type: "object";
-                properties?: Record<string, unknown>;
-                required?: string[];
+              const tool = t as {
+                name: string;
+                description?: string;
+                input_schema?: {
+                  type: 'object';
+                  properties?: Record<string, unknown>;
+                  required?: string[];
+                };
               };
-            };
-            return {
-              name: tool.name,
-              description: tool.description ?? "",
-              input_schema: tool.input_schema ?? _DEFAULT_TOOL_INPUT_SCHEMA,
-            };
-          })
+              return {
+                name: tool.name,
+                description: tool.description ?? '',
+                input_schema: tool.input_schema ?? _DEFAULT_TOOL_INPUT_SCHEMA,
+              };
+            })
           : undefined;
 
       // Smart tool filtering: reduce input tokens by only sending relevant tools
       // In 'code' mode ALWAYS send all tools so file_write/bash_execute are guaranteed available
       const filteredTools = mappedTools
-        ? (mode === 'code'
+        ? mode === 'code'
           ? mappedTools
-          : filterToolsByContext(
-            mappedTools as Array<{ name: string;[key: string]: unknown }>,
-            messages,
-          ) as typeof mappedTools)
+          : (filterToolsByContext(
+              mappedTools as Array<{ name: string; [key: string]: unknown }>,
+              messages
+            ) as typeof mappedTools)
         : undefined;
 
-      // Use higher max_tokens for code generation to allow tool call arguments (file contents)
-      const defaultMaxTokens = (mode === "code" || mode === "normal") ? 32768 : 16384;
+      // SPEED: Lower max_tokens — most code responses are under 8K tokens.
+      // Higher max_tokens increases latency because the model allocates attention for the
+      // full output window. 16384 is generous for code while halving latency overhead.
+      const defaultMaxTokens = mode === 'code' || mode === 'normal' ? 16384 : 8192;
       const maxTokens = Number(process.env.CHAT_MAX_TOKENS ?? defaultMaxTokens);
 
       // Agentic loop: execute tools and feed results back to the model
@@ -521,54 +485,70 @@ export class ClaudeServiceWithTools {
       const MAX_TOOL_TURNS = Number(process.env.CHAT_MAX_TOOL_TURNS ?? 25);
       let turnCount = 0;
       let totalToolCallCount = 0;
+      let consecutiveEmptyTurns = 0; // Detect stuck models
       let loopMessages: Array<{
-        role: "user" | "assistant" | "tool";
+        role: 'user' | 'assistant' | 'tool';
         content: string | MultimodalContentPart[];
         tool_call_id?: string;
         tool_calls?: Array<{
           id: string;
-          type: "function";
+          type: 'function';
           function: { name: string; arguments: string };
         }>;
       }> = [...gwMessages]; // Mutable copy for the agentic loop
 
       // ── Files-changed accumulator ────────────────────────────────────
-      const FILE_WRITE_TOOLS = new Set(["file_write", "write_file", "write_to_file"]);
-      const FILE_EDIT_TOOLS = new Set(["file_edit", "edit_file", "replace_file_content", "multi_replace_file_content"]);
-      const EXEC_TOOLS = new Set(["bash_execute", "terminal_execute", "run_command"]);
-      const READ_TOOLS = new Set(["file_read", "grep_search", "codebase_search", "list_directory", "file_outline"]);
+      const FILE_WRITE_TOOLS = new Set(['file_write', 'write_file', 'write_to_file']);
+      const FILE_EDIT_TOOLS = new Set([
+        'file_edit',
+        'edit_file',
+        'replace_file_content',
+        'multi_replace_file_content',
+      ]);
+      const EXEC_TOOLS = new Set(['bash_execute', 'terminal_execute', 'run_command']);
+      const READ_TOOLS = new Set([
+        'file_read',
+        'grep_search',
+        'codebase_search',
+        'list_directory',
+        'file_outline',
+      ]);
       const fileChanges: FileChangeRecord[] = [];
       let commandsRun = 0;
       let commandsPassed = 0;
       let totalTextEmitted = 0; // Track total text chars emitted across all turns
 
       // ── Smart tool output compression for LLM context ──────────────────
-      const compressToolOutput = (toolName: string, raw: string, result: ToolExecutionResult): string => {
+      const compressToolOutput = (
+        toolName: string,
+        raw: string,
+        result: ToolExecutionResult
+      ): string => {
         // Write/edit tools: LLM doesn't need file content echoed back
         if (FILE_WRITE_TOOLS.has(toolName) || FILE_EDIT_TOOLS.has(toolName)) {
-          const p = result.diff?.filePath ?? "file";
-          const lines = result.diff?.afterContent?.split("\n").length ?? 0;
+          const p = result.diff?.filePath ?? 'file';
+          const lines = result.diff?.afterContent?.split('\n').length ?? 0;
           return result.success ? `✓ Written: ${p} (${lines} lines)` : raw.slice(0, 2000);
         }
         // Exec tools: keep last 100 lines of output
         if (EXEC_TOOLS.has(toolName)) {
           if (raw.length > 4000) {
-            const lines = raw.split("\n");
-            return lines.length > 100 ? lines.slice(-100).join("\n") : raw.slice(-4000);
+            const lines = raw.split('\n');
+            return lines.length > 100 ? lines.slice(-100).join('\n') : raw.slice(-4000);
           }
           return raw;
         }
-        // Read/search tools get full context for accurate code gen
-        return raw.slice(0, 16000);
+        // SPEED: Cap read/search output at 8000 chars — still enough for accurate code gen
+        // but significantly reduces context window size on multi-tool agentic turns
+        return raw.slice(0, 8000);
       };
 
-      agenticLoop:
-      while (turnCount < MAX_TOOL_TURNS) {
+      agenticLoop: while (turnCount < MAX_TOOL_TURNS) {
         turnCount++;
 
         // Emit agentic progress so frontend can show iteration
         yield {
-          type: "agentic_progress",
+          type: 'agentic_progress',
           currentTurn: turnCount,
           maxTurns: MAX_TOOL_TURNS,
           toolCallCount: totalToolCallCount,
@@ -581,10 +561,10 @@ export class ClaudeServiceWithTools {
             system: systemPrompt,
             messages: loopMessages,
             tools: filteredTools,
-            temperature: 0.4,
+            temperature: mode === 'code' || mode === 'normal' ? 0.1 : 0.4,
             userId,
           },
-          { provider: finalProvider, modelId: finalModelId },
+          { provider: finalProvider, modelId: finalModelId }
         );
 
         logger.info(
@@ -597,10 +577,10 @@ export class ClaudeServiceWithTools {
             toolCount: filteredTools?.length ?? 0,
             mode,
           },
-          "Agentic loop: starting stream request",
+          'Agentic loop: starting stream request'
         );
 
-        let currentTextBlock = "";
+        let currentTextBlock = '';
         // Collect tool calls from this turn — execute in parallel after stream completes
         const pendingToolCalls: Array<{
           id: string;
@@ -627,50 +607,79 @@ export class ClaudeServiceWithTools {
             };
           };
           if (abortSignal?.aborted) {
-            logger.debug({}, "Stream aborted");
-            yield { type: "error", message: "Stream aborted" };
+            logger.debug({}, 'Stream aborted');
+            yield { type: 'error', message: 'Stream aborted' };
             break agenticLoop;
           }
 
           // Handle content block deltas (text)
-          if (
-            event.type === "content_block_delta" &&
-            event.delta?.type === "text_delta"
-          ) {
-            const raw = event.delta.text ?? "";
+          if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+            const raw = event.delta.text ?? '';
             currentTextBlock += raw;
             totalTextEmitted += raw.length;
-            yield { type: "text", text: filterOutput(raw) };
+            yield { type: 'text', text: filterOutput(raw) };
           }
 
           // Handle tool use blocks — collect, don't execute yet
-          if (event.type === "content_block_start") {
+          if (event.type === 'content_block_start') {
             const contentBlock = event.content_block;
-            if (contentBlock?.type === "tool_use") {
+            if (contentBlock?.type === 'tool_use') {
               // Flush any accumulated text
               if (currentTextBlock.trim()) {
-                currentTextBlock = "";
+                currentTextBlock = '';
               }
 
               const toolUse = contentBlock;
-              const toolId = toolUse.id ?? "";
-              const toolName = toolUse.name ?? "";
-              logger.debug({ toolName, toolId, turn: turnCount }, "Tool use discovered");
+              const toolId = toolUse.id ?? '';
+              const toolName = toolUse.name ?? '';
+              logger.debug({ toolName, toolId, turn: turnCount }, 'Tool use discovered');
 
-              // Emit tool call event immediately (shows in UI)
-              yield {
-                type: "tool_call",
-                id: toolId,
-                name: toolName,
-                input: (toolUse.input ?? {}) as Record<string, unknown>,
-              };
+              const toolInput = (toolUse.input ?? {}) as Record<string, unknown>;
 
-              // Queue for parallel execution after stream completes
-              pendingToolCalls.push({
-                id: toolId,
-                name: toolName,
-                input: (toolUse.input ?? {}) as Record<string, unknown>,
-              });
+              // ── Malformed argument recovery ────────────────────────
+              // When the stream layer fails to parse tool arguments JSON,
+              // it falls back to { _raw: "..." } or { raw: "..." }.
+              // Instead of executing with garbage input, report the error
+              // so the model can self-correct and retry.
+              if (toolInput._raw !== undefined || toolInput.raw !== undefined) {
+                const rawArgs = String(toolInput._raw ?? toolInput.raw);
+                logger.warn(
+                  { toolName, toolId, rawArgs: rawArgs.slice(0, 300) },
+                  'Tool call has malformed JSON arguments — skipping execution and reporting to model'
+                );
+                yield {
+                  type: 'tool_result',
+                  id: toolId,
+                  toolName,
+                  output: `Error: Invalid JSON arguments for tool '${toolName}'. The arguments could not be parsed. Raw text: "${rawArgs.slice(0, 200)}". Please retry with valid JSON arguments.`,
+                  success: false,
+                  executionTime: 0,
+                };
+                // Add directly to turnToolCalls so the error feeds back to the model
+                turnToolCalls.push({
+                  id: toolId,
+                  name: toolName,
+                  input: toolInput,
+                  resultOutput: `Error: Invalid JSON arguments for tool '${toolName}'. Please retry with properly formed JSON.`,
+                  resultSuccess: false,
+                });
+                totalToolCallCount++;
+              } else {
+                // Emit tool call event immediately (shows in UI)
+                yield {
+                  type: 'tool_call',
+                  id: toolId,
+                  name: toolName,
+                  input: toolInput,
+                };
+
+                // Queue for parallel execution after stream completes
+                pendingToolCalls.push({
+                  id: toolId,
+                  name: toolName,
+                  input: toolInput,
+                });
+              }
             }
           }
         }
@@ -679,16 +688,20 @@ export class ClaudeServiceWithTools {
         // Execute all collected tool calls in parallel (up to PARALLEL_LIMIT)
         // This reduces multi-tool latency from sum(times) to max(times)
         if (pendingToolCalls.length > 0) {
-          const TOOL_TIMEOUT_MS = Number(process.env.TOOL_EXECUTION_TIMEOUT_MS ?? 120_000);
+          const TOOL_TIMEOUT_MS = Number(process.env.TOOL_EXECUTION_TIMEOUT_MS ?? 600_000);
           const PARALLEL_LIMIT = Number(process.env.TOOL_PARALLEL_LIMIT ?? 5);
 
           logger.info(
-            { turn: turnCount, toolCount: pendingToolCalls.length, tools: pendingToolCalls.map(t => t.name) },
-            "Agentic loop: executing tools in parallel",
+            {
+              turn: turnCount,
+              toolCount: pendingToolCalls.length,
+              tools: pendingToolCalls.map((t) => t.name),
+            },
+            'Agentic loop: executing tools in parallel'
           );
 
           // Split into chunks of PARALLEL_LIMIT for controlled concurrency
-          const chunks: typeof pendingToolCalls[] = [];
+          const chunks: (typeof pendingToolCalls)[] = [];
           for (let i = 0; i < pendingToolCalls.length; i += PARALLEL_LIMIT) {
             chunks.push(pendingToolCalls.slice(i, i + PARALLEL_LIMIT));
           }
@@ -699,27 +712,31 @@ export class ClaudeServiceWithTools {
                 const result = await Promise.race([
                   this._executeTool(tc.name, tc.input, workspaceRoot),
                   new Promise<ToolExecutionResult>((resolve) =>
-                    setTimeout(() => resolve({
-                      success: false,
-                      output: "",
-                      error: `Tool '${tc.name}' timed out after ${TOOL_TIMEOUT_MS / 1000}s`,
-                      executionTime: TOOL_TIMEOUT_MS,
-                    } as ToolExecutionResult), TOOL_TIMEOUT_MS),
+                    setTimeout(
+                      () =>
+                        resolve({
+                          success: false,
+                          output: '',
+                          error: `Tool '${tc.name}' timed out after ${TOOL_TIMEOUT_MS / 1000}s`,
+                          executionTime: TOOL_TIMEOUT_MS,
+                        } as ToolExecutionResult),
+                      TOOL_TIMEOUT_MS
+                    )
                   ),
                 ]);
                 return { tc, result };
-              }),
+              })
             );
 
             // Process results and emit events
             for (const outcome of settled) {
-              if (outcome.status === "fulfilled") {
+              if (outcome.status === 'fulfilled') {
                 const { tc, result } = outcome.value;
-                const rawOutput = result.output || result.error || "";
+                const rawOutput = result.output || result.error || '';
 
                 // Emit tool result event (filter output for secrets/PII)
                 yield {
-                  type: "tool_result",
+                  type: 'tool_result',
                   id: tc.id,
                   toolName: tc.name,
                   output: filterOutput(rawOutput),
@@ -740,13 +757,16 @@ export class ClaudeServiceWithTools {
 
                 // ── Track file changes for summary ───────────────────────────
                 if (FILE_WRITE_TOOLS.has(tc.name) || FILE_EDIT_TOOLS.has(tc.name)) {
-                  const filePath = result.diff?.filePath
-                    || (tc.input as Record<string, unknown>)?.path as string
-                    || (tc.input as Record<string, unknown>)?.file_path as string
-                    || "unknown";
-                  const changeType = FILE_WRITE_TOOLS.has(tc.name) ? "created" as const : "modified" as const;
-                  const beforeLines = result.diff?.beforeContent?.split("\n").length ?? 0;
-                  const afterLines = result.diff?.afterContent?.split("\n").length ?? 0;
+                  const filePath =
+                    result.diff?.filePath ||
+                    ((tc.input as Record<string, unknown>)?.path as string) ||
+                    ((tc.input as Record<string, unknown>)?.file_path as string) ||
+                    'unknown';
+                  const changeType = FILE_WRITE_TOOLS.has(tc.name)
+                    ? ('created' as const)
+                    : ('modified' as const);
+                  const beforeLines = result.diff?.beforeContent?.split('\n').length ?? 0;
+                  const afterLines = result.diff?.afterContent?.split('\n').length ?? 0;
                   fileChanges.push({
                     path: filePath,
                     changeType: result.diff?.changeType ?? changeType,
@@ -762,10 +782,13 @@ export class ClaudeServiceWithTools {
               } else {
                 // Promise rejected (shouldn't happen with Promise.race timeout, but be safe)
                 const tc = chunk[settled.indexOf(outcome)];
-                logger.error({ toolName: tc?.name, error: outcome.reason }, "Tool execution promise rejected");
+                logger.error(
+                  { toolName: tc?.name, error: outcome.reason },
+                  'Tool execution promise rejected'
+                );
                 if (tc) {
                   yield {
-                    type: "tool_result",
+                    type: 'tool_result',
                     id: tc.id,
                     toolName: tc.name,
                     output: `Error: ${outcome.reason?.message ?? String(outcome.reason)}`,
@@ -788,26 +811,66 @@ export class ClaudeServiceWithTools {
 
         // If no tool calls were made this turn, the model is done — exit loop
         if (turnToolCalls.length === 0) {
+          // Check for consecutive empty turns (no text AND no tools = stuck model)
+          if (currentTextBlock.trim().length === 0) {
+            consecutiveEmptyTurns++;
+            if (consecutiveEmptyTurns >= 2) {
+              logger.warn(
+                { turn: turnCount, consecutiveEmptyTurns },
+                'Agentic loop: breaking due to consecutive empty responses (model may be stuck)'
+              );
+              yield {
+                type: 'text',
+                text: '\n\n*(Model returned empty responses — this may indicate a provider issue or context mismatch. Try rephrasing your request.)*',
+              };
+              break;
+            }
+          } else {
+            consecutiveEmptyTurns = 0; // Reset on non-empty text response
+          }
           logger.info(
             { turn: turnCount, textChars: currentTextBlock.length, toolCalls: 0 },
-            "Agentic loop: turn complete (no tool calls — exiting)",
+            'Agentic loop: turn complete (no tool calls — exiting)'
           );
           break;
         }
+        consecutiveEmptyTurns = 0; // Reset when tools are called
 
         logger.info(
-          { turn: turnCount, textChars: currentTextBlock.length, toolCalls: turnToolCalls.length, toolNames: turnToolCalls.map(tc => tc.name) },
-          "Agentic loop: turn complete (continuing with tool results)",
+          {
+            turn: turnCount,
+            textChars: currentTextBlock.length,
+            toolCalls: turnToolCalls.length,
+            toolNames: turnToolCalls.map((tc) => tc.name),
+          },
+          'Agentic loop: turn complete (continuing with tool results)'
         );
+
+        // SPEED: Trim agentic loop context to prevent exponential growth.
+        // On long sessions the loop can accumulate 50+ messages, each adding latency.
+        // Keep the first 4 (original user intent + early context) and last 20 messages.
+        const MAX_LOOP_MESSAGES = Number(process.env.AGENTIC_MAX_LOOP_MESSAGES ?? 30);
+        if (loopMessages.length > MAX_LOOP_MESSAGES) {
+          const head = loopMessages.slice(0, 4);
+          const tail = loopMessages.slice(-(MAX_LOOP_MESSAGES - 4));
+          loopMessages = [...head, ...tail];
+          logger.debug(
+            {
+              originalCount: loopMessages.length + (MAX_LOOP_MESSAGES - 24),
+              trimmedTo: loopMessages.length,
+            },
+            'Agentic loop: trimmed context messages for speed'
+          );
+        }
 
         // Agentic continuation: feed tool results back to the model
         // 1) Add an assistant message with the tool_calls it made
         loopMessages.push({
-          role: "assistant" as const,
-          content: currentTextBlock || "",
+          role: 'assistant' as const,
+          content: currentTextBlock || '',
           tool_calls: turnToolCalls.map((tc) => ({
             id: tc.id,
-            type: "function" as const,
+            type: 'function' as const,
             function: {
               name: tc.name,
               arguments: JSON.stringify(tc.input),
@@ -818,28 +881,23 @@ export class ClaudeServiceWithTools {
         // 2) Add tool result messages for each tool call
         for (const tc of turnToolCalls) {
           loopMessages.push({
-            role: "tool" as const,
-            content: tc.resultSuccess
-              ? (tc.resultOutput || "Success")
-              : `Error: ${tc.resultOutput}`,
+            role: 'tool' as const,
+            content: tc.resultSuccess ? tc.resultOutput || 'Success' : `Error: ${tc.resultOutput}`,
             tool_call_id: tc.id,
           });
         }
 
         logger.debug(
           { turn: turnCount, toolCallCount: turnToolCalls.length },
-          "Agentic loop: continuing with tool results",
+          'Agentic loop: continuing with tool results'
         );
       }
 
       if (turnCount >= MAX_TOOL_TURNS) {
-        logger.warn(
-          { turnCount, MAX_TOOL_TURNS },
-          "Agentic loop: hit max tool turns limit",
-        );
+        logger.warn({ turnCount, MAX_TOOL_TURNS }, 'Agentic loop: hit max tool turns limit');
         yield {
-          type: "text",
-          text: "\n\n*(Reached maximum tool execution limit. You can continue asking for more changes.)*",
+          type: 'text',
+          text: '\n\n*(Reached maximum tool execution limit. You can continue asking for more changes.)*',
         };
       }
 
@@ -847,18 +905,18 @@ export class ClaudeServiceWithTools {
       if (totalTextEmitted === 0 && totalToolCallCount === 0) {
         logger.warn(
           { mode, provider: finalProvider, modelId: finalModelId, turnCount },
-          "Agentic loop: LLM produced no text and no tool calls — empty response",
+          'Agentic loop: LLM produced no text and no tool calls — empty response'
         );
         yield {
-          type: "text",
-          text: "*(The model returned an empty response. This may indicate a provider issue, tool format mismatch, or timeout. Please try again or switch to a different model.)*",
+          type: 'text',
+          text: '*(The model returned an empty response. This may indicate a provider issue, tool format mismatch, or timeout. Please try again or switch to a different model.)*',
         };
       }
 
       // ── Emit files-changed summary if any file operations occurred ───
       if (fileChanges.length > 0 || commandsRun > 0) {
         yield {
-          type: "files_summary",
+          type: 'files_summary',
           files: fileChanges,
           commandsRun,
           commandsPassed,
@@ -866,7 +924,7 @@ export class ClaudeServiceWithTools {
         };
       }
 
-      yield { type: "done" };
+      yield { type: 'done' };
     } catch (error: unknown) {
       const errObj = error as Error;
       logger.error(
@@ -876,9 +934,9 @@ export class ClaudeServiceWithTools {
           errorStack: errObj?.stack,
           workspaceRoot,
           mode,
-          agentProfile
+          agentProfile,
         },
-        "Chat stream error",
+        'Chat stream error'
       );
 
       // Enhanced error handling with structured error types
@@ -893,38 +951,31 @@ export class ClaudeServiceWithTools {
       const status = err.status ?? err.statusCode;
       const errorCode = err.code ?? err.name;
 
-      let errorType = "api_error";
-      let userMessage = "An error occurred. Please try again.";
+      let errorType = 'api_error';
+      let userMessage = 'An error occurred. Please try again.';
       let retryable = false;
       let retryAfter: number | undefined;
 
       if (status === 401) {
-        errorType = "auth_error";
-        userMessage = "Authentication failed. Please check your API key.";
+        errorType = 'auth_error';
+        userMessage = 'Authentication failed. Please check your API key.';
         retryable = false;
       } else if (status === 429) {
-        errorType = "rate_limit";
-        userMessage =
-          "Rate limit exceeded. Please wait a moment and try again.";
+        errorType = 'rate_limit';
+        userMessage = 'Rate limit exceeded. Please wait a moment and try again.';
         retryable = true;
-        retryAfter = parseInt(err.headers?.["retry-after"] ?? "60", 10);
+        retryAfter = parseInt(err.headers?.['retry-after'] ?? '60', 10);
       } else if (status === 500 || status === 502 || status === 503) {
-        errorType = "service_error";
-        userMessage =
-          "Service temporarily unavailable. Please try again in a moment.";
+        errorType = 'service_error';
+        userMessage = 'Service temporarily unavailable. Please try again in a moment.';
         retryable = true;
-      } else if (errorCode === "ETIMEDOUT" || errorCode === "ECONNRESET") {
-        errorType = "timeout";
-        userMessage =
-          "Request timed out. The server may be busy. Please try again.";
+      } else if (errorCode === 'ETIMEDOUT' || errorCode === 'ECONNRESET') {
+        errorType = 'timeout';
+        userMessage = 'Request timed out. The server may be busy. Please try again.';
         retryable = true;
-      } else if (
-        err.message?.toLowerCase().includes("network") ||
-        errorCode === "ENOTFOUND"
-      ) {
-        errorType = "network_error";
-        userMessage =
-          "Network error. Please check your connection and try again.";
+      } else if (err.message?.toLowerCase().includes('network') || errorCode === 'ENOTFOUND') {
+        errorType = 'network_error';
+        userMessage = 'Network error. Please check your connection and try again.';
         retryable = true;
       } else if (err.message) {
         userMessage = err.message;
@@ -932,7 +983,7 @@ export class ClaudeServiceWithTools {
       }
 
       yield {
-        type: "error",
+        type: 'error',
         message: userMessage,
         errorType,
         retryable,
@@ -958,33 +1009,30 @@ export class ClaudeServiceWithTools {
   private async _executeTool(
     toolName: string,
     input: Record<string, unknown>,
-    workspaceRoot?: string,
+    workspaceRoot?: string
   ): Promise<ToolExecutionResult> {
     try {
       // G-Agent: run guardrails before tool execution
       if (this.gAgentSession) {
         const inputStr = JSON.stringify(input);
-        const inputCheck = await checkInput(inputStr, "default");
+        const inputCheck = await checkInput(inputStr, 'default');
         if (!inputCheck.passed) {
           return {
             success: false,
-            error: `Guardrails blocked: ${inputCheck.triggeredPolicies.map((p) => p.reason).join("; ")}`,
+            error: `Guardrails blocked: ${inputCheck.triggeredPolicies.map((p) => p.reason).join('; ')}`,
             toolName,
             executionTime: 0,
           };
         }
       }
 
-      logger.debug(
-        { toolName, inputKeys: Object.keys(input) },
-        "Executing tool",
-      );
+      logger.debug({ toolName, inputKeys: Object.keys(input) }, 'Executing tool');
 
       let result: ToolExecutionResult;
       const tes = this.getTes();
 
       // Check if this is a skill tool (prefixed with skill_)
-      if (toolName.startsWith("skill_")) {
+      if (toolName.startsWith('skill_')) {
         result = await executeSkillTool(toolName, input, workspaceRoot);
       } else if (isUserTool(toolName)) {
         // User-defined tools (from "add to skills" or API)
@@ -992,7 +1040,7 @@ export class ClaudeServiceWithTools {
         try {
           const context = createSkillContext({
             workspacePath: workspaceRoot,
-            source: "chat",
+            source: 'chat',
           });
           const { output } = await executeUserTool(toolName, input, context);
           result = {
@@ -1023,127 +1071,127 @@ export class ClaudeServiceWithTools {
       } else {
         // Delegate to extracted tool executor functions
         switch (toolName) {
-          case "bash_execute":
+          case 'bash_execute':
             result = await executeBash(input, tes);
             break;
-          case "file_read":
+          case 'file_read':
             result = await executeFileRead(input, tes);
             break;
-          case "file_write":
+          case 'file_write':
             result = await executeFileWrite(input, tes);
             break;
-          case "file_edit":
+          case 'file_edit':
             result = await executeFileEdit(input, tes);
             break;
-          case "search_and_replace":
+          case 'search_and_replace':
             result = await executeSearchAndReplace(input, tes);
             break;
-          case "list_directory":
+          case 'list_directory':
             result = await executeListDirectory(input, tes);
             break;
-          case "codebase_search":
+          case 'codebase_search':
             result = await executeCodebaseSearch(input, tes);
             break;
-          case "grep_search":
+          case 'grep_search':
             result = await executeGrepSearch(input, tes);
             break;
-          case "file_outline":
+          case 'file_outline':
             result = await executeFileOutline(input, tes);
             break;
-          case "generate_db_schema":
+          case 'generate_db_schema':
             result = await executeGenerateDbSchema(input);
             break;
-          case "generate_migrations":
+          case 'generate_migrations':
             result = await executeGenerateMigrations(input);
             break;
-          case "screenshot_url":
+          case 'screenshot_url':
             result = await executeScreenshotUrl(input, this.gAgentExternalAllowlist);
             break;
-          case "browser_run_script":
+          case 'browser_run_script':
             result = await executeBrowserRunScript(input);
             break;
-          case "browser_navigate":
+          case 'browser_navigate':
             result = await executeBrowserNavigate(input);
             break;
-          case "browser_click":
+          case 'browser_click':
             result = await executeBrowserClick(input);
             break;
-          case "browser_type":
+          case 'browser_type':
             result = await executeBrowserType(input);
             break;
-          case "browser_get_content":
+          case 'browser_get_content':
             result = await executeBrowserGetContent(input);
             break;
-          case "browser_screenshot":
+          case 'browser_screenshot':
             result = await executeBrowserScreenshot(input);
             break;
-          case "browser_snapshot":
+          case 'browser_snapshot':
             result = await executeBrowserSnapshot(input);
             break;
-          case "browser_upload":
+          case 'browser_upload':
             result = await executeBrowserUpload(input);
             break;
-          case "browser_profiles_list":
+          case 'browser_profiles_list':
             result = await executeBrowserProfilesList();
             break;
-          case "browser_profile_switch":
+          case 'browser_profile_switch':
             result = await executeBrowserProfileSwitch(input);
             break;
-          case "git_status":
+          case 'git_status':
             result = await executeGitStatus(input, tes);
             break;
-          case "git_diff":
+          case 'git_diff':
             result = await executeGitDiff(input, tes);
             break;
-          case "git_log":
+          case 'git_log':
             result = await executeGitLog(input, tes);
             break;
-          case "git_commit":
+          case 'git_commit':
             result = await executeGitCommit(input, tes);
             break;
-          case "git_branch":
+          case 'git_branch':
             result = await executeGitBranch(input, tes);
             break;
-          case "git_push":
+          case 'git_push':
             result = await executeGitPush(input, tes);
             break;
-          case "terminal_execute":
+          case 'terminal_execute':
             result = await executeTerminalExecute(input, tes);
             break;
-          case "skill_create":
+          case 'skill_create':
             result = await executeSkillCreate(input);
             break;
-          case "skill_edit":
+          case 'skill_edit':
             result = await executeSkillEdit(input);
             break;
-          case "skill_run_test":
+          case 'skill_run_test':
             result = await executeSkillRunTest(input, workspaceRoot);
             break;
-          case "skill_list":
+          case 'skill_list':
             result = await executeSkillList();
             break;
-          case "sessions_list":
+          case 'sessions_list':
             result = await executeSessionsList(input);
             break;
-          case "sessions_history":
+          case 'sessions_history':
             result = await executeSessionsHistory(input);
             break;
-          case "sessions_send":
+          case 'sessions_send':
             result = await executeSessionsSend(input);
             break;
-          case "camera_capture":
+          case 'camera_capture':
             result = await executeCameraCapture();
             break;
-          case "screen_record":
+          case 'screen_record':
             result = await executeScreenRecord(input);
             break;
-          case "location_get":
+          case 'location_get':
             result = await executeLocationGet();
             break;
-          case "system_exec":
+          case 'system_exec':
             result = await executeSystemExec(input);
             break;
-          case "canvas_update":
+          case 'canvas_update':
             result = await executeCanvasUpdate(input);
             break;
           default:
@@ -1157,23 +1205,19 @@ export class ClaudeServiceWithTools {
       }
 
       // G-Agent: run guardrails on output after execution
-      if (
-        this.gAgentSession &&
-        result.success &&
-        typeof result.output === "string"
-      ) {
-        const outputCheck = await checkOutput(result.output, "default");
-        if (!outputCheck.passed && outputCheck.action === "block") {
+      if (this.gAgentSession && result.success && typeof result.output === 'string') {
+        const outputCheck = await checkOutput(result.output, 'default');
+        if (!outputCheck.passed && outputCheck.action === 'block') {
           return {
             ...result,
-            output: "[Output filtered by guardrails]",
+            output: '[Output filtered by guardrails]',
             success: true,
           };
         }
       }
       return result;
     } catch (error: unknown) {
-      logger.error({ error, toolName }, "Tool execution failed");
+      logger.error({ error, toolName }, 'Tool execution failed');
 
       return {
         success: false,

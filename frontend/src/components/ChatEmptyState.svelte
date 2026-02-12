@@ -405,11 +405,6 @@
     cursor: not-allowed;
   }
 
-  .action-card-demo {
-    background: var(--color-bg-input);
-    border-color: var(--color-border-highlight);
-  }
-
   .action-icon {
     display: flex;
     justify-content: center;

@@ -114,15 +114,6 @@
     border: 1px solid #e5e7eb;
   }
 
-  .default-model-row .field-label {
-    flex-shrink: 0;
-  }
-
-  .advanced-finetuning .field-label {
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
   .settings-number-input,
   .settings-text-input {
     max-width: 200px;
@@ -131,14 +122,6 @@
     border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 0.5rem;
     background: var(--color-bg-card, #fff);
-  }
-
-  .inline-config-input-group .field-label {
-    margin-bottom: 0.5rem;
-  }
-
-  .models-custom-inner .section-desc {
-    margin-bottom: 0.75rem;
   }
 
   .section-desc {
@@ -163,20 +146,9 @@
     margin-bottom: 8px;
   }
 
-  .field-label-row .field-label {
-    margin-bottom: 0;
-  }
-
   .field-hint {
     font-size: 12px;
     color: var(--color-text-muted, #a1a1aa);
     margin-top: 6px;
-  }
-
-  .field-hint code {
-    font-size: 0.75em;
-    padding: 0.1em 0.35em;
-    background: var(--color-bg-card, #f4f4f5);
-    border-radius: 4px;
   }
 </style>

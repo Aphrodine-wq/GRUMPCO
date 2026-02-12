@@ -291,9 +291,10 @@
     <!-- Sections list -->
     <div class="sections-list">
       {#each sections as section (section.id)}
+        {@const SectionIcon = getIcon(section.iconKey)}
         <button class="section-row" onclick={() => handleSelectSection(section)}>
           <div class="section-icon">
-            <svelte:component this={getIcon(section.iconKey)} size={14} />
+            <SectionIcon size={14} />
           </div>
           <span class="section-label">{section.label}</span>
           <ChevronRight size={12} class="row-arrow" />

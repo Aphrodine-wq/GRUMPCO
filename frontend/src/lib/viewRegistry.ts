@@ -58,8 +58,6 @@ export const VIEW_REGISTRY = {
     backTo: 'chat',
   },
 
-
-
   // ── Cost & Billing ─────────────────────────────────────────────────────
   credits: {
     loader: () => import('../components/CreditMenuScreen.svelte'),
@@ -127,6 +125,17 @@ export const VIEW_REGISTRY = {
     backTo: 'chat',
   },
 
+  approvals: {
+    loader: () => import('../components/ApprovalsCenter.svelte'),
+    loadingLabel: 'Loading Approvals…',
+    backTo: 'chat',
+  },
+
+  heartbeats: {
+    loader: () => import('../components/HeartbeatsManager.svelte'),
+    loadingLabel: 'Loading Heartbeats…',
+    backTo: 'chat',
+  },
 
   // ── Settings sub-screens ───────────────────────────────────────────────
   troubleshooting: {

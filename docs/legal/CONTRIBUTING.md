@@ -24,8 +24,8 @@ Thank you for your interest in contributing to G-Rump! This document provides gu
 ### 1. Fork & Clone
 
 ```bash
-git clone https://github.com/your-username/G-rump.com.git
-cd G-rump.com
+git clone https://github.com/your-username/GRUMPCO.git
+cd GRUMPCO
 ```
 
 ### 2. Install Dependencies
@@ -221,7 +221,7 @@ grump/
 ├── packages/         # Shared packages
 │   ├── shared-types/ # Common types
 │   ├── ai-core/      # AI utilities & model router
-│   ├── cli/          # CLI tool (@g-rump/cli)
+│   ├── cli/          # CLI tool (grump-cli)
 │   └── ...
 └── docs/             # Developer documentation
 ```
@@ -573,8 +573,8 @@ If UI changes, include screenshots.
 ## Getting Help
 
 - **Discord:** [Join our community](https://discord.gg/grump)
-- **Issues:** [GitHub Issues](https://github.com/Aphrodine-wq/G-rump.com/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/Aphrodine-wq/G-rump.com/discussions)
+- **Issues:** [GitHub Issues](https://github.com/Aphrodine-wq/GRUMPCO/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/Aphrodine-wq/GRUMPCO/discussions)
 
 ---
 
@@ -590,3 +590,5 @@ Contributors will be:
 **Thank you for contributing to G-Rump!** 🚀
 
 **Last Updated:** February 2026
+
+

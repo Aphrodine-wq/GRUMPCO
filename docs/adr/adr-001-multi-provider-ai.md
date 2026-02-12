@@ -17,15 +17,17 @@ G-Rump requires reliable AI infer costs, single points of failure, and varying c
 
 ## Decision
 
-Implement a multi-provider architecture with **7 AI providers** and an intelligent routing system:
+Implement a multi-provider architecture with **4 core AI providers** and an intelligent routing system:
 
 - **NVIDIA NIM**: Primary provider (balanced speed/quality/cost)
-- **Anthropic**: Best quality (Claude 3.5 Sonnet)
-- **OpenRouter**: Multi-model gateway
-- **GitHub Copilot**: Code generation specialist
-- **Kimi K2.5**: Long context (128k tokens)
-- **Mistral AI**: European compliance, multilingual
+- **Anthropic**: Best quality (Claude Opus 4.6, Sonnet, Haiku)
+- **OpenRouter**: Multi-model gateway (access to GPT-4, Claude, Gemini, Llama)
 - **Ollama**: Local/offline deployment
+
+> **Note (v2.1):** GitHub Copilot, Kimi K2.5 (standalone), and Mistral AI (standalone)
+> were removed as direct providers. Kimi K2.5 and Mistral models remain accessible
+> through NVIDIA NIM. A meta-provider **G-CompN1** routes between Anthropic, NIM,
+> and OpenRouter for automatic quality/cost optimization.
 
 **Routing Strategy:**
 - Classify requests by type (simple, complex, coding, vision, creative, long-context)
@@ -44,11 +46,10 @@ Implement a multi-provider architecture with **7 AI providers** and an intellige
 - **Vendor Independence**: Not locked into single provider
 
 ### Negative
-- **Complexity**: More code to maintain across 7 provider integrations
+- **Complexity**: More code to maintain across provider integrations
 - **Testing Overhead**: Need to test with multiple providers
-- **API Key Management**: Requires managing 6+ API keys
+- **API Key Management**: Requires managing 3+ API keys
 - **Monitoring Complexity**: Track costs/usage across multiple providers
-- **Debugging Difficulty**: Issues may be provider-specific
 
 ### Neutral
 - **Configuration**: Requires environment variables for each provider
@@ -105,5 +106,4 @@ const PROVIDERS = {
 
 **Review Notes:**
 - Approved 2026-02-05 after removing Grok/direct OpenAI
-- Added Mistral AI for European compliance
-- Added GitHub Copilot for code specialization
+- v2.1 (2026-02): Consolidated to 4 core providers; removed GitHub Copilot, Kimi (standalone), Mistral (standalone)

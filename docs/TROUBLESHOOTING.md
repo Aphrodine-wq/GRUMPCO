@@ -2,7 +2,7 @@
 
 > **Version:** 2.1.0 | **Last Updated:** February 2026
 
-Comprehensive troubleshooting guide for G-Rump. Can't find your issue? Check [GitHub Issues](https://github.com/Aphrodine-wq/G-rump.com/issues) or [Discussions](https://github.com/Aphrodine-wq/G-rump.com/discussions).
+Comprehensive troubleshooting guide for G-Rump. Can't find your issue? Check [GitHub Issues](https://github.com/Aphrodine-wq/GRUMPCO/issues) or [Discussions](https://github.com/Aphrodine-wq/GRUMPCO/discussions).
 
 ---
 
@@ -682,8 +682,8 @@ When reporting issues, include:
 ### Support Channels
 
 - 📖 [Documentation](./README.md)
-- 🐛 [Issue Tracker](https://github.com/Aphrodine-wq/G-rump.com/issues)
-- 💬 [Discussions](https://github.com/Aphrodine-wq/G-rump.com/discussions)
+- 🐛 [Issue Tracker](https://github.com/Aphrodine-wq/GRUMPCO/issues)
+- 💬 [Discussions](https://github.com/Aphrodine-wq/GRUMPCO/discussions)
 
 ---
 
@@ -693,3 +693,4 @@ When reporting issues, include:
 - [PRODUCTION.md](./PRODUCTION.md) - Production deployment
 - [SECURITY.md](./SECURITY.md) - Security configuration
 - [TESTING.md](./TESTING.md) - Running tests
+

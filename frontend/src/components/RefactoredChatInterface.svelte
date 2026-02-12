@@ -36,6 +36,20 @@
     type FileAction,
   } from '../lib/chat/FileActivityTracker';
   import { createStreamEventHandler } from '../lib/chat/ChatStreamEventHandler';
+  import {
+    setModeArchitecture,
+    setModeCode,
+    setModeShip,
+    setModeArgument,
+    setModePlan,
+    setModeSpec,
+    type ModeHandlerDeps,
+  } from '../lib/chat/ChatModeHandlers';
+  import {
+    loadAttachments,
+    addAttachments,
+    removeAttachment,
+  } from '../lib/chat/ChatAttachmentManager';
 
   // Existing components
   import FrownyFace from './FrownyFace.svelte';
@@ -95,7 +109,7 @@
     { id: 'askDocs', label: 'Ask Docs', icon: BookOpen },
     { id: 'canvas', label: 'Canvas', icon: LayoutGrid },
     { id: 'talkMode', label: 'Talk', icon: MessageCircle },
-    { id: 'skills', label: 'Skills', icon: Sparkles },
+    { id: 'memory', label: 'Skills', icon: Sparkles },
   ];
 
   // Props
@@ -269,81 +283,33 @@
     if (t > 0 && inputRef) inputRef.focus();
   });
 
-  // Mode button handlers (Architecture, Code, Ship) – toggle off when clicking active mode
-  import { startDesignWorkflow } from '../lib/api';
-
-  async function _setModeArchitecture() {
-    if ($chatModeStore === 'design') {
-      chatModeStore.clearMode();
-      chatMode = 'normal';
-      chatPhaseStore.reset();
-    } else {
-      chatModeStore.setMode('design');
-      chatMode = 'design';
-      // Start design workflow if not already active
-      if (!$chatPhaseStore.isActive && $currentSession) {
-        try {
-          const result = await startDesignWorkflow(
-            $currentSession.description || 'New Project',
-            $currentSession.id
-          );
-          chatPhaseStore.startWorkflow(result.workflowState.projectDescription || 'New Project');
-          showToast('Design workflow started! Describe your project to begin.', 'success');
-        } catch (err) {
-          console.error('Failed to start design workflow:', err);
-          // Continue without workflow - will work in fallback mode
-        }
-      }
-    }
+  // Mode button handlers – delegated to ChatModeHandlers.ts
+  const _modeDeps: ModeHandlerDeps = {
+    chatModeStore,
+    chatPhaseStore,
+    currentSession,
+    setChatMode: (m) => {
+      chatMode = m;
+    },
+    getChatMode: () => chatMode,
+  };
+  function _setModeArchitecture() {
+    setModeArchitecture(_modeDeps);
   }
   function _setModeCode() {
-    if ($chatModeStore === 'code') {
-      chatModeStore.clearMode();
-      chatMode = 'normal';
-    } else {
-      chatModeStore.setMode('code');
-      chatMode = 'code';
-    }
+    setModeCode(_modeDeps);
   }
   function _setModeShip() {
-    if (chatMode === 'ship') {
-      const storeMode = get(chatModeStore);
-      chatMode = storeMode === 'design' ? 'design' : storeMode === 'code' ? 'code' : 'normal';
-    } else {
-      chatMode = 'ship';
-    }
+    setModeShip(_modeDeps);
   }
-
   function _setModeArgument() {
-    if ($chatModeStore === 'argument') {
-      chatModeStore.clearMode();
-      chatMode = 'normal';
-    } else {
-      chatModeStore.setMode('argument');
-      chatMode = 'argument';
-    }
+    setModeArgument(_modeDeps);
   }
-
   function _setModePlan() {
-    if (chatMode === 'plan') {
-      chatModeStore.clearMode();
-      chatMode = 'normal';
-    } else {
-      chatModeStore.setMode('code');
-      chatMode = 'plan';
-      window.dispatchEvent(new CustomEvent('switch-plan-mode'));
-    }
+    setModePlan(_modeDeps);
   }
-
   function _setModeSpec() {
-    if (chatMode === 'spec') {
-      chatModeStore.clearMode();
-      chatMode = 'normal';
-    } else {
-      chatModeStore.setMode('code');
-      chatMode = 'spec';
-      window.dispatchEvent(new CustomEvent('switch-spec-mode'));
-    }
+    setModeSpec(_modeDeps);
   }
 
   // Initialize settings
@@ -419,20 +385,11 @@
     }
   }
 
+  // Attachment management – delegated to ChatAttachmentManager.ts
   async function loadSessionAttachments() {
-    const sid = $currentSession?.id;
-    if (!sid) {
-      sessionAttachments = [];
-      return;
-    }
     _sessionAttachmentsLoading = true;
-    try {
-      sessionAttachments = await listSessionAttachments(sid);
-    } catch {
-      sessionAttachments = [];
-    } finally {
-      _sessionAttachmentsLoading = false;
-    }
+    sessionAttachments = await loadAttachments($currentSession?.id);
+    _sessionAttachmentsLoading = false;
   }
 
   $effect(() => {
@@ -442,49 +399,16 @@
   });
 
   async function _handleAddSessionAttachments(files: FileList | null) {
-    const sid = $currentSession?.id;
-    if (!sid || !files?.length) return;
-    const items: Array<{ name: string; mimeType: string; size: number; dataBase64?: string }> = [];
-    const maxSize = 500 * 1024;
-    for (const file of Array.from(files)) {
-      if (file.size > maxSize) continue;
-      const dataBase64 = await new Promise<string>((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => {
-          const s = r.result as string;
-          resolve(s.includes(',') ? (s.split(',')[1] ?? '') : s);
-        };
-        r.onerror = () => reject(r.error);
-        r.readAsDataURL(file);
-      });
-      items.push({
-        name: file.name,
-        mimeType: file.type || 'application/octet-stream',
-        size: file.size,
-        dataBase64,
-      });
-    }
-    if (items.length === 0) return;
-    try {
-      const added = await addSessionAttachments(sid, items);
-      sessionAttachments = [...sessionAttachments, ...added];
-      showToast('Attachments added', 'success');
-    } catch {
-      showToast('Failed to add attachments', 'error');
-    }
+    sessionAttachments = await addAttachments($currentSession?.id, files, sessionAttachments);
     if (sessionAttachmentInputEl) sessionAttachmentInputEl.value = '';
   }
 
   async function _handleRemoveSessionAttachment(attachmentId: string) {
-    const sid = $currentSession?.id;
-    if (!sid) return;
-    try {
-      await removeSessionAttachment(sid, attachmentId);
-      sessionAttachments = sessionAttachments.filter((a) => a.id !== attachmentId);
-      showToast('Attachment removed', 'success');
-    } catch {
-      showToast('Failed to remove attachment', 'error');
-    }
+    sessionAttachments = await removeAttachment(
+      $currentSession?.id,
+      attachmentId,
+      sessionAttachments
+    );
   }
 
   // Scroll helpers
@@ -1431,47 +1355,6 @@
     background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
   }
 
-  .streaming-message {
-    padding: 0.5rem 1rem;
-  }
-
-  .streaming-content {
-    margin-top: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .thinking-block {
-    margin-top: 0.5rem;
-    font-size: 0.8rem;
-    color: var(--color-text-secondary, #64748b);
-  }
-
-  .thinking-block summary {
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .thinking-content {
-    margin-top: 0.25rem;
-    padding: 0.5rem;
-    max-height: 12rem;
-    overflow: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
-    background: var(--color-surface-subtle, rgba(0, 0, 0, 0.2));
-    border-radius: 6px;
-    font-family: ui-monospace, monospace;
-  }
-
-  .text-block {
-    white-space: pre-wrap;
-    word-break: break-word;
-    line-height: 1.6;
-    color: var(--color-text);
-  }
-
   /* Input area - compact height, pulled down from bottom edge */
   .input-area {
     padding: 0.3rem 1rem 0.75rem 1rem;
@@ -1540,28 +1423,6 @@
       opacity: 1;
       transform: translateY(0);
     }
-  }
-
-  /* Streaming content blocks */
-  .streaming-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-  }
-
-  .streaming-content .text-block {
-    font-family:
-      'Inter',
-      -apple-system,
-      system-ui,
-      sans-serif;
-    font-size: 0.875rem;
-    line-height: 1.55;
-    color: var(--color-text, #e2e8f0);
-    white-space: pre-wrap;
-    word-break: break-word;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeSpeed;
   }
 
   @media (prefers-reduced-motion: reduce) {

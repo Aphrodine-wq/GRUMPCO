@@ -23,25 +23,27 @@ if %ERRORLEVEL% neq 0 (
 )
 for /f "tokens=*" %%V in ('node -v') do echo [OK] Node.js version: %%V
 
-REM --- NPM available check ---
-where npm >nul 2>nul
+REM --- pnpm available check ---
+where pnpm >nul 2>nul
 if %ERRORLEVEL% neq 0 (
-    echo [ERROR] npm is not available!
+    echo [ERROR] pnpm is not available!
+    echo         Install: npm install -g pnpm
     pause
     exit /b 1
 )
+for /f "tokens=*" %%V in ('pnpm --version') do echo [OK] pnpm version: %%V
 
 REM --- Check for .env file ---
-if not exist ".env" (
-    if exist ".env.example" (
-        echo [INFO] Creating .env from .env.example...
-        copy ".env.example" ".env" >nul
-        echo [WARN] Edit .env with your API keys before usage!
+if not exist "backend\.env" (
+    if exist "backend\.env.example" (
+        echo [INFO] Creating backend\.env from backend\.env.example...
+        copy "backend\.env.example" "backend\.env" >nul
+        echo [WARN] Edit backend\.env with your API keys before usage!
     ) else (
-        echo [WARN] No .env file found. Some features may not work.
+        echo [WARN] No backend\.env file found. Some features may not work.
     )
 ) else (
-    echo [OK] .env found
+    echo [OK] backend\.env found
 )
 
 REM --- Install / sync dependencies if needed ---
@@ -49,7 +51,7 @@ echo.
 echo [1/4] Checking dependencies...
 if not exist "node_modules" (
     echo [INFO] Installing root dependencies...
-    call npm install
+    call pnpm install
 ) else (
     echo [OK] Root node_modules exists
 )
@@ -57,7 +59,7 @@ if not exist "node_modules" (
 if not exist "backend\node_modules" (
     echo [INFO] Installing backend dependencies...
     cd backend
-    call npm install
+    call pnpm install
     cd ..
 ) else (
     echo [OK] Backend node_modules exists
@@ -66,22 +68,20 @@ if not exist "backend\node_modules" (
 if not exist "frontend\node_modules" (
     echo [INFO] Installing frontend dependencies...
     cd frontend
-    call npm install
+    call pnpm install
     cd ..
 ) else (
     echo [OK] Frontend node_modules exists
 )
 
-REM --- Build backend if no dist ---
+REM --- Build shared packages if needed ---
 echo.
-echo [2/4] Checking backend build...
-if not exist "backend\dist" (
-    echo [INFO] Building backend...
-    cd backend
-    call npm run build
-    cd ..
+echo [2/4] Checking shared packages build...
+if not exist "packages\shared-types\dist" (
+    echo [INFO] Building shared packages...
+    call pnpm run build:packages
 ) else (
-    echo [OK] Backend build exists
+    echo [OK] Shared packages built
 )
 
 REM --- Select launch mode ---
@@ -100,38 +100,52 @@ echo.
 echo [4/4] Launching...
 echo.
 
-if "%MODE%"=="1" (
-    echo Starting FULL DEV mode (Backend + Frontend)...
-    echo Press Ctrl+C to stop.
-    echo.
-    call npm run dev
-) else if "%MODE%"=="2" (
-    echo Starting DESKTOP mode (Backend + Electron)...
-    echo Press Ctrl+C to stop.
-    echo.
-    start /B "G-Rump Backend" cmd /c "cd /d "%~dp0backend" && npm run dev"
-    timeout /t 3 /nobreak >nul
-    cd frontend
-    call npm run electron:dev
-    cd ..
-) else if "%MODE%"=="3" (
-    echo Starting BACKEND only...
-    echo Press Ctrl+C to stop.
-    echo.
-    cd backend
-    call npm run dev
-    cd ..
-) else if "%MODE%"=="4" (
-    echo Starting FRONTEND only (browser)...
-    echo Press Ctrl+C to stop.
-    echo.
-    cd frontend
-    call npm run dev
-    cd ..
-) else (
-    echo [ERROR] Invalid choice. Exiting.
-    pause
-    exit /b 1
-)
+if "%MODE%"=="1" goto MODE_FULL
+if "%MODE%"=="2" goto MODE_DESKTOP
+if "%MODE%"=="3" goto MODE_BACKEND
+if "%MODE%"=="4" goto MODE_FRONTEND
+goto MODE_INVALID
 
+:MODE_FULL
+echo Starting FULL DEV mode (Backend + Frontend)...
+echo Press Ctrl+C to stop.
+echo.
+call pnpm run dev
+goto END
+
+:MODE_DESKTOP
+echo Starting DESKTOP mode (Backend + Electron)...
+echo Press Ctrl+C to stop.
+echo.
+start /B "G-Rump Backend" cmd /c "cd /d "%~dp0backend" && pnpm run dev"
+timeout /t 3 /nobreak >nul
+cd frontend
+call pnpm run electron:dev
+cd ..
+goto END
+
+:MODE_BACKEND
+echo Starting BACKEND only...
+echo Press Ctrl+C to stop.
+echo.
+cd backend
+call pnpm run dev
+cd ..
+goto END
+
+:MODE_FRONTEND
+echo Starting FRONTEND only (browser)...
+echo Press Ctrl+C to stop.
+echo.
+cd frontend
+call pnpm run dev
+cd ..
+goto END
+
+:MODE_INVALID
+echo [ERROR] Invalid choice. Exiting.
+pause
+exit /b 1
+
+:END
 pause

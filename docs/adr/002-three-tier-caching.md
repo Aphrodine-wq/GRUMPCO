@@ -210,7 +210,7 @@ Request → L1 Check → L2 Check → L3 Check → API Call → Store in L1/L2/L
 - [Redis Best Practices](https://redis.io/docs/manual/patterns/)
 - [SQLite FTS5](https://www.sqlite.org/fts5.html)
 - [Cost Analysis Spreadsheet](https://docs.google.com/spreadsheets/d/xyz)
-- [Implementation PR](https://github.com/Aphrodine-wq/G-rump.com/pull/89)
+- [Implementation PR](https://github.com/Aphrodine-wq/GRUMPCO/pull/89)
 
 ## Revision History
 
@@ -219,3 +219,4 @@ Request → L1 Check → L2 Check → L3 Check → API Call → Store in L1/L2/L
 | 2025-10-10 | Initial draft | Backend Team |
 | 2025-10-15 | Added performance numbers | Backend Team |
 | 2025-10-20 | Accepted | Architecture Team |
+

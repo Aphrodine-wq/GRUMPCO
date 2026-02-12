@@ -75,14 +75,6 @@
       group: 'tools',
       icon: 'docs',
     },
-    { view: 'skills', label: 'Skills', keywords: ['skills'], group: 'tools', icon: 'skills' },
-    {
-      view: 'swarm',
-      label: 'Agent swarm',
-      keywords: ['agent', 'swarm'],
-      group: 'ai',
-      icon: 'swarm',
-    },
     { view: 'memory', label: 'Memory', keywords: ['memory'], group: 'ai', icon: 'memory' },
     {
       view: 'approvals',

@@ -23,7 +23,19 @@
     showCustomModelForm: any;
   }
 
-  let { addCustomModel, customModelDraft, modelGroups, modelGroupsLoading, modelValue, removeCustomModel, saveCustomModel, saveModels, saving, settings, showCustomModelForm }: Props = $props();
+  let {
+    addCustomModel,
+    customModelDraft,
+    modelGroups,
+    modelGroupsLoading,
+    modelValue,
+    removeCustomModel,
+    saveCustomModel,
+    saveModels,
+    saving,
+    settings,
+    showCustomModelForm,
+  }: Props = $props();
 </script>
 
 <div class="tab-section models-tab">
@@ -44,8 +56,7 @@
             type="button"
             class="preset-option"
             class:selected={(settings?.models?.modelPreset ?? 'balanced') === preset}
-            onclick={() =>
-              saveModels({ ...settings?.models, modelPreset: preset as ModelPreset })}
+            onclick={() => saveModels({ ...settings?.models, modelPreset: preset as ModelPreset })}
             disabled={saving}
             title={desc}
           >
@@ -102,9 +113,7 @@
           />
         </label>
       </div>
-      <p class="field-hint">
-        Temperature: higher = more creative. Max tokens: cap per response.
-      </p>
+      <p class="field-hint">Temperature: higher = more creative. Max tokens: cap per response.</p>
     </div>
   </Card>
 
@@ -114,8 +123,7 @@
       <p class="models-provider-loading">Loading model list…</p>
     {:else if modelGroups.length === 0}
       <p class="field-hint">
-        No providers available. Configure API keys in AI Providers (below) or in your
-        backend .env.
+        No providers available. Configure API keys in AI Providers (below) or in your backend .env.
       </p>
     {:else}
       <p class="field-hint models-provider-intro">
@@ -129,8 +137,7 @@
                 src={group.icon}
                 alt=""
                 class="models-provider-icon"
-                onerror={(e) =>
-                  ((e.currentTarget as HTMLImageElement).style.display = 'none')}
+                onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
               />
               <span class="models-provider-name">{group.displayName}</span>
             </div>
@@ -194,12 +201,7 @@
     <summary>Custom models</summary>
     <div class="models-custom-inner">
       <p class="section-desc">Add a model by ID, API endpoint, and optional API key.</p>
-      <Button
-        variant="secondary"
-        size="sm"
-        onclick={() => addCustomModel()}
-        disabled={saving}
-      >
+      <Button variant="secondary" size="sm" onclick={() => addCustomModel()} disabled={saving}>
         Add Custom Model
       </Button>
       {#if showCustomModelForm}
@@ -233,8 +235,8 @@
               variant="primary"
               size="sm"
               onclick={saveCustomModel}
-              disabled={!customModelDraft.modelId?.trim() ||
-                !customModelDraft.apiEndpoint?.trim()}>Save</Button
+              disabled={!customModelDraft.modelId?.trim() || !customModelDraft.apiEndpoint?.trim()}
+              >Save</Button
             >
             <Button
               variant="ghost"
@@ -265,23 +267,22 @@
 </div>
 
 <style>
-
-.tab-section {
+  .tab-section {
     max-width: 900px;
     display: flex;
     flex-direction: column;
     gap: 28px;
   }
 
-.tab-section :global(.card) {
+  .tab-section :global(.card) {
     border: 1px solid #e5e7eb;
   }
 
-.models-tab {
+  .models-tab {
     max-width: 720px;
   }
 
-.preset-label {
+  .preset-label {
     display: block;
     font-size: 0.8125rem;
     font-weight: 600;
@@ -289,13 +290,13 @@
     margin-bottom: 0.5rem;
   }
 
-.preset-options {
+  .preset-options {
     display: flex;
     gap: 0.25rem;
     flex-wrap: wrap;
   }
 
-.preset-option {
+  .preset-option {
     padding: 0.4rem 0.75rem;
     font-size: 0.8125rem;
     font-weight: 500;
@@ -310,19 +311,19 @@
       color 0.15s;
   }
 
-.preset-option:hover {
+  .preset-option:hover {
     background: var(--color-bg-secondary, #f9fafb);
     border-color: var(--color-primary, #7c3aed);
     color: var(--color-primary, #7c3aed);
   }
 
-.preset-option.selected {
+  .preset-option.selected {
     background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
     border-color: var(--color-primary, #7c3aed);
     color: var(--color-primary, #7c3aed);
   }
 
-.default-model-row {
+  .default-model-row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -330,33 +331,24 @@
     margin-bottom: 0.5rem;
   }
 
-.default-model-row .field-label {
-    flex-shrink: 0;
-  }
-
-.chat-model-hint {
+  .chat-model-hint {
     margin: 0;
     font-size: 0.8125rem;
   }
 
-.advanced-finetuning {
+  .advanced-finetuning {
     margin-top: 1.25rem;
     padding-top: 1.25rem;
     border-top: 1px solid var(--color-border, #e5e7eb);
   }
 
-.advanced-finetuning .field-label {
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
-.advanced-row {
+  .advanced-row {
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
   }
 
-.advanced-field {
+  .advanced-field {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -364,7 +356,7 @@
     color: var(--color-text-muted, #6b7280);
   }
 
-.advanced-field input {
+  .advanced-field input {
     width: 100px;
     padding: 0.35rem 0.5rem;
     font-size: 0.875rem;
@@ -372,29 +364,25 @@
     border-radius: 0.5rem;
   }
 
-.models-tab .models-section {
+  .models-tab .models-section {
     margin-bottom: 1.25rem;
   }
 
-.models-tab .models-section:last-child {
+  .models-tab .models-section:last-child {
     margin-bottom: 0;
   }
 
-.models-provider-loading {
+  .models-provider-loading {
     color: #6b7280;
     font-size: 0.875rem;
     margin: 0;
   }
 
-.models-provider-intro {
+  .models-provider-intro {
     margin-bottom: 1rem;
   }
 
-.inline-config-input-group .field-label {
-    margin-bottom: 0.5rem;
-  }
-
-.inline-config-input-row .custom-input {
+  .inline-config-input-row .custom-input {
     flex: 1;
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border, #e5e7eb);
@@ -402,11 +390,11 @@
     font-size: 0.875rem;
   }
 
-.inline-config-input-row .custom-input.error {
+  .inline-config-input-row .custom-input.error {
     border-color: #ef4444;
   }
 
-.models-provider-list {
+  .models-provider-list {
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -414,45 +402,45 @@
     overflow-y: auto;
   }
 
-.models-provider-row {
+  .models-provider-row {
     display: flex;
     align-items: center;
     gap: 1rem;
     flex-wrap: wrap;
   }
 
-.models-provider-heading {
+  .models-provider-heading {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     min-width: 140px;
   }
 
-.models-provider-icon {
+  .models-provider-icon {
     width: 20px;
     height: 20px;
     object-fit: contain;
   }
 
-.models-provider-name {
+  .models-provider-name {
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--color-text-secondary, #374151);
   }
 
-.models-provider-select {
+  .models-provider-select {
     flex: 1;
     min-width: 200px;
     max-width: 400px;
   }
 
-.models-custom-details {
+  .models-custom-details {
     border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 10px;
     overflow: hidden;
   }
 
-.models-custom-details summary {
+  .models-custom-details summary {
     padding: 0.875rem 1rem;
     font-size: 0.9375rem;
     font-weight: 600;
@@ -462,37 +450,33 @@
     list-style: none;
   }
 
-.models-custom-details summary::-webkit-details-marker {
+  .models-custom-details summary::-webkit-details-marker {
     display: none;
   }
 
-.models-custom-details summary::before {
+  .models-custom-details summary::before {
     content: '▸ ';
     display: inline-block;
     margin-right: 0.375rem;
     transition: transform 0.2s;
   }
 
-.models-custom-details[open] summary::before {
+  .models-custom-details[open] summary::before {
     transform: rotate(90deg);
   }
 
-.models-custom-inner {
+  .models-custom-inner {
     padding: 1rem 1rem 1.25rem;
     border-top: 1px solid var(--color-border, #e5e7eb);
   }
 
-.models-custom-inner .section-desc {
-    margin-bottom: 0.75rem;
-  }
-
-.section-desc {
+  .section-desc {
     font-size: 14px;
     color: var(--color-text-muted, #71717a);
     margin-bottom: 20px;
   }
 
-.field-label {
+  .field-label {
     display: block;
     font-size: 13px;
     font-weight: 600;
@@ -500,30 +484,26 @@
     margin-bottom: 8px;
   }
 
-.field-label-row .field-label {
-    margin-bottom: 0;
-  }
-
-.field-hint {
+  .field-hint {
     font-size: 12px;
     color: var(--color-text-muted, #a1a1aa);
     margin-top: 6px;
   }
 
-.theme-card.selected {
+  .theme-card.selected {
     background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
     border-color: var(--color-primary, #7c3aed);
     color: var(--color-primary, #7c3aed);
   }
 
-.accent-swatch.selected {
+  .accent-swatch.selected {
     border-color: var(--color-text, #111827);
     box-shadow:
       0 0 0 2px white,
       0 0 0 4px var(--color-text, #111827);
   }
 
-.custom-select {
+  .custom-select {
     width: 100%;
     height: 40px;
     padding: 0 12px;
@@ -536,18 +516,11 @@
     transition: border-color 150ms;
   }
 
-.custom-select:focus {
+  .custom-select:focus {
     border-color: var(--color-primary, #7c3aed);
   }
 
-.field-hint code {
-    font-size: 0.75em;
-    padding: 0.1em 0.35em;
-    background: var(--color-bg-card, #f4f4f5);
-    border-radius: 4px;
-  }
-
-.custom-model-form {
+  .custom-model-form {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -557,25 +530,25 @@
     border-radius: 8px;
   }
 
-.custom-model-form .custom-input {
+  .custom-model-form .custom-input {
     padding: 8px 12px;
     border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 6px;
     font-size: 14px;
   }
 
-.custom-model-form-actions {
+  .custom-model-form-actions {
     display: flex;
     gap: 8px;
   }
 
-.custom-models-list {
+  .custom-models-list {
     list-style: none;
     padding: 0;
     margin: 12px 0 0;
   }
 
-.custom-model-item {
+  .custom-model-item {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -585,13 +558,13 @@
     margin-bottom: 4px;
   }
 
-.custom-model-id {
+  .custom-model-id {
     font-family: monospace;
     font-weight: 600;
     font-size: 13px;
   }
 
-.custom-model-endpoint {
+  .custom-model-endpoint {
     font-size: 12px;
     color: var(--color-text-muted, #6b7280);
     flex: 1;

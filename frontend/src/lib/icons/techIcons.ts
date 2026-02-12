@@ -295,7 +295,6 @@ export const STYLING_ICONS: Record<string, ComponentType> = {
  * AI Provider icon mappings
  */
 export const AI_PROVIDER_ICONS: Record<string, ComponentType> = {
-  kimi: Moon,
   'nvidia-nim': Cpu,
   openrouter: Split,
   anthropic: Brain,

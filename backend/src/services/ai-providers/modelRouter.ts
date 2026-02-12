@@ -10,17 +10,15 @@
  * Provider Priority:
  * 1. NIM - Primary, reliable, high performance
  * 2. Anthropic - Best quality (Claude)
- * 3. OpenRouter - Best model selection
- * 4. GitHub Copilot - Code generation specialist
- * 5. Mistral AI - European, multilingual
- * 6. Kimi K2.5 - Long context specialist
- * 7. Ollama - Local/self-hosted (enterprise)
+ * 3. Google - Long context, balanced cost
+ * 4. OpenRouter - Best model selection
+ * 5. Ollama - Local/self-hosted (enterprise)
  *
  * @module services/modelRouter
  */
 
-import logger from "../../middleware/logger.js";
-import { env } from "../../config/env.js";
+import logger from '../../middleware/logger.js';
+import { env } from '../../config/env.js';
 import {
   type LLMProvider,
   type StreamParams,
@@ -30,7 +28,7 @@ import {
   getProviderConfig,
   raceStream,
   PROVIDER_CONFIGS,
-} from "./llmGateway.js";
+} from './llmGateway.js';
 
 // =============================================================================
 // Types & Interfaces
@@ -38,13 +36,13 @@ import {
 
 /** Request type classification */
 export type RequestType =
-  | "simple"
-  | "complex"
-  | "coding"
-  | "vision"
-  | "creative"
-  | "long-context"
-  | "default";
+  | 'simple'
+  | 'complex'
+  | 'coding'
+  | 'vision'
+  | 'creative'
+  | 'long-context'
+  | 'default';
 
 /** Routing decision result */
 export interface RoutingDecision {
@@ -52,7 +50,7 @@ export interface RoutingDecision {
   model: string;
   reason: string;
   estimatedCost: number;
-  estimatedLatency: "fast" | "medium" | "slow";
+  estimatedLatency: 'fast' | 'medium' | 'slow';
   fallbackChain: LLMProvider[];
 }
 
@@ -93,163 +91,86 @@ interface ProviderRanking {
 
 /** Provider rankings by different criteria (only configured providers) */
 const PROVIDER_RANKINGS: ProviderRanking = {
-  speed: [
-    "grump",
-    "nim",
-    "kimi",
-    "github-copilot",
-    "google",
-    "mistral",
-    "anthropic",
-    "openrouter",
-    "ollama",
-    "jan",
-  ],
-  quality: [
-    "grump",
-    "anthropic",
-    "openrouter",
-    "google",
-    "nim",
-    "mistral",
-    "github-copilot",
-    "kimi",
-    "ollama",
-    "jan",
-  ],
-  cost: [
-    "ollama",
-    "jan",
-    "nim",
-    "kimi",
-    "grump",
-    "google",
-    "mistral",
-    "github-copilot",
-    "openrouter",
-    "anthropic",
-  ],
-  coding: [
-    "grump",
-    "github-copilot",
-    "anthropic",
-    "mistral",
-    "google",
-    "nim",
-    "openrouter",
-    "kimi",
-    "ollama",
-    "jan",
-  ],
-  longContext: [
-    "kimi",
-    "anthropic",
-    "google",
-    "grump",
-    "nim",
-    "openrouter",
-    "mistral",
-    "github-copilot",
-    "ollama",
-    "jan",
-  ],
+  speed: ['grump', 'nim', 'google', 'anthropic', 'openrouter', 'ollama'],
+  quality: ['grump', 'anthropic', 'openrouter', 'nim', 'google', 'ollama'],
+  cost: ['ollama', 'nim', 'google', 'grump', 'openrouter', 'anthropic'],
+  coding: ['grump', 'anthropic', 'nim', 'openrouter', 'google', 'ollama'],
+  longContext: ['google', 'anthropic', 'grump', 'nim', 'openrouter', 'ollama'],
 };
 
 /** Default model mappings by request type */
 const DEFAULT_MODELS: Record<RequestType, Record<LLMProvider, string>> = {
   simple: {
-    nim: "moonshotai/kimi-k2.5",
-    openrouter: "meta-llama/llama-3.1-70b-instruct",
-    ollama: "kimi-k2.5:cloud",
-    jan: "llama3.1",
-    "github-copilot": "gpt-3.5-turbo",
-    kimi: "moonshot-v1-8k",
-    anthropic: "claude-3-haiku-20240307",
-    mistral: "mistral-small-latest",
-    google: "gemini-2.0-flash",
-    grump: "g-compn1-fast",
-    mock: "mock-model",
+    nim: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+    openrouter: 'meta-llama/llama-3.1-70b-instruct',
+    ollama: 'llama3.1',
+    google: 'gemini-2.0-flash',
+    github_copilot: 'gpt-4o',
+    anthropic: 'claude-3-haiku-20240307',
+    grump: 'g-compn1-fast',
+    mock: 'mock-model',
   },
   complex: {
-    nim: "moonshotai/kimi-k2.5",
-    openrouter: "anthropic/claude-3.5-sonnet",
-    ollama: "kimi-k2.5:cloud",
-    jan: "llama3.1",
-    "github-copilot": "gpt-4",
-    kimi: "moonshot-v1-32k",
-    anthropic: "claude-opus-4-6-20260206",
-    mistral: "mistral-large-latest",
-    google: "gemini-3-pro",
-    grump: "g-compn1-quality",
-    mock: "mock-model",
+    nim: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+    openrouter: 'anthropic/claude-3.5-sonnet',
+    ollama: 'llama3.1',
+    google: 'gemini-2.0-pro',
+    github_copilot: 'gpt-4o',
+    anthropic: 'claude-opus-4-6-20260206',
+    grump: 'g-compn1-quality',
+    mock: 'mock-model',
   },
   coding: {
-    nim: "moonshotai/kimi-k2.5",
-    openrouter: "anthropic/claude-3.5-sonnet",
-    ollama: "codellama",
-    jan: "codellama",
-    "github-copilot": "gpt-4",
-    kimi: "moonshot-v1-32k",
-    anthropic: "claude-opus-4-6-20260206",
-    mistral: "codestral-latest",
-    google: "gemini-3-pro",
-    grump: "g-compn1-quality",
-    mock: "mock-model",
+    nim: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+    openrouter: 'anthropic/claude-3.5-sonnet',
+    ollama: 'codellama',
+    google: 'gemini-2.0-pro',
+    github_copilot: 'claude-3.5-sonnet',
+    anthropic: 'claude-opus-4-6-20260206',
+    grump: 'g-compn1-quality',
+    mock: 'mock-model',
   },
   vision: {
-    nim: "moonshotai/kimi-k2.5",
-    openrouter: "openai/gpt-4o",
-    ollama: "llava",
-    jan: "llava",
-    "github-copilot": "gpt-4",
-    kimi: "moonshot-v1-32k",
-    anthropic: "claude-opus-4-6-20260206",
-    mistral: "mistral-large-latest",
-    google: "gemini-3-pro",
-    grump: "g-compn1-balanced",
-    mock: "mock-model",
+    nim: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+    openrouter: 'openai/gpt-4o',
+    ollama: 'llava',
+    google: 'gemini-2.0-pro',
+    github_copilot: 'gpt-4o',
+    anthropic: 'claude-opus-4-6-20260206',
+    grump: 'g-compn1-balanced',
+    mock: 'mock-model',
   },
   creative: {
-    nim: "moonshotai/kimi-k2.5",
-    openrouter: "anthropic/claude-3-opus",
-    ollama: "kimi-k2.5:cloud",
-    jan: "llama3.1",
-    "github-copilot": "gpt-4",
-    kimi: "moonshot-v1-128k",
-    anthropic: "claude-opus-4-6-20260206",
-    mistral: "mistral-large-latest",
-    google: "gemini-3-pro",
-    grump: "g-compn1-quality",
-    mock: "mock-model",
+    nim: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+    openrouter: 'anthropic/claude-3-opus',
+    ollama: 'llama3.1',
+    google: 'gemini-2.0-pro',
+    github_copilot: 'gpt-4o',
+    anthropic: 'claude-opus-4-6-20260206',
+    grump: 'g-compn1-quality',
+    mock: 'mock-model',
   },
-  "long-context": {
-    nim: "moonshotai/kimi-k2.5",
-    openrouter: "anthropic/claude-3.5-sonnet",
-    ollama: "kimi-k2.5:cloud",
-    jan: "llama3.1",
-    "github-copilot": "gpt-4",
-    kimi: "moonshot-v1-128k",
-    anthropic: "claude-opus-4-6-20260206",
-    mistral: "mistral-large-latest",
-    google: "gemini-3-pro",
-    grump: "g-compn1-balanced",
-    mock: "mock-model",
+  'long-context': {
+    nim: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+    openrouter: 'anthropic/claude-3.5-sonnet',
+    ollama: 'llama3.1',
+    google: 'gemini-2.0-pro',
+    github_copilot: 'gpt-4o',
+    anthropic: 'claude-opus-4-6-20260206',
+    grump: 'g-compn1-balanced',
+    mock: 'mock-model',
   },
   default: {
-    nim: "moonshotai/kimi-k2.5",
-    openrouter: "anthropic/claude-3.5-sonnet",
-    ollama: "kimi-k2.5:cloud",
-    jan: "llama3.1",
-    "github-copilot": "gpt-4",
-    kimi: "moonshot-v1-32k",
-    anthropic: "claude-opus-4-6-20260206",
-    mistral: "mistral-large-latest",
-    google: "gemini-3-pro",
-    grump: "g-compn1-auto",
-    mock: "mock-model",
+    nim: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+    openrouter: 'anthropic/claude-3.5-sonnet',
+    ollama: 'llama3.1',
+    google: 'gemini-2.0-flash',
+    github_copilot: 'gpt-4o',
+    anthropic: 'claude-opus-4-6-20260206',
+    grump: 'g-compn1-auto',
+    mock: 'mock-model',
   },
 };
-
 
 // =============================================================================
 // Request Classification
@@ -263,52 +184,52 @@ export function classifyRequest(params: StreamParams): RequestType {
 
   // Vision requests
   if (params.messages.some((m) => Array.isArray(m.content))) {
-    return "vision";
+    return 'vision';
   }
 
   // Long context requests (very long prompts)
   if (content.length > 10000) {
-    return "long-context";
+    return 'long-context';
   }
 
   // Coding requests
   if (
-    content.includes("code") ||
-    content.includes("function") ||
-    content.includes("implement") ||
-    content.includes("debug") ||
-    content.includes("refactor") ||
-    content.includes("typescript") ||
-    content.includes("javascript") ||
-    content.includes("python") ||
-    content.includes("api") ||
-    content.includes("class")
+    content.includes('code') ||
+    content.includes('function') ||
+    content.includes('implement') ||
+    content.includes('debug') ||
+    content.includes('refactor') ||
+    content.includes('typescript') ||
+    content.includes('javascript') ||
+    content.includes('python') ||
+    content.includes('api') ||
+    content.includes('class')
   ) {
-    return "coding";
+    return 'coding';
   }
 
   // Creative requests
   if (
-    content.includes("creative") ||
-    content.includes("story") ||
-    content.includes("poem") ||
-    content.includes("imagine") ||
-    content.includes("write")
+    content.includes('creative') ||
+    content.includes('story') ||
+    content.includes('poem') ||
+    content.includes('imagine') ||
+    content.includes('write')
   ) {
-    return "creative";
+    return 'creative';
   }
 
   // Complex requests (long prompts, tool use)
   if (content.length > 2000 || params.tools) {
-    return "complex";
+    return 'complex';
   }
 
   // Simple requests
   if (content.length < 500) {
-    return "simple";
+    return 'simple';
   }
 
-  return "default";
+  return 'default';
 }
 
 // =============================================================================
@@ -320,17 +241,16 @@ export function classifyRequest(params: StreamParams): RequestType {
  */
 export function selectProvider(
   requestType: RequestType,
-  options: RouterOptions = {},
+  options: RouterOptions = {}
 ): RoutingDecision {
   // Force provider if specified
   if (options.provider) {
     const config = getProviderConfig(options.provider);
-    const model =
-      options.model || DEFAULT_MODELS[requestType][options.provider];
+    const model = options.model || DEFAULT_MODELS[requestType][options.provider];
     return {
       provider: options.provider,
       model,
-      reason: "User-specified provider",
+      reason: 'User-specified provider',
       estimatedCost: config?.costPer1kTokens ?? 0,
       estimatedLatency: getLatencyEstimate(options.provider),
       fallbackChain: [options.provider],
@@ -340,97 +260,96 @@ export function selectProvider(
   // User preference
   if (options.userPreference) {
     const config = getProviderConfig(options.userPreference);
-    const model =
-      options.model || DEFAULT_MODELS[requestType][options.userPreference];
+    const model = options.model || DEFAULT_MODELS[requestType][options.userPreference];
     return {
       provider: options.userPreference,
       model,
-      reason: "User preference from settings",
+      reason: 'User preference from settings',
       estimatedCost: config?.costPer1kTokens ?? 0,
       estimatedLatency: getLatencyEstimate(options.userPreference),
-      fallbackChain: [options.userPreference, "nim", "openrouter"],
+      fallbackChain: [options.userPreference, 'nim', 'openrouter'],
     };
   }
 
-  // Coding requests prefer GitHub Copilot or Mistral
-  if (requestType === "coding") {
-    const provider: LLMProvider = "github-copilot";
+  // Coding requests prefer Anthropic
+  if (requestType === 'coding') {
+    const provider: LLMProvider = 'anthropic';
     const model = options.model || DEFAULT_MODELS.coding[provider];
     return {
       provider,
       model,
-      reason: "GitHub Copilot optimized for code generation",
+      reason: 'Anthropic Claude optimized for code generation',
       estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
-      estimatedLatency: "fast",
-      fallbackChain: ["github-copilot", "mistral", "anthropic", "nim"],
+      estimatedLatency: 'medium',
+      fallbackChain: ['anthropic', 'nim', 'openrouter'],
     };
   }
 
-  // Long context requests prefer Kimi
-  if (requestType === "long-context") {
-    const provider: LLMProvider = "kimi";
-    const model = options.model || DEFAULT_MODELS["long-context"][provider];
+  // Long context requests prefer Google Gemini (2M context)
+  if (requestType === 'long-context') {
+    const provider: LLMProvider = 'google';
+    const model = options.model || DEFAULT_MODELS['long-context'][provider];
     return {
       provider,
       model,
-      reason: "Kimi K2.5 optimized for long context (128k tokens)",
+      reason: 'Google Gemini optimized for long context (up to 2M tokens)',
       estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
-      estimatedLatency: "medium",
-      fallbackChain: ["kimi", "anthropic", "nim", "openrouter"],
+      estimatedLatency: 'medium',
+      fallbackChain: ['google', 'anthropic', 'nim', 'openrouter'],
     };
   }
 
   // Quality-focused requests prefer Anthropic
-  if (options.preferQuality || requestType === "creative") {
-    const provider: LLMProvider = "anthropic";
+  if (options.preferQuality || requestType === 'creative') {
+    const provider: LLMProvider = 'anthropic';
     const model = options.model || DEFAULT_MODELS[requestType][provider];
     return {
       provider,
       model,
-      reason: "Anthropic Claude - Best quality and reasoning",
+      reason: 'Anthropic Claude - Best quality and reasoning',
       estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
-      estimatedLatency: "medium",
-      fallbackChain: ["anthropic", "openrouter", "nim", "mistral"],
+      estimatedLatency: 'medium',
+      fallbackChain: ['anthropic', 'openrouter', 'nim'],
     };
   }
 
   // Speed-focused requests prefer NIM
   if (options.preferSpeed) {
-    const provider: LLMProvider = "nim";
+    const provider: LLMProvider = 'nim';
     const model = options.model || DEFAULT_MODELS[requestType][provider];
     return {
       provider,
       model,
-      reason: "NVIDIA NIM - Fastest inference",
+      reason: 'NVIDIA NIM - Fastest inference',
       estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
-      estimatedLatency: "fast",
-      fallbackChain: ["nim", "kimi", "mistral", "openrouter"],
+      estimatedLatency: 'fast',
+      fallbackChain: ['nim', 'google', 'openrouter'],
     };
   }
 
   // Default to NIM for balanced performance
-  const provider: LLMProvider = "nim";
+  const provider: LLMProvider = 'nim';
   const model = options.model || DEFAULT_MODELS[requestType][provider];
   return {
     provider,
     model,
-    reason: "NVIDIA NIM - Primary provider for balanced performance",
+    reason: 'NVIDIA NIM - Primary provider for balanced performance',
     estimatedCost: PROVIDER_CONFIGS[provider].costPer1kTokens,
-    estimatedLatency: "fast",
-    fallbackChain: ["nim", "anthropic", "openrouter", "mistral"],
+    estimatedLatency: 'fast',
+    fallbackChain: ['nim', 'anthropic', 'openrouter'],
   };
 }
 
 /**
  * Get estimated latency for a provider.
  */
-function getLatencyEstimate(provider: LLMProvider): "fast" | "medium" | "slow" {
+function getLatencyEstimate(provider: LLMProvider): 'fast' | 'medium' | 'slow' {
   const config = getProviderConfig(provider);
-  if (!config) return "medium";
+  if (!config) return 'medium';
 
-  if (config.speedRank <= 2) return "fast";
-  if (config.speedRank <= 4) return "medium";
-  return "slow";
+  if (config.speedRank <= 2) return 'fast';
+  if (config.speedRank <= 4) return 'medium';
+  return 'slow';
 }
 
 // =============================================================================
@@ -454,7 +373,7 @@ function getLatencyEstimate(provider: LLMProvider): "fast" | "medium" | "slow" {
  *   messages: [{ role: 'user', content: 'Hello' }]
  * });
  *
- * // Coding query -> routed to GitHub Copilot
+ * // Coding query -> routed to Anthropic
  * const stream = routeStream({
  *   model: '',
  *   max_tokens: 2048,
@@ -462,7 +381,7 @@ function getLatencyEstimate(provider: LLMProvider): "fast" | "medium" | "slow" {
  *   messages: [{ role: 'user', content: 'Write a TypeScript function' }]
  * }, { requestType: 'coding' });
  *
- * // Long document -> routed to Kimi
+ * // Long document -> routed to Google Gemini
  * const stream = routeStream({
  *   model: '',
  *   max_tokens: 4096,
@@ -473,28 +392,28 @@ function getLatencyEstimate(provider: LLMProvider): "fast" | "medium" | "slow" {
  */
 export async function* routeStream(
   params: StreamParams,
-  options: RouterOptions = {},
+  options: RouterOptions = {}
 ): AsyncGenerator<StreamEvent> {
   const requestType = options.requestType ?? classifyRequest(params);
   const decision = selectProvider(requestType, options);
 
   // Optimistic racing for speed-sensitive requests
-  if (
-    !options.provider &&
-    (options.preferSpeed || requestType === "simple")
-  ) {
+  if (!options.provider && (options.preferSpeed || requestType === 'simple')) {
     const configured = getConfiguredProviders();
     const candidates = (decision.fallbackChain || [])
-      .filter((p) => configured.includes(p) && p !== "mock")
+      .filter((p) => configured.includes(p) && p !== 'mock')
       .slice(0, 3);
 
     if (candidates.length > 1) {
-      logger.info({ candidates, model: decision.model }, "Racing providers for speed");
+      logger.info({ candidates, model: decision.model }, 'Racing providers for speed');
       try {
         yield* raceStream(candidates, { ...params, model: decision.model });
         return;
       } catch (err) {
-        logger.warn({ error: (err as Error).message }, "Race failed, falling back to primary provider");
+        logger.warn(
+          { error: (err as Error).message },
+          'Race failed, falling back to primary provider'
+        );
       }
     }
   }
@@ -506,7 +425,7 @@ export async function* routeStream(
       requestType,
       reason: decision.reason,
     },
-    "Routing request",
+    'Routing request'
   );
 
   yield* getStream(params, {
@@ -520,7 +439,7 @@ export async function* routeStream(
  */
 export function getRoutingDecision(
   params: StreamParams,
-  options: RouterOptions = {},
+  options: RouterOptions = {}
 ): RoutingDecision {
   const requestType = options.requestType ?? classifyRequest(params);
   return selectProvider(requestType, options);
@@ -531,7 +450,7 @@ export function getRoutingDecision(
  */
 export function getAvailableProviders(requestType: RequestType): LLMProvider[] {
   const configured = getConfiguredProviders();
-  return configured.filter((p) => p !== "mock");
+  return configured.filter((p) => p !== 'mock');
 }
 
 /**
@@ -540,7 +459,7 @@ export function getAvailableProviders(requestType: RequestType): LLMProvider[] {
 export function estimateCost(
   provider: LLMProvider,
   inputTokens: number,
-  outputTokens: number,
+  outputTokens: number
 ): number {
   const config = getProviderConfig(provider);
   if (!config) return 0;
@@ -551,36 +470,23 @@ export function estimateCost(
  * Get recommended provider for a specific use case.
  */
 export function getRecommendedProvider(
-  useCase: "speed" | "quality" | "cost" | "coding" | "long-context",
+  useCase: 'speed' | 'quality' | 'cost' | 'coding' | 'long-context'
 ): LLMProvider {
   const configured = getConfiguredProviders();
 
   switch (useCase) {
-    case "speed":
-      return (
-        configured.find((p) => PROVIDER_RANKINGS.speed.includes(p)) ?? "nim"
-      );
-    case "quality":
-      return (
-        configured.find((p) => PROVIDER_RANKINGS.quality.includes(p)) ??
-        "anthropic"
-      );
-    case "cost":
-      return (
-        configured.find((p) => PROVIDER_RANKINGS.cost.includes(p)) ?? "ollama"
-      );
-    case "coding":
-      return (
-        configured.find((p) => PROVIDER_RANKINGS.coding.includes(p)) ??
-        "github-copilot"
-      );
-    case "long-context":
-      return (
-        configured.find((p) => PROVIDER_RANKINGS.longContext.includes(p)) ??
-        "kimi"
-      );
+    case 'speed':
+      return configured.find((p) => PROVIDER_RANKINGS.speed.includes(p)) ?? 'nim';
+    case 'quality':
+      return configured.find((p) => PROVIDER_RANKINGS.quality.includes(p)) ?? 'anthropic';
+    case 'cost':
+      return configured.find((p) => PROVIDER_RANKINGS.cost.includes(p)) ?? 'ollama';
+    case 'coding':
+      return configured.find((p) => PROVIDER_RANKINGS.coding.includes(p)) ?? 'anthropic';
+    case 'long-context':
+      return configured.find((p) => PROVIDER_RANKINGS.longContext.includes(p)) ?? 'google';
     default:
-      return "nim";
+      return 'nim';
   }
 }
 
@@ -601,14 +507,14 @@ export function route(params: {
   maxLatencyMs?: number;
   sessionType?: string;
   modelPreference?: {
-    source?: "cloud" | "auto";
+    source?: 'cloud' | 'auto';
     provider?: string;
     modelId?: string;
   };
 }): { provider: string; modelId: string; reason?: string } {
   // Map legacy params to new RouterOptions
   const options: RouterOptions = {
-    preferSpeed: params.mode === "simple", // rough mapping
+    preferSpeed: params.mode === 'simple', // rough mapping
     requiresTools: params.toolsRequested,
     requiresVision: params.multimodal || false,
     userPreference: params.modelPreference?.provider as LLMProvider | undefined,
@@ -616,16 +522,16 @@ export function route(params: {
   };
 
   if (params.preferNim) {
-    options.provider = "nim";
+    options.provider = 'nim';
   }
 
   // Determine request type based on mode/params if possible
-  let requestType: RequestType = "default";
-  if (params.multimodal) requestType = "vision";
-  else if (params.mode === "coding") requestType = "coding";
-  else if (params.messageChars > 10000) requestType = "long-context";
-  else if (params.mode === "complex") requestType = "complex";
-  else if (params.mode === "simple") requestType = "simple";
+  let requestType: RequestType = 'default';
+  if (params.multimodal) requestType = 'vision';
+  else if (params.mode === 'coding') requestType = 'coding';
+  else if (params.messageChars > 10000) requestType = 'long-context';
+  else if (params.mode === 'complex') requestType = 'complex';
+  else if (params.mode === 'simple') requestType = 'simple';
 
   const decision = selectProvider(requestType, options);
 
@@ -641,7 +547,7 @@ export function route(params: {
  */
 export function getRAGModel(): { provider: LLMProvider; modelId: string } {
   // Favor long-context providers for RAG
-  const provider = getRecommendedProvider("long-context");
-  const model = DEFAULT_MODELS["long-context"][provider];
+  const provider = getRecommendedProvider('long-context');
+  const model = DEFAULT_MODELS['long-context'][provider];
   return { provider, modelId: model };
 }

@@ -43,8 +43,8 @@ This guide covers the development workflow, coding standards, and best practices
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/Aphrodine-wq/G-rump.com.git
-cd G-rump.com
+git clone https://github.com/Aphrodine-wq/GRUMPCO.git
+cd GRUMPCO
 
 # Use correct Node version
 nvm use  # or check .nvmrc
@@ -334,7 +334,7 @@ grump-monorepo/
 ├── backend/           # Express 5 API server
 ├── packages/          # Shared packages
 │   ├── ai-core/       # LLM routing and providers
-│   ├── cli/           # @g-rump/cli
+│   ├── cli/           # grump-cli
 │   ├── shared-types/  # TypeScript types
 │   └── ...
 ├── intent-compiler/   # Rust NL parser
@@ -436,9 +436,11 @@ npm run test:coverage:ci
 ## Getting Help
 
 - 📖 [Documentation](https://docs.g-rump.com)
-- 🐛 [Issue Tracker](https://github.com/Aphrodine-wq/G-rump.com/issues)
-- 💬 [Discussions](https://github.com/Aphrodine-wq/G-rump.com/discussions)
+- 🐛 [Issue Tracker](https://github.com/Aphrodine-wq/GRUMPCO/issues)
+- 💬 [Discussions](https://github.com/Aphrodine-wq/GRUMPCO/discussions)
 
 ---
 
 Made with ❤️ by the G-Rump Team
+
+

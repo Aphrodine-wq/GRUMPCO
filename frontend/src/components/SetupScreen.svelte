@@ -18,14 +18,13 @@
 
   const steps = ['Welcome', 'Preferences', 'Model', 'Tech Stack', 'Complete'];
 
-  type ModelChoice = 'kimi' | 'nemotron-ultra' | 'nemotron-super' | 'auto';
-  let selectedModel = $state<ModelChoice>('kimi');
+  type ModelChoice = 'nemotron-ultra' | 'nemotron-super' | 'auto';
+  let selectedModel = $state<ModelChoice>('auto');
 
   const modelOptions: { value: ModelChoice; label: string; desc: string }[] = [
-    { value: 'kimi', label: 'KimiK2.5', desc: 'Recommended for most users (cost-effective)' },
+    { value: 'auto', label: 'Let G-Rump decide', desc: 'Recommended — Auto-routing by task' },
     { value: 'nemotron-ultra', label: 'NemoTRON Ultra 253B', desc: 'Highest quality' },
     { value: 'nemotron-super', label: 'NemoTRON Super 49B', desc: 'Balanced' },
-    { value: 'auto', label: 'Let G-Rump decide', desc: 'Auto-routing by task' },
   ];
 
   let preferences = $state<Partial<UserPreferences>>({

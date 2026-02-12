@@ -32,6 +32,9 @@
     Database,
     BarChart3,
     Trash2,
+    DollarSign,
+    Container,
+    ScrollText,
   } from 'lucide-svelte';
   import { sessionsStore, sortedSessions, currentSession } from '../../stores/sessionsStore';
   import {
@@ -69,12 +72,13 @@
       | 'agent'
       | 'projects'
       | 'integrations'
-      | 'skills'
       | 'memory'
-      | 'mcp'
       | 'cloud'
       | 'github'
       | 'analytics'
+      | 'cost'
+      | 'docker'
+      | 'auditLog'
       | 'settings';
     badge?: string;
   }
@@ -88,6 +92,9 @@
     { id: 'cloud', label: 'Cloud', icon: 'cloud' },
     { id: 'analytics', label: 'Analytics', icon: 'analytics' },
     { id: 'github', label: 'GitHub', icon: 'github' },
+    { id: 'cost', label: 'Cost', icon: 'cost' },
+    { id: 'docker', label: 'Docker', icon: 'docker' },
+    { id: 'auditLog', label: 'Audit Log', icon: 'auditLog' },
   ];
 
   const secondaryNav: NavItem[] = [];
@@ -291,18 +298,20 @@
           <FolderOpen size={16} />
         {:else if item.icon === 'integrations'}
           <Plug size={16} />
-        {:else if item.icon === 'skills'}
-          <BookOpen size={16} />
         {:else if item.icon === 'memory'}
           <Brain size={16} />
-        {:else if item.icon === 'mcp'}
-          <Server size={16} />
         {:else if item.icon === 'cloud'}
           <Cloud size={16} />
         {:else if item.icon === 'github'}
           <Github size={16} />
         {:else if item.icon === 'analytics'}
           <BarChart3 size={16} />
+        {:else if item.icon === 'cost'}
+          <DollarSign size={16} />
+        {:else if item.icon === 'docker'}
+          <Container size={16} />
+        {:else if item.icon === 'auditLog'}
+          <ScrollText size={16} />
         {:else}
           <Settings size={16} />
         {/if}

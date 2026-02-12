@@ -22,7 +22,15 @@
 
 {#if open}
   <div class="confirm-overlay" onclick={onClose} role="presentation">
-    <div class="confirm-container" onclick={(e) => e.stopPropagation()}>
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="confirm-container"
+      onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-label={title}
+      tabindex="-1"
+    >
       <h2 class="confirm-title">{title}</h2>
       {#if message}
         <p class="confirm-message">{message}</p>

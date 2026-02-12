@@ -188,15 +188,9 @@ export const AI_PROVIDER_OPTIONS: TechOption[] = [
     name: 'G-CompN1 Model Mix',
     icon: 'grump',
     popular: true,
-    description: 'Recommended — Smart routing between Opus 4.6, Kimi K2.5 & Gemini 3 Pro',
+    description: 'Recommended — Smart routing between Opus 4.6, Gemini 3 Pro & more',
   },
-  {
-    id: 'kimi',
-    name: 'Kimi K2.5',
-    icon: 'kimi',
-    popular: true,
-    description: 'Great balance of speed & quality',
-  },
+
   {
     id: 'nvidia-nim',
     name: 'NVIDIA NIM',
@@ -211,21 +205,31 @@ export const AI_PROVIDER_OPTIONS: TechOption[] = [
     description: 'Advanced reasoning & Agent SDK',
   },
   {
-    id: 'google',
-    name: 'Google Gemini 3 Pro',
-    icon: 'gemini',
-    description: 'Fast, balanced quality & cost',
-  },
-  {
     id: 'openrouter',
     name: 'OpenRouter',
     icon: 'openrouter',
     popular: true,
     description: 'Access multiple models',
   },
-  { id: 'mistral', name: 'Mistral AI', icon: 'mistral', description: 'Efficient open models' },
-  { id: 'ollama', name: 'Ollama (Local)', icon: 'ollama', description: 'Run models locally via Ollama' },
-  { id: 'jan', name: 'Jan (Local)', icon: 'jan', description: 'Run models locally via Jan' },
+  {
+    id: 'ollama',
+    name: 'Ollama (Local)',
+    icon: 'ollama',
+    description: 'Run models locally via Ollama',
+  },
+  {
+    id: 'google',
+    name: 'Google Gemini',
+    icon: 'google',
+    popular: true,
+    description: 'Gemini 3 Pro, 2.5 Pro & Flash models',
+  },
+  {
+    id: 'github_copilot',
+    name: 'GitHub Copilot',
+    icon: 'github_copilot',
+    description: 'Connect via GitHub OAuth',
+  },
 ];
 
 // Auth providers supported

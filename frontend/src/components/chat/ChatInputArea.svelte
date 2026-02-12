@@ -102,7 +102,7 @@
     <button
       type="button"
       class="attach-image-btn"
-      title="Attach image (Kimi)"
+      title="Attach image"
       aria-label="Attach image"
       onclick={triggerImageUpload}
       disabled={streaming}

@@ -44,6 +44,96 @@ let backendProcess = null;
 let backendReady = false;
 let isQuitting = false;
 
+// --- Sidecar readiness helpers ---
+const http = require('http');
+
+/**
+ * Poll the backend health endpoint until it responds with 200.
+ * Resolves when ready, rejects after maxWaitMs.
+ */
+function waitForBackend(maxWaitMs = 30000, intervalMs = 500) {
+  const start = Date.now();
+  return new Promise((resolve, reject) => {
+    function poll() {
+      if (Date.now() - start > maxWaitMs) {
+        console.warn('[G-Rump] Backend did not become ready within', maxWaitMs, 'ms');
+        return resolve(false); // Don't block the app, just warn
+      }
+      const req = http.get('http://localhost:3000/health/live', (res) => {
+        if (res.statusCode === 200) {
+          backendReady = true;
+          console.log('[G-Rump] Backend sidecar is ready!');
+          resolve(true);
+        } else {
+          setTimeout(poll, intervalMs);
+        }
+        res.resume(); // consume response data
+      });
+      req.on('error', () => setTimeout(poll, intervalMs));
+      req.setTimeout(2000, () => { req.destroy(); setTimeout(poll, intervalMs); });
+    }
+    poll();
+  });
+}
+
+/**
+ * Get/set last-used workspace root from persisted config.
+ */
+function getLastWorkspaceFile() {
+  try { return path.join(app.getPath('userData'), 'last-workspace.json'); } catch (e) { return null; }
+}
+
+function loadLastWorkspace() {
+  const f = getLastWorkspaceFile();
+  if (!f || !fs.existsSync(f)) return null;
+  try {
+    const data = JSON.parse(fs.readFileSync(f, 'utf-8'));
+    return data.path || null;
+  } catch (e) { return null; }
+}
+
+function saveLastWorkspace(wsPath) {
+  const f = getLastWorkspaceFile();
+  if (!f) return;
+  try {
+    fs.writeFileSync(f, JSON.stringify({ path: wsPath }), 'utf-8');
+  } catch (e) { /* silent */ }
+}
+
+/**
+ * Auto-set workspace root on the backend sidecar.
+ * Uses last-used directory, or falls back to user's home directory.
+ */
+async function autoSetWorkspaceRoot() {
+  const lastWs = loadLastWorkspace();
+  const targetDir = lastWs || (process.env.USERPROFILE || process.env.HOME || '');
+  if (!targetDir) return;
+
+  try {
+    const postData = JSON.stringify({ path: targetDir });
+    await new Promise((resolve, reject) => {
+      const req = http.request('http://localhost:3000/api/workspace/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) },
+      }, (res) => {
+        res.resume();
+        if (res.statusCode === 200) {
+          console.log('[G-Rump] Auto-set workspace root to:', targetDir);
+          resolve(true);
+        } else {
+          console.warn('[G-Rump] Failed to auto-set workspace root, status:', res.statusCode);
+          resolve(false);
+        }
+      });
+      req.on('error', (err) => { console.warn('[G-Rump] Auto-set workspace root error:', err.message); resolve(false); });
+      req.write(postData);
+      req.end();
+    });
+  } catch (e) {
+    console.warn('[G-Rump] autoSetWorkspaceRoot failed:', e.message);
+  }
+}
+
 // 16x16 tray icon fallback (when no icon file exists)
 const TRAY_ICON_DATA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAKElEQVQ4T2NkYGD4z0ABYBwNAAAhKAX6R8jMogAAAABJRU5ErkJggg==';
 
@@ -116,17 +206,30 @@ function loadEnvFile(envPath) {
 function startBackendAsync() {
   // Don't await - let it start in background
   setImmediate(() => {
-    if (fs.existsSync(backendScript)) {
-      console.log('[G-Rump] Starting backend...');
+    // In dev: backend is at ../../backend/dist/index.js (relative to electron/)
+    // In packaged: backend is bundled via extraResources to resources/backend/
+    const localBackendDir = app.isPackaged
+      ? path.join(process.resourcesPath, 'backend')
+      : backendDir;
+    const localBackendScript = app.isPackaged
+      ? path.join(localBackendDir, 'dist', 'index.js')
+      : backendScript;
 
-      const envVars = loadEnvFile(path.join(backendDir, '.env'));
+    if (fs.existsSync(localBackendScript)) {
+      console.log('[G-Rump] Starting local backend sidecar...');
+      console.log('[G-Rump] Backend dir:', localBackendDir);
+      console.log('[G-Rump] Backend script:', localBackendScript);
 
-      backendProcess = spawn('node', [backendScript], {
-        cwd: backendDir,
+      const envVars = loadEnvFile(path.join(localBackendDir, '.env'));
+
+      backendProcess = spawn('node', [localBackendScript], {
+        cwd: localBackendDir,
         env: {
           ...process.env,
           ...envVars,
-          NODE_ENV: envVars.NODE_ENV || 'development'
+          NODE_ENV: envVars.NODE_ENV || 'development',
+          // Local sidecar defaults: SQLite for DB, skip Redis if not configured
+          DB_TYPE: envVars.DB_TYPE || 'sqlite',
         },
         stdio: ['pipe', 'pipe', 'pipe'],
         detached: false,
@@ -136,10 +239,8 @@ function startBackendAsync() {
       backendProcess.stdout.on('data', (data) => {
         const msg = data.toString().trim();
         console.log('[Backend]', msg);
-        // Detect when backend is ready
-        if (msg.includes('listening') || msg.includes('started') || msg.includes('ready')) {
-          backendReady = true;
-        }
+        // Note: backendReady is now set by waitForBackend() via health check,
+        // not by parsing stdout. This is more reliable.
       });
 
       backendProcess.stderr.on('data', (data) => {
@@ -155,18 +256,9 @@ function startBackendAsync() {
         backendProcess = null;
         backendReady = false;
       });
-    } else if (app.isPackaged) {
-      // Production: look for bundled backend
-      const bundledBackend = path.join(app.getAppPath(), 'grump-backend.exe');
-      if (fs.existsSync(bundledBackend)) {
-        backendProcess = spawn(bundledBackend, [], {
-          cwd: path.dirname(bundledBackend),
-          env: { ...process.env, NODE_ENV: 'production' },
-          stdio: ['pipe', 'pipe', 'pipe'],
-          detached: false,
-          windowsHide: true
-        });
-      }
+    } else {
+      console.warn('[G-Rump] Backend script not found at:', localBackendScript);
+      console.warn('[G-Rump] File I/O tools will not work without the local backend.');
     }
   });
 }
@@ -492,6 +584,43 @@ ipcMain.handle('shell:show-item-in-folder', (_event, pathToOpen) => {
   }
 });
 
+// Backend sidecar status (renderer can check health)
+ipcMain.handle('backend:status', () => {
+  return {
+    ready: backendReady,
+    pid: backendProcess ? backendProcess.pid : null,
+  };
+});
+
+// Workspace picker — set workspace root on backend and persist choice
+ipcMain.handle('workspace:select-directory', async () => {
+  const win = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+  const result = await dialog.showOpenDialog(win, {
+    properties: ['openDirectory'],
+    title: 'Select project workspace folder',
+  });
+  if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+    return { canceled: true };
+  }
+  const selectedPath = result.filePaths[0];
+  // Persist for next launch
+  saveLastWorkspace(selectedPath);
+  // Also set on the running backend sidecar
+  try {
+    const postData = JSON.stringify({ path: selectedPath });
+    await new Promise((resolve) => {
+      const req = http.request('http://localhost:3000/api/workspace/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) },
+      }, (res) => { res.resume(); resolve(); });
+      req.on('error', () => resolve());
+      req.write(postData);
+      req.end();
+    });
+  } catch (e) { /* silent */ }
+  return { canceled: false, path: selectedPath };
+});
+
 // Folder picker for Settings > Security > Allowed directories
 ipcMain.handle('dialog:select-directory', async () => {
   const win = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
@@ -727,23 +856,20 @@ app.whenReady().then(() => {
   if (argvUrl) setImmediate(() => sendProtocolUrlToRenderer(argvUrl));
 
   // Start everything in parallel
-  Promise.all([
-    // 1. Create splash immediately
-    new Promise(resolve => {
-      createSplashWindow();
-      resolve();
-    }),
-    // 2. Start backend (non-blocking)
-    new Promise(resolve => {
-      startBackendAsync();
-      resolve();
-    }),
-    // 3. Create main window
-    new Promise(resolve => {
-      createMainWindow();
-      resolve();
-    })
-  ]);
+  // 1. Create splash immediately
+  createSplashWindow();
+  // 2. Start backend (non-blocking)
+  startBackendAsync();
+  // 3. Create main window (hidden until backend ready)
+  createMainWindow();
+  // 4. Wait for backend sidecar to become ready, then auto-set workspace
+  waitForBackend(30000, 500).then(async (ready) => {
+    if (ready) {
+      await autoSetWorkspaceRoot();
+    }
+    // Show main window regardless (splash fallback below handles it too)
+    showMainWindow();
+  });
 
   // Global shortcut: Ctrl+Shift+G to show G-Rump from anywhere
   globalShortcut.register('CommandOrControl+Shift+G', () => {

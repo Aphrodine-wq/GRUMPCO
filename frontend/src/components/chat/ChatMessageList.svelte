@@ -61,10 +61,11 @@
         <MessageBubble
           {message}
           {index}
-          isLast={index === visibleMessages.length - 1}
+          isLastAssistant={index === visibleMessages.length - 1}
           {streaming}
           onCopy={() => onCopyMessage(typeof message.content === 'string' ? message.content : '')}
-          onEdit={() => onEditMessage(index, typeof message.content === 'string' ? message.content : '')}
+          onEdit={() =>
+            onEditMessage(index, typeof message.content === 'string' ? message.content : '')}
           onRegenerate={onRegenerateMessage}
         />
       {/each}
@@ -85,7 +86,7 @@
   </div>
 </div>
 
-<ScrollNavigation containerRef={messagesContainerRef} />
+<ScrollNavigation scrollContainer={messagesContainerRef} />
 
 <style>
   .messages-container {

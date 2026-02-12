@@ -67,7 +67,7 @@
 
 ### 1. Install Dependencies
 ```bash
-cd /root/.openclaw/workspace/G-rump.com
+cd <repo-root>
 npm install
 ```
 
@@ -193,3 +193,4 @@ After implementation, you should be able to:
 **Implementation Status: ✅ COMPLETE**
 
 All files are ready. Just add your PostHog API key and start tracking!
+

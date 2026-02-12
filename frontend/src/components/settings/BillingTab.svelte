@@ -1,7 +1,8 @@
 <script lang="ts">
   /**
    * BillingTab - Subscription, usage, payment methods, and invoices.
-   * Extracted from TabbedSettingsScreen.svelte (Phase 2 decomposition).
+   * Professional redesign with premium plan banner, polished stat cards,
+   * formatted payment method cards, and invoice tables.
    */
   import { Card, Badge, Button } from '../../lib/design-system';
   import { showPricing } from '../../stores/uiStore';
@@ -39,6 +40,17 @@
 
   let billingPortalLoading = $state(false);
 
+  function getUsagePercent(used: number, limit: number): number {
+    if (limit <= 0) return 0;
+    return Math.min(100, (used / limit) * 100);
+  }
+
+  function getBarColor(pct: number): string {
+    if (pct >= 90) return '#ef4444';
+    if (pct >= 70) return '#f59e0b';
+    return 'var(--color-primary, #7c3aed)';
+  }
+
   async function handleBillingPortalClick() {
     billingPortalLoading = true;
     try {
@@ -67,285 +79,373 @@
 </script>
 
 <div class="tab-section billing-tab">
-  <Card title="Subscription & Usage" padding="md">
-    <div class="billing-status">
-      {#if billingMe?.tier}
-        <div class="billing-tier-row">
-          <span class="status-label">Current plan</span>
-          <Badge variant="primary">{billingMe.tier}</Badge>
-        </div>
-        <div class="billing-usage-dashboard">
-          <div class="usage-item">
-            <div class="usage-header">
-              <span class="usage-label">API / AI calls</span>
-              <span class="usage-value"
-                >{formatCredits(billingMe.usage)} / {billingMe.limit ?? '∞'}</span
-              >
-            </div>
-            {#if typeof billingMe.limit === 'number' && billingMe.limit > 0}
-              <div class="usage-bar">
-                <div
-                  class="usage-bar-fill"
-                  style="width: {Math.min(
-                    100,
-                    ((Number(billingMe.usage) ?? 0) / billingMe.limit) * 100
-                  )}%"
-                ></div>
-              </div>
-            {/if}
-          </div>
-          {#if billingMe.computeMinutesLimit != null && billingMe.computeMinutesLimit > 0}
-            <div class="usage-item">
-              <div class="usage-header">
-                <span class="usage-label">Compute (min)</span>
-                <span class="usage-value"
-                  >{(billingMe.computeMinutesUsed ?? 0).toFixed(1)} / {billingMe.computeMinutesLimit}</span
-                >
-              </div>
-              <div class="usage-bar">
-                <div
-                  class="usage-bar-fill"
-                  style="width: {Math.min(
-                    100,
-                    ((billingMe.computeMinutesUsed ?? 0) / billingMe.computeMinutesLimit) * 100
-                  )}%"
-                ></div>
-              </div>
-            </div>
-          {/if}
-          {#if billingMe.storageGbLimit != null && billingMe.storageGbLimit > 0}
-            <div class="usage-item">
-              <div class="usage-header">
-                <span class="usage-label">Storage (GB)</span>
-                <span class="usage-value"
-                  >{(billingMe.storageGbUsed ?? 0).toFixed(2)} / {billingMe.storageGbLimit}</span
-                >
-              </div>
-              <div class="usage-bar">
-                <div
-                  class="usage-bar-fill"
-                  style="width: {Math.min(
-                    100,
-                    ((billingMe.storageGbUsed ?? 0) / billingMe.storageGbLimit) * 100
-                  )}%"
-                ></div>
-              </div>
-            </div>
+  <!-- Premium Plan Banner -->
+  <div class="plan-banner">
+    <div class="plan-banner-content">
+      <div class="plan-banner-left">
+        <div class="plan-badge-row">
+          <span class="plan-icon">⚡</span>
+          <span class="plan-name">{billingMe?.tier ?? 'Free'}</span>
+          {#if billingMe?.tier}
+            <Badge variant="primary">Active</Badge>
+          {:else}
+            <Badge variant="default">No plan</Badge>
           {/if}
         </div>
-        {#if billingMe.overageRates}
-          <div class="billing-overages">
-            <span class="status-label">Overage rates</span>
-            <ul class="overage-list">
-              <li>
-                Storage: ${(billingMe.overageRates.storageGbMonthlyCents / 100).toFixed(2)}/GB
-              </li>
-              <li>
-                Compute: ${(billingMe.overageRates.computeMinuteCents / 100).toFixed(2)}/min
-              </li>
-              <li>
-                Extra slot: ${(
-                  billingMe.overageRates.extraConcurrentAgentMonthlyCents / 100
-                ).toFixed(2)}/slot
-              </li>
-            </ul>
-          </div>
-        {/if}
-        {#if tiers.length > 0}
-          <p class="billing-tiers-note">
-            {tiers.length} plan(s) available. Upgrade for more.
-          </p>
-        {/if}
-      {:else}
-        <p class="billing-empty">Sign in to view your subscription details.</p>
+        <p class="plan-tagline">
+          {#if billingMe?.tier === 'pro' || billingMe?.tier === 'enterprise'}
+            Full access to all AI models, unlimited compute, and priority support.
+          {:else}
+            Upgrade to unlock unlimited AI calls, compute, and premium features.
+          {/if}
+        </p>
+      </div>
+      <div class="plan-banner-actions">
+        <Button variant="primary" size="sm" onclick={() => showPricing.set(true)}>
+          {billingMe?.tier ? 'Change plan' : 'Upgrade now'}
+        </Button>
+        <Button variant="ghost" size="sm" onclick={() => setCurrentView('cost')}>
+          Cost Dashboard
+        </Button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Usage Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-icon">🤖</span>
+        <span class="stat-title">AI Calls</span>
+      </div>
+      <div class="stat-value">{formatCredits(billingMe?.usage ?? 0)}</div>
+      <div class="stat-limit">of {billingMe?.limit ?? '∞'} credits</div>
+      {#if typeof billingMe?.limit === 'number' && billingMe.limit > 0}
+        {@const pct = getUsagePercent(Number(billingMe.usage ?? 0), billingMe.limit)}
+        <div class="stat-bar">
+          <div class="stat-bar-fill" style="width: {pct}%; background: {getBarColor(pct)}"></div>
+        </div>
       {/if}
     </div>
-    <div class="field-group billing-alert-field">
-      <label class="field-label" for="usage-alert-percent"
-        >Alert when usage exceeds % of limit</label
-      >
-      <input
-        id="usage-alert-percent"
-        type="number"
-        min="0"
-        max="100"
-        step="5"
-        class="settings-number-input"
-        value={settings?.preferences?.usageAlertPercent ?? ''}
-        onchange={(e) => {
-          const v = parseInt((e.target as HTMLInputElement).value, 10);
-          if (!Number.isNaN(v) && v >= 0 && v <= 100) savePreferences({ usageAlertPercent: v });
-          else if ((e.target as HTMLInputElement).value === '')
-            savePreferences({ usageAlertPercent: undefined });
-        }}
-        placeholder="80"
-      />
+    {#if billingMe?.computeMinutesLimit != null && billingMe.computeMinutesLimit > 0}
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-icon">⏱️</span>
+          <span class="stat-title">Compute</span>
+        </div>
+        <div class="stat-value">{(billingMe.computeMinutesUsed ?? 0).toFixed(1)} min</div>
+        <div class="stat-limit">of {billingMe.computeMinutesLimit} min</div>
+        <div class="stat-bar">
+          <div
+            class="stat-bar-fill"
+            style="width: {getUsagePercent(
+              billingMe.computeMinutesUsed ?? 0,
+              billingMe.computeMinutesLimit
+            )}%; background: {getBarColor(
+              getUsagePercent(billingMe.computeMinutesUsed ?? 0, billingMe.computeMinutesLimit)
+            )}"
+          ></div>
+        </div>
+      </div>
+    {/if}
+    {#if billingMe?.storageGbLimit != null && billingMe.storageGbLimit > 0}
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-icon">💾</span>
+          <span class="stat-title">Storage</span>
+        </div>
+        <div class="stat-value">{(billingMe.storageGbUsed ?? 0).toFixed(2)} GB</div>
+        <div class="stat-limit">of {billingMe.storageGbLimit} GB</div>
+        <div class="stat-bar">
+          <div
+            class="stat-bar-fill"
+            style="width: {getUsagePercent(
+              billingMe.storageGbUsed ?? 0,
+              billingMe.storageGbLimit
+            )}%; background: {getBarColor(
+              getUsagePercent(billingMe.storageGbUsed ?? 0, billingMe.storageGbLimit)
+            )}"
+          ></div>
+        </div>
+      </div>
+    {/if}
+  </div>
+
+  <!-- Usage Alert Setting -->
+  <Card title="Usage Alerts" padding="md">
+    <div class="field-group">
+      <label class="field-label" for="usage-alert-percent"> Warn when usage exceeds </label>
+      <div class="alert-input-row">
+        <input
+          id="usage-alert-percent"
+          type="number"
+          min="0"
+          max="100"
+          step="5"
+          class="settings-number-input"
+          value={settings?.preferences?.usageAlertPercent ?? ''}
+          onchange={(e) => {
+            const v = parseInt((e.target as HTMLInputElement).value, 10);
+            if (!Number.isNaN(v) && v >= 0 && v <= 100) savePreferences({ usageAlertPercent: v });
+            else if ((e.target as HTMLInputElement).value === '')
+              savePreferences({ usageAlertPercent: undefined });
+          }}
+          placeholder="80"
+        />
+        <span class="alert-suffix">% of plan limit</span>
+      </div>
       <p class="field-hint">
         Show a warning when API/usage reaches this percent of your plan limit. Leave empty to
         disable.
       </p>
     </div>
-    <div class="billing-actions">
-      <Button variant="primary" size="sm" onclick={() => showPricing.set(true)}>Upgrade</Button>
+  </Card>
+
+  <!-- Overage Rates -->
+  {#if billingMe?.overageRates}
+    <Card title="Overage Rates" padding="md">
+      <p class="section-desc">Charges applied when you exceed your plan limits.</p>
+      <div class="overage-grid">
+        <div class="overage-item">
+          <span class="overage-label">Storage</span>
+          <span class="overage-price"
+            >${(billingMe.overageRates.storageGbMonthlyCents / 100).toFixed(2)}<span
+              class="overage-unit">/GB/mo</span
+            ></span
+          >
+        </div>
+        <div class="overage-item">
+          <span class="overage-label">Compute</span>
+          <span class="overage-price"
+            >${(billingMe.overageRates.computeMinuteCents / 100).toFixed(2)}<span
+              class="overage-unit">/min</span
+            ></span
+          >
+        </div>
+        <div class="overage-item">
+          <span class="overage-label">Extra agent slot</span>
+          <span class="overage-price"
+            >${(billingMe.overageRates.extraConcurrentAgentMonthlyCents / 100).toFixed(2)}<span
+              class="overage-unit">/slot/mo</span
+            ></span
+          >
+        </div>
+      </div>
+    </Card>
+  {/if}
+
+  <!-- Payment Methods -->
+  <Card title="Payment Methods" padding="md">
+    {#if billingPaymentMethods.length > 0}
+      <div class="payment-cards">
+        {#each billingPaymentMethods as pm}
+          <div class="payment-card">
+            <div class="card-brand-icon">
+              {#if pm.brand?.toLowerCase() === 'visa'}💳
+              {:else if pm.brand?.toLowerCase() === 'mastercard'}💳
+              {:else}💳{/if}
+            </div>
+            <div class="card-details">
+              <span class="card-brand">{pm.brand ?? 'Card'}</span>
+              <span class="card-last4">•••• •••• •••• {pm.last4 ?? '----'}</span>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <p class="billing-empty">No payment methods on file. Add one when upgrading.</p>
+    {/if}
+    <div class="card-action-row">
       <Button
         variant="secondary"
         size="sm"
-        onclick={() => {
-          setCurrentView('cost');
-        }}
+        onclick={handleBillingPortalClick}
+        disabled={billingPortalLoading}
       >
-        Cost Dashboard
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onclick={() => window.open(billingUrl, '_blank')}
-        title="Open external billing portal if configured"
-      >
-        Billing portal
+        {billingPortalLoading ? 'Opening…' : 'Manage in billing portal'}
       </Button>
     </div>
   </Card>
 
-  <Card title="Payment methods" padding="md">
-    <p class="section-desc">Manage payment methods for your subscription in the billing portal.</p>
-    {#if billingPaymentMethods.length > 0}
-      <ul class="billing-list">
-        {#each billingPaymentMethods as pm}
-          <li class="billing-list-item">
-            <span>{pm.brand ?? 'Card'} •••• {pm.last4 ?? '----'}</span>
-          </li>
-        {/each}
-      </ul>
-    {:else}
-      <p class="billing-empty">No payment methods on file. Add one when upgrading.</p>
-    {/if}
-    <Button
-      variant="secondary"
-      size="sm"
-      onclick={handleBillingPortalClick}
-      disabled={billingPortalLoading}
-    >
-      {billingPortalLoading ? 'Opening…' : 'Open billing portal'}
-    </Button>
-  </Card>
-
+  <!-- Invoices -->
   <Card title="Invoices" padding="md">
-    <p class="section-desc">Download past invoices from the billing portal.</p>
     {#if billingInvoices.length > 0}
-      <ul class="billing-list">
-        {#each billingInvoices as inv}
-          <li class="billing-list-item">
-            <span>{inv.date}</span>
-            <span>${(inv.amount / 100).toFixed(2)}</span>
-            <Badge variant={inv.status === 'paid' ? 'success' : 'default'}>{inv.status}</Badge>
-          </li>
-        {/each}
-      </ul>
+      <div class="invoice-table-wrap">
+        <table class="invoice-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each billingInvoices as inv}
+              <tr>
+                <td>{inv.date}</td>
+                <td class="amount-cell">${(inv.amount / 100).toFixed(2)}</td>
+                <td>
+                  <Badge variant={inv.status === 'paid' ? 'success' : 'default'}>{inv.status}</Badge
+                  >
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
     {:else}
       <p class="billing-empty">No invoices yet.</p>
     {/if}
-    <Button
-      variant="secondary"
-      size="sm"
-      onclick={handleBillingPortalClick}
-      disabled={billingPortalLoading}
-    >
-      {billingPortalLoading ? 'Opening…' : 'Open billing portal'}
-    </Button>
-  </Card>
-
-  <Card title="Add-On Credit Usage" padding="md">
-    <p class="section-desc">
-      Credits used by add-ons and platform features (AI calls, compute, storage).
-    </p>
-    <div class="billing-status">
-      {#if billingMe?.tier}
-        <div class="status-row">
-          <span class="status-label">API / AI calls</span>
-          <span class="status-value"
-            >{formatCredits(billingMe.usage)} / {billingMe.limit ?? '∞'} credits</span
-          >
-        </div>
-        {#if billingMe.computeMinutesLimit != null}
-          <div class="status-row">
-            <span class="status-label">Compute minutes</span>
-            <span class="status-value"
-              >{(billingMe.computeMinutesUsed ?? 0).toFixed(1)} / {billingMe.computeMinutesLimit}
-              min</span
-            >
-          </div>
-        {/if}
-        {#if billingMe.storageGbLimit != null}
-          <div class="status-row">
-            <span class="status-label">Storage</span>
-            <span class="status-value"
-              >{(billingMe.storageGbUsed ?? 0).toFixed(2)} / {billingMe.storageGbLimit} GB</span
-            >
-          </div>
-        {/if}
-      {:else}
-        <p class="billing-empty">Sign in to view add-on credit usage.</p>
-      {/if}
+    <div class="card-action-row">
+      <Button
+        variant="secondary"
+        size="sm"
+        onclick={handleBillingPortalClick}
+        disabled={billingPortalLoading}
+      >
+        {billingPortalLoading ? 'Opening…' : 'View all in billing portal'}
+      </Button>
     </div>
   </Card>
 </div>
 
 <style>
-
-.tab-section {
+  .tab-section {
     max-width: 900px;
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    gap: 24px;
   }
 
-.tab-section :global(.card) {
-    border: 1px solid #e5e7eb;
+  .tab-section :global(.card) {
+    border: 1px solid var(--color-border, #e5e7eb);
   }
 
-.default-model-row .field-label {
+  /* ---- Plan Banner ---- */
+  .plan-banner {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #4c1d95 100%);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    color: white;
+  }
+
+  .plan-banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .plan-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .plan-icon {
+    font-size: 1.25rem;
+  }
+
+  .plan-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-transform: capitalize;
+  }
+
+  .plan-tagline {
+    font-size: 0.8125rem;
+    opacity: 0.85;
+    margin: 0;
+  }
+
+  .plan-banner-actions {
+    display: flex;
+    gap: 0.5rem;
     flex-shrink: 0;
   }
 
-.advanced-finetuning .field-label {
-    display: block;
-    margin-bottom: 0.5rem;
+  .plan-banner-actions :global(.btn) {
+    border-color: rgba(255, 255, 255, 0.3) !important;
   }
 
-.settings-number-input,
-  .settings-text-input {
-    max-width: 200px;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 0.5rem;
+  .plan-banner-actions :global(.btn-ghost) {
+    color: white !important;
+  }
+
+  /* ---- Stats Grid ---- */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .stat-card {
     background: var(--color-bg-card, #fff);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
-.inline-config-input-group .field-label {
-    margin-bottom: 0.5rem;
+  .stat-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
   }
 
-.models-custom-inner .section-desc {
-    margin-bottom: 0.75rem;
+  .stat-icon {
+    font-size: 1rem;
   }
 
-.section-desc {
-    font-size: 14px;
+  .stat-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: var(--color-text-muted, #71717a);
-    margin-bottom: 20px;
   }
 
-.field-group {
-    margin-bottom: 20px;
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text, #18181b);
+    font-variant-numeric: tabular-nums;
   }
 
-.field-group:last-child {
+  .stat-limit {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #a1a1aa);
+  }
+
+  .stat-bar {
+    height: 6px;
+    background: var(--color-border, #e5e7eb);
+    border-radius: 3px;
+    margin-top: 0.5rem;
+    overflow: hidden;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ---- Fields ---- */
+  .field-group {
+    margin-bottom: 16px;
+  }
+
+  .field-group:last-child {
     margin-bottom: 0;
   }
 
-.field-label {
+  .field-label {
     display: block;
     font-size: 13px;
     font-weight: 600;
@@ -353,272 +453,160 @@
     margin-bottom: 8px;
   }
 
-.field-label-row .field-label {
-    margin-bottom: 0;
-  }
-
-.field-hint {
+  .field-hint {
     font-size: 12px;
     color: var(--color-text-muted, #a1a1aa);
     margin-top: 6px;
   }
 
-.field-hint code {
-    font-size: 0.75em;
-    padding: 0.1em 0.35em;
-    background: var(--color-bg-card, #f4f4f5);
-    border-radius: 4px;
-  }
-
-.billing-status {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-bottom: 20px;
-  }
-
-.billing-tier-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 4px;
-  }
-
-.billing-usage-dashboard {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-.usage-item {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-.usage-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-.usage-label {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--color-text-muted, #71717a);
-  }
-
-.usage-value {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-text, #18181b);
-  }
-
-.usage-bar {
-    height: 8px;
-    background: var(--color-bg-subtle, #f3f4f6);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-.usage-bar-fill {
-    height: 100%;
-    background: var(--color-primary, #7c3aed);
-    border-radius: 4px;
-    transition: width 0.2s ease;
-  }
-
-.billing-overages {
-    margin-top: 4px;
-  }
-
-.billing-overages .status-label {
-    display: block;
-    margin-bottom: 6px;
-  }
-
-.overage-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    font-size: 0.8125rem;
-    color: var(--color-text-muted, #71717a);
-  }
-
-.overage-list li {
-    padding: 2px 0;
-  }
-
-.billing-tiers-note {
-    font-size: 0.8125rem;
-    color: var(--color-text-muted, #71717a);
-    margin: 0;
-  }
-
-.status-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px;
-    background-color: var(--color-bg-card, #f9fafb);
-    border-radius: 8px;
-  }
-
-.status-label {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--color-text-muted, #71717a);
-  }
-
-.status-value {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--color-text, #18181b);
-  }
-
-.billing-empty {
-    font-size: 14px;
-    color: var(--color-text-muted, #71717a);
-    font-style: italic;
-    margin-bottom: 16px;
-  }
-
-.billing-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-.billing-list-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 14px;
-    color: var(--color-text, #18181b);
-  }
-
-.billing-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-.billing-usage-dashboard {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1rem;
-    margin: 1rem 0;
-  }
-
-.usage-item {
-    background: var(--color-bg-secondary, #f9fafb);
-    border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 0.75rem;
-    padding: 1rem;
-  }
-
-.usage-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-  }
-
-.usage-label {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--color-text-muted, #71717a);
-  }
-
-.usage-value {
+  .settings-number-input {
+    max-width: 100px;
+    padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
-    font-weight: 700;
-    color: var(--color-text, #18181b);
-    font-variant-numeric: tabular-nums;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+    background: var(--color-bg-card, #fff);
   }
 
-.usage-bar {
-    height: 6px;
-    background: var(--color-border, #e5e7eb);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-
-.usage-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--color-primary, #7c3aed), #a78bfa);
-    border-radius: 3px;
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-.billing-tier-row {
+  .alert-input-row {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.25rem;
+    gap: 0.5rem;
   }
 
-.billing-overages {
-    margin-top: 0.75rem;
+  .alert-suffix {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #71717a);
+  }
+
+  .section-desc {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #71717a);
+    margin-bottom: 1rem;
+  }
+
+  /* ---- Overage Grid ---- */
+  .overage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .overage-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 0.75rem;
     background: var(--color-bg-secondary, #f9fafb);
     border-radius: 0.5rem;
     border: 1px solid var(--color-border, #e5e7eb);
   }
 
-.overage-list {
-    margin: 0.375rem 0 0;
-    padding-left: 1.25rem;
+  .overage-label {
     font-size: 0.8125rem;
-    color: var(--color-text-muted, #71717a);
-    line-height: 1.6;
+    color: var(--color-text-secondary, #3f3f46);
+    font-weight: 500;
   }
 
-.billing-tiers-note {
-    font-size: 0.8125rem;
-    color: var(--color-text-muted, #71717a);
-    margin-top: 0.75rem;
+  .overage-price {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-text, #18181b);
+    font-variant-numeric: tabular-nums;
   }
 
-.billing-actions {
+  .overage-unit {
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #71717a);
+  }
+
+  /* ---- Payment Cards ---- */
+  .payment-cards {
     display: flex;
+    flex-direction: column;
     gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--color-border, #e5e7eb);
+    margin-bottom: 1rem;
   }
 
-.billing-alert-field {
-    margin-top: 0.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--color-border, #e5e7eb);
-  }
-
-.billing-list {
-    margin: 0.5rem 0;
-    padding: 0;
-    list-style: none;
-  }
-
-.billing-list-item {
+  .payment-card {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.625rem 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-bg-secondary, #f9fafb);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+  }
+
+  .card-brand-icon {
+    font-size: 1.25rem;
+  }
+
+  .card-details {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-brand {
     font-size: 0.8125rem;
-    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    font-weight: 600;
+    color: var(--color-text, #18181b);
+    text-transform: capitalize;
   }
 
-.billing-list-item:last-child {
-    border-bottom: none;
+  .card-last4 {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #71717a);
+    font-family: ui-monospace, monospace;
+    letter-spacing: 0.05em;
   }
 
-.billing-empty {
+  .card-action-row {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  /* ---- Invoice Table ---- */
+  .invoice-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 0.5rem;
+  }
+
+  .invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+
+  .invoice-table th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted, #71717a);
+    padding: 0.625rem 0.75rem;
+    border-bottom: 2px solid var(--color-border, #e5e7eb);
+  }
+
+  .invoice-table td {
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--color-border, #f4f4f5);
+    color: var(--color-text, #18181b);
+  }
+
+  .invoice-table tbody tr:hover {
+    background: var(--color-bg-secondary, #f9fafb);
+  }
+
+  .amount-cell {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .billing-empty {
     font-size: 0.8125rem;
     color: var(--color-text-muted, #71717a);
     font-style: italic;

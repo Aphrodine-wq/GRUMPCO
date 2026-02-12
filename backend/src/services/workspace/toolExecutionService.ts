@@ -33,62 +33,50 @@
  * ```
  */
 
-import path from "path";
-import fs from "fs/promises";
-import { execSync } from "child_process";
-import type { ToolExecutionResult } from "../../tools/types.js";
-import { logger } from "../../utils/logger.js";
-import { resolvePath, type PathOperation } from "../security/pathPolicyService.js";
-import {
-  getGuardrailsConfig,
-  isHighRiskCommand,
-} from "../../config/guardrailsConfig.js";
+import path from 'path';
+import fs from 'fs/promises';
+import { execSync } from 'child_process';
+import type { ToolExecutionResult } from '../../tools/types.js';
+import { logger } from '../../utils/logger.js';
+import { resolvePath, type PathOperation } from '../security/pathPolicyService.js';
+import { getGuardrailsConfig, isHighRiskCommand } from '../../config/guardrailsConfig.js';
 import {
   enforceToolGuardrails,
   type ToolExecutionRequest,
   type EnforcementResult,
-} from "../security/guardrailsEnforcementService.js";
+} from '../security/guardrailsEnforcementService.js';
 import {
   classifyCommand,
   classifyFileOperation,
   classifyGitOperation,
   checkApprovalGate,
   type ApprovalContext,
-} from "../security/approvalService.js";
+} from '../security/approvalService.js';
 
 // ============================================================================
 // DANGEROUS COMMANDS - BLOCKED
 // ============================================================================
 
 const DANGEROUS_COMMANDS = [
-  "rm -rf /",
-  "rm -rf /*",
-  "dd",
-  "mkfs",
-  "fdisk",
-  "wget",
-  "curl http",
-  "nc",
-  "telnet",
-  "reboot",
-  "shutdown",
-  "init",
-  "halt",
-  "poweroff",
+  'rm -rf /',
+  'rm -rf /*',
+  'dd',
+  'mkfs',
+  'fdisk',
+  'wget',
+  'curl http',
+  'nc',
+  'telnet',
+  'reboot',
+  'shutdown',
+  'init',
+  'halt',
+  'poweroff',
 ];
 
 /** When STRICT_COMMAND_ALLOWLIST=true, only these basenames are allowed for bash_execute. */
-const STRICT_ALLOWLIST = process.env.STRICT_COMMAND_ALLOWLIST === "true";
-const ALLOWED_COMMANDS = new Set([
-  "npm",
-  "npx",
-  "node",
-  "git",
-  "pnpm",
-  "yarn",
-  "tsx",
-  "ts-node",
-]);
+const STRICT_ALLOWLIST = process.env.STRICT_COMMAND_ALLOWLIST === 'true';
+const ALLOWED_COMMANDS = new Set(['npm', 'npx', 'node', 'git', 'pnpm', 'yarn', 'tsx', 'ts-node']);
 
 // ============================================================================
 // TOOL EXECUTION SERVICE
@@ -161,14 +149,13 @@ export class ToolExecutionService {
       userId?: string;
       sessionId?: string;
       enableGuardrails?: boolean;
-    },
+    }
   ) {
     this.workspaceRoot = path.resolve(workspaceRoot);
     this.allowedDirs = options?.allowedDirs ?? [];
     this.userId = options?.userId;
     this.sessionId = options?.sessionId;
-    this.guardrailsEnabled =
-      options?.enableGuardrails ?? getGuardrailsConfig().enabled;
+    this.guardrailsEnabled = options?.enableGuardrails ?? getGuardrailsConfig().enabled;
   }
 
   /**
@@ -187,7 +174,7 @@ export class ToolExecutionService {
     tool: string,
     parameters: Record<string, unknown>,
     toolName: string,
-    startTime: number,
+    startTime: number
   ): Promise<ToolExecutionResult | null> {
     if (!this.guardrailsEnabled) {
       return null; // Guardrails disabled, allow operation
@@ -197,8 +184,8 @@ export class ToolExecutionService {
       tool,
       parameters,
       context: {
-        userId: this.userId ?? "anonymous",
-        sessionId: this.sessionId ?? "",
+        userId: this.userId ?? 'anonymous',
+        sessionId: this.sessionId ?? '',
         workspaceRoot: this.workspaceRoot,
       },
     };
@@ -207,7 +194,7 @@ export class ToolExecutionService {
       const result: EnforcementResult = await enforceToolGuardrails(request);
 
       if (!result.allowed) {
-        const requiresApproval = result.action === "require_approval";
+        const requiresApproval = result.action === 'require_approval';
         const approvalId = result.approvalRequired?.approvalId;
 
         logger.warn(
@@ -217,12 +204,12 @@ export class ToolExecutionService {
             reason: result.reason,
             requiresApproval,
           },
-          "Guardrails blocked tool execution",
+          'Guardrails blocked tool execution'
         );
 
         return {
           success: false,
-          error: result.reason ?? "Operation blocked by guardrails",
+          error: result.reason ?? 'Operation blocked by guardrails',
           toolName,
           executionTime: Date.now() - startTime,
           metadata: {
@@ -233,12 +220,12 @@ export class ToolExecutionService {
         };
       }
     } catch (err) {
-      logger.error({ err, tool }, "Guardrails check failed");
+      logger.error({ err, tool }, 'Guardrails check failed');
       // In case of guardrails error, we fail closed (block the operation)
-      if (getGuardrailsConfig().strictMode === "enforce") {
+      if (getGuardrailsConfig().strictMode === 'enforce') {
         return {
           success: false,
-          error: "Guardrails check failed - operation blocked for safety",
+          error: 'Guardrails check failed - operation blocked for safety',
           toolName,
           executionTime: Date.now() - startTime,
         };
@@ -254,13 +241,13 @@ export class ToolExecutionService {
    */
   private checkApprovalRequired(
     action: string,
-    parameters?: Record<string, unknown>,
+    parameters?: Record<string, unknown>
   ): { required: boolean; riskLevel: string; reason: string } {
     if (!this.guardrailsEnabled || !this.userId) {
       return {
         required: false,
-        riskLevel: "low",
-        reason: "Guardrails disabled or no user context",
+        riskLevel: 'low',
+        reason: 'Guardrails disabled or no user context',
       };
     }
 
@@ -286,7 +273,7 @@ export class ToolExecutionService {
    */
   private validatePath(
     requestedPath: string,
-    operation: PathOperation = "read",
+    operation: PathOperation = 'read'
   ): { valid: boolean; error?: string; resolvedPath?: string } {
     const result = resolvePath(requestedPath, operation, {
       workspaceRoot: this.workspaceRoot,
@@ -315,13 +302,13 @@ export class ToolExecutionService {
 
     if (STRICT_ALLOWLIST) {
       const trimmed = command.trim();
-      const first = trimmed.split(/\s+/)[0] ?? "";
-      const base = path.basename(first.replace(/^[\s"']+|["']$/g, ""));
+      const first = trimmed.split(/\s+/)[0] ?? '';
+      const base = path.basename(first.replace(/^[\s"']+|["']$/g, ''));
       const name = base.toLowerCase();
       if (!ALLOWED_COMMANDS.has(name)) {
         return {
           valid: false,
-          error: `Command not in allowlist (STRICT_COMMAND_ALLOWLIST): ${base}. Allowed: ${[...ALLOWED_COMMANDS].join(", ")}.`,
+          error: `Command not in allowlist (STRICT_COMMAND_ALLOWLIST): ${base}. Allowed: ${[...ALLOWED_COMMANDS].join(', ')}.`,
         };
       }
     }
@@ -335,14 +322,10 @@ export class ToolExecutionService {
   async executeTerminal(
     command: string,
     workingDirectory?: string,
-    timeout: number = 60000,
+    timeout: number = 60000
   ): Promise<ToolExecutionResult> {
-    const result = await this.executeBash(
-      command,
-      workingDirectory,
-      Math.min(timeout, 60000),
-    );
-    result.toolName = "terminal_execute";
+    const result = await this.executeBash(command, workingDirectory, Math.min(timeout, 60000));
+    result.toolName = 'terminal_execute';
     return result;
   }
 
@@ -375,17 +358,17 @@ export class ToolExecutionService {
   async executeBash(
     command: string,
     workingDirectory?: string,
-    timeout: number = 30000,
+    timeout: number = 30000
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
 
     try {
       // Check guardrails first
       const guardrailResult = await this.checkGuardrails(
-        "bash",
+        'bash',
         { command, workingDirectory },
-        "bash_execute",
-        startTime,
+        'bash_execute',
+        startTime
       );
       if (guardrailResult) {
         return guardrailResult;
@@ -393,7 +376,7 @@ export class ToolExecutionService {
 
       // Check if command is high-risk and requires approval
       const classification = classifyCommand(command);
-      if (classification.riskLevel === "high" || isHighRiskCommand(command)) {
+      if (classification.riskLevel === 'high' || isHighRiskCommand(command)) {
         const approval = this.checkApprovalRequired(classification.action, {
           command,
         });
@@ -401,7 +384,7 @@ export class ToolExecutionService {
           return {
             success: false,
             error: `High-risk command requires approval: ${approval.reason}`,
-            toolName: "bash_execute",
+            toolName: 'bash_execute',
             executionTime: Date.now() - startTime,
             metadata: {
               requiresApproval: true,
@@ -418,7 +401,7 @@ export class ToolExecutionService {
         return {
           success: false,
           error: validation.error,
-          toolName: "bash_execute",
+          toolName: 'bash_execute',
           executionTime: Date.now() - startTime,
         };
       }
@@ -426,36 +409,37 @@ export class ToolExecutionService {
       // Validate working directory if provided
       let cwd = this.workspaceRoot;
       if (workingDirectory) {
-        const dirValidation = this.validatePath(workingDirectory, "list");
+        const dirValidation = this.validatePath(workingDirectory, 'list');
         if (!dirValidation.valid) {
           return {
             success: false,
             error: dirValidation.error,
-            toolName: "bash_execute",
+            toolName: 'bash_execute',
             executionTime: Date.now() - startTime,
           };
         }
-        cwd =
-          dirValidation.resolvedPath ??
-          path.resolve(this.workspaceRoot, workingDirectory);
+        cwd = dirValidation.resolvedPath ?? path.resolve(this.workspaceRoot, workingDirectory);
       }
 
       // Execute command with timeout
+      // On Windows, explicitly use cmd.exe; on Unix, use default shell (bash/sh)
+      const shellOpt = process.platform === 'win32' ? { shell: 'cmd.exe' as const } : {};
       const output = execSync(command, {
         cwd,
-        encoding: "utf8",
+        encoding: 'utf8',
         timeout,
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+        ...shellOpt,
       });
 
       return {
         success: true,
         output,
-        toolName: "bash_execute",
+        toolName: 'bash_execute',
         executionTime: Date.now() - startTime,
       };
     } catch (error: unknown) {
-      logger.error({ error, command }, "Bash execution failed");
+      logger.error({ error, command }, 'Bash execution failed');
       const err = error as {
         code?: string;
         status?: number;
@@ -464,12 +448,12 @@ export class ToolExecutionService {
         message?: string;
       };
       // Handle timeout
-      if (err.code === "ETIMEDOUT") {
+      if (err.code === 'ETIMEDOUT') {
         return {
           success: false,
           error: `Command timed out after ${timeout}ms`,
           exitCode: -1,
-          toolName: "bash_execute",
+          toolName: 'bash_execute',
           executionTime: Date.now() - startTime,
         };
       }
@@ -478,13 +462,10 @@ export class ToolExecutionService {
       if (err.status) {
         return {
           success: false,
-          output: err.stdout != null ? String(err.stdout) : "",
-          error:
-            err.stderr != null
-              ? String(err.stderr)
-              : (err.message ?? "Unknown error"),
+          output: err.stdout != null ? String(err.stdout) : '',
+          error: err.stderr != null ? String(err.stderr) : (err.message ?? 'Unknown error'),
           exitCode: err.status,
-          toolName: "bash_execute",
+          toolName: 'bash_execute',
           executionTime: Date.now() - startTime,
         };
       }
@@ -492,7 +473,7 @@ export class ToolExecutionService {
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        toolName: "bash_execute",
+        toolName: 'bash_execute',
         executionTime: Date.now() - startTime,
       };
     }
@@ -521,19 +502,19 @@ export class ToolExecutionService {
    */
   async readFile(
     filePath: string,
-    encoding: "utf8" | "base64" = "utf8",
+    encoding: 'utf8' | 'base64' = 'utf8',
     startLine?: number,
-    endLine?: number,
+    endLine?: number
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
 
     try {
-      const validation = this.validatePath(filePath, "read");
+      const validation = this.validatePath(filePath, 'read');
       if (!validation.valid) {
         return {
           success: false,
           error: validation.error,
-          toolName: "file_read",
+          toolName: 'file_read',
           executionTime: Date.now() - startTime,
         };
       }
@@ -542,16 +523,16 @@ export class ToolExecutionService {
       if (!resolvedPath) {
         return {
           success: false,
-          error: "Path validation did not return resolved path",
-          toolName: "file_read",
+          error: 'Path validation did not return resolved path',
+          toolName: 'file_read',
           executionTime: Date.now() - startTime,
         };
       }
       const content = await fs.readFile(resolvedPath, encoding);
 
       // If line range requested and encoding is utf8, return only the requested slice
-      if (encoding === "utf8" && (startLine !== undefined || endLine !== undefined)) {
-        const allLines = content.split("\n");
+      if (encoding === 'utf8' && (startLine !== undefined || endLine !== undefined)) {
+        const allLines = content.split('\n');
         const totalLines = allLines.length;
         const start = Math.max(1, startLine ?? 1);
         const end = Math.min(totalLines, endLine ?? totalLines);
@@ -560,21 +541,19 @@ export class ToolExecutionService {
           return {
             success: false,
             error: `startLine ${start} exceeds file length (${totalLines} lines)`,
-            toolName: "file_read",
+            toolName: 'file_read',
             executionTime: Date.now() - startTime,
           };
         }
 
         const slicedLines = allLines.slice(start - 1, end);
-        const numbered = slicedLines.map(
-          (line, i) => `${start + i}: ${line}`,
-        );
+        const numbered = slicedLines.map((line, i) => `${start + i}: ${line}`);
         const header = `Showing lines ${start}-${end} of ${totalLines} total`;
 
         return {
           success: true,
-          output: `${header}\n${numbered.join("\n")}`,
-          toolName: "file_read",
+          output: `${header}\n${numbered.join('\n')}`,
+          toolName: 'file_read',
           executionTime: Date.now() - startTime,
         };
       }
@@ -582,16 +561,16 @@ export class ToolExecutionService {
       return {
         success: true,
         output: content,
-        toolName: "file_read",
+        toolName: 'file_read',
         executionTime: Date.now() - startTime,
       };
     } catch (error: unknown) {
-      logger.error({ error, filePath }, "File read failed");
+      logger.error({ error, filePath }, 'File read failed');
 
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        toolName: "file_read",
+        toolName: 'file_read',
         executionTime: Date.now() - startTime,
       };
     }
@@ -621,28 +600,25 @@ export class ToolExecutionService {
   async writeFile(
     filePath: string,
     content: string,
-    createDirectories: boolean = true,
+    createDirectories: boolean = true
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
 
     try {
       // Check guardrails first
       const guardrailResult = await this.checkGuardrails(
-        "file_write",
+        'file_write',
         { filePath, contentLength: content.length },
-        "file_write",
-        startTime,
+        'file_write',
+        startTime
       );
       if (guardrailResult) {
         return guardrailResult;
       }
 
       // Check if writing to sensitive file requires approval
-      const classification = classifyFileOperation("write", filePath);
-      if (
-        classification.riskLevel === "high" ||
-        classification.riskLevel === "medium"
-      ) {
+      const classification = classifyFileOperation('write', filePath);
+      if (classification.riskLevel === 'high' || classification.riskLevel === 'medium') {
         const approval = this.checkApprovalRequired(classification.action, {
           filePath,
         });
@@ -650,7 +626,7 @@ export class ToolExecutionService {
           return {
             success: false,
             error: `Writing to this file requires approval: ${approval.reason}`,
-            toolName: "file_write",
+            toolName: 'file_write',
             executionTime: Date.now() - startTime,
             metadata: {
               requiresApproval: true,
@@ -661,12 +637,12 @@ export class ToolExecutionService {
         }
       }
 
-      const validation = this.validatePath(filePath, "write");
+      const validation = this.validatePath(filePath, 'write');
       if (!validation.valid) {
         return {
           success: false,
           error: validation.error,
-          toolName: "file_write",
+          toolName: 'file_write',
           executionTime: Date.now() - startTime,
         };
       }
@@ -675,20 +651,20 @@ export class ToolExecutionService {
       if (!resolvedPath) {
         return {
           success: false,
-          error: "Path validation did not return resolved path",
-          toolName: "file_write",
+          error: 'Path validation did not return resolved path',
+          toolName: 'file_write',
           executionTime: Date.now() - startTime,
         };
       }
 
       // Check if file exists to determine change type
-      let beforeContent = "";
-      let changeType: "created" | "modified" = "created";
+      let beforeContent = '';
+      let changeType: 'created' | 'modified' = 'created';
       try {
-        beforeContent = await fs.readFile(resolvedPath, "utf8");
-        changeType = "modified";
+        beforeContent = await fs.readFile(resolvedPath, 'utf8');
+        changeType = 'modified';
       } catch {
-        changeType = "created";
+        changeType = 'created';
       }
 
       if (createDirectories) {
@@ -696,14 +672,13 @@ export class ToolExecutionService {
         await fs.mkdir(dir, { recursive: true });
       }
 
-      await fs.writeFile(resolvedPath, content, "utf8");
+      await fs.writeFile(resolvedPath, content, 'utf8');
 
-      const displayPath =
-        path.relative(this.workspaceRoot, resolvedPath) || filePath;
+      const displayPath = path.relative(this.workspaceRoot, resolvedPath) || filePath;
       return {
         success: true,
-        output: `File ${changeType === "created" ? "created" : "modified"} successfully: ${displayPath}`,
-        toolName: "file_write",
+        output: `File ${changeType === 'created' ? 'created' : 'modified'} successfully: ${displayPath}`,
+        toolName: 'file_write',
         executionTime: Date.now() - startTime,
         diff: {
           filePath: displayPath,
@@ -713,12 +688,12 @@ export class ToolExecutionService {
         },
       };
     } catch (error: unknown) {
-      logger.error({ error, filePath }, "File write failed");
+      logger.error({ error, filePath }, 'File write failed');
 
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        toolName: "file_write",
+        toolName: 'file_write',
         executionTime: Date.now() - startTime,
       };
     }
@@ -754,21 +729,21 @@ export class ToolExecutionService {
   async editFile(
     filePath: string,
     operations: Array<{
-      type: "insert" | "replace" | "delete";
+      type: 'insert' | 'replace' | 'delete';
       lineStart: number;
       lineEnd?: number;
       content?: string;
-    }>,
+    }>
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
 
     try {
-      const validation = this.validatePath(filePath, "write");
+      const validation = this.validatePath(filePath, 'write');
       if (!validation.valid) {
         return {
           success: false,
           error: validation.error,
-          toolName: "file_edit",
+          toolName: 'file_edit',
           executionTime: Date.now() - startTime,
         };
       }
@@ -777,15 +752,15 @@ export class ToolExecutionService {
       if (!resolvedPath) {
         return {
           success: false,
-          error: "Path validation did not return resolved path",
-          toolName: "file_edit",
+          error: 'Path validation did not return resolved path',
+          toolName: 'file_edit',
           executionTime: Date.now() - startTime,
         };
       }
 
       // Read file - capture before content
-      const beforeContent = await fs.readFile(resolvedPath, "utf8");
-      const lines = beforeContent.split("\n");
+      const beforeContent = await fs.readFile(resolvedPath, 'utf8');
+      const lines = beforeContent.split('\n');
 
       // Store operation details for diff
       const operationDetails = operations.map((op) => ({
@@ -795,53 +770,51 @@ export class ToolExecutionService {
       }));
 
       // Apply operations in reverse order to avoid line number shifts
-      const sortedOps = [...operations].sort(
-        (a, b) => b.lineStart - a.lineStart,
-      );
+      const sortedOps = [...operations].sort((a, b) => b.lineStart - a.lineStart);
 
       for (const op of sortedOps) {
         const lineStart = op.lineStart - 1; // Convert to 0-indexed
         const lineEnd = op.lineEnd ? op.lineEnd - 1 : lineStart;
 
         switch (op.type) {
-          case "insert":
-            lines.splice(lineStart, 0, op.content || "");
+          case 'insert':
+            lines.splice(lineStart, 0, op.content || '');
             break;
-          case "replace":
-            lines.splice(lineStart, lineEnd - lineStart + 1, op.content || "");
+          case 'replace':
+            lines.splice(lineStart, lineEnd - lineStart + 1, op.content || '');
             break;
-          case "delete":
+          case 'delete':
             lines.splice(lineStart, lineEnd - lineStart + 1);
             break;
         }
       }
 
       // Capture after content
-      const afterContent = lines.join("\n");
+      const afterContent = lines.join('\n');
 
       // Write file back
-      await fs.writeFile(resolvedPath, afterContent, "utf8");
+      await fs.writeFile(resolvedPath, afterContent, 'utf8');
 
       return {
         success: true,
         output: `File edited successfully: ${operations.length} operation(s) applied`,
-        toolName: "file_edit",
+        toolName: 'file_edit',
         executionTime: Date.now() - startTime,
         diff: {
           filePath,
           beforeContent,
           afterContent,
-          changeType: "modified",
+          changeType: 'modified',
           operations: operationDetails,
         },
       };
     } catch (error: unknown) {
-      logger.error({ error, filePath }, "File edit failed");
+      logger.error({ error, filePath }, 'File edit failed');
 
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        toolName: "file_edit",
+        toolName: 'file_edit',
         executionTime: Date.now() - startTime,
       };
     }
@@ -867,19 +840,16 @@ export class ToolExecutionService {
    * //     📄 /src/utils/helper.ts
    * ```
    */
-  async listDirectory(
-    dirPath: string,
-    recursive: boolean = false,
-  ): Promise<ToolExecutionResult> {
+  async listDirectory(dirPath: string, recursive: boolean = false): Promise<ToolExecutionResult> {
     const startTime = Date.now();
 
     try {
-      const validation = this.validatePath(dirPath, "list");
+      const validation = this.validatePath(dirPath, 'list');
       if (!validation.valid) {
         return {
           success: false,
           error: validation.error,
-          toolName: "list_directory",
+          toolName: 'list_directory',
           executionTime: Date.now() - startTime,
         };
       }
@@ -888,26 +858,26 @@ export class ToolExecutionService {
       if (!resolvedPath) {
         return {
           success: false,
-          error: "Path validation did not return resolved path",
-          toolName: "list_directory",
+          error: 'Path validation did not return resolved path',
+          toolName: 'list_directory',
           executionTime: Date.now() - startTime,
         };
       }
-      const files = await this._listDir(resolvedPath, recursive, "");
+      const files = await this._listDir(resolvedPath, recursive, '');
 
       return {
         success: true,
-        output: files.join("\n"),
-        toolName: "list_directory",
+        output: files.join('\n'),
+        toolName: 'list_directory',
         executionTime: Date.now() - startTime,
       };
     } catch (error: unknown) {
-      logger.error({ error, dirPath }, "Directory listing failed");
+      logger.error({ error, dirPath }, 'Directory listing failed');
 
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        toolName: "list_directory",
+        toolName: 'list_directory',
         executionTime: Date.now() - startTime,
       };
     }
@@ -920,16 +890,16 @@ export class ToolExecutionService {
   async searchCodebase(
     query: string,
     workingDirectory?: string,
-    maxResults: number = 20,
+    maxResults: number = 20
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
-    const dir = workingDirectory ?? ".";
-    const validation = this.validatePath(dir, "list");
+    const dir = workingDirectory ?? '.';
+    const validation = this.validatePath(dir, 'list');
     if (!validation.valid) {
       return {
         success: false,
         error: validation.error,
-        toolName: "codebase_search",
+        toolName: 'codebase_search',
         executionTime: Date.now() - startTime,
       };
     }
@@ -938,32 +908,27 @@ export class ToolExecutionService {
       if (!basePath) {
         return {
           success: false,
-          error: "Path validation did not return resolved path",
-          toolName: "codebase_search",
+          error: 'Path validation did not return resolved path',
+          toolName: 'codebase_search',
           executionTime: Date.now() - startTime,
         };
       }
-      const q = query.toLowerCase().replace(/\*\./g, ".").replace(/\*\*/g, "");
+      const q = query.toLowerCase().replace(/\*\./g, '.').replace(/\*\*/g, '');
       const collected: string[] = [];
       const walk = async (p: string): Promise<void> => {
         if (collected.length >= maxResults) return;
-        const entries = await fs
-          .readdir(p, { withFileTypes: true })
-          .catch(() => []);
+        const entries = await fs.readdir(p, { withFileTypes: true }).catch(() => []);
         for (const e of entries) {
           const full = path.join(p, e.name);
-          const rel = full
-            .replace(this.workspaceRoot, "")
-            .replace(/^[/\\]/, "");
+          const rel = full.replace(this.workspaceRoot, '').replace(/^[/\\]/, '');
           if (e.isDirectory()) {
-            if (e.name !== "node_modules" && e.name !== ".git") {
+            if (e.name !== 'node_modules' && e.name !== '.git') {
               await walk(full);
             }
           } else {
             if (collected.length >= maxResults) return;
             const match =
-              rel.toLowerCase().includes(q) ||
-              e.name.toLowerCase().includes(query.toLowerCase());
+              rel.toLowerCase().includes(q) || e.name.toLowerCase().includes(query.toLowerCase());
             if (match) collected.push(rel);
           }
         }
@@ -971,17 +936,15 @@ export class ToolExecutionService {
       await walk(basePath);
       return {
         success: true,
-        output: collected.length
-          ? collected.join("\n")
-          : `No paths matching "${query}" in ${dir}.`,
-        toolName: "codebase_search",
+        output: collected.length ? collected.join('\n') : `No paths matching "${query}" in ${dir}.`,
+        toolName: 'codebase_search',
         executionTime: Date.now() - startTime,
       };
     } catch (err: unknown) {
       return {
         success: false,
         error: (err as Error).message,
-        toolName: "codebase_search",
+        toolName: 'codebase_search',
         executionTime: Date.now() - startTime,
       };
     }
@@ -1005,16 +968,16 @@ export class ToolExecutionService {
     isRegex: boolean = false,
     includes?: string[],
     maxResults: number = 50,
-    caseSensitive: boolean = true,
+    caseSensitive: boolean = true
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
-    const dir = searchPath ?? ".";
-    const validation = this.validatePath(dir, "list");
+    const dir = searchPath ?? '.';
+    const validation = this.validatePath(dir, 'list');
     if (!validation.valid) {
       return {
         success: false,
         error: validation.error,
-        toolName: "grep_search",
+        toolName: 'grep_search',
         executionTime: Date.now() - startTime,
       };
     }
@@ -1023,8 +986,8 @@ export class ToolExecutionService {
       if (!basePath) {
         return {
           success: false,
-          error: "Path validation did not return resolved path",
-          toolName: "grep_search",
+          error: 'Path validation did not return resolved path',
+          toolName: 'grep_search',
           executionTime: Date.now() - startTime,
         };
       }
@@ -1032,27 +995,45 @@ export class ToolExecutionService {
       // Build the matcher
       let regex: RegExp;
       try {
-        const flags = caseSensitive ? "" : "i";
+        const flags = caseSensitive ? '' : 'i';
         regex = isRegex
           ? new RegExp(pattern, flags)
-          : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), flags);
+          : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
       } catch (e) {
         return {
           success: false,
           error: `Invalid regex pattern: ${(e as Error).message}`,
-          toolName: "grep_search",
+          toolName: 'grep_search',
           executionTime: Date.now() - startTime,
         };
       }
 
       // Build include globs matcher (simple extension matching)
       const includeExts: string[] | null = includes?.length
-        ? includes.map((g) => g.replace(/^\*\.?/, ".").toLowerCase())
+        ? includes.map((g) => g.replace(/^\*\.?/, '.').toLowerCase())
         : null;
 
       const matches: string[] = [];
-      const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", "__pycache__"]);
-      const BINARY_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2", ".ttf", ".eot", ".zip", ".tar", ".gz", ".pdf", ".exe", ".dll", ".so", ".dylib"]);
+      const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', '__pycache__']);
+      const BINARY_EXTS = new Set([
+        '.png',
+        '.jpg',
+        '.jpeg',
+        '.gif',
+        '.ico',
+        '.woff',
+        '.woff2',
+        '.ttf',
+        '.eot',
+        '.zip',
+        '.tar',
+        '.gz',
+        '.pdf',
+        '.exe',
+        '.dll',
+        '.so',
+        '.dylib',
+      ]);
 
       // Check if basePath is a file (not a directory)
       const baseStat = await fs.stat(basePath).catch(() => null);
@@ -1060,7 +1041,7 @@ export class ToolExecutionService {
         return {
           success: false,
           error: `Path not found: ${dir}`,
-          toolName: "grep_search",
+          toolName: 'grep_search',
           executionTime: Date.now() - startTime,
         };
       }
@@ -1072,11 +1053,9 @@ export class ToolExecutionService {
         if (includeExts && !includeExts.includes(ext)) return;
 
         try {
-          const content = await fs.readFile(filePath, "utf8");
-          const lines = content.split("\n");
-          const rel = filePath
-            .replace(this.workspaceRoot, "")
-            .replace(/^[/\\]/, "");
+          const content = await fs.readFile(filePath, 'utf8');
+          const lines = content.split('\n');
+          const rel = filePath.replace(this.workspaceRoot, '').replace(/^[/\\]/, '');
           for (let i = 0; i < lines.length && matches.length < maxResults; i++) {
             if (regex.test(lines[i])) {
               matches.push(`${rel}:${i + 1}: ${lines[i].trimEnd()}`);
@@ -1092,9 +1071,7 @@ export class ToolExecutionService {
       } else {
         const walk = async (p: string): Promise<void> => {
           if (matches.length >= maxResults) return;
-          const entries = await fs
-            .readdir(p, { withFileTypes: true })
-            .catch(() => []);
+          const entries = await fs.readdir(p, { withFileTypes: true }).catch(() => []);
           for (const e of entries) {
             if (matches.length >= maxResults) return;
             const full = path.join(p, e.name);
@@ -1113,16 +1090,16 @@ export class ToolExecutionService {
       return {
         success: true,
         output: matches.length
-          ? `Found ${matches.length} match${matches.length === 1 ? "" : "es"}:\n${matches.join("\n")}`
+          ? `Found ${matches.length} match${matches.length === 1 ? '' : 'es'}:\n${matches.join('\n')}`
           : `No matches for "${pattern}" in ${dir}.`,
-        toolName: "grep_search",
+        toolName: 'grep_search',
         executionTime: Date.now() - startTime,
       };
     } catch (err: unknown) {
       return {
         success: false,
         error: (err as Error).message,
-        toolName: "grep_search",
+        toolName: 'grep_search',
         executionTime: Date.now() - startTime,
       };
     }
@@ -1143,17 +1120,17 @@ export class ToolExecutionService {
     filePath: string,
     search: string,
     replace: string,
-    allowMultiple: boolean = false,
+    allowMultiple: boolean = false
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
 
     try {
-      const validation = this.validatePath(filePath, "write");
+      const validation = this.validatePath(filePath, 'write');
       if (!validation.valid) {
         return {
           success: false,
           error: validation.error,
-          toolName: "search_and_replace",
+          toolName: 'search_and_replace',
           executionTime: Date.now() - startTime,
         };
       }
@@ -1162,13 +1139,13 @@ export class ToolExecutionService {
       if (!resolvedPath) {
         return {
           success: false,
-          error: "Path validation did not return resolved path",
-          toolName: "search_and_replace",
+          error: 'Path validation did not return resolved path',
+          toolName: 'search_and_replace',
           executionTime: Date.now() - startTime,
         };
       }
 
-      const beforeContent = await fs.readFile(resolvedPath, "utf8");
+      const beforeContent = await fs.readFile(resolvedPath, 'utf8');
 
       // Count occurrences
       let count = 0;
@@ -1182,7 +1159,7 @@ export class ToolExecutionService {
         return {
           success: false,
           error: `Search text not found in file. Make sure the search text matches exactly, including whitespace and indentation.`,
-          toolName: "search_and_replace",
+          toolName: 'search_and_replace',
           executionTime: Date.now() - startTime,
         };
       }
@@ -1191,7 +1168,7 @@ export class ToolExecutionService {
         return {
           success: false,
           error: `Found ${count} occurrences of the search text. Set allowMultiple: true to replace all, or make the search text more specific to match only one occurrence.`,
-          toolName: "search_and_replace",
+          toolName: 'search_and_replace',
           executionTime: Date.now() - startTime,
         };
       }
@@ -1201,29 +1178,28 @@ export class ToolExecutionService {
         ? beforeContent.split(search).join(replace)
         : beforeContent.replace(search, replace);
 
-      await fs.writeFile(resolvedPath, afterContent, "utf8");
+      await fs.writeFile(resolvedPath, afterContent, 'utf8');
 
-      const displayPath =
-        path.relative(this.workspaceRoot, resolvedPath) || filePath;
+      const displayPath = path.relative(this.workspaceRoot, resolvedPath) || filePath;
       return {
         success: true,
         output: `Replaced ${allowMultiple ? count : 1} occurrence(s) in ${displayPath}`,
-        toolName: "search_and_replace",
+        toolName: 'search_and_replace',
         executionTime: Date.now() - startTime,
         diff: {
           filePath: displayPath,
           beforeContent,
           afterContent,
-          changeType: "modified",
+          changeType: 'modified',
         },
       };
     } catch (error: unknown) {
-      logger.error({ error, filePath }, "Search and replace failed");
+      logger.error({ error, filePath }, 'Search and replace failed');
 
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        toolName: "search_and_replace",
+        toolName: 'search_and_replace',
         executionTime: Date.now() - startTime,
       };
     }
@@ -1238,19 +1214,16 @@ export class ToolExecutionService {
    * @param {number} [maxItems=100] - Maximum items to return
    * @returns {Promise<ToolExecutionResult>} Outline with line numbers
    */
-  async fileOutline(
-    filePath: string,
-    maxItems: number = 100,
-  ): Promise<ToolExecutionResult> {
+  async fileOutline(filePath: string, maxItems: number = 100): Promise<ToolExecutionResult> {
     const startTime = Date.now();
 
     try {
-      const validation = this.validatePath(filePath, "read");
+      const validation = this.validatePath(filePath, 'read');
       if (!validation.valid) {
         return {
           success: false,
           error: validation.error,
-          toolName: "file_outline",
+          toolName: 'file_outline',
           executionTime: Date.now() - startTime,
         };
       }
@@ -1259,80 +1232,104 @@ export class ToolExecutionService {
       if (!resolvedPath) {
         return {
           success: false,
-          error: "Path validation did not return resolved path",
-          toolName: "file_outline",
+          error: 'Path validation did not return resolved path',
+          toolName: 'file_outline',
           executionTime: Date.now() - startTime,
         };
       }
 
-      const content = await fs.readFile(resolvedPath, "utf8");
-      const lines = content.split("\n");
+      const content = await fs.readFile(resolvedPath, 'utf8');
+      const lines = content.split('\n');
       const ext = path.extname(resolvedPath).toLowerCase();
 
       // Language-specific regex patterns for structural elements
       const patterns: Array<{ label: string; regex: RegExp }> = [];
 
-      if ([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(ext)) {
+      if (['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'].includes(ext)) {
         // TypeScript / JavaScript
         patterns.push(
-          { label: "class", regex: /^(?:export\s+)?(?:abstract\s+)?class\s+(\w+)/ },
-          { label: "interface", regex: /^(?:export\s+)?interface\s+(\w+)/ },
-          { label: "type", regex: /^(?:export\s+)?type\s+(\w+)\s*[=<]/ },
-          { label: "enum", regex: /^(?:export\s+)?(?:const\s+)?enum\s+(\w+)/ },
-          { label: "function", regex: /^(?:export\s+)?(?:async\s+)?function\s+(\w+)/ },
-          { label: "const fn", regex: /^(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|[a-zA-Z_]\w*)\s*(?:=>|:\s*\()/ },
-          { label: "method", regex: /^\s+(?:(?:public|private|protected|static|async|readonly|abstract|override|get|set)\s+)*(\w+)\s*(?:<[^>]*>)?\s*\(/ },
+          { label: 'class', regex: /^(?:export\s+)?(?:abstract\s+)?class\s+(\w+)/ },
+          { label: 'interface', regex: /^(?:export\s+)?interface\s+(\w+)/ },
+          { label: 'type', regex: /^(?:export\s+)?type\s+(\w+)\s*[=<]/ },
+          { label: 'enum', regex: /^(?:export\s+)?(?:const\s+)?enum\s+(\w+)/ },
+          { label: 'function', regex: /^(?:export\s+)?(?:async\s+)?function\s+(\w+)/ },
+          {
+            label: 'const fn',
+            regex:
+              /^(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|[a-zA-Z_]\w*)\s*(?:=>|:\s*\()/,
+          },
+          {
+            label: 'method',
+            regex:
+              /^\s+(?:(?:public|private|protected|static|async|readonly|abstract|override|get|set)\s+)*(\w+)\s*(?:<[^>]*>)?\s*\(/,
+          }
         );
-      } else if ([".py"].includes(ext)) {
+      } else if (['.py'].includes(ext)) {
         // Python
         patterns.push(
-          { label: "class", regex: /^class\s+(\w+)/ },
-          { label: "function", regex: /^(?:async\s+)?def\s+(\w+)/ },
-          { label: "method", regex: /^\s+(?:async\s+)?def\s+(\w+)/ },
+          { label: 'class', regex: /^class\s+(\w+)/ },
+          { label: 'function', regex: /^(?:async\s+)?def\s+(\w+)/ },
+          { label: 'method', regex: /^\s+(?:async\s+)?def\s+(\w+)/ }
         );
-      } else if ([".rs"].includes(ext)) {
+      } else if (['.rs'].includes(ext)) {
         // Rust
         patterns.push(
-          { label: "struct", regex: /^(?:pub\s+)?struct\s+(\w+)/ },
-          { label: "enum", regex: /^(?:pub\s+)?enum\s+(\w+)/ },
-          { label: "trait", regex: /^(?:pub\s+)?trait\s+(\w+)/ },
-          { label: "impl", regex: /^impl(?:<[^>]*>)?\s+(\w+)/ },
-          { label: "function", regex: /^(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/ },
-          { label: "method", regex: /^\s+(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/ },
+          { label: 'struct', regex: /^(?:pub\s+)?struct\s+(\w+)/ },
+          { label: 'enum', regex: /^(?:pub\s+)?enum\s+(\w+)/ },
+          { label: 'trait', regex: /^(?:pub\s+)?trait\s+(\w+)/ },
+          { label: 'impl', regex: /^impl(?:<[^>]*>)?\s+(\w+)/ },
+          { label: 'function', regex: /^(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/ },
+          { label: 'method', regex: /^\s+(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/ }
         );
-      } else if ([".go"].includes(ext)) {
+      } else if (['.go'].includes(ext)) {
         // Go
         patterns.push(
-          { label: "struct", regex: /^type\s+(\w+)\s+struct/ },
-          { label: "interface", regex: /^type\s+(\w+)\s+interface/ },
-          { label: "function", regex: /^func\s+(\w+)\s*\(/ },
-          { label: "method", regex: /^func\s+\([^)]+\)\s+(\w+)\s*\(/ },
+          { label: 'struct', regex: /^type\s+(\w+)\s+struct/ },
+          { label: 'interface', regex: /^type\s+(\w+)\s+interface/ },
+          { label: 'function', regex: /^func\s+(\w+)\s*\(/ },
+          { label: 'method', regex: /^func\s+\([^)]+\)\s+(\w+)\s*\(/ }
         );
-      } else if ([".java", ".kt", ".scala"].includes(ext)) {
+      } else if (['.java', '.kt', '.scala'].includes(ext)) {
         // JVM languages
         patterns.push(
-          { label: "class", regex: /^(?:public\s+|private\s+|protected\s+)?(?:abstract\s+|final\s+)?(?:data\s+)?class\s+(\w+)/ },
-          { label: "interface", regex: /^(?:public\s+)?interface\s+(\w+)/ },
-          { label: "function", regex: /^(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(?:suspend\s+)?(?:fun|void|\w+)\s+(\w+)\s*\(/ },
+          {
+            label: 'class',
+            regex:
+              /^(?:public\s+|private\s+|protected\s+)?(?:abstract\s+|final\s+)?(?:data\s+)?class\s+(\w+)/,
+          },
+          { label: 'interface', regex: /^(?:public\s+)?interface\s+(\w+)/ },
+          {
+            label: 'function',
+            regex:
+              /^(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(?:suspend\s+)?(?:fun|void|\w+)\s+(\w+)\s*\(/,
+          }
         );
-      } else if ([".c", ".cpp", ".cc", ".cxx", ".h", ".hpp"].includes(ext)) {
+      } else if (['.c', '.cpp', '.cc', '.cxx', '.h', '.hpp'].includes(ext)) {
         // C/C++
         patterns.push(
-          { label: "class", regex: /^(?:template\s*<[^>]*>\s*)?class\s+(\w+)/ },
-          { label: "struct", regex: /^(?:typedef\s+)?struct\s+(\w+)/ },
-          { label: "function", regex: /^(?:(?:static|inline|virtual|extern)\s+)*(?:\w+(?:::\w+)*\s+)+(\w+)\s*\(/ },
+          { label: 'class', regex: /^(?:template\s*<[^>]*>\s*)?class\s+(\w+)/ },
+          { label: 'struct', regex: /^(?:typedef\s+)?struct\s+(\w+)/ },
+          {
+            label: 'function',
+            regex: /^(?:(?:static|inline|virtual|extern)\s+)*(?:\w+(?:::\w+)*\s+)+(\w+)\s*\(/,
+          }
         );
-      } else if ([".svelte", ".vue"].includes(ext)) {
+      } else if (['.svelte', '.vue'].includes(ext)) {
         // Svelte/Vue — pick up script block functions
         patterns.push(
-          { label: "function", regex: /^\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)/ },
-          { label: "const fn", regex: /^\s*(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|[a-zA-Z_]\w*)\s*(?:=>|:\s*\()/ },
+          { label: 'function', regex: /^\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)/ },
+          {
+            label: 'const fn',
+            regex:
+              /^\s*(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|[a-zA-Z_]\w*)\s*(?:=>|:\s*\()/,
+          }
         );
       } else {
         // Generic: try to find function-like patterns
-        patterns.push(
-          { label: "function", regex: /^(?:(?:export|public|private|def|fn|func|function)\s+)+(\w+)/ },
-        );
+        patterns.push({
+          label: 'function',
+          regex: /^(?:(?:export|public|private|def|fn|func|function)\s+)+(\w+)/,
+        });
       }
 
       const items: string[] = [];
@@ -1351,31 +1348,30 @@ export class ToolExecutionService {
       }
 
       const totalLines = lines.length;
-      const displayPath =
-        path.relative(this.workspaceRoot, resolvedPath) || filePath;
+      const displayPath = path.relative(this.workspaceRoot, resolvedPath) || filePath;
 
       if (items.length === 0) {
         return {
           success: true,
           output: `${displayPath} (${totalLines} lines) — no structural elements found. Try file_read instead.`,
-          toolName: "file_outline",
+          toolName: 'file_outline',
           executionTime: Date.now() - startTime,
         };
       }
 
       return {
         success: true,
-        output: `${displayPath} (${totalLines} lines, ${items.length} items):\n${items.join("\n")}`,
-        toolName: "file_outline",
+        output: `${displayPath} (${totalLines} lines, ${items.length} items):\n${items.join('\n')}`,
+        toolName: 'file_outline',
         executionTime: Date.now() - startTime,
       };
     } catch (error: unknown) {
-      logger.error({ error, filePath }, "File outline failed");
+      logger.error({ error, filePath }, 'File outline failed');
 
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        toolName: "file_outline",
+        toolName: 'file_outline',
         executionTime: Date.now() - startTime,
       };
     }
@@ -1384,26 +1380,18 @@ export class ToolExecutionService {
   /**
    * Recursively list directory contents
    */
-  private async _listDir(
-    dirPath: string,
-    recursive: boolean,
-    indent: string,
-  ): Promise<string[]> {
+  private async _listDir(dirPath: string, recursive: boolean, indent: string): Promise<string[]> {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
     const files: string[] = [];
 
     for (const entry of entries) {
       const fullPath = path.join(dirPath, entry.name);
-      const displayPath = fullPath.replace(this.workspaceRoot, "");
+      const displayPath = fullPath.replace(this.workspaceRoot, '');
 
       if (entry.isDirectory()) {
         files.push(`${indent}📁 ${displayPath}/`);
         if (recursive) {
-          const subFiles = await this._listDir(
-            fullPath,
-            recursive,
-            indent + "  ",
-          );
+          const subFiles = await this._listDir(fullPath, recursive, indent + '  ');
           files.push(...subFiles);
         }
       } else {
@@ -1422,37 +1410,32 @@ export class ToolExecutionService {
     error?: string;
     cwd?: string;
   } {
-    const dir = workingDirectory ?? ".";
-    const validation = this.validatePath(dir, "list");
+    const dir = workingDirectory ?? '.';
+    const validation = this.validatePath(dir, 'list');
     if (!validation.valid) {
       return { valid: false, error: validation.error };
     }
-    const cwd =
-      validation.resolvedPath ?? path.resolve(this.workspaceRoot, dir);
+    const cwd = validation.resolvedPath ?? path.resolve(this.workspaceRoot, dir);
     return { valid: true, cwd };
   }
 
   /**
    * Run git command in workspace; returns output or error.
    */
-  private runGit(
-    args: string[],
-    cwd: string,
-    timeout: number = 10000,
-  ): ToolExecutionResult {
+  private runGit(args: string[], cwd: string, timeout: number = 10000): ToolExecutionResult {
     const startTime = Date.now();
-    const cmd = `git ${args.join(" ")}`;
+    const cmd = `git ${args.join(' ')}`;
     try {
       const output = execSync(cmd, {
         cwd,
-        encoding: "utf8",
+        encoding: 'utf8',
         timeout,
         maxBuffer: 2 * 1024 * 1024,
       });
       return {
         success: true,
-        output: output?.trim() ?? "",
-        toolName: "git",
+        output: output?.trim() ?? '',
+        toolName: 'git',
         executionTime: Date.now() - startTime,
       };
     } catch (err: unknown) {
@@ -1468,7 +1451,7 @@ export class ToolExecutionService {
         error: stderr,
         output: e.stdout?.trim(),
         exitCode: e.status ?? -1,
-        toolName: "git",
+        toolName: 'git',
         executionTime: Date.now() - startTime,
       };
     }
@@ -1495,12 +1478,12 @@ export class ToolExecutionService {
       return {
         success: false,
         error: resolved.error,
-        toolName: "git_status",
+        toolName: 'git_status',
         executionTime: Date.now() - startTime,
       };
     }
-    const result = this.runGit(["status", "--short", "-b"], resolved.cwd);
-    result.toolName = "git_status";
+    const result = this.runGit(['status', '--short', '-b'], resolved.cwd);
+    result.toolName = 'git_status';
     return result;
   }
 
@@ -1527,7 +1510,7 @@ export class ToolExecutionService {
   async gitDiff(
     workingDirectory?: string,
     staged?: boolean,
-    file?: string,
+    file?: string
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
     const resolved = this.resolveGitCwd(workingDirectory);
@@ -1535,15 +1518,15 @@ export class ToolExecutionService {
       return {
         success: false,
         error: resolved.error,
-        toolName: "git_diff",
+        toolName: 'git_diff',
         executionTime: Date.now() - startTime,
       };
     }
-    const args = ["diff"];
-    if (staged) args.push("--staged");
-    if (file) args.push("--", file);
+    const args = ['diff'];
+    if (staged) args.push('--staged');
+    if (file) args.push('--', file);
     const result = this.runGit(args, resolved.cwd);
-    result.toolName = "git_diff";
+    result.toolName = 'git_diff';
     return result;
   }
 
@@ -1564,7 +1547,7 @@ export class ToolExecutionService {
   async gitLog(
     workingDirectory?: string,
     maxCount: number = 20,
-    oneline: boolean = true,
+    oneline: boolean = true
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
     const resolved = this.resolveGitCwd(workingDirectory);
@@ -1572,14 +1555,14 @@ export class ToolExecutionService {
       return {
         success: false,
         error: resolved.error,
-        toolName: "git_log",
+        toolName: 'git_log',
         executionTime: Date.now() - startTime,
       };
     }
-    const args = ["log", `-n`, String(maxCount)];
-    if (oneline) args.push("--oneline");
+    const args = ['log', `-n`, String(maxCount)];
+    if (oneline) args.push('--oneline');
     const result = this.runGit(args, resolved.cwd);
-    result.toolName = "git_log";
+    result.toolName = 'git_log';
     return result;
   }
 
@@ -1603,7 +1586,7 @@ export class ToolExecutionService {
   async gitCommit(
     message: string,
     workingDirectory?: string,
-    addAll: boolean = false,
+    addAll: boolean = false
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
     const resolved = this.resolveGitCwd(workingDirectory);
@@ -1611,19 +1594,19 @@ export class ToolExecutionService {
       return {
         success: false,
         error: resolved.error,
-        toolName: "git_commit",
+        toolName: 'git_commit',
         executionTime: Date.now() - startTime,
       };
     }
     if (addAll) {
-      const addResult = this.runGit(["add", "-A"], resolved.cwd);
+      const addResult = this.runGit(['add', '-A'], resolved.cwd);
       if (!addResult.success) {
-        addResult.toolName = "git_commit";
+        addResult.toolName = 'git_commit';
         return addResult;
       }
     }
-    const result = this.runGit(["commit", "-m", message], resolved.cwd);
-    result.toolName = "git_commit";
+    const result = this.runGit(['commit', '-m', message], resolved.cwd);
+    result.toolName = 'git_commit';
     return result;
   }
 
@@ -1647,7 +1630,7 @@ export class ToolExecutionService {
   async gitBranch(
     workingDirectory?: string,
     _list: boolean = true,
-    create?: string,
+    create?: string
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
     const resolved = this.resolveGitCwd(workingDirectory);
@@ -1655,17 +1638,17 @@ export class ToolExecutionService {
       return {
         success: false,
         error: resolved.error,
-        toolName: "git_branch",
+        toolName: 'git_branch',
         executionTime: Date.now() - startTime,
       };
     }
     if (create) {
-      const result = this.runGit(["checkout", "-b", create], resolved.cwd);
-      result.toolName = "git_branch";
+      const result = this.runGit(['checkout', '-b', create], resolved.cwd);
+      result.toolName = 'git_branch';
       return result;
     }
-    const result = this.runGit(["branch", "-a"], resolved.cwd);
-    result.toolName = "git_branch";
+    const result = this.runGit(['branch', '-a'], resolved.cwd);
+    result.toolName = 'git_branch';
     return result;
   }
 
@@ -1692,31 +1675,27 @@ export class ToolExecutionService {
    */
   async gitPush(
     workingDirectory?: string,
-    remote: string = "origin",
+    remote: string = 'origin',
     branch?: string,
-    force: boolean = false,
+    force: boolean = false
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
 
     // Check guardrails first
     const guardrailResult = await this.checkGuardrails(
-      "git",
-      { operation: "push", remote, branch, force },
-      "git_push",
-      startTime,
+      'git',
+      { operation: 'push', remote, branch, force },
+      'git_push',
+      startTime
     );
     if (guardrailResult) {
       return guardrailResult;
     }
 
     // Check if this requires approval (especially force push)
-    const forceArgs = force ? ["--force"] : [];
-    const classification = classifyGitOperation("push", [
-      remote,
-      branch ?? "",
-      ...forceArgs,
-    ]);
-    if (classification.riskLevel === "high") {
+    const forceArgs = force ? ['--force'] : [];
+    const classification = classifyGitOperation('push', [remote, branch ?? '', ...forceArgs]);
+    if (classification.riskLevel === 'high') {
       const approval = this.checkApprovalRequired(classification.action, {
         remote,
         branch,
@@ -1726,7 +1705,7 @@ export class ToolExecutionService {
         return {
           success: false,
           error: `Git push requires approval: ${approval.reason}`,
-          toolName: "git_push",
+          toolName: 'git_push',
           executionTime: Date.now() - startTime,
           metadata: {
             requiresApproval: true,
@@ -1737,11 +1716,11 @@ export class ToolExecutionService {
       }
     }
 
-    if (process.env.ENABLE_GIT_PUSH !== "true") {
+    if (process.env.ENABLE_GIT_PUSH !== 'true') {
       return {
         success: false,
-        error: "git_push is disabled. Set ENABLE_GIT_PUSH=true to enable.",
-        toolName: "git_push",
+        error: 'git_push is disabled. Set ENABLE_GIT_PUSH=true to enable.',
+        toolName: 'git_push',
         executionTime: Date.now() - startTime,
       };
     }
@@ -1750,14 +1729,14 @@ export class ToolExecutionService {
       return {
         success: false,
         error: resolved.error,
-        toolName: "git_push",
+        toolName: 'git_push',
         executionTime: Date.now() - startTime,
       };
     }
-    const args = ["push", remote];
+    const args = ['push', remote];
     if (branch) args.push(branch);
     const result = this.runGit(args, resolved.cwd, 60000);
-    result.toolName = "git_push";
+    result.toolName = 'git_push';
     return result;
   }
 }

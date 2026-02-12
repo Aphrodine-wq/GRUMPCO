@@ -3,25 +3,26 @@
  * Proxy for Ollama status and model listing (avoids CORS from frontend).
  */
 
-import { Router, type Request, type Response } from "express";
+import { Router, type Request, type Response } from 'express';
+import { setOllamaReachable } from '../services/ai-providers/llmGateway.js';
 
 const router = Router();
-const OLLAMA_HOST = process.env.OLLAMA_HOST || "localhost:11434";
+const OLLAMA_HOST = process.env.OLLAMA_HOST || 'localhost:11434';
 
 /**
  * GET /ollama/status
  * Returns Ollama detection status and available models.
  * Proxies to local Ollama API to avoid CORS.
+ * Also updates the reachability cache in llmGateway.
  */
-router.get("/status", async (_req: Request, res: Response): Promise<void> => {
+router.get('/status', async (_req: Request, res: Response): Promise<void> => {
   try {
-    const baseUrl = OLLAMA_HOST.startsWith("http")
-      ? OLLAMA_HOST
-      : `http://${OLLAMA_HOST}`;
+    const baseUrl = OLLAMA_HOST.startsWith('http') ? OLLAMA_HOST : `http://${OLLAMA_HOST}`;
     const tagsRes = await fetch(`${baseUrl}/api/tags`, {
       signal: AbortSignal.timeout(5000),
     });
     if (!tagsRes.ok) {
+      setOllamaReachable(false);
       res.json({
         detected: false,
         host: OLLAMA_HOST,
@@ -32,12 +33,14 @@ router.get("/status", async (_req: Request, res: Response): Promise<void> => {
     }
     const data = (await tagsRes.json()) as { models?: Array<{ name: string }> };
     const models = (data.models ?? []).map((m) => m.name);
+    setOllamaReachable(true);
     res.json({
       detected: true,
       host: OLLAMA_HOST,
       models,
     });
   } catch (err) {
+    setOllamaReachable(false);
     res.json({
       detected: false,
       host: OLLAMA_HOST,

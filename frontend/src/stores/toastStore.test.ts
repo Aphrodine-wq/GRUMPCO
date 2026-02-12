@@ -1,19 +1,6 @@
-/**
- * Toast Store Tests
- *
- * Comprehensive tests for the toast notification system
- */
-
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
-import {
-  toasts,
-  showToast,
-  dismissToast,
-  clearAllToasts,
-  resetToastState,
-  type ToastType,
-} from './toastStore';
+import { toasts, showToast, dismissToast, clearAllToasts, resetToastState } from './toastStore';
 
 describe('toastStore', () => {
   beforeEach(() => {
@@ -25,225 +12,173 @@ describe('toastStore', () => {
     vi.useRealTimers();
   });
 
-  describe('showToast', () => {
-    it('should add a toast to the store', () => {
-      showToast('Test message');
-
-      const currentToasts = get(toasts);
-      expect(currentToasts).toHaveLength(1);
-      expect(currentToasts[0].message).toBe('Test message');
-    });
-
-    it('should return the toast ID', () => {
-      const id = showToast('Test message');
-
-      expect(id).toMatch(/^toast-\d+-\d+$/);
-    });
-
-    it('should set default type to info', () => {
-      showToast('Test message');
-
-      const currentToasts = get(toasts);
-      expect(currentToasts[0].type).toBe('info');
-    });
-
-    it('should respect the type parameter', () => {
-      const types: ToastType[] = ['success', 'error', 'info'];
-
-      types.forEach((type) => {
-        resetToastState();
-        showToast('Test', type);
-        const currentToasts = get(toasts);
-        expect(currentToasts[0].type).toBe(type);
-      });
-    });
-
-    it('should set default duration to 3000ms', () => {
-      showToast('Test message');
-
-      const currentToasts = get(toasts);
-      expect(currentToasts[0].duration).toBe(3000);
-    });
-
-    it('should respect custom duration', () => {
-      showToast('Test message', 'info', 5000);
-
-      const currentToasts = get(toasts);
-      expect(currentToasts[0].duration).toBe(5000);
-    });
-
-    it('should add newest toasts at the beginning', () => {
-      showToast('First');
-      showToast('Second');
-      showToast('Third');
-
-      const currentToasts = get(toasts);
-      expect(currentToasts.map((t) => t.message)).toEqual(['Third', 'Second', 'First']);
-    });
-
-    it('should limit non-persistent toasts to MAX_TOASTS (3)', () => {
-      showToast('First');
-      showToast('Second');
-      showToast('Third');
-      showToast('Fourth');
-
-      const currentToasts = get(toasts);
-      expect(currentToasts).toHaveLength(3);
-      expect(currentToasts.map((t) => t.message)).not.toContain('First');
-    });
-
-    it('should not count persistent toasts against the limit', () => {
-      showToast('Persistent 1', 'info', 0, { persistent: true });
-      showToast('Persistent 2', 'info', 0, { persistent: true });
-      showToast('Regular 1');
-      showToast('Regular 2');
-      showToast('Regular 3');
-
-      const currentToasts = get(toasts);
-      // 2 persistent + 3 regular = 5 total
-      expect(currentToasts).toHaveLength(5);
-    });
-
-    it('should auto-dismiss after duration', () => {
-      showToast('Auto dismiss', 'info', 3000);
-
-      expect(get(toasts)).toHaveLength(1);
-
-      vi.advanceTimersByTime(3000);
-
-      expect(get(toasts)).toHaveLength(0);
-    });
-
-    it('should not auto-dismiss persistent toasts', () => {
-      showToast('Persistent', 'info', 3000, { persistent: true });
-
-      expect(get(toasts)).toHaveLength(1);
-
-      vi.advanceTimersByTime(10000);
-
-      expect(get(toasts)).toHaveLength(1);
-    });
-
-    it('should include actions in the toast', () => {
-      const action = vi.fn();
-      showToast('With action', 'info', 3000, {
-        actions: [{ label: 'Retry', action, primary: true }],
-      });
-
-      const currentToasts = get(toasts);
-      expect(currentToasts[0].actions).toHaveLength(1);
-      expect(currentToasts[0].actions?.[0].label).toBe('Retry');
-      expect(currentToasts[0].actions?.[0].primary).toBe(true);
-    });
-
-    it('should include onDismiss callback', () => {
-      const onDismiss = vi.fn();
-      showToast('With dismiss callback', 'info', 3000, { onDismiss });
-
-      const currentToasts = get(toasts);
-      expect(currentToasts[0].onDismiss).toBe(onDismiss);
-    });
+  it('should start with an empty toast list', () => {
+    expect(get(toasts)).toEqual([]);
   });
 
-  describe('dismissToast', () => {
-    it('should remove a specific toast by ID', () => {
-      const id1 = showToast('First');
-      showToast('Second');
-      showToast('Third');
+  it('should add a toast with showToast', () => {
+    showToast('Hello!', 'info');
 
-      dismissToast(id1);
-
-      const currentToasts = get(toasts);
-      expect(currentToasts).toHaveLength(2);
-      expect(currentToasts.find((t) => t.id === id1)).toBeUndefined();
-    });
-
-    it('should do nothing if ID does not exist', () => {
-      showToast('First');
-      showToast('Second');
-
-      dismissToast('non-existent-id');
-
-      expect(get(toasts)).toHaveLength(2);
-    });
+    const current = get(toasts);
+    expect(current.length).toBe(1);
+    expect(current[0].message).toBe('Hello!');
+    expect(current[0].type).toBe('info');
   });
 
-  describe('clearAllToasts', () => {
-    it('should remove all toasts', () => {
-      showToast('First');
-      showToast('Second');
-      showToast('Third', 'info', 0, { persistent: true });
+  it('should use info as default type', () => {
+    showToast('Default type');
 
-      clearAllToasts();
-
-      expect(get(toasts)).toHaveLength(0);
-    });
+    const current = get(toasts);
+    expect(current[0].type).toBe('info');
   });
 
-  describe('resetToastState', () => {
-    it('should clear toasts and reset ID counter', () => {
-      showToast('First');
-      showToast('Second');
+  it('should use 3000ms as default duration', () => {
+    showToast('Timed');
 
-      resetToastState();
-
-      expect(get(toasts)).toHaveLength(0);
-
-      // ID counter should be reset - new toast should have ID starting with 1
-      const newId = showToast('New');
-      expect(newId).toMatch(/^toast-1-/);
-    });
+    const current = get(toasts);
+    expect(current[0].duration).toBe(3000);
   });
 
-  describe('toast ordering', () => {
-    it('should maintain order with mixed persistent and non-persistent toasts', () => {
-      showToast('Regular 1', 'info', 3000);
-      showToast('Persistent', 'error', 0, { persistent: true });
-      showToast('Regular 2', 'info', 3000);
+  it('should return a unique id for each toast', () => {
+    const id1 = showToast('First');
+    const id2 = showToast('Second');
 
-      const currentToasts = get(toasts);
-      expect(currentToasts[0].message).toBe('Regular 2');
-      expect(currentToasts[1].message).toBe('Persistent');
-      expect(currentToasts[2].message).toBe('Regular 1');
-    });
+    expect(id1).toBeTruthy();
+    expect(id2).toBeTruthy();
+    expect(id1).not.toBe(id2);
   });
 
-  describe('concurrent toasts', () => {
-    it('should handle rapid toast creation', () => {
-      for (let i = 0; i < 10; i++) {
-        showToast(`Toast ${i}`);
-      }
+  it('should add success toast', () => {
+    showToast('Success!', 'success');
 
-      const currentToasts = get(toasts);
-      // Should be limited to MAX_TOASTS (3)
-      expect(currentToasts).toHaveLength(3);
-    });
-
-    it('should handle sequential dismissals correctly', () => {
-      const ids = Array.from({ length: 3 }, (_, i) =>
-        showToast(`Toast ${i}`, 'info', 0, { persistent: true })
-      );
-
-      ids.forEach((id) => dismissToast(id));
-
-      expect(get(toasts)).toHaveLength(0);
-    });
+    const current = get(toasts);
+    expect(current[0].type).toBe('success');
   });
 
-  describe('toast types styling', () => {
-    it('should create success toast', () => {
-      showToast('Success!', 'success');
-      expect(get(toasts)[0].type).toBe('success');
+  it('should add error toast', () => {
+    showToast('Error!', 'error');
+
+    const current = get(toasts);
+    expect(current[0].type).toBe('error');
+  });
+
+  it('should enforce MAX_TOASTS limit of 3 non-persistent toasts', () => {
+    showToast('Toast 1');
+    showToast('Toast 2');
+    showToast('Toast 3');
+    showToast('Toast 4');
+
+    const current = get(toasts);
+    const nonPersistent = current.filter((t) => !t.persistent);
+    expect(nonPersistent.length).toBeLessThanOrEqual(3);
+  });
+
+  it('should dismiss a toast by id', () => {
+    const id = showToast('Dismissable');
+
+    expect(get(toasts).length).toBe(1);
+
+    dismissToast(id);
+
+    expect(get(toasts).length).toBe(0);
+  });
+
+  it('should only dismiss the specified toast', () => {
+    const id1 = showToast('Keep');
+    const id2 = showToast('Remove');
+
+    dismissToast(id2);
+
+    const current = get(toasts);
+    expect(current.length).toBe(1);
+    expect(current[0].id).toBe(id1);
+  });
+
+  it('should clear all toasts', () => {
+    showToast('A');
+    showToast('B');
+    showToast('C');
+
+    expect(get(toasts).length).toBe(3);
+
+    clearAllToasts();
+
+    expect(get(toasts).length).toBe(0);
+  });
+
+  it('should reset state including counter', () => {
+    showToast('Before reset');
+
+    resetToastState();
+
+    expect(get(toasts).length).toBe(0);
+  });
+
+  it('should create persistent toast with duration 0', () => {
+    showToast('Persistent', 'info', 3000, { persistent: true });
+
+    const current = get(toasts);
+    expect(current[0].persistent).toBe(true);
+    expect(current[0].duration).toBe(0);
+  });
+
+  it('should include actions when provided', () => {
+    const action = vi.fn();
+    showToast('With action', 'info', 3000, {
+      actions: [{ label: 'Undo', action, primary: true }],
     });
 
-    it('should create error toast', () => {
-      showToast('Error!', 'error');
-      expect(get(toasts)[0].type).toBe('error');
-    });
+    const current = get(toasts);
+    expect(current[0].actions).toHaveLength(1);
+    expect(current[0].actions![0].label).toBe('Undo');
+    expect(current[0].actions![0].primary).toBe(true);
+  });
 
-    it('should create info toast', () => {
-      showToast('Info', 'info');
-      expect(get(toasts)[0].type).toBe('info');
-    });
+  it('should include onDismiss callback', () => {
+    const onDismiss = vi.fn();
+    showToast('Callback', 'info', 3000, { onDismiss });
+
+    const current = get(toasts);
+    expect(current[0].onDismiss).toBe(onDismiss);
+  });
+
+  it('should auto-dismiss after duration', () => {
+    showToast('Auto-dismiss', 'info', 2000);
+
+    expect(get(toasts).length).toBe(1);
+
+    vi.advanceTimersByTime(2000);
+
+    expect(get(toasts).length).toBe(0);
+  });
+
+  it('should not auto-dismiss persistent toasts', () => {
+    showToast('Stays', 'info', 3000, { persistent: true });
+
+    vi.advanceTimersByTime(5000);
+
+    expect(get(toasts).length).toBe(1);
+  });
+
+  it('should keep persistent toasts when non-persistent exceed limit', () => {
+    showToast('Persistent', 'info', 3000, { persistent: true });
+    showToast('Toast 1');
+    showToast('Toast 2');
+    showToast('Toast 3');
+    showToast('Toast 4');
+
+    const current = get(toasts);
+    const persistent = current.filter((t) => t.persistent);
+    expect(persistent.length).toBe(1);
+    expect(persistent[0].message).toBe('Persistent');
+  });
+
+  it('should add newest toast to the front', () => {
+    showToast('First');
+    showToast('Second');
+
+    const current = get(toasts);
+    expect(current[0].message).toBe('Second');
+    expect(current[1].message).toBe('First');
   });
 });

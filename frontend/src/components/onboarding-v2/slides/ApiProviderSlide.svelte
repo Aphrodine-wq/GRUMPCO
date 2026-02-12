@@ -27,7 +27,7 @@
   onMount(() => {
     setTimeout(() => (mounted = true), 100);
 
-    // Pre-select Kimi as recommended; do not show nvidia-nim (platform default)
+    // Pre-select G-CompN1 as recommended; do not show nvidia-nim (platform default)
     const current = newOnboardingStore.get();
     if (current.aiProvider && current.aiProvider !== 'nvidia-nim') {
       selectedProvider = current.aiProvider;
@@ -50,9 +50,6 @@
     const mapping: Record<string, string> = {
       anthropic: 'anthropic',
       google: 'google',
-      kimi: 'kimi',
-      mistral: 'mistral',
-      jan: 'jan',
       openrouter: 'openrouter',
     };
     return mapping[providerId] ?? null;
@@ -151,7 +148,7 @@
           class:recommended={provider.popular}
           onclick={() => selectProvider(provider.id)}
         >
-          {#if provider.popular && provider.id === 'kimi'}
+          {#if provider.popular && provider.id === 'grump'}
             <span class="recommended-badge">Recommended</span>
           {/if}
           <span class="provider-icon" aria-hidden="true">

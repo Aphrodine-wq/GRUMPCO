@@ -549,7 +549,7 @@ export async function getDistillationStats(): Promise<DistillationStats> {
 }
 
 // ============================================================================
-// Types - Supervised Swarm (Kimi Oversight)
+// Types - Supervised Swarm
 // ============================================================================
 
 export type SupervisedAgentStatus =
@@ -681,12 +681,12 @@ export interface SupervisedSwarmConfig {
 }
 
 export interface SupervisedSwarmTopology {
-  supervisor: { id: 'kimi'; status: 'active' | 'idle' };
+  supervisor: { id: 'supervisor'; status: 'active' | 'idle' };
   agents: SpecialistAgent[];
 }
 
 // ============================================================================
-// API Functions - Supervised Swarm (Kimi Oversight)
+// API Functions - Supervised Swarm
 // ============================================================================
 
 export async function createSupervisedSwarm(

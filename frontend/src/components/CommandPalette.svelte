@@ -160,7 +160,7 @@
         category: 'ai',
         icon: Users,
         action: () => {
-          setCurrentView('swarm');
+          setCurrentView('gAgent');
           close();
         },
       },

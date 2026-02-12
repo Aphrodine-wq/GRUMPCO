@@ -209,6 +209,7 @@
         <h2>Collections</h2>
         <div class="collections-list">
           {#each collections as col (col.id)}
+            {@const StatusIcon = getStatusIcon(col.status)}
             <div class="collection-card">
               <div class="col-icon"><Database size={20} /></div>
               <div class="col-body">
@@ -220,7 +221,7 @@
                 </div>
               </div>
               <div class="col-status" style:color={getStatusColor(col.status)}>
-                <svelte:component this={getStatusIcon(col.status)} size={14} />
+                <StatusIcon size={14} />
                 <span>{col.lastIndexed}</span>
               </div>
               <div class="col-actions">

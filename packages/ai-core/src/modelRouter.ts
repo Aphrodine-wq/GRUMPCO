@@ -1,10 +1,11 @@
 /**
- * Model Router – NVIDIA NIM Exclusive
+ * Model Router – Multi-Provider Aware
  * 
- * Intelligent routing for NVIDIA NIM models based on task requirements.
- * Powered by NVIDIA AI infrastructure for optimized inference.
+ * Intelligent routing for AI models based on task requirements.
+ * Primary routing uses NVIDIA NIM models with tool/function calling support.
+ * G-CompN1 meta-routing (in llmGateway.ts) handles cross-provider routing.
  * 
- * Routing Strategy (all models support tool/function calling):
+ * Routing Strategy (NIM-hosted models support tool/function calling):
  * - Complex/Flagship: Llama 3.1 405B
  * - Balanced: Llama 3.1 70B (default)
  * - Code Generation: Codestral or Llama 405B
@@ -171,7 +172,7 @@ function estimateCost(
 }
 
 // =============================================================================
-// Task Type Routing (NVIDIA NIM Exclusive)
+// Task Type Routing (Primary: NVIDIA NIM, cross-provider via G-CompN1)
 // =============================================================================
 
 const TASK_TYPE_MODELS: Record<TaskType, { primary: string; fallback: string }> = {

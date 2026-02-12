@@ -1,8 +1,8 @@
 # G-Rump Product Requirements Document (PRD)
 
 **Version:** 2.1.0  
-**Last Updated:** February 4, 2026  
-**Status:** Active Development  
+**Last Updated:** February 11, 2026  
+**Status:** Released  
 **Document Owner:** G-Rump Product Team
 
 ---
@@ -233,8 +233,7 @@ Built-in quality enforcement:
                                │
 ┌──────────────────────────────▼──────────────────────────────────┐
 │                      AI Providers                                │
-│   NVIDIA NIM │ Kimi K2.5 │ OpenRouter │ Anthropic │ Ollama          │
-│              │ Ollama (Local) │ GitHub Copilot │ Mistral        │
+│   NVIDIA NIM │ Anthropic │ OpenRouter │ Kimi K2.5 │ Ollama      │
 └──────────────────────────────┬──────────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────────┐
@@ -644,13 +643,10 @@ Three-tier caching architecture:
 | Provider | Purpose | Priority |
 |----------|---------|----------|
 | NVIDIA NIM | Primary inference, Nemotron models | P0 |
-| Anthropic Claude | High-quality reasoning | P0 |
+| Anthropic | High-quality reasoning (Claude) | P0 |
 | OpenRouter | Multi-model access | P1 |
-| Anthropic | Claude models | P1 |
 | Kimi K2.5 | Long context, multilingual | P1 |
 | Ollama | Local/offline models | P1 |
-| GitHub Copilot | Code completion | P2 |
-| Mistral | European compliance | P2 |
 
 ### 11.2 Third-Party Integrations
 

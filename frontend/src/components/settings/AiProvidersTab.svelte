@@ -19,7 +19,6 @@
     configuringTestState: any;
     getProviderFallbackLetter: any;
     getProviderIconPath: any;
-    janBaseUrl: any;
     modelGroups: any;
     modelGroupsLoading: any;
     openIntegrationsTab: any;
@@ -42,7 +41,6 @@
     configuringTestState,
     getProviderFallbackLetter,
     getProviderIconPath,
-    janBaseUrl,
     modelGroups,
     modelGroupsLoading,
     openIntegrationsTab,
@@ -237,7 +235,10 @@
               <input
                 id="ai-provider-api-key"
                 type="password"
-                bind:value={configuringApiKey}
+                value={configuringApiKey}
+                oninput={(e) => {
+                  configuringApiKey = (e.target as HTMLInputElement).value;
+                }}
                 placeholder="Enter your API key..."
                 class="custom-input"
                 class:error={configuringTestState === 'error'}
@@ -291,62 +292,63 @@
       </Button>
     </div>
   </Card>
-  <Card title="Local AI (Jan)" padding="md" class="jan-base-url-card">
-    <p class="field-hint">
-      Override Jan base URL if Jan runs on a different host/port. Leave empty to use default
-      (http://localhost:1337). Used when listing models and when using Jan for chat.
-    </p>
-    <label class="field-label" for="jan-base-url">Jan base URL</label>
-    <input
-      id="jan-base-url"
-      type="url"
-      class="custom-input"
-      placeholder="http://localhost:1337"
-      value={$janBaseUrl}
-      oninput={(e) => preferencesStore.setJanBaseUrl((e.currentTarget as HTMLInputElement).value)}
-    />
+  <Card title="Connect OpenClaw" padding="md" class="ai-providers-openclaw-card">
+    <div class="openclaw-connect-wrap">
+      <div class="openclaw-info">
+        <span class="openclaw-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="#ef4444" role="img">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"
+            />
+          </svg>
+        </span>
+        <div class="openclaw-text">
+          <span class="openclaw-name">OpenClaw</span>
+          <span class="openclaw-desc">
+            Connect OpenClaw autonomous agent to G-Rump. Allows OpenClaw to interact with your
+            workspace through the G-Agent API.
+          </span>
+        </div>
+      </div>
+      <div class="openclaw-actions">
+        <a
+          href="https://openclaw.ai"
+          target="_blank"
+          rel="noopener"
+          class="help-link openclaw-docs-link"
+        >
+          <ExternalLink size={14} />
+          Learn more
+        </a>
+        <Button variant="primary" size="sm" onclick={openIntegrationsTab}>Connect OpenClaw</Button>
+      </div>
+    </div>
   </Card>
 </div>
 
 <style>
-
-.tab-section {
+  .tab-section {
     max-width: 900px;
     display: flex;
     flex-direction: column;
     gap: 28px;
   }
 
-.tab-section :global(.card) {
+  .tab-section :global(.card) {
     border: 1px solid #e5e7eb;
   }
 
-.preset-option.selected {
-    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
-    border-color: var(--color-primary, #7c3aed);
-    color: var(--color-primary, #7c3aed);
-  }
-
-.default-model-row .field-label {
-    flex-shrink: 0;
-  }
-
-.advanced-finetuning .field-label {
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
-.models-provider-loading {
+  .models-provider-loading {
     color: #6b7280;
     font-size: 0.875rem;
     margin: 0;
   }
 
-.models-provider-intro {
+  .models-provider-intro {
     margin-bottom: 1rem;
   }
 
-.ai-tab-quick-start {
+  .ai-tab-quick-start {
     margin: 0 0 1.25rem;
     padding: 0.75rem 1rem;
     background: var(--color-bg-subtle, #f8fafc);
@@ -356,26 +358,26 @@
     line-height: 1.5;
   }
 
-.ai-providers-tab .models-provider-intro {
+  .ai-providers-tab .models-provider-intro {
     color: var(--color-text-secondary, #6b7280);
     line-height: 1.5;
   }
 
-.ai-providers-tab .provider-card-wrap {
+  .ai-providers-tab .provider-card-wrap {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
   }
 
-.ai-providers-tab .settings-providers-grid {
+  .ai-providers-tab .settings-providers-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 1rem;
     margin-bottom: 1.5rem;
   }
 
-.ai-providers-tab .settings-provider-card {
+  .ai-providers-tab .settings-provider-card {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -393,19 +395,19 @@
     text-align: center;
   }
 
-.ai-providers-tab .settings-provider-card:hover {
+  .ai-providers-tab .settings-provider-card:hover {
     border-color: var(--color-primary, #7c3aed);
     background: var(--color-primary-subtle, rgba(124, 58, 237, 0.06));
     box-shadow: var(--shadow-sm, 0 2px 6px rgba(0, 0, 0, 0.05));
   }
 
-.ai-providers-tab .settings-provider-card.selected {
+  .ai-providers-tab .settings-provider-card.selected {
     border-color: var(--color-primary, #7c3aed);
     box-shadow: 0 0 0 2px var(--color-primary-subtle, rgba(124, 58, 237, 0.25));
     background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
   }
 
-.ai-providers-tab .provider-icon {
+  .ai-providers-tab .provider-icon {
     width: 40px;
     height: 40px;
     display: flex;
@@ -416,50 +418,50 @@
     color: var(--color-text-secondary, #6b7280);
   }
 
-.ai-providers-tab .settings-provider-card.selected .provider-icon {
+  .ai-providers-tab .settings-provider-card.selected .provider-icon {
     background: var(--color-primary-subtle, rgba(124, 58, 237, 0.15));
     color: var(--color-primary, #7c3aed);
   }
 
-.ai-providers-tab .provider-icon svg {
+  .ai-providers-tab .provider-icon svg {
     width: 24px;
     height: 24px;
   }
 
-.ai-providers-tab .provider-icon-img {
+  .ai-providers-tab .provider-icon-img {
     width: 24px;
     height: 24px;
     object-fit: contain;
   }
 
-.ai-providers-tab .provider-icon-fallback {
+  .ai-providers-tab .provider-icon-fallback {
     font-size: 1rem;
     font-weight: 600;
     color: var(--color-primary, #7c3aed);
   }
 
-.ai-providers-tab .add-more-providers-grid {
+  .ai-providers-tab .add-more-providers-grid {
     margin-bottom: 1rem;
   }
 
-.ai-providers-tab .add-more-card {
+  .ai-providers-tab .add-more-card {
     cursor: default;
     min-height: 120px;
     background: var(--color-bg-subtle, #f9fafb);
   }
 
-.ai-providers-tab .add-more-card .provider-icon {
+  .ai-providers-tab .add-more-card .provider-icon {
     background: var(--color-bg-card, #ffffff);
   }
 
-.ai-providers-tab .add-more-card .provider-desc {
+  .ai-providers-tab .add-more-card .provider-desc {
     font-size: 0.75rem;
     color: var(--color-text-muted, #6b7280);
     line-height: 1.3;
     max-width: 140px;
   }
 
-.ai-providers-tab .add-more-card .configured-badge {
+  .ai-providers-tab .add-more-card .configured-badge {
     font-size: 0.7rem;
     font-weight: 600;
     padding: 0.2rem 0.5rem;
@@ -468,16 +470,16 @@
     color: var(--color-success, #10b981);
   }
 
-.ai-providers-tab .section-desc.ai-providers-add-desc {
+  .ai-providers-tab .section-desc.ai-providers-add-desc {
     margin-bottom: 1.25rem;
     line-height: 1.5;
   }
 
-.ai-providers-tab .open-integrations-wrap {
+  .ai-providers-tab .open-integrations-wrap {
     margin-top: 1rem;
   }
 
-.ai-provider-inline-config {
+  .ai-provider-inline-config {
     margin-top: 1rem;
     padding: 1rem;
     background: var(--color-bg-subtle, #f9fafb);
@@ -485,31 +487,27 @@
     border: 1px solid var(--color-border, #e5e7eb);
   }
 
-.ai-provider-inline-config .ollama-inline-notice {
+  .ai-provider-inline-config .ollama-inline-notice {
     padding: 0.5rem 0;
   }
 
-.ai-provider-inline-config .ollama-inline-notice p {
+  .ai-provider-inline-config .ollama-inline-notice p {
     margin: 0 0 0.5rem 0;
     font-size: 0.875rem;
     color: var(--color-text-secondary, #6b7280);
   }
 
-.inline-config-input-group {
+  .inline-config-input-group {
     margin-bottom: 0.75rem;
   }
 
-.inline-config-input-group .field-label {
-    margin-bottom: 0.5rem;
-  }
-
-.inline-config-input-row {
+  .inline-config-input-row {
     display: flex;
     gap: 0.5rem;
     align-items: center;
   }
 
-.inline-config-input-row .custom-input {
+  .inline-config-input-row .custom-input {
     flex: 1;
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border, #e5e7eb);
@@ -517,11 +515,11 @@
     font-size: 0.875rem;
   }
 
-.inline-config-input-row .custom-input.error {
+  .inline-config-input-row .custom-input.error {
     border-color: #ef4444;
   }
 
-.inline-config-error {
+  .inline-config-error {
     display: flex;
     align-items: center;
     gap: 0.375rem;
@@ -530,13 +528,13 @@
     color: #ef4444;
   }
 
-.inline-config-actions {
+  .inline-config-actions {
     display: flex;
     gap: 0.5rem;
     margin-top: 0.75rem;
   }
 
-.ai-provider-inline-config .help-link {
+  .ai-provider-inline-config .help-link {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
@@ -545,11 +543,11 @@
     text-decoration: none;
   }
 
-.ai-provider-inline-config .help-link:hover {
+  .ai-provider-inline-config .help-link:hover {
     text-decoration: underline;
   }
 
-.inline-spinner {
+  .inline-spinner {
     display: inline-block;
     width: 14px;
     height: 14px;
@@ -559,31 +557,27 @@
     animation: ai-config-spin 0.8s linear infinite;
   }
 
-.ai-providers-tab .provider-name {
+  .ai-providers-tab .provider-name {
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--color-text, #111827);
     line-height: 1.2;
   }
 
-.ai-providers-tab .provider-model-select {
+  .ai-providers-tab .provider-model-select {
     margin-top: 1.25rem;
     padding-top: 1.25rem;
     border-top: 1px solid var(--color-border, #e5e7eb);
     max-width: 360px;
   }
 
-.models-custom-inner .section-desc {
-    margin-bottom: 0.75rem;
-  }
-
-.section-desc {
+  .section-desc {
     font-size: 14px;
     color: var(--color-text-muted, #71717a);
     margin-bottom: 20px;
   }
 
-.field-label {
+  .field-label {
     display: block;
     font-size: 13px;
     font-weight: 600;
@@ -591,30 +585,13 @@
     margin-bottom: 8px;
   }
 
-.field-label-row .field-label {
-    margin-bottom: 0;
-  }
-
-.field-hint {
+  .field-hint {
     font-size: 12px;
     color: var(--color-text-muted, #a1a1aa);
     margin-top: 6px;
   }
 
-.theme-card.selected {
-    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
-    border-color: var(--color-primary, #7c3aed);
-    color: var(--color-primary, #7c3aed);
-  }
-
-.accent-swatch.selected {
-    border-color: var(--color-text, #111827);
-    box-shadow:
-      0 0 0 2px white,
-      0 0 0 4px var(--color-text, #111827);
-  }
-
-.custom-select {
+  .custom-select {
     width: 100%;
     height: 40px;
     padding: 0 12px;
@@ -627,26 +604,81 @@
     transition: border-color 150ms;
   }
 
-.custom-select:focus {
+  .custom-select:focus {
     border-color: var(--color-primary, #7c3aed);
   }
 
-.field-hint code {
-    font-size: 0.75em;
-    padding: 0.1em 0.35em;
-    background: var(--color-bg-card, #f4f4f5);
-    border-radius: 4px;
-  }
-
-.custom-model-form .custom-input {
+  .custom-model-form .custom-input {
     padding: 8px 12px;
     border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 6px;
     font-size: 14px;
   }
 
-.channel-status-dot.configured {
+  .channel-status-dot.configured {
     background: #22c55e;
     box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+  }
+
+  /* OpenClaw connect card */
+  .openclaw-connect-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .openclaw-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .openclaw-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 10px;
+  }
+
+  .openclaw-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .openclaw-name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--color-text, #111827);
+  }
+
+  .openclaw-desc {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted, #6b7280);
+    line-height: 1.4;
+  }
+
+  .openclaw-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.25rem;
+  }
+
+  .openclaw-docs-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--color-primary, #7c3aed);
+    text-decoration: none;
+  }
+
+  .openclaw-docs-link:hover {
+    text-decoration: underline;
   }
 </style>

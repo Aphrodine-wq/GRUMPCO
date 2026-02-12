@@ -4,57 +4,26 @@
    * Data from API only; no client-side mock.
    */
   import { onMount } from 'svelte';
-  import { fade, fly, slide } from 'svelte/transition';
+  import { fade } from 'svelte/transition';
   import { writable, derived } from 'svelte/store';
   import { fetchApi } from '$lib/api.js';
   import { setCurrentView } from '../stores/uiStore';
+  import {
+    type Integration,
+    type Deployment,
+    type CloudResource,
+    type CostSummary,
+  } from './cloud/cloudUtils';
+  import CloudOverviewTab from './cloud/CloudOverviewTab.svelte';
+  import CloudDeploymentsTab from './cloud/CloudDeploymentsTab.svelte';
+  import CloudResourcesTab from './cloud/CloudResourcesTab.svelte';
+  import CloudCostsTab from './cloud/CloudCostsTab.svelte';
 
   // Props
   interface Props {
     onBack?: () => void;
   }
   let { onBack }: Props = $props();
-
-  // Types
-  interface Integration {
-    id: string;
-    name: string;
-    icon: string;
-    category: 'deploy' | 'cloud' | 'baas' | 'vcs' | 'pm';
-    connected: boolean;
-    lastSync?: string;
-    status?: 'healthy' | 'warning' | 'error';
-  }
-
-  interface Deployment {
-    id: string;
-    project: string;
-    provider: 'vercel' | 'netlify';
-    status: 'ready' | 'building' | 'error' | 'queued';
-    url?: string;
-    branch: string;
-    commit: string;
-    createdAt: string;
-    duration?: number;
-  }
-
-  interface CloudResource {
-    id: string;
-    name: string;
-    provider: 'aws' | 'gcp' | 'azure';
-    type: 'compute' | 'database' | 'storage' | 'serverless' | 'container';
-    status: 'running' | 'stopped' | 'pending' | 'error';
-    region: string;
-    cost?: number;
-  }
-
-  interface CostSummary {
-    provider: string;
-    current: number;
-    forecast: number;
-    trend: 'up' | 'down' | 'stable';
-    trendPercent: number;
-  }
 
   // State
   const integrations = writable<Integration[]>([]);
@@ -94,100 +63,6 @@
   onMount(() => {
     loadDashboardData();
   });
-
-  // Helpers
-  function formatTime(dateStr: string): string {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const mins = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (mins < 60) return `${mins}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
-  }
-
-  function formatDuration(seconds?: number): string {
-    if (!seconds) return '-';
-    if (seconds < 60) return `${seconds}s`;
-    return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-  }
-
-  function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-  }
-
-  function getStatusColor(status: string): string {
-    switch (status) {
-      case 'ready':
-      case 'running':
-      case 'healthy':
-        return 'text-green-500';
-      case 'building':
-      case 'pending':
-      case 'queued':
-        return 'text-yellow-500';
-      case 'error':
-      case 'warning':
-        return 'text-red-500';
-      default:
-        return 'text-gray-500';
-    }
-  }
-
-  function getStatusBg(status: string): string {
-    switch (status) {
-      case 'ready':
-      case 'running':
-      case 'healthy':
-        return 'bg-green-500/10 border-green-500/30';
-      case 'building':
-      case 'pending':
-      case 'queued':
-        return 'bg-yellow-500/10 border-yellow-500/30';
-      case 'error':
-      case 'warning':
-        return 'bg-red-500/10 border-red-500/30';
-      default:
-        return 'bg-gray-500/10 border-gray-500/30';
-    }
-  }
-
-  function getProviderIcon(provider: string): string {
-    switch (provider) {
-      case 'vercel':
-        return 'M12 2L2 20h20L12 2z';
-      case 'netlify':
-        return 'M12 2L2 12l10 10 10-10L12 2z';
-      case 'aws':
-        return 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z';
-      case 'gcp':
-        return 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5';
-      case 'azure':
-        return 'M12 2L2 12l10 10 10-10L12 2z';
-      default:
-        return 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z';
-    }
-  }
-
-  function getResourceIcon(type: string): string {
-    switch (type) {
-      case 'compute':
-        return 'M4 6h16M4 10h16M4 14h16M4 18h16';
-      case 'database':
-        return 'M12 2C6.48 2 2 4.5 2 7.5v9C2 19.5 6.48 22 12 22s10-2.5 10-5.5v-9C22 4.5 17.52 2 12 2z';
-      case 'storage':
-        return 'M20 6H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2z';
-      case 'serverless':
-        return 'M13 10V3L4 14h7v7l9-11h-7z';
-      case 'container':
-        return 'M21 8v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM7 12h2M11 12h2M15 12h2';
-      default:
-        return 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z';
-    }
-  }
 </script>
 
 <div class="cloud-dashboard" in:fade={{ duration: 200 }}>
@@ -195,7 +70,7 @@
   <header class="dashboard-header">
     <div class="header-left">
       {#if onBack}
-        <button class="back-btn" onclick={onBack} aria-label="Back">
+        <button class="back-btn" onclick={onBack} aria-label="Go back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
@@ -203,17 +78,16 @@
       {/if}
       <div class="header-title">
         <h1>Cloud Dashboard</h1>
-        <span class="subtitle">Unified view of your infrastructure</span>
+        <span class="subtitle">Manage deployments, infrastructure & costs</span>
       </div>
     </div>
-    <div class="header-actions">
-      <button class="action-btn primary" onclick={() => setCurrentView('integrations')}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-        Connect Integration
-      </button>
-    </div>
+    <button class="action-btn primary" onclick={() => setCurrentView('integrations')}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+      Connect Integration
+    </button>
   </header>
 
   <!-- Tabs -->
@@ -221,34 +95,24 @@
     <button
       class="tab"
       class:active={$activeTab === 'overview'}
-      onclick={() => activeTab.set('overview')}
+      onclick={() => activeTab.set('overview')}>Overview</button
     >
-      Overview
-    </button>
     <button
       class="tab"
       class:active={$activeTab === 'deployments'}
-      onclick={() => activeTab.set('deployments')}
+      onclick={() => activeTab.set('deployments')}>Deployments</button
     >
-      Deployments
-    </button>
     <button
       class="tab"
       class:active={$activeTab === 'resources'}
-      onclick={() => activeTab.set('resources')}
+      onclick={() => activeTab.set('resources')}>Resources</button
     >
-      Resources
-    </button>
-    <button
-      class="tab"
-      class:active={$activeTab === 'costs'}
-      onclick={() => activeTab.set('costs')}
+    <button class="tab" class:active={$activeTab === 'costs'} onclick={() => activeTab.set('costs')}
+      >Costs</button
     >
-      Costs
-    </button>
   </nav>
 
-  <!-- Content -->
+  <!-- Content — each tab is its own component -->
   <div class="dashboard-content">
     {#if $isLoading}
       <div class="loading">
@@ -256,366 +120,22 @@
         <span>Loading dashboard...</span>
       </div>
     {:else if $activeTab === 'overview'}
-      <!-- Overview Tab -->
-      <div class="overview-grid" in:fly={{ y: 20, duration: 200 }}>
-        <!-- Stats Cards -->
-        <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-icon connected">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-              </svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">{$connectedIntegrations.length}</span>
-              <span class="stat-label">Connected</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon deployments">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path
-                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-                />
-              </svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">{$deployments.length}</span>
-              <span class="stat-label">Deployments</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon resources">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
-                <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
-                <line x1="6" y1="6" x2="6.01" y2="6" />
-                <line x1="6" y1="18" x2="6.01" y2="18" />
-              </svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">{$resources.length}</span>
-              <span class="stat-label">Resources</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon costs">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="1" x2="12" y2="23" />
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-              </svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">{formatCurrency($totalMonthlyCost)}</span>
-              <span class="stat-label">Monthly Cost</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Integrations Grid -->
-        <section class="section">
-          <h2 class="section-title">Integrations</h2>
-          <div class="integrations-grid">
-            {#each $integrations as integration}
-              <div
-                class="integration-card"
-                class:connected={integration.connected}
-                class:disconnected={!integration.connected}
-              >
-                <div class="integration-icon {integration.id}">
-                  <span class="icon-letter">{integration.name[0]}</span>
-                </div>
-                <div class="integration-info">
-                  <span class="integration-name">{integration.name}</span>
-                  {#if integration.connected}
-                    <span
-                      class="integration-status {getStatusColor(integration.status || 'healthy')}"
-                    >
-                      Connected
-                    </span>
-                  {:else}
-                    <span class="integration-status text-gray-400">Not connected</span>
-                  {/if}
-                </div>
-                {#if integration.connected && integration.status}
-                  <div class="status-dot {integration.status}"></div>
-                {/if}
-              </div>
-            {:else}
-              <div class="empty-state">
-                <p>No integrations connected</p>
-                <button class="action-btn primary" onclick={() => setCurrentView('integrations')}>
-                  Connect integration
-                </button>
-              </div>
-            {/each}
-          </div>
-        </section>
-
-        <!-- Recent Deployments -->
-        <section class="section">
-          <div class="section-header">
-            <h2 class="section-title">Recent Deployments</h2>
-            <button class="view-all-btn" onclick={() => activeTab.set('deployments')}>
-              View all
-            </button>
-          </div>
-          <div class="deployments-list">
-            {#each $recentDeployments as deployment}
-              <div class="deployment-row" transition:slide>
-                <div class="deployment-info">
-                  <div class="deployment-project">
-                    <svg
-                      class="provider-icon"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path d={getProviderIcon(deployment.provider)} />
-                    </svg>
-                    <span>{deployment.project}</span>
-                  </div>
-                  <div class="deployment-meta">
-                    <span class="branch">{deployment.branch}</span>
-                    <span class="commit">{deployment.commit.slice(0, 7)}</span>
-                    <span class="time">{formatTime(deployment.createdAt)}</span>
-                  </div>
-                </div>
-                <div class="deployment-status">
-                  <span class="status-badge {getStatusBg(deployment.status)}">
-                    {#if deployment.status === 'building'}
-                      <span class="spinner-small"></span>
-                    {/if}
-                    {deployment.status}
-                  </span>
-                  {#if deployment.url}
-                    <a
-                      href={deployment.url}
-                      target="_blank"
-                      rel="noopener"
-                      class="visit-link"
-                      aria-label="Visit deployment"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                        <polyline points="15 3 21 3 21 9" />
-                        <line x1="10" y1="14" x2="21" y2="3" />
-                      </svg>
-                    </a>
-                  {/if}
-                </div>
-              </div>
-            {:else}
-              <div class="empty-state">
-                <p>No deployments yet</p>
-                <p class="empty-state-hint">
-                  Connect a provider (e.g. Vercel, Netlify) to see deployments here.
-                </p>
-                <button class="action-btn primary" onclick={() => setCurrentView('integrations')}>
-                  Connect to see data
-                </button>
-              </div>
-            {/each}
-          </div>
-        </section>
-
-        <!-- Cost Overview -->
-        <section class="section">
-          <div class="section-header">
-            <h2 class="section-title">Cost Overview</h2>
-            <button class="view-all-btn" onclick={() => activeTab.set('costs')}>
-              View details
-            </button>
-          </div>
-          <div class="cost-cards">
-            {#each $costs as cost}
-              <div class="cost-card">
-                <div class="cost-provider">{cost.provider}</div>
-                <div class="cost-amount">{formatCurrency(cost.current)}</div>
-                <div class="cost-trend {cost.trend}">
-                  {#if cost.trend === 'up'}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                      <polyline points="17 6 23 6 23 12" />
-                    </svg>
-                  {:else if cost.trend === 'down'}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
-                      <polyline points="17 18 23 18 23 12" />
-                    </svg>
-                  {:else}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                  {/if}
-                  <span>{cost.trendPercent}%</span>
-                </div>
-              </div>
-            {:else}
-              <div class="empty-state">
-                <p>No cost data</p>
-                <p class="empty-state-hint">Connect cloud providers to see usage and costs.</p>
-                <button class="action-btn primary" onclick={() => setCurrentView('integrations')}>
-                  Connect to see data
-                </button>
-              </div>
-            {/each}
-          </div>
-        </section>
-      </div>
+      <CloudOverviewTab
+        connectedIntegrations={$connectedIntegrations}
+        integrations={$integrations}
+        deployments={$deployments}
+        recentDeployments={$recentDeployments}
+        resources={$resources}
+        costs={$costs}
+        totalMonthlyCost={$totalMonthlyCost}
+        onSwitchTab={(tab) => activeTab.set(tab)}
+      />
     {:else if $activeTab === 'deployments'}
-      <!-- Deployments Tab -->
-      <div class="deployments-tab" in:fly={{ y: 20, duration: 200 }}>
-        <div class="deployments-table">
-          <div class="table-header">
-            <span>Project</span>
-            <span>Branch</span>
-            <span>Commit</span>
-            <span>Status</span>
-            <span>Duration</span>
-            <span>Time</span>
-            <span></span>
-          </div>
-          {#each $deployments as deployment}
-            <div class="table-row">
-              <span class="project-cell">
-                <svg
-                  class="provider-icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d={getProviderIcon(deployment.provider)} />
-                </svg>
-                {deployment.project}
-              </span>
-              <span class="branch-cell">{deployment.branch}</span>
-              <span class="commit-cell">{deployment.commit.slice(0, 7)}</span>
-              <span class="status-cell">
-                <span class="status-badge {getStatusBg(deployment.status)}"
-                  >{deployment.status}</span
-                >
-              </span>
-              <span class="duration-cell">{formatDuration(deployment.duration)}</span>
-              <span class="time-cell">{formatTime(deployment.createdAt)}</span>
-              <span class="actions-cell">
-                {#if deployment.url}
-                  <a
-                    href={deployment.url}
-                    target="_blank"
-                    rel="noopener"
-                    class="action-icon"
-                    aria-label="Visit deployment"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                      <polyline points="15 3 21 3 21 9" />
-                      <line x1="10" y1="14" x2="21" y2="3" />
-                    </svg>
-                  </a>
-                {/if}
-              </span>
-            </div>
-          {/each}
-        </div>
-      </div>
+      <CloudDeploymentsTab deployments={$deployments} />
     {:else if $activeTab === 'resources'}
-      <!-- Resources Tab -->
-      <div class="resources-tab" in:fly={{ y: 20, duration: 200 }}>
-        <div class="resources-grid">
-          {#each $resources as resource}
-            <div class="resource-card">
-              <div class="resource-header">
-                <div class="resource-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d={getResourceIcon(resource.type)} />
-                  </svg>
-                </div>
-                <span class="status-indicator {resource.status}"></span>
-              </div>
-              <div class="resource-name">{resource.name}</div>
-              <div class="resource-meta">
-                <span class="provider">{resource.provider.toUpperCase()}</span>
-                <span class="region">{resource.region}</span>
-                <span class="type">{resource.type}</span>
-              </div>
-              {#if resource.cost}
-                <div class="resource-cost">{formatCurrency(resource.cost)}/mo</div>
-              {/if}
-            </div>
-          {:else}
-            <div class="empty-state">
-              <p>No resources</p>
-              <p class="empty-state-hint">Connect a cloud provider to see resources here.</p>
-              <button class="action-btn primary" onclick={() => setCurrentView('integrations')}>
-                Connect to see data
-              </button>
-            </div>
-          {/each}
-        </div>
-      </div>
+      <CloudResourcesTab resources={$resources} />
     {:else if $activeTab === 'costs'}
-      <!-- Costs Tab -->
-      <div class="costs-tab" in:fly={{ y: 20, duration: 200 }}>
-        <div class="cost-summary-card">
-          <div class="summary-header">
-            <h3>Total Monthly Cost</h3>
-            <span class="summary-period">Current billing period</span>
-          </div>
-          <div class="summary-amount">{formatCurrency($totalMonthlyCost)}</div>
-          <div class="summary-forecast">
-            Forecast: {formatCurrency($costs.reduce((sum, c) => sum + c.forecast, 0))}
-          </div>
-        </div>
-
-        <div class="cost-breakdown">
-          <h3>Cost by Provider</h3>
-          <div class="breakdown-list">
-            {#each $costs as cost}
-              <div class="breakdown-item">
-                <div class="breakdown-info">
-                  <span class="breakdown-provider">{cost.provider}</span>
-                  <span class="breakdown-amount">{formatCurrency(cost.current)}</span>
-                </div>
-                <div class="breakdown-bar">
-                  <div
-                    class="breakdown-fill"
-                    style="width: {(cost.current / $totalMonthlyCost) * 100}%"
-                  ></div>
-                </div>
-                <div class="breakdown-trend {cost.trend}">
-                  {#if cost.trend === 'up'}+{/if}{cost.trendPercent}%
-                </div>
-              </div>
-            {/each}
-          </div>
-        </div>
-
-        <div class="cost-by-resource">
-          <h3>Cost by Resource</h3>
-          <div class="resource-cost-list">
-            {#each $resources
-              .filter((r) => r.cost)
-              .sort((a, b) => (b.cost || 0) - (a.cost || 0)) as resource}
-              <div class="resource-cost-item">
-                <div class="resource-cost-info">
-                  <span class="resource-cost-name">{resource.name}</span>
-                  <span class="resource-cost-type"
-                    >{resource.type} - {resource.provider.toUpperCase()}</span
-                  >
-                </div>
-                <span class="resource-cost-amount">{formatCurrency(resource.cost || 0)}</span>
-              </div>
-            {/each}
-          </div>
-        </div>
-      </div>
+      <CloudCostsTab costs={$costs} resources={$resources} totalMonthlyCost={$totalMonthlyCost} />
     {/if}
   </div>
 </div>

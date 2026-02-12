@@ -11,13 +11,15 @@ services:
       context: ../backend
       dockerfile: Dockerfile
       cache_from:
-        - ghcr.io/your-org/grump-backend:latest
+        - ghcr.io/aphrodine-wq/grump-backend:latest
       args:
         BUILDKIT_INLINE_CACHE: 1
     image: grump-backend:latest
     container_name: grump-backend
     ports:
       - "3000:3000"
+    env_file:
+      - ../backend/.env
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -83,13 +85,15 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
       cache_from:
-        - ghcr.io/your-org/grump-frontend:latest
+        - ghcr.io/aphrodine-wq/grump-frontend:latest
       args:
         BUILDKIT_INLINE_CACHE: 1
     image: grump-frontend:latest
     container_name: grump-frontend
     ports:
       - "5173:80"
+    environment:
+      - BACKEND_URL=http://backend:3000
     depends_on:
       - backend
     restart: unless-stopped

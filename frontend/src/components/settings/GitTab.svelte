@@ -141,15 +141,6 @@
     border: 1px solid #e5e7eb;
   }
 
-  .default-model-row .field-label {
-    flex-shrink: 0;
-  }
-
-  .advanced-finetuning .field-label {
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
   .settings-number-input,
   .settings-text-input {
     max-width: 200px;
@@ -163,14 +154,6 @@
   .settings-text-input {
     width: 100%;
     max-width: 280px;
-  }
-
-  .inline-config-input-group .field-label {
-    margin-bottom: 0.5rem;
-  }
-
-  .models-custom-inner .section-desc {
-    margin-bottom: 0.75rem;
   }
 
   .section-desc {
@@ -193,10 +176,6 @@
     font-weight: 600;
     color: var(--color-text-secondary, #3f3f46);
     margin-bottom: 8px;
-  }
-
-  .field-label-row .field-label {
-    margin-bottom: 0;
   }
 
   .field-hint {
@@ -227,13 +206,6 @@
 
   .tips-list li {
     margin-bottom: 0.5rem;
-  }
-
-  .field-hint code {
-    font-size: 0.75em;
-    padding: 0.1em 0.35em;
-    background: var(--color-bg-card, #f4f4f5);
-    border-radius: 4px;
   }
 
   .checkbox-field {

@@ -55,17 +55,29 @@
     gAgentPersona,
     gAgentAutoApprove,
     gAgentPersistent,
-    janBaseUrl,
     type GAgentCapabilityKey,
     CAPABILITY_DESCRIPTIONS,
     PREMIUM_CAPABILITIES,
   } from '../stores/preferencesStore';
-  import {
-    wakeWordEnabled,
-    setWakeWordEnabled,
-    loadWakeWordEnabled,
-  } from '../stores/wakeWordStore';
+  import { writable } from 'svelte/store';
   import { getDockerInfo, isDockerSetupAvailable } from '../lib/dockerSetup';
+
+  // Inline wake-word state (previously wakeWordStore, now deleted)
+  const WAKE_WORD_KEY = 'g-rump-wake-word-enabled';
+  const wakeWordEnabled = writable(false);
+  function loadWakeWordEnabled(): boolean {
+    try {
+      return localStorage.getItem(WAKE_WORD_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  }
+  function setWakeWordEnabled(v: boolean) {
+    wakeWordEnabled.set(v);
+    try {
+      localStorage.setItem(WAKE_WORD_KEY, String(v));
+    } catch {}
+  }
   import {
     Settings2,
     Cpu,
@@ -422,8 +434,6 @@
           anthropic: 'g-rump-anthropic-key',
           google: 'g-rump-google-key',
           openrouter: 'g-rump-openrouter-key',
-          mistral: 'g-rump-mistral-key',
-          kimi: 'g-rump-kimi-key',
           'nvidia-nim': 'g-rump-nvidia-nim-key',
         };
         const storageKey = providerKeyMap[configuringProvider];
@@ -486,8 +496,6 @@
         anthropic: 'g-rump-anthropic-key',
         google: 'g-rump-google-key',
         openrouter: 'g-rump-openrouter-key',
-        mistral: 'g-rump-mistral-key',
-        kimi: 'g-rump-kimi-key',
         'nvidia-nim': 'g-rump-nvidia-nim-key',
       };
       for (const [provider, storageKey] of Object.entries(PER_PROVIDER_KEYS)) {
@@ -614,7 +622,7 @@
                 provider: 'grump',
                 capabilities: ['code', 'reasoning', 'vision', 'creative'],
                 contextWindow: 200000,
-                description: 'Smart routing: Opus 4.6 + Kimi K2.5 + Gemini 3 Pro',
+                description: 'Smart routing: Opus 4.6 + Gemini 3 Pro & more',
                 isRecommended: true,
               },
             ],
@@ -849,7 +857,6 @@
           {configuringTestState}
           {getProviderFallbackLetter}
           {getProviderIconPath}
-          {janBaseUrl}
           {modelGroups}
           {modelGroupsLoading}
           {openIntegrationsTab}
@@ -877,6 +884,8 @@
           {gAgentPersona}
           {gAgentPreferredModelSource}
           {preferencesStore}
+          {settings}
+          {savePreferences}
         />
 
         <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -1088,12 +1097,6 @@
     overflow-y: auto;
     padding: 32px;
     background: var(--color-bg-card);
-  }
-
-  @media (max-width: 1024px) {
-    .integrations-section-content.integrations-grid-two {
-      grid-template-columns: 1fr;
-    }
   }
 
   @keyframes ai-config-spin {

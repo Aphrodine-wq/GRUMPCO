@@ -212,7 +212,7 @@ for (const agent of agents) {
 - [C4 Model for Architecture](https://c4model.com/)
 - [User Research Report](https://docs.google.com/document/d/abc123)
 - [Architecture Mode Spec](./docs/ARCHITECTURE_MODE.md)
-- [Implementation PR](https://github.com/Aphrodine-wq/G-rump.com/pull/12)
+- [Implementation PR](https://github.com/Aphrodine-wq/GRUMPCO/pull/12)
 
 ## Revision History
 
@@ -221,3 +221,4 @@ for (const agent of agents) {
 | 2025-06-01 | Initial draft | Product Team |
 | 2025-06-10 | Added user research | UX Team |
 | 2025-06-15 | Accepted | Architecture Team |
+

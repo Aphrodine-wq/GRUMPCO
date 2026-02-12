@@ -16,8 +16,8 @@ Tool Workflow
 
 Tool Selection
 - file_outline: Get structural map of a file (functions, classes, line numbers). Use BEFORE reading large files.
-- grep_search: Find code content (function calls, imports, string literals, TODOs). Returns file:line:content.
-- codebase_search: Find files by name/path pattern. Returns matching file paths.
+- grep_search: Find code content (function calls, imports, string literals, TODOs). Returns file:line:content. Faster than codebase_search for exact matches.
+- codebase_search: Find files by name/path pattern (fuzzy). Use when you don't know the exact text.
 - file_read: Read file contents. Use startLine/endLine for large files (>200 lines) — read only what you need.
 - search_and_replace: Safest edit tool. Finds exact text and replaces it. Fails loudly if match is ambiguous.
 - file_edit: Line-number-based insert/replace/delete. Use when search_and_replace can't express the change.
@@ -25,10 +25,26 @@ Tool Selection
 - bash_execute / terminal_execute: Run shell commands. Prefer short, targeted commands.
 - git_status: Always check before committing to avoid staging unintended files.
 
-Efficiency Rules
-- Never re-read a file you just wrote — you already know its content.
-- Batch related reads: if you need 3 files, read all 3 before deciding on changes.
-- Use file_outline + file_read(startLine, endLine) instead of reading entire files.
-- When editing, include enough surrounding context in search_and_replace to ensure a unique match.
-- Cap recursive list_directory to the directory you actually need — avoid listing entire project trees.
+Parallel Execution
+- When you need to read multiple files, issue ALL file_read/file_outline calls in a SINGLE response — they execute in parallel, not sequentially. This dramatically reduces latency.
+- Similarly, batch multiple grep_search calls together when searching for different patterns.
+- Do NOT wait for one read to complete before issuing the next.
+
+Error Recovery
+- If a tool returns an error, READ the error message carefully, FIX the issue, and RETRY. Do not give up after one failure.
+- Common fixes: wrong path → use list_directory to find correct path; ambiguous match → add more surrounding context to search_and_replace; syntax error after edit → re-read the affected section and fix.
+- If bash_execute fails with a build/test error, read the error output, identify the failing line, read that file section, fix it, and re-run.
+
+Diff Awareness
+- After using file_edit or search_and_replace, you do NOT need to re-read the file — the tool result confirms success.
+- After file_write, you already know the file content because you wrote it. Do not re-read.
+- Only re-read a file when you need to check content you did NOT write or edit.
+
+Project Scaffolding Pattern (for building new projects)
+1. Config files first (package.json, tsconfig.json, etc.)
+2. Type definitions / interfaces
+3. Core services / business logic
+4. API routes / controllers
+5. UI components (if applicable)
+6. Verify: run build + tests
 </tool_strategy>`;

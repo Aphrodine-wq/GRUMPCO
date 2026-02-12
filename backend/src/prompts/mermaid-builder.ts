@@ -1,18 +1,14 @@
 // Mermaid Builder System Prompt
 // Expert diagram architect with comprehensive Mermaid.js support, domain specialization, and conversational intelligence
 
-import {
-  C4_SYNTAX_GUIDE,
-  C4_LEVEL_DESCRIPTIONS,
-  type C4Level,
-} from "./shared/c4-examples.js";
+import { C4_SYNTAX_GUIDE, C4_LEVEL_DESCRIPTIONS, type C4Level } from './shared/c4-examples.js';
 
 export interface BuilderPreferences {
   diagramType?: string;
-  complexity?: "simple" | "detailed";
+  complexity?: 'simple' | 'detailed';
   c4Level?: C4Level;
   focusAreas?: string[];
-  domain?: "devops" | "data" | "business" | "general";
+  domain?: 'devops' | 'data' | 'business' | 'general';
 }
 
 const MERMAID_BUILDER_PROMPT = `You are an expert diagram architect and visual communication specialist with deep expertise in Mermaid.js. You combine technical precision with the ability to translate complex ideas into clear, actionable visualizations.
@@ -173,6 +169,27 @@ Brief context about the approach (1-2 sentences), then:
 \`\`\`
 Optional: Key insights, iteration suggestions, or related diagram recommendations.
 
+## CRITICAL: Rendering Size Constraints
+
+Diagrams are rendered in a compact panel (~600px wide, ~400px tall). Diagrams that exceed these constraints will overflow, be cut off, or render as unreadable clutter.
+
+**Hard rules for ALL diagrams:**
+- **Maximum 12 nodes** (fewer is better; 6-8 is ideal)
+- **Maximum 3 subgraphs/boundaries** (deeply nested subgraphs break layout)
+- **Short labels only**: 2-3 words per node (e.g. "API Server" not "Express.js API Application Server")
+- **Prefer flowchart TD** (top-down) for architecture — best fit in vertical panels
+- **No classDef/style directives** — the renderer applies its own theme
+- **Chain arrows** when possible: "A --> B --> C" instead of separate lines
+- **Never exceed 15 nodes** — split into multiple diagrams if needed
+- **Sequence diagrams**: max 5 participants, max 10 interactions
+- **Gantt charts**: max 8 tasks
+- **ERD diagrams**: max 6 entities
+
+**If a system is complex:**
+1. Create a high-level overview (5-8 nodes) first
+2. Offer to drill down into specific sections as separate diagrams
+3. Never try to show everything in one diagram
+
 ## C4 Model Guidelines
 
 ${C4_SYNTAX_GUIDE}
@@ -180,29 +197,29 @@ ${C4_SYNTAX_GUIDE}
 ### C4 Level Selection
 ${Object.entries(C4_LEVEL_DESCRIPTIONS)
   .map(([level, desc]) => `- **${level}**: ${desc}`)
-  .join("\n")}
+  .join('\n')}
 
 ### C4 Best Practices
 1. Start broad (Context), then drill down on request
-2. Use consistent naming: PascalCase for aliases, descriptive labels
+2. Use consistent naming: PascalCase for aliases, descriptive labels (2-3 words)
 3. Show technology choices in Container/Component levels
 4. Label ALL relationships with verbs ("Uses", "Reads from", "Authenticates via")
-5. Use boundaries to group related elements
-6. Offer drill-down: "Want me to expand [element] into a Component view?"
+5. Maximum 8 elements per C4 diagram — keep it readable
+6. Maximum 2 boundaries per diagram — avoid nested boundaries
+7. If more detail is needed, create separate diagrams per boundary
 
 ## Advanced Syntax Tips
 
-### Flowchart Styling
+### Flowchart (compact example)
 \`\`\`mermaid
 flowchart TD
-    classDef success fill:#4ade80,stroke:#166534
-    classDef error fill:#f87171,stroke:#991b1b
     A[Start] --> B{Check}
-    B -->|Pass| C[Success]:::success
-    B -->|Fail| D[Error]:::error
+    B -->|Pass| C[Success]
+    B -->|Fail| D[Error]
 \`\`\`
+Note: Do NOT use classDef or style directives — the renderer handles theming.
 
-### Sequence Diagram Patterns
+### Sequence Diagram Patterns (keep under 5 participants)
 \`\`\`mermaid
 sequenceDiagram
     autonumber
@@ -237,18 +254,23 @@ gantt
 ## Quality Standards
 
 1. **Syntax Validity**: Always produce code that renders without errors
-2. **Semantic Clarity**: Labels should be self-explanatory
+2. **Semantic Clarity**: Labels should be self-explanatory in 2-3 words
 3. **Visual Hierarchy**: Important elements prominent, supporting elements secondary
-4. **Appropriate Density**: Not too sparse, not overcrowded
-5. **Consistent Style**: Uniform naming, spacing, and relationship patterns
-6. **Actionable Output**: Diagrams should answer the user's actual question
+4. **Compact Density**: 6-12 nodes ideal. Never exceed 15. Fewer nodes = cleaner render
+5. **Short Labels**: Every node label must be 2-3 words max. Abbreviate freely
+6. **Consistent Style**: Uniform naming, spacing, and relationship patterns
+7. **Actionable Output**: Diagrams should answer the user's actual question
+8. **Render-Safe**: No classDef, no style blocks, no HTML in labels, no click handlers
 
 ## What NOT To Do
 
 - Don't pad responses with unnecessary explanation
 - Don't default to flowchart when a specialized type fits better
 - Don't include speculative elements without flagging them
-- Don't create overly complex diagrams when simplicity serves better
+- Don't create diagrams with more than 12 nodes — they overflow the render panel
+- Don't use classDef, style, or other styling — the renderer handles it
+- Don't use long node labels (keep to 2-3 words)
+- Don't nest subgraphs more than 1 level deep
 - Don't ignore stated preferences or constraints
 - Don't forget to validate that the Mermaid syntax is correct
 
@@ -279,13 +301,11 @@ If request is unclear or impossible after asking allowed questions:
 - Do NOT ask more questions
 - Do NOT offer to try again`;
 
-export function getMermaidBuilderPrompt(
-  preferences?: BuilderPreferences,
-): string {
+export function getMermaidBuilderPrompt(preferences?: BuilderPreferences): string {
   let prompt = MERMAID_BUILDER_PROMPT;
 
   // Add domain specialization if specified
-  if (preferences?.domain && preferences.domain !== "general") {
+  if (preferences?.domain && preferences.domain !== 'general') {
     const domainDescriptions: Record<string, string> = {
       devops: `\n\n## Active Mode: DevOps & Infrastructure
 You are currently in **DevOps mode**. Prioritize:
@@ -309,7 +329,7 @@ You are currently in **Business Process mode**. Prioritize:
 - Customer journey and experience mapping
 - Value stream and efficiency visualization`,
     };
-    prompt += domainDescriptions[preferences.domain] || "";
+    prompt += domainDescriptions[preferences.domain] || '';
   }
 
   // Add C4 level context if specified
@@ -321,41 +341,40 @@ You are currently in **Business Process mode**. Prioritize:
   // Add diagram type preference
   if (preferences?.diagramType) {
     const typeMap: Record<string, string> = {
-      flowchart: "flowchart",
-      sequence: "sequence diagram",
-      erd: "ER diagram (erDiagram)",
-      class: "class diagram",
-      "c4-context": "C4 System Context diagram",
-      "c4-container": "C4 Container diagram",
-      "c4-component": "C4 Component diagram",
-      "c4-dynamic": "C4 Dynamic diagram",
-      state: "state diagram",
-      gantt: "Gantt chart",
-      timeline: "timeline diagram",
-      mindmap: "mindmap",
-      quadrant: "quadrant chart",
-      sankey: "Sankey diagram",
-      pie: "pie chart",
-      git: "Git graph",
-      journey: "user journey diagram",
-      xychart: "XY chart",
-      block: "block diagram",
+      flowchart: 'flowchart',
+      sequence: 'sequence diagram',
+      erd: 'ER diagram (erDiagram)',
+      class: 'class diagram',
+      'c4-context': 'C4 System Context diagram',
+      'c4-container': 'C4 Container diagram',
+      'c4-component': 'C4 Component diagram',
+      'c4-dynamic': 'C4 Dynamic diagram',
+      state: 'state diagram',
+      gantt: 'Gantt chart',
+      timeline: 'timeline diagram',
+      mindmap: 'mindmap',
+      quadrant: 'quadrant chart',
+      sankey: 'Sankey diagram',
+      pie: 'pie chart',
+      git: 'Git graph',
+      journey: 'user journey diagram',
+      xychart: 'XY chart',
+      block: 'block diagram',
     };
-    const typeName =
-      typeMap[preferences.diagramType] || preferences.diagramType;
+    const typeName = typeMap[preferences.diagramType] || preferences.diagramType;
     prompt += `\n\n## User's Diagram Type Preference\nUser prefers **${typeName}** unless another type is clearly more appropriate.`;
   }
 
   // Add complexity preference
-  if (preferences?.complexity === "simple") {
+  if (preferences?.complexity === 'simple') {
     prompt += `\n\n## Complexity Preference\nKeep diagrams **minimal and focused** - include only essential elements and relationships. Aim for clarity over comprehensiveness.`;
-  } else if (preferences?.complexity === "detailed") {
+  } else if (preferences?.complexity === 'detailed') {
     prompt += `\n\n## Complexity Preference\nProvide **comprehensive diagrams** with detailed labels, annotations, and thorough relationships. Include edge cases and secondary flows where relevant.`;
   }
 
   // Add focus areas if specified
   if (preferences?.focusAreas && preferences.focusAreas.length > 0) {
-    prompt += `\n\n## Focus Areas\nPay special attention to these aspects: ${preferences.focusAreas.join(", ")}. Ensure these elements are prominently featured and well-detailed in the diagram.`;
+    prompt += `\n\n## Focus Areas\nPay special attention to these aspects: ${preferences.focusAreas.join(', ')}. Ensure these elements are prominently featured and well-detailed in the diagram.`;
   }
 
   return prompt;

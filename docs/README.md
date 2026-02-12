@@ -152,8 +152,8 @@ All documentation follows these conventions:
 Can't find what you're looking for?
 
 - 📖 Check the [FAQ](./FAQ.md)
-- 🐛 Search [GitHub Issues](https://github.com/Aphrodine-wq/G-rump.com/issues)
-- 💬 Ask in [GitHub Discussions](https://github.com/Aphrodine-wq/G-rump.com/discussions)
+- 🐛 Search [GitHub Issues](https://github.com/Aphrodine-wq/GRUMPCO/issues)
+- 💬 Ask in [GitHub Discussions](https://github.com/Aphrodine-wq/GRUMPCO/discussions)
 
 ---
 
@@ -183,4 +183,5 @@ Historical documentation that has been superseded or merged can be found in [arc
 - **G-Agent** – Use the **Use G-Agent** button (bottom-right of the chat) to turn on agent mode in the current chat without switching tabs. **Leave G-Agent** (same corner when active) returns to normal chat.
 - **Connection status** – A slim status bar at the bottom shows backend connection; layout keeps content flush with minimal gap above it.
 
-**Last Updated:** February 9, 2026
+**Last Updated:** February 11, 2026
+
