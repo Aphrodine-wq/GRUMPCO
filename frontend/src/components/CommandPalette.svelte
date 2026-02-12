@@ -371,6 +371,10 @@
     }
   });
 
+  const activeDescendantId = $derived(
+    filteredCommands.length > 0 ? `command-item-${selectedIndex}` : undefined
+  );
+
   type ListItem =
     | { type: 'header'; category: CommandCategory }
     | { type: 'command'; command: Command; index: number };
@@ -485,6 +489,7 @@
           aria-expanded="true"
           aria-autocomplete="list"
           aria-controls="command-list"
+          aria-activedescendant={activeDescendantId}
         />
       </div>
       <div class="command-palette-list" role="listbox" id="command-list">
@@ -496,12 +501,14 @@
               <div class="command-category-header">{categoryLabels[item.category]}</div>
             {:else}
               <button
+                id="command-item-{item.index}"
                 class="command-item"
                 class:selected={item.index === selectedIndex}
                 onclick={() => executeCommand(item.command)}
                 onmouseenter={() => (selectedIndex = item.index)}
                 role="option"
                 aria-selected={item.index === selectedIndex}
+                tabindex="-1"
               >
                 <span class="command-icon">
                   {#if item.command.icon}
