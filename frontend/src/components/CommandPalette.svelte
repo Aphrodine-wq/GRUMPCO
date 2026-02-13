@@ -468,8 +468,8 @@
   >
     <div
       class="command-palette"
-      role="menu"
-      tabindex="0"
+      role="none"
+      tabindex="-1"
       onclick={(e) => e.stopPropagation()}
       onkeydown={handleKeydown}
     >
@@ -485,6 +485,9 @@
           aria-expanded="true"
           aria-autocomplete="list"
           aria-controls="command-list"
+          aria-activedescendant={filteredCommands.length > 0
+            ? `command-item-${selectedIndex}`
+            : undefined}
         />
       </div>
       <div class="command-palette-list" role="listbox" id="command-list">
@@ -493,15 +496,19 @@
         {:else}
           {#each listItems as item}
             {#if item.type === 'header'}
-              <div class="command-category-header">{categoryLabels[item.category]}</div>
+              <div class="command-category-header" role="presentation">
+                {categoryLabels[item.category]}
+              </div>
             {:else}
               <button
                 class="command-item"
                 class:selected={item.index === selectedIndex}
+                id={`command-item-${item.index}`}
                 onclick={() => executeCommand(item.command)}
                 onmouseenter={() => (selectedIndex = item.index)}
                 role="option"
                 aria-selected={item.index === selectedIndex}
+                tabindex="-1"
               >
                 <span class="command-icon">
                   {#if item.command.icon}
