@@ -472,10 +472,8 @@
   >
     <div
       class="command-palette"
-      role="menu"
-      tabindex="0"
+      role="none"
       onclick={(e) => e.stopPropagation()}
-      onkeydown={handleKeydown}
     >
       <div class="command-palette-header">
         <input
@@ -498,12 +496,15 @@
         {:else}
           {#each listItems as item}
             {#if item.type === 'header'}
-              <div class="command-category-header">{categoryLabels[item.category]}</div>
+              <div class="command-category-header" role="presentation">
+                {categoryLabels[item.category]}
+              </div>
             {:else}
               <button
                 id="command-item-{item.index}"
                 class="command-item"
                 class:selected={item.index === selectedIndex}
+                id="command-item-{item.index}"
                 onclick={() => executeCommand(item.command)}
                 onmouseenter={() => (selectedIndex = item.index)}
                 role="option"
@@ -652,6 +653,7 @@
   .command-item:hover,
   .command-item.selected {
     background: var(--color-bg-subtle);
+    box-shadow: inset 3px 0 0 var(--color-primary);
   }
 
   .command-item .command-icon {
