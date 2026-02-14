@@ -43,7 +43,7 @@
     "jspdf": "^4.0.0",
     "lucide-svelte": "^0.564.0",
     "mermaid": "^10.9.0",
-    "shiki": "^1.1.0",
+    "shiki": "^3.22.0",
     "svelte": "^5.50.0"
   },
   "devDependencies": {
