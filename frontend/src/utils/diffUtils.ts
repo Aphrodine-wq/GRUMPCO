@@ -28,12 +28,13 @@ export interface FileDiff {
 }
 
 // Lazy-loaded diff module
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let diffModule: any = null;
 
 /**
  * Gets or loads the diff module lazily
  */
-async function getDiffModule(): Promise<any> {
+async function getDiffModule() {
   if (!diffModule) {
     diffModule = await import('diff');
   }
@@ -42,7 +43,7 @@ async function getDiffModule(): Promise<any> {
 
 export async function computeLineDiff(before: string, after: string): Promise<DiffLine[]> {
   const Diff = await getDiffModule();
-  
+
   // Use diffArrays on split lines for newline-insensitive line comparison.
   // diffLines includes newlines in tokens, causing line2 vs line2\n to differ.
   const oldLines = before.split(/\r?\n/);

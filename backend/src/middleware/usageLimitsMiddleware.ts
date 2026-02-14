@@ -3,55 +3,42 @@
  * Enforces platform credits, compute minutes, and storage caps.
  */
 
-import type { Request, Response, NextFunction } from "express";
-import type { AuthenticatedRequest } from "./authMiddleware.js";
-import { getTier } from "../config/pricing.js";
-import { licenseService } from "../services/licenseService.js";
+import type { Request, Response, NextFunction } from 'express';
+import type { AuthenticatedRequest } from './authMiddleware.js';
+import { getTier } from '../config/pricing.js';
+import { licenseService } from '../services/security/licenseService.js';
 import {
   getMonthlyComputeMinutes,
   getMonthlyStorageBytes,
   isComputeEndpoint,
   isCreditMeteredEndpoint,
-} from "../services/usageLimitsService.js";
-import { getCreditsUsed, getCreditsLimit } from "../services/creditService.js";
+} from '../services/platform/usageLimitsService.js';
+import { getCreditsUsed, getCreditsLimit } from '../services/platform/creditService.js';
 
-const SKIP_PATH_PREFIXES = [
-  "/health",
-  "/metrics",
-  "/api/health",
-  "/api/billing",
-  "/auth",
-];
+const SKIP_PATH_PREFIXES = ['/health', '/metrics', '/api/health', '/api/billing', '/auth'];
 
 function shouldSkip(path: string): boolean {
   return SKIP_PATH_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
-export async function usageLimitsMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
+export async function usageLimitsMiddleware(req: Request, res: Response, next: NextFunction) {
   if (shouldSkip(req.path)) {
     return next();
   }
 
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id ?? "anonymous";
+    const userId = authReq.user?.id ?? 'anonymous';
 
     const license = await licenseService.getLicenseStatus(userId);
     const tier = getTier(license.tier);
 
     if (isCreditMeteredEndpoint(req.path)) {
-      const [used, limit] = await Promise.all([
-        getCreditsUsed(userId),
-        getCreditsLimit(userId),
-      ]);
+      const [used, limit] = await Promise.all([getCreditsUsed(userId), getCreditsLimit(userId)]);
       if (Number.isFinite(limit) && limit > 0 && used >= limit) {
         res.status(402).json({
-          error: "Credits limit exceeded",
-          type: "credits_limit_exceeded",
+          error: 'Credits limit exceeded',
+          type: 'credits_limit_exceeded',
           creditsUsed: used,
           creditsLimit: limit,
           tier: tier.id,
@@ -73,8 +60,8 @@ export async function usageLimitsMiddleware(
         computeMinutesUsed >= computeMinutesLimit
       ) {
         res.status(402).json({
-          error: "Compute minutes limit exceeded",
-          type: "compute_limit_exceeded",
+          error: 'Compute minutes limit exceeded',
+          type: 'compute_limit_exceeded',
           computeMinutesUsed,
           computeMinutesLimit,
           tier: tier.id,
@@ -89,8 +76,8 @@ export async function usageLimitsMiddleware(
         storageBytesUsed >= storageBytesLimit
       ) {
         res.status(402).json({
-          error: "Storage limit exceeded",
-          type: "storage_limit_exceeded",
+          error: 'Storage limit exceeded',
+          type: 'storage_limit_exceeded',
           storageBytesUsed,
           storageBytesLimit,
           tier: tier.id,

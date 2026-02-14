@@ -21,17 +21,14 @@
 
   // Slide components
   import WelcomeSlide from './slides/WelcomeSlide.svelte';
-  import ShipWorkflowSlide from './slides/ShipWorkflowSlide.svelte';
-  import GAgentSlide from './slides/GAgentSlide.svelte';
   import AuthSlide from './slides/AuthSlide.svelte';
   import ApiProviderSlide from './slides/ApiProviderSlide.svelte';
   import TechStackSlide from './slides/TechStackSlide.svelte';
-  import AppPreferencesSlide from './slides/AppPreferencesSlide.svelte';
   import ReviewSlide from './slides/ReviewSlide.svelte';
   import NextStepsSlide from './slides/NextStepsSlide.svelte';
 
   // Dots indicator
-  import OnboardingDots from '../onboarding/OnboardingDots.svelte';
+  import OnboardingDots from '../OnboardingDots.svelte';
 
   interface Props {
     onComplete: () => void;
@@ -164,10 +161,6 @@
     >
       {#if $currentStep === 'welcome'}
         <WelcomeSlide onNext={nextStep} />
-      {:else if $currentStep === 'ship-workflow'}
-        <ShipWorkflowSlide onNext={nextStep} />
-      {:else if $currentStep === 'g-agent'}
-        <GAgentSlide onNext={nextStep} />
       {:else if $currentStep === 'auth'}
         <AuthSlide onNext={nextStep} />
       {:else if $currentStep === 'api-provider'}
@@ -297,8 +290,6 @@
             />
           </div>
         </div>
-      {:else if $currentStep === 'app-preferences'}
-        <AppPreferencesSlide onNext={nextStep} />
       {:else if $currentStep === 'review'}
         <ReviewSlide onNext={nextStep} onEdit={handleEditFromReview} />
       {:else if $currentStep === 'next-steps'}

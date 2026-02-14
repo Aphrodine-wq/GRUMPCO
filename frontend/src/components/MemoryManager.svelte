@@ -433,7 +433,7 @@
   bind:open={showAddModal}
   onClose={closeAddModal}
   title="Add Memory"
-  description="Store a fact, preference, task, or context for G-Agent to recall."
+  description="Store a fact, preference, task, or context for the agent to recall."
   size="lg"
   closeOnBackdrop={true}
   closeOnEscape={true}

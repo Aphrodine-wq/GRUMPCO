@@ -14,26 +14,19 @@ export interface FileInfo {
 export interface DependencyInfo {
   name: string;
   version: string;
-  type: "production" | "development" | "peer";
+  type: 'production' | 'development' | 'peer';
   isOutdated?: boolean;
   vulnerabilities?: number;
 }
 
 export interface ArchitectureComponent {
   name: string;
-  type:
-    | "frontend"
-    | "backend"
-    | "database"
-    | "service"
-    | "library"
-    | "config"
-    | "test";
+  type: 'frontend' | 'backend' | 'database' | 'service' | 'library' | 'config' | 'test';
   path: string;
   description: string;
   dependencies: string[];
   exports: string[];
-  complexity: "low" | "medium" | "high";
+  complexity: 'low' | 'medium' | 'high';
 }
 
 export interface CodeMetrics {
@@ -49,26 +42,19 @@ export interface CodeMetrics {
 
 export interface ArchitecturePattern {
   pattern:
-    | "monolith"
-    | "microservices"
-    | "modular-monolith"
-    | "layered"
-    | "hexagonal"
-    | "event-driven"
-    | "unknown";
+    | 'monolith'
+    | 'microservices'
+    | 'modular-monolith'
+    | 'layered'
+    | 'hexagonal'
+    | 'event-driven'
+    | 'unknown';
   confidence: number;
   indicators: string[];
 }
 
 export interface TechStackItem {
-  category:
-    | "framework"
-    | "language"
-    | "database"
-    | "testing"
-    | "build"
-    | "deployment"
-    | "other";
+  category: 'framework' | 'language' | 'database' | 'testing' | 'build' | 'deployment' | 'other';
   name: string;
   version?: string;
   configFile?: string;
@@ -76,14 +62,14 @@ export interface TechStackItem {
 
 export interface CodeSmell {
   type:
-    | "large-file"
-    | "deep-nesting"
-    | "long-function"
-    | "duplicate-code"
-    | "god-class"
-    | "magic-number"
-    | "unused-import";
-  severity: "info" | "warning" | "error";
+    | 'large-file'
+    | 'deep-nesting'
+    | 'long-function'
+    | 'duplicate-code'
+    | 'god-class'
+    | 'magic-number'
+    | 'unused-import';
+  severity: 'info' | 'warning' | 'error';
   file: string;
   line?: number;
   description: string;
@@ -136,18 +122,13 @@ export interface AnalysisRequest {
     includeTests?: boolean;
     maxDepth?: number;
     excludePatterns?: string[];
-    analysisDepth?: "quick" | "standard" | "deep";
+    analysisDepth?: 'quick' | 'standard' | 'deep';
   };
 }
 
 export interface ArchitectureDiagramRequest {
   workspacePath: string;
-  diagramType?:
-    | "c4-context"
-    | "c4-container"
-    | "component"
-    | "dependency"
-    | "flow";
+  diagramType?: 'c4-context' | 'c4-container' | 'component' | 'dependency' | 'flow';
   focusOn?: string;
 }
 
@@ -159,5 +140,5 @@ export interface DependencyGraphRequest {
 
 export interface MetricsRequest {
   workspacePath: string;
-  groupBy?: "language" | "directory" | "component";
+  groupBy?: 'language' | 'directory' | 'component';
 }

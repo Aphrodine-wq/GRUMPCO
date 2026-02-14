@@ -7,8 +7,6 @@
 # OTEL_METRICS_EXPORTER=otlp, OTEL_TRACES_EXPORTER=otlp
 # See docs/NVIDIA_OBSERVABILITY.md for full setup.
 
-version: '3.8'
-
 services:
   prometheus:
     image: prom/prometheus:v2.47.0
@@ -53,6 +51,7 @@ services:
 volumes:
   prometheus-data:
   grafana-data:
+
 
 networks:
   grump-network:

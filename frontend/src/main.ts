@@ -59,13 +59,6 @@ if (path === '/auth/google/start' || route === 'auth-google-start') {
   app = mount(AuthDone, { target });
 } else {
   app = mount(App, { target });
-
-  // Signal Electron to show main window as soon as root app is mounted (don't rely on App.svelte onMount or 100ms delay)
-  const grump = (window as unknown as { grump?: { closeSplashShowMain?: () => Promise<unknown> } })
-    .grump;
-  if (grump?.closeSplashShowMain) {
-    grump.closeSplashShowMain().catch(() => { });
-  }
 }
 
 export default app;

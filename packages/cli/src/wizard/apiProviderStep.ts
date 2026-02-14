@@ -58,13 +58,6 @@ const AI_PROVIDERS: ProviderOption[] = [
     keyPlaceholder: 'sk-...'
   },
   {
-    name: '⚡ Groq',
-    value: 'groq',
-    description: 'Ultra-fast inference',
-    requiresKey: true,
-    keyPlaceholder: 'gsk_...'
-  },
-  {
     name: '🦙 Ollama (Local)',
     value: 'ollama',
     description: 'Run models locally - no API key needed',
@@ -82,8 +75,7 @@ async function testProviderKey(provider: string, apiKey: string): Promise<boolea
     'nvidia-nim': 'https://integrate.api.nvidia.com/v1/models',
     'openrouter': 'https://openrouter.ai/api/v1/models',
     'anthropic': 'https://api.anthropic.com/v1/messages',
-    'openai': 'https://api.openai.com/v1/models',
-    'groq': 'https://api.groq.com/openai/v1/models'
+    'openai': 'https://api.openai.com/v1/models'
   };
 
   const endpoint = testEndpoints[provider];
@@ -119,7 +111,7 @@ async function testProviderKey(provider: string, apiKey: string): Promise<boolea
  */
 export async function runApiProviderStep(): Promise<ApiProviderResult> {
   console.log(chalk.white('  Choose your primary AI provider:\n'));
-  
+
   const { provider } = await askUser<{ provider: string }>([{
     type: 'list',
     name: 'provider',

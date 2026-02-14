@@ -5,9 +5,9 @@
  * and provide insights for development.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { getStream, type StreamParams } from "../../services/llmGateway.js";
+import * as fs from 'fs';
+import * as path from 'path';
+import { getStream, type StreamParams } from '../../services/ai-providers/llmGateway.js';
 import {
   type CodebaseAnalysisResult,
   type AnalysisRequest,
@@ -21,31 +21,28 @@ import {
   type DependencyInfo,
   type ArchitectureComponent,
   type ArchitecturePattern,
-} from "./types.js";
+} from './types.js';
 import {
   CODEBASE_ANALYSIS_SYSTEM_PROMPT,
   generateAnalysisPrompt,
   generateArchitectureDiagramPrompt,
   generateDependencyAnalysisPrompt,
   generateCodeSmellsPrompt,
-} from "./prompts.js";
+} from './prompts.js';
 
-const DEFAULT_MODEL = "moonshotai/kimi-k2.5";
+const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
 
 /**
  * Helper to call LLM via gateway and get complete response text
  */
 async function callLLM(params: StreamParams): Promise<string> {
   const stream = getStream(params, {
-    provider: "nim",
+    provider: 'nim',
     modelId: params.model || DEFAULT_MODEL,
   });
-  let responseText = "";
+  let responseText = '';
   for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
       responseText += event.delta.text;
     }
   }
@@ -54,60 +51,55 @@ async function callLLM(params: StreamParams): Promise<string> {
 
 // File extensions to language mapping
 const LANGUAGE_MAP: Record<string, string> = {
-  ".ts": "TypeScript",
-  ".tsx": "TypeScript (React)",
-  ".js": "JavaScript",
-  ".jsx": "JavaScript (React)",
-  ".py": "Python",
-  ".go": "Go",
-  ".rs": "Rust",
-  ".java": "Java",
-  ".kt": "Kotlin",
-  ".swift": "Swift",
-  ".rb": "Ruby",
-  ".php": "PHP",
-  ".cs": "C#",
-  ".cpp": "C++",
-  ".c": "C",
-  ".vue": "Vue",
-  ".svelte": "Svelte",
-  ".html": "HTML",
-  ".css": "CSS",
-  ".scss": "SCSS",
-  ".json": "JSON",
-  ".yaml": "YAML",
-  ".yml": "YAML",
-  ".md": "Markdown",
-  ".sql": "SQL",
-  ".sh": "Shell",
-  ".bat": "Batch",
+  '.ts': 'TypeScript',
+  '.tsx': 'TypeScript (React)',
+  '.js': 'JavaScript',
+  '.jsx': 'JavaScript (React)',
+  '.py': 'Python',
+  '.go': 'Go',
+  '.rs': 'Rust',
+  '.java': 'Java',
+  '.kt': 'Kotlin',
+  '.swift': 'Swift',
+  '.rb': 'Ruby',
+  '.php': 'PHP',
+  '.cs': 'C#',
+  '.cpp': 'C++',
+  '.c': 'C',
+  '.vue': 'Vue',
+  '.svelte': 'Svelte',
+  '.html': 'HTML',
+  '.css': 'CSS',
+  '.scss': 'SCSS',
+  '.json': 'JSON',
+  '.yaml': 'YAML',
+  '.yml': 'YAML',
+  '.md': 'Markdown',
+  '.sql': 'SQL',
+  '.sh': 'Shell',
+  '.bat': 'Batch',
 };
 
 // Directories to ignore
 const IGNORE_DIRS = new Set([
-  "node_modules",
-  ".git",
-  "dist",
-  "build",
-  "coverage",
-  ".next",
-  ".nuxt",
-  "__pycache__",
-  "venv",
-  ".venv",
-  "target",
-  "vendor",
-  ".idea",
-  ".vscode",
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  'coverage',
+  '.next',
+  '.nuxt',
+  '__pycache__',
+  'venv',
+  '.venv',
+  'target',
+  'vendor',
+  '.idea',
+  '.vscode',
 ]);
 
 // Files to ignore
-const IGNORE_FILES = new Set([
-  ".DS_Store",
-  "Thumbs.db",
-  ".gitignore",
-  ".npmignore",
-]);
+const IGNORE_FILES = new Set(['.DS_Store', 'Thumbs.db', '.gitignore', '.npmignore']);
 
 /**
  * Recursively scan directory for files
@@ -116,7 +108,7 @@ function scanDirectory(
   dirPath: string,
   maxDepth: number = 10,
   currentDepth: number = 0,
-  excludePatterns: string[] = [],
+  excludePatterns: string[] = []
 ): FileInfo[] {
   const files: FileInfo[] = [];
 
@@ -141,22 +133,15 @@ function scanDirectory(
       }
 
       if (entry.isDirectory()) {
-        files.push(
-          ...scanDirectory(
-            fullPath,
-            maxDepth,
-            currentDepth + 1,
-            excludePatterns,
-          ),
-        );
+        files.push(...scanDirectory(fullPath, maxDepth, currentDepth + 1, excludePatterns));
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase();
-        const language = LANGUAGE_MAP[ext] || "Other";
+        const language = LANGUAGE_MAP[ext] || 'Other';
 
         try {
           const stats = fs.statSync(fullPath);
-          const content = fs.readFileSync(fullPath, "utf-8");
-          const lines = content.split("\n").length;
+          const content = fs.readFileSync(fullPath, 'utf-8');
+          const lines = content.split('\n').length;
 
           files.push({
             path: fullPath,
@@ -209,8 +194,7 @@ function calculateMetrics(files: FileInfo[]): CodeMetrics {
     blankLines: 0,
     languages,
     largestFiles,
-    averageFileSize:
-      files.length > 0 ? Math.round(totalLines / files.length) : 0,
+    averageFileSize: files.length > 0 ? Math.round(totalLines / files.length) : 0,
   };
 }
 
@@ -218,12 +202,12 @@ function calculateMetrics(files: FileInfo[]): CodeMetrics {
  * Read package.json if it exists
  */
 function readPackageJson(
-  workspacePath: string,
+  workspacePath: string
 ): { content: string; parsed: Record<string, unknown> } | null {
-  const pkgPath = path.join(workspacePath, "package.json");
+  const pkgPath = path.join(workspacePath, 'package.json');
   if (fs.existsSync(pkgPath)) {
     try {
-      const content = fs.readFileSync(pkgPath, "utf-8");
+      const content = fs.readFileSync(pkgPath, 'utf-8');
       return { content, parsed: JSON.parse(content) };
     } catch (_err) {
       return null;
@@ -237,29 +221,29 @@ function readPackageJson(
  */
 function findConfigFiles(workspacePath: string): string[] {
   const configPatterns = [
-    "tsconfig.json",
-    "package.json",
-    "vite.config.ts",
-    "vite.config.js",
-    "webpack.config.js",
-    "next.config.js",
-    "nuxt.config.ts",
-    "svelte.config.js",
-    "tailwind.config.js",
-    "postcss.config.js",
-    ".eslintrc",
-    ".eslintrc.js",
-    ".prettierrc",
-    "Dockerfile",
-    "docker-compose.yml",
-    "docker-compose.yaml",
-    ".github/workflows",
-    "Makefile",
-    "Cargo.toml",
-    "go.mod",
-    "requirements.txt",
-    "pyproject.toml",
-    "setup.py",
+    'tsconfig.json',
+    'package.json',
+    'vite.config.ts',
+    'vite.config.js',
+    'webpack.config.js',
+    'next.config.js',
+    'nuxt.config.ts',
+    'svelte.config.js',
+    'tailwind.config.js',
+    'postcss.config.js',
+    '.eslintrc',
+    '.eslintrc.js',
+    '.prettierrc',
+    'Dockerfile',
+    'docker-compose.yml',
+    'docker-compose.yaml',
+    '.github/workflows',
+    'Makefile',
+    'Cargo.toml',
+    'go.mod',
+    'requirements.txt',
+    'pyproject.toml',
+    'setup.py',
   ];
 
   const found: string[] = [];
@@ -287,7 +271,7 @@ function extractDependencies(pkg: Record<string, unknown>): {
       production.push({
         name,
         version: String(version),
-        type: "production",
+        type: 'production',
       });
     }
   }
@@ -297,7 +281,7 @@ function extractDependencies(pkg: Record<string, unknown>): {
       development.push({
         name,
         version: String(version),
-        type: "development",
+        type: 'development',
       });
     }
   }
@@ -308,9 +292,7 @@ function extractDependencies(pkg: Record<string, unknown>): {
 /**
  * Main analysis function
  */
-export async function analyzeCodebase(
-  request: AnalysisRequest,
-): Promise<CodebaseAnalysisResult> {
+export async function analyzeCodebase(request: AnalysisRequest): Promise<CodebaseAnalysisResult> {
   const { workspacePath, options = {} } = request;
   const { maxDepth = 10, excludePatterns = [] } = options;
 
@@ -327,31 +309,22 @@ export async function analyzeCodebase(
   const configFiles = findConfigFiles(workspacePath);
 
   // Extract dependencies
-  const deps = pkg
-    ? extractDependencies(pkg.parsed)
-    : { production: [], development: [] };
+  const deps = pkg ? extractDependencies(pkg.parsed) : { production: [], development: [] };
 
   // Generate file list for LLM analysis
   const fileList = files
-    .map(
-      (f) =>
-        `${f.path.replace(workspacePath, "")} (${f.language}, ${f.lines} lines)`,
-    )
+    .map((f) => `${f.path.replace(workspacePath, '')} (${f.language}, ${f.lines} lines)`)
     .slice(0, 200) // Limit for context window
-    .join("\n");
+    .join('\n');
 
   // Call LLM for analysis
-  const analysisPrompt = generateAnalysisPrompt(
-    fileList,
-    pkg?.content || null,
-    configFiles,
-  );
+  const analysisPrompt = generateAnalysisPrompt(fileList, pkg?.content || null, configFiles);
 
   const responseText = await callLLM({
     model: DEFAULT_MODEL,
     max_tokens: 4096,
     system: CODEBASE_ANALYSIS_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: analysisPrompt }],
+    messages: [{ role: 'user', content: analysisPrompt }],
   });
 
   let analysisData: Record<string, unknown> = {};
@@ -364,8 +337,7 @@ export async function analyzeCodebase(
     // Use defaults if parsing fails
   }
 
-  const techStack =
-    (analysisData.techStack as TechStackItem[] | undefined) ?? [];
+  const techStack = (analysisData.techStack as TechStackItem[] | undefined) ?? [];
   const archRaw = analysisData.architecture as
     | { pattern?: string; confidence?: number; indicators?: string[] }
     | undefined;
@@ -379,51 +351,36 @@ export async function analyzeCodebase(
         }>
       | undefined) ?? [];
   const entryPoints = (analysisData.entryPoints as string[] | undefined) ?? [];
-  const recommendations =
-    (analysisData.recommendations as string[] | undefined) ?? [];
+  const recommendations = (analysisData.recommendations as string[] | undefined) ?? [];
 
   const projectName =
-    pkg?.parsed && typeof pkg.parsed === "object" && "name" in pkg.parsed
-      ? String(
-          (pkg.parsed as { name?: unknown }).name ||
-            path.basename(workspacePath),
-        )
+    pkg?.parsed && typeof pkg.parsed === 'object' && 'name' in pkg.parsed
+      ? String((pkg.parsed as { name?: unknown }).name || path.basename(workspacePath))
       : path.basename(workspacePath);
   const result: CodebaseAnalysisResult = {
     projectName,
     projectPath: workspacePath,
     analyzedAt: new Date().toISOString(),
-    summary:
-      typeof analysisData.summary === "string"
-        ? analysisData.summary
-        : "Analysis complete",
+    summary: typeof analysisData.summary === 'string' ? analysisData.summary : 'Analysis complete',
     projectType:
-      typeof analysisData.projectType === "string"
-        ? analysisData.projectType
-        : "Unknown",
+      typeof analysisData.projectType === 'string' ? analysisData.projectType : 'Unknown',
     techStack,
-    frameworks: techStack
-      .filter((t) => t.category === "framework")
-      .map((t) => t.name),
+    frameworks: techStack.filter((t) => t.category === 'framework').map((t) => t.name),
     languages: Object.keys(metrics.languages),
     architecture: {
       pattern: {
-        pattern:
-          (archRaw?.pattern as ArchitecturePattern["pattern"]) ?? "unknown",
-        confidence:
-          typeof archRaw?.confidence === "number" ? archRaw.confidence : 0,
-        indicators: Array.isArray(archRaw?.indicators)
-          ? archRaw.indicators
-          : [],
+        pattern: (archRaw?.pattern as ArchitecturePattern['pattern']) ?? 'unknown',
+        confidence: typeof archRaw?.confidence === 'number' ? archRaw.confidence : 0,
+        indicators: Array.isArray(archRaw?.indicators) ? archRaw.indicators : [],
       },
       components: componentsRaw.map((c) => ({
-        name: c.name ?? "",
-        type: (c.type as ArchitectureComponent["type"]) ?? "library",
-        path: c.path ?? "",
-        description: c.description ?? "",
+        name: c.name ?? '',
+        type: (c.type as ArchitectureComponent['type']) ?? 'library',
+        path: c.path ?? '',
+        description: c.description ?? '',
         dependencies: [],
         exports: [],
-        complexity: "medium" as const,
+        complexity: 'medium' as const,
       })),
       entryPoints,
       layers: [],
@@ -448,37 +405,37 @@ export async function analyzeCodebase(
  * (frontend, API) can display context alongside the diagram.
  */
 export async function generateArchitectureDiagram(
-  request: ArchitectureDiagramRequest,
+  request: ArchitectureDiagramRequest
 ): Promise<{ mermaidDiagram: string; summary: string; diagramType: string }> {
-  const { workspacePath, diagramType = "component" } = request;
+  const { workspacePath, diagramType = 'component' } = request;
 
   // First, get a quick analysis so we have a summary + components
   const analysis = await analyzeCodebase({
     workspacePath,
-    options: { analysisDepth: "quick" },
+    options: { analysisDepth: 'quick' },
   });
 
   // Generate diagram prompt
   const componentsStr = analysis.architecture.components
     .map((c) => `- ${c.name} (${c.type}): ${c.description}`)
-    .join("\n");
+    .join('\n');
 
   const diagramPrompt = generateArchitectureDiagramPrompt(
     analysis.summary,
     diagramType,
-    componentsStr,
+    componentsStr
   );
 
   const responseText = await callLLM({
     model: DEFAULT_MODEL,
     max_tokens: 2048,
     system: CODEBASE_ANALYSIS_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: diagramPrompt }],
+    messages: [{ role: 'user', content: diagramPrompt }],
   });
 
   // Extract Mermaid diagram (fallback to empty string if not found)
   const mermaidMatch = responseText.match(/```mermaid\n?([\s\S]*?)\n?```/);
-  const mermaidDiagram = mermaidMatch ? mermaidMatch[1].trim() : "";
+  const mermaidDiagram = mermaidMatch ? mermaidMatch[1].trim() : '';
 
   return {
     mermaidDiagram,
@@ -490,9 +447,7 @@ export async function generateArchitectureDiagram(
 /**
  * Analyze dependencies
  */
-export async function analyzeDependencies(
-  request: DependencyGraphRequest,
-): Promise<{
+export async function analyzeDependencies(request: DependencyGraphRequest): Promise<{
   error?: string;
   dependencies?: DependencyInfo[];
   raw?: string;
@@ -502,24 +457,20 @@ export async function analyzeDependencies(
 
   const pkg = readPackageJson(workspacePath);
   if (!pkg) {
-    return { error: "No package.json found" };
+    return { error: 'No package.json found' };
   }
 
   const deps = extractDependencies(pkg.parsed);
-  const allDeps = includeDevDeps
-    ? [...deps.production, ...deps.development]
-    : deps.production;
+  const allDeps = includeDevDeps ? [...deps.production, ...deps.development] : deps.production;
 
-  const depsStr = allDeps
-    .map((d) => `${d.name}@${d.version} (${d.type})`)
-    .join("\n");
+  const depsStr = allDeps.map((d) => `${d.name}@${d.version} (${d.type})`).join('\n');
 
   // Read lock file if exists
   let lockfile: string | null = null;
-  const lockPath = path.join(workspacePath, "package-lock.json");
+  const lockPath = path.join(workspacePath, 'package-lock.json');
   if (fs.existsSync(lockPath)) {
     try {
-      lockfile = fs.readFileSync(lockPath, "utf-8");
+      lockfile = fs.readFileSync(lockPath, 'utf-8');
     } catch (_err) {
       // Ignore
     }
@@ -531,7 +482,7 @@ export async function analyzeDependencies(
     model: DEFAULT_MODEL,
     max_tokens: 2048,
     system: CODEBASE_ANALYSIS_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: analysisPrompt }],
+    messages: [{ role: 'user', content: analysisPrompt }],
   });
 
   try {
@@ -552,9 +503,7 @@ export async function analyzeDependencies(
 /**
  * Get code metrics
  */
-export async function getCodeMetrics(
-  request: MetricsRequest,
-): Promise<CodeMetrics> {
+export async function getCodeMetrics(request: MetricsRequest): Promise<CodeMetrics> {
   const { workspacePath } = request;
   const files = scanDirectory(workspacePath);
   return calculateMetrics(files);
@@ -563,9 +512,7 @@ export async function getCodeMetrics(
 /**
  * Detect code smells
  */
-export async function detectCodeSmells(
-  workspacePath: string,
-): Promise<CodeSmell[]> {
+export async function detectCodeSmells(workspacePath: string): Promise<CodeSmell[]> {
   const files = scanDirectory(workspacePath);
   const smells: CodeSmell[] = [];
 
@@ -573,32 +520,32 @@ export async function detectCodeSmells(
   for (const file of files) {
     if (file.lines > 500) {
       smells.push({
-        type: "large-file",
-        severity: file.lines > 1000 ? "error" : "warning",
+        type: 'large-file',
+        severity: file.lines > 1000 ? 'error' : 'warning',
         file: file.path,
         description: `File has ${file.lines} lines, which is quite large`,
-        suggestion: "Consider splitting into smaller modules",
+        suggestion: 'Consider splitting into smaller modules',
       });
     }
   }
 
   // Sample some files for deeper analysis with LLM
   const sampleFiles = files
-    .filter((f) => [".ts", ".js", ".py", ".go"].includes(f.extension))
+    .filter((f) => ['.ts', '.js', '.py', '.go'].includes(f.extension))
     .slice(0, 5);
 
   if (sampleFiles.length > 0) {
     const snippets = sampleFiles
       .map((f) => {
         try {
-          const content = fs.readFileSync(f.path, "utf-8");
+          const content = fs.readFileSync(f.path, 'utf-8');
           return `## ${f.path}\n\`\`\`${f.language.toLowerCase()}\n${content.substring(0, 2000)}\n\`\`\``;
         } catch (_err) {
-          return "";
+          return '';
         }
       })
       .filter(Boolean)
-      .join("\n\n");
+      .join('\n\n');
 
     if (snippets) {
       const prompt = generateCodeSmellsPrompt(snippets);
@@ -607,7 +554,7 @@ export async function detectCodeSmells(
         model: DEFAULT_MODEL,
         max_tokens: 2048,
         system: CODEBASE_ANALYSIS_SYSTEM_PROMPT,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: 'user', content: prompt }],
       });
 
       try {

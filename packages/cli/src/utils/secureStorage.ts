@@ -167,7 +167,7 @@ class SecureConfigManager {
 
   async getApiKey(provider: string): Promise<string | null> {
     const account = `api-key-${provider}`;
-    
+
     // Try keychain first
     const keychainValue = await this.keychain.getPassword(SERVICE_NAME, account);
     if (keychainValue) {
@@ -203,10 +203,10 @@ class SecureConfigManager {
 
   async deleteApiKey(provider: string): Promise<boolean> {
     const account = `api-key-${provider}`;
-    
+
     // Try keychain
     const keychainDeleted = await this.keychain.deletePassword(SERVICE_NAME, account);
-    
+
     // Remove from fallback store if exists
     if (this.fallbackStore.has(provider)) {
       this.fallbackStore.delete(provider);
@@ -221,7 +221,6 @@ class SecureConfigManager {
       'nvidia_nim',
       'openai',
       'anthropic',
-      'groq',
       'openrouter',
       'ollama',
       'kimi'

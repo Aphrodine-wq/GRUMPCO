@@ -1,16 +1,17 @@
 /**
- * Model Router – NVIDIA NIM Exclusive
+ * Model Router – Multi-Provider Aware
  * 
- * Intelligent routing for NVIDIA NIM models based on task requirements.
- * Powered by NVIDIA AI infrastructure for optimized inference.
+ * Intelligent routing for AI models based on task requirements.
+ * Primary routing uses NVIDIA NIM models with tool/function calling support.
+ * G-CompN1 meta-routing (in llmGateway.ts) handles cross-provider routing.
  * 
- * Routing Strategy:
+ * Routing Strategy (NIM-hosted models support tool/function calling):
  * - Complex/Flagship: Llama 3.1 405B
  * - Balanced: Llama 3.1 70B (default)
  * - Code Generation: Codestral or Llama 405B
  * - Reasoning: Nemotron Ultra 253B
  * - Multilingual: Mistral Large 2
- * - Cost-Optimized: Mixtral 8x22B
+ * - Cost-Optimized: Nemotron Super 49B
  */
 
 import { getModelById, type ModelCapability } from './modelRegistry.js';
@@ -67,12 +68,12 @@ const LLAMA_405B = 'meta/llama-3.1-405b-instruct';
 const LLAMA_70B = 'meta/llama-3.1-70b-instruct';
 const LLAMA_33_70B = 'meta/llama-3.3-70b-instruct';
 const MISTRAL_LARGE = 'mistralai/mistral-large-2-instruct';
-const MIXTRAL_8X22B = 'mistralai/mixtral-8x22b-instruct-v0.1';
+// MIXTRAL_8X22B removed — does not support tool calling on NIM
 const NEMOTRON_ULTRA = 'nvidia/llama-3.1-nemotron-ultra-253b-v1';
 const NEMOTRON_70B = 'nvidia/llama-3.1-nemotron-70b-instruct';
 const NEMOTRON_SUPER = 'nvidia/llama-3.3-nemotron-super-49b-v1.5';
 const NEMOTRON_3_NANO = 'nvidia/nemotron-3-nano-30b-a3b';
-const NEMOTRON_VISION = 'nvidia/nemotron-nano-12b-v2-vl';
+// NEMOTRON_VISION removed — vision-only model, no tool calling support on NIM
 const CODESTRAL = 'mistralai/codestral-22b-instruct-v0.1';
 
 // Default model for general use (Nemotron Super for demos and agentic use)
@@ -99,28 +100,59 @@ function isMockModeEnabled(): boolean {
 function calculateComplexity(context: RouterContext): number {
   let score = 0;
   const chars = context.messageChars || 0;
-  
+
   // Message length scoring
   if (chars < 500) score += 10;
   else if (chars < 2000) score += 30;
   else if (chars < 5000) score += 50;
   else if (chars < 20000) score += 70;
   else score += 90;
-  
+
   // Conversation depth
   if (context.messageCount && context.messageCount > 10) score += 15;
   if (context.messageCount && context.messageCount > 30) score += 10;
-  
+
   // Mode complexity
   if (context.mode === 'ship' || context.mode === 'codegen') score += 25;
   if (context.mode === 'architecture' || context.mode === 'spec') score += 20;
   if (context.mode === 'plan') score += 15;
-  
+
   // Feature complexity
   if (context.toolsRequested) score += 15;
   if (context.multimodal) score += 10;
-  
+
   return Math.min(100, score);
+}
+
+// =============================================================================
+// Long Context Routing Helper
+// =============================================================================
+
+function routeForLongContext(messageChars: number, requiredContext?: number): RouterResult | null {
+  const useNemotron3Rag = process.env.USE_NEMOTRON_3_FOR_RAG !== 'false';
+  if (!useNemotron3Rag) return null;
+
+  // Check for very long context (100K+)
+  if (messageChars > 100_000) {
+    const model = getModelById(NEMOTRON_3_NANO);
+    return {
+      provider: 'nim',
+      modelId: NEMOTRON_3_NANO,
+      estimatedCost: estimateCost(model, messageChars),
+      reasoning: 'Very long context - Nemotron 3 Nano 30B A3B (1M)',
+    };
+  }
+
+  // Check for required context preference
+  if (requiredContext && requiredContext > 100_000) {
+    return {
+      provider: 'nim',
+      modelId: NEMOTRON_3_NANO,
+      reasoning: 'Long context (1M) - Nemotron 3 Nano 30B A3B',
+    };
+  }
+
+  return null;
 }
 
 // =============================================================================
@@ -140,7 +172,7 @@ function estimateCost(
 }
 
 // =============================================================================
-// Task Type Routing (NVIDIA NIM Exclusive)
+// Task Type Routing (Primary: NVIDIA NIM, cross-provider via G-CompN1)
 // =============================================================================
 
 const TASK_TYPE_MODELS: Record<TaskType, { primary: string; fallback: string }> = {
@@ -149,7 +181,7 @@ const TASK_TYPE_MODELS: Record<TaskType, { primary: string; fallback: string }> 
   embedding: { primary: LLAMA_70B, fallback: LLAMA_70B },
   codegen: { primary: LLAMA_405B, fallback: CODESTRAL },
   reasoning: { primary: NEMOTRON_ULTRA, fallback: LLAMA_405B },
-  vision: { primary: NEMOTRON_VISION, fallback: LLAMA_70B },
+  vision: { primary: LLAMA_70B, fallback: LLAMA_33_70B },
   agent: { primary: NEMOTRON_SUPER, fallback: NEMOTRON_70B },
   safety: { primary: NEMOTRON_ULTRA, fallback: LLAMA_70B },
 };
@@ -225,26 +257,9 @@ export function route(context: RouterContext): RouterResult {
   const preferLowLatency = typeof maxLatencyMs === 'number' && maxLatencyMs > 0 && maxLatencyMs < 5000;
 
   // Very long context (100K+): Nemotron 3 Nano 1M when USE_NEMOTRON_3_FOR_RAG !== 'false'
-  const useNemotron3Rag = process.env.USE_NEMOTRON_3_FOR_RAG !== 'false';
-  if (messageChars > 100_000 && useNemotron3Rag) {
-    const model = getModelById(NEMOTRON_3_NANO);
-    return {
-      provider: 'nim',
-      modelId: NEMOTRON_3_NANO,
-      estimatedCost: estimateCost(model, messageChars),
-      reasoning: 'Very long context - Nemotron 3 Nano 30B A3B (1M)',
-    };
-  }
-  if (
-    useNemotron3Rag &&
-    context.preferCapability === 'long-context' &&
-    (context.requiredContext ?? 0) > 100_000
-  ) {
-    return {
-      provider: 'nim',
-      modelId: NEMOTRON_3_NANO,
-      reasoning: 'Long context (1M) - Nemotron 3 Nano 30B A3B',
-    };
+  const longContextRoute = routeForLongContext(messageChars, context.requiredContext);
+  if (longContextRoute) {
+    return longContextRoute;
   }
 
   // Not configured - return default with warning
@@ -258,14 +273,14 @@ export function route(context: RouterContext): RouterResult {
 
   // Cost optimization routing
   if (costOptimization) {
-    // Simple tasks: use cost-effective model
+    // Simple tasks: use cost-effective model with tool support
     if (complexity < 25) {
-      const model = getModelById(MIXTRAL_8X22B);
+      const model = getModelById(NEMOTRON_SUPER);
       return {
         provider: 'nim',
-        modelId: MIXTRAL_8X22B,
+        modelId: NEMOTRON_SUPER,
         estimatedCost: estimateCost(model, messageChars),
-        reasoning: 'Simple task - Mixtral 8x22B (cost-effective)',
+        reasoning: 'Simple task - Nemotron Super 49B (cost-effective with tool support)',
       };
     }
 
@@ -309,24 +324,9 @@ export function route(context: RouterContext): RouterResult {
   }
 
   // Very long context (100K+): Nemotron 3 Nano 1M when USE_NEMOTRON_3_FOR_RAG !== 'false'
-  const useNemotron3RagCost = process.env.USE_NEMOTRON_3_FOR_RAG !== 'false';
-  if (
-    useNemotron3RagCost &&
-    context.preferCapability === 'long-context' &&
-    (context.requiredContext ?? 0) > 100_000
-  ) {
-    return {
-      provider: 'nim',
-      modelId: NEMOTRON_3_NANO,
-      reasoning: 'Long context (1M) - Nemotron 3 Nano 30B A3B',
-    };
-  }
-  if (messageChars > 100_000 && useNemotron3RagCost) {
-    return {
-      provider: 'nim',
-      modelId: NEMOTRON_3_NANO,
-      reasoning: 'Very long context - Nemotron 3 Nano 30B A3B (1M)',
-    };
+  const longContextRouteCost = routeForLongContext(messageChars, context.requiredContext);
+  if (longContextRouteCost) {
+    return longContextRouteCost;
   }
   if (context.preferCapability === 'long-context' || messageChars > 50_000) {
     return { provider: 'nim', modelId: LLAMA_405B, reasoning: 'Long context - Llama 3.1 405B' };
@@ -416,8 +416,8 @@ export function getReasoningModel(requiresTools: boolean): RouterResult {
 export function getVisionModel(): RouterResult {
   return {
     provider: 'nim',
-    modelId: NEMOTRON_VISION,
-    reasoning: 'Vision - Nemotron Nano 12B v2 VL (diagram/document)',
+    modelId: LLAMA_70B,
+    reasoning: 'Vision - Llama 3.1 70B (tool-call compatible)',
   };
 }
 
@@ -426,7 +426,7 @@ export function getMultilingualModel(): RouterResult {
 }
 
 export function getCostOptimizedModel(): RouterResult {
-  return { provider: 'nim', modelId: MIXTRAL_8X22B, reasoning: 'Cost-optimized - Mixtral 8x22B' };
+  return { provider: 'nim', modelId: NEMOTRON_SUPER, reasoning: 'Cost-optimized - Nemotron Super 49B' };
 }
 
 // =============================================================================

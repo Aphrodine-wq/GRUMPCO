@@ -147,9 +147,7 @@
   });
 
   const useCostDisplay = $derived.by(
-    () =>
-      typeof billingMe?.costUsedUsd === 'number' ||
-      typeof billingMe?.costLimitUsd === 'number',
+    () => typeof billingMe?.costUsedUsd === 'number' || typeof billingMe?.costLimitUsd === 'number'
   );
   const displayUsed = $derived.by(() => {
     if (useCostDisplay && typeof billingMe?.costUsedUsd === 'number') {
@@ -277,10 +275,11 @@
                 <span class="usage-current">{displayUsed}</span>
                 <span class="usage-sep">/</span>
                 <span class="usage-total">{displayLimit}</span>
-                <span class="usage-label">{useCostDisplay ? 'Usage this month' : 'credits used'}</span>
+                <span class="usage-label"
+                  >{useCostDisplay ? 'Usage this month' : 'credits used'}</span
+                >
               </div>
-              {#if (typeof billingMe?.costLimitUsd === 'number' && billingMe.costLimitUsd > 0) ||
-                  (typeof billingMe?.limit === 'number' && (billingMe?.limit ?? 0) > 0)}
+              {#if (typeof billingMe?.costLimitUsd === 'number' && billingMe.costLimitUsd > 0) || (typeof billingMe?.limit === 'number' && (billingMe?.limit ?? 0) > 0)}
                 <div class="usage-bar-container">
                   <div class="usage-bar">
                     <div

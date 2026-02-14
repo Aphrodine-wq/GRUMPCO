@@ -44,10 +44,6 @@ export type IntegrationProvider =
   | 'anthropic'
   | 'openrouter'
   | 'google'
-  | 'kimi'
-  | 'groq'
-  | 'mistral'
-  | 'jan'
   | 'custom';
 
 export type IntegrationStatus = 'active' | 'disabled' | 'error' | 'pending';
@@ -734,6 +730,28 @@ export const PROVIDER_METADATA: Record<
     description: 'API development, testing, and documentation',
     authType: 'api_key',
   },
+  anthropic: {
+    name: 'Anthropic',
+    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z',
+    color: '#D4A373',
+    description: 'Claude AI models — advanced reasoning and coding',
+    authType: 'api_key',
+  },
+  openrouter: {
+    name: 'OpenRouter',
+    icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+    color: '#6366F1',
+    description: 'Access multiple AI models through one API',
+    authType: 'api_key',
+  },
+  google: {
+    name: 'Google Gemini',
+    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z',
+    color: '#4285F4',
+    description: 'Gemini AI models — fast and versatile',
+    authType: 'api_key',
+  },
+
   custom: {
     name: 'Custom Integration',
     icon: 'M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 4a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5a1 1 0 0 1 1-1z',

@@ -5,7 +5,7 @@
  * for distributed tracing and logging correlation
  */
 
-import { type Request, type Response, type NextFunction } from "express";
+import { type Request, type Response, type NextFunction } from 'express';
 import {
   generateCorrelationId,
   generateRequestId,
@@ -14,7 +14,7 @@ import {
   CORRELATION_ID_HEADER,
   REQUEST_ID_HEADER,
   type RequestContext,
-} from "../utils/correlationId.js";
+} from '../utils/correlationId.js';
 
 /**
  * Extend Express Request type to include correlation context
@@ -88,7 +88,7 @@ interface CorrelationMiddlewareOptions {
  * ```
  */
 export function correlationMiddleware(
-  options: CorrelationMiddlewareOptions = {},
+  options: CorrelationMiddlewareOptions = {}
 ): (req: Request, res: Response, next: NextFunction) => void {
   const {
     generate = true,
@@ -108,7 +108,7 @@ export function correlationMiddleware(
 
     if (!correlationId && trustProxy) {
       correlationId = getCorrelationIdFromHeaders(
-        req.headers as Record<string, string | string[] | undefined>,
+        req.headers as Record<string, string | string[] | undefined>
       );
     }
 
@@ -176,14 +176,12 @@ export function correlationErrorMiddleware(
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): void {
   // Ensure correlation ID is in the error response
   const correlationId =
     req.correlationId ||
-    getCorrelationIdFromHeaders(
-      req.headers as Record<string, string | string[] | undefined>,
-    );
+    getCorrelationIdFromHeaders(req.headers as Record<string, string | string[] | undefined>);
 
   // Add to response if not already set
   if (!res.headersSent) {

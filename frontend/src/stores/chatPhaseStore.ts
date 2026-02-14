@@ -202,26 +202,20 @@ function createChatPhaseStore() {
 export const chatPhaseStore = createChatPhaseStore();
 
 /** Derived store for current phase label */
-export const currentPhaseLabel: Readable<string> = derived(
-  chatPhaseStore,
-  ($store) => {
-    const labels: Record<DesignPhase, string> = {
-      architecture: 'Architecture Design',
-      prd: 'Product Requirements',
-      plan: 'Implementation Plan',
-      code: 'Code Generation',
-      completed: 'Completed',
-    };
-    return labels[$store.currentPhase];
-  }
-);
+export const currentPhaseLabel: Readable<string> = derived(chatPhaseStore, ($store) => {
+  const labels: Record<DesignPhase, string> = {
+    architecture: 'Architecture Design',
+    prd: 'Product Requirements',
+    plan: 'Implementation Plan',
+    code: 'Code Generation',
+    completed: 'Completed',
+  };
+  return labels[$store.currentPhase];
+});
 
 /** Derived store for progress percentage */
-export const workflowProgress: Readable<number> = derived(
-  chatPhaseStore,
-  ($store) => {
-    const phases: DesignPhase[] = ['architecture', 'prd', 'plan', 'code', 'completed'];
-    const currentIndex = phases.indexOf($store.currentPhase);
-    return (currentIndex / (phases.length - 1)) * 100;
-  }
-);
+export const workflowProgress: Readable<number> = derived(chatPhaseStore, ($store) => {
+  const phases: DesignPhase[] = ['architecture', 'prd', 'plan', 'code', 'completed'];
+  const currentIndex = phases.indexOf($store.currentPhase);
+  return (currentIndex / (phases.length - 1)) * 100;
+});

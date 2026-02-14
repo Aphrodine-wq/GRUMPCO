@@ -5,24 +5,13 @@
   "bin": {
     "grump": "./bin/grump.js"
   },
-  "workspaces": [
-    "frontend",
-    "backend",
-    "packages/shared-types",
-    "packages/utils",
-    "packages/ai-core",
-    "packages/rag",
-    "packages/voice",
-    "packages/memory",
-    "packages/kimi",
-    "packages/cli",
-    "packages/compiler-enhanced",
-    "packages/vscode-extension",
-    "infrastructure"
-  ],
+
   "description": "G-Rump AI development platform monorepo",
   "license": "MIT",
-  "engines": { "node": ">=18.0.0" },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
   "scripts": {
     "grump": "node bin/grump.js",
     "build:exe": "npm run electron:build --prefix frontend",
@@ -44,6 +33,7 @@
     "test:coverage": "npm run test:coverage --prefix frontend && npm run test:coverage --prefix backend",
     "sbom": "node scripts/generate-sbom.js",
     "benchmark": "tsx scripts/benchmark.ts",
+    "benchmark:build": "tsx scripts/benchmark-build.ts",
     "data:synth": "cd services/nemo-curator && python generate_synthetic.py",
     "prepare": "husky || true",
     "installer:stage": "node scripts/build-installer-stage.js",
@@ -60,7 +50,7 @@
     "@swc/core-linux-x64-gnu": "^1.7.0"
   },
   "lint-staged": {
-    "frontend/src/**/*.{ts,js,vue}": [
+    "frontend/src/**/*.{ts,js,svelte}": [
       "npm run lint:fix --prefix frontend",
       "npm run format --prefix frontend"
     ],
@@ -90,5 +80,5 @@
       "xxhash-addon"
     ]
   },
-  "packageManager": "pnpm@8.15.4"
+  "packageManager": "pnpm@9.15.4"
 }

@@ -23,15 +23,26 @@
     LogOut,
     BookOpen,
     Brain,
+    Bot,
     FolderOpen,
     Clock,
     Cloud,
-    Hammer,
-    Bot,
+    Sparkles,
+    Github,
+    Database,
+    BarChart3,
     Trash2,
+    DollarSign,
+    Container,
+    ScrollText,
   } from 'lucide-svelte';
   import { sessionsStore, sortedSessions, currentSession } from '../../stores/sessionsStore';
-  import { setCurrentView, sidebarCollapsed, currentView } from '../../stores/uiStore';
+  import {
+    setCurrentView,
+    sidebarCollapsed,
+    currentView,
+    chatStreaming,
+  } from '../../stores/uiStore';
   import type { ViewType } from '../../stores/uiStore';
   import { isAuthenticated, user as currentUser, logout } from '../../stores/authStore';
   import { authGateStore } from '../../stores/authGateStore';
@@ -60,13 +71,14 @@
       | 'chat'
       | 'agent'
       | 'projects'
-      | 'builder'
       | 'integrations'
-      | 'tasks'
-      | 'skills'
       | 'memory'
-      | 'mcp'
       | 'cloud'
+      | 'github'
+      | 'analytics'
+      | 'cost'
+      | 'docker'
+      | 'auditLog'
       | 'settings';
     badge?: string;
   }
@@ -75,13 +87,14 @@
     { id: 'chat', label: 'Chat', icon: 'chat' },
     { id: 'gAgent', label: 'Agent', icon: 'agent' },
     { id: 'projects', label: 'Projects', icon: 'projects' },
-    { id: 'builder', label: 'Builder', icon: 'builder' },
     { id: 'integrations', label: 'Integrations', icon: 'integrations' },
-    { id: 'heartbeats', label: 'Tasks', icon: 'tasks' },
-    { id: 'skills', label: 'Skills', icon: 'skills' },
-    { id: 'memory', label: 'Memory', icon: 'memory' },
-    { id: 'mcp', label: 'MCP', icon: 'mcp' },
+    { id: 'memory', label: 'Knowledge', icon: 'memory' },
     { id: 'cloud', label: 'Cloud', icon: 'cloud' },
+    { id: 'analytics', label: 'Analytics', icon: 'analytics' },
+    { id: 'github', label: 'GitHub', icon: 'github' },
+    { id: 'cost', label: 'Cost', icon: 'cost' },
+    { id: 'docker', label: 'Docker', icon: 'docker' },
+    { id: 'auditLog', label: 'Audit Log', icon: 'auditLog' },
   ];
 
   const secondaryNav: NavItem[] = [];
@@ -139,6 +152,11 @@
   }
 
   function goTo(view: ViewType) {
+    // Block navigation while chat is streaming to prevent accidental page switches
+    if ($chatStreaming && view !== 'chat') {
+      // Allow navigating back to chat but not away from it
+      return;
+    }
     setCurrentView(view);
   }
 
@@ -273,27 +291,29 @@
         title={item.label}
       >
         {#if item.icon === 'chat'}
-          <MessageSquare size={18} />
+          <MessageSquare size={16} />
         {:else if item.icon === 'agent'}
-          <Bot size={18} />
+          <Bot size={16} />
         {:else if item.icon === 'projects'}
-          <FolderOpen size={18} />
-        {:else if item.icon === 'builder'}
-          <Hammer size={18} />
+          <FolderOpen size={16} />
         {:else if item.icon === 'integrations'}
-          <Plug size={18} />
-        {:else if item.icon === 'tasks'}
-          <Clock size={18} />
-        {:else if item.icon === 'skills'}
-          <BookOpen size={18} />
+          <Plug size={16} />
         {:else if item.icon === 'memory'}
-          <Brain size={18} />
-        {:else if item.icon === 'mcp'}
-          <Server size={18} />
+          <Brain size={16} />
         {:else if item.icon === 'cloud'}
-          <Cloud size={18} />
+          <Cloud size={16} />
+        {:else if item.icon === 'github'}
+          <Github size={16} />
+        {:else if item.icon === 'analytics'}
+          <BarChart3 size={16} />
+        {:else if item.icon === 'cost'}
+          <DollarSign size={16} />
+        {:else if item.icon === 'docker'}
+          <Container size={16} />
+        {:else if item.icon === 'auditLog'}
+          <ScrollText size={16} />
         {:else}
-          <Settings size={18} />
+          <Settings size={16} />
         {/if}
         {#if !effectiveCollapsed}
           <span class="nav-label">{item.label}</span>
@@ -720,12 +740,11 @@
     opacity: 0.7;
   }
 
-  /* Primary Navigation */
   .primary-nav {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 4px 6px;
+    gap: 1px;
+    padding: 3px 6px;
   }
 
   .nav-item {
@@ -733,12 +752,12 @@
     align-items: center;
     gap: 10px;
     width: 100%;
-    height: 44px;
+    height: 36px;
     padding: 0 12px;
     background: transparent;
     border: none;
     border-radius: 8px;
-    font-size: 0.9375rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     color: var(--color-text, #1f1147);
     cursor: pointer;

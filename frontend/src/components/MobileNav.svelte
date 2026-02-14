@@ -1,11 +1,5 @@
 <script lang="ts">
-  import {
-    showSettings,
-    showAskDocs,
-    showVoiceCode,
-    showSwarm,
-    showDesignToCode,
-  } from '../stores/uiStore';
+  import { showSettings, showAskDocs, showVoiceCode, showDesignToCode } from '../stores/uiStore';
   import { currentSession } from '../stores/sessionsStore';
 
   interface Props {
@@ -17,19 +11,18 @@
   const navItems = [
     {
       id: 'chat',
-      icon: '💬',
+      icon: '○',
       label: 'Chat',
       action: () => {
         showSettings.set(false);
         showAskDocs.set(false);
         showVoiceCode.set(false);
-        showSwarm.set(false);
         showDesignToCode.set(false);
       },
     },
     {
       id: 'ship',
-      icon: '🚀',
+      icon: '▸',
       label: 'Ship',
       action: () => {
         // Navigate to ship mode
@@ -38,23 +31,15 @@
     },
     {
       id: 'voice',
-      icon: '🎤',
+      icon: '●',
       label: 'Voice',
       action: () => {
         showVoiceCode.set(true);
       },
     },
     {
-      id: 'swarm',
-      icon: '🐝',
-      label: 'Swarm',
-      action: () => {
-        showSwarm.set(true);
-      },
-    },
-    {
       id: 'settings',
-      icon: '⚙️',
+      icon: '≡',
       label: 'Settings',
       action: () => {
         showSettings.set(true);

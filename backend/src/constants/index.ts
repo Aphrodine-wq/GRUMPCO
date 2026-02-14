@@ -10,6 +10,6 @@
  * @module constants
  */
 
-export * from "./timeouts.js";
-export * from "./urls.js";
-export * from "./limits.js";
+export * from './timeouts.js';
+export * from './urls.js';
+export * from './limits.js';

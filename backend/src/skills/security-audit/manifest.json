@@ -1,35 +1,14 @@
 {
-    "id": "security-audit",
-    "name": "Security Audit",
-    "version": "1.0.0",
-    "description": "Scan code for security vulnerabilities, check dependencies for known CVEs, analyze authentication flows, and generate security reports.",
-    "category": "security",
-    "icon": "🔒",
-    "tags": [
-        "security",
-        "audit",
-        "vulnerability",
-        "cve",
-        "owasp"
-    ],
-    "capabilities": [
-        "vulnerability-scan",
-        "dependency-audit",
-        "security-report"
-    ],
-    "triggers": {
-        "keywords": [
-            "security",
-            "vulnerability",
-            "audit",
-            "cve",
-            "owasp",
-            "secure"
-        ],
-        "commands": [
-            "/security",
-            "/audit",
-            "/scan-security"
-        ]
-    }
+  "id": "security-audit",
+  "name": "Security Audit",
+  "version": "1.0.0",
+  "description": "Scan code for security vulnerabilities, check dependencies for known CVEs, analyze authentication flows, and generate security reports.",
+  "category": "security",
+  "icon": "🔒",
+  "tags": ["security", "audit", "vulnerability", "cve", "owasp"],
+  "capabilities": ["vulnerability-scan", "dependency-audit", "security-report"],
+  "triggers": {
+    "keywords": ["security", "vulnerability", "audit", "cve", "owasp", "secure"],
+    "commands": ["/security", "/audit", "/scan-security"]
+  }
 }

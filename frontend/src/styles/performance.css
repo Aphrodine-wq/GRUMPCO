@@ -12,19 +12,19 @@
 
 /* Main app shell: prevent child layout from affecting ancestors */
 #app {
-    contain: layout style;
+  contain: layout style;
 }
 
 .app-body {
-    contain: layout style;
+  contain: layout style;
 }
 
 .main-content {
-    contain: layout style;
+  contain: layout style;
 }
 
 .main-content-view {
-    contain: layout style;
+  contain: layout style;
 }
 
 /* Scrollable containers: isolate scroll paint from parent */
@@ -32,9 +32,9 @@
 .message-list,
 .chat-messages,
 .sessions-list {
-    contain: layout style;
-    scroll-behavior: auto;
-    /* smooth scrolling kills high-fps */
+  contain: layout style;
+  scroll-behavior: auto;
+  /* smooth scrolling kills high-fps */
 }
 
 /* ============================================================
@@ -45,13 +45,13 @@
 .modal-overlay,
 .modal-content,
 .toast-item {
-    will-change: opacity;
+  will-change: opacity;
 }
 
 /* Sidebar width transition needs its own layer */
 .unified-sidebar {
-    will-change: width;
-    contain: layout style;
+  will-change: width;
+  contain: layout style;
 }
 
 /* ============================================================
@@ -60,13 +60,15 @@
 
 /* Force compositor-only transitions on messages (transform + opacity only) */
 .message-wrapper {
-    transition: opacity 60ms ease-out, transform 60ms ease-out !important;
-    content-visibility: auto;
-    contain-intrinsic-size: auto 80px;
+  transition:
+    opacity 60ms ease-out,
+    transform 60ms ease-out !important;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 80px;
 }
 
 .message-actions {
-    transition: opacity 50ms ease-out !important;
+  transition: opacity 50ms ease-out !important;
 }
 
 /* ============================================================
@@ -78,7 +80,7 @@
 .input-area,
 .top-bar,
 .electron-title-bar {
-    contain: layout style paint;
+  contain: layout style paint;
 }
 
 /* ============================================================
@@ -89,13 +91,13 @@
 img,
 svg.diagram-svg,
 canvas {
-    content-visibility: auto;
+  content-visibility: auto;
 }
 
 /* Mermaid diagrams - contain but don't over-promote */
 .diagram-output svg,
 .diagram-container svg {
-    contain: layout style;
+  contain: layout style;
 }
 
 /* ============================================================
@@ -103,11 +105,11 @@ canvas {
    ============================================================ */
 
 .modal-overlay {
-    contain: layout style paint;
+  contain: layout style paint;
 }
 
 .modal-content {
-    contain: layout style;
+  contain: layout style;
 }
 
 /* ============================================================
@@ -118,7 +120,7 @@ canvas {
 .message-bubble,
 .text-block,
 .code-block {
-    text-rendering: optimizeSpeed;
+  text-rendering: optimizeSpeed;
 }
 
 /* ============================================================
@@ -126,18 +128,17 @@ canvas {
    ============================================================ */
 
 @media (prefers-reduced-motion: no-preference) {
+  /* Avoid expensive box-shadow repaints on hover during scroll */
+  .message-wrapper:hover {
+    box-shadow: none !important;
+  }
 
-    /* Avoid expensive box-shadow repaints on hover during scroll */
-    .message-wrapper:hover {
-        box-shadow: none !important;
-    }
-
-    /* Outline instead of box-shadow for focus (no repaint) */
-    *:focus-visible {
-        outline: 2px solid var(--color-primary, #7c3aed);
-        outline-offset: 2px;
-        box-shadow: none !important;
-    }
+  /* Outline instead of box-shadow for focus (no repaint) */
+  *:focus-visible {
+    outline: 2px solid var(--color-primary, #7c3aed);
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
 }
 
 /* ============================================================
@@ -146,12 +147,12 @@ canvas {
 
 /* Auto-hide off-screen messages for huge chat histories */
 .message-wrapper {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 80px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 80px;
 }
 
 /* Off-screen session items */
 .session-item {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 34px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 34px;
 }

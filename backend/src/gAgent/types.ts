@@ -11,26 +11,26 @@
 
 export type AgentType =
   // Code Generation Specialists
-  | "architect"
-  | "frontend"
-  | "backend"
-  | "devops"
-  | "test"
-  | "docs"
-  | "security"
-  | "i18n"
+  | 'architect'
+  | 'frontend'
+  | 'backend'
+  | 'devops'
+  | 'test'
+  | 'docs'
+  | 'security'
+  | 'i18n'
   // Swarm Specialists
-  | "ux"
-  | "perf"
-  | "a11y"
-  | "data"
-  | "review"
+  | 'ux'
+  | 'perf'
+  | 'a11y'
+  | 'data'
+  | 'review'
   // Meta Agents
-  | "supervisor"
-  | "planner"
-  | "executor";
+  | 'supervisor'
+  | 'planner'
+  | 'executor';
 
-export type AgentTier = "free" | "pro" | "team" | "enterprise";
+export type AgentTier = 'free' | 'pro' | 'team' | 'enterprise';
 
 export interface AgentDefinition {
   id: string;
@@ -60,13 +60,13 @@ export interface AgentInstance {
 }
 
 export type AgentStatus =
-  | "idle"
-  | "starting"
-  | "running"
-  | "waiting"
-  | "completed"
-  | "failed"
-  | "cancelled";
+  | 'idle'
+  | 'starting'
+  | 'running'
+  | 'waiting'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
 
 export interface AgentCheckpoint {
   id: string;
@@ -85,7 +85,7 @@ export interface AgentResult {
 }
 
 export interface AgentArtifact {
-  type: "file" | "code" | "diagram" | "report";
+  type: 'file' | 'code' | 'diagram' | 'report';
   path?: string;
   content: string;
   language?: string;
@@ -96,13 +96,13 @@ export interface AgentArtifact {
 // ============================================================================
 
 export type AgentMode =
-  | "chat" // Interactive chat with agent
-  | "goal" // Submit a goal to the queue
-  | "plan" // Generate a plan (no execution)
-  | "execute" // Execute a plan
-  | "swarm" // Multi-agent decomposition
-  | "codegen" // Full code generation pipeline
-  | "autonomous"; // Long-running autonomous operation
+  | 'chat' // Interactive chat with agent
+  | 'goal' // Submit a goal to the queue
+  | 'plan' // Generate a plan (no execution)
+  | 'execute' // Execute a plan
+  | 'swarm' // Multi-agent decomposition
+  | 'codegen' // Full code generation pipeline
+  | 'autonomous'; // Long-running autonomous operation
 
 export interface AgentRequest {
   /** User's message or goal description */
@@ -139,7 +139,7 @@ export interface AgentRequest {
   autonomous?: boolean;
 
   /** Priority for queued operations */
-  priority?: "low" | "normal" | "high" | "urgent";
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
 
   /** Abort signal for cancellation */
   abortSignal?: AbortSignal;
@@ -213,7 +213,7 @@ export interface AgentResponse {
 }
 
 export interface AgentMessage {
-  role: "user" | "assistant" | "system" | "tool";
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
   timestamp: string;
   toolCalls?: ToolCall[];
@@ -225,25 +225,25 @@ export interface AgentMessage {
 // ============================================================================
 
 export type GoalStatus =
-  | "pending"
-  | "scheduled"
-  | "planning"
-  | "awaiting_approval"
-  | "executing"
-  | "paused"
-  | "completed"
-  | "failed"
-  | "cancelled";
+  | 'pending'
+  | 'scheduled'
+  | 'planning'
+  | 'awaiting_approval'
+  | 'executing'
+  | 'paused'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
 
-export type GoalPriority = "low" | "normal" | "high" | "urgent";
+export type GoalPriority = 'low' | 'normal' | 'high' | 'urgent';
 
 export type GoalTrigger =
-  | "immediate"
-  | "scheduled"
-  | "cron"
-  | "webhook"
-  | "file_change"
-  | "self_scheduled";
+  | 'immediate'
+  | 'scheduled'
+  | 'cron'
+  | 'webhook'
+  | 'file_change'
+  | 'self_scheduled';
 
 export interface Goal {
   id: string;
@@ -304,7 +304,7 @@ export interface Plan {
   tasks: Task[];
   parallelBatches: string[][];
   estimatedDurationMs: number;
-  status: "draft" | "approved" | "executing" | "completed" | "failed";
+  status: 'draft' | 'approved' | 'executing' | 'completed' | 'failed';
   createdAt: string;
   approvedAt?: string;
   approvedBy?: string;
@@ -324,13 +324,7 @@ export interface Task {
   durationMs?: number;
 }
 
-export type TaskStatus =
-  | "pending"
-  | "blocked"
-  | "in_progress"
-  | "completed"
-  | "failed"
-  | "skipped";
+export type TaskStatus = 'pending' | 'blocked' | 'in_progress' | 'completed' | 'failed' | 'skipped';
 
 // ============================================================================
 // TOOLS
@@ -356,75 +350,75 @@ export interface ToolResult {
 
 export type AgentEvent =
   // Session events
-  | { type: "session_start"; sessionId: string; mode: AgentMode }
-  | { type: "session_end"; sessionId: string; success: boolean }
+  | { type: 'session_start'; sessionId: string; mode: AgentMode }
+  | { type: 'session_end'; sessionId: string; success: boolean }
 
   // Goal events
-  | { type: "goal_created"; goalId: string; description: string }
-  | { type: "goal_started"; goalId: string }
-  | { type: "goal_progress"; goalId: string; progress: number; message: string }
-  | { type: "goal_checkpoint"; goalId: string; checkpoint: GoalCheckpoint }
-  | { type: "goal_completed"; goalId: string; result: string }
-  | { type: "goal_failed"; goalId: string; error: string }
+  | { type: 'goal_created'; goalId: string; description: string }
+  | { type: 'goal_started'; goalId: string }
+  | { type: 'goal_progress'; goalId: string; progress: number; message: string }
+  | { type: 'goal_checkpoint'; goalId: string; checkpoint: GoalCheckpoint }
+  | { type: 'goal_completed'; goalId: string; result: string }
+  | { type: 'goal_failed'; goalId: string; error: string }
 
   // Plan events
-  | { type: "plan_generated"; planId: string; taskCount: number }
-  | { type: "plan_approved"; planId: string }
-  | { type: "plan_started"; planId: string }
-  | { type: "plan_completed"; planId: string; status: "completed" | "failed" }
+  | { type: 'plan_generated'; planId: string; taskCount: number }
+  | { type: 'plan_approved'; planId: string }
+  | { type: 'plan_started'; planId: string }
+  | { type: 'plan_completed'; planId: string; status: 'completed' | 'failed' }
 
   // Task events
-  | { type: "task_started"; taskId: string; description: string }
-  | { type: "task_progress"; taskId: string; progress: number }
+  | { type: 'task_started'; taskId: string; description: string }
+  | { type: 'task_progress'; taskId: string; progress: number }
   | {
-      type: "task_completed";
+      type: 'task_completed';
       taskId: string;
       output: string;
       durationMs: number;
     }
-  | { type: "task_failed"; taskId: string; error: string }
+  | { type: 'task_failed'; taskId: string; error: string }
 
   // Agent events
-  | { type: "agent_spawned"; agentId: string; agentType: AgentType }
-  | { type: "agent_started"; agentId: string }
-  | { type: "agent_message"; agentId: string; message: string }
-  | { type: "agent_completed"; agentId: string; result: AgentResult }
+  | { type: 'agent_spawned'; agentId: string; agentType: AgentType }
+  | { type: 'agent_started'; agentId: string }
+  | { type: 'agent_message'; agentId: string; message: string }
+  | { type: 'agent_completed'; agentId: string; result: AgentResult }
 
   // Agent Lightning Code Generation events
-  | { type: "codegen_started"; goalId: string; projectName: string }
+  | { type: 'codegen_started'; goalId: string; projectName: string }
   | {
-      type: "codegen_phase";
+      type: 'codegen_phase';
       goalId: string;
-      phase: "analyze" | "plan" | "generate" | "validate";
+      phase: 'analyze' | 'plan' | 'generate' | 'validate';
       progress: number;
     }
   | {
-      type: "codegen_agent";
+      type: 'codegen_agent';
       goalId: string;
       agentType: AgentType;
-      status: "started" | "completed" | "failed";
+      status: 'started' | 'completed' | 'failed';
     }
-  | { type: "codegen_file"; goalId: string; path: string; language: string }
+  | { type: 'codegen_file'; goalId: string; path: string; language: string }
   | {
-      type: "codegen_completed";
+      type: 'codegen_completed';
       goalId: string;
       files: number;
       agents: number;
       durationMs: number;
     }
-  | { type: "codegen_failed"; goalId: string; error: string }
+  | { type: 'codegen_failed'; goalId: string; error: string }
 
   // Tool events
-  | { type: "tool_call"; toolCall: ToolCall }
-  | { type: "tool_result"; toolResult: ToolResult }
+  | { type: 'tool_call'; toolCall: ToolCall }
+  | { type: 'tool_result'; toolResult: ToolResult }
 
   // Message events
-  | { type: "text"; text: string }
-  | { type: "thinking"; content: string }
+  | { type: 'text'; text: string }
+  | { type: 'thinking'; content: string }
 
   // Error/done
-  | { type: "error"; message: string; code?: string }
-  | { type: "done" };
+  | { type: 'error'; message: string; code?: string }
+  | { type: 'done' };
 
 // ============================================================================
 // MEMORY & LEARNING
@@ -477,11 +471,11 @@ export interface SkillStep {
 // ============================================================================
 
 export type MessageBusEvent =
-  | { type: "agent_spawn_request"; agentType: AgentType; taskId: string }
-  | { type: "agent_status_update"; agentId: string; status: AgentStatus }
-  | { type: "task_result"; taskId: string; result: AgentResult }
-  | { type: "goal_update"; goalId: string; update: Partial<Goal> }
-  | { type: "broadcast"; channel: string; data: unknown };
+  | { type: 'agent_spawn_request'; agentType: AgentType; taskId: string }
+  | { type: 'agent_status_update'; agentId: string; status: AgentStatus }
+  | { type: 'task_result'; taskId: string; result: AgentResult }
+  | { type: 'goal_update'; goalId: string; update: Partial<Goal> }
+  | { type: 'broadcast'; channel: string; data: unknown };
 
 export interface MessageBusSubscription {
   id: string;

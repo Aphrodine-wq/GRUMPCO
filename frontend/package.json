@@ -1,6 +1,6 @@
 {
   "name": "g-rump",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "license": "MIT",
   "type": "module",
   "description": "G-Rump AI Development Platform",
@@ -17,7 +17,7 @@
     "electron:build": "npm run build:icon && vite build && electron-builder -c.npmRebuild=false",
     "electron:pack": "electron-builder --dir",
     "type-check": "svelte-check --tsconfig ./tsconfig.json",
-    "lint": "eslint \"src/**/*.ts\" \"src/**/*.js\"",
+    "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint src --fix",
     "format": "prettier --write \"src/**/*.{ts,js,svelte,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,svelte,css,json}\"",
@@ -101,9 +101,30 @@
       "electron/**/*.cjs",
       "public/favicon.ico"
     ],
+    "extraResources": [
+      {
+        "from": "../backend/dist",
+        "to": "backend/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../backend/node_modules",
+        "to": "backend/node_modules",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../backend/package.json",
+        "to": "backend/package.json"
+      }
+    ],
     "win": {
       "target": "portable",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "signAndEditExecutable": false
     },
     "portable": {
       "artifactName": "grump.exe"
@@ -111,7 +132,9 @@
     "extraMetadata": {
       "main": "electron/main.cjs"
     },
-    "asar": true,
-    "compression": "maximum"
+    "asarUnpack": [
+      "*.node"
+    ],
+    "compression": "normal"
   }
 }

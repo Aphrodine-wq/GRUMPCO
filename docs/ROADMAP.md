@@ -1,6 +1,6 @@
 # G-Rump Roadmap
 
-> **Version:** 2.1.0 | **Last Updated:** February 2026
+> **Version:** 2.1.0 | **Last Updated:** February 11, 2026
 
 ## Current Focus: NVIDIA Golden Developer Award
 
@@ -22,7 +22,7 @@ G-Rump is pivoting to full NVIDIA Golden Developer Award compliance. All six che
 | **v1.0** | Q1 2026 | Core SHIP workflow, Electron app, basic codegen | Shipped |
 | **v2.0** | Q1 2026 | G-Agent orchestration, Express 5, enhanced caching | Shipped |
 | **v2.1** | Q1 2026 | RAG, agent evals, VS Code extension | Shipped |
-| **v2.1+** | Q1 2026 | NVIDIA Golden Developer pivot (NGC, NeMo, observability) | **Current** |
+| **v2.1+** | Q1 2026 | NVIDIA Golden Developer pivot (NGC, NeMo, observability) | **Shipped** |
 | **v2.2** | Q2 2026 | More IDE integrations, Intent Optimizer, codebase scanner | Planned |
 | **v3.0** | Q3 2026 | Enhanced G-Agent, "Wow" features, offline support | Planned |
 

@@ -5,48 +5,25 @@
 
 import { app, BrowserWindow, ipcMain, shell, nativeTheme } from 'electron';
 import * as path from 'path';
-import { registerDockerHandlers, unregisterDockerHandlers } from './docker';
+
+// Lazy loaded handlers
+let dockerHandlers: typeof import('./docker') | null = null;
+
+async function getDockerHandlers() {
+  if (!dockerHandlers) {
+    dockerHandlers = await import('./docker');
+  }
+  return dockerHandlers;
+}
 
 // Keep a global reference to prevent garbage collection
 let mainWindow: BrowserWindow | null = null;
-let splashWindow: BrowserWindow | null = null;
 
 // Environment detection
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const isMac = process.platform === 'darwin';
 const isWindows = process.platform === 'win32';
 
-/**
- * Create the splash screen window
- */
-function createSplashWindow(): void {
-  splashWindow = new BrowserWindow({
-    width: 400,
-    height: 300,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    resizable: false,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-    },
-  });
-
-  // Load splash HTML
-  const splashPath = isDev
-    ? path.join(__dirname, '../../public/splash.html')
-    : path.join(__dirname, '../public/splash.html');
-  
-  splashWindow.loadFile(splashPath).catch(() => {
-    // If splash doesn't exist, just skip it
-    splashWindow?.close();
-    splashWindow = null;
-  });
-
-  splashWindow.center();
-}
 
 /**
  * Create the main application window
@@ -79,7 +56,7 @@ function createMainWindow(): void {
       const indexPath = path.join(__dirname, '../../frontend/dist/index.html');
       mainWindow?.loadFile(indexPath);
     });
-    
+
     // Open DevTools in development
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
@@ -90,12 +67,6 @@ function createMainWindow(): void {
 
   // Show window when ready
   mainWindow.once('ready-to-show', () => {
-    // Close splash if it exists
-    if (splashWindow) {
-      splashWindow.close();
-      splashWindow = null;
-    }
-    
     mainWindow?.show();
     mainWindow?.focus();
   });
@@ -116,8 +87,8 @@ function createMainWindow(): void {
  * Register all IPC handlers
  */
 function registerIpcHandlers(): void {
-  // Docker handlers
-  registerDockerHandlers();
+  // Docker handlers - registered lazily on first call or background
+  getDockerHandlers().then(h => h.registerDockerHandlers());
 
   // Window control handlers
   ipcMain.handle('window:minimize', () => {
@@ -171,22 +142,16 @@ function registerIpcHandlers(): void {
     return app.getPath(name as 'home' | 'appData' | 'userData' | 'temp' | 'desktop' | 'documents' | 'downloads');
   });
 
-  // Splash control
-  ipcMain.handle('splash:close', () => {
-    if (splashWindow) {
-      splashWindow.close();
-      splashWindow = null;
-    }
-    mainWindow?.show();
-    mainWindow?.focus();
-  });
+
 }
 
 /**
  * Cleanup IPC handlers
  */
 function unregisterIpcHandlers(): void {
-  unregisterDockerHandlers();
+  if (dockerHandlers) {
+    dockerHandlers.unregisterDockerHandlers();
+  }
   ipcMain.removeHandler('window:minimize');
   ipcMain.removeHandler('window:maximize');
   ipcMain.removeHandler('window:close');
@@ -198,8 +163,18 @@ function unregisterIpcHandlers(): void {
   ipcMain.removeHandler('app:getVersion');
   ipcMain.removeHandler('app:getName');
   ipcMain.removeHandler('app:getPath');
-  ipcMain.removeHandler('splash:close');
+
 }
+
+// ============================================
+// Performance Switches
+// ============================================
+
+// Enable various performance optimizations
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
 
 // ============================================
 // App Lifecycle
@@ -219,18 +194,29 @@ if (!gotTheLock) {
     }
   });
 
-  // App ready
-  app.whenReady().then(() => {
-    createSplashWindow();
+  /**
+   * Initialize critical systems and show UI
+   */
+  const startup = async () => {
+    // 1. Register basic IPC handlers (lightweight)
     registerIpcHandlers();
+
+    // 3. Create main window (hidden)
     createMainWindow();
 
-    // macOS: Re-create window when dock icon clicked
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        createMainWindow();
-      }
-    });
+    // 4. Background tasks (non-critical)
+    // We can delay heavier registrations until after the main window is shown
+    // or just let them happen in parallel
+  };
+
+  // App ready
+  app.whenReady().then(startup);
+
+  // macOS: Re-create window when dock icon clicked
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createMainWindow();
+    }
   });
 
   // Quit when all windows closed (except macOS)

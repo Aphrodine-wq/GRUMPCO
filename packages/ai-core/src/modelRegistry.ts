@@ -1,19 +1,19 @@
 /**
- * Model Registry – NVIDIA NIM Exclusive
+ * Model Registry – Multi-Provider
  * 
- * Powered by NVIDIA NIM - Enterprise AI infrastructure for deploying
- * state-of-the-art foundation models with optimized inference.
+ * Registry of AI models across all supported providers:
+ * NVIDIA NIM, Anthropic, Google, GitHub Copilot, OpenRouter, Ollama.
  * 
- * Featured Models:
- * - Llama 3.1 405B Instruct (Flagship)
- * - Llama 3.1 70B Instruct (Balanced)
- * - Mistral Large 2 (Multilingual)
- * - Nemotron Ultra 253B (Scientific Reasoning)
+ * All models listed here support function/tool calling.
+ * Models without tool-call support have been removed to prevent
+ * API errors.
  * 
- * @see https://build.nvidia.com - Get your free API key
+ * @see https://build.nvidia.com - NVIDIA NIM
+ * @see https://docs.anthropic.com - Anthropic
+ * @see https://aistudio.google.com - Google AI
  */
 
-export type LLMProvider = 'nim' | 'mock';
+export type LLMProvider = 'nim' | 'anthropic' | 'google' | 'openrouter' | 'github_copilot' | 'ollama' | 'mock';
 
 export type ModelCapability =
   | 'code'
@@ -41,6 +41,31 @@ export const PROVIDER_METADATA: Record<LLMProvider, ProviderMetadata> = {
     displayName: 'NVIDIA NIM',
     icon: '/icons/providers/nvidia.svg',
     description: 'Powered by NVIDIA NIM - Enterprise AI inference',
+  },
+  anthropic: {
+    displayName: 'Anthropic',
+    icon: '/icons/providers/anthropic.svg',
+    description: 'Claude models - Best-in-class reasoning',
+  },
+  google: {
+    displayName: 'Google AI',
+    icon: '/icons/providers/google.svg',
+    description: 'Gemini models - Balanced cost/quality',
+  },
+  openrouter: {
+    displayName: 'OpenRouter',
+    icon: '/icons/providers/openrouter.svg',
+    description: 'Multi-model gateway - Access any model',
+  },
+  github_copilot: {
+    displayName: 'GitHub Copilot',
+    icon: '/icons/providers/github.svg',
+    description: 'GitHub Copilot - OAuth-based AI assistant',
+  },
+  ollama: {
+    displayName: 'Ollama',
+    icon: '/icons/providers/ollama.svg',
+    description: 'Local/self-hosted models',
   },
   mock: {
     displayName: 'Demo Mode',
@@ -162,24 +187,8 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     featured: true,
   },
 
-  // MIXTRAL: 8x22B MoE (Cost-Effective)
-  {
-    id: 'mistralai/mixtral-8x22b-instruct-v0.1',
-    provider: 'nim',
-    capabilities: [
-      'code',
-      'agent',
-      'multilingual',
-      'reasoning',
-      'function-calling',
-    ],
-    contextWindow: 65_536,
-    costPerMillionInput: 0.9,
-    costPerMillionOutput: 0.9,
-    description: 'Mixtral 8x22B MoE - Cost-effective with excellent performance',
-    publisher: 'Mistral AI',
-    parameters: '141B (MoE)',
-  },
+  // MIXTRAL 8x22B removed — does not support tool calling on NVIDIA NIM
+  // (NIM returns error 400: "auto" tool choice requires --enable-auto-tool-choice)
 
   // NEMOTRON: Ultra 253B (Scientific Reasoning)
   {
@@ -259,22 +268,7 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     featured: true,
   },
 
-  // NEMOTRON: Nano 12B v2 VL (Vision / diagram / document)
-  {
-    id: 'nvidia/nemotron-nano-12b-v2-vl',
-    provider: 'nim',
-    capabilities: [
-      'vision',
-      'multimodal',
-      'reasoning',
-    ],
-    contextWindow: 128_000,
-    costPerMillionInput: 0.10,
-    costPerMillionOutput: 0.10,
-    description: 'Nemotron Nano VL - Document and diagram understanding',
-    publisher: 'NVIDIA',
-    parameters: '12B',
-  },
+  // NEMOTRON Nano 12B v2 VL removed — vision-only model, does not support tool calling on NIM
 
   // CODESTRAL: Code Generation Specialist
   {
@@ -315,11 +309,199 @@ export const MODEL_REGISTRY: ModelConfig[] = [
 ];
 
 // =============================================================================
+// ANTHROPIC - Claude Models
+// =============================================================================
+
+const ANTHROPIC_MODELS: ModelConfig[] = [
+  {
+    id: 'claude-opus-4-6-20260206',
+    provider: 'anthropic',
+    capabilities: ['code', 'reasoning', 'agent', 'long-context', 'agentic', 'function-calling', 'vision'],
+    contextWindow: 1_000_000,
+    costPerMillionInput: 15.0,
+    costPerMillionOutput: 75.0,
+    description: 'Claude Opus 4.6 - State-of-the-art reasoning, 1M context (beta)',
+    publisher: 'Anthropic',
+    parameters: 'Opus',
+    featured: true,
+  },
+  {
+    id: 'claude-sonnet-4-5-20250929',
+    provider: 'anthropic',
+    capabilities: ['code', 'vision', 'reasoning', 'agent', 'long-context', 'agentic', 'function-calling'],
+    contextWindow: 200_000,
+    costPerMillionInput: 3.0,
+    costPerMillionOutput: 15.0,
+    description: 'Claude Sonnet 4.5 - Best agentic coding model, 64K output',
+    publisher: 'Anthropic',
+    parameters: 'Sonnet 4.5',
+    featured: true,
+  },
+  {
+    id: 'claude-3-5-sonnet-20241022',
+    provider: 'anthropic',
+    capabilities: ['code', 'vision', 'reasoning', 'agent', 'long-context', 'function-calling'],
+    contextWindow: 200_000,
+    costPerMillionInput: 3.0,
+    costPerMillionOutput: 15.0,
+    description: 'Claude 3.5 Sonnet - Proven, reliable general purpose model',
+    publisher: 'Anthropic',
+    parameters: 'Sonnet 3.5',
+  },
+  {
+    id: 'claude-3-haiku-20240307',
+    provider: 'anthropic',
+    capabilities: ['code', 'vision', 'function-calling'],
+    contextWindow: 200_000,
+    costPerMillionInput: 0.25,
+    costPerMillionOutput: 1.25,
+    description: 'Claude 3 Haiku - Fast and cost-effective',
+    publisher: 'Anthropic',
+    parameters: 'Haiku',
+  },
+];
+
+// =============================================================================
+// GOOGLE AI - Gemini Models
+// =============================================================================
+
+const GOOGLE_MODELS: ModelConfig[] = [
+  {
+    id: 'gemini-2.5-pro',
+    provider: 'google',
+    capabilities: ['code', 'vision', 'reasoning', 'long-context', 'function-calling', 'multimodal', 'agentic'],
+    contextWindow: 10_000_000,
+    costPerMillionInput: 1.25,
+    costPerMillionOutput: 10.0,
+    description: 'Gemini 2.5 Pro - Best Gemini reasoning model, 10M+ context',
+    publisher: 'Google',
+    parameters: '2.5 Pro',
+    featured: true,
+  },
+  {
+    id: 'gemini-2.5-flash',
+    provider: 'google',
+    capabilities: ['code', 'vision', 'reasoning', 'long-context', 'function-calling', 'multimodal', 'agentic'],
+    contextWindow: 1_000_000,
+    costPerMillionInput: 0.075,
+    costPerMillionOutput: 0.30,
+    description: 'Gemini 2.5 Flash - Fast reasoning with thinking budgets',
+    publisher: 'Google',
+    parameters: '2.5 Flash',
+    featured: true,
+  },
+  {
+    id: 'gemini-2.0-flash',
+    provider: 'google',
+    capabilities: ['code', 'vision', 'reasoning', 'long-context', 'function-calling', 'multimodal'],
+    contextWindow: 1_000_000,
+    costPerMillionInput: 0.075,
+    costPerMillionOutput: 0.30,
+    description: 'Gemini 2.0 Flash - Fast, cost-effective multimodal',
+    publisher: 'Google',
+    parameters: '2.0 Flash',
+  },
+];
+
+// =============================================================================
+// OPENROUTER - Multi-Model Gateway (latest frontier models)
+// =============================================================================
+
+const OPENROUTER_MODELS: ModelConfig[] = [
+  {
+    id: 'anthropic/claude-sonnet-4.5',
+    provider: 'openrouter',
+    capabilities: ['code', 'vision', 'reasoning', 'agent', 'long-context', 'agentic', 'function-calling'],
+    contextWindow: 200_000,
+    costPerMillionInput: 3.0,
+    costPerMillionOutput: 15.0,
+    description: 'Claude Sonnet 4.5 via OpenRouter - Best agentic coding model',
+    publisher: 'Anthropic',
+    parameters: 'Sonnet 4.5',
+    featured: true,
+  },
+  {
+    id: 'openai/gpt-5',
+    provider: 'openrouter',
+    capabilities: ['code', 'vision', 'reasoning', 'agent', 'long-context', 'agentic', 'function-calling', 'multimodal'],
+    contextWindow: 400_000,
+    costPerMillionInput: 5.0,
+    costPerMillionOutput: 15.0,
+    description: 'GPT-5 via OpenRouter - Advanced reasoning and agentic tasks',
+    publisher: 'OpenAI',
+    parameters: 'GPT-5',
+    featured: true,
+  },
+  {
+    id: 'google/gemini-2.5-pro',
+    provider: 'openrouter',
+    capabilities: ['code', 'vision', 'reasoning', 'long-context', 'function-calling', 'multimodal', 'agentic'],
+    contextWindow: 10_000_000,
+    costPerMillionInput: 1.25,
+    costPerMillionOutput: 10.0,
+    description: 'Gemini 2.5 Pro via OpenRouter - 10M+ context window',
+    publisher: 'Google',
+    parameters: '2.5 Pro',
+  },
+];
+
+// =============================================================================
+// GITHUB COPILOT - OAuth-Based Models
+// =============================================================================
+
+const GITHUB_COPILOT_MODELS: ModelConfig[] = [
+  {
+    id: 'claude-sonnet-4.5',
+    provider: 'github_copilot',
+    capabilities: ['code', 'vision', 'reasoning', 'agent', 'agentic', 'function-calling'],
+    contextWindow: 200_000,
+    costPerMillionInput: 0,
+    costPerMillionOutput: 0,
+    description: 'Claude Sonnet 4.5 via GitHub Copilot',
+    publisher: 'Anthropic',
+    parameters: 'Sonnet 4.5',
+    featured: true,
+  },
+  {
+    id: 'gpt-5',
+    provider: 'github_copilot',
+    capabilities: ['code', 'vision', 'reasoning', 'agent', 'agentic', 'function-calling'],
+    contextWindow: 400_000,
+    costPerMillionInput: 0,
+    costPerMillionOutput: 0,
+    description: 'GPT-5 via GitHub Copilot',
+    publisher: 'OpenAI',
+    parameters: 'GPT-5',
+    featured: true,
+  },
+  {
+    id: 'gemini-2.5-pro',
+    provider: 'github_copilot',
+    capabilities: ['code', 'vision', 'reasoning', 'long-context', 'function-calling'],
+    contextWindow: 10_000_000,
+    costPerMillionInput: 0,
+    costPerMillionOutput: 0,
+    description: 'Gemini 2.5 Pro via GitHub Copilot',
+    publisher: 'Google',
+    parameters: '2.5 Pro',
+  },
+];
+
+// Combine all model registries
+export const FULL_MODEL_REGISTRY: ModelConfig[] = [
+  ...MODEL_REGISTRY,
+  ...ANTHROPIC_MODELS,
+  ...GOOGLE_MODELS,
+  ...OPENROUTER_MODELS,
+  ...GITHUB_COPILOT_MODELS,
+];
+
+// =============================================================================
 // Model Lookup Functions
 // =============================================================================
 
 export function getModelById(id: string): ModelConfig | undefined {
-  return MODEL_REGISTRY.find((m) => m.id === id);
+  return FULL_MODEL_REGISTRY.find((m) => m.id === id);
 }
 
 export function getDefaultModel(): ModelConfig {
@@ -327,19 +509,19 @@ export function getDefaultModel(): ModelConfig {
 }
 
 export function getModelsByCapability(cap: ModelCapability): ModelConfig[] {
-  return MODEL_REGISTRY.filter((m) => m.capabilities.includes(cap));
+  return FULL_MODEL_REGISTRY.filter((m) => m.capabilities.includes(cap));
 }
 
 export function getModelsByProvider(provider: LLMProvider): ModelConfig[] {
-  return MODEL_REGISTRY.filter((m) => m.provider === provider);
+  return FULL_MODEL_REGISTRY.filter((m) => m.provider === provider);
 }
 
 export function getFeaturedModels(): ModelConfig[] {
-  return MODEL_REGISTRY.filter((m) => m.featured === true);
+  return FULL_MODEL_REGISTRY.filter((m) => m.featured === true);
 }
 
 export function getMultilingualModels(): ModelConfig[] {
-  return MODEL_REGISTRY.filter((m) => m.capabilities.includes('multilingual'));
+  return FULL_MODEL_REGISTRY.filter((m) => m.capabilities.includes('multilingual'));
 }
 
 export function getCheapestModel(): ModelConfig {
@@ -352,7 +534,7 @@ export function getCheapestModel(): ModelConfig {
 }
 
 export function getLargestContextModel(): ModelConfig {
-  return MODEL_REGISTRY.reduce((largest, model) =>
+  return FULL_MODEL_REGISTRY.reduce((largest, model) =>
     model.contextWindow > largest.contextWindow ? model : largest
   );
 }
@@ -362,29 +544,29 @@ export function getNvidiaModels(): ModelConfig[] {
 }
 
 export function getCodeModels(): ModelConfig[] {
-  return MODEL_REGISTRY.filter((m) => m.capabilities.includes('code'));
+  return FULL_MODEL_REGISTRY.filter((m) => m.capabilities.includes('code'));
 }
 
 export function getReasoningModels(): ModelConfig[] {
-  return MODEL_REGISTRY.filter((m) => m.capabilities.includes('reasoning'));
+  return FULL_MODEL_REGISTRY.filter((m) => m.capabilities.includes('reasoning'));
 }
 
 export function getAgenticModels(): ModelConfig[] {
-  return MODEL_REGISTRY.filter((m) => m.capabilities.includes('agentic'));
+  return FULL_MODEL_REGISTRY.filter((m) => m.capabilities.includes('agentic'));
 }
 
 export function getVisionModels(): ModelConfig[] {
-  return MODEL_REGISTRY.filter(
+  return FULL_MODEL_REGISTRY.filter(
     (m) => m.capabilities.includes('vision') || m.capabilities.includes('multimodal')
   );
 }
 
 export function getLongContextModels(minContext: number = 100_000): ModelConfig[] {
-  return MODEL_REGISTRY.filter((m) => m.contextWindow >= minContext);
+  return FULL_MODEL_REGISTRY.filter((m) => m.contextWindow >= minContext);
 }
 
 export function getModelsByPublisher(publisher: string): ModelConfig[] {
-  return MODEL_REGISTRY.filter((m) => m.publisher?.toLowerCase() === publisher.toLowerCase());
+  return FULL_MODEL_REGISTRY.filter((m) => m.publisher?.toLowerCase() === publisher.toLowerCase());
 }
 
 export function estimateCost(
@@ -420,13 +602,13 @@ export function getRecommendedModel(
 ): ModelConfig {
   switch (useCase) {
     case 'general':
-      return getModelById('meta/llama-3.1-405b-instruct') || getDefaultModel();
+      return getModelById('claude-sonnet-4-5-20250929') || getModelById('meta/llama-3.1-405b-instruct') || getDefaultModel();
     case 'code':
-      return getModelById('mistralai/codestral-22b-instruct-v0.1') || getDefaultModel();
+      return getModelById('claude-sonnet-4-5-20250929') || getModelById('mistralai/codestral-22b-instruct-v0.1') || getDefaultModel();
     case 'reasoning':
-      return getModelById('nvidia/llama-3.1-nemotron-ultra-253b-v1') || getDefaultModel();
+      return getModelById('claude-opus-4-6-20260206') || getModelById('nvidia/llama-3.1-nemotron-ultra-253b-v1') || getDefaultModel();
     case 'cost-optimized':
-      return getModelById('meta/llama-3.1-70b-instruct') || getCheapestModel();
+      return getModelById('nvidia/llama-3.3-nemotron-super-49b-v1.5') || getCheapestModel();
     case 'multilingual':
       return getModelById('mistralai/mistral-large-2-instruct') || getDefaultModel();
     default:
@@ -435,8 +617,8 @@ export function getRecommendedModel(
 }
 
 /**
- * Check if NVIDIA NIM is the only provider (always true now).
+ * Check if NVIDIA NIM is the only provider (no longer true — multi-provider supported).
  */
 export function isNvidiaExclusive(): boolean {
-  return true;
+  return false;
 }

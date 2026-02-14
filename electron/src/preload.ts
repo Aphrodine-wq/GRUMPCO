@@ -20,29 +20,26 @@ interface DockerArgs {
 interface GrumpAPI {
   isElectron: boolean;
   platform: NodeJS.Platform;
-  
+
   // Window controls
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   close: () => Promise<void>;
   isMaximized: () => Promise<boolean>;
-  
+
   // Theme
   getTheme: () => Promise<'dark' | 'light'>;
   setTheme: (theme: 'dark' | 'light' | 'system') => Promise<void>;
   onThemeChange: (callback: (theme: 'dark' | 'light') => void) => () => void;
-  
+
   // Shell
   openExternal: (url: string) => Promise<void>;
   openPath: (path: string) => Promise<string>;
-  
+
   // App info
   getVersion: () => Promise<string>;
   getName: () => Promise<string>;
   getPath: (name: string) => Promise<string>;
-  
-  // Splash
-  closeSplashShowMain: () => Promise<void>;
 }
 
 interface ElectronAPI {
@@ -56,13 +53,13 @@ interface ElectronAPI {
 const grumpAPI: GrumpAPI = {
   isElectron: true,
   platform: process.platform,
-  
+
   // Window controls
   minimize: () => ipcRenderer.invoke('window:minimize'),
   maximize: () => ipcRenderer.invoke('window:maximize'),
   close: () => ipcRenderer.invoke('window:close'),
   isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
-  
+
   // Theme
   getTheme: () => ipcRenderer.invoke('theme:get'),
   setTheme: (theme) => ipcRenderer.invoke('theme:set', theme),
@@ -71,18 +68,15 @@ const grumpAPI: GrumpAPI = {
     ipcRenderer.on('theme:changed', handler);
     return () => ipcRenderer.removeListener('theme:changed', handler);
   },
-  
+
   // Shell
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
   openPath: (path) => ipcRenderer.invoke('shell:openPath', path),
-  
+
   // App info
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   getName: () => ipcRenderer.invoke('app:getName'),
   getPath: (name) => ipcRenderer.invoke('app:getPath', name),
-  
-  // Splash
-  closeSplashShowMain: () => ipcRenderer.invoke('splash:close'),
 };
 
 const electronAPI: ElectronAPI = {

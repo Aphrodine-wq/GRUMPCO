@@ -186,16 +186,6 @@
       y: 120,
     },
     {
-      id: 'groq',
-      label: 'Groq',
-      type: 'external',
-      description: 'Fast inference provider',
-      dependencies: ['ai-core'],
-      status: 'optional',
-      x: 700,
-      y: 190,
-    },
-    {
       id: 'ollama',
       label: 'Ollama',
       type: 'external',
@@ -280,7 +270,6 @@
     { from: 'rag', to: 'pinecone', type: 'api', label: 'vectors' },
     { from: 'ai-core', to: 'nim', type: 'api', label: 'LLM' },
     { from: 'ai-core', to: 'openrouter', type: 'api', label: 'LLM' },
-    { from: 'ai-core', to: 'groq', type: 'api', label: 'LLM' },
     { from: 'ai-core', to: 'ollama', type: 'api', label: 'LLM' },
     { from: 'backend', to: 'supabase', type: 'api', label: 'DB' },
     { from: 'svelte', to: 'electron', type: 'dep' },
@@ -302,7 +291,7 @@
     packages: { label: 'Shared Packages', nodes: ['cli', 'compiler'] },
     external: {
       label: 'External Providers',
-      nodes: ['nim', 'openrouter', 'groq', 'ollama', 'pinecone', 'supabase'],
+      nodes: ['nim', 'openrouter', 'ollama', 'pinecone', 'supabase'],
     },
     features: { label: 'Features', nodes: ['chat', 'arch-mode', 'ship-mode', 'skills-system'] },
   };
@@ -511,6 +500,8 @@
             <!-- Nodes -->
             {#each nodes as node}
               {#if !searchQuery || filteredNodeIds.has(node.id)}
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <g
                   transform="translate({node.x}, {node.y})"
                   class="cursor-pointer transition-all duration-200"

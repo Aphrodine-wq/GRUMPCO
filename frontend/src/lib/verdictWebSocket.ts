@@ -1,7 +1,7 @@
 //! WebSocket Real-time Streaming for Verdicts
 //! Push verdict updates, outcome events, and model improvements in real-time
 
-/* eslint-disable no-console, @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* global WebSocket */
 
 export interface WebSocketMessage {
@@ -73,11 +73,12 @@ export class VerdictWebSocketClient {
     return new Promise((resolve, reject) => {
       try {
         this.ws = new WebSocket(this.url);
+        let settled = false;
 
         this.ws.onopen = () => {
-          console.log('✅ WebSocket connected');
           this.isConnected = true;
           this.reconnectAttempts = 0;
+          settled = true;
           resolve();
         };
 
@@ -92,13 +93,18 @@ export class VerdictWebSocketClient {
 
         this.ws.onerror = (error) => {
           console.error('WebSocket error:', error);
-          reject(error);
+          if (!settled) {
+            settled = true;
+            reject(error);
+          }
         };
 
         this.ws.onclose = () => {
-          console.log('⚠️  WebSocket disconnected');
           this.isConnected = false;
-          this.attemptReconnect();
+          if (settled) {
+            // Only reconnect if we had a successful connection before
+            this.attemptReconnect();
+          }
         };
       } catch (error) {
         reject(error);
@@ -111,7 +117,6 @@ export class VerdictWebSocketClient {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-      console.log(`🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
       setTimeout(() => {
         this.connect().catch(() => {
@@ -192,31 +197,24 @@ export class RealTimeDashboard {
     await this.wsClient.connect();
 
     // Subscribe to verdict updates
-    this.wsClient.on('verdict:created', (msg: WebSocketMessage) => {
-      console.log('📊 New verdict created:', msg.data);
+    this.wsClient.on('verdict:created', (_msg: WebSocketMessage) => {
       this.notifyUpdate();
     });
 
     // Subscribe to outcome events
-    this.wsClient.on('outcome:discovered', (msg: WebSocketMessage) => {
-      console.log('🎯 Outcome discovered:', msg.data);
+    this.wsClient.on('outcome:discovered', (_msg: WebSocketMessage) => {
       this.notifyUpdate();
     });
 
     // Subscribe to model updates
-    this.wsClient.on('model:trained', (msg: WebSocketMessage) => {
-      console.log('🤖 Model trained:', msg.data);
+    this.wsClient.on('model:trained', (_msg: WebSocketMessage) => {
       this.notifyUpdate();
     });
 
     // Subscribe to batch progress
-    this.wsClient.on('batch:progress', (msg: WebSocketMessage) => {
-      const batchMsg = msg as BatchProgressMessage;
-      console.log(`⚙️  Batch progress: ${batchMsg.data.processed}/${batchMsg.data.total}`);
+    this.wsClient.on('batch:progress', (_msg: WebSocketMessage) => {
       this.notifyUpdate();
     });
-
-    console.log('✅ Real-time dashboard initialized');
   }
 
   /// Register update listener
@@ -268,6 +266,9 @@ export class VerdictSSEClient {
   private eventSource: EventSource | null = null;
   private url: string;
   private listeners: Map<string, Set<(data: unknown) => void>> = new Map();
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectDelay = 3000;
 
   constructor(url: string) {
     this.url = url;
@@ -293,7 +294,10 @@ export class VerdictSSEClient {
         this.reconnect();
       });
 
-      console.log('✅ SSE connected');
+      // Reset attempts on successful open
+      this.eventSource.onopen = () => {
+        this.reconnectAttempts = 0;
+      };
     } catch (error) {
       console.error('Failed to create SSE connection:', error);
     }
@@ -319,11 +323,19 @@ export class VerdictSSEClient {
     }
   }
 
-  /// Reconnect
+  /// Reconnect with attempt limit and exponential backoff
   private reconnect(): void {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('❌ SSE max reconnection attempts reached');
+      return;
+    }
+
+    this.reconnectAttempts++;
+    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+
     setTimeout(() => {
       this.connect();
-    }, 3000);
+    }, delay);
   }
 
   /// Disconnect

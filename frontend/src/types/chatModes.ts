@@ -24,7 +24,8 @@ export type ChatModeType =
 export type GlobalModeType = 'code' | 'design' | 'argument';
 
 /**
- * Session types for G-Agent
+ * Session types for Agent.
+ * 'freeAgent' kept for backward compatibility with stored sessions.
  */
 export type SessionType = 'chat' | 'gAgent' | 'freeAgent';
 
@@ -57,6 +58,7 @@ export const GlobalMode = {
 export const SessionTypes = {
   CHAT: 'chat',
   GAGENT: 'gAgent',
+  /** @deprecated Use GAGENT. Kept for backward compat with stored sessions. */
   FREE_AGENT: 'freeAgent',
 } as const;
 
@@ -74,7 +76,6 @@ export const SlashCommands = {
  * Model shortcuts for /use command
  */
 export const ModelShortcuts: Record<string, { provider: string; modelId: string }> = {
-  kimi: { provider: 'nim', modelId: 'moonshotai/kimi-k2.5' },
   'nemotron-ultra': { provider: 'nim', modelId: 'nvidia/llama-3.1-nemotron-ultra-253b-v1' },
   'nemotron-super': { provider: 'nim', modelId: 'nvidia/llama-3.3-nemotron-super-49b-v1.5' },
   auto: { provider: 'nim', modelId: '' },
@@ -86,7 +87,7 @@ export const ModelShortcuts: Record<string, { provider: string; modelId: string 
 export const API_TIMEOUT_MS = 120_000;
 
 /**
- * Check if a mode is a G-Agent session type
+ * Check if a mode is an Agent session type
  */
 export function isGAgentSessionType(sessionType: string | undefined): boolean {
   return sessionType === SessionTypes.GAGENT || sessionType === SessionTypes.FREE_AGENT;

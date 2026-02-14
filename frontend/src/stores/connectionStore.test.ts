@@ -75,22 +75,22 @@ describe('connectionStore', () => {
     });
 
     it('should preserve other fields when updating', () => {
-      connectionStore.updateConnection({ provider: 'groq' });
+      connectionStore.updateConnection({ provider: 'mistral' });
       connectionStore.updateConnection({ latency: 50 });
 
       const state = get(connectionStore);
-      expect(state.provider).toBe('groq');
+      expect(state.provider).toBe('mistral');
       expect(state.latency).toBe(50);
     });
   });
 
   describe('setProviderModel', () => {
     it('should set provider and model together', () => {
-      connectionStore.setProviderModel('nvidia', 'kimi-k2.5');
+      connectionStore.setProviderModel('nvidia', 'nemotron-ultra');
 
       const state = get(connectionStore);
       expect(state.provider).toBe('nvidia');
-      expect(state.model).toBe('kimi-k2.5');
+      expect(state.model).toBe('nemotron-ultra');
     });
 
     it('should preserve other state when setting provider/model', () => {

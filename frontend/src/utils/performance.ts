@@ -1,6 +1,6 @@
 /**
  * Performance Monitoring Utility
- * 
+ *
  * Track and report performance metrics for the application
  */
 
@@ -12,7 +12,7 @@ interface PerformanceMetrics {
   domProcessing: number;
   resourceLoading: number;
   totalLoadTime: number;
-  
+
   // Custom metrics
   jsBundleSize?: number;
   cssBundleSize?: number;
@@ -40,7 +40,7 @@ class PerformanceMonitor {
    */
   mark(name: string): void {
     if (!this.isEnabled) return;
-    
+
     performance.mark(name);
     this.metrics.set(name, performance.now());
   }
@@ -70,7 +70,7 @@ class PerformanceMonitor {
    */
   startTimer(name: string): () => number {
     const startTime = performance.now();
-    
+
     return () => {
       const duration = performance.now() - startTime;
       this.timings.push({ name, startTime, duration });
@@ -85,7 +85,9 @@ class PerformanceMonitor {
     if (!this.isEnabled || !performance.timing) return null;
 
     const timing = performance.timing;
-    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    const navigation = performance.getEntriesByType('navigation')[0] as
+      | PerformanceNavigationTiming
+      | undefined;
 
     return {
       dnsLookup: timing.domainLookupEnd - timing.domainLookupStart,
@@ -94,7 +96,7 @@ class PerformanceMonitor {
       domProcessing: timing.domComplete - timing.domLoading,
       resourceLoading: timing.loadEventEnd - timing.domContentLoadedEventEnd,
       totalLoadTime: timing.loadEventEnd - timing.navigationStart,
-      
+
       // Use newer Navigation Timing API v2 if available
       ...(navigation && {
         firstContentfulPaint: this.getFirstContentfulPaint(),
@@ -110,7 +112,7 @@ class PerformanceMonitor {
     if (!this.isEnabled) return undefined;
 
     const paintEntries = performance.getEntriesByType('paint');
-    const fcpEntry = paintEntries.find(entry => entry.name === 'first-contentful-paint');
+    const fcpEntry = paintEntries.find((entry) => entry.name === 'first-contentful-paint');
     return fcpEntry ? fcpEntry.startTime : undefined;
   }
 
@@ -135,7 +137,7 @@ class PerformanceMonitor {
     let jsSize = 0;
     let cssSize = 0;
 
-    resources.forEach(resource => {
+    resources.forEach((resource) => {
       const url = resource.name;
       const size = (resource as PerformanceResourceTiming).encodedBodySize || 0;
 
@@ -156,13 +158,13 @@ class PerformanceMonitor {
    * Log all collected metrics
    */
   logMetrics(): void {
-    if (!this.isEnabled) return;
+    if (!this.isEnabled || !import.meta.env.DEV) return;
 
     const navigationTiming = this.getNavigationTiming();
     const bundleSizes = this.getBundleSizes();
-    
+
     console.group('📊 Performance Metrics');
-    
+
     if (navigationTiming) {
       console.log('Navigation Timing:', {
         'DNS Lookup': `${navigationTiming.dnsLookup}ms`,
@@ -179,16 +181,19 @@ class PerformanceMonitor {
 
     if (bundleSizes.js || bundleSizes.css) {
       console.log('Bundle Sizes:', {
-        ...(bundleSizes.js && { 'JavaScript': `${(bundleSizes.js / 1024).toFixed(2)}KB` }),
-        ...(bundleSizes.css && { 'CSS': `${(bundleSizes.css / 1024).toFixed(2)}KB` }),
+        ...(bundleSizes.js && { JavaScript: `${(bundleSizes.js / 1024).toFixed(2)}KB` }),
+        ...(bundleSizes.css && { CSS: `${(bundleSizes.css / 1024).toFixed(2)}KB` }),
       });
     }
 
     if (this.timings.length > 0) {
-      console.log('Custom Timings:', this.timings.map(t => ({
-        name: t.name,
-        duration: `${t.duration.toFixed(2)}ms`,
-      })));
+      console.log(
+        'Custom Timings:',
+        this.timings.map((t) => ({
+          name: t.name,
+          duration: `${t.duration.toFixed(2)}ms`,
+        }))
+      );
     }
 
     console.groupEnd();
@@ -217,9 +222,9 @@ class PerformanceMonitor {
         const entries = list.getEntries();
         callback(entries);
       });
-      
+
       observer.observe({ entryTypes: ['longtask'] });
-    } catch (error) {
+    } catch (_error) {
       console.warn('[Performance] Long task observation not supported');
     }
   }
@@ -237,7 +242,7 @@ export const performanceMonitor = new PerformanceMonitor();
 
 // Convenience exports
 export const mark = (name: string) => performanceMonitor.mark(name);
-export const measure = (name: string, startMark: string, endMark?: string) => 
+export const measure = (name: string, startMark: string, endMark?: string) =>
   performanceMonitor.measure(name, startMark, endMark);
 export const startTimer = (name: string) => performanceMonitor.startTimer(name);
 export const logMetrics = () => performanceMonitor.logMetrics();

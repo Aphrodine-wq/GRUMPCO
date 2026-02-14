@@ -78,7 +78,7 @@ describe('newOnboardingStore', () => {
       const expectedOrder: OnboardingStep[] = [
         'welcome',
         'ship-workflow',
-        'g-agent',
+        'agent',
         'auth',
         'api-provider',
         'frontend-stack',
@@ -240,9 +240,9 @@ describe('newOnboardingStore', () => {
 
   describe('AI provider', () => {
     it('should set AI provider', () => {
-      newOnboardingStore.setAiProvider('kimi');
+      newOnboardingStore.setAiProvider('anthropic');
       const data = newOnboardingStore.get();
-      expect(data.aiProvider).toBe('kimi');
+      expect(data.aiProvider).toBe('anthropic');
     });
 
     it('should set AI provider with API key', () => {
@@ -393,10 +393,10 @@ describe('newOnboardingStore', () => {
   });
 
   describe('tech options', () => {
-    it('should have frontend options with Kimi recommended', () => {
-      const kimi = AI_PROVIDER_OPTIONS.find((o) => o.id === 'kimi');
-      expect(kimi).toBeDefined();
-      expect(kimi?.popular).toBe(true);
+    it('should have G-CompN1 marked as popular/recommended', () => {
+      const grump = AI_PROVIDER_OPTIONS.find((o) => o.id === 'grump');
+      expect(grump).toBeDefined();
+      expect(grump?.popular).toBe(true);
     });
 
     it('should have popular frontend frameworks marked', () => {

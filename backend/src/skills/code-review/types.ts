@@ -2,7 +2,7 @@
  * Code Review Skill - Type Definitions
  */
 
-export type ReviewType = "quick" | "deep" | "security" | "performance";
+export type ReviewType = 'quick' | 'deep' | 'security' | 'performance';
 
 export interface ReviewRequest {
   code: string;
@@ -13,8 +13,8 @@ export interface ReviewRequest {
 }
 
 export interface ReviewIssue {
-  severity: "critical" | "warning" | "suggestion" | "info";
-  category: "quality" | "security" | "performance" | "logic" | "style";
+  severity: 'critical' | 'warning' | 'suggestion' | 'info';
+  category: 'quality' | 'security' | 'performance' | 'logic' | 'style';
   line?: number;
   endLine?: number;
   message: string;
@@ -54,6 +54,6 @@ export interface ImprovementSuggestion {
   description: string;
   before: string;
   after: string;
-  impact: "high" | "medium" | "low";
+  impact: 'high' | 'medium' | 'low';
   category: string;
 }

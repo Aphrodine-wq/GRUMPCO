@@ -29,15 +29,6 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 # OpenRouter - Multi-model gateway
 OPENROUTER_API_KEY=your_openrouter_api_key
 
-# GitHub Copilot - Code generation
-GITHUB_COPILOT_TOKEN=your_github_copilot_token
-
-# Kimi K2.5 - Long context specialist
-KIMI_API_KEY=your_kimi_api_key
-
-# Mistral AI - European, multilingual
-MISTRAL_API_KEY=your_mistral_api_key
-
 # Ollama - Local/self-hosted
 OLLAMA_BASE_URL=http://localhost:11434
 ```

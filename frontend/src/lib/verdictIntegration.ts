@@ -205,60 +205,60 @@ export async function getVerdictFromEngine(_query: VerdictQuery): Promise<Verdic
 // ============================================================================
 
 export function formatVerdictForChat(result: VerdictResult): string {
-  const verdictEmoji =
+  const verdictLabel =
     {
-      BuildNow: '🚀',
-      BuildButPivot: '🔄',
-      Skip: '⛔',
-      ThinkHarder: '🤔',
-    }[result.verdict] || '📊';
+      BuildNow: '[BUILD NOW]',
+      BuildButPivot: '[PIVOT]',
+      Skip: '[SKIP]',
+      ThinkHarder: '[RECONSIDER]',
+    }[result.verdict] || '[VERDICT]';
 
   return `
-${verdictEmoji} **VERDICT: ${result.verdict}**
+${verdictLabel} **VERDICT: ${result.verdict}**
 Confidence: ${(result.confidence * 100).toFixed(0)}% | Success Probability: ${(result.success_probability * 100).toFixed(0)}%
 
-**📝 Semantic Analysis:**
-• Intent Type: ${result.analysis.semantic.intent_type}
-• Complexity: ${(result.analysis.semantic.complexity_score * 100).toFixed(0)}%
-• Clarity: ${(result.analysis.semantic.clarity_score * 100).toFixed(0)}%
-• Features: ${result.analysis.semantic.extracted_features.join(', ')}
+**Semantic Analysis:**
+- Intent Type: ${result.analysis.semantic.intent_type}
+- Complexity: ${(result.analysis.semantic.complexity_score * 100).toFixed(0)}%
+- Clarity: ${(result.analysis.semantic.clarity_score * 100).toFixed(0)}%
+- Features: ${result.analysis.semantic.extracted_features.join(', ')}
 
-**🧠 Founder Psychology:**
-• Archetype: ${result.analysis.psychology.archetype}
-• Consistency: ${(result.analysis.psychology.consistency * 100).toFixed(0)}%
-• Learning Orientation: ${(result.analysis.psychology.learning_orientation * 100).toFixed(0)}%
-• Resilience: ${(result.analysis.psychology.resilience * 100).toFixed(0)}%
-• Burnout Risk: ${(result.analysis.psychology.burnout_risk * 100).toFixed(0)}% ⚠️
+**Founder Psychology:**
+- Archetype: ${result.analysis.psychology.archetype}
+- Consistency: ${(result.analysis.psychology.consistency * 100).toFixed(0)}%
+- Learning Orientation: ${(result.analysis.psychology.learning_orientation * 100).toFixed(0)}%
+- Resilience: ${(result.analysis.psychology.resilience * 100).toFixed(0)}%
+- Burnout Risk: ${(result.analysis.psychology.burnout_risk * 100).toFixed(0)}% [!]
 
-**📊 Market Intelligence:**
-• TAM: ${result.analysis.market.tam}
-• Growth Rate: ${(result.analysis.market.growth_rate * 100).toFixed(0)}% YoY
-• Competition: ${result.analysis.market.competition}
-• Opportunity Score: ${(result.analysis.market.opportunity_score * 100).toFixed(0)}%
+**Market Intelligence:**
+- TAM: ${result.analysis.market.tam}
+- Growth Rate: ${(result.analysis.market.growth_rate * 100).toFixed(0)}% YoY
+- Competition: ${result.analysis.market.competition}
+- Opportunity Score: ${(result.analysis.market.opportunity_score * 100).toFixed(0)}%
 
-**🌐 Network Analysis:**
-• Network Size: ${result.analysis.network.size} connections
-• Mentor Strength: ${(result.analysis.network.mentor_strength * 100).toFixed(0)}%
-• Investor Credibility: ${(result.analysis.network.investor_credibility * 100).toFixed(0)}%
-• Peer Quality: ${(result.analysis.network.peer_quality * 100).toFixed(0)}%
-• Pattern: ${result.analysis.network.winning_pattern}
+**Network Analysis:**
+- Network Size: ${result.analysis.network.size} connections
+- Mentor Strength: ${(result.analysis.network.mentor_strength * 100).toFixed(0)}%
+- Investor Credibility: ${(result.analysis.network.investor_credibility * 100).toFixed(0)}%
+- Peer Quality: ${(result.analysis.network.peer_quality * 100).toFixed(0)}%
+- Pattern: ${result.analysis.network.winning_pattern}
 
-**🤖 ML Prediction:**
-• Success Probability: ${(result.analysis.ml_prediction.success_probability * 100).toFixed(0)}%
-• Revenue Potential: ${result.analysis.ml_prediction.revenue_potential}
-• Top Success Factors:
-${result.analysis.ml_prediction.success_factors.map((f) => `  ✓ ${f}`).join('\n')}
-• Top Risk Factors:
-${result.analysis.ml_prediction.risk_factors.map((f) => `  ⚠️  ${f}`).join('\n')}
+**ML Prediction:**
+- Success Probability: ${(result.analysis.ml_prediction.success_probability * 100).toFixed(0)}%
+- Revenue Potential: ${result.analysis.ml_prediction.revenue_potential}
+- Top Success Factors:
+${result.analysis.ml_prediction.success_factors.map((f) => `  + ${f}`).join('\n')}
+- Top Risk Factors:
+${result.analysis.ml_prediction.risk_factors.map((f) => `  ! ${f}`).join('\n')}
 
-**💡 Implicit Requirements:**
-${result.implicit_requirements.map((r) => `• ${r}`).join('\n')}
+**Implicit Requirements:**
+${result.implicit_requirements.map((r) => `- ${r}`).join('\n')}
 
-**⚡ Contradictions:**
-${result.contradictions.length > 0 ? result.contradictions.map((c) => `• ${c}`).join('\n') : 'None detected'}
+**Contradictions:**
+${result.contradictions.length > 0 ? result.contradictions.map((c) => `- ${c}`).join('\n') : 'None detected'}
 
-**📋 Reasoning:**
-${result.reasoning.map((r) => `• ${r}`).join('\n')}
+**Reasoning:**
+${result.reasoning.map((r) => `- ${r}`).join('\n')}
   `;
 }
 
@@ -271,27 +271,27 @@ export async function* streamVerdictResponse(
 ): AsyncGenerator<string, void, unknown> {
   const sections = [
     {
-      label: '🚀 Verdict',
+      label: '[VERDICT]',
       content: `${result.verdict} (${(result.confidence * 100).toFixed(0)}% confidence)`,
     },
     {
-      label: '📊 Semantic Analysis',
+      label: '[SEMANTIC]',
       content: `Intent: ${result.analysis.semantic.intent_type}, Clarity: ${(result.analysis.semantic.clarity_score * 100).toFixed(0)}%`,
     },
     {
-      label: '🧠 Founder Psychology',
+      label: '[PSYCHOLOGY]',
       content: `${result.analysis.psychology.archetype} archetype, Resilience: ${(result.analysis.psychology.resilience * 100).toFixed(0)}%`,
     },
     {
-      label: '📈 Market',
+      label: '[MARKET]',
       content: `TAM: ${result.analysis.market.tam}, Growth: ${(result.analysis.market.growth_rate * 100).toFixed(0)}%`,
     },
     {
-      label: '🌐 Network',
+      label: '[NETWORK]',
       content: `${result.analysis.network.size} connections, Pattern: ${result.analysis.network.winning_pattern}`,
     },
     {
-      label: '🤖 ML Prediction',
+      label: '[ML PREDICTION]',
       content: `Success: ${(result.analysis.ml_prediction.success_probability * 100).toFixed(0)}%, Revenue: ${result.analysis.ml_prediction.revenue_potential}`,
     },
   ];
@@ -318,7 +318,7 @@ export async function processVerdictInChat(
   }
 
   // Show thinking indicator
-  onStream('🔄 Analyzing founder intent and market opportunity...\n');
+  onStream('[ANALYZING] Analyzing founder intent and market opportunity...\n');
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   try {
@@ -331,7 +331,7 @@ export async function processVerdictInChat(
 
     return result;
   } catch (error) {
-    onStream(`❌ Error processing verdict: ${error}\n`);
+    onStream(`[ERROR] Error processing verdict: ${error}\n`);
     return null;
   }
 }

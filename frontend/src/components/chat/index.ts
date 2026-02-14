@@ -18,3 +18,15 @@ export { default as PRDResult } from './PRDResult.svelte';
 export { default as PlanResult } from './PlanResult.svelte';
 export { default as CodeResult } from './CodeResult.svelte';
 export { default as ArtifactViewer } from './ArtifactViewer.svelte';
+export { default as CodeAgentTimeline } from './CodeAgentTimeline.svelte';
+export { default as FilesChangedSummary } from './FilesChangedSummary.svelte';
+export { default as ChatStreamingStatus } from './ChatStreamingStatus.svelte';
+export { default as ChatQuestionDetector } from './ChatQuestionDetector.svelte';
+export {
+  detectNumberedQuestions,
+  extractOptions,
+  type ParsedQuestion,
+} from '../../lib/chat/QuestionDetector';
+export { default as ChatMessageList } from './ChatMessageList.svelte';
+export { default as ChatModelSelector } from './ChatModelSelector.svelte';
+export { default as ChatImageHandler } from './ChatImageHandler.svelte';

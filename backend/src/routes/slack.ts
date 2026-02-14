@@ -3,12 +3,12 @@
  * User connects workspace via OAuth; bot receives messages and routes to messagingService.
  */
 
-import { Router, type Request, type Response } from "express";
-import crypto from "crypto";
-import { getRequestLogger } from "../middleware/logger.js";
-import { getDatabase } from "../db/database.js";
-import { processMessage } from "../services/messagingService.js";
-import { encryptValue } from "../services/cryptoService.js";
+import { Router, type Request, type Response } from 'express';
+import crypto from 'crypto';
+import { getRequestLogger } from '../middleware/logger.js';
+import { getDatabase } from '../db/database.js';
+import { processMessage } from '../services/integrations/messagingService.js';
+import { encryptValue } from '../services/security/cryptoService.js';
 
 const router = Router();
 const log = getRequestLogger();
@@ -16,11 +16,11 @@ const log = getRequestLogger();
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
 const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const API_BASE =
   process.env.PUBLIC_BASE_URL ??
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined) ??
-  "http://localhost:3000";
+  'http://localhost:3000';
 
 function isSlackConfigured(): boolean {
   return !!(SLACK_CLIENT_ID && SLACK_CLIENT_SECRET && SLACK_SIGNING_SECRET);
@@ -35,16 +35,12 @@ function timingSafeEqualString(a: string, b: string): boolean {
 
 function verifySlackSignature(req: Request): boolean {
   if (!SLACK_SIGNING_SECRET) return false;
-  const timestampHeader = req.headers["x-slack-request-timestamp"];
-  const signatureHeader = req.headers["x-slack-signature"];
+  const timestampHeader = req.headers['x-slack-request-timestamp'];
+  const signatureHeader = req.headers['x-slack-signature'];
   if (!timestampHeader || !signatureHeader) return false;
 
-  const timestamp = Array.isArray(timestampHeader)
-    ? timestampHeader[0]
-    : timestampHeader;
-  const signature = Array.isArray(signatureHeader)
-    ? signatureHeader[0]
-    : signatureHeader;
+  const timestamp = Array.isArray(timestampHeader) ? timestampHeader[0] : timestampHeader;
+  const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
   const timestampNumber = Number(timestamp);
   if (!Number.isFinite(timestampNumber)) return false;
 
@@ -54,11 +50,8 @@ function verifySlackSignature(req: Request): boolean {
   const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
   if (!rawBody) return false;
 
-  const base = `v0:${timestamp}:${rawBody.toString("utf8")}`;
-  const digest = crypto
-    .createHmac("sha256", SLACK_SIGNING_SECRET)
-    .update(base)
-    .digest("hex");
+  const base = `v0:${timestamp}:${rawBody.toString('utf8')}`;
+  const digest = crypto.createHmac('sha256', SLACK_SIGNING_SECRET).update(base).digest('hex');
   const expected = `v0=${digest}`;
   return timingSafeEqualString(signature, expected);
 }
@@ -68,16 +61,16 @@ function verifySlackSignature(req: Request): boolean {
  * Redirect user to Slack OAuth authorize URL.
  * Optional query: ?userId=grump_user_id - passed as state for pairing on callback.
  */
-router.get("/oauth", (req: Request, res: Response) => {
+router.get('/oauth', (req: Request, res: Response) => {
   if (!isSlackConfigured()) {
-    res.status(503).json({ error: "Slack not configured" });
+    res.status(503).json({ error: 'Slack not configured' });
     return;
   }
   const redirectUri = `${API_BASE}/api/slack/callback`;
-  const scopes = "chat:write,channels:history,im:history,commands,users:read";
-  const state = (req.query?.userId ?? req.query?.state ?? "") as string;
+  const scopes = 'chat:write,channels:history,im:history,commands,users:read';
+  const state = (req.query?.userId ?? req.query?.state ?? '') as string;
   const params = new URLSearchParams({
-    client_id: SLACK_CLIENT_ID ?? "",
+    client_id: SLACK_CLIENT_ID ?? '',
     scope: scopes,
     redirect_uri: redirectUri,
     ...(state && { state }),
@@ -90,25 +83,25 @@ router.get("/oauth", (req: Request, res: Response) => {
  * GET /api/slack/callback
  * OAuth callback – exchange code for token and store.
  */
-router.get("/callback", async (req: Request, res: Response) => {
+router.get('/callback', async (req: Request, res: Response) => {
   const { code, state } = req.query;
-  if (!code || typeof code !== "string") {
-    res.status(400).json({ error: "Missing code" });
+  if (!code || typeof code !== 'string') {
+    res.status(400).json({ error: 'Missing code' });
     return;
   }
-  const grumpUserId = typeof state === "string" ? state.trim() || null : null;
+  const grumpUserId = typeof state === 'string' ? state.trim() || null : null;
   if (!isSlackConfigured()) {
-    res.status(503).json({ error: "Slack not configured" });
+    res.status(503).json({ error: 'Slack not configured' });
     return;
   }
   try {
     const redirectUri = `${API_BASE}/api/slack/callback`;
-    const r = await fetch("https://slack.com/api/oauth.v2.access", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    const r = await fetch('https://slack.com/api/oauth.v2.access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id: SLACK_CLIENT_ID ?? "",
-        client_secret: SLACK_CLIENT_SECRET ?? "",
+        client_id: SLACK_CLIENT_ID ?? '',
+        client_secret: SLACK_CLIENT_SECRET ?? '',
         code,
         redirect_uri: redirectUri,
       }),
@@ -122,17 +115,17 @@ router.get("/callback", async (req: Request, res: Response) => {
       scope?: string;
     };
     if (!data.ok || !data.access_token) {
-      log.warn({ error: data.error }, "Slack OAuth exchange failed");
-      res.status(400).json({ error: data.error ?? "OAuth failed" });
+      log.warn({ error: data.error }, 'Slack OAuth exchange failed');
+      res.status(400).json({ error: data.error ?? 'OAuth failed' });
       return;
     }
 
     // Store access_token in DB keyed by user/workspace
     try {
       const db = getDatabase();
-      const workspaceId = data.team?.id || "unknown";
+      const workspaceId = data.team?.id || 'unknown';
       const workspaceName = data.team?.name || null;
-      const slackUserId = data.authed_user?.id || "default";
+      const slackUserId = data.authed_user?.id || 'default';
       const tokenId = `slack_${slackUserId}_${workspaceId}`;
       const now = new Date().toISOString();
 
@@ -156,24 +149,21 @@ router.get("/callback", async (req: Request, res: Response) => {
           grump_user_id: grumpUserId,
           created_at: now,
         });
-        log.info(
-          { slackUserId, workspaceId, grumpUserId },
-          "Slack user pairing saved",
-        );
+        log.info({ slackUserId, workspaceId, grumpUserId }, 'Slack user pairing saved');
       }
 
       log.info(
         { workspaceId, workspaceName, userId: slackUserId },
-        "Slack OAuth success - token stored",
+        'Slack OAuth success - token stored'
       );
     } catch (err) {
-      log.error({ err }, "Failed to store Slack token");
+      log.error({ err }, 'Failed to store Slack token');
     }
 
     res.redirect(`${FRONTEND_URL}/settings?slack=connected`);
   } catch (err) {
-    log.error({ err }, "Slack OAuth error");
-    res.status(500).json({ error: "OAuth failed" });
+    log.error({ err }, 'Slack OAuth error');
+    res.status(500).json({ error: 'OAuth failed' });
   }
 });
 
@@ -181,13 +171,13 @@ router.get("/callback", async (req: Request, res: Response) => {
  * POST /api/slack/events
  * Slack Events API webhook – receive messages and route to chat/ship.
  */
-router.post("/events", async (req: Request, res: Response) => {
+router.post('/events', async (req: Request, res: Response) => {
   if (!SLACK_SIGNING_SECRET) {
-    res.status(503).json({ error: "Slack not configured" });
+    res.status(503).json({ error: 'Slack not configured' });
     return;
   }
   if (!verifySlackSignature(req)) {
-    res.status(401).json({ error: "Invalid Slack signature" });
+    res.status(401).json({ error: 'Invalid Slack signature' });
     return;
   }
   const body = req.body as {
@@ -202,13 +192,13 @@ router.post("/events", async (req: Request, res: Response) => {
     };
   };
   // URL verification challenge
-  if (body.type === "url_verification" && body.challenge) {
+  if (body.type === 'url_verification' && body.challenge) {
     res.json({ challenge: body.challenge });
     return;
   }
 
   // Process events and route to messagingService
-  if (body.event?.type === "message" && body.event.text) {
+  if (body.event?.type === 'message' && body.event.text) {
     const { user, channel, text, team } = body.event;
     if (!user || !text) {
       res.status(200).send();
@@ -217,7 +207,7 @@ router.post("/events", async (req: Request, res: Response) => {
 
     try {
       // Process message through messagingService (user = Slack user ID for conversation key)
-      const reply = await processMessage("slack", user, text);
+      const reply = await processMessage('slack', user, text);
 
       // Send reply back to Slack using any token for this workspace
       if (reply && team) {
@@ -225,19 +215,16 @@ router.post("/events", async (req: Request, res: Response) => {
           const db = getDatabase();
           const tokenRecord = await db.getSlackTokenByWorkspace(team);
           if (tokenRecord) {
-            const { decryptValue } =
-              await import("../services/cryptoService.js");
-            const accessToken = decryptValue(
-              JSON.parse(tokenRecord.access_token_enc),
-            );
-            await sendSlackMessage(accessToken, channel || "", reply);
+            const { decryptValue } = await import('../services/security/cryptoService.js');
+            const accessToken = decryptValue(JSON.parse(tokenRecord.access_token_enc));
+            await sendSlackMessage(accessToken, channel || '', reply);
           }
         } catch (err) {
-          log.warn({ err, user, team }, "Failed to send Slack reply");
+          log.warn({ err, user, team }, 'Failed to send Slack reply');
         }
       }
     } catch (err) {
-      log.error({ err, user }, "Error processing Slack message");
+      log.error({ err, user }, 'Error processing Slack message');
     }
   }
 
@@ -247,16 +234,12 @@ router.post("/events", async (req: Request, res: Response) => {
 /**
  * Send a message to Slack channel
  */
-async function sendSlackMessage(
-  accessToken: string,
-  channel: string,
-  text: string,
-): Promise<void> {
-  const res = await fetch("https://slack.com/api/chat.postMessage", {
-    method: "POST",
+async function sendSlackMessage(accessToken: string, channel: string, text: string): Promise<void> {
+  const res = await fetch('https://slack.com/api/chat.postMessage', {
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       channel,

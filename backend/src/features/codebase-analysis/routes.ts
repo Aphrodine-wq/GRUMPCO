@@ -4,21 +4,21 @@
  * API endpoints for analyzing existing codebases.
  */
 
-import { Router, type Request, type Response } from "express";
-import logger from "../../middleware/logger.js";
+import { Router, type Request, type Response } from 'express';
+import logger from '../../middleware/logger.js';
 import {
   analyzeCodebase,
   generateArchitectureDiagram,
   analyzeDependencies,
   getCodeMetrics,
   detectCodeSmells,
-} from "./service.js";
+} from './service.js';
 import {
   type AnalysisRequest,
   type ArchitectureDiagramRequest,
   type DependencyGraphRequest,
   type MetricsRequest,
-} from "./types.js";
+} from './types.js';
 
 const router = Router();
 
@@ -26,14 +26,14 @@ const router = Router();
  * POST /api/analyze/project
  * Full codebase analysis
  */
-router.post("/project", async (req: Request, res: Response) => {
+router.post('/project', async (req: Request, res: Response) => {
   try {
     const { workspacePath, options } = req.body as AnalysisRequest;
 
     if (!workspacePath) {
       res.status(400).json({
-        error: "Missing workspacePath",
-        type: "validation_error",
+        error: 'Missing workspacePath',
+        type: 'validation_error',
       });
       return;
     }
@@ -46,10 +46,10 @@ router.post("/project", async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message }, "Analysis error");
+    logger.error({ error: err.message }, 'Analysis error');
     res.status(500).json({
       error: err.message,
-      type: "analysis_error",
+      type: 'analysis_error',
     });
   }
 });
@@ -58,15 +58,14 @@ router.post("/project", async (req: Request, res: Response) => {
  * POST /api/analyze/architecture
  * Generate architecture diagram from codebase
  */
-router.post("/architecture", async (req: Request, res: Response) => {
+router.post('/architecture', async (req: Request, res: Response) => {
   try {
-    const { workspacePath, diagramType, focusOn } =
-      req.body as ArchitectureDiagramRequest;
+    const { workspacePath, diagramType, focusOn } = req.body as ArchitectureDiagramRequest;
 
     if (!workspacePath) {
       res.status(400).json({
-        error: "Missing workspacePath",
-        type: "validation_error",
+        error: 'Missing workspacePath',
+        type: 'validation_error',
       });
       return;
     }
@@ -86,21 +85,21 @@ router.post("/architecture", async (req: Request, res: Response) => {
       data: {
         mermaidDiagram,
         summary,
-        diagramType: resolvedDiagramType || diagramType || "component",
+        diagramType: resolvedDiagramType || diagramType || 'component',
       },
     });
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message }, "Architecture diagram error");
+    logger.error({ error: err.message }, 'Architecture diagram error');
     const hint =
-      err.message.includes("ENOENT") || err.message.includes("no such file")
-        ? "Ensure workspacePath exists and is readable."
-        : err.message.includes("timeout") || err.message.includes("ETIMEDOUT")
-          ? "Analysis timed out; try a smaller workspace or increase timeout."
+      err.message.includes('ENOENT') || err.message.includes('no such file')
+        ? 'Ensure workspacePath exists and is readable.'
+        : err.message.includes('timeout') || err.message.includes('ETIMEDOUT')
+          ? 'Analysis timed out; try a smaller workspace or increase timeout.'
           : undefined;
     res.status(500).json({
       error: err.message,
-      type: "diagram_error",
+      type: 'diagram_error',
       ...(hint && { hint }),
     });
   }
@@ -110,15 +109,14 @@ router.post("/architecture", async (req: Request, res: Response) => {
  * POST /api/analyze/dependencies
  * Analyze project dependencies
  */
-router.post("/dependencies", async (req: Request, res: Response) => {
+router.post('/dependencies', async (req: Request, res: Response) => {
   try {
-    const { workspacePath, includeDevDeps, showVersions } =
-      req.body as DependencyGraphRequest;
+    const { workspacePath, includeDevDeps, showVersions } = req.body as DependencyGraphRequest;
 
     if (!workspacePath) {
       res.status(400).json({
-        error: "Missing workspacePath",
-        type: "validation_error",
+        error: 'Missing workspacePath',
+        type: 'validation_error',
       });
       return;
     }
@@ -135,10 +133,10 @@ router.post("/dependencies", async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message }, "Dependency analysis error");
+    logger.error({ error: err.message }, 'Dependency analysis error');
     res.status(500).json({
       error: err.message,
-      type: "dependency_error",
+      type: 'dependency_error',
     });
   }
 });
@@ -147,14 +145,14 @@ router.post("/dependencies", async (req: Request, res: Response) => {
  * POST /api/analyze/metrics
  * Get code metrics
  */
-router.post("/metrics", async (req: Request, res: Response) => {
+router.post('/metrics', async (req: Request, res: Response) => {
   try {
     const { workspacePath, groupBy } = req.body as MetricsRequest;
 
     if (!workspacePath) {
       res.status(400).json({
-        error: "Missing workspacePath",
-        type: "validation_error",
+        error: 'Missing workspacePath',
+        type: 'validation_error',
       });
       return;
     }
@@ -167,10 +165,10 @@ router.post("/metrics", async (req: Request, res: Response) => {
     });
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message }, "Metrics error");
+    logger.error({ error: err.message }, 'Metrics error');
     res.status(500).json({
       error: err.message,
-      type: "metrics_error",
+      type: 'metrics_error',
     });
   }
 });
@@ -179,14 +177,14 @@ router.post("/metrics", async (req: Request, res: Response) => {
  * POST /api/analyze/code-smells
  * Detect code smells and quality issues
  */
-router.post("/code-smells", async (req: Request, res: Response) => {
+router.post('/code-smells', async (req: Request, res: Response) => {
   try {
     const { workspacePath } = req.body;
 
     if (!workspacePath) {
       res.status(400).json({
-        error: "Missing workspacePath",
-        type: "validation_error",
+        error: 'Missing workspacePath',
+        type: 'validation_error',
       });
       return;
     }
@@ -203,23 +201,23 @@ router.post("/code-smells", async (req: Request, res: Response) => {
             acc[s.type] = (acc[s.type] || 0) + 1;
             return acc;
           },
-          {} as Record<string, number>,
+          {} as Record<string, number>
         ),
         bySeverity: smells.reduce(
           (acc, s) => {
             acc[s.severity] = (acc[s.severity] || 0) + 1;
             return acc;
           },
-          {} as Record<string, number>,
+          {} as Record<string, number>
         ),
       },
     });
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message }, "Code smells error");
+    logger.error({ error: err.message }, 'Code smells error');
     res.status(500).json({
       error: err.message,
-      type: "code_smells_error",
+      type: 'code_smells_error',
     });
   }
 });
@@ -228,11 +226,11 @@ router.post("/code-smells", async (req: Request, res: Response) => {
  * GET /api/analyze/health
  * Health check for analysis service
  */
-router.get("/health", (_req: Request, res: Response) => {
+router.get('/health', (_req: Request, res: Response) => {
   res.json({
-    status: "ok",
-    service: "codebase-analysis",
-    version: "1.0.0",
+    status: 'ok',
+    service: 'codebase-analysis',
+    version: '1.0.0',
   });
 });
 

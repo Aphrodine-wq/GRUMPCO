@@ -94,7 +94,7 @@
       // Build
       {
         id: 'view-gAgent',
-        label: 'G-Agent',
+        label: 'Agent',
         category: 'build',
         icon: Bot,
         action: () => {
@@ -149,7 +149,7 @@
         category: 'tools',
         icon: Blocks,
         action: () => {
-          setCurrentView('skills');
+          setCurrentView('memory');
           close();
         },
       },
@@ -160,27 +160,17 @@
         category: 'ai',
         icon: Users,
         action: () => {
-          setCurrentView('swarm');
+          setCurrentView('gAgent');
           close();
         },
       },
       {
         id: 'view-memory',
-        label: 'Memory',
+        label: 'Knowledge',
         category: 'ai',
         icon: Brain,
         action: () => {
           setCurrentView('memory');
-          close();
-        },
-      },
-      {
-        id: 'view-heartbeats',
-        label: 'Scheduled tasks',
-        category: 'ai',
-        icon: Clock,
-        action: () => {
-          setCurrentView('heartbeats');
           close();
         },
       },
@@ -503,7 +493,9 @@
         {:else}
           {#each listItems as item}
             {#if item.type === 'header'}
-              <div class="command-category-header">{categoryLabels[item.category]}</div>
+              <div class="command-category-header" role="presentation">
+                {categoryLabels[item.category]}
+              </div>
             {:else}
               <button
                 class="command-item"
@@ -513,6 +505,7 @@
                 onmouseenter={() => (selectedIndex = item.index)}
                 role="option"
                 aria-selected={item.index === selectedIndex}
+                tabindex="-1"
               >
                 <span class="command-icon">
                   {#if item.command.icon}

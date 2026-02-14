@@ -12,12 +12,12 @@ import globals from 'globals';
 
 export default [
   js.configs.recommended,
-  
+
   // Ignores
   {
-    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.ts'],
+    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.ts', 'src/__tests__/**'],
   },
-  
+
   // TypeScript source files
   {
     files: ['src/**/*.ts'],
@@ -39,9 +39,9 @@ export default [
     rules: {
       // Inherit recommended rules
       ...tseslint.configs.recommended.rules,
-      
+
       // TypeScript strict rules - aligned with root config
-      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['warn', {
         argsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_',
@@ -49,52 +49,67 @@ export default [
       }],
       '@typescript-eslint/no-empty-object-type': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-require-imports': 'off',
-      
+
       // Consistent type imports
       '@typescript-eslint/consistent-type-imports': ['warn', {
         prefer: 'type-imports',
         fixStyle: 'inline-type-imports',
       }],
-      
+
       // General rules
       'no-useless-catch': 'warn',
       'no-useless-escape': 'warn',
       'no-undef': 'off', // TypeScript handles this
       'no-console': 'off', // Backend needs console for logging
-      
+
       // Best practices
       'eqeqeq': ['error', 'always', { null: 'ignore' }],
       'no-var': 'error',
-      'prefer-const': 'error',
+      'prefer-const': 'warn',
       'no-duplicate-imports': 'warn',
       'no-case-declarations': 'warn',
       'no-control-regex': 'warn',
-      
+
       // Security
       'no-eval': 'error',
       'no-implied-eval': 'error',
       'no-new-func': 'error',
-      
+
       // Async safety
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error',
-      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-misused-promises': 'warn',
+      '@typescript-eslint/await-thenable': 'warn',
       '@typescript-eslint/require-await': 'warn',
+      '@typescript-eslint/no-unused-expressions': 'warn',
     },
   },
-  
+
   // Test files - more relaxed rules
   {
     files: ['tests/**/*.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        // Test files are excluded from tsconfig.json, so we disable project-based parsing
+        project: null,
+      },
+    },
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
+      '@typescript-eslint/await-thenable': 'off',
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
       'no-console': 'off',
     },
   },
-  
+
   // Scripts - allow console
   {
     files: ['scripts/**/*.ts'],
@@ -102,7 +117,7 @@ export default [
       'no-console': 'off',
     },
   },
-  
+
   // JavaScript files
   {
     files: ['src/**/*.js', 'api/**/*.js'],

@@ -1,5 +1,3 @@
-version: '3.8'
-
 # G-Rump Docker Compose Configuration
 #
 # Run from project root: docker compose -f deploy/docker-compose.yml up --build -d
@@ -13,13 +11,15 @@ services:
       context: ../backend
       dockerfile: Dockerfile
       cache_from:
-        - ghcr.io/your-org/grump-backend:latest
+        - ghcr.io/aphrodine-wq/grump-backend:latest
       args:
         BUILDKIT_INLINE_CACHE: 1
     image: grump-backend:latest
     container_name: grump-backend
     ports:
       - "3000:3000"
+    env_file:
+      - ../backend/.env
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -41,7 +41,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health/quick"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/health/quick" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -65,15 +65,10 @@ services:
     volumes:
       - redis-data:/data
     command: >
-      redis-server 
-      --appendonly yes 
-      --maxmemory 512mb 
-      --maxmemory-policy allkeys-lru
-      --tcp-keepalive 60
-      --timeout 0
+      redis-server  --appendonly yes  --maxmemory 512mb  --maxmemory-policy allkeys-lru --tcp-keepalive 60 --timeout 0
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -90,13 +85,15 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
       cache_from:
-        - ghcr.io/your-org/grump-frontend:latest
+        - ghcr.io/aphrodine-wq/grump-frontend:latest
       args:
         BUILDKIT_INLINE_CACHE: 1
     image: grump-frontend:latest
     container_name: grump-frontend
     ports:
       - "5173:80"
+    environment:
+      - BACKEND_URL=http://backend:3000
     depends_on:
       - backend
     restart: unless-stopped

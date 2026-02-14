@@ -1,9 +1,0 @@
-# NeMo Curator synthetic data pipeline for G-Rump
-# Uses NVIDIA NIM (OpenAI-compatible) for Nemotron-based generation
-# Python 3.10+ required
-
-openai>=1.0.0
-pyyaml>=6.0
-
-# Optional: nemo-curator[text] for advanced pipelines (Q&A, distillation, etc.)
-# pip install nemo-curator[text]

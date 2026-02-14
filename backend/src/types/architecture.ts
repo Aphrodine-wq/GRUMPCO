@@ -3,21 +3,15 @@
  * Structures for system architecture generation and PRD
  */
 
-export type C4Level = "context" | "container" | "component" | "code";
-export type ProjectType =
-  | "web"
-  | "mobile"
-  | "api"
-  | "fullstack"
-  | "saas"
-  | "general";
-export type Complexity = "mvp" | "standard" | "enterprise";
+export type C4Level = 'context' | 'container' | 'component' | 'code';
+export type ProjectType = 'web' | 'mobile' | 'api' | 'fullstack' | 'saas' | 'general';
+export type Complexity = 'mvp' | 'standard' | 'enterprise';
 
 export interface Component {
   id: string;
   name: string;
   description: string;
-  type: "frontend" | "backend" | "database" | "service" | "external" | "queue";
+  type: 'frontend' | 'backend' | 'database' | 'service' | 'external' | 'queue';
   technology?: string[];
   responsibilities?: string[];
 }
@@ -42,13 +36,13 @@ export interface DataModel {
   relationships?: {
     field: string;
     references: string;
-    type: "one-to-one" | "one-to-many" | "many-to-many";
+    type: 'one-to-one' | 'one-to-many' | 'many-to-many';
   }[];
 }
 
 export interface APIEndpoint {
   id: string;
-  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   path: string;
   description: string;
   parameters?: {
@@ -115,8 +109,85 @@ export interface ArchitectureRequest {
 
 export interface ArchitectureResponse {
   id: string;
-  status: "generating" | "complete" | "error";
+  status: 'generating' | 'complete' | 'error';
   architecture?: SystemArchitecture;
   error?: string;
   timestamp: string;
+}
+
+// ============================================================================
+// Drift Detection Types
+// ============================================================================
+
+export type DriftSeverity = 'error' | 'warning' | 'info';
+
+export type DriftCategory =
+  | 'layer_crossing'
+  | 'undeclared_integration'
+  | 'tech_mismatch'
+  | 'component_boundary'
+  | 'reverse_dependency';
+
+export interface DriftViolation {
+  /** Unique rule ID for filtering/suppressing */
+  ruleId: string;
+  /** Severity of the violation */
+  severity: DriftSeverity;
+  /** Which detection category triggered this */
+  category: DriftCategory;
+  /** File where the violation was detected */
+  file: string;
+  /** Line number (if determinable) */
+  line?: number;
+  /** The offending import/reference */
+  offendingCode: string;
+  /** Human-readable description of the violation */
+  message: string;
+  /** Suggested fix */
+  suggestion: string;
+}
+
+export interface ArchitectureRuleset {
+  /** Component types and their allowed layers */
+  components: Array<{
+    id: string;
+    name: string;
+    type: Component['type'];
+    technology: string[];
+  }>;
+  /** Declared integrations (source → target pairs) */
+  allowedIntegrations: Array<{
+    sourceId: string;
+    targetId: string;
+    protocol: string;
+  }>;
+  /** Declared tech stack per layer */
+  declaredTech: {
+    frontend: string[];
+    backend: string[];
+    database: string[];
+    infrastructure: string[];
+  };
+  /** All declared tech stack items (flat) */
+  allTech: string[];
+}
+
+export interface DriftReport {
+  /** Architecture ID that rules were derived from */
+  architectureId: string;
+  /** Timestamp of the analysis */
+  analyzedAt: string;
+  /** Total files scanned */
+  filesScanned: number;
+  /** All violations found */
+  violations: DriftViolation[];
+  /** Summary counts by severity */
+  summary: {
+    errors: number;
+    warnings: number;
+    info: number;
+    total: number;
+  };
+  /** Whether the code passes (no errors) */
+  passes: boolean;
 }

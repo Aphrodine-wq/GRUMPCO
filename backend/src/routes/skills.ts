@@ -1,5 +1,5 @@
-import { Router } from "express";
-import { skillRegistry } from "../skills/index.js";
+import { Router } from 'express';
+import { skillRegistry } from '../skills/index.js';
 
 const router = Router();
 
@@ -7,7 +7,7 @@ const router = Router();
  * GET /api/skills
  * List all available skills in the registry.
  */
-router.get("/", (req, res) => {
+router.get('/', (req, res) => {
   const skills = skillRegistry.getAllSkills().map((s) => ({
     id: s.manifest.id,
     name: s.manifest.name,
@@ -25,10 +25,10 @@ router.get("/", (req, res) => {
  * GET /api/skills/:id
  * Get details for a specific skill.
  */
-router.get("/:id", (req, res) => {
+router.get('/:id', (req, res) => {
   const skill = skillRegistry.getSkill(req.params.id);
   if (!skill) {
-    res.status(404).json({ error: "Skill not found" });
+    res.status(404).json({ error: 'Skill not found' });
     return;
   }
   res.json({

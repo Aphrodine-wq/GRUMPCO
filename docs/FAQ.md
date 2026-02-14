@@ -45,7 +45,7 @@ Yes! G-Rump is open source (MIT license) with:
 - Development and testing
 - Demo environments
 
-For real AI generation, add one API key from [NVIDIA NIM](https://build.nvidia.com/), [OpenRouter](https://openrouter.ai/), or [Groq](https://groq.com/).
+For real AI generation, add one API key from [NVIDIA NIM](https://build.nvidia.com/) or [OpenRouter](https://openrouter.ai/).
 
 ### What are the system requirements?
 
@@ -60,8 +60,8 @@ For real AI generation, add one API key from [NVIDIA NIM](https://build.nvidia.c
 
 **Quick start:**
 ```bash
-git clone https://github.com/Aphrodine-wq/G-rump.com.git
-cd G-rump.com
+git clone https://github.com/Aphrodine-wq/GRUMPCO.git
+cd GRUMPCO
 npm install
 npm run build:packages
 echo "MOCK_AI_MODE=true" > backend/.env
@@ -120,7 +120,6 @@ echo "OLLAMA_URL=http://localhost:11434" >> backend/.env
 |----------|---------------------|--------|
 | **NVIDIA NIM** | `NVIDIA_NIM_API_KEY` | Nemotron, Llama, Mistral |
 | **OpenRouter** | `OPENROUTER_API_KEY` | 100+ models |
-| **Groq** | `GROQ_API_KEY` | Fast inference |
 | **Ollama** | `OLLAMA_URL` | Local models |
 
 ### Can I use G-Rump via API?
@@ -145,7 +144,7 @@ See [API.md](./API.md) for complete reference.
 Yes! Install the CLI:
 
 ```bash
-npm install -g @g-rump/cli
+npm install -g grump-cli
 
 # Usage
 grump ship "Build a React dashboard"
@@ -304,8 +303,8 @@ See [ROADMAP.md](./ROADMAP.md) for full details.
 ### Where can I get help?
 
 - 📖 [Documentation](./README.md)
-- 🐛 [Issue Tracker](https://github.com/Aphrodine-wq/G-rump.com/issues)
-- 💬 [Discussions](https://github.com/Aphrodine-wq/G-rump.com/discussions)
+- 🐛 [Issue Tracker](https://github.com/Aphrodine-wq/GRUMPCO/issues)
+- 💬 [Discussions](https://github.com/Aphrodine-wq/GRUMPCO/discussions)
 
 ### How do I report a bug?
 
@@ -335,3 +334,5 @@ Yes! You can:
 ### Do I need to contribute back?
 
 No, but contributions are welcome! 🎉
+
+

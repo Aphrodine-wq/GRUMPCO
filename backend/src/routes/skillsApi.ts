@@ -4,17 +4,17 @@
  * Mounted at /api/skills-api to avoid clashing with /api/skills (skill registry).
  */
 
-import { Router, type Request, type Response } from "express";
-import { createSkill } from "../services/userSkillsService.js";
-import { sendServerError } from "../utils/errorResponse.js";
+import { Router, type Request, type Response } from 'express';
+import { createSkill } from '../services/workspace/userSkillsService.js';
+import { sendServerError } from '../utils/errorResponse.js';
 
 const router = Router();
 
 function getUserId(req: Request): string {
-  const header = req.headers["x-user-id"];
-  if (typeof header === "string" && header.trim()) return header.trim();
+  const header = req.headers['x-user-id'];
+  if (typeof header === 'string' && header.trim()) return header.trim();
   const r = req as Request & { user?: { id?: string }; userId?: string };
-  return r.user?.id ?? r.userId ?? "default";
+  return r.user?.id ?? r.userId ?? 'default';
 }
 
 /**
@@ -23,16 +23,14 @@ function getUserId(req: Request): string {
  * Body: { description: string }
  * Returns: { content: string } – the SKILL.md body to save to .cursor/skills/ or similar.
  */
-router.post(
-  "/generate-skill-md",
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { description } = req.body as { description?: string };
-      if (!description || typeof description !== "string") {
-        res.status(400).json({ error: "description (string) required" });
-        return;
-      }
-      const content = `# Skill: ${description.slice(0, 80)}${description.length > 80 ? "..." : ""}
+router.post('/generate-skill-md', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { description } = req.body as { description?: string };
+    if (!description || typeof description !== 'string') {
+      res.status(400).json({ error: 'description (string) required' });
+      return;
+    }
+    const content = `# Skill: ${description.slice(0, 80)}${description.length > 80 ? '...' : ''}
 
 ## When to use
 Use this skill when the user asks for: ${description.slice(0, 200)}.
@@ -46,12 +44,11 @@ Use this skill when the user asks for: ${description.slice(0, 200)}.
 - Prefer small, focused changes.
 - Explain briefly what you did.
 `;
-      res.json({ content });
-    } catch (err) {
-      sendServerError(res, err);
-    }
-  },
-);
+    res.json({ content });
+  } catch (err) {
+    sendServerError(res, err);
+  }
+});
 
 /**
  * POST /api/skills-api/create
@@ -59,19 +56,19 @@ Use this skill when the user asks for: ${description.slice(0, 200)}.
  * Body: { name: string, description: string, tools?: Array<{ name: string, description: string }> }
  * Returns: { success: boolean, skillId?: string, error?: string }
  */
-router.post("/create", async (req: Request, res: Response): Promise<void> => {
+router.post('/create', async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, description, tools } = (req.body ?? {}) as {
       name?: string;
       description?: string;
       tools?: Array<{ name: string; description: string }>;
     };
-    if (!name || typeof name !== "string" || !name.trim()) {
-      res.status(400).json({ error: "name (non-empty string) required" });
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      res.status(400).json({ error: 'name (non-empty string) required' });
       return;
     }
-    if (!description || typeof description !== "string") {
-      res.status(400).json({ error: "description (string) required" });
+    if (!description || typeof description !== 'string') {
+      res.status(400).json({ error: 'description (string) required' });
       return;
     }
     const userId = getUserId(req);
@@ -80,7 +77,7 @@ router.post("/create", async (req: Request, res: Response): Promise<void> => {
       description.trim(),
       Array.isArray(tools) ? tools : [],
       {},
-      userId,
+      userId
     );
     if (!result.success) {
       res.status(400).json({ success: false, error: result.error });

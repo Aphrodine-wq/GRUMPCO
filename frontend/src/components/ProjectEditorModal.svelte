@@ -24,7 +24,7 @@
     if (session) {
       name = session.name ?? '';
       description = session.description ?? '';
-      // Show G-Agent for both gAgent and legacy freeAgent
+      // Show Agent for both gAgent and legacy freeAgent
       const raw = session.sessionType ?? '';
       sessionType = raw === 'freeAgent' ? 'gAgent' : raw;
     }
@@ -54,7 +54,7 @@
   const SESSION_TYPE_OPTIONS: { value: SessionType | ''; label: string }[] = [
     { value: '', label: 'Default' },
     { value: 'chat', label: 'Chat' },
-    { value: 'gAgent', label: 'G-Agent' },
+    { value: 'gAgent', label: 'Agent' },
   ];
 </script>
 

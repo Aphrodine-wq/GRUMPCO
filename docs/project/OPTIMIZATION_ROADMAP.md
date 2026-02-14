@@ -31,7 +31,6 @@ This roadmap delivers **sub-100ms P50** and **sub-500ms P95** latency with a con
 ```typescript
 // backend/src/services/llmGateway.ts - Add provider-specific timeouts
 const PROVIDER_TIMEOUTS: Record<LLMProvider, number> = {
-  groq: 30_000,      // Fast inference
   nim: 60_000,       // Kimi K2.5 - reliable
   anthropic: 120_000, // Claude can be slow
   gemini: 90_000,
@@ -391,7 +390,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxAttempts: 3,
   baseDelay: 1000,
   maxDelay: 10000,
-  fallbackChain: ['groq', 'nim', 'openrouter', 'anthropic'],
+  fallbackChain: ['nim', 'openrouter', 'anthropic'],
 };
 
 export async function* streamWithRetry(
@@ -1277,7 +1276,7 @@ shortcuts.register('esc', () => closeModal());
 2. **Update timeout configuration:**
    ```typescript
    // In llmGateway.ts, add provider-specific timeouts
-   const PROVIDER_TIMEOUTS = { groq: 30_000, nim: 60_000, anthropic: 120_000 };
+   const PROVIDER_TIMEOUTS = { nim: 60_000, anthropic: 120_000, openrouter: 90_000 };
    ```
 
 3. **Implement request deduplication:** (see code above)

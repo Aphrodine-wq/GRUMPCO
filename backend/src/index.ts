@@ -10,15 +10,15 @@
  */
 
 // MUST be first import - loads environment variables before other modules
-import "./config/env.js";
+import './config/env.js';
 
-import logger from "./middleware/logger.js";
+import logger from './middleware/logger.js';
 import {
   createApp,
   applyAsyncMiddleware,
   applyMetricsEndpoint,
   applyErrorHandlers,
-} from "./server/app.js";
+} from './server/app.js';
 import {
   initializeCore,
   initializeWorkers,
@@ -26,10 +26,10 @@ import {
   initializeSkills,
   startServer,
   registerShutdownHandlers,
-} from "./server/lifecycle.js";
+} from './server/lifecycle.js';
 
 /** Preferred port for the HTTP server */
-const PREFERRED_PORT = parseInt(process.env.PORT || "3000", 10) || 3000;
+const PREFERRED_PORT = parseInt(process.env.PORT || '3000', 10) || 3000;
 
 /** Promise that resolves when the app is fully initialized */
 let resolveAppReady: (() => void) | null = null;
@@ -46,14 +46,15 @@ const app = createApp();
  */
 async function bootstrap(): Promise<void> {
   try {
+    // Phase 0: Register shutdown & error handlers FIRST so unhandledRejection /
+    // uncaughtException handlers protect every subsequent phase.
+    registerShutdownHandlers();
+
     // Phase 1: Initialize core services (database, cost tracking) — must be first
     await initializeCore();
 
     // Phase 2+3: Workers and middleware are INDEPENDENT — run in parallel
-    await Promise.all([
-      initializeWorkers(),
-      applyAsyncMiddleware(app),
-    ]);
+    await Promise.all([initializeWorkers(), applyAsyncMiddleware(app)]);
 
     // Phase 4: Apply metrics and error handlers (sync, fast)
     applyMetricsEndpoint(app);
@@ -65,22 +66,18 @@ async function bootstrap(): Promise<void> {
     // Phase 5: Start HTTP server BEFORE optional services
     await startServer(app, PREFERRED_PORT);
 
-    // Phase 6: Register shutdown handlers (sync, fast)
-    registerShutdownHandlers();
+    // Phase 6: Shutdown handlers already registered in Phase 0
 
     // Phase 7+8: Non-critical — run in background AFTER server is listening
     // This means the server starts accepting requests ~1s sooner
     initializeMonitoring();
     initializeSkills(app).catch((err) => {
-      logger.warn({ err: (err as Error).message }, "Skills init failed (non-fatal)");
+      logger.warn({ err: (err as Error).message }, 'Skills init failed (non-fatal)');
     });
   } catch (err) {
     const error = err as Error;
-    logger.error(
-      { error: error.message, stack: error.stack },
-      "Failed to start server",
-    );
-    if (process.env.NODE_ENV !== "test") {
+    logger.error({ error: error.message, stack: error.stack }, 'Failed to start server');
+    if (process.env.NODE_ENV !== 'test') {
       process.exit(1);
     }
   }

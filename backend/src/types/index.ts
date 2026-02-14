@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from 'express';
 
 // API types
 export interface DiagramRequest {
@@ -20,7 +20,7 @@ export interface ErrorResponse {
 export interface MermaidExtractionResult {
   extracted: boolean;
   code: string | null;
-  method: "block" | "raw" | null;
+  method: 'block' | 'raw' | null;
 }
 
 // Claude service types
@@ -34,13 +34,13 @@ export interface ClaudeStreamEvent {
 
 // Conversation context types
 export interface ConversationMessage {
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
 }
 
 export interface RefinementContext {
   baseDiagram?: string;
-  refinementType?: "modify" | "convert" | "expand" | "simplify";
+  refinementType?: 'modify' | 'convert' | 'expand' | 'simplify';
   instruction?: string;
 }
 
@@ -52,7 +52,7 @@ export interface TypedRequest<T = unknown> extends Request {
 export type TypedRequestHandler<T = unknown> = (
   req: TypedRequest<T>,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => void | Promise<void>;
 
 // Error with code
@@ -63,11 +63,8 @@ export interface ServiceError extends Error {
 }
 
 // Code Generation Types
-export type TechStack =
-  | "react-express-prisma"
-  | "fastapi-sqlalchemy"
-  | "nextjs-prisma";
-export type DiagramType = "er" | "sequence" | "flowchart" | "class";
+export type TechStack = 'react-express-prisma' | 'fastapi-sqlalchemy' | 'nextjs-prisma';
+export type DiagramType = 'er' | 'sequence' | 'flowchart' | 'class';
 
 export interface CodeGenerationRequest {
   diagramType: DiagramType;
@@ -97,15 +94,9 @@ export interface ClarificationOption {
 
 export interface ClarificationQuestion {
   id: string;
-  category:
-    | "complexity"
-    | "domain"
-    | "scope"
-    | "features"
-    | "diagramType"
-    | "custom";
+  category: 'complexity' | 'domain' | 'scope' | 'features' | 'diagramType' | 'custom';
   question: string;
-  selectionType: "single" | "multiple";
+  selectionType: 'single' | 'multiple';
   options: ClarificationOption[];
   required?: boolean;
 }
@@ -137,7 +128,7 @@ export type {
   C4Diagrams,
   ProjectType as ArchProjectType,
   Complexity,
-} from "./architecture.js";
+} from './architecture.js';
 export type {
   PRD,
   PRDRequest,
@@ -148,7 +139,7 @@ export type {
   APIEndpointSpec,
   NonFunctionalRequirement,
   SuccessMetric,
-} from "./prd.js";
+} from './prd.js';
 export type {
   GenerationSession,
   AgentType,
@@ -156,7 +147,7 @@ export type {
   CodeGenRequest,
   GeneratedFile,
   CodeGenResponse,
-} from "./agents.js";
+} from './agents.js';
 export type {
   CreativeDesignDoc,
   LayoutSpec,
@@ -164,4 +155,4 @@ export type {
   KeyScreen,
   UXFlow,
   PRDOverviewForCDD,
-} from "./creativeDesignDoc.js";
+} from './creativeDesignDoc.js';

@@ -6,22 +6,22 @@
  */
 
 // Note: Install these packages: npm install swagger-jsdoc swagger-ui-express @types/swagger-jsdoc @types/swagger-ui-express
-import swaggerJsdoc from "swagger-jsdoc";
-import swaggerUi from "swagger-ui-express";
-import type { Express } from "express";
-import { env } from "../config/env.js";
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+import type { Express } from 'express';
+import { env } from '../config/env.js';
 
-const isProduction = env.NODE_ENV === "production";
+const isProduction = env.NODE_ENV === 'production';
 
 // ============================================================================
 // OpenAPI Specification
 // ============================================================================
 
 const swaggerDefinition = {
-  openapi: "3.0.3",
+  openapi: '3.0.3',
   info: {
-    title: "G-Rump API",
-    version: "2.1.0",
+    title: 'G-Rump API',
+    version: '2.1.0',
     description: `
 G-Rump Enterprise AI Development Platform API.
 
@@ -29,9 +29,9 @@ G-Rump Enterprise AI Development Platform API.
 G-Rump provides AI-powered code generation, architecture design, and development workflow automation.
 
 ## Supported AI Providers
-- **NVIDIA NIM** (Recommended) - Kimi K2.5, DeepSeek, Mistral
+- **NVIDIA NIM** (Recommended) - Kimi K2.5, DeepSeek, Nemotron
+- **Anthropic** - Claude Opus 4.6, Sonnet, Haiku
 - **OpenRouter** - Claude, GPT-4, Llama, and more
-- **Groq** - Ultra-fast Llama 3, Mixtral inference
 - **Ollama** - Local model deployment
 
 ## Authentication
@@ -57,94 +57,92 @@ All errors follow a consistent format:
 \`\`\`
     `,
     contact: {
-      name: "G-Rump Support",
-      url: "https://g-rump.com/support",
-      email: "support@g-rump.com",
+      name: 'G-Rump Support',
+      url: 'https://g-rump.com/support',
+      email: 'support@g-rump.com',
     },
     license: {
-      name: "MIT",
-      url: "https://opensource.org/licenses/MIT",
+      name: 'MIT',
+      url: 'https://opensource.org/licenses/MIT',
     },
   },
   servers: [
     {
-      url: isProduction
-        ? env.PUBLIC_BASE_URL || "https://api.g-rump.com"
-        : "http://localhost:3000",
-      description: isProduction ? "Production" : "Development",
+      url: isProduction ? env.PUBLIC_BASE_URL || 'https://api.g-rump.com' : 'http://localhost:3000',
+      description: isProduction ? 'Production' : 'Development',
     },
   ],
   tags: [
-    { name: "Health", description: "Health check endpoints" },
-    { name: "Auth", description: "Authentication and authorization" },
-    { name: "Chat", description: "AI chat and conversation" },
+    { name: 'Health', description: 'Health check endpoints' },
+    { name: 'Auth', description: 'Authentication and authorization' },
+    { name: 'Chat', description: 'AI chat and conversation' },
     {
-      name: "Ship",
-      description: "SHIP workflow (Spec, Hypothesis, Implement, Prove)",
+      name: 'Ship',
+      description: 'SHIP workflow (Spec, Hypothesis, Implement, Prove)',
     },
-    { name: "Architecture", description: "System architecture generation" },
-    { name: "PRD", description: "Product Requirements Document generation" },
-    { name: "Codegen", description: "Code generation" },
-    { name: "RAG", description: "Retrieval Augmented Generation" },
-    { name: "Agents", description: "AI agent management" },
-    { name: "Memory", description: "Long-term memory management" },
-    { name: "Settings", description: "User settings" },
+    { name: 'Architecture', description: 'System architecture generation' },
+    { name: 'PRD', description: 'Product Requirements Document generation' },
+    { name: 'Codegen', description: 'Code generation' },
+    { name: 'RAG', description: 'Retrieval Augmented Generation' },
+    { name: 'Agents', description: 'AI agent management' },
+    { name: 'Memory', description: 'Long-term memory management' },
+    { name: 'Settings', description: 'User settings' },
   ],
   components: {
     securitySchemes: {
       bearerAuth: {
-        type: "http",
-        scheme: "bearer",
-        bearerFormat: "JWT",
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
       },
       apiKey: {
-        type: "apiKey",
-        in: "header",
-        name: "X-API-Key",
+        type: 'apiKey',
+        in: 'header',
+        name: 'X-API-Key',
       },
     },
     schemas: {
       Error: {
-        type: "object",
+        type: 'object',
         properties: {
-          error: { type: "string", description: "Error message" },
-          code: { type: "string", description: "Error code" },
+          error: { type: 'string', description: 'Error message' },
+          code: { type: 'string', description: 'Error code' },
           details: {
-            type: "string",
-            description: "Additional details (dev only)",
+            type: 'string',
+            description: 'Additional details (dev only)',
           },
         },
-        required: ["error", "code"],
+        required: ['error', 'code'],
       },
       Message: {
-        type: "object",
+        type: 'object',
         properties: {
           role: {
-            type: "string",
-            enum: ["user", "assistant", "system"],
+            type: 'string',
+            enum: ['user', 'assistant', 'system'],
           },
           content: {
             oneOf: [
-              { type: "string" },
+              { type: 'string' },
               {
-                type: "array",
+                type: 'array',
                 items: {
                   oneOf: [
                     {
-                      type: "object",
+                      type: 'object',
                       properties: {
-                        type: { type: "string", enum: ["text"] },
-                        text: { type: "string" },
+                        type: { type: 'string', enum: ['text'] },
+                        text: { type: 'string' },
                       },
                     },
                     {
-                      type: "object",
+                      type: 'object',
                       properties: {
-                        type: { type: "string", enum: ["image_url"] },
+                        type: { type: 'string', enum: ['image_url'] },
                         image_url: {
-                          type: "object",
+                          type: 'object',
                           properties: {
-                            url: { type: "string", format: "uri" },
+                            url: { type: 'string', format: 'uri' },
                           },
                         },
                       },
@@ -155,141 +153,134 @@ All errors follow a consistent format:
             ],
           },
         },
-        required: ["role", "content"],
+        required: ['role', 'content'],
       },
       User: {
-        type: "object",
+        type: 'object',
         properties: {
-          id: { type: "string", format: "uuid" },
-          email: { type: "string", format: "email" },
-          name: { type: "string" },
-          created_at: { type: "string", format: "date-time" },
+          id: { type: 'string', format: 'uuid' },
+          email: { type: 'string', format: 'email' },
+          name: { type: 'string' },
+          created_at: { type: 'string', format: 'date-time' },
         },
       },
       Architecture: {
-        type: "object",
+        type: 'object',
         properties: {
-          id: { type: "string", format: "uuid" },
-          projectName: { type: "string" },
-          projectDescription: { type: "string" },
+          id: { type: 'string', format: 'uuid' },
+          projectName: { type: 'string' },
+          projectDescription: { type: 'string' },
           c4Diagrams: {
-            type: "object",
+            type: 'object',
             properties: {
-              context: { type: "string" },
-              container: { type: "string" },
-              component: { type: "string" },
+              context: { type: 'string' },
+              container: { type: 'string' },
+              component: { type: 'string' },
             },
           },
-          metadata: { type: "object" },
+          metadata: { type: 'object' },
         },
       },
       PRD: {
-        type: "object",
+        type: 'object',
         properties: {
-          id: { type: "string", format: "uuid" },
-          title: { type: "string" },
-          overview: { type: "string" },
+          id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          overview: { type: 'string' },
           userStories: {
-            type: "array",
-            items: { type: "object" },
+            type: 'array',
+            items: { type: 'object' },
           },
           technicalRequirements: {
-            type: "array",
-            items: { type: "object" },
+            type: 'array',
+            items: { type: 'object' },
           },
         },
       },
       VectorChunk: {
-        type: "object",
+        type: 'object',
         properties: {
-          id: { type: "string" },
-          content: { type: "string" },
-          source: { type: "string" },
+          id: { type: 'string' },
+          content: { type: 'string' },
+          source: { type: 'string' },
           type: {
-            type: "string",
-            enum: ["doc", "code", "spec", "grump"],
+            type: 'string',
+            enum: ['doc', 'code', 'spec', 'grump'],
           },
-          score: { type: "number" },
+          score: { type: 'number' },
         },
       },
       MemoryRecord: {
-        type: "object",
+        type: 'object',
         properties: {
-          id: { type: "string" },
+          id: { type: 'string' },
           type: {
-            type: "string",
-            enum: [
-              "interaction",
-              "correction",
-              "preference",
-              "fact",
-              "context",
-              "feedback",
-            ],
+            type: 'string',
+            enum: ['interaction', 'correction', 'preference', 'fact', 'context', 'feedback'],
           },
-          content: { type: "string" },
-          summary: { type: "string" },
+          content: { type: 'string' },
+          summary: { type: 'string' },
           priority: {
-            type: "string",
-            enum: ["low", "medium", "high", "critical"],
+            type: 'string',
+            enum: ['low', 'medium', 'high', 'critical'],
           },
-          createdAt: { type: "string", format: "date-time" },
+          createdAt: { type: 'string', format: 'date-time' },
         },
       },
     },
     responses: {
       Unauthorized: {
-        description: "Authentication required",
+        description: 'Authentication required',
         content: {
-          "application/json": {
-            schema: { $ref: "#/components/schemas/Error" },
-            example: { error: "Authentication required", code: "unauthorized" },
+          'application/json': {
+            schema: { $ref: '#/components/schemas/Error' },
+            example: { error: 'Authentication required', code: 'unauthorized' },
           },
         },
       },
       Forbidden: {
-        description: "Access denied",
+        description: 'Access denied',
         content: {
-          "application/json": {
-            schema: { $ref: "#/components/schemas/Error" },
-            example: { error: "Access denied", code: "forbidden" },
+          'application/json': {
+            schema: { $ref: '#/components/schemas/Error' },
+            example: { error: 'Access denied', code: 'forbidden' },
           },
         },
       },
       NotFound: {
-        description: "Resource not found",
+        description: 'Resource not found',
         content: {
-          "application/json": {
-            schema: { $ref: "#/components/schemas/Error" },
-            example: { error: "Resource not found", code: "not_found" },
+          'application/json': {
+            schema: { $ref: '#/components/schemas/Error' },
+            example: { error: 'Resource not found', code: 'not_found' },
           },
         },
       },
       RateLimited: {
-        description: "Rate limit exceeded",
+        description: 'Rate limit exceeded',
         content: {
-          "application/json": {
-            schema: { $ref: "#/components/schemas/Error" },
-            example: { error: "Too many requests", code: "rate_limit" },
+          'application/json': {
+            schema: { $ref: '#/components/schemas/Error' },
+            example: { error: 'Too many requests', code: 'rate_limit' },
           },
         },
       },
       ValidationError: {
-        description: "Validation failed",
+        description: 'Validation failed',
         content: {
-          "application/json": {
+          'application/json': {
             schema: {
-              type: "object",
+              type: 'object',
               properties: {
-                error: { type: "string" },
-                code: { type: "string" },
+                error: { type: 'string' },
+                code: { type: 'string' },
                 errors: {
-                  type: "array",
+                  type: 'array',
                   items: {
-                    type: "object",
+                    type: 'object',
                     properties: {
-                      path: { type: "string" },
-                      message: { type: "string" },
+                      path: { type: 'string' },
+                      message: { type: 'string' },
                     },
                   },
                 },
@@ -302,19 +293,19 @@ All errors follow a consistent format:
   },
   paths: {
     // Health endpoints
-    "/health": {
+    '/health': {
       get: {
-        tags: ["Health"],
-        summary: "Basic health check",
+        tags: ['Health'],
+        summary: 'Basic health check',
         responses: {
           200: {
-            description: "Service is healthy",
+            description: 'Service is healthy',
             content: {
-              "application/json": {
+              'application/json': {
                 schema: {
-                  type: "object",
+                  type: 'object',
                   properties: {
-                    status: { type: "string", example: "ok" },
+                    status: { type: 'string', example: 'ok' },
                   },
                 },
               },
@@ -323,24 +314,24 @@ All errors follow a consistent format:
         },
       },
     },
-    "/health/detailed": {
+    '/health/detailed': {
       get: {
-        tags: ["Health"],
-        summary: "Detailed health check with component status",
+        tags: ['Health'],
+        summary: 'Detailed health check with component status',
         responses: {
           200: {
-            description: "Health status of all components",
+            description: 'Health status of all components',
             content: {
-              "application/json": {
+              'application/json': {
                 schema: {
-                  type: "object",
+                  type: 'object',
                   properties: {
                     status: {
-                      type: "string",
-                      enum: ["healthy", "degraded", "unhealthy"],
+                      type: 'string',
+                      enum: ['healthy', 'degraded', 'unhealthy'],
                     },
-                    timestamp: { type: "string", format: "date-time" },
-                    checks: { type: "object" },
+                    timestamp: { type: 'string', format: 'date-time' },
+                    checks: { type: 'object' },
                   },
                 },
               },
@@ -350,39 +341,38 @@ All errors follow a consistent format:
       },
     },
     // Chat endpoints
-    "/api/chat/stream": {
+    '/api/chat/stream': {
       post: {
-        tags: ["Chat"],
-        summary: "Stream chat completion",
-        description:
-          "Send messages and receive streaming AI responses with tool calling support.",
+        tags: ['Chat'],
+        summary: 'Stream chat completion',
+        description: 'Send messages and receive streaming AI responses with tool calling support.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
-            "application/json": {
+            'application/json': {
               schema: {
-                type: "object",
-                required: ["messages"],
+                type: 'object',
+                required: ['messages'],
                 properties: {
                   messages: {
-                    type: "array",
-                    items: { $ref: "#/components/schemas/Message" },
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/Message' },
                     minItems: 1,
                     maxItems: 50,
                   },
-                  workspaceRoot: { type: "string" },
+                  workspaceRoot: { type: 'string' },
                   mode: {
-                    type: "string",
-                    enum: ["normal", "plan", "spec", "execute", "argument"],
+                    type: 'string',
+                    enum: ['normal', 'plan', 'spec', 'execute', 'argument'],
                   },
                   provider: {
-                    type: "string",
-                    enum: ["nim", "mock"],
-                    description: "AI provider - NVIDIA NIM (powered by NVIDIA)",
+                    type: 'string',
+                    enum: ['nim', 'mock'],
+                    description: 'AI provider - NVIDIA NIM (powered by NVIDIA)',
                   },
-                  modelId: { type: "string" },
-                  autonomous: { type: "boolean" },
+                  modelId: { type: 'string' },
+                  autonomous: { type: 'boolean' },
                 },
               },
             },
@@ -390,46 +380,45 @@ All errors follow a consistent format:
         },
         responses: {
           200: {
-            description: "SSE stream of chat events",
+            description: 'SSE stream of chat events',
             content: {
-              "text/event-stream": {
-                schema: { type: "string" },
+              'text/event-stream': {
+                schema: { type: 'string' },
               },
             },
           },
-          400: { $ref: "#/components/responses/ValidationError" },
-          401: { $ref: "#/components/responses/Unauthorized" },
-          429: { $ref: "#/components/responses/RateLimited" },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          429: { $ref: '#/components/responses/RateLimited' },
         },
       },
     },
     // Ship endpoints
-    "/api/ship/start": {
+    '/api/ship/start': {
       post: {
-        tags: ["Ship"],
-        summary: "Start SHIP workflow",
-        description:
-          "Begin the Spec-Hypothesis-Implement-Prove workflow for a project.",
+        tags: ['Ship'],
+        summary: 'Start SHIP workflow',
+        description: 'Begin the Spec-Hypothesis-Implement-Prove workflow for a project.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
-            "application/json": {
+            'application/json': {
               schema: {
-                type: "object",
-                required: ["projectDescription"],
+                type: 'object',
+                required: ['projectDescription'],
                 properties: {
-                  projectDescription: { type: "string", maxLength: 16000 },
-                  projectName: { type: "string" },
+                  projectDescription: { type: 'string', maxLength: 16000 },
+                  projectName: { type: 'string' },
                   complexity: {
-                    type: "string",
-                    enum: ["simple", "medium", "complex", "enterprise"],
+                    type: 'string',
+                    enum: ['simple', 'medium', 'complex', 'enterprise'],
                   },
                   techStack: {
-                    type: "array",
-                    items: { type: "string" },
+                    type: 'array',
+                    items: { type: 'string' },
                   },
-                  stream: { type: "boolean" },
+                  stream: { type: 'boolean' },
                 },
               },
             },
@@ -437,43 +426,43 @@ All errors follow a consistent format:
         },
         responses: {
           200: {
-            description: "SHIP workflow started",
+            description: 'SHIP workflow started',
             content: {
-              "application/json": {
+              'application/json': {
                 schema: {
-                  type: "object",
+                  type: 'object',
                   properties: {
-                    sessionId: { type: "string", format: "uuid" },
-                    phase: { type: "string" },
-                    status: { type: "string" },
+                    sessionId: { type: 'string', format: 'uuid' },
+                    phase: { type: 'string' },
+                    status: { type: 'string' },
                   },
                 },
               },
             },
           },
-          400: { $ref: "#/components/responses/ValidationError" },
-          401: { $ref: "#/components/responses/Unauthorized" },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/Unauthorized' },
         },
       },
     },
     // Architecture endpoints
-    "/api/architecture/generate": {
+    '/api/architecture/generate': {
       post: {
-        tags: ["Architecture"],
-        summary: "Generate system architecture",
+        tags: ['Architecture'],
+        summary: 'Generate system architecture',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
-            "application/json": {
+            'application/json': {
               schema: {
-                type: "object",
-                required: ["projectDescription"],
+                type: 'object',
+                required: ['projectDescription'],
                 properties: {
-                  projectDescription: { type: "string" },
-                  projectType: { type: "string" },
-                  techStack: { type: "array", items: { type: "string" } },
-                  complexity: { type: "string" },
+                  projectDescription: { type: 'string' },
+                  projectType: { type: 'string' },
+                  techStack: { type: 'array', items: { type: 'string' } },
+                  complexity: { type: 'string' },
                 },
               },
             },
@@ -481,15 +470,15 @@ All errors follow a consistent format:
         },
         responses: {
           200: {
-            description: "Architecture generated",
+            description: 'Architecture generated',
             content: {
-              "application/json": {
+              'application/json': {
                 schema: {
-                  type: "object",
+                  type: 'object',
                   properties: {
-                    id: { type: "string" },
-                    status: { type: "string" },
-                    architecture: { $ref: "#/components/schemas/Architecture" },
+                    id: { type: 'string' },
+                    status: { type: 'string' },
+                    architecture: { $ref: '#/components/schemas/Architecture' },
                   },
                 },
               },
@@ -499,29 +488,29 @@ All errors follow a consistent format:
       },
     },
     // RAG endpoints
-    "/api/rag/query": {
+    '/api/rag/query': {
       post: {
-        tags: ["RAG"],
-        summary: "Query the RAG vector store",
+        tags: ['RAG'],
+        summary: 'Query the RAG vector store',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
-            "application/json": {
+            'application/json': {
               schema: {
-                type: "object",
-                required: ["query"],
+                type: 'object',
+                required: ['query'],
                 properties: {
-                  query: { type: "string" },
-                  topK: { type: "integer", default: 10 },
+                  query: { type: 'string' },
+                  topK: { type: 'integer', default: 10 },
                   types: {
-                    type: "array",
+                    type: 'array',
                     items: {
-                      type: "string",
-                      enum: ["doc", "code", "spec", "grump"],
+                      type: 'string',
+                      enum: ['doc', 'code', 'spec', 'grump'],
                     },
                   },
-                  threshold: { type: "number" },
+                  threshold: { type: 'number' },
                 },
               },
             },
@@ -529,15 +518,15 @@ All errors follow a consistent format:
         },
         responses: {
           200: {
-            description: "Query results",
+            description: 'Query results',
             content: {
-              "application/json": {
+              'application/json': {
                 schema: {
-                  type: "object",
+                  type: 'object',
                   properties: {
                     results: {
-                      type: "array",
-                      items: { $ref: "#/components/schemas/VectorChunk" },
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/VectorChunk' },
                     },
                   },
                 },
@@ -548,38 +537,38 @@ All errors follow a consistent format:
       },
     },
     // Memory endpoints
-    "/api/memory/store": {
+    '/api/memory/store': {
       post: {
-        tags: ["Memory"],
-        summary: "Store a memory",
+        tags: ['Memory'],
+        summary: 'Store a memory',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
-            "application/json": {
+            'application/json': {
               schema: {
-                type: "object",
-                required: ["type", "content"],
+                type: 'object',
+                required: ['type', 'content'],
                 properties: {
                   type: {
-                    type: "string",
+                    type: 'string',
                     enum: [
-                      "interaction",
-                      "correction",
-                      "preference",
-                      "fact",
-                      "context",
-                      "feedback",
+                      'interaction',
+                      'correction',
+                      'preference',
+                      'fact',
+                      'context',
+                      'feedback',
                     ],
                   },
-                  content: { type: "string" },
+                  content: { type: 'string' },
                   priority: {
-                    type: "string",
-                    enum: ["low", "medium", "high", "critical"],
+                    type: 'string',
+                    enum: ['low', 'medium', 'high', 'critical'],
                   },
                   ttl: {
-                    type: "integer",
-                    description: "Time-to-live in seconds",
+                    type: 'integer',
+                    description: 'Time-to-live in seconds',
                   },
                 },
               },
@@ -588,10 +577,10 @@ All errors follow a consistent format:
         },
         responses: {
           200: {
-            description: "Memory stored",
+            description: 'Memory stored',
             content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/MemoryRecord" },
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MemoryRecord' },
               },
             },
           },
@@ -613,7 +602,7 @@ const options = {
 
 const swaggerSpec = swaggerJsdoc(options);
 
-import { Router } from "express";
+import { Router } from 'express';
 
 /**
  * Router that serves Swagger UI and the OpenAPI spec JSON.
@@ -626,47 +615,47 @@ import { Router } from "express";
 const router = Router();
 
 // Serve swagger spec as JSON
-router.get("/swagger.json", (_req, res) => {
-  res.setHeader("Content-Type", "application/json");
+router.get('/swagger.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
 
 // Serve Swagger UI at the mount root
 router.use(
-  "/",
+  '/',
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
-    customCss: ".swagger-ui .topbar { display: none }",
-    customSiteTitle: "G-Rump API Documentation",
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'G-Rump API Documentation',
     swaggerOptions: {
       persistAuthorization: true,
       displayRequestDuration: true,
       filter: true,
     },
-  }),
+  })
 );
 
 /**
  * Legacy helper – mount Swagger on an Express app at an arbitrary base path.
  * Kept for backwards compatibility but the primary export is now the Router.
  */
-export function setupSwagger(app: Express, basePath = "/docs"): void {
+export function setupSwagger(app: Express, basePath = '/docs'): void {
   app.get(`${basePath}/swagger.json`, (_req, res) => {
-    res.setHeader("Content-Type", "application/json");
+    res.setHeader('Content-Type', 'application/json');
     res.send(swaggerSpec);
   });
   app.use(
     basePath,
     swaggerUi.serve,
     swaggerUi.setup(swaggerSpec, {
-      customCss: ".swagger-ui .topbar { display: none }",
-      customSiteTitle: "G-Rump API Documentation",
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'G-Rump API Documentation',
       swaggerOptions: {
         persistAuthorization: true,
         displayRequestDuration: true,
         filter: true,
       },
-    }),
+    })
   );
 }
 

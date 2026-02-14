@@ -37,7 +37,6 @@ declare global {
   interface Window {
     grump?: {
       isElectron?: boolean;
-      closeSplashShowMain?: () => Promise<void>;
       docker?: {
         getVersion: () => Promise<DockerVersionResult>;
         getInfo: () => Promise<DockerInfoResult>;

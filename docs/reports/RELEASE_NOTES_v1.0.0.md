@@ -63,8 +63,8 @@ Orchestrated AI agents working together:
 ### Option 1: Desktop App
 
 ```bash
-git clone https://github.com/Aphrodine-wq/G-rump.com.git
-cd G-rump.com
+git clone https://github.com/Aphrodine-wq/GRUMPCO.git
+cd GRUMPCO
 npm install
 npm run build:packages
 cd frontend && npm run electron:dev
@@ -73,7 +73,7 @@ cd frontend && npm run electron:dev
 ### Option 2: CLI
 
 ```bash
-npm install -g @g-rump/cli
+npm install -g grump-cli
 grump ship "Create a React dashboard with real-time charts"
 ```
 
@@ -91,8 +91,8 @@ docker run -it grump/cli:latest ship "Build a REST API with authentication"
 
 ```bash
 # Clone the repository
-git clone https://github.com/Aphrodine-wq/G-rump.com.git
-cd G-rump.com
+git clone https://github.com/Aphrodine-wq/GRUMPCO.git
+cd GRUMPCO
 
 # Install dependencies
 npm install
@@ -156,8 +156,8 @@ See [CHANGELOG.md](CHANGELOG.md) for complete list. Top issues:
 
 ## 💬 Support
 
-- 🐛 [Report Issues](https://github.com/Aphrodine-wq/G-rump.com/issues)
-- 💡 [Request Features](https://github.com/Aphrodine-wq/G-rump.com/discussions)
+- 🐛 [Report Issues](https://github.com/Aphrodine-wq/GRUMPCO/issues)
+- 💡 [Request Features](https://github.com/Aphrodine-wq/GRUMPCO/discussions)
 - 📧 Email: support@g-rump.com
 - 💬 Discord: [Join Community](https://discord.gg/grump)
 
@@ -180,4 +180,5 @@ See [CHANGELOG.md](CHANGELOG.md) for complete list. Top issues:
 
 ---
 
-**Full Changelog**: [v1.0.0...HEAD](https://github.com/Aphrodine-wq/G-rump.com/compare/v0.9.0-beta...v1.0.0)
+**Full Changelog**: [v1.0.0...HEAD](https://github.com/Aphrodine-wq/GRUMPCO/compare/v0.9.0-beta...v1.0.0)
+

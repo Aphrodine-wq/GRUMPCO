@@ -3,30 +3,25 @@
  * Communication structures for multi-agent code generation system
  */
 
-import type { PRD } from "../types/prd.js";
-import type { SystemArchitecture } from "../types/architecture.js";
+import type { PRD } from '../types/prd.js';
+import type { SystemArchitecture } from '../types/architecture.js';
 
 export type AgentType =
-  | "architect"
-  | "frontend"
-  | "backend"
-  | "devops"
-  | "test"
-  | "docs"
-  | "security"
-  | "i18n"
-  | "wrunner";
-export type AgentStatus =
-  | "pending"
-  | "running"
-  | "completed"
-  | "failed"
-  | "blocked";
+  | 'architect'
+  | 'frontend'
+  | 'backend'
+  | 'devops'
+  | 'test'
+  | 'docs'
+  | 'security'
+  | 'i18n'
+  | 'wrunner';
+export type AgentStatus = 'pending' | 'running' | 'completed' | 'failed' | 'blocked';
 
 export interface AgentMessage {
   agentId: string;
   agentType: AgentType;
-  type: "request" | "response" | "error" | "log";
+  type: 'request' | 'response' | 'error' | 'log';
   status: AgentStatus;
   content: Record<string, unknown>;
   timestamp: string;
@@ -48,7 +43,7 @@ export interface AgentTask {
 
 export interface GenerationSession {
   sessionId: string;
-  status: "initializing" | "running" | "completed" | "failed";
+  status: 'initializing' | 'running' | 'completed' | 'failed';
   prdId: string;
   architectureId: string;
   createdAt: string;
@@ -75,11 +70,11 @@ export interface GenerationSession {
   autoFixesApplied?: Array<{
     issueId: string;
     fix: string;
-    status: "applied" | "failed";
+    status: 'applied' | 'failed';
   }>;
   /** Design workflow state for inline Architecture → PRD → Plan → Code */
   designWorkflow?: {
-    currentPhase: "architecture" | "prd" | "plan" | "code" | "completed";
+    currentPhase: 'architecture' | 'prd' | 'plan' | 'code' | 'completed';
     phaseData: {
       architecture?: {
         mermaidCode: string;
@@ -94,7 +89,7 @@ export interface GenerationSession {
           id: string;
           title: string;
           description: string;
-          status: "pending" | "in-progress" | "completed";
+          status: 'pending' | 'in-progress' | 'completed';
         }>;
       };
       code?: {
@@ -112,17 +107,17 @@ export interface GenerationSession {
 }
 
 export interface GenerationPreferences {
-  frontendFramework?: "vue" | "react";
-  backendRuntime?: "node" | "python" | "go";
-  database?: "postgres" | "mongodb";
+  frontendFramework?: 'vue' | 'react';
+  backendRuntime?: 'node' | 'python' | 'go';
+  database?: 'postgres' | 'mongodb';
   includeTests?: boolean;
   includeDocs?: boolean;
-  styleGuide?: "airbnb" | "google" | "standard";
+  styleGuide?: 'airbnb' | 'google' | 'standard';
 }
 
 export interface GeneratedFile {
   path: string;
-  type: "source" | "test" | "config" | "doc";
+  type: 'source' | 'test' | 'config' | 'doc';
   language: string;
   size: number;
   content: string;
@@ -141,7 +136,7 @@ export interface CodeGenRequest {
 export interface SubTask {
   id: string;
   title: string;
-  status: "pending" | "running" | "completed" | "failed";
+  status: 'pending' | 'running' | 'completed' | 'failed';
 }
 
 export interface CodeGenRequestMulti {
@@ -158,7 +153,7 @@ export interface CodeGenRequestMulti {
 
 export interface CodeGenResponse {
   sessionId: string;
-  status: "initializing" | "running" | "completed" | "failed";
+  status: 'initializing' | 'running' | 'completed' | 'failed';
   agents: Record<AgentType, AgentTask>;
   progress?: number;
   message?: string;
@@ -202,7 +197,7 @@ export interface AgentWorkReport {
     testingStrategy: string;
     knownIssues: Array<{
       issue: string;
-      severity: "low" | "medium" | "high";
+      severity: 'low' | 'medium' | 'high';
       suggestedFix: string;
     }>;
     recommendations: string[];
@@ -214,13 +209,8 @@ export interface WRunnerAnalysis {
   sessionId: string;
   issues: Array<{
     id: string;
-    severity: "critical" | "high" | "medium" | "low";
-    category:
-      | "missing"
-      | "inconsistency"
-      | "quality"
-      | "integration"
-      | "security";
+    severity: 'critical' | 'high' | 'medium' | 'low';
+    category: 'missing' | 'inconsistency' | 'quality' | 'integration' | 'security';
     description: string;
     affectedAgents: AgentType[];
     suggestedFixes: Array<{ action: string; files: string[]; code?: string }>;

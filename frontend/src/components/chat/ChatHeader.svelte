@@ -2,52 +2,41 @@
   /**
    * ChatHeader Component
    *
-   * Header bar for the chat interface with G-Agent controls.
+   * Header bar for the chat interface.
    */
-  import { Brain } from 'lucide-svelte';
-  import KillSwitchButton from '../gAgent/KillSwitchButton.svelte';
 
   interface Props {
     /** Project/session name to show at top when user has entered a project (blank for new chats) */
     projectName?: string;
-    /** Whether this is a G-Agent session */
-    isGAgentSession?: boolean;
-    /** Whether connected to G-Agent */
-    isConnected?: boolean;
-    /** Whether status panel is shown */
-    showStatusPanel?: boolean;
-    /** Whether memory panel is shown */
-    showMemoryPanel?: boolean;
     /** Current model display name (shown in header when provided) */
     modelName?: string;
     /** Whether the model picker dropdown is open (shows active state on model button) */
     modelPickerOpen?: boolean;
-    /** Called when G-Agent button clicked */
-    onGAgentClick?: () => void;
-    /** Called when status toggle clicked */
-    onStatusToggle?: () => void;
-    /** Called when memory toggle clicked */
-    onMemoryToggle?: () => void;
+    /** Current chat mode (normal, code, plan, design, etc.) */
+    chatMode?: string;
+    /** Workspace path for code mode */
+    workspacePath?: string;
     /** Called when model selector clicked */
     onModelClick?: () => void;
-    /** Called when user wants to leave G-Agent mode */
-    onLeaveGAgent?: () => void;
   }
 
   let {
     projectName = '',
-    isGAgentSession = false,
-    isConnected = false,
-    showStatusPanel = false,
-    showMemoryPanel = false,
     modelName,
     modelPickerOpen = false,
-    onGAgentClick: _onGAgentClick,
-    onStatusToggle,
-    onMemoryToggle,
+    chatMode = 'normal',
+    workspacePath = '',
     onModelClick,
-    onLeaveGAgent,
   }: Props = $props();
+
+  function getShortWorkspacePath(fullPath: string): string {
+    const segments = fullPath.replace(/\\/g, '/').split('/');
+    if (segments.length <= 3) return segments.join('/');
+    return '…/' + segments.slice(-3).join('/');
+  }
+
+  const isCodeMode = $derived(chatMode === 'code');
+  const shortWorkspace = $derived(workspacePath ? getShortWorkspacePath(workspacePath) : '');
 </script>
 
 <header class="chat-header">
@@ -57,41 +46,18 @@
       <span class="project-name-value">{projectName}</span>
     </div>
   {/if}
-  <!-- G-Agent / Use G-Agent moved to bottom-right of chat interface -->
 
-  {#if isGAgentSession}
-    <button
-      type="button"
-      class="header-btn status-btn"
-      class:active={showStatusPanel}
-      onclick={() => onStatusToggle?.()}
-    >
-      <span class="status-dot" class:connected={isConnected}></span>
-      <span>Status</span>
-    </button>
-
-    <button
-      type="button"
-      class="header-btn memory-btn"
-      class:active={showMemoryPanel}
-      onclick={() => onMemoryToggle?.()}
-    >
-      <span><Brain size={16} /></span>
-      <span>Memory</span>
-    </button>
-
-    <div class="header-kill-switch">
-      <KillSwitchButton size="sm" showLabel={false} />
+  {#if isCodeMode}
+    <div class="code-mode-badge">
+      <span class="code-mode-icon">&gt;_</span>
+      <span class="code-mode-label">Code Mode</span>
     </div>
-
-    <button
-      type="button"
-      class="header-btn leave-g-agent-btn"
-      onclick={() => onLeaveGAgent?.()}
-      title="Leave G-Agent mode and return to normal chat"
-    >
-      <span>Leave G-Agent</span>
-    </button>
+    {#if shortWorkspace}
+      <div class="workspace-indicator" title={workspacePath}>
+        <span class="workspace-icon">▷</span>
+        <code class="workspace-path">{shortWorkspace}</code>
+      </div>
+    {/if}
   {/if}
 
   <span class="header-spacer"></span>
@@ -213,33 +179,6 @@
     color: inherit;
   }
 
-  .status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #ef4444;
-  }
-
-  .status-dot.connected {
-    background: #10b981;
-    box-shadow: 0 0 4px #10b981;
-  }
-
-  .header-kill-switch {
-    margin-left: 0.25rem;
-  }
-
-  .header-btn.leave-g-agent-btn {
-    color: var(--color-text-muted, #6b7280);
-    font-weight: 500;
-  }
-
-  .header-btn.leave-g-agent-btn:hover {
-    background: rgba(239, 68, 68, 0.08);
-    border-color: rgba(239, 68, 68, 0.2);
-    color: var(--color-error, #ef4444);
-  }
-
   .header-spacer {
     flex: 1;
   }
@@ -270,5 +209,55 @@
     .header-btn {
       transition: none;
     }
+  }
+
+  .code-mode-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.6rem;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 1rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #22c55e;
+  }
+
+  .code-mode-icon {
+    font-size: 0.75rem;
+  }
+
+  .code-mode-label {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .workspace-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem;
+    background: rgba(88, 166, 255, 0.06);
+    border: 1px solid rgba(88, 166, 255, 0.12);
+    border-radius: 0.5rem;
+    font-size: 0.65rem;
+    max-width: 20rem;
+  }
+
+  .workspace-icon {
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+
+  .workspace-path {
+    color: #58a6ff;
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 0.65rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: none;
+    padding: 0;
   }
 </style>

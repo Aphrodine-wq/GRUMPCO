@@ -129,14 +129,13 @@ async function legacyInteractiveSetup(configPath: string): Promise<void> {
         { name: '🌙 Kimi K2.5 (Recommended)', value: 'kimi', checked: true },
         { name: '🟢 NVIDIA NIM', value: 'nim', checked: false },
         { name: '🔀 OpenRouter', value: 'openrouter', checked: true },
-        { name: '⚡ Groq', value: 'groq', checked: false },
         { name: '🦙 Ollama (local)', value: 'ollama', checked: false },
       ],
     },
   ]);
 
   console.log(chalk.dim('\nTesting API connection...'));
-  
+
   const answers = await askUser<{ apiUrl: string; apiKey: string; theme: string; defaultOutputDir: string; autoStream: boolean; progressIndicators: boolean }>([
     {
       type: 'input',
@@ -181,7 +180,7 @@ async function legacyInteractiveSetup(configPath: string): Promise<void> {
       default: true
     }
   ]);
-  
+
   // Build configuration object
   const configuration = {
     apiUrl: answers.apiUrl,
@@ -202,7 +201,7 @@ async function legacyInteractiveSetup(configPath: string): Promise<void> {
       wizardComplete: true
     }
   };
-  
+
   // Write configuration
   writeFileSync(configPath, JSON.stringify(configuration, null, 2));
 

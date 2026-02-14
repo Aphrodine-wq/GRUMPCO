@@ -99,7 +99,7 @@
     onShipMode?.();
   }
 
-  function handleGAgent() {
+  function handleAgent() {
     setCurrentView('gAgent');
   }
 
@@ -121,7 +121,7 @@
       </p>
     </div>
 
-    <!-- Primary mode cards: Argument, Plan, Spec, SHIP, G-Agent -->
+    <!-- Primary mode cards: Argument, Plan, Spec, SHIP, Agent -->
     <div class="modes-grid">
       <button type="button" class="mode-card" onclick={handleArgument}>
         <div class="mode-icon"><MessageCircle strokeWidth={1.5} /></div>
@@ -143,9 +143,9 @@
         <h3 class="mode-title">SHIP</h3>
         <p class="mode-desc">Design → Spec → Plan → Code in one run</p>
       </button>
-      <button type="button" class="mode-card mode-card-highlight" onclick={handleGAgent}>
+      <button type="button" class="mode-card mode-card-highlight" onclick={handleAgent}>
         <div class="mode-icon"><Bot strokeWidth={1.5} /></div>
-        <h3 class="mode-title">G-Agent</h3>
+        <h3 class="mode-title">Agent</h3>
         <p class="mode-desc">Full capabilities (Docker recommended)</p>
       </button>
     </div>
@@ -403,11 +403,6 @@
   .action-card:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-  }
-
-  .action-card-demo {
-    background: var(--color-bg-input);
-    border-color: var(--color-border-highlight);
   }
 
   .action-icon {

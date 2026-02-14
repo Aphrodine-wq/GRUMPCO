@@ -1,11 +1,11 @@
 {
   "name": "g-rump-electron",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "G-Rump Desktop Application",
   "main": "dist/main.js",
   "author": "G-Rump Team",
   "license": "MIT",
-"scripts": {
+  "scripts": {
     "build": "tsc",
     "start": "electron dist/main.js",
     "dev": "tsc -w",
@@ -31,6 +31,10 @@
     "directories": {
       "output": "release"
     },
+    "asar": {
+      "unpack": "*.node"
+    },
+    "compression": "normal",
     "files": [
       "dist/**/*",
       "../frontend/dist/**/*",

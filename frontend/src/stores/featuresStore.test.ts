@@ -662,7 +662,7 @@ describe('featuresStore', () => {
         },
         original: 'Multi-tenant SaaS todo app',
         confidence: 0.85,
-        metadata: { processingTime: 150, model: 'kimi-k2.5', mode: 'architecture' },
+        metadata: { processingTime: 150, model: 'nemotron-ultra', mode: 'architecture' },
       };
 
       vi.mocked(fetchApi).mockResolvedValue({

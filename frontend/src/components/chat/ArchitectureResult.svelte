@@ -31,7 +31,7 @@
     if (data?.mermaidCode) {
       await navigator.clipboard.writeText(data.mermaidCode);
       copied = true;
-      setTimeout(() => copied = false, 2000);
+      setTimeout(() => (copied = false), 2000);
     }
   }
 </script>
@@ -39,10 +39,7 @@
 <div class="phase-result architecture-result">
   <div class="result-header">
     <h3 class="result-title">System Architecture</h3>
-    <button 
-      class="toggle-btn"
-      onclick={() => showMermaid = !showMermaid}
-    >
+    <button class="toggle-btn" onclick={() => (showMermaid = !showMermaid)}>
       {#if showMermaid}
         <ChevronUp size={16} />
       {:else}
@@ -81,14 +78,14 @@
 
   <div class="approval-section">
     <p class="approval-question">Does this architecture look good?</p>
-    
+
     {#if !showFeedbackInput}
       <div class="approval-buttons">
         <button class="approve-btn" onclick={handleApprove}>
           <Check size={16} />
           <span>Looks good! Continue to PRD</span>
         </button>
-        <button class="changes-btn" onclick={() => showFeedbackInput = true}>
+        <button class="changes-btn" onclick={() => (showFeedbackInput = true)}>
           <RefreshCw size={16} />
           <span>Request changes</span>
         </button>
@@ -104,7 +101,7 @@
           <button class="submit-feedback-btn" onclick={handleRequestChanges}>
             Submit Feedback
           </button>
-          <button class="cancel-btn" onclick={() => showFeedbackInput = false}>
+          <button class="cancel-btn" onclick={() => (showFeedbackInput = false)}>
             <X size={16} />
             <span>Cancel</span>
           </button>

@@ -23,7 +23,7 @@ Always provide specific, actionable recommendations backed by evidence from the 
 export const generateAnalysisPrompt = (
   fileList: string,
   packageJson: string | null,
-  configFiles: string[],
+  configFiles: string[]
 ): string => {
   return `Analyze this codebase and provide a comprehensive assessment.
 
@@ -36,14 +36,14 @@ ${
 \`\`\`json
 ${packageJson}
 \`\`\``
-    : ""
+    : ''
 }
 
 ${
   configFiles.length > 0
     ? `## Configuration files found:
-${configFiles.join("\n")}`
-    : ""
+${configFiles.join('\n')}`
+    : ''
 }
 
 Please analyze and provide:
@@ -86,16 +86,16 @@ Respond in JSON format:
 export const generateArchitectureDiagramPrompt = (
   analysis: string,
   diagramType: string,
-  components: string,
+  components: string
 ): string => {
   const diagramInstructions: Record<string, string> = {
-    "c4-context": `Generate a C4 Context diagram showing:
+    'c4-context': `Generate a C4 Context diagram showing:
 - The main system as a central box
 - External users/actors interacting with it
 - External systems it integrates with
 Use: Person, System, System_Ext, Rel`,
 
-    "c4-container": `Generate a C4 Container diagram showing:
+    'c4-container': `Generate a C4 Container diagram showing:
 - The main containers (applications, services, databases)
 - Technology choices for each container
 - Communication paths between containers
@@ -129,7 +129,7 @@ ${analysis}
 ${components}
 
 ## Diagram Type: ${diagramType}
-${diagramInstructions[diagramType] || diagramInstructions["component"]}
+${diagramInstructions[diagramType] || diagramInstructions['component']}
 
 Generate a valid Mermaid diagram. Use clear, descriptive labels. Keep it readable (max 15-20 nodes).
 
@@ -141,7 +141,7 @@ Respond with ONLY the Mermaid code block:
 
 export const generateDependencyAnalysisPrompt = (
   dependencies: string,
-  lockfile: string | null,
+  lockfile: string | null
 ): string => {
   return `Analyze these project dependencies:
 
@@ -152,7 +152,7 @@ ${
   lockfile
     ? `## Lock file excerpt:
 ${lockfile.substring(0, 5000)}`
-    : ""
+    : ''
 }
 
 Provide analysis in JSON format:

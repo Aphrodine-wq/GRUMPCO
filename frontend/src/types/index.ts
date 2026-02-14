@@ -68,6 +68,19 @@ export interface PhaseResultBlock {
   data: unknown;
 }
 
+export interface FilesSummaryBlock {
+  type: 'files_summary';
+  files: Array<{
+    path: string;
+    changeType: 'created' | 'modified' | 'deleted';
+    linesAdded: number;
+    linesRemoved: number;
+  }>;
+  commandsRun: number;
+  commandsPassed: number;
+  totalTurns: number;
+}
+
 export type ContentBlock =
   | TextBlock
   | CodeBlockType
@@ -76,7 +89,8 @@ export type ContentBlock =
   | ToolResultBlock
   | IntentBlock
   | ContextBlock
-  | PhaseResultBlock;
+  | PhaseResultBlock
+  | FilesSummaryBlock;
 
 // Routing decision (transparent model selection)
 export interface RoutingDecision {
@@ -114,7 +128,7 @@ export interface RefinementContext {
   instruction?: string;
 }
 
-// Session types
+// Session types ('freeAgent' kept for backward compat with stored sessions)
 export type SessionType = 'chat' | 'gAgent' | 'freeAgent';
 
 export interface Session {
@@ -127,7 +141,7 @@ export interface Session {
   currentDiagramId?: string; // Current active diagram version
   /** Optional project id; when present, include in backend calls (e.g. ship/codegen from chat). */
   projectId?: string | null;
-  /** Optional session type; when 'gAgent' or 'freeAgent', session uses G-Agent capabilities and is shown with a badge. */
+  /** Optional session type; when 'gAgent' (or legacy 'freeAgent'), session uses Agent capabilities and is shown with a badge. */
   sessionType?: SessionType;
   /** Optional project description. */
   description?: string;

@@ -7,7 +7,7 @@ import { writable, derived, get } from 'svelte/store';
 export type OnboardingStep =
   | 'welcome'
   | 'ship-workflow'
-  | 'g-agent'
+  | 'agent'
   | 'auth'
   | 'api-provider'
   | 'frontend-stack'
@@ -188,15 +188,9 @@ export const AI_PROVIDER_OPTIONS: TechOption[] = [
     name: 'G-CompN1 Model Mix',
     icon: 'grump',
     popular: true,
-    description: 'Recommended — Smart routing between Opus 4.6, Kimi K2.5 & Gemini 3 Pro',
+    description: 'Recommended — Smart routing between Opus 4.6, Gemini 3 Pro & more',
   },
-  {
-    id: 'kimi',
-    name: 'Kimi K2.5',
-    icon: 'kimi',
-    popular: true,
-    description: 'Great balance of speed & quality',
-  },
+
   {
     id: 'nvidia-nim',
     name: 'NVIDIA NIM',
@@ -211,26 +205,31 @@ export const AI_PROVIDER_OPTIONS: TechOption[] = [
     description: 'Advanced reasoning & Agent SDK',
   },
   {
-    id: 'google',
-    name: 'Google Gemini 3 Pro',
-    icon: 'gemini',
-    description: 'Fast, balanced quality & cost',
-  },
-  {
     id: 'openrouter',
     name: 'OpenRouter',
     icon: 'openrouter',
     popular: true,
     description: 'Access multiple models',
   },
-  { id: 'mistral', name: 'Mistral AI', icon: 'mistral', description: 'Efficient open models' },
-  { id: 'groq', name: 'Groq', icon: 'groq', description: 'Ultra-fast inference' },
-  { id: 'cohere', name: 'Cohere', icon: 'cohere', description: 'Command and embed models' },
-  { id: 'fireworks', name: 'Fireworks AI', icon: 'fireworks', description: 'Open model inference' },
-  { id: 'replicate', name: 'Replicate', icon: 'replicate', description: 'Run open-source models' },
-  { id: 'anyscale', name: 'Anyscale', icon: 'anyscale', description: 'Ray and LLM inference' },
-  { id: 'ollama', name: 'Ollama (Local)', icon: 'ollama', description: 'Run models locally via Ollama' },
-  { id: 'jan', name: 'Jan (Local)', icon: 'jan', description: 'Run models locally via Jan' },
+  {
+    id: 'ollama',
+    name: 'Ollama (Local)',
+    icon: 'ollama',
+    description: 'Run models locally via Ollama',
+  },
+  {
+    id: 'google',
+    name: 'Google Gemini',
+    icon: 'google',
+    popular: true,
+    description: 'Gemini 3 Pro, 2.5 Pro & Flash models',
+  },
+  {
+    id: 'github_copilot',
+    name: 'GitHub Copilot',
+    icon: 'github_copilot',
+    description: 'Connect via GitHub OAuth',
+  },
 ];
 
 // Auth providers supported
@@ -303,14 +302,11 @@ const DEFAULT_ONBOARDING_DATA: OnboardingData = {
   riskAcknowledged: false,
 };
 
-// Step order for navigation (g-agent early – right after welcome; tech stack removed – AI chooses best fit)
+// Step order for navigation – streamlined to essentials only
 export const STEP_ORDER: OnboardingStep[] = [
   'welcome',
-  'g-agent',
-  'ship-workflow',
   'auth',
   'api-provider',
-  'app-preferences',
   'review',
   'next-steps',
 ];

@@ -12,16 +12,16 @@
  * @module gAgent/config
  */
 
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 import {
   type AutonomyLevel,
   type AutonomyConfig,
   type ConfidenceThresholds,
   AUTONOMY_CONFIGS,
   DEFAULT_CONFIDENCE_THRESHOLDS,
-} from "./systemPrompt.js";
-import { type BudgetConfig, DEFAULT_BUDGET_CONFIG } from "./budgetManager.js";
-import type { AgentTier, AgentType } from "./types.js";
+} from './systemPrompt.js';
+import { type BudgetConfig, DEFAULT_BUDGET_CONFIG } from './budgetManager.js';
+import type { AgentTier, AgentType } from './types.js';
 
 // ============================================================================
 // CONSTANTS
@@ -31,9 +31,9 @@ import type { AgentTier, AgentType } from "./types.js";
  * Environment types
  */
 export const ENVIRONMENTS = {
-  DEVELOPMENT: "development",
-  STAGING: "staging",
-  PRODUCTION: "production",
+  DEVELOPMENT: 'development',
+  STAGING: 'staging',
+  PRODUCTION: 'production',
 } as const;
 
 export type Environment = (typeof ENVIRONMENTS)[keyof typeof ENVIRONMENTS];
@@ -43,26 +43,26 @@ export type Environment = (typeof ENVIRONMENTS)[keyof typeof ENVIRONMENTS];
  */
 export const FEATURES = {
   // Core features
-  GOAL_QUEUE: "goal_queue",
-  AGENT_LIGHTNING: "agent_lightning",
-  SELF_HEALING: "self_healing",
-  PATTERN_LEARNING: "pattern_learning",
-  CONFIDENCE_ROUTING: "confidence_routing",
+  GOAL_QUEUE: 'goal_queue',
+  AGENT_LIGHTNING: 'agent_lightning',
+  SELF_HEALING: 'self_healing',
+  PATTERN_LEARNING: 'pattern_learning',
+  CONFIDENCE_ROUTING: 'confidence_routing',
 
   // Advanced features
-  MULTI_AGENT_SWARM: "multi_agent_swarm",
-  AUTONOMOUS_MODE: "autonomous_mode",
-  BACKGROUND_AGENTS: "background_agents",
+  MULTI_AGENT_SWARM: 'multi_agent_swarm',
+  AUTONOMOUS_MODE: 'autonomous_mode',
+  BACKGROUND_AGENTS: 'background_agents',
 
   // Safety features
-  KILL_SWITCH: "kill_switch",
-  BUDGET_ENFORCEMENT: "budget_enforcement",
-  RUNAWAY_DETECTION: "runaway_detection",
+  KILL_SWITCH: 'kill_switch',
+  BUDGET_ENFORCEMENT: 'budget_enforcement',
+  RUNAWAY_DETECTION: 'runaway_detection',
 
   // Experimental features
-  VOICE_CONTROL: "voice_control",
-  PROACTIVE_SUGGESTIONS: "proactive_suggestions",
-  CODE_REVIEW_AGENTS: "code_review_agents",
+  VOICE_CONTROL: 'voice_control',
+  PROACTIVE_SUGGESTIONS: 'proactive_suggestions',
+  CODE_REVIEW_AGENTS: 'code_review_agents',
 } as const;
 
 export type Feature = (typeof FEATURES)[keyof typeof FEATURES];
@@ -174,7 +174,7 @@ export interface AgentTypeConfig {
 }
 
 export interface LoggingConfig {
-  level: "debug" | "info" | "warn" | "error";
+  level: 'debug' | 'info' | 'warn' | 'error';
   enableTelemetry: boolean;
   enableAuditLog: boolean;
   logTokenUsage: boolean;
@@ -192,7 +192,7 @@ export interface UserConfig {
 }
 
 export type ConfigChangeEvent = {
-  type: "config_changed";
+  type: 'config_changed';
   section: keyof GAgentConfig;
   previous: unknown;
   current: unknown;
@@ -208,11 +208,11 @@ export type ConfigChangeEvent = {
  * Default model configuration
  */
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  primary: "claude-3.5-sonnet",
-  fallback: "gpt-4o",
-  codegen: "claude-3.5-sonnet",
-  planning: "claude-3.5-sonnet",
-  cheap: "claude-3.5-haiku",
+  primary: 'claude-3.5-sonnet',
+  fallback: 'gpt-4o',
+  codegen: 'claude-3.5-sonnet',
+  planning: 'claude-3.5-sonnet',
+  cheap: 'claude-3.5-haiku',
   maxTokens: 16000,
   temperature: 0.7,
 };
@@ -264,36 +264,36 @@ export const DEFAULT_PERFORMANCE_CONFIG: PerformanceConfig = {
  */
 export const DEFAULT_AGENT_REGISTRY_CONFIG: AgentRegistryConfig = {
   tierAccess: {
-    free: ["executor", "planner"],
-    pro: ["executor", "planner", "frontend", "backend", "test", "docs"],
+    free: ['executor', 'planner'],
+    pro: ['executor', 'planner', 'frontend', 'backend', 'test', 'docs'],
     team: [
-      "executor",
-      "planner",
-      "frontend",
-      "backend",
-      "test",
-      "docs",
-      "architect",
-      "devops",
-      "security",
+      'executor',
+      'planner',
+      'frontend',
+      'backend',
+      'test',
+      'docs',
+      'architect',
+      'devops',
+      'security',
     ],
     enterprise: [
-      "executor",
-      "planner",
-      "frontend",
-      "backend",
-      "test",
-      "docs",
-      "architect",
-      "devops",
-      "security",
-      "supervisor",
-      "ux",
-      "perf",
-      "a11y",
-      "data",
-      "review",
-      "i18n",
+      'executor',
+      'planner',
+      'frontend',
+      'backend',
+      'test',
+      'docs',
+      'architect',
+      'devops',
+      'security',
+      'supervisor',
+      'ux',
+      'perf',
+      'a11y',
+      'data',
+      'review',
+      'i18n',
     ],
   },
   agentConfigs: {} as Record<AgentType, Partial<AgentTypeConfig>>,
@@ -303,7 +303,7 @@ export const DEFAULT_AGENT_REGISTRY_CONFIG: AgentRegistryConfig = {
  * Default logging configuration
  */
 export const DEFAULT_LOGGING_CONFIG: LoggingConfig = {
-  level: "info",
+  level: 'info',
   enableTelemetry: true,
   enableAuditLog: true,
   logTokenUsage: true,
@@ -396,11 +396,11 @@ export class ConfigManager extends EventEmitter {
     const env = this.detectEnvironment();
 
     return {
-      version: "2.0.0",
+      version: '2.0.0',
       environment: env,
 
-      autonomyLevel: "semi-autonomous",
-      autonomyConfig: AUTONOMY_CONFIGS["semi-autonomous"],
+      autonomyLevel: 'semi-autonomous',
+      autonomyConfig: AUTONOMY_CONFIGS['semi-autonomous'],
       confidenceThresholds: { ...DEFAULT_CONFIDENCE_THRESHOLDS },
 
       budget: { ...DEFAULT_BUDGET_CONFIG },
@@ -417,10 +417,10 @@ export class ConfigManager extends EventEmitter {
    * Detect current environment
    */
   private detectEnvironment(): Environment {
-    const nodeEnv = process.env.NODE_ENV || "development";
+    const nodeEnv = process.env.NODE_ENV || 'development';
 
-    if (nodeEnv === "production") return ENVIRONMENTS.PRODUCTION;
-    if (nodeEnv === "staging") return ENVIRONMENTS.STAGING;
+    if (nodeEnv === 'production') return ENVIRONMENTS.PRODUCTION;
+    if (nodeEnv === 'staging') return ENVIRONMENTS.STAGING;
     return ENVIRONMENTS.DEVELOPMENT;
   }
 
@@ -438,9 +438,7 @@ export class ConfigManager extends EventEmitter {
   /**
    * Get specific section
    */
-  getSection<K extends keyof GAgentConfig>(
-    section: K,
-  ): Readonly<GAgentConfig[K]> {
+  getSection<K extends keyof GAgentConfig>(section: K): Readonly<GAgentConfig[K]> {
     return this.config[section];
   }
 
@@ -484,10 +482,8 @@ export class ConfigManager extends EventEmitter {
   /**
    * Get model for a specific purpose
    */
-  getModel(purpose: keyof ModelConfig = "primary"): string {
-    return (
-      (this.config.models[purpose] as string) || this.config.models.primary
-    );
+  getModel(purpose: keyof ModelConfig = 'primary'): string {
+    return (this.config.models[purpose] as string) || this.config.models.primary;
   }
 
   // --------------------------------------------------------------------------
@@ -500,15 +496,15 @@ export class ConfigManager extends EventEmitter {
   updateSection<K extends keyof GAgentConfig>(
     section: K,
     updates: Partial<GAgentConfig[K]>,
-    changedBy: string = "system",
+    changedBy: string = 'system'
   ): void {
     const currentValue = this.config[section];
     const previous =
-      typeof currentValue === "object" && currentValue !== null
+      typeof currentValue === 'object' && currentValue !== null
         ? { ...(currentValue as object) }
         : currentValue;
 
-    if (typeof currentValue === "object" && currentValue !== null) {
+    if (typeof currentValue === 'object' && currentValue !== null) {
       this.config[section] = {
         ...(currentValue as object),
         ...(updates as object),
@@ -523,61 +519,43 @@ export class ConfigManager extends EventEmitter {
   /**
    * Set autonomy level
    */
-  setAutonomyLevel(level: AutonomyLevel, changedBy: string = "system"): void {
+  setAutonomyLevel(level: AutonomyLevel, changedBy: string = 'system'): void {
     const previous = this.config.autonomyLevel;
     this.config.autonomyLevel = level;
     this.config.autonomyConfig = AUTONOMY_CONFIGS[level];
 
-    this.emitChange("autonomyLevel", previous, level, changedBy);
+    this.emitChange('autonomyLevel', previous, level, changedBy);
   }
 
   /**
    * Enable/disable a feature
    */
-  setFeature(
-    feature: Feature,
-    enabled: boolean,
-    changedBy: string = "system",
-  ): void {
+  setFeature(feature: Feature, enabled: boolean, changedBy: string = 'system'): void {
     const previous = this.config.features[feature];
     this.config.features[feature] = enabled;
 
-    this.emitChange(
-      "features",
-      { [feature]: previous },
-      { [feature]: enabled },
-      changedBy,
-    );
+    this.emitChange('features', { [feature]: previous }, { [feature]: enabled }, changedBy);
   }
 
   /**
    * Update budget config
    */
-  updateBudget(
-    updates: Partial<BudgetConfig>,
-    changedBy: string = "system",
-  ): void {
-    this.updateSection("budget", updates, changedBy);
+  updateBudget(updates: Partial<BudgetConfig>, changedBy: string = 'system'): void {
+    this.updateSection('budget', updates, changedBy);
   }
 
   /**
    * Update safety config
    */
-  updateSafety(
-    updates: Partial<SafetyConfig>,
-    changedBy: string = "system",
-  ): void {
-    this.updateSection("safety", updates, changedBy);
+  updateSafety(updates: Partial<SafetyConfig>, changedBy: string = 'system'): void {
+    this.updateSection('safety', updates, changedBy);
   }
 
   /**
    * Update model config
    */
-  updateModels(
-    updates: Partial<ModelConfig>,
-    changedBy: string = "system",
-  ): void {
-    this.updateSection("models", updates, changedBy);
+  updateModels(updates: Partial<ModelConfig>, changedBy: string = 'system'): void {
+    this.updateSection('models', updates, changedBy);
   }
 
   // --------------------------------------------------------------------------
@@ -643,29 +621,29 @@ export class ConfigManager extends EventEmitter {
 
     // Validate budget limits
     if (this.config.budget.sessionLimit < 0) {
-      errors.push("Session budget limit cannot be negative");
+      errors.push('Session budget limit cannot be negative');
     }
     if (this.config.budget.dailyLimit < this.config.budget.sessionLimit) {
-      errors.push("Daily limit should be >= session limit");
+      errors.push('Daily limit should be >= session limit');
     }
 
     // Validate confidence thresholds
     const ct = this.config.confidenceThresholds;
     if (ct.autoExecute <= ct.suggestAndWait) {
-      errors.push("autoExecute threshold should be > suggestAndWait");
+      errors.push('autoExecute threshold should be > suggestAndWait');
     }
     if (ct.suggestAndWait <= ct.askExplicitly) {
-      errors.push("suggestAndWait threshold should be > askExplicitly");
+      errors.push('suggestAndWait threshold should be > askExplicitly');
     }
 
     // Validate safety settings
     if (this.config.safety.maxRequestsPerMinute < 1) {
-      errors.push("maxRequestsPerMinute must be at least 1");
+      errors.push('maxRequestsPerMinute must be at least 1');
     }
 
     // Validate performance settings
     if (this.config.performance.maxConcurrentAgents < 1) {
-      errors.push("maxConcurrentAgents must be at least 1");
+      errors.push('maxConcurrentAgents must be at least 1');
     }
 
     return {
@@ -681,7 +659,7 @@ export class ConfigManager extends EventEmitter {
   /**
    * Apply a preset configuration
    */
-  applyPreset(preset: ConfigPreset, changedBy: string = "system"): void {
+  applyPreset(preset: ConfigPreset, changedBy: string = 'system'): void {
     const presetConfig = CONFIG_PRESETS[preset];
     if (!presetConfig) {
       throw new Error(`Unknown preset: ${preset}`);
@@ -706,17 +684,17 @@ export class ConfigManager extends EventEmitter {
     section: keyof GAgentConfig | string,
     previous: unknown,
     current: unknown,
-    changedBy: string,
+    changedBy: string
   ): void {
     const event: ConfigChangeEvent = {
-      type: "config_changed",
+      type: 'config_changed',
       section: section as keyof GAgentConfig,
       previous,
       current,
       changedBy,
       timestamp: new Date().toISOString(),
     };
-    this.emit("change", event);
+    this.emit('change', event);
   }
 
   /**
@@ -729,18 +707,14 @@ export class ConfigManager extends EventEmitter {
   /**
    * Import configuration from JSON
    */
-  fromJSON(json: string, changedBy: string = "system"): void {
+  fromJSON(json: string, changedBy: string = 'system'): void {
     try {
       const parsed = JSON.parse(json) as Partial<GAgentConfig>;
 
       // Validate and merge each section
       for (const [key, value] of Object.entries(parsed)) {
         if (key in this.config && value !== undefined) {
-          this.updateSection(
-            key as keyof GAgentConfig,
-            value as any,
-            changedBy,
-          );
+          this.updateSection(key as keyof GAgentConfig, value as any, changedBy);
         }
       }
     } catch (err) {
@@ -751,10 +725,10 @@ export class ConfigManager extends EventEmitter {
   /**
    * Reset to defaults
    */
-  reset(changedBy: string = "system"): void {
+  reset(changedBy: string = 'system'): void {
     const previous = { ...this.config };
     this.config = this.createDefaultConfig();
-    this.emitChange("*" as any, previous, this.config, changedBy);
+    this.emitChange('*' as any, previous, this.config, changedBy);
   }
 }
 
@@ -763,15 +737,15 @@ export class ConfigManager extends EventEmitter {
 // ============================================================================
 
 export type ConfigPreset =
-  | "conservative" // Maximum safety, minimum risk
-  | "balanced" // Good balance of safety and capability
-  | "aggressive" // Maximum capability, higher risk tolerance
-  | "enterprise" // Enterprise-grade settings
-  | "development"; // Development-friendly settings
+  | 'conservative' // Maximum safety, minimum risk
+  | 'balanced' // Good balance of safety and capability
+  | 'aggressive' // Maximum capability, higher risk tolerance
+  | 'enterprise' // Enterprise-grade settings
+  | 'development'; // Development-friendly settings
 
 export const CONFIG_PRESETS: Record<ConfigPreset, Partial<GAgentConfig>> = {
   conservative: {
-    autonomyLevel: "supervised",
+    autonomyLevel: 'supervised',
     safety: {
       ...DEFAULT_SAFETY_CONFIG,
       requireApprovalForFileDelete: true,
@@ -794,14 +768,14 @@ export const CONFIG_PRESETS: Record<ConfigPreset, Partial<GAgentConfig>> = {
   },
 
   balanced: {
-    autonomyLevel: "semi-autonomous",
+    autonomyLevel: 'semi-autonomous',
     safety: { ...DEFAULT_SAFETY_CONFIG },
     budget: { ...DEFAULT_BUDGET_CONFIG },
     features: { ...DEFAULT_FEATURES.staging },
   },
 
   aggressive: {
-    autonomyLevel: "autonomous",
+    autonomyLevel: 'autonomous',
     safety: {
       ...DEFAULT_SAFETY_CONFIG,
       requireApprovalForFileDelete: false,
@@ -820,7 +794,7 @@ export const CONFIG_PRESETS: Record<ConfigPreset, Partial<GAgentConfig>> = {
   },
 
   enterprise: {
-    autonomyLevel: "semi-autonomous",
+    autonomyLevel: 'semi-autonomous',
     safety: {
       ...DEFAULT_SAFETY_CONFIG,
       requireApprovalForFileDelete: true,
@@ -852,7 +826,7 @@ export const CONFIG_PRESETS: Record<ConfigPreset, Partial<GAgentConfig>> = {
   },
 
   development: {
-    autonomyLevel: "autonomous",
+    autonomyLevel: 'autonomous',
     safety: {
       ...DEFAULT_SAFETY_CONFIG,
       requireApprovalForFileDelete: false,
@@ -866,7 +840,7 @@ export const CONFIG_PRESETS: Record<ConfigPreset, Partial<GAgentConfig>> = {
     },
     logging: {
       ...DEFAULT_LOGGING_CONFIG,
-      level: "debug",
+      level: 'debug',
     },
     features: { ...DEFAULT_FEATURES.development },
   },

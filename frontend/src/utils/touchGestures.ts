@@ -23,10 +23,10 @@ export class SwipeGestureHandler {
     this.options = {
       threshold: options.threshold ?? 50,
       timeout: options.timeout ?? 300,
-      onSwipeLeft: options.onSwipeLeft ?? (() => { }),
-      onSwipeRight: options.onSwipeRight ?? (() => { }),
-      onSwipeUp: options.onSwipeUp ?? (() => { }),
-      onSwipeDown: options.onSwipeDown ?? (() => { }),
+      onSwipeLeft: options.onSwipeLeft ?? (() => {}),
+      onSwipeRight: options.onSwipeRight ?? (() => {}),
+      onSwipeUp: options.onSwipeUp ?? (() => {}),
+      onSwipeDown: options.onSwipeDown ?? (() => {}),
     };
 
     this.element.addEventListener('touchstart', this.handleTouchStart, { passive: true });
@@ -113,7 +113,7 @@ export class PullToRefreshHandler {
     this.element = element;
     this.options = {
       threshold: options.threshold ?? 80,
-      onRefresh: options.onRefresh ?? (() => { }),
+      onRefresh: options.onRefresh ?? (() => {}),
     };
 
     this.createIndicator();
@@ -252,8 +252,8 @@ export class EdgeSwipeHandler {
     this.options = {
       edgeWidth: options.edgeWidth ?? 20,
       threshold: options.threshold ?? 50,
-      onSwipeFromLeft: options.onSwipeFromLeft ?? (() => { }),
-      onSwipeFromRight: options.onSwipeFromRight ?? (() => { }),
+      onSwipeFromLeft: options.onSwipeFromLeft ?? (() => {}),
+      onSwipeFromRight: options.onSwipeFromRight ?? (() => {}),
     };
 
     document.addEventListener('touchstart', this.handleTouchStart, { passive: true });
@@ -326,7 +326,7 @@ export class SwipeToDeleteHandler {
     this.element = element;
     this.options = {
       threshold: options.threshold ?? 100,
-      onDelete: options.onDelete ?? (() => { }),
+      onDelete: options.onDelete ?? (() => {}),
       deleteBackground: options.deleteBackground ?? '#ff3b30',
     };
 

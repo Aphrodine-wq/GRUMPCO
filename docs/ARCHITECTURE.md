@@ -64,7 +64,6 @@ graph TB
         NIM[NVIDIA NIM]
         Kimi[Kimi K2.5]
         OpenRouter[OpenRouter]
-        Groq[Groq]
         Ollama[Ollama Local]
     end
 
@@ -91,7 +90,6 @@ graph TB
     LLMRouter --> NIM
     LLMRouter --> Kimi
     LLMRouter --> OpenRouter
-    LLMRouter --> Groq
     LLMRouter --> Ollama
 
     Agents --> SQLite
@@ -110,7 +108,7 @@ graph TB
 | **Frontend** | TypeScript 5.3, Mermaid.js, Shiki, Lucide | Web UI components |
 | **Backend** | Node.js 20+, Express 5, TypeScript, SWC, Pino | API server |
 | **Compiler** | Rust 1.77+, rayon, SIMD (AVX2/AVX-512), WASM | Intent parsing |
-| **AI/ML** | NVIDIA NIM, Kimi K2.5, OpenRouter, Groq, Ollama | LLM inference |
+| **AI/ML** | NVIDIA NIM, Kimi K2.5, OpenRouter, Anthropic, Ollama | LLM inference |
 | **Database** | SQLite (dev), Supabase/PostgreSQL (prod) | Data persistence |
 | **Queue** | BullMQ, Redis, ioredis | Job processing |
 | **Vector DB** | Pinecone | RAG document storage |

@@ -5,9 +5,9 @@
  * Supports both web app and CLI authentication flows.
  */
 
-import express, { type Request, type Response, type Router } from "express";
-import { auth } from "../services/supabaseClient.js";
-import { getRequestLogger } from "../middleware/logger.js";
+import express, { type Request, type Response, type Router } from 'express';
+import { auth } from '../services/platform/supabaseClient.js';
+import { getRequestLogger } from '../middleware/logger.js';
 
 const router: Router = express.Router();
 
@@ -39,17 +39,14 @@ interface OAuthState {
  * - state: Optional state parameter to pass through
  */
 router.get(
-  "/",
-  async (
-    req: Request<unknown, unknown, unknown, DiscordAuthQuery>,
-    res: Response,
-  ) => {
+  '/',
+  async (req: Request<unknown, unknown, unknown, DiscordAuthQuery>, res: Response) => {
     const log = getRequestLogger();
     const { cli, redirect_uri, state } = req.query;
 
     try {
       // Determine the redirect URL based on flow type
-      const isCli = cli === "true";
+      const isCli = cli === 'true';
 
       // Build state object to pass through OAuth flow
       const oauthState: OAuthState = {};
@@ -64,29 +61,27 @@ router.get(
       // Backend callback URL - always comes back to our server first
       const redirectTo =
         process.env.DISCORD_OAUTH_REDIRECT_URL ||
-        `${process.env.PUBLIC_BASE_URL || "http://localhost:3000"}/auth/discord/callback`;
+        `${process.env.PUBLIC_BASE_URL || 'http://localhost:3000'}/auth/discord/callback`;
 
       const { data, error } = await auth.signInWithOAuth({
-        provider: "discord",
+        provider: 'discord',
         options: {
           redirectTo,
-          scopes: "identify email",
+          scopes: 'identify email',
         },
       });
 
       if (error) {
-        log.error({ error: error.message }, "Discord OAuth init failed");
+        log.error({ error: error.message }, 'Discord OAuth init failed');
 
         if (isCli && redirect_uri) {
-          res.redirect(
-            `${redirect_uri}?error=${encodeURIComponent(error.message)}`,
-          );
+          res.redirect(`${redirect_uri}?error=${encodeURIComponent(error.message)}`);
           return;
         }
 
         res.status(500).json({
-          error: "Failed to initiate Discord authentication",
-          type: "oauth_init_error",
+          error: 'Failed to initiate Discord authentication',
+          type: 'oauth_init_error',
         });
         return;
       }
@@ -95,29 +90,26 @@ router.get(
         // Append our state to the OAuth URL for CLI flow
         if (isCli && redirect_uri) {
           const url = new URL(data.url);
-          url.searchParams.set(
-            "state",
-            Buffer.from(JSON.stringify(oauthState)).toString("base64"),
-          );
+          url.searchParams.set('state', Buffer.from(JSON.stringify(oauthState)).toString('base64'));
           res.redirect(url.toString());
         } else {
           res.redirect(data.url);
         }
       } else {
         res.status(500).json({
-          error: "No OAuth URL returned",
-          type: "oauth_init_error",
+          error: 'No OAuth URL returned',
+          type: 'oauth_init_error',
         });
       }
     } catch (err) {
       const error = err as Error;
-      log.error({ error: error.message }, "Discord OAuth error");
+      log.error({ error: error.message }, 'Discord OAuth error');
       res.status(500).json({
-        error: "Discord authentication failed",
-        type: "server_error",
+        error: 'Discord authentication failed',
+        type: 'server_error',
       });
     }
-  },
+  }
 );
 
 /**
@@ -128,11 +120,8 @@ router.get(
  * For Web flow: Sets cookie and redirects to frontend
  */
 router.get(
-  "/callback",
-  async (
-    req: Request<unknown, unknown, unknown, DiscordAuthCallbackQuery>,
-    res: Response,
-  ) => {
+  '/callback',
+  async (req: Request<unknown, unknown, unknown, DiscordAuthCallbackQuery>, res: Response) => {
     const log = getRequestLogger();
     const { code, error: oauthError, state } = req.query;
 
@@ -140,12 +129,10 @@ router.get(
     let oauthState: OAuthState = {};
     if (state) {
       try {
-        oauthState = JSON.parse(
-          Buffer.from(String(state), "base64").toString("utf-8"),
-        );
+        oauthState = JSON.parse(Buffer.from(String(state), 'base64').toString('utf-8'));
       } catch {
         // State parsing failed, continue with web flow
-        log.debug("Failed to parse OAuth state, using web flow");
+        log.debug('Failed to parse OAuth state, using web flow');
       }
     }
 
@@ -153,32 +140,30 @@ router.get(
     const cliRedirectUri = oauthState.redirect_uri;
 
     if (oauthError) {
-      log.warn({ error: oauthError }, "Discord OAuth callback error");
+      log.warn({ error: oauthError }, 'Discord OAuth callback error');
 
       if (isCli && cliRedirectUri) {
         res.redirect(
-          `${cliRedirectUri}?error=${encodeURIComponent(String(oauthError))}&provider=discord`,
+          `${cliRedirectUri}?error=${encodeURIComponent(String(oauthError))}&provider=discord`
         );
         return;
       }
 
       res.redirect(
-        `${process.env.FRONTEND_URL || "/"}/login?error=${encodeURIComponent(String(oauthError))}`,
+        `${process.env.FRONTEND_URL || '/'}/login?error=${encodeURIComponent(String(oauthError))}`
       );
       return;
     }
 
     if (!code) {
-      log.warn("Discord OAuth callback missing code");
+      log.warn('Discord OAuth callback missing code');
 
       if (isCli && cliRedirectUri) {
         res.redirect(`${cliRedirectUri}?error=missing_code&provider=discord`);
         return;
       }
 
-      res.redirect(
-        `${process.env.FRONTEND_URL || "/"}/login?error=missing_code`,
-      );
+      res.redirect(`${process.env.FRONTEND_URL || '/'}/login?error=missing_code`);
       return;
     }
 
@@ -187,27 +172,24 @@ router.get(
       const { data, error } = await auth.exchangeCodeForSession(String(code));
 
       if (error) {
-        log.error(
-          { error: error.message },
-          "Discord OAuth code exchange failed",
-        );
+        log.error({ error: error.message }, 'Discord OAuth code exchange failed');
 
         if (isCli && cliRedirectUri) {
           res.redirect(
-            `${cliRedirectUri}?error=${encodeURIComponent(error.message)}&provider=discord`,
+            `${cliRedirectUri}?error=${encodeURIComponent(error.message)}&provider=discord`
           );
           return;
         }
 
         res.redirect(
-          `${process.env.FRONTEND_URL || "/"}/login?error=${encodeURIComponent(error.message)}`,
+          `${process.env.FRONTEND_URL || '/'}/login?error=${encodeURIComponent(error.message)}`
         );
         return;
       }
 
       log.info(
         { userId: data.user?.id, email: data.user?.email, cli: isCli },
-        "Discord OAuth login successful",
+        'Discord OAuth login successful'
       );
 
       // CLI flow: redirect to CLI's local server with token
@@ -218,11 +200,11 @@ router.get(
           expires_in?: number;
         } | null;
 
-        const accessToken = session?.access_token || "";
-        const refreshToken = session?.refresh_token || "";
+        const accessToken = session?.access_token || '';
+        const refreshToken = session?.refresh_token || '';
         const expiresIn = session?.expires_in || 3600;
-        const userEmail = data.user?.email || "";
-        const userId = data.user?.id || "";
+        const userEmail = data.user?.email || '';
+        const userId = data.user?.id || '';
 
         const params = new URLSearchParams({
           access_token: accessToken,
@@ -230,11 +212,11 @@ router.get(
           expires_in: String(expiresIn),
           email: userEmail,
           user_id: userId,
-          provider: "discord",
+          provider: 'discord',
         });
 
         if (oauthState.original_state) {
-          params.set("state", oauthState.original_state);
+          params.set('state', oauthState.original_state);
         }
 
         res.redirect(`${cliRedirectUri}?${params.toString()}`);
@@ -242,35 +224,31 @@ router.get(
       }
 
       // Web flow: set cookie and redirect to frontend
-      const frontendUrl = process.env.FRONTEND_URL || "/";
-      const accessToken = data.session?.access_token || "";
+      const frontendUrl = process.env.FRONTEND_URL || '/';
+      const accessToken = data.session?.access_token || '';
 
       if (data.session) {
-        res.cookie("sb-access-token", accessToken, {
+        res.cookie('sb-access-token', accessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: data.session.expires_in
-            ? data.session.expires_in * 1000
-            : 3600000,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: data.session.expires_in ? data.session.expires_in * 1000 : 3600000,
         });
       }
 
       res.redirect(`${frontendUrl}/auth/done`);
     } catch (err) {
       const error = err as Error;
-      log.error({ error: error.message }, "Discord OAuth callback error");
+      log.error({ error: error.message }, 'Discord OAuth callback error');
 
       if (isCli && cliRedirectUri) {
         res.redirect(`${cliRedirectUri}?error=server_error&provider=discord`);
         return;
       }
 
-      res.redirect(
-        `${process.env.FRONTEND_URL || "/"}/login?error=server_error`,
-      );
+      res.redirect(`${process.env.FRONTEND_URL || '/'}/login?error=server_error`);
     }
-  },
+  }
 );
 
 export default router;

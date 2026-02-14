@@ -1,0 +1,1710 @@
+Loading svelte-check in workspace: c:\Users\Walt\Desktop\milesproject\frontend
+Getting Svelte diagnostics...
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ChatHeader.svelte[39m:93:3
+[33mWarn[39m: Unused CSS selector ".header-btn"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.header-btn[36m {
+    display: flex;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ChatHeader.svelte[39m:108:3
+[33mWarn[39m: Unused CSS selector ".header-btn:hover"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.header-btn:hover[36m {
+    background: rgba(124, 58, 237, 0.08);[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ChatHeader.svelte[39m:113:3
+[33mWarn[39m: Unused CSS selector ".header-btn.active"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.header-btn.active[36m {
+    background: var(--color-primary, #7c3aed);[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ChatHeader.svelte[39m:209:5
+[33mWarn[39m: Unused CSS selector ".header-btn"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m  @media (prefers-reduced-motion: reduce) {
+    [35m.header-btn[36m {
+      transition: none;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ArtifactViewer.svelte[39m:65:81
+[33mWarn[39m: This reference only captures the initial value of `phaseData`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m  const tabs = [
+    { id: 'architecture', label: 'Architecture', icon: LayoutGrid, available: !![35mphaseData[36m.architecture },
+    { id: 'prd', label: 'PRD', icon: FileText, available: !!phaseData.prd },[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ArtifactViewer.svelte[39m:66:61
+[33mWarn[39m: This reference only captures the initial value of `phaseData`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m    { id: 'architecture', label: 'Architecture', icon: LayoutGrid, available: !!phaseData.architecture },
+    { id: 'prd', label: 'PRD', icon: FileText, available: !![35mphaseData[36m.prd },
+    { id: 'plan', label: 'Plan', icon: ListTodo, available: !!phaseData.plan },[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ArtifactViewer.svelte[39m:67:63
+[33mWarn[39m: This reference only captures the initial value of `phaseData`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m    { id: 'prd', label: 'PRD', icon: FileText, available: !!phaseData.prd },
+    { id: 'plan', label: 'Plan', icon: ListTodo, available: !![35mphaseData[36m.plan },
+    { id: 'code', label: 'Code', icon: FileCode, available: !!phaseData.code },[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ArtifactViewer.svelte[39m:68:63
+[33mWarn[39m: This reference only captures the initial value of `phaseData`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m    { id: 'plan', label: 'Plan', icon: ListTodo, available: !!phaseData.plan },
+    { id: 'code', label: 'Code', icon: FileCode, available: !![35mphaseData[36m.code },
+  ] as const;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ArtifactViewer.svelte[39m:73:3
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m{#if open}
+  [35m<div class="artifact-viewer-overlay" onclick={onClose}>
+    <div class="artifact-viewer" onclick={(e) => e.stopPropagation()}>
+      <div class="viewer-header">
+        <h2 class="viewer-title">Design Workflow Artifacts</h2>
+        <button class="close-btn" onclick={onClose}>
+          <X size={20} />
+        </button>
+      </div>
+
+      <div class="viewer-tabs">
+        {#each tabs as tab}
+          <button
+            class="tab"
+            class:active={activeTab === tab.id}
+            class:disabled={!tab.available}
+            disabled={!tab.available}
+            onclick={() => tab.available && (activeTab = tab.id)}
+          >
+            <tab.icon size={16} />
+            <span>{tab.label}</span>
+            {#if tab.available}
+              <Check size={12} class="tab-check" />
+            {/if}
+          </button>
+        {/each}
+      </div>
+
+      <div class="viewer-content">
+        {#if activeTab === 'architecture' && phaseData.architecture}
+          <div class="artifact-section">
+            <h3>System Architecture</h3>
+            {#if phaseData.architecture.mermaidCode}
+              <div class="mermaid-block">
+                <pre><code>{phaseData.architecture.mermaidCode}</code></pre>
+              </div>
+            {/if}
+            {#if phaseData.architecture.description}
+              <div class="description-block">
+                {phaseData.architecture.description}
+              </div>
+            {/if}
+          </div>
+        {:else if activeTab === 'prd' && phaseData.prd}
+          <div class="artifact-section">
+            <h3>Product Requirements Document</h3>
+            <div class="prd-summary">
+              {phaseData.prd.summary}
+            </div>
+            <pre class="prd-content"><code>{phaseData.prd.content}</code></pre>
+          </div>
+        {:else if activeTab === 'plan' && phaseData.plan}
+          <div class="artifact-section">
+            <h3>Implementation Plan</h3>
+            <div class="tasks-list">
+              {#each phaseData.plan.tasks as task, index}
+                <div class="task-item">
+                  <span class="task-number">{index + 1}</span>
+                  <div class="task-content">
+                    <div class="task-title">{task.title}</div>
+                    {#if task.description}
+                      <div class="task-description">{task.description}</div>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {:else if activeTab === 'code' && phaseData.code}
+          <div class="artifact-section">
+            <h3>Generated Code</h3>
+            <div class="files-list">
+              {#each phaseData.code.files as file}
+                <div class="file-item">
+                  <FileCode size={14} />
+                  <span class="file-path">{file.path}</span>
+                  <span class="file-language">{file.language}</span>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {:else}
+          <div class="empty-state">
+            <p>No data available for this phase yet.</p>
+          </div>
+        {/if}
+      </div>
+
+      <div class="viewer-footer">
+        {#if isCompleted}
+          <button class="complete-btn" onclick={handleCompleteWorkflow}>
+            <Check size={16} />
+            <span>Workflow Completed</span>
+          </button>
+        {/if}
+        {#if phaseData.code?.files}
+          <button class="download-btn" onclick={handleDownloadAll} disabled={downloading}>
+            <Download size={16} />
+            <span>{downloading ? 'Downloading...' : 'Download All Files'}</span>
+          </button>
+        {/if}
+      </div>
+    </div>
+  </div>[36m
+{/if}[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ArtifactViewer.svelte[39m:73:3
+[33mWarn[39m: `<div>` with a click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
+[36m{#if open}
+  [35m<div class="artifact-viewer-overlay" onclick={onClose}>
+    <div class="artifact-viewer" onclick={(e) => e.stopPropagation()}>
+      <div class="viewer-header">
+        <h2 class="viewer-title">Design Workflow Artifacts</h2>
+        <button class="close-btn" onclick={onClose}>
+          <X size={20} />
+        </button>
+      </div>
+
+      <div class="viewer-tabs">
+        {#each tabs as tab}
+          <button
+            class="tab"
+            class:active={activeTab === tab.id}
+            class:disabled={!tab.available}
+            disabled={!tab.available}
+            onclick={() => tab.available && (activeTab = tab.id)}
+          >
+            <tab.icon size={16} />
+            <span>{tab.label}</span>
+            {#if tab.available}
+              <Check size={12} class="tab-check" />
+            {/if}
+          </button>
+        {/each}
+      </div>
+
+      <div class="viewer-content">
+        {#if activeTab === 'architecture' && phaseData.architecture}
+          <div class="artifact-section">
+            <h3>System Architecture</h3>
+            {#if phaseData.architecture.mermaidCode}
+              <div class="mermaid-block">
+                <pre><code>{phaseData.architecture.mermaidCode}</code></pre>
+              </div>
+            {/if}
+            {#if phaseData.architecture.description}
+              <div class="description-block">
+                {phaseData.architecture.description}
+              </div>
+            {/if}
+          </div>
+        {:else if activeTab === 'prd' && phaseData.prd}
+          <div class="artifact-section">
+            <h3>Product Requirements Document</h3>
+            <div class="prd-summary">
+              {phaseData.prd.summary}
+            </div>
+            <pre class="prd-content"><code>{phaseData.prd.content}</code></pre>
+          </div>
+        {:else if activeTab === 'plan' && phaseData.plan}
+          <div class="artifact-section">
+            <h3>Implementation Plan</h3>
+            <div class="tasks-list">
+              {#each phaseData.plan.tasks as task, index}
+                <div class="task-item">
+                  <span class="task-number">{index + 1}</span>
+                  <div class="task-content">
+                    <div class="task-title">{task.title}</div>
+                    {#if task.description}
+                      <div class="task-description">{task.description}</div>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {:else if activeTab === 'code' && phaseData.code}
+          <div class="artifact-section">
+            <h3>Generated Code</h3>
+            <div class="files-list">
+              {#each phaseData.code.files as file}
+                <div class="file-item">
+                  <FileCode size={14} />
+                  <span class="file-path">{file.path}</span>
+                  <span class="file-language">{file.language}</span>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {:else}
+          <div class="empty-state">
+            <p>No data available for this phase yet.</p>
+          </div>
+        {/if}
+      </div>
+
+      <div class="viewer-footer">
+        {#if isCompleted}
+          <button class="complete-btn" onclick={handleCompleteWorkflow}>
+            <Check size={16} />
+            <span>Workflow Completed</span>
+          </button>
+        {/if}
+        {#if phaseData.code?.files}
+          <button class="download-btn" onclick={handleDownloadAll} disabled={downloading}>
+            <Download size={16} />
+            <span>{downloading ? 'Downloading...' : 'Download All Files'}</span>
+          </button>
+        {/if}
+      </div>
+    </div>
+  </div>[36m
+{/if}[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ArtifactViewer.svelte[39m:74:5
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m  <div class="artifact-viewer-overlay" onclick={onClose}>
+    [35m<div class="artifact-viewer" onclick={(e) => e.stopPropagation()}>
+      <div class="viewer-header">
+        <h2 class="viewer-title">Design Workflow Artifacts</h2>
+        <button class="close-btn" onclick={onClose}>
+          <X size={20} />
+        </button>
+      </div>
+
+      <div class="viewer-tabs">
+        {#each tabs as tab}
+          <button
+            class="tab"
+            class:active={activeTab === tab.id}
+            class:disabled={!tab.available}
+            disabled={!tab.available}
+            onclick={() => tab.available && (activeTab = tab.id)}
+          >
+            <tab.icon size={16} />
+            <span>{tab.label}</span>
+            {#if tab.available}
+              <Check size={12} class="tab-check" />
+            {/if}
+          </button>
+        {/each}
+      </div>
+
+      <div class="viewer-content">
+        {#if activeTab === 'architecture' && phaseData.architecture}
+          <div class="artifact-section">
+            <h3>System Architecture</h3>
+            {#if phaseData.architecture.mermaidCode}
+              <div class="mermaid-block">
+                <pre><code>{phaseData.architecture.mermaidCode}</code></pre>
+              </div>
+            {/if}
+            {#if phaseData.architecture.description}
+              <div class="description-block">
+                {phaseData.architecture.description}
+              </div>
+            {/if}
+          </div>
+        {:else if activeTab === 'prd' && phaseData.prd}
+          <div class="artifact-section">
+            <h3>Product Requirements Document</h3>
+            <div class="prd-summary">
+              {phaseData.prd.summary}
+            </div>
+            <pre class="prd-content"><code>{phaseData.prd.content}</code></pre>
+          </div>
+        {:else if activeTab === 'plan' && phaseData.plan}
+          <div class="artifact-section">
+            <h3>Implementation Plan</h3>
+            <div class="tasks-list">
+              {#each phaseData.plan.tasks as task, index}
+                <div class="task-item">
+                  <span class="task-number">{index + 1}</span>
+                  <div class="task-content">
+                    <div class="task-title">{task.title}</div>
+                    {#if task.description}
+                      <div class="task-description">{task.description}</div>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {:else if activeTab === 'code' && phaseData.code}
+          <div class="artifact-section">
+            <h3>Generated Code</h3>
+            <div class="files-list">
+              {#each phaseData.code.files as file}
+                <div class="file-item">
+                  <FileCode size={14} />
+                  <span class="file-path">{file.path}</span>
+                  <span class="file-language">{file.language}</span>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {:else}
+          <div class="empty-state">
+            <p>No data available for this phase yet.</p>
+          </div>
+        {/if}
+      </div>
+
+      <div class="viewer-footer">
+        {#if isCompleted}
+          <button class="complete-btn" onclick={handleCompleteWorkflow}>
+            <Check size={16} />
+            <span>Workflow Completed</span>
+          </button>
+        {/if}
+        {#if phaseData.code?.files}
+          <button class="download-btn" onclick={handleDownloadAll} disabled={downloading}>
+            <Download size={16} />
+            <span>{downloading ? 'Downloading...' : 'Download All Files'}</span>
+          </button>
+        {/if}
+      </div>
+    </div>[36m
+  </div>[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\chat\ArtifactViewer.svelte[39m:74:5
+[33mWarn[39m: `<div>` with a click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
+[36m  <div class="artifact-viewer-overlay" onclick={onClose}>
+    [35m<div class="artifact-viewer" onclick={(e) => e.stopPropagation()}>
+      <div class="viewer-header">
+        <h2 class="viewer-title">Design Workflow Artifacts</h2>
+        <button class="close-btn" onclick={onClose}>
+          <X size={20} />
+        </button>
+      </div>
+
+      <div class="viewer-tabs">
+        {#each tabs as tab}
+          <button
+            class="tab"
+            class:active={activeTab === tab.id}
+            class:disabled={!tab.available}
+            disabled={!tab.available}
+            onclick={() => tab.available && (activeTab = tab.id)}
+          >
+            <tab.icon size={16} />
+            <span>{tab.label}</span>
+            {#if tab.available}
+              <Check size={12} class="tab-check" />
+            {/if}
+          </button>
+        {/each}
+      </div>
+
+      <div class="viewer-content">
+        {#if activeTab === 'architecture' && phaseData.architecture}
+          <div class="artifact-section">
+            <h3>System Architecture</h3>
+            {#if phaseData.architecture.mermaidCode}
+              <div class="mermaid-block">
+                <pre><code>{phaseData.architecture.mermaidCode}</code></pre>
+              </div>
+            {/if}
+            {#if phaseData.architecture.description}
+              <div class="description-block">
+                {phaseData.architecture.description}
+              </div>
+            {/if}
+          </div>
+        {:else if activeTab === 'prd' && phaseData.prd}
+          <div class="artifact-section">
+            <h3>Product Requirements Document</h3>
+            <div class="prd-summary">
+              {phaseData.prd.summary}
+            </div>
+            <pre class="prd-content"><code>{phaseData.prd.content}</code></pre>
+          </div>
+        {:else if activeTab === 'plan' && phaseData.plan}
+          <div class="artifact-section">
+            <h3>Implementation Plan</h3>
+            <div class="tasks-list">
+              {#each phaseData.plan.tasks as task, index}
+                <div class="task-item">
+                  <span class="task-number">{index + 1}</span>
+                  <div class="task-content">
+                    <div class="task-title">{task.title}</div>
+                    {#if task.description}
+                      <div class="task-description">{task.description}</div>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {:else if activeTab === 'code' && phaseData.code}
+          <div class="artifact-section">
+            <h3>Generated Code</h3>
+            <div class="files-list">
+              {#each phaseData.code.files as file}
+                <div class="file-item">
+                  <FileCode size={14} />
+                  <span class="file-path">{file.path}</span>
+                  <span class="file-language">{file.language}</span>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {:else}
+          <div class="empty-state">
+            <p>No data available for this phase yet.</p>
+          </div>
+        {/if}
+      </div>
+
+      <div class="viewer-footer">
+        {#if isCompleted}
+          <button class="complete-btn" onclick={handleCompleteWorkflow}>
+            <Check size={16} />
+            <span>Workflow Completed</span>
+          </button>
+        {/if}
+        {#if phaseData.code?.files}
+          <button class="download-btn" onclick={handleDownloadAll} disabled={downloading}>
+            <Download size={16} />
+            <span>{downloading ? 'Downloading...' : 'Download All Files'}</span>
+          </button>
+        {/if}
+      </div>
+    </div>[36m
+  </div>[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\BillingTab.svelte[39m:307:1
+[33mWarn[39m: Unused CSS selector ".default-model-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.default-model-row .field-label[36m {
+    flex-shrink: 0;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\BillingTab.svelte[39m:311:1
+[33mWarn[39m: Unused CSS selector ".advanced-finetuning .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.advanced-finetuning .field-label[36m {
+    display: block;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\BillingTab.svelte[39m:317:3
+[33mWarn[39m: Unused CSS selector ".settings-text-input"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m.settings-number-input,
+  [35m.settings-text-input[36m {
+    max-width: 200px;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\BillingTab.svelte[39m:326:1
+[33mWarn[39m: Unused CSS selector ".inline-config-input-group .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.inline-config-input-group .field-label[36m {
+    margin-bottom: 0.5rem;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\BillingTab.svelte[39m:330:1
+[33mWarn[39m: Unused CSS selector ".models-custom-inner .section-desc"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.models-custom-inner .section-desc[36m {
+    margin-bottom: 0.75rem;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\BillingTab.svelte[39m:356:1
+[33mWarn[39m: Unused CSS selector ".field-label-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.field-label-row .field-label[36m {
+    margin-bottom: 0;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\BillingTab.svelte[39m:366:1
+[33mWarn[39m: Unused CSS selector ".field-hint code"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.field-hint code[36m {
+    font-size: 0.75em;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\AboutTab.svelte[39m:111:1
+[33mWarn[39m: Unused CSS selector ".models-custom-inner .section-desc"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.models-custom-inner .section-desc[36m {
+    margin-bottom: 0.75rem;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\AiProvidersTab.svelte[39m:294:8
+[33mWarn[39m: Unused CSS selector ".preset-option.selected"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\AiProvidersTab.svelte[39m:294:8
+[33mWarn[39m: Unused CSS selector ".default-model-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\AiProvidersTab.svelte[39m:294:8
+[33mWarn[39m: Unused CSS selector ".advanced-finetuning .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\AiProvidersTab.svelte[39m:294:8
+[33mWarn[39m: Unused CSS selector ".models-custom-inner .section-desc"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\AiProvidersTab.svelte[39m:294:8
+[33mWarn[39m: Unused CSS selector ".field-label-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\AiProvidersTab.svelte[39m:294:8
+[33mWarn[39m: Unused CSS selector ".theme-card.selected"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\AiProvidersTab.svelte[39m:294:8
+[33mWarn[39m: Unused CSS selector ".accent-swatch.selected"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\AiProvidersTab.svelte[39m:294:8
+[33mWarn[39m: Unused CSS selector ".field-hint code"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\AiProvidersTab.svelte[39m:294:8
+[33mWarn[39m: Unused CSS selector ".custom-model-form .custom-input"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\AiProvidersTab.svelte[39m:294:8
+[33mWarn[39m: Unused CSS selector ".channel-status-dot.configured"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GAgentTab.svelte[39m:220:8
+[33mWarn[39m: Unused CSS selector ".default-model-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GAgentTab.svelte[39m:220:8
+[33mWarn[39m: Unused CSS selector ".advanced-finetuning .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GAgentTab.svelte[39m:220:8
+[33mWarn[39m: Unused CSS selector ".settings-number-input"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GAgentTab.svelte[39m:220:8
+[33mWarn[39m: Unused CSS selector ".inline-config-input-group .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GAgentTab.svelte[39m:220:8
+[33mWarn[39m: Unused CSS selector ".models-custom-inner .section-desc"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GAgentTab.svelte[39m:220:8
+[33mWarn[39m: Unused CSS selector ".field-label-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GAgentTab.svelte[39m:220:8
+[33mWarn[39m: Unused CSS selector ".field-hint code"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GeneralTab.svelte[39m:380:8
+[33mWarn[39m: Unused CSS selector ".preset-option.selected"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GeneralTab.svelte[39m:380:8
+[33mWarn[39m: Unused CSS selector ".models-custom-inner .section-desc"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GeneralTab.svelte[39m:380:8
+[33mWarn[39m: Unused CSS selector ".field-hint code"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GitTab.svelte[39m:132:8
+[33mWarn[39m: Unused CSS selector ".default-model-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GitTab.svelte[39m:132:8
+[33mWarn[39m: Unused CSS selector ".advanced-finetuning .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GitTab.svelte[39m:132:8
+[33mWarn[39m: Unused CSS selector ".inline-config-input-group .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GitTab.svelte[39m:132:8
+[33mWarn[39m: Unused CSS selector ".models-custom-inner .section-desc"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GitTab.svelte[39m:132:8
+[33mWarn[39m: Unused CSS selector ".field-label-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\GitTab.svelte[39m:132:8
+[33mWarn[39m: Unused CSS selector ".field-hint code"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\IntegrationsTab.svelte[39m:194:1
+[33mWarn[39m: Unused CSS selector ".default-model-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.default-model-row .field-label[36m {
+    flex-shrink: 0;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\IntegrationsTab.svelte[39m:198:1
+[33mWarn[39m: Unused CSS selector ".advanced-finetuning .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.advanced-finetuning .field-label[36m {
+    display: block;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\IntegrationsTab.svelte[39m:203:1
+[33mWarn[39m: Unused CSS selector ".inline-config-input-group .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.inline-config-input-group .field-label[36m {
+    margin-bottom: 0.5rem;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\IntegrationsTab.svelte[39m:207:1
+[33mWarn[39m: Unused CSS selector ".models-custom-inner .section-desc"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.models-custom-inner .section-desc[36m {
+    margin-bottom: 0.75rem;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\IntegrationsTab.svelte[39m:233:1
+[33mWarn[39m: Unused CSS selector ".field-label-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.field-label-row .field-label[36m {
+    margin-bottom: 0;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\IntegrationsTab.svelte[39m:243:1
+[33mWarn[39m: Unused CSS selector ".field-hint code"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+[35m.field-hint code[36m {
+    font-size: 0.75em;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\McpTab.svelte[39m:106:3
+[33mWarn[39m: Unused CSS selector ".integrations-section-content.integrations-grid-two"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.integrations-section-content.integrations-grid-two[36m {
+    display: grid;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\McpTab.svelte[39m:117:3
+[33mWarn[39m: Unused CSS selector ".default-model-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.default-model-row .field-label[36m {
+    flex-shrink: 0;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\McpTab.svelte[39m:121:3
+[33mWarn[39m: Unused CSS selector ".advanced-finetuning .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.advanced-finetuning .field-label[36m {
+    display: block;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\McpTab.svelte[39m:127:3
+[33mWarn[39m: Unused CSS selector ".settings-text-input"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m  .settings-number-input,
+  [35m.settings-text-input[36m {
+    max-width: 200px;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\McpTab.svelte[39m:136:3
+[33mWarn[39m: Unused CSS selector ".inline-config-input-group .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.inline-config-input-group .field-label[36m {
+    margin-bottom: 0.5rem;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\McpTab.svelte[39m:140:3
+[33mWarn[39m: Unused CSS selector ".models-custom-inner .section-desc"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.models-custom-inner .section-desc[36m {
+    margin-bottom: 0.75rem;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\McpTab.svelte[39m:166:3
+[33mWarn[39m: Unused CSS selector ".field-label-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.field-label-row .field-label[36m {
+    margin-bottom: 0;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\McpTab.svelte[39m:176:3
+[33mWarn[39m: Unused CSS selector ".field-hint code"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.field-hint code[36m {
+    font-size: 0.75em;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\MemoryTab.svelte[39m:84:8
+[33mWarn[39m: Unused CSS selector ".default-model-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\MemoryTab.svelte[39m:84:8
+[33mWarn[39m: Unused CSS selector ".advanced-finetuning .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\MemoryTab.svelte[39m:84:8
+[33mWarn[39m: Unused CSS selector ".settings-text-input"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\MemoryTab.svelte[39m:84:8
+[33mWarn[39m: Unused CSS selector ".inline-config-input-group .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\MemoryTab.svelte[39m:84:8
+[33mWarn[39m: Unused CSS selector ".models-custom-inner .section-desc"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\MemoryTab.svelte[39m:84:8
+[33mWarn[39m: Unused CSS selector ".field-label-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\MemoryTab.svelte[39m:84:8
+[33mWarn[39m: Unused CSS selector ".field-hint code"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\ModelsTab.svelte[39m:267:8
+[33mWarn[39m: Unused CSS selector ".models-tab .models-section"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\ModelsTab.svelte[39m:267:8
+[33mWarn[39m: Unused CSS selector ".models-tab .models-section:last-child"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\ModelsTab.svelte[39m:267:8
+[33mWarn[39m: Unused CSS selector ".inline-config-input-group .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\ModelsTab.svelte[39m:267:8
+[33mWarn[39m: Unused CSS selector ".inline-config-input-row .custom-input"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\ModelsTab.svelte[39m:267:8
+[33mWarn[39m: Unused CSS selector ".inline-config-input-row .custom-input.error"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\ModelsTab.svelte[39m:267:8
+[33mWarn[39m: Unused CSS selector ".field-label-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\ModelsTab.svelte[39m:267:8
+[33mWarn[39m: Unused CSS selector ".theme-card.selected"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\ModelsTab.svelte[39m:267:8
+[33mWarn[39m: Unused CSS selector ".accent-swatch.selected"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\ModelsTab.svelte[39m:267:8
+[33mWarn[39m: Unused CSS selector ".field-hint code"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\SecurityTab.svelte[39m:209:8
+[33mWarn[39m: Unused CSS selector ".default-model-row .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\SecurityTab.svelte[39m:209:8
+[33mWarn[39m: Unused CSS selector ".advanced-finetuning .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\SecurityTab.svelte[39m:209:8
+[33mWarn[39m: Unused CSS selector ".inline-config-input-group .field-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\settings\SecurityTab.svelte[39m:209:8
+[33mWarn[39m: Unused CSS selector ".models-custom-inner .section-desc"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .tab-section {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\TabbedSettingsScreen.svelte[39m:1090:5
+[33mWarn[39m: Unused CSS selector ".integrations-section-content.integrations-grid-two"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m  @media (max-width: 1024px) {
+    [35m.integrations-section-content.integrations-grid-two[36m {
+      grid-template-columns: 1fr;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\ConfirmModal.svelte[39m:25:5
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m  <div class="confirm-overlay" onclick={onClose} role="presentation">
+    [35m<div class="confirm-container" onclick={(e) => e.stopPropagation()}>
+      <h2 class="confirm-title">{title}</h2>
+      {#if message}
+        <p class="confirm-message">{message}</p>
+      {/if}
+      <div class="confirm-actions">
+        <button type="button" class="btn-cancel" onclick={onClose}>{cancelLabel}</button>
+        <button type="button" class="btn-confirm" onclick={onConfirm}>{confirmLabel}</button>
+      </div>
+    </div>[36m
+  </div>[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\ConfirmModal.svelte[39m:25:5
+[33mWarn[39m: `<div>` with a click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
+[36m  <div class="confirm-overlay" onclick={onClose} role="presentation">
+    [35m<div class="confirm-container" onclick={(e) => e.stopPropagation()}>
+      <h2 class="confirm-title">{title}</h2>
+      {#if message}
+        <p class="confirm-message">{message}</p>
+      {/if}
+      <div class="confirm-actions">
+        <button type="button" class="btn-cancel" onclick={onClose}>{cancelLabel}</button>
+        <button type="button" class="btn-confirm" onclick={onConfirm}>{confirmLabel}</button>
+      </div>
+    </div>[36m
+  </div>[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\SectionPickerModal.svelte[39m:296:13
+[33mWarn[39m: `<svelte:component>` is deprecated in runes mode ΓÇö components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated (svelte)
+[36m          <div class="section-icon">
+            [35m<svelte:component this={getIcon(section.iconKey)} size={14} />[36m
+          </div>[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\RefactoredChatInterface.svelte[39m:1181:8
+[33mWarn[39m: Unused CSS selector ".streaming-message"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .chat-interface {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\RefactoredChatInterface.svelte[39m:1181:8
+[33mWarn[39m: Unused CSS selector ".streaming-content"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .chat-interface {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\RefactoredChatInterface.svelte[39m:1181:8
+[33mWarn[39m: Unused CSS selector ".thinking-block"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .chat-interface {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\RefactoredChatInterface.svelte[39m:1181:8
+[33mWarn[39m: Unused CSS selector ".thinking-block summary"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .chat-interface {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\RefactoredChatInterface.svelte[39m:1181:8
+[33mWarn[39m: Unused CSS selector ".thinking-content"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .chat-interface {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\RefactoredChatInterface.svelte[39m:1181:8
+[33mWarn[39m: Unused CSS selector ".text-block"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .chat-interface {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\RefactoredChatInterface.svelte[39m:1181:8
+[33mWarn[39m: Unused CSS selector ".streaming-content"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .chat-interface {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\RefactoredChatInterface.svelte[39m:1181:8
+[33mWarn[39m: Unused CSS selector ".streaming-content .text-block"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .chat-interface {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\onboarding-v2\slides\ReviewSlide.svelte[39m:150:3
+[33mWarn[39m: Unused CSS selector ".arrow"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.arrow[36m {
+    width: 1.25rem;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\onboarding-v2\slides\ReviewSlide.svelte[39m:156:3
+[33mWarn[39m: Unused CSS selector ".cta-button:hover .arrow"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.cta-button:hover .arrow[36m {
+    transform: translateX(4px);[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\onboarding-v2\slides\ShipWorkflowSlide.svelte[39m:236:3
+[33mWarn[39m: Unused CSS selector ".connector-arrow"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.connector-arrow[36m {
+    color: #d1d5db;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\onboarding-v2\slides\AppPreferencesSlide.svelte[39m:94:9
+[33mWarn[39m: Buttons and links should either contain text or have an `aria-label`, `aria-labelledby` or `title` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+[36m        </div>
+        [35m<button
+          class="toggle-switch"
+          class:active={telemetryOptIn}
+          onclick={toggleTelemetry}
+          role="switch"
+          aria-checked={telemetryOptIn}
+        >
+          <span class="toggle-thumb"></span>
+        </button>[36m
+      </div>[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\VoiceCodeScreen.svelte[39m:419:3
+[33mWarn[39m: Unused CSS selector ".voice-card"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.voice-card[36m {
+    border: 1px solid #e4e4e7;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\VoiceCodeScreen.svelte[39m:425:3
+[33mWarn[39m: Unused CSS selector ".voice-card-record"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.voice-card-record[36m {
+    border-color: #e4e4e7;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\VoiceCodeScreen.svelte[39m:429:3
+[33mWarn[39m: Unused CSS selector ".voice-card-transcript .result-text.transcript"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.voice-card-transcript .result-text.transcript[36m {
+    margin: 0;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\VoiceCodeScreen.svelte[39m:433:3
+[33mWarn[39m: Unused CSS selector ".voice-card-result .result-label:first-of-type"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.voice-card-result .result-label:first-of-type[36m {
+    margin-top: 0;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\VoiceCodeScreen.svelte[39m:437:3
+[33mWarn[39m: Unused CSS selector ".voice-card-error"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.voice-card-error[36m {
+    border-color: #fecaca;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\VoiceCodeScreen.svelte[39m:442:3
+[33mWarn[39m: Unused CSS selector ".voice-card-history"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.voice-card-history[36m {
+    margin-top: 0.5rem;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DesignToCodeScreen.svelte[39m:697:7
+[33mWarn[39m: Non-interactive element `<div>` should not be assigned mouse or keyboard event listeners
+https://svelte.dev/e/a11y_no_noninteractive_element_interactions (svelte)
+[36m    >
+      [35m<div
+        class="figma-modal"
+        role="document"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
+      >
+        <div class="figma-modal-header">
+          <h3>Choose a Figma file</h3>
+          <button
+            type="button"
+            class="figma-modal-close"
+            onclick={() => (showFigmaPicker = false)}
+            aria-label="Close"
+          >
+            ├ù
+          </button>
+        </div>
+        <div class="figma-modal-body">
+          {#if figmaFilesLoading}
+            <p>Loading filesΓÇª</p>
+          {:else if figmaFiles.length === 0}
+            <p>No files found. Connect Figma in Integrations first.</p>
+          {:else}
+            <ul class="figma-file-list">
+              {#each figmaFiles as file (file.key)}
+                <li>
+                  <button
+                    type="button"
+                    class="figma-file-item"
+                    onclick={() => selectFigmaFile(file)}
+                  >
+                    <span class="figma-file-name">{file.name}</span>
+                    {#if file.thumbnail_url}
+                      <img src={file.thumbnail_url} alt="" class="figma-thumb" />
+                    {/if}
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      </div>[36m
+    </div>[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DesignToCodeScreen.svelte[39m:743:8
+[33mWarn[39m: Unused CSS selector ".generate-btn-sticky"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .design-screen {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DesignToCodeScreen.svelte[39m:743:8
+[33mWarn[39m: Unused CSS selector ".step-card"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .design-screen {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DesignToCodeScreen.svelte[39m:743:8
+[33mWarn[39m: Unused CSS selector ".figma-btn"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .design-screen {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DesignToCodeScreen.svelte[39m:743:8
+[33mWarn[39m: Unused CSS selector ".drop-zone.has-image"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .design-screen {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DesignToCodeScreen.svelte[39m:743:8
+[33mWarn[39m: Unused CSS selector ".clear-btn"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .design-screen {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DesignToCodeScreen.svelte[39m:743:8
+[33mWarn[39m: Unused CSS selector ".generate-btn"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .design-screen {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DesignToCodeScreen.svelte[39m:743:8
+[33mWarn[39m: Unused CSS selector ".generate-btn.loading"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .design-screen {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DesignToCodeScreen.svelte[39m:743:8
+[33mWarn[39m: Unused CSS selector ".result-card.error"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .design-screen {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DesignToCodeScreen.svelte[39m:743:8
+[33mWarn[39m: Unused CSS selector ".region-result"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .design-screen {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:55:31
+[33mWarn[39m: This reference only captures the initial value of `initialTab`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m  type Tab = 'memories' | 'documents' | 'skills' | 'mcp';
+  let activeTab = $state<Tab>([35minitialTab[36m ?? 'memories');[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".doc-stats"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".stat-card"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".stat-value"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".stat-label"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".section-header"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".section-header h2"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".collections-list"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".collection-card"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".collection-info"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".collection-icon"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".collection-details h3"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".collection-meta"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".status-badge"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".status-badge.indexed"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".status-badge.indexing"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".status-badge.error"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".collection-actions"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".search-test"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".search-test .search-box"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".search-results"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".result-card"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".result-header"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".result-rank"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".result-source"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".result-score"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\KnowledgeBase.svelte[39m:795:8
+[33mWarn[39m: Unused CSS selector ".result-content"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+<style>[35m[36m
+  .knowledge-base {[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DockerPanel.svelte[39m:82:3
+[33mWarn[39m: Unused CSS selector ".docker-icon"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.docker-icon[36m {
+    color: var(--color-primary, #7c3aed);[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DockerPanel.svelte[39m:100:3
+[33mWarn[39m: Unused CSS selector ".open-docker-card"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.open-docker-card[36m {
+    margin-bottom: 1rem;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DockerSetupWizard.svelte[39m:631:3
+[33mWarn[39m: Unused CSS selector ".back-btn"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.back-btn[36m {
+    align-self: flex-start;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DockerSetupWizard.svelte[39m:698:3
+[33mWarn[39m: Unused CSS selector ".preset-card"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.preset-card[36m {
+    cursor: pointer;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\DockerSetupWizard.svelte[39m:702:3
+[33mWarn[39m: Unused CSS selector ".preset-card.selected"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.preset-card.selected[36m {
+    border-color: var(--color-primary, #7c3aed) !important;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\TrackFeature.svelte[39m:88:1
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m
+[35m<div
+  bind:this={element}
+  on:click={handleClick}
+  on:mouseenter={handleMouseEnter}
+  class="contents"
+  data-feature-name={name}
+>
+  <slot />
+</div>[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\TrackFeature.svelte[39m:88:1
+[33mWarn[39m: `<div>` with a click or mouseenter handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
+[36m
+[35m<div
+  bind:this={element}
+  on:click={handleClick}
+  on:mouseenter={handleMouseEnter}
+  class="contents"
+  data-feature-name={name}
+>
+  <slot />
+</div>[36m[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\ArchitectureExplorer.svelte[39m:503:17
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m              {#if !searchQuery || filteredNodeIds.has(node.id)}
+                [35m<g
+                  transform="translate({node.x}, {node.y})"
+                  class="cursor-pointer transition-all duration-200"
+                  on:mouseenter={() => (hoveredNode = node.id)}
+                  on:mouseleave={() => (hoveredNode = null)}
+                  on:click={() => (selectedNode = node)}
+                  opacity={hoveredNode &&
+                  hoveredNode !== node.id &&
+                  !node.dependencies.includes(hoveredNode) &&
+                  !nodes.find((n) => n.id === hoveredNode)?.dependencies.includes(node.id)
+                    ? 0.3
+                    : 1}
+                >
+                  <!-- Node circle -->
+                  <circle
+                    r="30"
+                    fill="white"
+                    stroke={getNodeColor(node.type)}
+                    stroke-width={selectedNode?.id === node.id ? 4 : 2}
+                    class="fill-white"
+                  />
+
+                  <!-- Status indicator -->
+                  {#if node.status === 'optional'}
+                    <circle
+                      r="34"
+                      fill="none"
+                      stroke={getNodeColor(node.type)}
+                      stroke-width="1"
+                      stroke-dasharray="4,2"
+                      opacity="0.5"
+                    />
+                  {/if}
+
+                  <!-- Icon using foreignObject for proper Lucide rendering -->
+                  <foreignObject x="-12" y="-22" width="24" height="24">
+                    <div
+                      xmlns="http://www.w3.org/1999/xhtml"
+                      style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"
+                    >
+                      {#if getNodeIcon(node.type)}
+                        {@const NodeIcon = getNodeIcon(node.type)}
+                        <NodeIcon size={18} color={getNodeColor(node.type)} />
+                      {/if}
+                    </div>
+                  </foreignObject>
+
+                  <!-- Label -->
+                  <text
+                    text-anchor="middle"
+                    dy="45"
+                    font-size="11"
+                    font-weight="500"
+                    fill="currentColor"
+                    class="fill-gray-800"
+                  >
+                    {node.label}
+                  </text>
+
+                  <!-- File count badge -->
+                  {#if node.files}
+                    <g transform="translate(20, -20)">
+                      <circle r="10" fill={getNodeColor(node.type)} />
+                      <text
+                        text-anchor="middle"
+                        dy="3"
+                        font-size="8"
+                        fill="white"
+                        font-weight="bold"
+                      >
+                        {node.files}
+                      </text>
+                    </g>
+                  {/if}
+                </g>[36m
+              {/if}[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\ArchitectureExplorer.svelte[39m:503:17
+[33mWarn[39m: `<g>` with a mouseenter, mouseleave or click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
+[36m              {#if !searchQuery || filteredNodeIds.has(node.id)}
+                [35m<g
+                  transform="translate({node.x}, {node.y})"
+                  class="cursor-pointer transition-all duration-200"
+                  on:mouseenter={() => (hoveredNode = node.id)}
+                  on:mouseleave={() => (hoveredNode = null)}
+                  on:click={() => (selectedNode = node)}
+                  opacity={hoveredNode &&
+                  hoveredNode !== node.id &&
+                  !node.dependencies.includes(hoveredNode) &&
+                  !nodes.find((n) => n.id === hoveredNode)?.dependencies.includes(node.id)
+                    ? 0.3
+                    : 1}
+                >
+                  <!-- Node circle -->
+                  <circle
+                    r="30"
+                    fill="white"
+                    stroke={getNodeColor(node.type)}
+                    stroke-width={selectedNode?.id === node.id ? 4 : 2}
+                    class="fill-white"
+                  />
+
+                  <!-- Status indicator -->
+                  {#if node.status === 'optional'}
+                    <circle
+                      r="34"
+                      fill="none"
+                      stroke={getNodeColor(node.type)}
+                      stroke-width="1"
+                      stroke-dasharray="4,2"
+                      opacity="0.5"
+                    />
+                  {/if}
+
+                  <!-- Icon using foreignObject for proper Lucide rendering -->
+                  <foreignObject x="-12" y="-22" width="24" height="24">
+                    <div
+                      xmlns="http://www.w3.org/1999/xhtml"
+                      style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"
+                    >
+                      {#if getNodeIcon(node.type)}
+                        {@const NodeIcon = getNodeIcon(node.type)}
+                        <NodeIcon size={18} color={getNodeColor(node.type)} />
+                      {/if}
+                    </div>
+                  </foreignObject>
+
+                  <!-- Label -->
+                  <text
+                    text-anchor="middle"
+                    dy="45"
+                    font-size="11"
+                    font-weight="500"
+                    fill="currentColor"
+                    class="fill-gray-800"
+                  >
+                    {node.label}
+                  </text>
+
+                  <!-- File count badge -->
+                  {#if node.files}
+                    <g transform="translate(20, -20)">
+                      <circle r="10" fill={getNodeColor(node.type)} />
+                      <text
+                        text-anchor="middle"
+                        dy="3"
+                        font-size="8"
+                        fill="white"
+                        font-weight="bold"
+                      >
+                        {node.files}
+                      </text>
+                    </g>
+                  {/if}
+                </g>[36m
+              {/if}[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\ChatEmptyState.svelte[39m:408:3
+[33mWarn[39m: Unused CSS selector ".action-card-demo"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.action-card-demo[36m {
+    background: var(--color-bg-input);[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\GRumpBlob.svelte[39m:93:3
+[33mWarn[39m: Unused CSS selector ".blob-inner svg"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.blob-inner svg[36m {
+    width: 45%;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\GRumpBlob.svelte[39m:104:3
+[33mWarn[39m: Unused CSS selector ".thinking-dots span"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.thinking-dots span[36m {
+    width: 5px;[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\GRumpBlob.svelte[39m:112:3
+[33mWarn[39m: Unused CSS selector ".thinking-dots span:nth-child(2)"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m.thinking-dots span:nth-child(2)[36m { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\GRumpBlob.svelte[39m:113:3
+[33mWarn[39m: Unused CSS selector ".thinking-dots span:nth-child(3)"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  [35m.thinking-dots span:nth-child(3)[36m { animation-delay: 0.4s; }[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\RagDashboard.svelte[39m:223:17
+[33mWarn[39m: `<svelte:component>` is deprecated in runes mode ΓÇö components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated (svelte)
+[36m              <div class="col-status" style:color={getStatusColor(col.status)}>
+                [35m<svelte:component this={getStatusIcon(col.status)} size={14} />[36m
+                <span>{col.lastIndexed}</span>[39m
+
+c:\Users\Walt\Desktop\milesproject\frontend\[32msrc\components\ThemeToggle.svelte[39m:374:3
+[33mWarn[39m: Unused CSS selector "[data-theme="dark"] .toggle-dot"
+https://svelte.dev/e/css_unused_selector (svelte)
+[36m
+  [35m[data-theme="dark"] .toggle-dot[36m {
+    background: var(--color-primary, #a78bfa);[39m
+
+====================================
+[33msvelte-check found 0 errors and 155 warnings in 31 files
+[39m

@@ -5,16 +5,16 @@
  * @module errorResponse
  */
 
-import type { Response } from "express";
-import { env } from "../config/env.js";
+import type { Response } from 'express';
+import { env } from '../config/env.js';
 
-const isProduction = env.NODE_ENV === "production";
+const isProduction = env.NODE_ENV === 'production';
 
 /** Generic message for 500 JSON responses in production */
-const GENERIC_ERROR_MESSAGE = "Internal server error";
+const GENERIC_ERROR_MESSAGE = 'Internal server error';
 
 /** Generic message for SSE error events in production */
-const GENERIC_SSE_ERROR_MESSAGE = "An error occurred";
+const GENERIC_SSE_ERROR_MESSAGE = 'An error occurred';
 
 /**
  * Standardized error codes for API responses.
@@ -22,48 +22,48 @@ const GENERIC_SSE_ERROR_MESSAGE = "An error occurred";
  */
 export enum ErrorCode {
   // Authentication & Authorization (401, 403)
-  UNAUTHORIZED = "unauthorized",
-  FORBIDDEN = "forbidden",
-  TOKEN_EXPIRED = "token_expired",
-  TOKEN_INVALID = "token_invalid",
-  ADMIN_REQUIRED = "admin_required",
+  UNAUTHORIZED = 'unauthorized',
+  FORBIDDEN = 'forbidden',
+  TOKEN_EXPIRED = 'token_expired',
+  TOKEN_INVALID = 'token_invalid',
+  ADMIN_REQUIRED = 'admin_required',
 
   // Validation & Request Errors (400)
-  VALIDATION_ERROR = "validation_error",
-  INVALID_INPUT = "invalid_input",
-  MISSING_FIELD = "missing_field",
-  INVALID_FORMAT = "invalid_format",
+  VALIDATION_ERROR = 'validation_error',
+  INVALID_INPUT = 'invalid_input',
+  MISSING_FIELD = 'missing_field',
+  INVALID_FORMAT = 'invalid_format',
 
   // Resource Errors (404, 409, 410)
-  NOT_FOUND = "not_found",
-  RESOURCE_NOT_FOUND = "resource_not_found",
-  ALREADY_EXISTS = "already_exists",
-  CONFLICT = "conflict",
-  GONE = "gone",
+  NOT_FOUND = 'not_found',
+  RESOURCE_NOT_FOUND = 'resource_not_found',
+  ALREADY_EXISTS = 'already_exists',
+  CONFLICT = 'conflict',
+  GONE = 'gone',
 
   // Rate Limiting & Quotas (429)
-  RATE_LIMIT = "rate_limit",
-  QUOTA_EXCEEDED = "quota_exceeded",
+  RATE_LIMIT = 'rate_limit',
+  QUOTA_EXCEEDED = 'quota_exceeded',
 
   // Payload Errors (413)
-  PAYLOAD_TOO_LARGE = "payload_too_large",
+  PAYLOAD_TOO_LARGE = 'payload_too_large',
 
   // Timeout & Availability (408, 503)
-  REQUEST_TIMEOUT = "request_timeout",
-  SERVICE_UNAVAILABLE = "service_unavailable",
-  DEPENDENCY_FAILURE = "dependency_failure",
+  REQUEST_TIMEOUT = 'request_timeout',
+  SERVICE_UNAVAILABLE = 'service_unavailable',
+  DEPENDENCY_FAILURE = 'dependency_failure',
 
   // Internal Errors (500)
-  INTERNAL_ERROR = "internal_error",
-  DATABASE_ERROR = "database_error",
-  AI_SERVICE_ERROR = "ai_service_error",
-  EXTERNAL_API_ERROR = "external_api_error",
+  INTERNAL_ERROR = 'internal_error',
+  DATABASE_ERROR = 'database_error',
+  AI_SERVICE_ERROR = 'ai_service_error',
+  EXTERNAL_API_ERROR = 'external_api_error',
 
   // Business Logic Errors
-  OPERATION_FAILED = "operation_failed",
-  INVALID_STATE = "invalid_state",
-  FEATURE_DISABLED = "feature_disabled",
-  SUBSCRIPTION_REQUIRED = "subscription_required",
+  OPERATION_FAILED = 'operation_failed',
+  INVALID_STATE = 'invalid_state',
+  FEATURE_DISABLED = 'feature_disabled',
+  SUBSCRIPTION_REQUIRED = 'subscription_required',
 }
 
 /**
@@ -127,13 +127,9 @@ export class ApiError extends Error {
   public readonly field?: string;
   public readonly retryAfter?: number;
 
-  constructor(
-    code: ErrorCode,
-    message: string,
-    options?: { field?: string; retryAfter?: number },
-  ) {
+  constructor(code: ErrorCode, message: string, options?: { field?: string; retryAfter?: number }) {
     super(message);
-    this.name = "ApiError";
+    this.name = 'ApiError';
     this.code = code;
     this.statusCode = ErrorStatusMap[code];
     this.field = options?.field;
@@ -166,19 +162,19 @@ export class ApiError extends Error {
       case ErrorCode.UNAUTHORIZED:
       case ErrorCode.TOKEN_EXPIRED:
       case ErrorCode.TOKEN_INVALID:
-        return "Authentication required";
+        return 'Authentication required';
       case ErrorCode.FORBIDDEN:
       case ErrorCode.ADMIN_REQUIRED:
-        return "Access denied";
+        return 'Access denied';
       case ErrorCode.RATE_LIMIT:
-        return "Too many requests";
+        return 'Too many requests';
       case ErrorCode.QUOTA_EXCEEDED:
-        return "Quota exceeded";
+        return 'Quota exceeded';
       case ErrorCode.NOT_FOUND:
       case ErrorCode.RESOURCE_NOT_FOUND:
-        return "Resource not found";
+        return 'Resource not found';
       case ErrorCode.SERVICE_UNAVAILABLE:
-        return "Service temporarily unavailable";
+        return 'Service temporarily unavailable';
       default:
         return GENERIC_ERROR_MESSAGE;
     }
@@ -201,7 +197,7 @@ export function sendErrorResponse(
   res: Response,
   code: ErrorCode,
   message: string,
-  options?: { field?: string; retryAfter?: number },
+  options?: { field?: string; retryAfter?: number }
 ): void {
   const error = new ApiError(code, message, options);
   sendError(res, error);
@@ -221,9 +217,7 @@ export function getErrorMessage(err: unknown): string {
  */
 export function getClientErrorMessage(err: unknown): string {
   if (isProduction) return GENERIC_ERROR_MESSAGE;
-  return (
-    (err instanceof Error ? err.message : String(err)) || GENERIC_ERROR_MESSAGE
-  );
+  return (err instanceof Error ? err.message : String(err)) || GENERIC_ERROR_MESSAGE;
 }
 
 /**
@@ -232,26 +226,18 @@ export function getClientErrorMessage(err: unknown): string {
  */
 export function getClientSSEErrorMessage(err: unknown): string {
   if (isProduction) return GENERIC_SSE_ERROR_MESSAGE;
-  return (
-    (err instanceof Error ? err.message : String(err)) ||
-    GENERIC_SSE_ERROR_MESSAGE
-  );
+  return (err instanceof Error ? err.message : String(err)) || GENERIC_SSE_ERROR_MESSAGE;
 }
 
 /**
  * Send a 500 JSON response. In production, does not include err.message in the body.
  */
-export function sendServerError(
-  res: Response,
-  err: unknown,
-  opts?: { type?: string },
-): void {
-  const type = opts?.type ?? "internal_error";
+export function sendServerError(res: Response, err: unknown, opts?: { type?: string }): void {
+  const type = opts?.type ?? 'internal_error';
   const payload: Record<string, unknown> = {
     error: isProduction
       ? GENERIC_ERROR_MESSAGE
-      : (err instanceof Error ? err.message : String(err)) ||
-        GENERIC_ERROR_MESSAGE,
+      : (err instanceof Error ? err.message : String(err)) || GENERIC_ERROR_MESSAGE,
     type,
   };
   if (!isProduction && err instanceof Error) {
@@ -267,5 +253,5 @@ export function sendServerError(
  */
 export function writeSSEError(res: Response, err: unknown): void {
   const message = getClientSSEErrorMessage(err);
-  res.write(`data: ${JSON.stringify({ type: "error", error: message })}\n\n`);
+  res.write(`data: ${JSON.stringify({ type: 'error', error: message })}\n\n`);
 }

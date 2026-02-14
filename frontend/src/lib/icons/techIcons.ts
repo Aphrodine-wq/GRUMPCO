@@ -295,12 +295,10 @@ export const STYLING_ICONS: Record<string, ComponentType> = {
  * AI Provider icon mappings
  */
 export const AI_PROVIDER_ICONS: Record<string, ComponentType> = {
-  kimi: Moon,
   'nvidia-nim': Cpu,
   openrouter: Split,
   anthropic: Brain,
   openai: Bot,
-  groq: Zap,
   ollama: Box,
 };
 
@@ -352,7 +350,7 @@ export const COMMAND_ICONS: Record<string, ComponentType> = {
   design: Palette,
   code: Code2,
   // Build
-  freeAgent: Bot,
+  gAgent: Bot,
   designToCode: Layout,
   // Tools
   voiceCode: Mic,

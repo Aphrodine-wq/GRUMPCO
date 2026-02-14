@@ -9,18 +9,7 @@ describe('viewRegistry', () => {
     });
 
     it('should contain all expected core AI screens', () => {
-      const coreScreens = [
-        'askDocs',
-        'voiceCode',
-        'talkMode',
-        'canvas',
-        'skills',
-        'swarm',
-        'designToCode',
-        'freeAgent',
-        'gAgent',
-        'advancedAI',
-      ];
+      const coreScreens = ['askDocs', 'voiceCode', 'talkMode', 'canvas', 'designToCode'];
 
       coreScreens.forEach((screen) => {
         expect(VIEW_REGISTRY[screen as keyof typeof VIEW_REGISTRY]).toBeDefined();
@@ -32,7 +21,7 @@ describe('viewRegistry', () => {
     });
 
     it('should contain integration and platform screens', () => {
-      const integrationScreens = ['integrations', 'approvals', 'heartbeats', 'memory', 'auditLog'];
+      const integrationScreens = ['integrations', 'approvals', 'memory', 'auditLog', 'gAgent'];
 
       integrationScreens.forEach((screen) => {
         expect(VIEW_REGISTRY[screen as keyof typeof VIEW_REGISTRY]).toBeDefined();
@@ -107,11 +96,7 @@ describe('viewRegistry', () => {
       });
 
       it('all other screens should navigate back to chat', () => {
-        const settingsScreens = new Set([
-          'docker-setup',
-          'troubleshooting',
-          'reset',
-        ]);
+        const settingsScreens = new Set(['docker-setup', 'troubleshooting', 'reset']);
 
         Object.entries(VIEW_REGISTRY).forEach(([key, def]) => {
           if (!settingsScreens.has(key)) {

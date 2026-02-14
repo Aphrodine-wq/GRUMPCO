@@ -56,6 +56,11 @@ const browserGlobals = {
   URLSearchParams: 'readonly',
   structuredClone: 'readonly',
   TouchEvent: 'readonly',
+  performance: 'readonly',
+  PerformanceObserver: 'readonly',
+  PerformanceEntry: 'readonly',
+  PerformanceNavigationTiming: 'readonly',
+  PerformanceResourceTiming: 'readonly',
 };
 
 
@@ -83,7 +88,10 @@ export default [js.configs.recommended, {
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/no-non-null-assertion': 'warn',
     '@typescript-eslint/no-empty-object-type': 'off',
+    '@typescript-eslint/ban-ts-comment': 'warn',
     'no-console': ['warn', { allow: ['warn', 'error'] }],
+    'no-undef': 'off', // TypeScript handles this
+    'no-useless-assignment': 'warn',
   },
 }, // JavaScript files
 {

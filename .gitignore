@@ -46,6 +46,9 @@ target/
 # JIT cache
 .grump/
 
+# Test artifacts
+test-chat.json
+
 # Installer staging and output
 installer/stage/
 installer/Output/
@@ -59,6 +62,22 @@ intent-compiler/target/
 
 # Temporary backup dirs
 .backup-untracked/
+
+# AI tool configuration (user-specific)
+.claude/
+.cursor/
+.opencode/
+.zap/
+.hyper/
+
+# SQLite databases
+data/*.db
+
+# TypeScript build cache
+backend/.tsbuildinfo
+
+# Prevent npm lockfiles (project uses pnpm)
+package-lock.json
 
 # Electron app builds (too large for GitHub)
 grump-app/

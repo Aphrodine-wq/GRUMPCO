@@ -4,7 +4,7 @@
  * Each tool has its own handler function with validation and execution logic
  */
 
-import type { ToolExecutionResult } from "../../tools/types.js";
+import type { ToolExecutionResult } from '../../tools/types.js';
 import {
   bashExecuteInputSchema,
   fileReadInputSchema,
@@ -17,9 +17,9 @@ import {
   type FileWriteInput,
   type FileEditInput,
   type ListDirectoryInput,
-} from "../../tools/index.js";
-import { type ToolExecutionService } from "../toolExecutionService.js";
-import logger from "../../middleware/logger.js";
+} from '../../tools/index.js';
+import { type ToolExecutionService } from '../workspace/toolExecutionService.js';
+import logger from '../../middleware/logger.js';
 
 // ============================================================================
 // EXECUTION HANDLERS
@@ -27,7 +27,7 @@ import logger from "../../middleware/logger.js";
 
 export async function executeBash(
   input: Record<string, unknown>,
-  tes: ToolExecutionService,
+  tes: ToolExecutionService
 ): Promise<ToolExecutionResult> {
   const start = Date.now();
   const validation = bashExecuteInputSchema.safeParse(input);
@@ -35,23 +35,19 @@ export async function executeBash(
     return {
       success: false,
       error: `Invalid input: ${validation.error.message}`,
-      toolName: "bash_execute",
+      toolName: 'bash_execute',
       executionTime: 0,
     };
   }
   const data = validation.data as BashExecuteInput;
   try {
-    const result = await tes.executeBash(
-      data.command,
-      data.workingDirectory,
-      data.timeout,
-    );
+    const result = await tes.executeBash(data.command, data.workingDirectory, data.timeout);
     return { ...result, executionTime: Date.now() - start };
   } catch (e) {
     return {
       success: false,
       error: (e as Error).message,
-      toolName: "bash_execute",
+      toolName: 'bash_execute',
       executionTime: Date.now() - start,
     };
   }
@@ -59,7 +55,7 @@ export async function executeBash(
 
 export async function executeFileRead(
   input: Record<string, unknown>,
-  tes: ToolExecutionService,
+  tes: ToolExecutionService
 ): Promise<ToolExecutionResult> {
   const start = Date.now();
   const validation = fileReadInputSchema.safeParse(input);
@@ -67,7 +63,7 @@ export async function executeFileRead(
     return {
       success: false,
       error: `Invalid input: ${validation.error.message}`,
-      toolName: "file_read",
+      toolName: 'file_read',
       executionTime: 0,
     };
   }
@@ -79,7 +75,7 @@ export async function executeFileRead(
     return {
       success: false,
       error: (e as Error).message,
-      toolName: "file_read",
+      toolName: 'file_read',
       executionTime: Date.now() - start,
     };
   }
@@ -87,7 +83,7 @@ export async function executeFileRead(
 
 export async function executeFileWrite(
   input: Record<string, unknown>,
-  tes: ToolExecutionService,
+  tes: ToolExecutionService
 ): Promise<ToolExecutionResult> {
   const start = Date.now();
   const validation = fileWriteInputSchema.safeParse(input);
@@ -95,23 +91,19 @@ export async function executeFileWrite(
     return {
       success: false,
       error: `Invalid input: ${validation.error.message}`,
-      toolName: "file_write",
+      toolName: 'file_write',
       executionTime: 0,
     };
   }
   const data = validation.data as FileWriteInput;
   try {
-    const result = await tes.writeFile(
-      data.path,
-      data.content,
-      data.createDirectories,
-    );
+    const result = await tes.writeFile(data.path, data.content, data.createDirectories);
     return { ...result, executionTime: Date.now() - start };
   } catch (e) {
     return {
       success: false,
       error: (e as Error).message,
-      toolName: "file_write",
+      toolName: 'file_write',
       executionTime: Date.now() - start,
     };
   }
@@ -119,7 +111,7 @@ export async function executeFileWrite(
 
 export async function executeFileEdit(
   input: Record<string, unknown>,
-  tes: ToolExecutionService,
+  tes: ToolExecutionService
 ): Promise<ToolExecutionResult> {
   const start = Date.now();
   const validation = fileEditInputSchema.safeParse(input);
@@ -127,7 +119,7 @@ export async function executeFileEdit(
     return {
       success: false,
       error: `Invalid input: ${validation.error.message}`,
-      toolName: "file_edit",
+      toolName: 'file_edit',
       executionTime: 0,
     };
   }
@@ -139,7 +131,7 @@ export async function executeFileEdit(
     return {
       success: false,
       error: (e as Error).message,
-      toolName: "file_edit",
+      toolName: 'file_edit',
       executionTime: Date.now() - start,
     };
   }
@@ -147,7 +139,7 @@ export async function executeFileEdit(
 
 export async function executeListDirectory(
   input: Record<string, unknown>,
-  tes: ToolExecutionService,
+  tes: ToolExecutionService
 ): Promise<ToolExecutionResult> {
   const start = Date.now();
   const validation = listDirectoryInputSchema.safeParse(input);
@@ -155,7 +147,7 @@ export async function executeListDirectory(
     return {
       success: false,
       error: `Invalid input: ${validation.error.message}`,
-      toolName: "list_directory",
+      toolName: 'list_directory',
       executionTime: 0,
     };
   }
@@ -167,7 +159,7 @@ export async function executeListDirectory(
     return {
       success: false,
       error: (e as Error).message,
-      toolName: "list_directory",
+      toolName: 'list_directory',
       executionTime: Date.now() - start,
     };
   }
@@ -175,7 +167,7 @@ export async function executeListDirectory(
 
 export async function executeCodebaseSearch(
   input: Record<string, unknown>,
-  tes: ToolExecutionService,
+  tes: ToolExecutionService
 ): Promise<ToolExecutionResult> {
   const start = Date.now();
   const validation = codebaseSearchInputSchema.safeParse(input);
@@ -183,23 +175,19 @@ export async function executeCodebaseSearch(
     return {
       success: false,
       error: `Invalid input: ${validation.error.message}`,
-      toolName: "codebase_search",
+      toolName: 'codebase_search',
       executionTime: 0,
     };
   }
   const { query, workingDirectory, maxResults } = validation.data;
   try {
-    const result = await tes.searchCodebase(
-      query,
-      workingDirectory,
-      maxResults,
-    );
+    const result = await tes.searchCodebase(query, workingDirectory, maxResults);
     return { ...result, executionTime: Date.now() - start };
   } catch (e) {
     return {
       success: false,
       error: (e as Error).message,
-      toolName: "codebase_search",
+      toolName: 'codebase_search',
       executionTime: Date.now() - start,
     };
   }
@@ -211,26 +199,23 @@ export async function executeCodebaseSearch(
 
 export type ToolHandler = (
   input: Record<string, unknown>,
-  tes: ToolExecutionService,
+  tes: ToolExecutionService
 ) => Promise<ToolExecutionResult>;
 
 export const toolHandlers: Map<string, ToolHandler> = new Map([
-  ["bash_execute", executeBash],
-  ["file_read", executeFileRead],
-  ["file_write", executeFileWrite],
-  ["file_edit", executeFileEdit],
-  ["list_directory", executeListDirectory],
-  ["codebase_search", executeCodebaseSearch],
+  ['bash_execute', executeBash],
+  ['file_read', executeFileRead],
+  ['file_write', executeFileWrite],
+  ['file_edit', executeFileEdit],
+  ['list_directory', executeListDirectory],
+  ['codebase_search', executeCodebaseSearch],
 ]);
 
 export function getToolHandler(toolName: string): ToolHandler | undefined {
   return toolHandlers.get(toolName);
 }
 
-export function registerToolHandler(
-  toolName: string,
-  handler: ToolHandler,
-): void {
+export function registerToolHandler(toolName: string, handler: ToolHandler): void {
   toolHandlers.set(toolName, handler);
-  logger.debug({ toolName }, "Registered tool handler");
+  logger.debug({ toolName }, 'Registered tool handler');
 }

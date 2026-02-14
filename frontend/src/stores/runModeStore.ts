@@ -1,6 +1,6 @@
 /**
  * Run mode: 'docker' | 'local'.
- * Set by FreeAgentScreen when it detects Docker; ChatInterface uses it for local confirmation.
+ * Set by GAgentScreen when it detects Docker; ChatInterface uses it for local confirmation.
  */
 import { writable } from 'svelte/store';
 

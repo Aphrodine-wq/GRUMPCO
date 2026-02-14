@@ -3,11 +3,11 @@
  * Auto-discovery and management of skills
  */
 
-import fs from "fs";
-import path from "path";
-import { fileURLToPath, pathToFileURL } from "url";
-import type { Express } from "express";
-import logger from "../middleware/logger.js";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+import type { Express } from 'express';
+import logger from '../middleware/logger.js';
 import type {
   Skill,
   SkillManifest,
@@ -18,7 +18,7 @@ import type {
   SkillExecutionResult,
   ToolExecutionResult,
   ToolDefinition,
-} from "./types.js";
+} from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,7 +41,7 @@ class SkillRegistry {
   async discoverSkills(customDir?: string): Promise<void> {
     const skillsDir = customDir || this.skillsDirectory;
 
-    logger.info({ skillsDir }, "Discovering skills");
+    logger.info({ skillsDir }, 'Discovering skills');
 
     try {
       const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
@@ -49,19 +49,15 @@ class SkillRegistry {
       for (const entry of entries) {
         // Skip non-directories and base/internal folders
         if (!entry.isDirectory()) continue;
-        if (["base", "node_modules", "__tests__"].includes(entry.name))
-          continue;
+        if (['base', 'node_modules', '__tests__'].includes(entry.name)) continue;
 
         const skillPath = path.join(skillsDir, entry.name);
         await this.loadSkill(skillPath);
       }
 
-      logger.info(
-        { skillCount: this.skills.size },
-        "Skills discovery complete",
-      );
+      logger.info({ skillCount: this.skills.size }, 'Skills discovery complete');
     } catch (error) {
-      logger.error({ error }, "Failed to discover skills");
+      logger.error({ error }, 'Failed to discover skills');
       throw error;
     }
   }
@@ -70,42 +66,39 @@ class SkillRegistry {
    * Load a single skill from a directory
    */
   private async loadSkill(skillPath: string): Promise<void> {
-    const manifestPath = path.join(skillPath, "manifest.json");
+    const manifestPath = path.join(skillPath, 'manifest.json');
 
     // Check for manifest
     if (!fs.existsSync(manifestPath)) {
-      logger.debug({ skillPath }, "No manifest.json found, skipping");
+      logger.debug({ skillPath }, 'No manifest.json found, skipping');
       return;
     }
 
     try {
       // Load manifest
-      const manifestContent = fs.readFileSync(manifestPath, "utf-8");
+      const manifestContent = fs.readFileSync(manifestPath, 'utf-8');
       const manifest: SkillManifest = JSON.parse(manifestContent);
 
       // Validate manifest
       if (!manifest.id || !manifest.name || !manifest.version) {
-        logger.warn({ skillPath }, "Invalid manifest: missing required fields");
+        logger.warn({ skillPath }, 'Invalid manifest: missing required fields');
         return;
       }
 
       // Check for duplicate
       if (this.skills.has(manifest.id)) {
-        logger.warn(
-          { skillId: manifest.id },
-          "Skill already registered, skipping duplicate",
-        );
+        logger.warn({ skillId: manifest.id }, 'Skill already registered, skipping duplicate');
         return;
       }
 
       // Load skill module - try .js first, fall back to .ts for dev mode (tsx)
-      let resolvedIndexPath = path.join(skillPath, "index.js");
+      let resolvedIndexPath = path.join(skillPath, 'index.js');
       if (!fs.existsSync(resolvedIndexPath)) {
-        const tsIndexPath = path.join(skillPath, "index.ts");
+        const tsIndexPath = path.join(skillPath, 'index.ts');
         if (fs.existsSync(tsIndexPath)) {
           resolvedIndexPath = tsIndexPath;
         } else {
-          logger.warn({ skillPath }, "No index.js or index.ts found");
+          logger.warn({ skillPath }, 'No index.js or index.ts found');
           return;
         }
       }
@@ -113,7 +106,7 @@ class SkillRegistry {
       const skillModule = await import(pathToFileURL(resolvedIndexPath).href);
       const skillExport = skillModule.default || skillModule;
 
-      // Construct skill object - manifest MUST come after spread to ensure 
+      // Construct skill object - manifest MUST come after spread to ensure
       // it's never overwritten by a stale/undefined manifest from the export
       const skill: Skill = {
         ...skillExport,
@@ -134,10 +127,10 @@ class SkillRegistry {
           name: manifest.name,
           version: manifest.version,
         },
-        "Skill loaded",
+        'Skill loaded'
       );
     } catch (error) {
-      logger.error({ skillPath, error }, "Failed to load skill");
+      logger.error({ skillPath, error }, 'Failed to load skill');
     }
   }
 
@@ -146,26 +139,26 @@ class SkillRegistry {
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
-      logger.warn("Skill registry already initialized");
+      logger.warn('Skill registry already initialized');
       return;
     }
 
-    logger.info("Initializing skills");
+    logger.info('Initializing skills');
 
     for (const [id, registration] of this.skills) {
       try {
         if (registration.skill.initialize) {
           await registration.skill.initialize({});
-          logger.debug({ skillId: id }, "Skill initialized");
+          logger.debug({ skillId: id }, 'Skill initialized');
         }
       } catch (error) {
-        logger.error({ skillId: id, error }, "Failed to initialize skill");
+        logger.error({ skillId: id, error }, 'Failed to initialize skill');
         registration.active = false;
       }
     }
 
     this.initialized = true;
-    logger.info("Skills initialization complete");
+    logger.info('Skills initialization complete');
   }
 
   /**
@@ -214,7 +207,7 @@ class SkillRegistry {
       // Check patterns
       if (triggers.patterns) {
         for (const pattern of triggers.patterns) {
-          const regex = new RegExp(pattern, "i");
+          const regex = new RegExp(pattern, 'i');
           if (regex.test(input)) {
             return true;
           }
@@ -238,7 +231,7 @@ class SkillRegistry {
    * Get skills that can handle specific file extensions
    */
   getSkillsByFileExtension(extension: string): Skill[] {
-    const ext = extension.startsWith(".") ? extension : `.${extension}`;
+    const ext = extension.startsWith('.') ? extension : `.${extension}`;
 
     return this.getAllSkills().filter((skill) => {
       const triggers = skill.manifest.triggers;
@@ -271,12 +264,12 @@ class SkillRegistry {
    */
   getToolHandler(toolName: string):
     | {
-      skill: Skill;
-      handler: (
-        input: Record<string, unknown>,
-        context: SkillContext,
-      ) => Promise<ToolExecutionResult>;
-    }
+        skill: Skill;
+        handler: (
+          input: Record<string, unknown>,
+          context: SkillContext
+        ) => Promise<ToolExecutionResult>;
+      }
     | undefined {
     // Parse skill_<skillId>_<toolName> format
     const match = toolName.match(/^skill_([^_]+)_(.+)$/);
@@ -306,12 +299,12 @@ class SkillRegistry {
       if (skill.routes) {
         const routePath = `/api/skills/${id}`;
         app.use(routePath, skill.routes);
-        logger.info({ skillId: id, path: routePath }, "Skill routes mounted");
+        logger.info({ skillId: id, path: routePath }, 'Skill routes mounted');
       }
     }
 
     // Mount skills management API
-    app.get("/api/skills", (req, res) => {
+    app.get('/api/skills', (req, res) => {
       const skills = this.getAllSkills().map((s) => ({
         id: s.manifest.id,
         name: s.manifest.name,
@@ -325,10 +318,10 @@ class SkillRegistry {
       res.json({ skills });
     });
 
-    app.get("/api/skills/:id", (req, res): void => {
+    app.get('/api/skills/:id', (req, res): void => {
       const skill = this.getSkill(req.params.id);
       if (!skill) {
-        res.status(404).json({ error: "Skill not found" });
+        res.status(404).json({ error: 'Skill not found' });
         return;
       }
       res.json({
@@ -339,7 +332,7 @@ class SkillRegistry {
       });
     });
 
-    logger.info("Skills management API mounted at /api/skills");
+    logger.info('Skills management API mounted at /api/skills');
   }
 
   /**
@@ -348,13 +341,13 @@ class SkillRegistry {
   async executeSkill(
     skillId: string,
     input: SkillExecutionInput,
-    context: SkillContext,
+    context: SkillContext
   ): Promise<SkillExecutionResult> {
     const skill = this.getSkill(skillId);
     if (!skill) {
       return {
         success: false,
-        output: "",
+        output: '',
         events: [],
         duration: 0,
         error: new Error(`Skill not found: ${skillId}`),
@@ -390,7 +383,7 @@ class SkillRegistry {
 
         result = finalResult || {
           success: true,
-          output: "",
+          output: '',
           events,
           duration: Date.now() - startTime,
         };
@@ -400,10 +393,10 @@ class SkillRegistry {
       } else {
         result = {
           success: false,
-          output: "",
+          output: '',
           events,
           duration: Date.now() - startTime,
-          error: new Error("Skill has no execute or run method"),
+          error: new Error('Skill has no execute or run method'),
         };
       }
 
@@ -420,7 +413,7 @@ class SkillRegistry {
     } catch (error) {
       return {
         success: false,
-        output: "",
+        output: '',
         events,
         duration: Date.now() - startTime,
         error: error instanceof Error ? error : new Error(String(error)),
@@ -432,7 +425,7 @@ class SkillRegistry {
    * Cleanup all skills
    */
   async cleanup(): Promise<void> {
-    logger.info("Cleaning up skills");
+    logger.info('Cleaning up skills');
 
     for (const [id, registration] of this.skills) {
       try {
@@ -440,7 +433,7 @@ class SkillRegistry {
           await registration.skill.cleanup();
         }
       } catch (error) {
-        logger.error({ skillId: id, error }, "Failed to cleanup skill");
+        logger.error({ skillId: id, error }, 'Failed to cleanup skill');
       }
     }
 
@@ -467,4 +460,4 @@ class SkillRegistry {
 export const skillRegistry = new SkillRegistry();
 
 // Export types
-export * from "./types.js";
+export * from './types.js';

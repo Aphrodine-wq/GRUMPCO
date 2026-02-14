@@ -48,14 +48,14 @@
 
   const tips = [
     { icon: Lightbulb, text: 'Type', kbd: '/ship', suffix: 'to start the SHIP workflow' },
-    { icon: Bot, text: "Click 'Use G-Agent' in chat to turn on agent mode in this session" },
+    { icon: Bot, text: "Click 'Use Agent' in chat to turn on agent mode in this session" },
     { icon: Settings, text: 'Access settings and AI providers from the sidebar' },
   ];
 
   const newFeatures = [
     {
-      label: 'G-Agent in chat',
-      desc: 'Use G-Agent button in the chat header to enable agent mode without leaving the conversation.',
+      label: 'Agent in chat',
+      desc: 'Use Agent button in the chat header to enable agent mode without leaving the conversation.',
     },
     { label: 'Credits & billing', desc: 'Buy credits and manage billing from the Credits view.' },
     { label: 'Dark mode & themes', desc: 'Appearance and density in Settings → General.' },

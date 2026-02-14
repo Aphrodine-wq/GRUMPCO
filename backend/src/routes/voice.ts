@@ -3,13 +3,13 @@
  * ASR and TTS via NVIDIA Build; voice code orchestrates ASR → intent + RAG → chat → TTS.
  */
 
-import { Router, Request, Response } from 'express';
-import { transcribe, synthesize } from '../services/voiceService.js';
-import { ragQuery } from '../services/ragService.js';
-import { claudeServiceWithTools } from '../services/claudeServiceWithTools.js';
-import type { ChatStreamEvent } from '../services/claudeServiceWithTools.js';
-import { route } from '../services/modelRouter.js';
-import { type LLMProvider } from '../services/llmGateway.js';
+import { Router, type Request, type Response } from 'express';
+import { transcribe, synthesize } from '../services/platform/voiceService.js';
+import { ragQuery } from '../services/rag/ragService.js';
+import { claudeServiceWithTools } from '../services/ai-providers/claudeServiceWithTools.js';
+import type { ChatStreamEvent } from '../services/ai-providers/claudeServiceWithTools.js';
+import { route } from '../services/ai-providers/modelRouter.js';
+import { type LLMProvider } from '../services/ai-providers/llmGateway.js';
 import logger from '../middleware/logger.js';
 
 const router = Router();
@@ -146,7 +146,8 @@ router.post('/code', async (req: Request, res: Response) => {
     const code = codeMatch ? codeMatch[1].trim() : undefined;
 
     // 5. TTS (truncate for playback)
-    const ttsText = fullText.length > TTS_MAX_CHARS ? fullText.slice(0, TTS_MAX_CHARS) + '…' : fullText;
+    const ttsText =
+      fullText.length > TTS_MAX_CHARS ? fullText.slice(0, TTS_MAX_CHARS) + '…' : fullText;
     let audioBase64: string | undefined;
     try {
       const { audio: audioBuf } = await synthesize(ttsText);

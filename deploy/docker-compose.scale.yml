@@ -1,5 +1,3 @@
-version: '3.8'
-
 # G-Rump Horizontal Scaling Configuration
 #
 # Usage: docker compose -f docker-compose.yml -f docker-compose.scale.yml up -d --scale backend=4
@@ -14,7 +12,7 @@ services:
   # Remove container_name to allow scaling
   backend:
     container_name: ""
-    ports: []  # Remove direct port mapping, use haproxy
+    ports: [] # Remove direct port mapping, use haproxy
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -66,17 +64,7 @@ services:
   # Enhanced Redis for production
   redis:
     command: >
-      redis-server 
-      --appendonly yes 
-      --maxmemory 1gb 
-      --maxmemory-policy allkeys-lru
-      --tcp-keepalive 60
-      --timeout 0
-      --maxclients 10000
-      --tcp-backlog 511
-      --save 900 1
-      --save 300 10
-      --save 60 10000
+      redis-server  --appendonly yes  --maxmemory 1gb  --maxmemory-policy allkeys-lru --tcp-keepalive 60 --timeout 0 --maxclients 10000 --tcp-backlog 511 --save 900 1 --save 300 10 --save 60 10000
     deploy:
       resources:
         limits:
@@ -101,24 +89,9 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
     command: >
-      postgres
-      -c shared_buffers=256MB
-      -c effective_cache_size=768MB
-      -c maintenance_work_mem=128MB
-      -c checkpoint_completion_target=0.9
-      -c wal_buffers=16MB
-      -c default_statistics_target=100
-      -c random_page_cost=1.1
-      -c effective_io_concurrency=200
-      -c work_mem=16MB
-      -c min_wal_size=1GB
-      -c max_wal_size=4GB
-      -c max_worker_processes=4
-      -c max_parallel_workers_per_gather=2
-      -c max_parallel_workers=4
-      -c max_connections=200
+      postgres -c shared_buffers=256MB -c effective_cache_size=768MB -c maintenance_work_mem=128MB -c checkpoint_completion_target=0.9 -c wal_buffers=16MB -c default_statistics_target=100 -c random_page_cost=1.1 -c effective_io_concurrency=200 -c work_mem=16MB -c min_wal_size=1GB -c max_wal_size=4GB -c max_worker_processes=4 -c max_parallel_workers_per_gather=2 -c max_parallel_workers=4 -c max_connections=200
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U grump -d grump"]
+      test: [ "CMD-SHELL", "pg_isready -U grump -d grump" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -140,7 +113,7 @@ services:
     container_name: grump-haproxy
     ports:
       - "3000:3000"
-      - "8404:8404"  # Stats page
+      - "8404:8404" # Stats page
     volumes:
       - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     depends_on:
@@ -148,7 +121,7 @@ services:
     networks:
       - grump-network
     healthcheck:
-      test: ["CMD", "haproxy", "-c", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+      test: [ "CMD", "haproxy", "-c", "-f", "/usr/local/etc/haproxy/haproxy.cfg" ]
       interval: 30s
       timeout: 10s
       retries: 3

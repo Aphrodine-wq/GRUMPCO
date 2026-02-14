@@ -3,10 +3,10 @@
  * Uses AES-256-GCM for authenticated encryption
  */
 
-import crypto from "crypto";
-import logger from "../middleware/logger.js";
+import crypto from 'crypto';
+import logger from '../middleware/logger.js';
 
-const ALGORITHM = "aes-256-gcm";
+const ALGORITHM = 'aes-256-gcm';
 const KEY_LENGTH = 32; // 256 bits
 const IV_LENGTH = 16; // 128 bits
 const AUTH_TAG_LENGTH = 16; // 128 bits
@@ -21,21 +21,17 @@ function getEncryptionKey(): Buffer {
 
   if (envKey) {
     // Derive key from environment variable using PBKDF2
-    const salt = Buffer.from(
-      process.env.ENCRYPTION_SALT || "grump-default-salt-change-me",
-    );
-    return crypto.pbkdf2Sync(envKey, salt, 100000, KEY_LENGTH, "sha256");
+    const salt = Buffer.from(process.env.ENCRYPTION_SALT || 'grump-default-salt-change-me');
+    return crypto.pbkdf2Sync(envKey, salt, 100000, KEY_LENGTH, 'sha256');
   }
 
   // Development fallback: generate a key (NOT for production!)
-  if (process.env.NODE_ENV !== "production") {
-    logger.warn(
-      "Using auto-generated encryption key. Set ENCRYPTION_KEY in production!",
-    );
+  if (process.env.NODE_ENV !== 'production') {
+    logger.warn('Using auto-generated encryption key. Set ENCRYPTION_KEY in production!');
     return crypto.randomBytes(KEY_LENGTH);
   }
 
-  throw new Error("ENCRYPTION_KEY must be set in production environment");
+  throw new Error('ENCRYPTION_KEY must be set in production environment');
 }
 
 let cachedKey: Buffer | null = null;
@@ -60,45 +56,41 @@ export function encrypt(plaintext: string): {
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
-    let encrypted = cipher.update(plaintext, "utf8", "base64");
-    encrypted += cipher.final("base64");
+    let encrypted = cipher.update(plaintext, 'utf8', 'base64');
+    encrypted += cipher.final('base64');
 
     const authTag = cipher.getAuthTag();
 
     return {
       encrypted,
-      iv: iv.toString("base64"),
-      authTag: authTag.toString("base64"),
+      iv: iv.toString('base64'),
+      authTag: authTag.toString('base64'),
     };
   } catch (error) {
-    logger.error({ error }, "Encryption failed");
-    throw new Error("Failed to encrypt data");
+    logger.error({ error }, 'Encryption failed');
+    throw new Error('Failed to encrypt data');
   }
 }
 
 /**
  * Decrypt data from JSON format
  */
-export function decrypt(encryptedData: {
-  encrypted: string;
-  iv: string;
-  authTag: string;
-}): string {
+export function decrypt(encryptedData: { encrypted: string; iv: string; authTag: string }): string {
   try {
     const key = getKey();
-    const iv = Buffer.from(encryptedData.iv, "base64");
-    const authTag = Buffer.from(encryptedData.authTag, "base64");
+    const iv = Buffer.from(encryptedData.iv, 'base64');
+    const authTag = Buffer.from(encryptedData.authTag, 'base64');
 
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(authTag);
 
-    let decrypted = decipher.update(encryptedData.encrypted, "base64", "utf8");
-    decrypted += decipher.final("utf8");
+    let decrypted = decipher.update(encryptedData.encrypted, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
 
     return decrypted;
   } catch (error) {
-    logger.error({ error }, "Decryption failed");
-    throw new Error("Failed to decrypt data");
+    logger.error({ error }, 'Decryption failed');
+    throw new Error('Failed to decrypt data');
   }
 }
 
@@ -106,21 +98,21 @@ export function decrypt(encryptedData: {
  * Hash a value (one-way, for comparison)
  */
 export function hash(value: string): string {
-  return crypto.createHash("sha256").update(value).digest("hex");
+  return crypto.createHash('sha256').update(value).digest('hex');
 }
 
 /**
  * Generate a secure random token
  */
 export function generateToken(length: number = 32): string {
-  return crypto.randomBytes(length).toString("hex");
+  return crypto.randomBytes(length).toString('hex');
 }
 
 /**
  * Generate a secure random secret
  */
 export function generateSecret(length: number = 64): string {
-  return crypto.randomBytes(length).toString("base64url");
+  return crypto.randomBytes(length).toString('base64url');
 }
 
 /**
@@ -144,7 +136,5 @@ export function encryptForDb(plaintext: string): Record<string, string> {
  * Decrypt from JSONB-compatible object
  */
 export function decryptFromDb(encryptedData: Record<string, string>): string {
-  return decrypt(
-    encryptedData as { encrypted: string; iv: string; authTag: string },
-  );
+  return decrypt(encryptedData as { encrypted: string; iv: string; authTag: string });
 }

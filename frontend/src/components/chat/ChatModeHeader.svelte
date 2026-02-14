@@ -2,40 +2,40 @@
   /**
    * ChatModeHeader Component
    *
-   * Displays G-Agent button and provides keyboard shortcut hint.
+   * Displays Agent button and provides keyboard shortcut hint.
    * Mode tabs (Argument, Plan, Spec, SHIP) removed - now automatic.
    */
   import { setCurrentView } from '../../stores/uiStore';
   import { Bot, Brain } from 'lucide-svelte';
 
   interface Props {
-    /** Whether this is a G-Agent session */
-    isGAgentSession?: boolean;
+    /** Whether this is an Agent session */
+    isAgentSession?: boolean;
     /** Whether memory panel is shown */
     showMemoryPanel?: boolean;
     /** Callback when memory panel toggle is clicked */
     onMemoryToggle?: () => void;
   }
 
-  let { isGAgentSession = false, showMemoryPanel = false, onMemoryToggle }: Props = $props();
+  let { isAgentSession = false, showMemoryPanel = false, onMemoryToggle }: Props = $props();
 
-  function openGAgent() {
+  function openAgent() {
     setCurrentView('gAgent');
   }
 </script>
 
 <header class="chat-mode-header">
-  <button type="button" class="mode-pill g-agent-btn" onclick={openGAgent} title="G-Agent">
-    <span class="g-agent-icon"><Bot size={16} /></span> G-Agent
+  <button type="button" class="mode-pill agent-btn" onclick={openAgent} title="Agent">
+    <span class="agent-icon"><Bot size={16} /></span> Agent
   </button>
 
-  {#if isGAgentSession}
+  {#if isAgentSession}
     <button
       type="button"
       class="mode-pill memory-toggle"
       class:active={showMemoryPanel}
       onclick={() => onMemoryToggle?.()}
-      title="G-Agent Memory"
+      title="Agent Memory"
     >
       <Brain size={16} /> Memory
     </button>
@@ -74,7 +74,7 @@
     border-color: var(--color-border-highlight, #d8b4fe);
   }
 
-  .mode-pill.g-agent-btn {
+  .mode-pill.agent-btn {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -83,12 +83,12 @@
     font-weight: 600;
   }
 
-  .mode-pill.g-agent-btn:hover {
+  .mode-pill.agent-btn:hover {
     background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(99, 102, 241, 0.2));
     border-color: var(--color-primary, #7c3aed);
   }
 
-  .g-agent-icon {
+  .agent-icon {
     font-size: 14px;
   }
 

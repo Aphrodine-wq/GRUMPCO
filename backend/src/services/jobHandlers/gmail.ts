@@ -1,28 +1,23 @@
-import logger from "../../middleware/logger.js";
-import { GmailService } from "../gmailService.js";
-import { from } from "../supabaseClient.js";
+import logger from '../../middleware/logger.js';
+import { GmailService } from '../integrations/gmailService.js';
+import { from } from '../platform/supabaseClient.js';
 
 interface ProcessGmailWebhookJob {
   emailAddress: string;
   historyId: string;
 }
 
-export async function handleProcessGmailWebhook(job: {
-  data: ProcessGmailWebhookJob;
-}) {
+export async function handleProcessGmailWebhook(job: { data: ProcessGmailWebhookJob }) {
   const { emailAddress, historyId } = job.data;
-  logger.info({ emailAddress, historyId }, "Processing Gmail webhook job");
+  logger.info({ emailAddress, historyId }, 'Processing Gmail webhook job');
 
-  const { data: userRow, error } = await from("users")
-    .select("id")
-    .eq("email", emailAddress)
+  const { data: userRow, error } = await from('users')
+    .select('id')
+    .eq('email', emailAddress)
     .single();
 
   if (error || !userRow) {
-    logger.error(
-      { emailAddress, error: error?.message },
-      "Could not find user for Gmail webhook",
-    );
+    logger.error({ emailAddress, error: error?.message }, 'Could not find user for Gmail webhook');
     return;
   }
 
@@ -40,10 +35,10 @@ export async function handleProcessGmailWebhook(job: {
           {
             messageId: msg.message.id,
             subject: message.payload.headers.find(
-              (h: { name: string; value: string }) => h.name === "Subject",
+              (h: { name: string; value: string }) => h.name === 'Subject'
             )?.value,
           },
-          "Processed new email",
+          'Processed new email'
         );
       }
     }

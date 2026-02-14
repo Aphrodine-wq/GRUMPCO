@@ -9,8 +9,6 @@
 #
 # =============================================================================
 
-version: '3.8'
-
 services:
   # ===========================================================================
   # Backend API Service
@@ -31,44 +29,46 @@ services:
       # Server
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=3000
-      
+
       # Database (SQLite default, PostgreSQL optional)
       - DB_TYPE=${DB_TYPE:-sqlite}
       - DB_PATH=${DB_PATH:-/app/data/grump.db}
-      - DATABASE_URL=${DATABASE_URL:-postgresql://grump:grump@postgres:5432/grump}
-      
+      - DATABASE_URL=${DATABASE_URL}
+
       # Redis
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      
-      # AI Providers (set in .env)
-      - NVIDIA_NIM_API_KEY=${NVIDIA_NIM_API_KEY:-}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
-      - GROQ_API_KEY=${GROQ_API_KEY:-}
-      
+      # CHANGE THIS: Redis password must be set in .env
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+      # AI Providers (REQUIRED: set these in .env)
+      # CHANGE THIS: NVIDIA NIM API key for AI model access
+      - NVIDIA_NIM_API_KEY=${NVIDIA_NIM_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+
       # Analytics
       - POSTHOG_API_KEY=${POSTHOG_API_KEY:-}
       - POSTHOG_HOST=${POSTHOG_HOST:-https://us.i.posthog.com}
       - ANALYTICS_ENABLED=${ANALYTICS_ENABLED:-true}
-      
+
       # Supabase
       - SUPABASE_URL=${SUPABASE_URL:-}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:-}
-      
+
       # Security
       - BLOCK_SUSPICIOUS_PROMPTS=${BLOCK_SUSPICIOUS_PROMPTS:-true}
       - REQUIRE_AUTH_FOR_API=${REQUIRE_AUTH_FOR_API:-true}
-      - MASTER_KEY=${MASTER_KEY:-}
-      
+      # CHANGE THIS: Master key for API authentication (generate a secure random string)
+      - MASTER_KEY=${MASTER_KEY}
+
       # Cache Settings
       - TIERED_CACHE_L1_MAX=500
       - TIERED_CACHE_L1_TTL_MS=300000
-      
+
       # Worker Pool
       - WORKER_POOL_MIN=2
       - WORKER_POOL_MAX=8
@@ -81,7 +81,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health/live"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/health/live" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -120,7 +120,7 @@ services:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -142,17 +142,12 @@ services:
       - "6379:6379"
     volumes:
       - redis-data:/data
+    # CHANGE THIS: Redis password must be set via REDIS_PASSWORD env variable
     command: >
-      redis-server 
-      --appendonly yes 
-      --maxmemory 512mb 
-      --maxmemory-policy allkeys-lru
-      --tcp-keepalive 60
-      --timeout 0
-      --requirepass ${REDIS_PASSWORD:-}
+      redis-server  --appendonly yes  --maxmemory 512mb  --maxmemory-policy allkeys-lru --tcp-keepalive 60 --timeout 0 --requirepass ${REDIS_PASSWORD}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -173,14 +168,15 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-grump}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-grump}
-      - POSTGRES_DB=${POSTGRES_DB:-grump}
+      # CHANGE THIS: PostgreSQL credentials must be set in .env
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-grump}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-grump}" ]
       interval: 10s
       timeout: 5s
       retries: 5

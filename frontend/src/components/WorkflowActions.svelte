@@ -111,8 +111,8 @@
       {#if canDownload}
         <button
           onclick={() => dispatch('download')}
-          class="action-btn success"
-          title="Download project as ZIP"
+          class="action-btn success download-primary"
+          title="Download generated project as ZIP"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -127,7 +127,7 @@
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
-          Download
+          Download ZIP
         </button>
         <button
           onclick={handlePushToGitHubClick}

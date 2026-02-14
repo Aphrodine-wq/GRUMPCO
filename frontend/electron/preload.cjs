@@ -50,6 +50,16 @@ contextBridge.exposeInMainWorld('grump', {
     return () => ipcRenderer.removeListener('app:protocol-url', fn);
   },
 
+  // Backend sidecar health check (returns Promise<{ ready: boolean, pid: number | null }>)
+  backend: {
+    status: () => ipcRenderer.invoke('backend:status'),
+  },
+
+  // Workspace management
+  workspace: {
+    selectDirectory: () => ipcRenderer.invoke('workspace:select-directory'),
+  },
+
   // Open path in Explorer / Finder (returns Promise<{ error?: string }>)
   openPath: (pathToOpen) => ipcRenderer.invoke('shell:open-path', pathToOpen),
   // Reveal file/folder in system file manager
@@ -108,7 +118,7 @@ contextBridge.exposeInMainWorld('grump', {
       return () => ipcRenderer.removeListener('auth:complete', fn);
     },
   },
-  
+
   // Free Agent Sandbox (Docker-based isolation)
   freeAgent: {
     /**
@@ -119,29 +129,29 @@ contextBridge.exposeInMainWorld('grump', {
      * @param {Object} [config.resourceLimits] - CPU/memory limits
      */
     start: (config) => ipcRenderer.invoke('freeagent:start', config),
-    
+
     /**
      * Stop the Free Agent sandbox container
      */
     stop: () => ipcRenderer.invoke('freeagent:stop'),
-    
+
     /**
      * Get Free Agent sandbox status
      * @returns {Promise<{running: boolean, containerId?: string, health?: string, uptime?: number}>}
      */
     status: () => ipcRenderer.invoke('freeagent:status'),
-    
+
     /**
      * Restart the Free Agent sandbox
      */
     restart: () => ipcRenderer.invoke('freeagent:restart'),
-    
+
     /**
      * Get Free Agent container logs
      * @param {number} [tail=100] - Number of log lines to return
      */
     logs: (tail = 100) => ipcRenderer.invoke('freeagent:logs', tail),
-    
+
     /**
      * Execute a command in the Free Agent sandbox
      * @param {string[]} command - Command and arguments

@@ -22,15 +22,28 @@
   import { workspaceStore } from '../stores/workspaceStore';
   import { analyzeArchitecture } from '../stores/featuresStore';
   import { setCurrentView, showPricing } from '../stores/uiStore';
-  import { onboardingStore } from '../stores/onboardingStore';
+
   import { authGateStore } from '../stores/authGateStore';
   import { preferencesStore, density, includeRagContext } from '../stores/preferencesStore';
-  import {
-    wakeWordEnabled,
-    setWakeWordEnabled,
-    loadWakeWordEnabled,
-  } from '../stores/wakeWordStore';
+  import { writable } from 'svelte/store';
   import { getDockerInfo, isDockerSetupAvailable } from '../lib/dockerSetup';
+
+  // Inline wake-word state (previously wakeWordStore, now deleted)
+  const WAKE_WORD_KEY = 'g-rump-wake-word-enabled';
+  const wakeWordEnabled = writable(false);
+  function loadWakeWordEnabled(): boolean {
+    try {
+      return localStorage.getItem(WAKE_WORD_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  }
+  function setWakeWordEnabled(v: boolean) {
+    wakeWordEnabled.set(v);
+    try {
+      localStorage.setItem(WAKE_WORD_KEY, String(v));
+    } catch {}
+  }
 
   interface Tier {
     id: string;
@@ -295,7 +308,7 @@
             disabled={saving}
           >
             <option value="balanced">Balanced (router default)</option>
-            <option value="fast">Fast (NIM / Kimi)</option>
+            <option value="fast">Fast (NIM)</option>
             <option value="quality">Quality (Claude / GPT-4)</option>
           </select>
           <p class="field-hint">
@@ -645,7 +658,9 @@
             variant="secondary"
             size="sm"
             onclick={() => {
-              onboardingStore.resetOnboarding();
+              try {
+                localStorage.removeItem('g-rump-onboarding-seen');
+              } catch {}
               window.location.reload();
             }}
           >

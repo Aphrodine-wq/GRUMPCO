@@ -1,5 +1,5 @@
 /**
- * G-Agent Config Store Tests
+ * Agent Config Store Tests
  *
  * Tests for configuration management, feature flags, and autonomy levels
  */

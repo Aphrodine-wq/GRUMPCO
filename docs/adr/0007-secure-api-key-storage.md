@@ -6,7 +6,7 @@
 
 ## Context
 
-API keys for AI providers (NVIDIA NIM, OpenAI, Groq, etc.) need secure storage that:
+API keys for AI providers (NVIDIA NIM, Anthropic, OpenRouter, etc.) need secure storage that:
 - Protects against credential leakage
 - Works across platforms (Windows, macOS, Linux)
 - Integrates with CLI workflow

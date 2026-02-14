@@ -8,10 +8,14 @@
    * - Modular message bubbles with actions
    * - Centered input with model selector
    * - Scroll navigation for long threads
-   * - G-Agent integration with status/memory panels
+   * - Agent integration with status/memory panels
    */
   import { onMount, tick } from 'svelte';
   import { get } from 'svelte/store';
+
+  /** Refs for stream lifecycle: cleanup aborts on unmount and skips onEvent after unmount. */
+  const streamMountedRef = { current: true };
+  const activeControllerRef = { current: null as AbortController | null };
 
   // Chat components
   import {
@@ -23,21 +27,40 @@
     PhaseProgressBar,
   } from './chat';
 
+  // Import from new modular components
+  import ChatStreamingStatus from './chat/ChatStreamingStatus.svelte';
+  import { detectNumberedQuestions, type ParsedQuestion } from './chat/ChatQuestionDetector.svelte';
+  import {
+    extractActiveFiles,
+    type ActiveFile,
+    type FileAction,
+  } from '../lib/chat/FileActivityTracker';
+  import { createStreamEventHandler } from '../lib/chat/ChatStreamEventHandler';
+  import {
+    setModeArchitecture,
+    setModeCode,
+    setModeShip,
+    setModeArgument,
+    setModePlan,
+    setModeSpec,
+    type ModeHandlerDeps,
+  } from '../lib/chat/ChatModeHandlers';
+  import {
+    loadAttachments,
+    addAttachments,
+    removeAttachment,
+  } from '../lib/chat/ChatAttachmentManager';
+
   // Existing components
   import FrownyFace from './FrownyFace.svelte';
   import ToolCallCard from './ToolCallCard.svelte';
   import ToolResultCard from './ToolResultCard.svelte';
   import SettingsScreen from './TabbedSettingsScreen.svelte';
-  import FreeAgentLocalConfirmModal from './FreeAgentLocalConfirmModal.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
   import ArchitectureApprovalModal from './ArchitectureApprovalModal.svelte';
   import SectionPickerModal from './SectionPickerModal.svelte';
+  import ChatQuestionModal from './ChatQuestionModal.svelte';
   import ModelPicker from './ModelPicker.svelte';
-  import GAgentPlanViewer from './GAgentPlanViewer.svelte';
-  import GAgentPlanApproval from './GAgentPlanApproval.svelte';
-  import GAgentLiveOutput from './GAgentLiveOutput.svelte';
-  import GAgentMemoryPanel from './GAgentMemoryPanel.svelte';
-  import GAgentStatusPanel from './gAgent/GAgentStatusPanel.svelte';
 
   // Streaming service
   import { streamChat, flattenMessageContent } from '../lib/chatStreaming';
@@ -62,18 +85,13 @@
   import { chatPhaseStore } from '../stores/chatPhaseStore';
   import { settingsStore } from '../stores/settingsStore';
   import { workspaceStore } from '../stores/workspaceStore';
-  import {
-    gAgentPlanStore,
-    currentPlan as gAgentCurrentPlan,
-    isExecuting as gAgentIsExecuting,
-  } from '../stores/gAgentPlanStore';
-  import { gAgentStore, isConnected as gAgentConnected } from '../stores/gAgentStore';
-  import { gAgentCompilerStore, compilerStats } from '../stores/gAgentCompilerStore';
+
   import {
     showSettings,
     focusChatTrigger,
     setCurrentView,
     currentView as _currentView,
+    chatStreaming,
   } from '../stores/uiStore';
   import type { ViewType } from '../stores/uiStore';
   import { addSavedPrompt } from '../stores/savedPromptsStore';
@@ -85,13 +103,13 @@
 
   import type { Message, ContentBlock } from '../types';
 
-  /** Views that can be opened from the chat mode bar (secondary row). G-Agent is accessed from sidebar/session, not this strip. */
+  /** Views that can be opened from the chat mode bar (secondary row). Agent is accessed from sidebar/session, not this strip. */
   const _CHAT_VIEW_MODES: { id: ViewType; label: string; icon: typeof Mic }[] = [
     { id: 'voiceCode', label: 'Voice', icon: Mic },
     { id: 'askDocs', label: 'Ask Docs', icon: BookOpen },
     { id: 'canvas', label: 'Canvas', icon: LayoutGrid },
     { id: 'talkMode', label: 'Talk', icon: MessageCircle },
-    { id: 'skills', label: 'Skills', icon: Sparkles },
+    { id: 'memory', label: 'Skills', icon: Sparkles },
   ];
 
   // Props
@@ -117,12 +135,22 @@
   let streaming = $state(false);
   let streamingStatus = $state('Thinking...');
   let streamingBlocks = $state<ContentBlock[]>([]);
+  /** Accumulated extended-thinking content from the model (emitted as thinking events). */
+  let streamingThinking = $state('');
+  /** Tool names currently in progress, for status summary (e.g. "Running: file_write, read_file"). */
+  let streamingToolNames = $state<string[]>([]);
+  /** When set, stream ended with an error; show status and optional retry CTA. */
+  let streamError = $state<string | null>(null);
+
+  // ── Claude Code-style file activity tracking (delegated to FileActivityTracker) ──
+  const streamingActiveFiles = $derived.by(() => extractActiveFiles(streamingBlocks));
   let activeController: AbortController | null = $state(null);
   let lastUserMessage = $state('');
   let expandedModelIndex = $state<number | null>(null);
   let currentModelKey = $state<string>('auto');
   const MAX_PENDING_IMAGES = 3;
   const MAX_PENDING_DOCUMENTS = 3;
+  const MAX_VISIBLE_MESSAGES = 60; // Only render last N messages to prevent DOM bloat
   let pendingImages = $state<string[]>([]);
   let pendingDocuments = $state<File[]>([]);
   let showModelPicker = $state(false);
@@ -130,6 +158,25 @@
   let sessionAttachments = $state<SessionAttachment[]>([]);
   let _sessionAttachmentsLoading = $state(false);
   let sessionAttachmentInputEl = $state<HTMLInputElement | null>(null);
+  let showAllMessages = $state(false);
+
+  // Cancel stream on unmount and prevent onEvent from updating state after unmount
+  $effect(() => {
+    return () => {
+      streamMountedRef.current = false;
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+        activeControllerRef.current = null;
+      }
+    };
+  });
+
+  // Only render limited messages to prevent lag on long conversations
+  const visibleMessages = $derived.by(() => {
+    if (showAllMessages || messages.length <= MAX_VISIBLE_MESSAGES) return messages;
+    return messages.slice(-MAX_VISIBLE_MESSAGES);
+  });
+  const hiddenMessageCount = $derived(messages.length - visibleMessages.length);
 
   const showAddToProjectBanner = $derived.by(() => {
     if (addToProjectBannerDismissed) return false;
@@ -137,21 +184,16 @@
     return userMessages >= 3;
   });
 
-  // G-Agent state
-  let showFreeAgentLocalConfirm = $state(false);
-  let showGAgentPlanApproval = $state(false);
-  let showGAgentLiveOutput = $state(false);
-  let showGAgentMemoryPanel = $state(false);
-  let showGAgentStatusPanel = $state(false);
-  let liveOutputRef: GAgentLiveOutput | null = $state(null);
-
   // Architecture Approval + Section Picker modals
   let showApprovalModal = $state(false);
   let showSectionPicker = $state(false);
   let lastMermaidCode = $state('');
-  /** Ref used only by bind:this in template (TS 6133: never read in script) */
-  // @ts-ignore
-  let memoryPanelRef: GAgentMemoryPanel | null = $state(null);
+
+  // Chat Question Modal -- auto-detect numbered questions from AI
+  let showChatQuestionModal = $state(false);
+  let chatQuestionsParsed = $state<ParsedQuestion[]>([]);
+  let chatQuestionsIntro = $state('');
+  let chatQuestionsOutro = $state('');
 
   // Chat mode (includes 'ship' for local Ship view; store has design | code | argument)
   let chatMode = $state<
@@ -187,19 +229,9 @@
     return ['Describe', 'Design', 'Spec', 'Plan', 'Code', 'Ship'];
   });
 
-  // Confirmed Free Agent sessions
-  const freeAgentLocalConfirmedSessionIds = new Set<string>();
-
   // Derived state
   const showSettingsValue = $derived($showSettings);
   let _isNimProvider = $state(false);
-  let gAgentSessionId = $derived(get(currentSession)?.id ?? 'default');
-  let hasGAgentPlan = $derived($gAgentCurrentPlan !== null);
-  let isGAgentSession = $derived(
-    get(currentSession)?.sessionType === 'gAgent' ||
-      get(currentSession)?.sessionType === 'freeAgent'
-  );
-  let isGAgentExecuting = $derived($gAgentIsExecuting);
 
   // Model display name
   const modelDisplayName = $derived(() => {
@@ -251,122 +283,33 @@
     if (t > 0 && inputRef) inputRef.focus();
   });
 
-  // G-Agent connection & events
-  $effect(() => {
-    if (!isGAgentSession) return;
-
-    gAgentStore.connect(gAgentSessionId);
-    gAgentCompilerStore.setSessionId(gAgentSessionId);
-    gAgentCompilerStore.fetchStats();
-
-    const unsubscribe = gAgentPlanStore.onExecutionEvent((event) => {
-      if (!liveOutputRef) return;
-
-      if (event.type === 'plan_started') {
-        showGAgentLiveOutput = true;
-        liveOutputRef.clear();
-        liveOutputRef.addEvent('plan_started', `Starting: ${event.goal}`, undefined);
-      } else if (event.type === 'task_started') {
-        liveOutputRef.addEvent('task_started', event.description, event.taskId);
-      } else if (event.type === 'task_completed') {
-        liveOutputRef.addEvent(
-          'task_completed',
-          `Completed in ${event.durationMs}ms`,
-          event.taskId
-        );
-      } else if (event.type === 'plan_completed') {
-        liveOutputRef.addEvent(
-          'plan_completed',
-          `Plan ${event.status} in ${event.durationMs}ms`,
-          undefined
-        );
-        if (event.status === 'completed') {
-          showToast('Plan completed successfully!', 'success', 5000);
-        }
-      }
-    });
-
-    return () => {
-      unsubscribe();
-      gAgentStore.disconnect();
-    };
-  });
-
-  // Mode button handlers (Architecture, Code, Ship) – toggle off when clicking active mode
-  import { startDesignWorkflow } from '../lib/api';
-
-  async function _setModeArchitecture() {
-    if ($chatModeStore === 'design') {
-      chatModeStore.clearMode();
-      chatMode = 'normal';
-      chatPhaseStore.reset();
-    } else {
-      chatModeStore.setMode('design');
-      chatMode = 'design';
-      // Start design workflow if not already active
-      if (!$chatPhaseStore.isActive && $currentSession) {
-        try {
-          const result = await startDesignWorkflow(
-            $currentSession.description || 'New Project',
-            $currentSession.id
-          );
-          chatPhaseStore.startWorkflow(result.workflowState.projectDescription || 'New Project');
-          showToast('Design workflow started! Describe your project to begin.', 'success');
-        } catch (err) {
-          console.error('Failed to start design workflow:', err);
-          // Continue without workflow - will work in fallback mode
-        }
-      }
-    }
+  // Mode button handlers – delegated to ChatModeHandlers.ts
+  const _modeDeps: ModeHandlerDeps = {
+    chatModeStore,
+    chatPhaseStore,
+    currentSession,
+    setChatMode: (m) => {
+      chatMode = m;
+    },
+    getChatMode: () => chatMode,
+  };
+  function _setModeArchitecture() {
+    setModeArchitecture(_modeDeps);
   }
   function _setModeCode() {
-    if ($chatModeStore === 'code') {
-      chatModeStore.clearMode();
-      chatMode = 'normal';
-    } else {
-      chatModeStore.setMode('code');
-      chatMode = 'code';
-    }
+    setModeCode(_modeDeps);
   }
   function _setModeShip() {
-    if (chatMode === 'ship') {
-      const storeMode = get(chatModeStore);
-      chatMode = storeMode === 'design' ? 'design' : storeMode === 'code' ? 'code' : 'normal';
-    } else {
-      chatMode = 'ship';
-    }
+    setModeShip(_modeDeps);
   }
-
   function _setModeArgument() {
-    if ($chatModeStore === 'argument') {
-      chatModeStore.clearMode();
-      chatMode = 'normal';
-    } else {
-      chatModeStore.setMode('argument');
-      chatMode = 'argument';
-    }
+    setModeArgument(_modeDeps);
   }
-
   function _setModePlan() {
-    if (chatMode === 'plan') {
-      chatModeStore.clearMode();
-      chatMode = 'normal';
-    } else {
-      chatModeStore.setMode('code');
-      chatMode = 'plan';
-      window.dispatchEvent(new CustomEvent('switch-plan-mode'));
-    }
+    setModePlan(_modeDeps);
   }
-
   function _setModeSpec() {
-    if (chatMode === 'spec') {
-      chatModeStore.clearMode();
-      chatMode = 'normal';
-    } else {
-      chatModeStore.setMode('code');
-      chatMode = 'spec';
-      window.dispatchEvent(new CustomEvent('switch-spec-mode'));
-    }
+    setModeSpec(_modeDeps);
   }
 
   // Initialize settings
@@ -442,20 +385,11 @@
     }
   }
 
+  // Attachment management – delegated to ChatAttachmentManager.ts
   async function loadSessionAttachments() {
-    const sid = $currentSession?.id;
-    if (!sid) {
-      sessionAttachments = [];
-      return;
-    }
     _sessionAttachmentsLoading = true;
-    try {
-      sessionAttachments = await listSessionAttachments(sid);
-    } catch {
-      sessionAttachments = [];
-    } finally {
-      _sessionAttachmentsLoading = false;
-    }
+    sessionAttachments = await loadAttachments($currentSession?.id);
+    _sessionAttachmentsLoading = false;
   }
 
   $effect(() => {
@@ -465,49 +399,16 @@
   });
 
   async function _handleAddSessionAttachments(files: FileList | null) {
-    const sid = $currentSession?.id;
-    if (!sid || !files?.length) return;
-    const items: Array<{ name: string; mimeType: string; size: number; dataBase64?: string }> = [];
-    const maxSize = 500 * 1024;
-    for (const file of Array.from(files)) {
-      if (file.size > maxSize) continue;
-      const dataBase64 = await new Promise<string>((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => {
-          const s = r.result as string;
-          resolve(s.includes(',') ? (s.split(',')[1] ?? '') : s);
-        };
-        r.onerror = () => reject(r.error);
-        r.readAsDataURL(file);
-      });
-      items.push({
-        name: file.name,
-        mimeType: file.type || 'application/octet-stream',
-        size: file.size,
-        dataBase64,
-      });
-    }
-    if (items.length === 0) return;
-    try {
-      const added = await addSessionAttachments(sid, items);
-      sessionAttachments = [...sessionAttachments, ...added];
-      showToast('Attachments added', 'success');
-    } catch {
-      showToast('Failed to add attachments', 'error');
-    }
+    sessionAttachments = await addAttachments($currentSession?.id, files, sessionAttachments);
     if (sessionAttachmentInputEl) sessionAttachmentInputEl.value = '';
   }
 
   async function _handleRemoveSessionAttachment(attachmentId: string) {
-    const sid = $currentSession?.id;
-    if (!sid) return;
-    try {
-      await removeSessionAttachment(sid, attachmentId);
-      sessionAttachments = sessionAttachments.filter((a) => a.id !== attachmentId);
-      showToast('Attachment removed', 'success');
-    } catch {
-      showToast('Failed to remove attachment', 'error');
-    }
+    sessionAttachments = await removeAttachment(
+      $currentSession?.id,
+      attachmentId,
+      sessionAttachments
+    );
   }
 
   // Scroll helpers
@@ -519,23 +420,6 @@
 
   // Submit handling
   function handleSubmit() {
-    const session = get(currentSession);
-    const runMode = get(runModeStore);
-    if (
-      (session?.sessionType === 'gAgent' || session?.sessionType === 'freeAgent') &&
-      runMode === 'local' &&
-      !freeAgentLocalConfirmedSessionIds.has(session.id)
-    ) {
-      showFreeAgentLocalConfirm = true;
-      return;
-    }
-    sendMessage();
-  }
-
-  function confirmFreeAgentLocal() {
-    const session = get(currentSession);
-    if (session?.id) freeAgentLocalConfirmedSessionIds.add(session.id);
-    showFreeAgentLocalConfirm = false;
     sendMessage();
   }
 
@@ -581,8 +465,14 @@
     // Start streaming for normal chat
     const controller = new AbortController();
     activeController = controller;
+    activeControllerRef.current = controller;
+    streamMountedRef.current = true;
+    streamError = null;
     streaming = true;
+    chatStreaming.set(true);
     streamingBlocks = [];
+    streamingThinking = '';
+    streamingToolNames = [];
 
     await tick();
     scrollToBottom();
@@ -590,6 +480,14 @@
     try {
       await runStreamingChat(controller.signal);
     } catch (err: unknown) {
+      streamError = err instanceof Error ? err.message : 'Stream failed';
+      streamingStatus = 'Error';
+
+      const isRetryable =
+        streamError.toLowerCase().includes('rate limit') ||
+        streamError.toLowerCase().includes('timeout') ||
+        streamError.toLowerCase().includes('overloaded');
+
       const errorContext = processError(err as Error, async () => {
         if (lastUserMessage) {
           inputText = lastUserMessage;
@@ -597,34 +495,89 @@
           sendMessage();
         }
       });
+
       logError(errorContext, { mode: get(chatModeStore) });
       trackError('api_error', errorContext.message);
-      const message =
-        errorContext.userMessage?.trim() ||
-        'Something went wrong. Check your connection and try again.';
-      showToast(message, 'error', 5000);
+
+      const message = errorContext.userMessage?.trim() || 'Something went wrong.';
+      showToast(message, isRetryable ? 'info' : 'error', 5000);
     } finally {
       streaming = false;
+      chatStreaming.set(false);
       activeController = null;
+      activeControllerRef.current = null;
     }
   }
 
-  async function runStreamingChat(signal: AbortSignal) {
+  // ── Unified streaming core ────────────────────────────────────────────
+  type StreamMode =
+    | 'normal'
+    | 'plan'
+    | 'spec'
+    | 'ship'
+    | 'execute'
+    | 'design'
+    | 'argument'
+    | 'code';
+
+  /**
+   * Core streaming function used by both normal chat and section-code-gen.
+   * @param signal        - AbortSignal for cancellation
+   * @param apiMessages   - messages to send to the backend (may differ from display messages)
+   * @param modeOverride  - force a specific mode
+   * @param imageForReq   - optional base64 image for vision
+   * @param detectModals  - whether to auto-detect mermaid / numbered questions
+   */
+  async function runStreamingChatCore(
+    signal: AbortSignal,
+    apiMessages: Message[],
+    opts: {
+      modeOverride?: StreamMode;
+      imageForReq?: string;
+      detectModals?: boolean;
+    } = {}
+  ) {
     const s = settingsStore.getCurrent();
     const provider = s?.models?.defaultProvider ?? 'nim';
     const sessionTypeVal = get(currentSession)?.sessionType ?? 'chat';
     const ws = get(workspaceStore).root || undefined;
-    const mode =
-      get(chatModeStore) === 'argument' ? 'argument' : chatMode !== 'normal' ? chatMode : 'normal';
 
-    // Capture first image for vision (backend may support multiple later)
-    const imageForRequest = pendingImages[0] ?? undefined;
-    pendingImages = [];
-    pendingDocuments = [];
+    // Resolve stream mode
+    let mode: StreamMode =
+      opts.modeOverride ??
+      (get(chatModeStore) === 'argument'
+        ? 'argument'
+        : chatMode !== 'normal'
+          ? (chatMode as StreamMode)
+          : 'normal');
 
-    // Handle stream events — use live reference instead of copying
-    // The streamChat function passes blocks by reference, so we just
-    // need to trigger Svelte reactivity by reassigning the reference.
+    // Auto-detect code context when in normal mode
+    if (mode === 'normal' && messages.length >= 2) {
+      const recentTexts = messages
+        .slice(-4)
+        .map((m) => (typeof m.content === 'string' ? m.content : ''))
+        .join(' ')
+        .toLowerCase();
+      const codeCtxKw = [
+        'file_write',
+        'file_edit',
+        'bash_execute',
+        'list_directory',
+        'exploring the workspace',
+        'build the',
+        'creating file',
+        'section now',
+        'template engine',
+        'implement',
+        'architecture approved',
+        'let me pull up the sections',
+        'start by exploring',
+        'create files',
+      ];
+      if (codeCtxKw.some((kw) => recentTexts.includes(kw))) mode = 'code';
+    }
+
+    // Scroll helper
     let scrollQueued = false;
     function queueScroll() {
       if (!scrollQueued) {
@@ -636,43 +589,49 @@
       }
     }
 
-    const handleEvent = (event: ChatStreamEvent) => {
-      if (event.type === 'text') {
-        streamingStatus = 'Thinking...';
-        // Use live blocks reference — avoid spreading
-        streamingBlocks = event.blocks;
-        queueScroll();
-      } else if (event.type === 'tool_call') {
-        const lastBlock = event.blocks[event.blocks.length - 1];
-        if (lastBlock?.type === 'tool_call') {
-          streamingStatus = `Running ${lastBlock.name}...`;
-        }
-        streamingBlocks = event.blocks;
-        queueScroll();
-      } else if (event.type === 'tool_result') {
-        streamingStatus = 'Thinking...';
-        streamingBlocks = event.blocks;
-        queueScroll();
-      } else if (event.type === 'error') {
-        showToast(event.error || 'Stream error', 'error', 5000);
-      }
-    };
+    // Unified event handler via ChatStreamEventHandler
+    const MAX_STREAMING_BLOCKS = 100; // Prevent DOM bloat during long agentic runs
+    const handleEvent = createStreamEventHandler({
+      onBlocksUpdate: (blocks) => {
+        streamingBlocks =
+          blocks.length > MAX_STREAMING_BLOCKS ? blocks.slice(-MAX_STREAMING_BLOCKS) : blocks;
+      },
+      onStatusUpdate: (status) => {
+        streamingStatus = status;
+      },
+      onThinkingUpdate: (thinking) => {
+        streamingThinking = thinking === '' ? '' : (streamingThinking || '') + thinking;
+      },
+      onToolNamesUpdate: (names) => {
+        streamingToolNames = names;
+      },
+      onError: (error) => {
+        streamError = error;
+        showToast(error, 'error', 5000);
+      },
+      isMounted: () => streamMountedRef.current,
+      queueScroll,
+    });
 
-    // Use the streaming service
     const enabledSkillIds = s?.skills?.enabledIds ?? [];
 
-    // Fetch user memories for AI context
+    // Fetch user memories (non-blocking with 2s timeout)
     let memoryContext: string[] = [];
     try {
-      const mems = await listMemories(undefined, 20);
+      const mems = await Promise.race([
+        listMemories(undefined, 20),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Memory timeout')), 2000)
+        ),
+      ]);
       if (mems.length > 0) {
         memoryContext = mems.map((m) => `[${m.type.toUpperCase()}] ${m.content}`);
       }
     } catch {
-      // Memory unavailable — continue without it
+      /* continue without memory */
     }
 
-    const blocks = await streamChat(messages, {
+    const blocks = await streamChat(apiMessages, {
       mode,
       sessionType: sessionTypeVal,
       workspaceRoot: ws,
@@ -680,16 +639,20 @@
       modelId: s?.models?.defaultModelId,
       signal,
       onEvent: handleEvent,
-      lastUserMessageImage: imageForRequest,
+      lastUserMessageImage: opts.imageForReq,
       enabledSkillIds,
       memoryContext,
     });
 
-    // Finalize message — store as string so MessageBubble's parseMessageContent
-    // can split out mermaid blocks and render them with DiagramRenderer (actual SVG)
+    // Finalize
     const finalContent = flattenMessageContent(blocks);
-    messages = [...messages, { role: 'assistant', content: finalContent, timestamp: Date.now() }];
+    const displayContent = finalContent.trim()
+      ? finalContent
+      : '*(No response received. The model may have timed out or returned an empty response. Try again or switch models.)*';
+    messages = [...messages, { role: 'assistant', content: displayContent, timestamp: Date.now() }];
     streamingBlocks = [];
+    streamingThinking = '';
+    streamingToolNames = [];
 
     // Save session
     if ($currentSession) {
@@ -698,27 +661,69 @@
       sessionsStore.createSession(messages);
     }
 
-    // Check for mermaid diagrams: auto-show approval modal
-    const hasMermaid = /```mermaid[\s\S]*?```/.test(finalContent);
-    if (hasMermaid) {
-      const mermaidMatch = finalContent.match(/```mermaid\s*([\s\S]*?)```/);
-      if (mermaidMatch && mermaidMatch[1]) {
-        lastMermaidCode = mermaidMatch[1].trim();
-        // Brief delay to let the diagram render first
-        setTimeout(() => {
-          showApprovalModal = true;
-        }, 1200);
+    // Auto-detect modals (only for normal chat, not code-gen section builds)
+    if (opts.detectModals !== false) {
+      const hasMermaid = /```mermaid[\s\S]*?```/.test(finalContent);
+      if (hasMermaid) {
+        const mermaidMatch = finalContent.match(/```mermaid\s*([\s\S]*?)```/);
+        if (mermaidMatch && mermaidMatch[1]) {
+          lastMermaidCode = mermaidMatch[1].trim();
+          setTimeout(() => {
+            showApprovalModal = true;
+          }, 300);
+        }
+      }
+      if (!hasMermaid) {
+        const detected = detectNumberedQuestions(finalContent);
+        if (detected) {
+          chatQuestionsParsed = detected.questions;
+          chatQuestionsIntro = detected.intro;
+          chatQuestionsOutro = detected.outro;
+          setTimeout(() => {
+            showChatQuestionModal = true;
+          }, 100);
+        }
       }
     }
+  }
+
+  /** Convenience: run streaming chat with the display messages (normal chat flow). */
+  async function runStreamingChat(signal: AbortSignal) {
+    const imageForReq = pendingImages[0] ?? undefined;
+    pendingImages = [];
+    pendingDocuments = [];
+    await runStreamingChatCore(signal, messages, { imageForReq, detectModals: true });
+  }
+
+  /** Run streaming chat with custom API messages and optional mode override (e.g. section build). */
+  async function runStreamingChatWithMessages(
+    signal: AbortSignal,
+    apiMessages: Message[],
+    modeOverride?: StreamMode
+  ) {
+    await runStreamingChatCore(signal, apiMessages, { modeOverride, detectModals: false });
   }
 
   function cancelGeneration() {
     if (activeController) {
       activeController.abort();
       activeController = null;
+      activeControllerRef.current = null;
     }
     streaming = false;
+    streamError = null;
     streamingBlocks = [];
+    streamingThinking = '';
+    streamingToolNames = [];
+    streamingStatus = 'Thinking...';
+  }
+
+  async function handleRetryAfterError() {
+    if (!lastUserMessage) return;
+    streamError = null;
+    inputText = lastUserMessage;
+    await tick();
+    sendMessage();
   }
 
   // Message actions
@@ -751,36 +756,28 @@
     showModelPicker = false;
   }
 
-  // G-Agent: activate in this chat without swapping tabs; create session if needed
-  function handleUseGAgent() {
-    const session = get(currentSession);
-    if (session?.id) {
-      sessionsStore.setSessionType(session.id, 'gAgent');
-      showGAgentStatusPanel = true;
-      showToast(
-        'G-Agent mode on. Use Status and Memory in the header, or open G-Agent from the sidebar for settings.',
-        'info',
-        5000
-      );
-    } else {
-      sessionsStore.createSession([], undefined, 'gAgent');
-      showGAgentStatusPanel = true;
-      showToast(
-        'G-Agent mode on. Start a conversation or open G-Agent from the sidebar.',
-        'info',
-        5000
-      );
-    }
-  }
-
   // Architecture Approval: user approves the diagram
   function handleArchitectureApproved(e: CustomEvent<{ mermaidCode: string }>) {
     lastMermaidCode = e.detail.mermaidCode;
     showApprovalModal = false;
+    // Add AI feedback so user knows work is resuming
+    messages = [
+      ...messages,
+      {
+        role: 'assistant',
+        content:
+          'Architecture approved! Let me pull up the sections so you can pick which one to build first.',
+        timestamp: Date.now(),
+      },
+    ];
+    if ($currentSession) {
+      sessionsStore.updateSession($currentSession.id, messages);
+    }
     // Show the section picker
     setTimeout(() => {
       showSectionPicker = true;
-    }, 200);
+      tick().then(scrollToBottom);
+    }, 50);
   }
 
   // Architecture Approval: user requests changes
@@ -793,6 +790,7 @@
   }
 
   // Section Picker: user selects a section to code
+  // CRITICAL: Forces 'code' mode so the AI uses file_write tools to create actual files
   function handleSectionSelected(
     e: CustomEvent<{
       sectionId: string;
@@ -808,22 +806,69 @@
     const unsub = workspaceStore.subscribe((v) => (ws = v));
     unsub();
     const wsRoot = ws.root || '';
-    const wsInstruction = wsRoot
-      ? `\nIMPORTANT: Use file_write tool to create all files under the workspace: ${wsRoot}. Do NOT just output code — use tool calls to write each file.`
-      : `\nIMPORTANT: Use file_write tool to create all files. Do NOT just output code — use tool calls to write each file.`;
-    inputText = `Start coding the "${sectionLabel}" section from the architecture. The full architecture has these sections: ${sectionList}. Build this section with production-quality code, proper file structure, types, and tests.${wsInstruction}`;
-    sendMessage();
-  }
 
-  // G-Agent: leave mode and stay in chat
-  function handleLeaveGAgent() {
-    const session = get(currentSession);
-    if (session?.id && isGAgentSession) {
-      sessionsStore.setSessionType(session.id, 'chat');
-      showGAgentStatusPanel = false;
-      showGAgentMemoryPanel = false;
-      showToast('Left G-Agent mode. This chat is now normal.', 'info', 3000);
-    }
+    // Build a directive system prompt that forces tool usage
+    const systemPrompt = [
+      `Build the "${sectionLabel}" section now.`,
+      `Architecture sections: ${sectionList}.`,
+      '',
+      'RULES:',
+      `1. Use file_write to create EVERY file under: ${wsRoot || '/workspace'}`,
+      '2. Create complete, production-ready code with proper imports/exports.',
+      '3. Include types, error handling, and structure.',
+      '4. After creating files, verify with list_directory.',
+      '5. Prefer file_write for every file. If file_write fails or is unavailable, output the code in markdown code blocks.',
+      '6. Use bash_execute to install dependencies if needed.',
+      '',
+      'Start by listing the current workspace structure, then create files.',
+    ].join('\n');
+
+    // Short user-visible message
+    messages = [
+      ...messages,
+      { role: 'user', content: `Build the "${sectionLabel}" section`, timestamp: Date.now() },
+    ];
+    inputText = '';
+    lastUserMessage = systemPrompt;
+
+    const controller = new AbortController();
+    streamError = null;
+    activeController = controller;
+    activeControllerRef.current = controller;
+    streamMountedRef.current = true;
+    streaming = true;
+    chatStreaming.set(true);
+    streamingStatus = 'Generating Code';
+    streamingBlocks = [];
+    streamingThinking = '';
+    streamingToolNames = [];
+
+    tick().then(scrollToBottom);
+
+    // Build API messages with the detailed system prompt
+    const apiMessages = [...messages];
+    apiMessages[apiMessages.length - 1] = {
+      ...apiMessages[apiMessages.length - 1],
+      content: systemPrompt,
+    };
+
+    // FORCE 'code' mode so the backend uses the code prompt with tool support
+    runStreamingChatWithMessages(controller.signal, apiMessages, 'code')
+      .then(() => {
+        // Display messages stored with short label by runStreamingChatWithMessages
+      })
+      .catch((err: unknown) => {
+        const errorContext = processError(err as Error, async () => {});
+        logError(errorContext, { mode: get(chatModeStore) });
+        trackError('api_error', errorContext.message);
+        showToast(errorContext.userMessage?.trim() || 'Something went wrong.', 'error', 5000);
+      })
+      .finally(() => {
+        streaming = false;
+        chatStreaming.set(false);
+        activeController = null;
+        activeControllerRef.current = null;
+      });
   }
 </script>
 
@@ -836,17 +881,9 @@
       <div class="header-wrapper">
         <ChatHeader
           projectName={headerProjectName}
-          {isGAgentSession}
-          isConnected={$gAgentConnected}
-          showStatusPanel={showGAgentStatusPanel}
-          showMemoryPanel={showGAgentMemoryPanel}
           modelName={modelDisplayName()}
           modelPickerOpen={showModelPicker}
-          onGAgentClick={() => handleUseGAgent()}
-          onStatusToggle={() => (showGAgentStatusPanel = !showGAgentStatusPanel)}
-          onMemoryToggle={() => (showGAgentMemoryPanel = !showGAgentMemoryPanel)}
           onModelClick={() => (showModelPicker = !showModelPicker)}
-          onLeaveGAgent={() => handleLeaveGAgent()}
         />
         {#if showModelPicker}
           <div class="model-picker-dropdown">
@@ -861,53 +898,12 @@
         {/if}
       </div>
 
-      <!-- Main content area -->
-      <div class="chat-main" class:with-sidebar={showGAgentMemoryPanel}>
-        <!-- Design Workflow Progress Bar -->
-        {#if $chatPhaseStore.isActive}
-          <PhaseProgressBar />
-        {/if}
-        <!-- Status panel: only mount when G-Agent is in use (panel open, plan, or executing) to avoid backend connect on every load -->
-        {#if isGAgentSession && (showGAgentStatusPanel || hasGAgentPlan || isGAgentExecuting)}
-          <aside class="status-sidebar">
-            <GAgentStatusPanel
-              sessionId={gAgentSessionId}
-              compact={false}
-              showCompiler={true}
-              showBudget={true}
-            />
-          </aside>
-        {/if}
-
-        <!-- Center column: plan/live output above, then messages to the edge -->
+      <div class="chat-main">
         <div class="chat-main-center">
           <div class="chat-content">
-            {#if isGAgentSession && hasGAgentPlan}
-              <div class="plan-panel">
-                <GAgentPlanViewer
-                  compact={false}
-                  workspaceRoot={$workspaceStore.root ?? undefined}
-                  onApprove={() => {
-                    showGAgentPlanApproval = false;
-                  }}
-                  onCancel={() => {
-                    gAgentPlanStore.clearPlan();
-                  }}
-                />
-              </div>
-            {/if}
-            {#if isGAgentSession && (showGAgentLiveOutput || isGAgentExecuting)}
-              <div class="live-output-panel">
-                <GAgentLiveOutput
-                  bind:this={liveOutputRef}
-                  isExecuting={isGAgentExecuting}
-                  currentTaskId={$gAgentCurrentPlan?.tasks.find((t) => t.status === 'in_progress')
-                    ?.id ?? ''}
-                  onClose={() => {
-                    showGAgentLiveOutput = false;
-                  }}
-                />
-              </div>
+            <!-- Design Workflow Progress Bar -->
+            {#if $chatPhaseStore.isActive}
+              <PhaseProgressBar />
             {/if}
             <ScrollNavigation scrollContainer={messagesRef} />
           </div>
@@ -923,7 +919,13 @@
                   </p>
                 </div>
               {:else}
-                {#each messages as msg, index}
+                {#if hiddenMessageCount > 0}
+                  <button class="load-more-btn" onclick={() => (showAllMessages = true)}>
+                    Show {hiddenMessageCount} earlier messages
+                  </button>
+                {/if}
+                {#each visibleMessages as msg, vIdx}
+                  {@const index = hiddenMessageCount + vIdx}
                   <MessageBubble
                     message={msg}
                     {index}
@@ -972,24 +974,25 @@
                   </div>
                 {/if}
 
-                {#if streaming}
-                  <div class="streaming-message">
-                    <StreamingIndicator streaming={true} status={streamingStatus} />
-                    {#if streamingBlocks.length > 0}
-                      <div class="streaming-content">
-                        {#each streamingBlocks as block}
-                          {#if block.type === 'text'}
-                            <div class="text-block">{block.content}</div>
-                          {:else if block.type === 'tool_call'}
-                            <ToolCallCard toolCall={block} />
-                          {:else if block.type === 'tool_result'}
-                            <ToolResultCard toolResult={block} />
-                          {/if}
-                        {/each}
-                      </div>
-                    {/if}
+                {#if !streaming && streamError && lastUserMessage}
+                  <div class="stream-error-bar">
+                    <span class="stream-error-status">Error</span>
+                    <span class="stream-error-message" title={streamError}
+                      >{streamError.length > 80
+                        ? streamError.slice(0, 77) + '…'
+                        : streamError}</span
+                    >
+                    <button type="button" class="stream-retry-btn" onclick={handleRetryAfterError}
+                      >Try again</button
+                    >
                   </div>
                 {/if}
+                <ChatStreamingStatus
+                  {streaming}
+                  status={streamingStatus}
+                  toolNames={streamingToolNames}
+                  activeFiles={streamingActiveFiles}
+                />
 
                 <!-- Inline architecture approval (inside chat flow) -->
                 {#if showApprovalModal}
@@ -1018,45 +1021,12 @@
                 {/if}
               {/if}
             </div>
+          </div>
         </div>
-        </div>
-
-        <!-- Memory sidebar -->
-        {#if isGAgentSession && showGAgentMemoryPanel}
-          <aside class="memory-sidebar">
-            <!-- svelte-ignore state_referenced_locally -->
-            <GAgentMemoryPanel
-              bind:this={memoryPanelRef}
-              compact={true}
-              onPatternSelect={(pattern) => {
-                showToast(`Pattern: ${pattern.name}`, 'info');
-              }}
-            />
-          </aside>
-        {/if}
       </div>
 
       <!-- Input area -->
       <div class="input-area">
-        {#if isGAgentSession && $compilerStats}
-          <div class="stats-bar">
-            <span class="stat">
-              <span class="stat-label">Compression</span>
-              <span class="stat-value"
-                >{Math.round($compilerStats.compressionEfficiency * 100)}x</span
-              >
-            </span>
-            <span class="stat">
-              <span class="stat-label">Saved</span>
-              <span class="stat-value">{($compilerStats.tokensSaved / 1000).toFixed(1)}K</span>
-            </span>
-            <span class="stat connection">
-              <span class="conn-dot" class:connected={$gAgentConnected}></span>
-              {$gAgentConnected ? 'Connected' : 'Disconnected'}
-            </span>
-          </div>
-        {/if}
-
         {#if chatMode !== 'ship'}
           <div class="input-row">
             <div class="input-main">
@@ -1101,22 +1071,6 @@
   {/if}
 
   <!-- Modals -->
-  <FreeAgentLocalConfirmModal
-    open={showFreeAgentLocalConfirm}
-    onConfirm={confirmFreeAgentLocal}
-    onCancel={() => (showFreeAgentLocalConfirm = false)}
-  />
-
-  <GAgentPlanApproval
-    open={showGAgentPlanApproval}
-    onClose={() => (showGAgentPlanApproval = false)}
-    onApproved={() => {
-      showGAgentPlanApproval = false;
-      gAgentPlanStore.startExecution();
-    }}
-    onRejected={() => (showGAgentPlanApproval = false)}
-  />
-
   <ConfirmModal
     bind:open={showShipConfirmModal}
     title="Run SHIP?"
@@ -1129,6 +1083,20 @@
       setCurrentView('chat');
     }}
     onClose={() => (showShipConfirmModal = false)}
+  />
+
+  <!-- Chat Question Modal: appears when AI asks numbered questions -->
+  <ChatQuestionModal
+    bind:open={showChatQuestionModal}
+    questions={chatQuestionsParsed}
+    contextIntro={chatQuestionsIntro}
+    contextOutro={chatQuestionsOutro}
+    onSubmit={(composedAnswer) => {
+      showChatQuestionModal = false;
+      inputText = composedAnswer;
+      tick().then(() => sendMessage());
+    }}
+    onClose={() => (showChatQuestionModal = false)}
   />
 
   <!-- Architecture & Section modals are now inline in the chat flow above -->
@@ -1195,78 +1163,32 @@
     position: relative;
   }
 
-  /* Ship mode */
-  .ship-mode-container {
-    flex: 1;
-    overflow: auto;
-    padding: 1rem;
-    background: var(--color-bg-secondary, #f9fafb);
-  }
-
-  /* Sidebars */
-  .status-sidebar {
-    width: 320px;
-    border-right: 1px solid var(--color-border, #e5e7eb);
-    background: var(--color-bg-subtle, #f9fafb);
-    overflow-y: auto;
-    animation: slideInLeft 0.3s ease;
-  }
-
-  .memory-sidebar {
-    width: 360px;
-    border-left: 1px solid var(--color-border, #e5e7eb);
-    background: var(--color-bg-inset, #1e1e3f);
-    overflow: hidden;
-    animation: slideInRight 0.3s ease;
-  }
-
-  @keyframes slideInLeft {
-    from {
-      transform: translateX(-100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes slideInRight {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  /* Plan and live output panels */
-  .plan-panel {
-    padding: 1rem;
-    border-bottom: 1px solid var(--color-border, #e5e7eb);
-    background: var(--color-bg-secondary, #f9fafb);
-    max-height: 50vh;
-    overflow-y: auto;
-  }
-
-  .live-output-panel {
-    height: 280px;
-    border-bottom: 1px solid var(--color-border, #e5e7eb);
-    background: var(--color-bg-inset, #1a1a2e);
-  }
-
   /* Messages */
   .messages-container {
     flex: 1;
     overflow-y: auto;
     padding: 2rem 1rem;
-    /* Reserve space for scrollbar so it doesn't overlap Mermaid diagrams and content */
     scrollbar-gutter: stable;
-    scroll-behavior: smooth;
+    /* Removed scroll-behavior: smooth — causes jank on rapid updates */
     display: flex;
     flex-direction: column;
+    contain: layout style;
+  }
+
+  .load-more-btn {
+    align-self: center;
+    padding: 0.375rem 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-primary, #7c3aed);
+    background: rgba(124, 58, 237, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    border-radius: 1rem;
+    cursor: pointer;
+  }
+  .load-more-btn:hover {
+    background: rgba(124, 58, 237, 0.14);
   }
 
   .messages-inner {
@@ -1274,7 +1196,7 @@
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.375rem;
     width: 100%;
   }
 
@@ -1325,59 +1247,6 @@
     background: var(--color-bg-subtle);
     border: 1px solid var(--color-border, #e5e7eb);
     border-radius: 0.25rem;
-  }
-
-  /* G-Agent floating button: bottom-right of chat */
-  .g-agent-floating-wrap {
-    position: absolute;
-    bottom: 1rem;
-    right: 1rem;
-    z-index: 20;
-    pointer-events: auto;
-  }
-
-  .g-agent-floating-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.06));
-    border: 1px solid transparent;
-  }
-
-  .g-agent-floating-primary {
-    background: var(--color-primary, #7c3aed);
-    color: white;
-    border-color: var(--color-primary, #7c3aed);
-  }
-
-  .g-agent-floating-primary:hover {
-    background: var(--color-primary-hover, #6d28d9);
-    border-color: var(--color-primary-hover, #6d28d9);
-    box-shadow: var(--shadow-glow, 0 6px 26px rgba(124, 58, 237, 0.35));
-  }
-
-  .g-agent-floating-leave {
-    background: var(--color-bg-card, #fff);
-    color: var(--color-text-muted, #6b7280);
-    border-color: var(--color-border, #e5e7eb);
-  }
-
-  .g-agent-floating-leave:hover {
-    background: var(--color-error-subtle, rgba(239, 68, 68, 0.1));
-    border-color: var(--color-error-border, rgba(239, 68, 68, 0.3));
-    color: var(--color-error, #ef4444);
-  }
-
-  .g-agent-floating-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 
   /* Streaming message */
@@ -1443,22 +1312,47 @@
     background: rgba(0, 0, 0, 0.05);
   }
 
-  .streaming-message {
-    padding: 1rem 1.5rem;
-  }
-
-  .streaming-content {
-    margin-top: 0.75rem;
+  .stream-error-bar {
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 1rem;
+    background: var(--color-error-subtle, rgba(239, 68, 68, 0.08));
+    border: 1px solid var(--color-error-border, rgba(239, 68, 68, 0.2));
+    border-radius: 8px;
+    font-size: 0.85rem;
   }
 
-  .text-block {
-    white-space: pre-wrap;
-    word-break: break-word;
-    line-height: 1.6;
-    color: var(--color-text);
+  .stream-error-status {
+    font-weight: 600;
+    color: var(--color-error, #ef4444);
+    flex-shrink: 0;
+  }
+
+  .stream-error-message {
+    flex: 1;
+    min-width: 0;
+    color: var(--color-text-secondary, #64748b);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stream-retry-btn {
+    flex-shrink: 0;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-primary, #7c3aed);
+    background: transparent;
+    border: 1px solid var(--color-primary, #7c3aed);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .stream-retry-btn:hover {
+    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
   }
 
   /* Input area - compact height, pulled down from bottom edge */
@@ -1467,106 +1361,6 @@
     margin-bottom: 0.5rem;
     background: var(--color-bg-app);
     position: relative;
-  }
-
-  .session-attachments-details {
-    width: 100%;
-    margin-bottom: 0.5rem;
-    font-size: 0.8125rem;
-  }
-
-  .session-attachments-summary {
-    cursor: pointer;
-    color: var(--color-text-muted, #71717a);
-    padding: 0.25rem 0;
-    list-style: none;
-  }
-
-  .session-attachments-summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .session-attachments-body {
-    padding: 0.5rem 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .session-attachment-input {
-    position: absolute;
-    width: 0;
-    height: 0;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .session-attach-btn {
-    align-self: flex-start;
-    padding: 0.35rem 0.75rem;
-    font-size: 0.8125rem;
-    border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 6px;
-    background: var(--color-bg-card, #fff);
-    color: var(--color-text, #18181b);
-    cursor: pointer;
-  }
-
-  .session-attach-btn:hover {
-    background: var(--color-bg-card-hover, #f3f4f6);
-  }
-
-  .session-attachments-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .session-attachment-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.5rem;
-    background: var(--color-bg-subtle, #f4f4f5);
-    border-radius: 6px;
-    font-size: 0.8125rem;
-  }
-
-  .session-attachment-name {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .session-attachment-size {
-    color: var(--color-text-muted, #71717a);
-    flex-shrink: 0;
-  }
-
-  .session-attachment-remove {
-    flex-shrink: 0;
-    padding: 0.2rem;
-    border: none;
-    background: transparent;
-    color: var(--color-text-muted, #71717a);
-    cursor: pointer;
-    border-radius: 4px;
-  }
-
-  .session-attachment-remove:hover {
-    background: rgba(220, 38, 38, 0.1);
-    color: #dc2626;
-  }
-
-  .session-attachments-hint {
-    margin: 0;
-    font-size: 0.8125rem;
-    color: var(--color-text-muted, #71717a);
   }
 
   .input-row {
@@ -1581,74 +1375,6 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-  }
-
-  .talk-mode-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--color-text-muted, #6b7280);
-    background: var(--color-bg-card, #fff);
-    border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 0.5rem;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition:
-      background 0.15s,
-      border-color 0.15s,
-      color 0.15s;
-  }
-
-  .talk-mode-btn:hover {
-    background: var(--color-primary-subtle, rgba(124, 58, 237, 0.08));
-    border-color: var(--color-primary, #7c3aed);
-    color: var(--color-primary, #7c3aed);
-  }
-
-  .stats-bar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1.25rem;
-    padding: 0.25rem 0.5rem;
-    margin-bottom: 0.35rem;
-    background: linear-gradient(90deg, rgba(16, 185, 129, 0.05), rgba(124, 58, 237, 0.05));
-    border-radius: 0.5rem;
-    font-size: 0.75rem;
-  }
-
-  .stat {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-  }
-
-  .stat-label {
-    color: var(--color-text-muted);
-  }
-
-  .stat-value {
-    font-weight: 600;
-    color: #10b981;
-  }
-
-  .stat.connection {
-    margin-left: auto;
-    color: var(--color-text-muted);
-  }
-
-  .conn-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #ef4444;
-  }
-
-  .conn-dot.connected {
-    background: #10b981;
   }
 
   .model-picker-dropdown {
@@ -1675,36 +1401,16 @@
     max-height: 420px;
   }
 
-  .design-mode-suggestion {
-    margin: 0.5rem 0 0;
-    padding: 0;
-  }
-
-  .inline-design-mode-btn {
-    background: none;
-    border: none;
-    color: var(--color-primary, #7c3aed);
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    padding: 0.25rem 0;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .inline-design-mode-btn:hover {
-    color: var(--color-primary-hover, #6d28d9);
-  }
-
   /* Inline card wrappers for architecture approval / section picker */
   .inline-card-wrapper {
-    padding: 0.25rem 1.25rem 0.25rem 3.25rem;
+    padding: 0.375rem 0;
+    width: 100%;
     animation: card-in 0.2s ease-out;
   }
 
   @media (max-width: 920px) {
     .inline-card-wrapper {
-      padding: 0.25rem 0.75rem;
+      padding: 0.25rem 0;
     }
   }
 
@@ -1719,34 +1425,7 @@
     }
   }
 
-  /* Streaming content blocks */
-  .streaming-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-  }
-
-  .streaming-content .text-block {
-    font-family:
-      'Inter',
-      -apple-system,
-      system-ui,
-      sans-serif;
-    font-size: 0.875rem;
-    line-height: 1.55;
-    color: var(--color-text, #e2e8f0);
-    white-space: pre-wrap;
-    word-break: break-word;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeSpeed;
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .status-sidebar,
-    .memory-sidebar {
-      animation: none;
-    }
-
     .messages-container {
       scroll-behavior: auto;
     }

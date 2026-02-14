@@ -43,7 +43,7 @@
 
 ### Multi-Provider Router
 Adding support beyond NIM:
-- Groq (fast, cheap)
+- Anthropic (Claude models)
 - OpenRouter (model variety)
 - Ollama (local/enterprise)
 
@@ -74,7 +74,7 @@ PostHog integration for:
 
 | Service | Purpose | Cost |
 |---------|---------|------|
-| Groq | Fast inference | Pay-per-use |
+| Anthropic | Claude models | Pay-per-use |
 | OpenRouter | Model variety | Pay-per-use |
 | Pinecone | Vector search | Free tier |
 | Redis Cloud | Job queue | Free tier |

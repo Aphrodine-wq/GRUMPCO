@@ -27,19 +27,19 @@ const SUPPORTED_LANGUAGES = [
  */
 export async function initHighlighter(): Promise<Highlighter> {
   if (highlighter) return highlighter;
-  
+
   // Prevent multiple concurrent initialization attempts
   if (highlighterPromise) return highlighterPromise;
 
   highlighterPromise = (async () => {
     // Dynamically import shiki only when needed
     const { createHighlighter } = await import('shiki');
-    
+
     highlighter = await createHighlighter({
       themes: ['github-dark', 'github-light'],
       langs: SUPPORTED_LANGUAGES,
     });
-    
+
     return highlighter;
   })();
 
@@ -58,7 +58,7 @@ export async function highlightCode(
   language: string = 'javascript'
 ): Promise<string> {
   const h = await initHighlighter();
-  
+
   // Safe check if lang is loaded, else fallback to text/plain
   const isLoaded = h.getLoadedLanguages().includes(language);
   const lang = isLoaded ? language : 'plaintext';

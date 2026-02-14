@@ -6,38 +6,39 @@
  */
 
 // Base types
-export type {
-  Tool,
-  FileDiff,
-  ToolExecutionResult,
-  ToolExecutionEvent,
-} from "./types.js";
+export type { Tool, FileDiff, ToolExecutionResult, ToolExecutionEvent } from './types.js';
 
 // File tools
 export {
   fileReadTool,
   fileWriteTool,
   fileEditTool,
+  searchAndReplaceTool,
   listDirectoryTool,
   fileReadInputSchema,
   fileWriteInputSchema,
   fileEditInputSchema,
   fileEditOperationSchema,
+  searchAndReplaceInputSchema,
   listDirectoryInputSchema,
   type FileReadInput,
   type FileWriteInput,
   type FileEditInput,
+  type SearchAndReplaceInput,
   type ListDirectoryInput,
   FILE_TOOLS,
-} from "./file/index.js";
+} from './file/index.js';
 
 // Codebase tools
 export {
   codebaseSearchTool,
+  grepSearchTool,
   codebaseSearchInputSchema,
+  grepSearchInputSchema,
   type CodebaseSearchInput,
+  type GrepSearchInput,
   CODEBASE_TOOLS,
-} from "./codebase/index.js";
+} from './codebase/index.js';
 
 // Database tools
 export {
@@ -48,7 +49,7 @@ export {
   type GenerateDbSchemaInput,
   type GenerateMigrationsInput,
   DB_TOOLS,
-} from "./db/index.js";
+} from './db/index.js';
 
 // Browser tools
 export {
@@ -78,7 +79,7 @@ export {
   type BrowserGetContentInput,
   type BrowserScreenshotInput,
   BROWSER_TOOLS,
-} from "./browser/index.js";
+} from './browser/index.js';
 
 // Git tools
 export {
@@ -101,7 +102,7 @@ export {
   type GitBranchInput,
   type GitPushInput,
   GIT_TOOLS,
-} from "./git/index.js";
+} from './git/index.js';
 
 // Terminal tools
 export {
@@ -112,7 +113,7 @@ export {
   type BashExecuteInput,
   type TerminalExecuteInput,
   TERMINAL_TOOLS,
-} from "./terminal/index.js";
+} from './terminal/index.js';
 
 // Skill tools
 export {
@@ -124,7 +125,7 @@ export {
   skillEditInputSchema,
   skillRunTestInputSchema,
   SKILL_TOOLS,
-} from "./skill/index.js";
+} from './skill/index.js';
 
 // Planning tools
 export {
@@ -132,7 +133,7 @@ export {
   sessionsHistoryTool,
   sessionsSendTool,
   PLANNING_TOOLS,
-} from "./planning/index.js";
+} from './planning/index.js';
 
 // Electron tools
 export {
@@ -142,21 +143,30 @@ export {
   systemExecTool,
   canvasUpdateTool,
   ELECTRON_TOOLS,
-} from "./electron/index.js";
+} from './electron/index.js';
+
+// Outline / code navigation tools
+export {
+  fileOutlineTool,
+  fileOutlineInputSchema,
+  type FileOutlineInput,
+  OUTLINE_TOOLS,
+} from './outline/index.js';
 
 // ============================================================================
 // ALL TOOLS AGGREGATION
 // ============================================================================
 
-import { FILE_TOOLS } from "./file/index.js";
-import { CODEBASE_TOOLS } from "./codebase/index.js";
-import { DB_TOOLS } from "./db/index.js";
-import { BROWSER_TOOLS } from "./browser/index.js";
-import { GIT_TOOLS } from "./git/index.js";
-import { TERMINAL_TOOLS } from "./terminal/index.js";
-import { SKILL_TOOLS } from "./skill/index.js";
-import { PLANNING_TOOLS } from "./planning/index.js";
-import { ELECTRON_TOOLS } from "./electron/index.js";
+import { FILE_TOOLS } from './file/index.js';
+import { CODEBASE_TOOLS } from './codebase/index.js';
+import { DB_TOOLS } from './db/index.js';
+import { BROWSER_TOOLS } from './browser/index.js';
+import { GIT_TOOLS } from './git/index.js';
+import { TERMINAL_TOOLS } from './terminal/index.js';
+import { SKILL_TOOLS } from './skill/index.js';
+import { PLANNING_TOOLS } from './planning/index.js';
+import { ELECTRON_TOOLS } from './electron/index.js';
+import { OUTLINE_TOOLS } from './outline/index.js';
 
 /**
  * All available base tools. Can be extended by MCP or dynamic registration.
@@ -172,6 +182,7 @@ export const AVAILABLE_TOOLS = [
   ...SKILL_TOOLS,
   ...PLANNING_TOOLS,
   ...ELECTRON_TOOLS,
+  ...OUTLINE_TOOLS,
 ];
 
 /**
@@ -187,4 +198,5 @@ export const ToolCategories = {
   skill: SKILL_TOOLS,
   planning: PLANNING_TOOLS,
   electron: ELECTRON_TOOLS,
+  outline: OUTLINE_TOOLS,
 } as const;

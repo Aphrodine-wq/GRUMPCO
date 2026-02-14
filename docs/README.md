@@ -25,7 +25,7 @@ New to G-Rump? Start here:
 | Document | Description |
 |----------|-------------|
 | [GETTING_STARTED.md](./GETTING_STARTED.md) | Installation and first steps |
-| [HOW_IT_WORKS.md](./HOW_IT_WORKS.md) | Understanding the platform |
+| [OVERVIEW.md](./OVERVIEW.md) | Understanding the platform |
 | [CLI.md](./CLI.md) | Command-line interface reference |
 | [FAQ.md](./FAQ.md) | Frequently asked questions |
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Common issues and solutions |
@@ -46,9 +46,7 @@ New to G-Rump? Start here:
 |----------|-------------|
 | [PRODUCTION.md](./PRODUCTION.md) | Production deployment guide |
 | [SECURITY.md](./SECURITY.md) | Security configuration |
-| [GPU_DEPLOYMENT.md](./GPU_DEPLOYMENT.md) | GPU deployment guide |
-| [NVIDIA_GOLDEN_DEVELOPER.md](./NVIDIA_GOLDEN_DEVELOPER.md) | NVIDIA ecosystem setup |
-| [NVIDIA_OBSERVABILITY.md](./NVIDIA_OBSERVABILITY.md) | Observability configuration |
+| [GPU_DEPLOYMENT.md](./GPU_DEPLOYMENT.md) | GPU and NVIDIA deployment |
 
 ---
 
@@ -57,7 +55,7 @@ New to G-Rump? Start here:
 ### Architecture & Design
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture overview
-- [HOW_IT_WORKS.md](./HOW_IT_WORKS.md) - Request pipeline and flows
+- [OVERVIEW.md](./OVERVIEW.md) - Request pipeline and flows
 - [AGENT_SYSTEM.md](./AGENT_SYSTEM.md) - Multi-agent orchestration
 - [INTENT_RAG_FUSION.md](./INTENT_RAG_FUSION.md) - Intent-guided RAG
 - [adr/](./adr/) - Architecture Decision Records
@@ -85,8 +83,7 @@ New to G-Rump? Start here:
 
 ### NVIDIA Ecosystem
 
-- [NVIDIA_GOLDEN_DEVELOPER.md](./NVIDIA_GOLDEN_DEVELOPER.md) - Award submission
-- [NVIDIA_OBSERVABILITY.md](./NVIDIA_OBSERVABILITY.md) - OTEL configuration
+- [GPU_DEPLOYMENT.md](./GPU_DEPLOYMENT.md) - GPU deployment and NVIDIA NIM
 - [services/nemo-curator/](../services/nemo-curator/) - Synthetic data pipeline
 - [services/nemo-training/](../services/nemo-training/) - Fine-tuning service
 
@@ -155,8 +152,8 @@ All documentation follows these conventions:
 Can't find what you're looking for?
 
 - 📖 Check the [FAQ](./FAQ.md)
-- 🐛 Search [GitHub Issues](https://github.com/Aphrodine-wq/G-rump.com/issues)
-- 💬 Ask in [GitHub Discussions](https://github.com/Aphrodine-wq/G-rump.com/discussions)
+- 🐛 Search [GitHub Issues](https://github.com/Aphrodine-wq/GRUMPCO/issues)
+- 💬 Ask in [GitHub Discussions](https://github.com/Aphrodine-wq/GRUMPCO/discussions)
 
 ---
 
@@ -174,10 +171,17 @@ See [CONTRIBUTING.md](./legal/CONTRIBUTING.md) for details.
 
 ---
 
+## 📁 Documentation Archives
+
+Historical documentation that has been superseded or merged can be found in [archive/](archive/).
+
+---
+
 ## 🎨 UI & Customization
 
 - **Accent color** – In Settings → Appearance you can choose Purple, Blue, Green, or Amber. The accent updates primary actions, borders, and highlights app-wide (via `--color-primary` and `--color-primary-hover`).
 - **G-Agent** – Use the **Use G-Agent** button (bottom-right of the chat) to turn on agent mode in the current chat without switching tabs. **Leave G-Agent** (same corner when active) returns to normal chat.
 - **Connection status** – A slim status bar at the bottom shows backend connection; layout keeps content flush with minimal gap above it.
 
-**Last Updated:** February 2026
+**Last Updated:** February 11, 2026
+

@@ -157,7 +157,7 @@ intent-compiler/
 - [wasm-pack Documentation](https://rustwasm.github.io/docs/wasm-pack/)
 - [rayon Parallel Processing](https://docs.rs/rayon/)
 - [Criterion Benchmarking](https://github.com/bheisler/criterion.rs)
-- [Performance Comparison PR](https://github.com/Aphrodine-wq/G-rump.com/pull/42)
+- [Performance Comparison PR](https://github.com/Aphrodine-wq/GRUMPCO/pull/42)
 
 ## Revision History
 
@@ -166,3 +166,4 @@ intent-compiler/
 | 2025-08-15 | Initial draft | Core Team |
 | 2025-08-20 | Added benchmarks | Core Team |
 | 2025-09-01 | Accepted after review | Architecture Team |
+

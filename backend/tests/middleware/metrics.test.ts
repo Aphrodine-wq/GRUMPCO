@@ -488,7 +488,7 @@ describe('Metrics', () => {
 
     it('should record chat request by session type', () => {
       recordChatRequest('chat');
-      recordChatRequest('freeAgent');
+      recordChatRequest('gAgent');
       expect(chatRequestsTotal).toBeDefined();
     });
   });

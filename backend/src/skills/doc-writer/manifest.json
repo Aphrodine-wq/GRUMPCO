@@ -1,60 +1,34 @@
 {
-    "id": "doc-writer",
-    "name": "Doc Writer",
-    "description": "Generate documentation for code, APIs, and projects — including READMEs, JSDoc/TSDoc comments, and API reference pages.",
-    "version": "1.0.0",
-    "author": "G-Rump Team",
-    "category": "documentation",
-    "icon": "📝",
-    "capabilities": [
-        "readme_generation",
-        "api_docs",
-        "jsdoc_comments",
-        "changelog_generation"
-    ],
-    "triggers": {
-        "keywords": [
-            "document",
-            "readme",
-            "docs",
-            "jsdoc",
-            "tsdoc",
-            "changelog",
-            "api docs"
-        ],
-        "filePatterns": [
-            "*.md",
-            "*.ts",
-            "*.js",
-            "*.py"
-        ],
-        "contextual": true
+  "id": "doc-writer",
+  "name": "Doc Writer",
+  "description": "Generate documentation for code, APIs, and projects — including READMEs, JSDoc/TSDoc comments, and API reference pages.",
+  "version": "1.0.0",
+  "author": "G-Rump Team",
+  "category": "documentation",
+  "icon": "📝",
+  "capabilities": ["readme_generation", "api_docs", "jsdoc_comments", "changelog_generation"],
+  "triggers": {
+    "keywords": ["document", "readme", "docs", "jsdoc", "tsdoc", "changelog", "api docs"],
+    "filePatterns": ["*.md", "*.ts", "*.js", "*.py"],
+    "contextual": true
+  },
+  "settings": {
+    "style": {
+      "type": "select",
+      "label": "Documentation Style",
+      "options": ["concise", "detailed", "tutorial"],
+      "default": "detailed"
     },
-    "settings": {
-        "style": {
-            "type": "select",
-            "label": "Documentation Style",
-            "options": [
-                "concise",
-                "detailed",
-                "tutorial"
-            ],
-            "default": "detailed"
-        },
-        "format": {
-            "type": "select",
-            "label": "Output Format",
-            "options": [
-                "markdown",
-                "html",
-                "rst"
-            ],
-            "default": "markdown"
-        }
-    },
-    "permissions": {
-        "fileAccess": true,
-        "networkAccess": false,
-        "shellAccess": false
+    "format": {
+      "type": "select",
+      "label": "Output Format",
+      "options": ["markdown", "html", "rst"],
+      "default": "markdown"
     }
+  },
+  "permissions": {
+    "fileAccess": true,
+    "networkAccess": false,
+    "shellAccess": false
+  }
 }

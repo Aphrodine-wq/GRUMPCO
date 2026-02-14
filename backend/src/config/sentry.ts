@@ -2,107 +2,109 @@ import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { env } from './env.js';
 import type { Express } from 'express';
+import logger from '../middleware/logger.js';
 
 export function initializeSentry(app?: Express): void {
-    if (!env.SENTRY_DSN) {
-        console.warn('⚠️  SENTRY_DSN not configured - error tracking disabled');
-        return;
-    }
+  if (!env.SENTRY_DSN) {
+    console.warn('⚠️  SENTRY_DSN not configured - error tracking disabled');
+    return;
+  }
 
-    Sentry.init({
-        dsn: env.SENTRY_DSN,
-        environment: env.NODE_ENV,
-        release: `g-rump@${process.env.npm_package_version || '2.1.0'}`,
+  Sentry.init({
+    dsn: env.SENTRY_DSN,
+    environment: env.NODE_ENV,
+    release: `g-rump@${process.env.npm_package_version || '2.1.0'}`,
 
-        // Performance Monitoring
-        tracesSampleRate: env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    // Performance Monitoring
+    tracesSampleRate: env.NODE_ENV === 'production' ? 0.1 : 1.0,
 
-        // Profiling
-        profilesSampleRate: env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    // Profiling
+    profilesSampleRate: env.NODE_ENV === 'production' ? 0.1 : 1.0,
 
-        integrations: [
-            // Express integration
-            ...(app ? [
-                Sentry.httpIntegration(),
-                Sentry.expressIntegration(),
-            ] : []),
+    integrations: [
+      // Express integration
+      ...(app ? [Sentry.httpIntegration(), Sentry.expressIntegration()] : []),
 
-            // Performance profiling
-            nodeProfilingIntegration(),
+      // Performance profiling
+      nodeProfilingIntegration(),
 
-            // Additional integrations
-            Sentry.modulesIntegration(),
-            Sentry.contextLinesIntegration(),
-            Sentry.consoleIntegration(),
-            Sentry.onUncaughtExceptionIntegration(),
-            Sentry.onUnhandledRejectionIntegration(),
-        ],
+      // Additional integrations
+      Sentry.modulesIntegration(),
+      Sentry.contextLinesIntegration(),
+      Sentry.consoleIntegration(),
+      Sentry.onUncaughtExceptionIntegration(),
+      Sentry.onUnhandledRejectionIntegration(),
+    ],
 
-        // BeforeSend hook for filtering
-        beforeSend(event, hint) {
-            // Filter out certain errors
-            const error = hint.originalException;
+    // BeforeSend hook for filtering
+    beforeSend(event, hint) {
+      // Filter out certain errors
+      const error = hint.originalException;
 
-            // Don't send validation errors to Sentry
-            if (error && typeof error === 'object' && 'statusCode' in error) {
-                const statusCode = (error as any).statusCode;
-                if (statusCode === 400 || statusCode === 401 || statusCode === 403) {
-                    return null;
-                }
-            }
+      // Don't send validation errors to Sentry
+      if (error && typeof error === 'object' && 'statusCode' in error) {
+        const statusCode = (error as any).statusCode;
+        if (statusCode === 400 || statusCode === 401 || statusCode === 403) {
+          return null;
+        }
+      }
 
-            // Add custom context
-            if (event.request) {
-                event.tags = {
-                    ...event.tags,
-                    endpoint: event.request.url,
-                };
-            }
+      // Add custom context
+      if (event.request) {
+        event.tags = {
+          ...event.tags,
+          endpoint: event.request.url,
+        };
+      }
 
-            return event;
-        },
+      return event;
+    },
 
-        // Ignore certain errors
-        ignoreErrors: [
-            'ECONNABORTED',
-            'ECONNRESET',
-            'ETIMEDOUT',
-            'AbortError',
-            'ERR_CANCELED',
-            /^Non-Error promise rejection/,
-        ],
+    // Ignore certain errors
+    ignoreErrors: [
+      'ECONNABORTED',
+      'ECONNRESET',
+      'ETIMEDOUT',
+      'AbortError',
+      'ERR_CANCELED',
+      /^Non-Error promise rejection/,
+    ],
 
-        // Performance tracking
-        enableTracing: true,
-    });
+    // Performance tracking
+    enableTracing: true,
+  });
 
-    console.log('✅ Sentry error tracking initialized');
+  logger.info('Sentry error tracking initialized');
 }
 
 export function captureException(error: Error, context?: Record<string, any>): void {
-    if (context) {
-        Sentry.withScope((scope) => {
-            Object.entries(context).forEach(([key, value]) => {
-                scope.setContext(key, value);
-            });
-            Sentry.captureException(error);
-        });
-    } else {
-        Sentry.captureException(error);
-    }
+  if (context) {
+    Sentry.withScope((scope) => {
+      Object.entries(context).forEach(([key, value]) => {
+        scope.setContext(key, value);
+      });
+      Sentry.captureException(error);
+    });
+  } else {
+    Sentry.captureException(error);
+  }
 }
 
-export function captureMessage(message: string, level: Sentry.SeverityLevel = 'info', context?: Record<string, any>): void {
-    if (context) {
-        Sentry.withScope((scope) => {
-            Object.entries(context).forEach(([key, value]) => {
-                scope.setContext(key, value);
-            });
-            Sentry.captureMessage(message, level);
-        });
-    } else {
-        Sentry.captureMessage(message, level);
-    }
+export function captureMessage(
+  message: string,
+  level: Sentry.SeverityLevel = 'info',
+  context?: Record<string, any>
+): void {
+  if (context) {
+    Sentry.withScope((scope) => {
+      Object.entries(context).forEach(([key, value]) => {
+        scope.setContext(key, value);
+      });
+      Sentry.captureMessage(message, level);
+    });
+  } else {
+    Sentry.captureMessage(message, level);
+  }
 }
 
 export { Sentry };

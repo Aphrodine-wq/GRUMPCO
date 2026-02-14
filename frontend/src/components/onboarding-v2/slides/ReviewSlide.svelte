@@ -146,14 +146,4 @@
     outline: none;
     box-shadow: var(--focus-ring);
   }
-
-  .arrow {
-    width: 1.25rem;
-    height: 1.25rem;
-    transition: transform 0.2s;
-  }
-
-  .cta-button:hover .arrow {
-    transform: translateX(4px);
-  }
 </style>

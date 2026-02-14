@@ -23,8 +23,6 @@ services:
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
-      - key: GROQ_API_KEY
-        sync: false
       - key: REDIS_HOST
         sync: false
       - key: REDIS_PORT

@@ -129,7 +129,7 @@
               <pre class="metadata-pre">{JSON.stringify(error.metadata, null, 2)}</pre>
             </div>
           {/if}
-          <button class="copy-details-btn" onclick={copyErrorDetails}> 📋 Copy Details </button>
+          <button class="copy-details-btn" onclick={copyErrorDetails}> Copy Details </button>
         </div>
       {/if}
     </div>

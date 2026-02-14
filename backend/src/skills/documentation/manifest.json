@@ -1,39 +1,15 @@
 {
-    "id": "documentation",
-    "name": "Documentation Generator",
-    "version": "1.0.0",
-    "description": "Generate comprehensive documentation including JSDoc, README files, API references, and inline comments. Supports multiple languages and frameworks.",
-    "category": "productivity",
-    "icon": "📝",
-    "tags": [
-        "documentation",
-        "jsdoc",
-        "readme",
-        "api-docs",
-        "comments"
-    ],
-    "capabilities": [
-        "doc-generation",
-        "readme-creation",
-        "api-reference"
-    ],
-    "triggers": {
-        "keywords": [
-            "document",
-            "docs",
-            "jsdoc",
-            "readme",
-            "api docs",
-            "documentation"
-        ],
-        "commands": [
-            "/docs",
-            "/document",
-            "/readme"
-        ],
-        "fileExtensions": [
-            ".md",
-            ".mdx"
-        ]
-    }
+  "id": "documentation",
+  "name": "Documentation Generator",
+  "version": "1.0.0",
+  "description": "Generate comprehensive documentation including JSDoc, README files, API references, and inline comments. Supports multiple languages and frameworks.",
+  "category": "productivity",
+  "icon": "📝",
+  "tags": ["documentation", "jsdoc", "readme", "api-docs", "comments"],
+  "capabilities": ["doc-generation", "readme-creation", "api-reference"],
+  "triggers": {
+    "keywords": ["document", "docs", "jsdoc", "readme", "api docs", "documentation"],
+    "commands": ["/docs", "/document", "/readme"],
+    "fileExtensions": [".md", ".mdx"]
+  }
 }

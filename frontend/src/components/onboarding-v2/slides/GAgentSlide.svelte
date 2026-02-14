@@ -64,7 +64,7 @@
         <Bot size={28} />
         <div class="icon-pulse"></div>
       </div>
-      <h2 class="title">G-Agent is the star</h2>
+      <h2 class="title">Agent is the star</h2>
       <p class="subtitle">
         Your autonomous AI partner that executes, ships, and builds – powered by chat
       </p>

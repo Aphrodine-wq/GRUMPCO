@@ -1,25 +1,19 @@
 /**
  * Messaging Permissions Configuration
- * Defines per-platform and per-user permissions for Free Agent via messaging
+ * Defines per-platform and per-user permissions for G-Agent via messaging
  */
 
-import type { FreeAgentCapabilityKey } from "../types/settings.js";
+import type { GAgentCapabilityKey } from '../types/settings.js';
 
 // ========== Types ==========
 
-export type MessagingPlatform =
-  | "telegram"
-  | "discord"
-  | "twilio"
-  | "slack"
-  | "web"
-  | "electron";
+export type MessagingPlatform = 'telegram' | 'discord' | 'twilio' | 'slack' | 'web' | 'electron';
 
 export interface PlatformPermissions {
-  /** Whether Free Agent is enabled on this platform */
-  freeAgentEnabled: boolean;
+  /** Whether G-Agent is enabled on this platform */
+  gAgentEnabled: boolean;
   /** Allowed capabilities for this platform (subset of user's enabled capabilities) */
-  allowedCapabilities: FreeAgentCapabilityKey[];
+  allowedCapabilities: GAgentCapabilityKey[];
   /** Whether write operations require confirmation via messaging */
   requireConfirmation: boolean;
   /** Maximum tool execution timeout in seconds */
@@ -34,10 +28,10 @@ export interface UserMessagingPermissions {
   userId: string;
   /** Per-platform overrides */
   platforms: Partial<Record<MessagingPlatform, Partial<PlatformPermissions>>>;
-  /** Global Free Agent enabled state */
-  freeAgentEnabled: boolean;
+  /** Global G-Agent enabled state */
+  gAgentEnabled: boolean;
   /** Global capabilities (can be further restricted per platform) */
-  capabilities: FreeAgentCapabilityKey[];
+  capabilities: GAgentCapabilityKey[];
   /** External domain allowlist */
   allowlist: string[];
 }
@@ -48,56 +42,53 @@ export interface UserMessagingPermissions {
  * Default permissions by platform
  * These are conservative defaults that can be overridden per-user
  */
-export const DEFAULT_PLATFORM_PERMISSIONS: Record<
-  MessagingPlatform,
-  PlatformPermissions
-> = {
+export const DEFAULT_PLATFORM_PERMISSIONS: Record<MessagingPlatform, PlatformPermissions> = {
   telegram: {
-    freeAgentEnabled: false, // Disabled by default for security
-    allowedCapabilities: ["file", "git", "internet_search"], // Read-mostly
+    gAgentEnabled: false, // Disabled by default for security
+    allowedCapabilities: ['file', 'git', 'internet_search'], // Read-mostly
     requireConfirmation: true,
     timeoutSeconds: 30,
     requireSandbox: true,
     rateLimitPerHour: 20,
   },
   discord: {
-    freeAgentEnabled: false,
-    allowedCapabilities: ["file", "git", "internet_search"],
+    gAgentEnabled: false,
+    allowedCapabilities: ['file', 'git', 'internet_search'],
     requireConfirmation: true,
     timeoutSeconds: 30,
     requireSandbox: true,
     rateLimitPerHour: 20,
   },
   twilio: {
-    freeAgentEnabled: false,
-    allowedCapabilities: ["file", "git"], // More limited for SMS
+    gAgentEnabled: false,
+    allowedCapabilities: ['file', 'git'], // More limited for SMS
     requireConfirmation: true,
     timeoutSeconds: 20, // Shorter for SMS
     requireSandbox: true,
     rateLimitPerHour: 10,
   },
   slack: {
-    freeAgentEnabled: false,
-    allowedCapabilities: ["file", "git", "internet_search"],
+    gAgentEnabled: false,
+    allowedCapabilities: ['file', 'git', 'internet_search'],
     requireConfirmation: true,
     timeoutSeconds: 30,
     requireSandbox: true,
     rateLimitPerHour: 20,
   },
   web: {
-    freeAgentEnabled: true, // Enabled for web by default
+    gAgentEnabled: true, // Enabled for web by default
     allowedCapabilities: [
-      "file",
-      "git",
-      "bash",
-      "npm",
-      "docker",
-      "webhooks",
-      "heartbeats",
-      "internet_search",
-      "database",
-      "api_call",
-      "monitoring",
+      'file',
+      'git',
+      'bash',
+      'npm',
+      'docker',
+      'webhooks',
+      'heartbeats',
+      'internet_search',
+      'database',
+      'api_call',
+      'monitoring',
     ],
     requireConfirmation: false,
     timeoutSeconds: 60,
@@ -105,21 +96,21 @@ export const DEFAULT_PLATFORM_PERMISSIONS: Record<
     rateLimitPerHour: 100,
   },
   electron: {
-    freeAgentEnabled: true,
+    gAgentEnabled: true,
     allowedCapabilities: [
-      "file",
-      "git",
-      "bash",
-      "npm",
-      "docker",
-      "webhooks",
-      "heartbeats",
-      "internet_search",
-      "database",
-      "api_call",
-      "monitoring",
-      "cloud",
-      "cicd", // Premium features available
+      'file',
+      'git',
+      'bash',
+      'npm',
+      'docker',
+      'webhooks',
+      'heartbeats',
+      'internet_search',
+      'database',
+      'api_call',
+      'monitoring',
+      'cloud',
+      'cicd', // Premium features available
     ],
     requireConfirmation: false,
     timeoutSeconds: 60,
@@ -131,25 +122,25 @@ export const DEFAULT_PLATFORM_PERMISSIONS: Record<
 /**
  * Read-only capabilities that don't require confirmation
  */
-export const READ_ONLY_CAPABILITIES: FreeAgentCapabilityKey[] = [
-  "file", // file_read, list_directory, codebase_search
-  "git", // git_status, git_diff, git_log
-  "internet_search",
-  "monitoring", // metrics_query, alert_list, health_check
+export const READ_ONLY_CAPABILITIES: GAgentCapabilityKey[] = [
+  'file', // file_read, list_directory, codebase_search
+  'git', // git_status, git_diff, git_log
+  'internet_search',
+  'monitoring', // metrics_query, alert_list, health_check
 ];
 
 /**
  * Write capabilities that should require confirmation when requireConfirmation is true
  */
-export const WRITE_CAPABILITIES: FreeAgentCapabilityKey[] = [
-  "bash",
-  "npm",
-  "docker",
-  "cloud",
-  "cicd",
-  "webhooks",
-  "database",
-  "api_call",
+export const WRITE_CAPABILITIES: GAgentCapabilityKey[] = [
+  'bash',
+  'npm',
+  'docker',
+  'cloud',
+  'cicd',
+  'webhooks',
+  'database',
+  'api_call',
 ];
 
 // ========== Permission Resolution ==========
@@ -159,7 +150,7 @@ export const WRITE_CAPABILITIES: FreeAgentCapabilityKey[] = [
  */
 export function getEffectivePermissions(
   platform: MessagingPlatform,
-  userPermissions?: UserMessagingPermissions,
+  userPermissions?: UserMessagingPermissions
 ): PlatformPermissions {
   const defaults = DEFAULT_PLATFORM_PERMISSIONS[platform];
 
@@ -171,20 +162,16 @@ export function getEffectivePermissions(
 
   // Merge with defaults, user overrides take precedence
   return {
-    freeAgentEnabled:
-      platformOverrides.freeAgentEnabled ??
-      userPermissions.freeAgentEnabled ??
-      defaults.freeAgentEnabled,
+    gAgentEnabled:
+      platformOverrides.gAgentEnabled ?? userPermissions.gAgentEnabled ?? defaults.gAgentEnabled,
     allowedCapabilities: intersectCapabilities(
       userPermissions.capabilities,
-      platformOverrides.allowedCapabilities ?? defaults.allowedCapabilities,
+      platformOverrides.allowedCapabilities ?? defaults.allowedCapabilities
     ),
-    requireConfirmation:
-      platformOverrides.requireConfirmation ?? defaults.requireConfirmation,
+    requireConfirmation: platformOverrides.requireConfirmation ?? defaults.requireConfirmation,
     timeoutSeconds: platformOverrides.timeoutSeconds ?? defaults.timeoutSeconds,
     requireSandbox: platformOverrides.requireSandbox ?? defaults.requireSandbox,
-    rateLimitPerHour:
-      platformOverrides.rateLimitPerHour ?? defaults.rateLimitPerHour,
+    rateLimitPerHour: platformOverrides.rateLimitPerHour ?? defaults.rateLimitPerHour,
   };
 }
 
@@ -192,9 +179,9 @@ export function getEffectivePermissions(
  * Intersect two capability lists (user's enabled AND platform's allowed)
  */
 function intersectCapabilities(
-  userCaps: FreeAgentCapabilityKey[],
-  platformCaps: FreeAgentCapabilityKey[],
-): FreeAgentCapabilityKey[] {
+  userCaps: GAgentCapabilityKey[],
+  platformCaps: GAgentCapabilityKey[]
+): GAgentCapabilityKey[] {
   const platformSet = new Set(platformCaps);
   return userCaps.filter((cap) => platformSet.has(cap));
 }
@@ -204,14 +191,11 @@ function intersectCapabilities(
  */
 export function isCapabilityAllowed(
   platform: MessagingPlatform,
-  capability: FreeAgentCapabilityKey,
-  userPermissions?: UserMessagingPermissions,
+  capability: GAgentCapabilityKey,
+  userPermissions?: UserMessagingPermissions
 ): boolean {
   const effective = getEffectivePermissions(platform, userPermissions);
-  return (
-    effective.freeAgentEnabled &&
-    effective.allowedCapabilities.includes(capability)
-  );
+  return effective.gAgentEnabled && effective.allowedCapabilities.includes(capability);
 }
 
 /**
@@ -219,8 +203,8 @@ export function isCapabilityAllowed(
  */
 export function requiresConfirmation(
   platform: MessagingPlatform,
-  capability: FreeAgentCapabilityKey,
-  userPermissions?: UserMessagingPermissions,
+  capability: GAgentCapabilityKey,
+  userPermissions?: UserMessagingPermissions
 ): boolean {
   const effective = getEffectivePermissions(platform, userPermissions);
 
@@ -247,7 +231,7 @@ const rateLimitCounters = new Map<string, { count: number; resetAt: number }>();
 export function checkRateLimit(
   platform: MessagingPlatform,
   userId: string,
-  userPermissions?: UserMessagingPermissions,
+  userPermissions?: UserMessagingPermissions
 ): { allowed: boolean; remaining: number; resetIn: number } {
   const effective = getEffectivePermissions(platform, userPermissions);
   const key = `${platform}:${userId}`;
@@ -278,7 +262,7 @@ interface PendingConfirmation {
   id: string;
   platform: MessagingPlatform;
   userId: string;
-  capability: FreeAgentCapabilityKey;
+  capability: GAgentCapabilityKey;
   tool: string;
   args: Record<string, unknown>;
   expiresAt: number;
@@ -293,9 +277,9 @@ const pendingConfirmations = new Map<string, PendingConfirmation>();
 export function createConfirmationRequest(
   platform: MessagingPlatform,
   userId: string,
-  capability: FreeAgentCapabilityKey,
+  capability: GAgentCapabilityKey,
   tool: string,
-  args: Record<string, unknown>,
+  args: Record<string, unknown>
 ): { confirmationId: string; message: string } {
   const id = `confirm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
@@ -328,10 +312,7 @@ export function createConfirmationRequest(
 /**
  * Confirm a pending request
  */
-export function confirmRequest(
-  confirmationId: string,
-  userId: string,
-): PendingConfirmation | null {
+export function confirmRequest(confirmationId: string, userId: string): PendingConfirmation | null {
   const conf = pendingConfirmations.get(confirmationId);
 
   if (!conf) return null;
@@ -363,18 +344,14 @@ const userPermissionsStore = new Map<string, UserMessagingPermissions>();
 /**
  * Get user permissions (for admin dashboard)
  */
-export function getUserPermissions(
-  userId: string,
-): UserMessagingPermissions | null {
+export function getUserPermissions(userId: string): UserMessagingPermissions | null {
   return userPermissionsStore.get(userId) || null;
 }
 
 /**
  * Set user permissions (for admin dashboard)
  */
-export function setUserPermissions(
-  permissions: UserMessagingPermissions,
-): void {
+export function setUserPermissions(permissions: UserMessagingPermissions): void {
   userPermissionsStore.set(permissions.userId, permissions);
 }
 
@@ -384,14 +361,14 @@ export function setUserPermissions(
 export function updatePlatformPermissions(
   userId: string,
   platform: MessagingPlatform,
-  updates: Partial<PlatformPermissions>,
+  updates: Partial<PlatformPermissions>
 ): void {
   let perms = userPermissionsStore.get(userId);
   if (!perms) {
     perms = {
       userId,
       platforms: {},
-      freeAgentEnabled: false,
+      gAgentEnabled: false,
       capabilities: [],
       allowlist: [],
     };

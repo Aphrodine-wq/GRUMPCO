@@ -8,7 +8,7 @@
  * - Self-improvement and learning hooks
  */
 
-import { getCodeModePrompt, type CodePromptOptions } from "./code.js";
+import { getCodeModePrompt, type CodePromptOptions } from './code.js';
 
 export interface GAgentPromptOptions extends CodePromptOptions {
   /** Enabled capability keys (e.g. file, git, docker, task_planning, memory, self_improve) */
@@ -20,7 +20,7 @@ export interface GAgentPromptOptions extends CodePromptOptions {
   /** Current active plan ID (if any) */
   activePlanId?: string;
   /** User's risk tolerance level */
-  riskTolerance?: "low" | "medium" | "high";
+  riskTolerance?: 'low' | 'medium' | 'high';
 }
 
 const G_AGENT_BASELINE = `You are G-Agent, an advanced autonomous AI agent with extended tool access and the ability to plan, execute, and learn from complex tasks.
@@ -64,7 +64,7 @@ Use only the tools enabled for this session. Your current capabilities determine
 - memory: Persist and recall context
 - self_improve: Create skills and update patterns
 
-If a tool is not available, explain what you would do and suggest enabling that capability in Settings.`;
+If a tool is not available, explain what you would do and suggest enabling that capability in Settings. If file tools are not enabled, output requested code in markdown code blocks.`;
 
 const MEMORY_INSTRUCTIONS = `MEMORY & LEARNING:
 - Use memory tools to store important context (project structure, user preferences, successful patterns)
@@ -97,12 +97,12 @@ export function getGAgentModePrompt(opts?: GAgentPromptOptions): string {
     parts.push(CAPABILITY_AWARE);
 
     // Add memory instructions if memory capability is enabled
-    if (opts.enabledCapabilities.includes("memory")) {
+    if (opts.enabledCapabilities.includes('memory')) {
       parts.push(MEMORY_INSTRUCTIONS);
     }
 
     // Add self-improvement instructions if that capability is enabled
-    if (opts.enabledCapabilities.includes("self_improve")) {
+    if (opts.enabledCapabilities.includes('self_improve')) {
       parts.push(SELF_IMPROVEMENT);
     }
   }
@@ -114,9 +114,9 @@ export function getGAgentModePrompt(opts?: GAgentPromptOptions): string {
   // Add risk tolerance context
   if (opts?.riskTolerance) {
     const riskContext = `RISK TOLERANCE: ${opts.riskTolerance.toUpperCase()}
-${opts.riskTolerance === "low" ? "Always get explicit approval before any write operation." : ""}
-${opts.riskTolerance === "medium" ? "Auto-approve safe operations. Ask for approval on moderate/risky operations." : ""}
-${opts.riskTolerance === "high" ? "Auto-approve safe and moderate operations. Ask for approval only on risky operations." : ""}`;
+${opts.riskTolerance === 'low' ? 'Always get explicit approval before any write operation.' : ''}
+${opts.riskTolerance === 'medium' ? 'Auto-approve safe operations. Ask for approval on moderate/risky operations.' : ''}
+${opts.riskTolerance === 'high' ? 'Auto-approve safe and moderate operations. Ask for approval only on risky operations.' : ''}`;
     parts.push(riskContext);
   }
 
@@ -126,11 +126,5 @@ ${opts.riskTolerance === "high" ? "Auto-approve safe and moderate operations. As
 You are currently executing an approved plan. Focus on completing the current task and updating progress.`);
   }
 
-  return parts.join("\n\n");
+  return parts.join('\n\n');
 }
-
-// Backward compatibility alias
-/** @deprecated Use getGAgentModePrompt instead */
-export const getFreeAgentModePrompt = getGAgentModePrompt;
-/** @deprecated Use GAgentPromptOptions instead */
-export type FreeAgentPromptOptions = GAgentPromptOptions;

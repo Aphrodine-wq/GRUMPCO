@@ -221,7 +221,6 @@
 }
 
 @keyframes wiggle {
-
   0%,
   100% {
     transform: rotate(0deg);
@@ -237,7 +236,6 @@
 }
 
 @keyframes shake {
-
   0%,
   100% {
     transform: translateX(0);
@@ -261,7 +259,6 @@
 
 /* Pulse Animations */
 @keyframes pulse {
-
   0%,
   100% {
     opacity: 1;
@@ -273,7 +270,6 @@
 }
 
 @keyframes pulseScale {
-
   0%,
   100% {
     transform: scale(1);
@@ -285,7 +281,6 @@
 }
 
 @keyframes heartbeat {
-
   0%,
   100% {
     transform: scale(1);
@@ -309,7 +304,6 @@
 }
 
 @keyframes breathe {
-
   0%,
   100% {
     transform: scale(1);
@@ -324,7 +318,6 @@
 
 /* Bounce Animations */
 @keyframes bounce {
-
   0%,
   100% {
     transform: translateY(0);
@@ -336,7 +329,6 @@
 }
 
 @keyframes bounceLight {
-
   0%,
   100% {
     transform: translateY(0);
@@ -349,7 +341,6 @@
 
 /* Glow Animations */
 @keyframes glow {
-
   0%,
   100% {
     box-shadow: 0 0 5px var(--color-primary-glow);
@@ -363,7 +354,6 @@
 }
 
 @keyframes glowPulse {
-
   0%,
   100% {
     box-shadow: 0 0 0 0 var(--color-primary-glow);
@@ -397,7 +387,6 @@
 }
 
 @keyframes blink {
-
   0%,
   100% {
     opacity: 1;
@@ -410,7 +399,6 @@
 
 /* Float Animation */
 @keyframes float {
-
   0%,
   100% {
     transform: translateY(0);
@@ -422,7 +410,6 @@
 }
 
 @keyframes floatRotate {
-
   0%,
   100% {
     transform: translateY(0) rotate(0deg);
@@ -585,10 +572,12 @@
 
 /* Loading */
 .animate-shimmer {
-  background: linear-gradient(90deg,
-      var(--color-bg-subtle) 25%,
-      var(--color-bg-card) 50%,
-      var(--color-bg-subtle) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-subtle) 25%,
+    var(--color-bg-card) 50%,
+    var(--color-bg-subtle) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s var(--ease-in-out) infinite;
 }
@@ -781,43 +770,43 @@
    Stagger Animation Helpers
    ============================================ */
 
-.stagger-children>*:nth-child(1) {
+.stagger-children > *:nth-child(1) {
   animation-delay: 0ms;
 }
 
-.stagger-children>*:nth-child(2) {
+.stagger-children > *:nth-child(2) {
   animation-delay: 50ms;
 }
 
-.stagger-children>*:nth-child(3) {
+.stagger-children > *:nth-child(3) {
   animation-delay: 100ms;
 }
 
-.stagger-children>*:nth-child(4) {
+.stagger-children > *:nth-child(4) {
   animation-delay: 150ms;
 }
 
-.stagger-children>*:nth-child(5) {
+.stagger-children > *:nth-child(5) {
   animation-delay: 200ms;
 }
 
-.stagger-children>*:nth-child(6) {
+.stagger-children > *:nth-child(6) {
   animation-delay: 250ms;
 }
 
-.stagger-children>*:nth-child(7) {
+.stagger-children > *:nth-child(7) {
   animation-delay: 300ms;
 }
 
-.stagger-children>*:nth-child(8) {
+.stagger-children > *:nth-child(8) {
   animation-delay: 350ms;
 }
 
-.stagger-children>*:nth-child(9) {
+.stagger-children > *:nth-child(9) {
   animation-delay: 400ms;
 }
 
-.stagger-children>*:nth-child(10) {
+.stagger-children > *:nth-child(10) {
   animation-delay: 450ms;
 }
 
@@ -843,7 +832,6 @@
    ============================================ */
 
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {
