@@ -36,7 +36,7 @@
   "dependencies": {
     "@grump/shared-types": "workspace:*",
     "@supabase/supabase-js": "^2.91.1",
-    "posthog-js": "^1.100.0",
+    "posthog-js": "^1.347.2",
     "diff": "^8.0.3",
     "dockerode": "^4.0.2",
     "dompurify": "^3.3.1",
