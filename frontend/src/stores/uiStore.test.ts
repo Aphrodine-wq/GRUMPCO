@@ -16,7 +16,6 @@ import {
   sidebarOpen,
   showIntegrations,
   showApprovals,
-
   showMemory,
   showAuditLog,
   showDocker,
@@ -81,8 +80,6 @@ describe('uiStore', () => {
     });
   });
 
-
-
   describe('showDesignToCode', () => {
     it('should default to false', () => {
       expect(get(showDesignToCode)).toBe(false);
@@ -140,8 +137,6 @@ describe('uiStore', () => {
     });
   });
 
-
-
   describe('showMemory', () => {
     it('should default to false', () => {
       expect(get(showMemory)).toBe(false);
@@ -163,8 +158,6 @@ describe('uiStore', () => {
       expect(get(showAuditLog)).toBe(true);
     });
   });
-
-
 
   describe('showDocker', () => {
     it('should default to false', () => {

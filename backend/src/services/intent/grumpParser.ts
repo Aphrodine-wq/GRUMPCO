@@ -3,7 +3,7 @@
  * Outputs AST for code-aware RAG chunking.
  */
 
-export type GrumpNodeType = "entity" | "component" | "system" | "anim";
+export type GrumpNodeType = 'entity' | 'component' | 'system' | 'anim';
 
 export interface GrumpBlock {
   type: GrumpNodeType;
@@ -31,7 +31,7 @@ export function parseGrump(source: string): GrumpAST {
   const matches: { type: GrumpNodeType; name: string; start: number }[] = [];
   while ((m = BLOCK_RE.exec(source)) !== null) {
     const type = m[1] as GrumpNodeType;
-    const name = m[2] ?? "";
+    const name = m[2] ?? '';
     matches.push({ type, name, start: m.index });
   }
   for (let i = 0; i < matches.length; i++) {
@@ -42,9 +42,9 @@ export function parseGrump(source: string): GrumpAST {
     const nextStart = nextMatch ? nextMatch.start : source.length;
     let depth = 0;
     let end = start;
-    for (let j = source.indexOf("{", start); j < nextStart && j >= 0; j++) {
-      if (source[j] === "{") depth++;
-      if (source[j] === "}") {
+    for (let j = source.indexOf('{', start); j < nextStart && j >= 0; j++) {
+      if (source[j] === '{') depth++;
+      if (source[j] === '}') {
         depth--;
         if (depth === 0) {
           end = j + 1;
@@ -63,15 +63,15 @@ export function parseGrump(source: string): GrumpAST {
  */
 export function chunkGrumpByAST(
   source: string,
-  filePath: string,
-): { content: string; source: string; type: "grump" }[] {
+  filePath: string
+): { content: string; source: string; type: 'grump' }[] {
   const ast = parseGrump(source);
   if (ast.blocks.length === 0) {
-    return [{ content: source.trim(), source: filePath, type: "grump" }];
+    return [{ content: source.trim(), source: filePath, type: 'grump' }];
   }
   return ast.blocks.map((b) => ({
     content: b.body.trim(),
     source: `${filePath}#${b.type}:${b.name}`,
-    type: "grump" as const,
+    type: 'grump' as const,
   }));
 }

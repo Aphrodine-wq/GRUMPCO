@@ -46,8 +46,8 @@ Get up and running in **60 seconds**:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Aphrodine-wq/G-rump.com.git
-cd G-rump.com
+git clone https://github.com/Aphrodine-wq/GRUMPCO.git
+cd GRUMPCO
 
 # 2. Install dependencies
 npm install
@@ -150,7 +150,7 @@ Best for automation and terminal-first workflows.
 
 ```bash
 # Install globally
-npm install -g @g-rump/cli
+npm install -g grump-cli
 
 # Configure
 grump config set apiUrl http://localhost:3000
@@ -386,9 +386,11 @@ CORS_ORIGINS=http://localhost:5173,https://your-domain.com
 ## Getting Help
 
 - 📖 [Documentation](./README.md)
-- 🐛 [Issue Tracker](https://github.com/Aphrodine-wq/G-rump.com/issues)
-- 💬 [Discussions](https://github.com/Aphrodine-wq/G-rump.com/discussions)
+- 🐛 [Issue Tracker](https://github.com/Aphrodine-wq/GRUMPCO/issues)
+- 💬 [Discussions](https://github.com/Aphrodine-wq/GRUMPCO/discussions)
 
 ---
 
 **Welcome to G-Rump! Happy building.** 🚀
+
+

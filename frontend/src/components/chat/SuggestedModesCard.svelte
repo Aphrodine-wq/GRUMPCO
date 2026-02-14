@@ -7,7 +7,7 @@
   import { fade, fly } from 'svelte/transition';
   import { MessageCircle, LayoutGrid, Bot, Users, Palette } from 'lucide-svelte';
 
-  export type SuggestedModeView = 'chat' | 'designMode' | 'designToCode' | 'gAgent' | 'swarm';
+  export type SuggestedModeView = 'chat' | 'designMode' | 'designToCode' | 'gAgent';
 
   interface SuggestedMode {
     id: string;
@@ -27,7 +27,6 @@
     { id: 'designMode', label: 'Design mode', icon: Palette, view: 'designMode' },
     { id: 'design', label: 'Design to Code', icon: LayoutGrid, view: 'designToCode' },
     { id: 'gagent', label: 'Agent', icon: Bot, view: 'gAgent' },
-    { id: 'swarm', label: 'Agent Swarm', icon: Users, view: 'swarm' },
   ];
 </script>
 

@@ -160,7 +160,7 @@
         category: 'ai',
         icon: Users,
         action: () => {
-          setCurrentView('swarm');
+          setCurrentView('gAgent');
           close();
         },
       },
@@ -493,16 +493,20 @@
         {:else}
           {#each listItems as item}
             {#if item.type === 'header'}
-              <div class="command-category-header">{categoryLabels[item.category]}</div>
+              <div class="command-category-header" role="presentation">
+                {categoryLabels[item.category]}
+              </div>
             {:else}
               <button
                 id={'option-' + item.index}
                 class="command-item"
                 class:selected={item.index === selectedIndex}
+                id="command-item-{item.index}"
                 onclick={() => executeCommand(item.command)}
                 onmouseenter={() => (selectedIndex = item.index)}
                 role="option"
                 aria-selected={item.index === selectedIndex}
+                tabindex="-1"
               >
                 <span class="command-icon">
                   {#if item.command.icon}
@@ -646,6 +650,7 @@
   .command-item:hover,
   .command-item.selected {
     background: var(--color-bg-subtle);
+    box-shadow: inset 3px 0 0 var(--color-primary);
   }
 
   .command-item .command-icon {

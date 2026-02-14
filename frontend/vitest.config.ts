@@ -1,12 +1,65 @@
 import { defineConfig } from 'vitest/config';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { compile, compileModule, preprocess } from 'svelte/compiler';
+import { svelteTesting } from '@testing-library/svelte/vite';
 import { resolve } from 'path';
+import { transform } from 'esbuild';
+
+// Minimal Svelte compiler plugin for vitest — avoids @sveltejs/vite-plugin-svelte 6.x
+// which requires Vite 7 APIs (server.environments) that vitest 1.x (Vite 5) lacks.
+// Handles both .svelte files AND .svelte.js/.svelte.ts files (Svelte 5 runes modules).
+function svelteTestPlugin() {
+  return {
+    name: 'svelte-test-compiler',
+    async transform(code: string, id: string) {
+      // Handle .svelte.js and .svelte.ts files (runes modules like $state, $derived)
+      if (/\.svelte\.[jt]s$/.test(id)) {
+        // Strip TS if needed
+        let processedCode = code;
+        if (id.endsWith('.svelte.ts')) {
+          const tsResult = await transform(code, {
+            loader: 'ts',
+            tsconfigRaw: { compilerOptions: { verbatimModuleSyntax: true } },
+          });
+          processedCode = tsResult.code;
+        }
+        const result = compileModule(processedCode, {
+          filename: id,
+          dev: true,
+          generate: 'client',
+        });
+        return { code: result.js.code, map: result.js.map };
+      }
+
+      // Handle .svelte component files
+      if (!id.endsWith('.svelte')) return null;
+
+      // Preprocess: strip TypeScript using esbuild
+      const preprocessed = await preprocess(code, {
+        script: async ({ content, attributes }) => {
+          if (attributes.lang !== 'ts') return;
+          const result = await transform(content, {
+            loader: 'ts',
+            tsconfigRaw: { compilerOptions: { verbatimModuleSyntax: true } },
+          });
+          return { code: result.code };
+        },
+      }, { filename: id });
+
+      const result = compile(preprocessed.code, {
+        filename: id,
+        css: 'injected',
+        dev: true,
+        generate: 'client',
+      });
+      return { code: result.js.code, map: result.js.map };
+    },
+  };
+}
 
 export default defineConfig({
   plugins: [
-    svelte({ 
-      hot: !process.env.VITEST,
-    }),
+    svelteTestPlugin(),
+    svelteTesting(),
   ],
   test: {
     globals: true,

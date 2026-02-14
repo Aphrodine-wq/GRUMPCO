@@ -4,22 +4,22 @@
  * Used by both the chat stream and SHIP phases.
  */
 
-import { getDesignModePrompt } from "./design.js";
-import { getCodeModePrompt, type CodeSpecialist } from "./code.js";
-import { getPlanModePrompt } from "./plan.js";
-import { getSpecModePrompt } from "./spec.js";
-import { getArgumentModePrompt } from "./argument.js";
-import { getGAgentModePrompt, type GAgentPromptOptions } from "./gAgent.js";
+import { getDesignModePrompt } from './design.js';
+import { getCodeModePrompt, type CodeSpecialist } from './code.js';
+import { getPlanModePrompt } from './plan.js';
+import { getSpecModePrompt } from './spec.js';
+import { getArgumentModePrompt } from './argument.js';
+import { getGAgentModePrompt, type GAgentPromptOptions } from './gAgent.js';
 
 export type ChatModeName =
-  | "design"
-  | "normal"
-  | "code"
-  | "plan"
-  | "spec"
-  | "argument"
-  | "execute"
-  | "gAgent";
+  | 'design'
+  | 'normal'
+  | 'code'
+  | 'plan'
+  | 'spec'
+  | 'argument'
+  | 'execute'
+  | 'gAgent';
 
 export interface ChatModePromptOptions {
   workspaceRoot?: string;
@@ -29,7 +29,7 @@ export interface ChatModePromptOptions {
   allowlistDomains?: string[];
   runInDocker?: boolean;
   activePlanId?: string;
-  riskTolerance?: "low" | "medium" | "high";
+  riskTolerance?: 'low' | 'medium' | 'high';
 }
 
 /**
@@ -37,21 +37,18 @@ export interface ChatModePromptOptions {
  * 'normal' and 'execute' both use the Code mode prompt (tools, implementation).
  * 'gAgent' uses the G-Agent mode prompt (autonomous agent with planning).
  */
-export function getChatModePrompt(
-  mode: ChatModeName,
-  opts?: ChatModePromptOptions,
-): string {
+export function getChatModePrompt(mode: ChatModeName, opts?: ChatModePromptOptions): string {
   switch (mode) {
-    case "design":
+    case 'design':
       return getDesignModePrompt({ workspaceRoot: opts?.workspaceRoot });
-    case "plan":
+    case 'plan':
       return getPlanModePrompt();
-    case "spec":
+    case 'spec':
       return getSpecModePrompt();
-    case "argument":
+    case 'argument':
       return getArgumentModePrompt();
-    case "gAgent":
-    case "freeAgent" as ChatModeName: // backward compat: accept legacy sessionType
+    case 'gAgent':
+    case 'freeAgent' as ChatModeName: // backward compat: accept legacy sessionType
       return getGAgentModePrompt({
         workspaceRoot: opts?.workspaceRoot,
         specialist: opts?.specialist,
@@ -61,9 +58,9 @@ export function getChatModePrompt(
         activePlanId: opts?.activePlanId,
         riskTolerance: opts?.riskTolerance,
       } as GAgentPromptOptions);
-    case "normal":
-    case "code":
-    case "execute":
+    case 'normal':
+    case 'code':
+    case 'execute':
     default:
       return getCodeModePrompt({
         workspaceRoot: opts?.workspaceRoot,
@@ -72,13 +69,11 @@ export function getChatModePrompt(
   }
 }
 
-export { getDesignModePrompt } from "./design.js";
-export { getCodeModePrompt } from "./code.js";
-export { getGAgentModePrompt } from "./gAgent.js";
-export { getPlanModePrompt } from "./plan.js";
-export { getSpecModePrompt } from "./spec.js";
-export { getArgumentModePrompt } from "./argument.js";
-export type { CodeSpecialist } from "./code.js";
-export type { GAgentPromptOptions } from "./gAgent.js";
-
-
+export { getDesignModePrompt } from './design.js';
+export { getCodeModePrompt } from './code.js';
+export { getGAgentModePrompt } from './gAgent.js';
+export { getPlanModePrompt } from './plan.js';
+export { getSpecModePrompt } from './spec.js';
+export { getArgumentModePrompt } from './argument.js';
+export type { CodeSpecialist } from './code.js';
+export type { GAgentPromptOptions } from './gAgent.js';

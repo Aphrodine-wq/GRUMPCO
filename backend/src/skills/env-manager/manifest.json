@@ -1,42 +1,23 @@
 {
-    "id": "env-manager",
-    "name": "Environment Manager",
-    "version": "1.0.0",
-    "description": "Manage environment variables, .env files, secrets rotation, and configuration across multiple environments (dev, staging, prod). Validates required vars and detects leaked secrets.",
-    "category": "devops",
-    "icon": "🔐",
-    "tags": [
-        "env",
-        "environment",
-        "secrets",
-        "config",
-        "dotenv"
+  "id": "env-manager",
+  "name": "Environment Manager",
+  "version": "1.0.0",
+  "description": "Manage environment variables, .env files, secrets rotation, and configuration across multiple environments (dev, staging, prod). Validates required vars and detects leaked secrets.",
+  "category": "devops",
+  "icon": "🔐",
+  "tags": ["env", "environment", "secrets", "config", "dotenv"],
+  "capabilities": ["env-management", "secret-rotation", "env-validation"],
+  "triggers": {
+    "keywords": [
+      "env",
+      "environment",
+      "dotenv",
+      "secrets",
+      ".env",
+      "config",
+      "environment variables"
     ],
-    "capabilities": [
-        "env-management",
-        "secret-rotation",
-        "env-validation"
-    ],
-    "triggers": {
-        "keywords": [
-            "env",
-            "environment",
-            "dotenv",
-            "secrets",
-            ".env",
-            "config",
-            "environment variables"
-        ],
-        "commands": [
-            "/env",
-            "/secrets",
-            "/dotenv"
-        ],
-        "fileExtensions": [
-            ".env",
-            ".env.local",
-            ".env.production",
-            ".env.development"
-        ]
-    }
+    "commands": ["/env", "/secrets", "/dotenv"],
+    "fileExtensions": [".env", ".env.local", ".env.production", ".env.development"]
+  }
 }

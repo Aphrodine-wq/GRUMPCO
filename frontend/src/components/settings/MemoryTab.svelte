@@ -1,9 +1,7 @@
 <script lang="ts">
   /**
-   * MemoryTab – Extracted from TabbedSettingsScreen.svelte (tab: 'memory')
-   * Phase 2 decomposition.
-   *
-   * TODO: Replace `any` props with explicit types for full type safety.
+   * MemoryTab – Enhanced memory settings with auto-save, retention period,
+   * context control, and simplified layout.
    */
   import { Card, Button } from '../../lib/design-system';
 
@@ -20,16 +18,33 @@
 <div class="tab-section memory-tab">
   <Card title="Memory Settings" padding="md">
     <p class="section-desc">
-      Control what the agent remembers across sessions: limits, persistence, and search behavior.
+      Control what the agent remembers across sessions: auto-save behavior, retention, and search.
     </p>
+
+    <!-- Auto-save -->
     <div class="field-group">
-      <span class="field-label">Persistence</span>
-      <p class="field-hint">
-        Memories are stored locally per workspace. Clear data in Memory manager to reset.
-      </p>
+      <label class="toggle-row">
+        <input
+          type="checkbox"
+          checked={settings?.memory?.autoSave ?? true}
+          onchange={(e) =>
+            saveMemory({
+              ...settings?.memory,
+              autoSave: (e.target as HTMLInputElement).checked,
+            })}
+        />
+        <div class="toggle-content">
+          <span class="toggle-title">Auto-save memories</span>
+          <span class="toggle-desc"
+            >Automatically save key facts and decisions during conversations.</span
+          >
+        </div>
+      </label>
     </div>
+
+    <!-- Large context -->
     <div class="field-group">
-      <label class="guard-rail-item">
+      <label class="toggle-row">
         <input
           type="checkbox"
           checked={settings?.guardRails?.useLargeContext ?? false}
@@ -39,12 +54,20 @@
               useLargeContext: (e.target as HTMLInputElement).checked,
             })}
         />
-        <span class="guard-rail-title">Large context (200K+) for memory search</span>
-        <span class="guard-rail-desc"
-          >Allow longer context when searching memories; uses more tokens.</span
-        >
+        <div class="toggle-content">
+          <span class="toggle-title">Large context for memory search</span>
+          <span class="toggle-desc"
+            >Allow 200K+ context when searching memories. Uses more tokens.</span
+          >
+        </div>
       </label>
     </div>
+  </Card>
+
+  <Card title="Retention & Limits" padding="md">
+    <p class="section-desc">Control how much memory the agent retains and for how long.</p>
+
+    <!-- Max memories -->
     <div class="field-group">
       <label class="field-label" for="max-memories">Max memories to keep</label>
       <input
@@ -63,15 +86,45 @@
         placeholder="No limit"
         class="settings-number-input"
       />
+      <p class="field-hint">Cap for stored memories. Leave empty for unlimited.</p>
+    </div>
+
+    <!-- Retention period -->
+    <div class="field-group">
+      <label class="field-label" for="retention-days">Retention period (days)</label>
+      <input
+        id="retention-days"
+        type="number"
+        min="0"
+        max="365"
+        step="7"
+        value={settings?.memory?.retentionDays ?? ''}
+        onchange={(e) => {
+          const v = parseInt((e.target as HTMLInputElement).value, 10);
+          if (!Number.isNaN(v) && v >= 0) saveMemory({ ...settings?.memory, retentionDays: v });
+          else if ((e.target as HTMLInputElement).value === '')
+            saveMemory({ ...settings?.memory, retentionDays: undefined });
+        }}
+        placeholder="Forever"
+        class="settings-number-input"
+      />
       <p class="field-hint">
-        Optional cap for stored memories. Leave empty for no limit. Manage in Memory manager.
+        Automatically remove memories older than this. Leave empty to keep forever.
       </p>
     </div>
-    <div class="field-group">
-      <span class="field-label">Default memory types</span>
-      <p class="field-hint">
-        Fact, Preference, Task, Context, Conversation. Add and manage in Memory manager.
-      </p>
+  </Card>
+
+  <Card title="Memory Types" padding="md">
+    <p class="section-desc">
+      The agent stores different categories of memories. Manage individual entries in the Memory
+      manager.
+    </p>
+    <div class="memory-types-grid">
+      <div class="memory-type-chip">📝 Fact</div>
+      <div class="memory-type-chip">⭐ Preference</div>
+      <div class="memory-type-chip">📋 Task</div>
+      <div class="memory-type-chip">🧩 Context</div>
+      <div class="memory-type-chip">💬 Conversation</div>
     </div>
     <div class="memory-actions">
       <Button variant="primary" size="sm" onclick={() => setCurrentView('memory')}>
@@ -86,44 +139,18 @@
     max-width: 900px;
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    gap: 24px;
   }
 
   .tab-section :global(.card) {
-    border: 1px solid #e5e7eb;
-  }
-
-  .default-model-row .field-label {
-    flex-shrink: 0;
-  }
-
-  .advanced-finetuning .field-label {
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
-  .settings-number-input,
-  .settings-text-input {
-    max-width: 200px;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
     border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 0.5rem;
-    background: var(--color-bg-card, #fff);
-  }
-
-  .inline-config-input-group .field-label {
-    margin-bottom: 0.5rem;
-  }
-
-  .models-custom-inner .section-desc {
-    margin-bottom: 0.75rem;
   }
 
   .section-desc {
-    font-size: 14px;
+    font-size: 0.8125rem;
     color: var(--color-text-muted, #71717a);
-    margin-bottom: 20px;
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
   }
 
   .field-group {
@@ -142,54 +169,85 @@
     margin-bottom: 8px;
   }
 
-  .field-label-row .field-label {
-    margin-bottom: 0;
-  }
-
   .field-hint {
     font-size: 12px;
     color: var(--color-text-muted, #a1a1aa);
     margin-top: 6px;
   }
 
-  .field-hint code {
-    font-size: 0.75em;
-    padding: 0.1em 0.35em;
-    background: var(--color-bg-card, #f4f4f5);
-    border-radius: 4px;
+  .settings-number-input {
+    max-width: 160px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+    background: var(--color-bg-card, #fff);
   }
 
-  .guard-rail-item {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto auto;
-    gap: 2px 12px;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--color-border, #f4f4f5);
+  /* Toggle rows */
+  .toggle-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    background: var(--color-bg-secondary, #f9fafb);
     cursor: pointer;
     user-select: none;
-    align-items: start;
+    transition: border-color 150ms;
   }
 
-  .guard-rail-item:last-child {
-    border-bottom: none;
+  .toggle-row:hover {
+    border-color: var(--color-primary, #7c3aed);
   }
 
-  .guard-rail-item input {
-    grid-row: 1 / -1;
-    margin-top: 3px;
+  .toggle-row input {
+    margin-top: 2px;
     cursor: pointer;
   }
 
-  .guard-rail-title {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--color-text-secondary, #3f3f46);
+  .toggle-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
-  .guard-rail-desc {
-    font-size: 12px;
+  .toggle-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text, #18181b);
+  }
+
+  .toggle-desc {
+    font-size: 0.75rem;
     color: var(--color-text-muted, #71717a);
     line-height: 1.4;
+  }
+
+  /* Memory types */
+  .memory-types-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .memory-type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-secondary, #3f3f46);
+    background: var(--color-bg-secondary, #f9fafb);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 2rem;
+  }
+
+  .memory-actions {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border, #e5e7eb);
   }
 </style>

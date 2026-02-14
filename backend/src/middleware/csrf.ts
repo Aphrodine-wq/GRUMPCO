@@ -4,38 +4,35 @@
  * @module middleware/csrf
  */
 
-import { type Request, type Response, type NextFunction } from "express";
-import { doubleCsrf } from "csrf-csrf";
-import logger from "./logger.js";
+import { type Request, type Response, type NextFunction } from 'express';
+import { doubleCsrf } from 'csrf-csrf';
+import logger from './logger.js';
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === 'production';
 const CSRF_ENABLED = isProduction
-  ? process.env.CSRF_PROTECTION !== "false"
-  : process.env.CSRF_PROTECTION === "true";
+  ? process.env.CSRF_PROTECTION !== 'false'
+  : process.env.CSRF_PROTECTION === 'true';
 
 // Secret used to sign CSRF tokens — in production, use CSRF_SECRET env var
-const CSRF_SECRET = process.env.CSRF_SECRET || "grump-csrf-secret-change-in-production";
+const CSRF_SECRET = process.env.CSRF_SECRET || 'grump-csrf-secret-change-in-production';
 
-const {
-  generateCsrfToken,
-  doubleCsrfProtection,
-} = doubleCsrf({
+const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => CSRF_SECRET,
   getSessionIdentifier: (req: Request) => {
     // Use session ID if available, otherwise use a hash of IP + User-Agent
     const sessionId = (req as { sessionID?: string }).sessionID;
     if (sessionId) return sessionId;
     // Fallback for stateless: IP + User-Agent (less secure but works without sessions)
-    const ip = req.ip || req.socket?.remoteAddress || "unknown";
-    const ua = req.headers["user-agent"] || "unknown";
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const ua = req.headers['user-agent'] || 'unknown';
     return `${ip}-${ua}`.substring(0, 64);
   },
-  cookieName: "XSRF-TOKEN",
+  cookieName: 'XSRF-TOKEN',
   cookieOptions: {
     httpOnly: false, // Cookie must be readable by frontend JavaScript
     secure: isProduction, // HTTPS only in production
-    sameSite: "strict", // Strict same-site policy
-    path: "/",
+    sameSite: 'strict', // Strict same-site policy
+    path: '/',
   },
 });
 
@@ -73,20 +70,20 @@ const {
 export function createCsrfMiddleware() {
   // Only enable in production by default, or when explicitly enabled in development
   if (!isProduction && !CSRF_ENABLED) {
-    logger.info("CSRF protection disabled (development mode)");
+    logger.info('CSRF protection disabled (development mode)');
     return (_req: Request, _res: Response, next: NextFunction) => next();
   }
 
-  logger.info("CSRF protection enabled (double-submit cookie pattern)");
+  logger.info('CSRF protection enabled (double-submit cookie pattern)');
 
   return (req: Request, res: Response, next: NextFunction) => {
     // Skip CSRF validation for safe methods (GET, HEAD, OPTIONS)
     // But still generate token for them so the cookie is set
-    if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
       try {
         generateCsrfToken(req, res);
       } catch {
-        logger.debug("CSRF token generation failed for safe method");
+        logger.debug('CSRF token generation failed for safe method');
       }
       next();
       return;
@@ -101,14 +98,13 @@ export function createCsrfMiddleware() {
             path: req.path,
             ip: req.ip,
           },
-          "CSRF token validation failed",
+          'CSRF token validation failed'
         );
 
         res.status(403).json({
-          error: "Invalid CSRF token",
-          type: "csrf_error",
-          message:
-            "CSRF token missing or invalid. Include X-XSRF-TOKEN header in your request.",
+          error: 'Invalid CSRF token',
+          type: 'csrf_error',
+          message: 'CSRF token missing or invalid. Include X-XSRF-TOKEN header in your request.',
         });
         return;
       }

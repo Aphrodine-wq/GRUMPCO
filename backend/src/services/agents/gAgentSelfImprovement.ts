@@ -8,15 +8,15 @@
  * 4. Create follow-up goals for self-improvement
  */
 
-import logger from "../../middleware/logger.js";
+import logger from '../../middleware/logger.js';
 import {
   gAgentMemoryService,
   type LearnedSkill,
   type SkillStep,
   type LexiconEntry,
-} from "./gAgentMemoryService.js";
-import { gAgentGoalQueue } from "./gAgentGoalQueue.js";
-import type { Plan, Task } from "../intent/intentCliRunner.js";
+} from './gAgentMemoryService.js';
+import { gAgentGoalQueue } from './gAgentGoalQueue.js';
+import type { Plan, Task } from '../intent/intentCliRunner.js';
 
 // ============================================================================
 // TYPES
@@ -38,9 +38,9 @@ export interface LexiconExtraction {
 }
 
 export interface ImprovementSuggestion {
-  type: "optimize" | "learn" | "document" | "test";
+  type: 'optimize' | 'learn' | 'document' | 'test';
   description: string;
-  priority: "low" | "normal" | "high";
+  priority: 'low' | 'normal' | 'high';
   autoSchedule: boolean;
 }
 
@@ -51,15 +51,13 @@ export interface ImprovementSuggestion {
 /**
  * Extract skills from a completed plan
  */
-export async function extractSkillsFromPlan(
-  plan: Plan,
-): Promise<SkillExtraction[]> {
+export async function extractSkillsFromPlan(plan: Plan): Promise<SkillExtraction[]> {
   const skills: SkillExtraction[] = [];
 
   // Group tasks by feature
   const featureGroups = new Map<string, Task[]>();
   for (const task of plan.tasks) {
-    const feature = task.feature || "general";
+    const feature = task.feature || 'general';
     const group = featureGroups.get(feature) || [];
     group.push(task);
     featureGroups.set(feature, group);
@@ -70,7 +68,7 @@ export async function extractSkillsFromPlan(
     if (tasks.length < 2) continue; // Need at least 2 tasks for a meaningful skill
 
     // Check if all tasks in the group completed successfully
-    const allCompleted = tasks.every((t) => t.status === "completed");
+    const allCompleted = tasks.every((t) => t.status === 'completed');
     if (!allCompleted) continue;
 
     // Extract skill
@@ -78,17 +76,14 @@ export async function extractSkillsFromPlan(
       order: i + 1,
       action: t.description,
       tool: t.tools[0],
-      conditions:
-        t.depends_on.length > 0
-          ? [`After: ${t.depends_on.join(", ")}`]
-          : undefined,
+      conditions: t.depends_on.length > 0 ? [`After: ${t.depends_on.join(', ')}`] : undefined,
     }));
 
     const trigger = detectTriggerPattern(tasks);
 
     const skill: SkillExtraction = {
       name: generateSkillName(feature, tasks),
-      description: `Skill for ${feature}: ${tasks.map((t) => t.action).join(" → ")}`,
+      description: `Skill for ${feature}: ${tasks.map((t) => t.action).join(' → ')}`,
       trigger,
       steps: skillSteps,
       confidence: 0.7, // Initial confidence
@@ -114,18 +109,18 @@ export async function learnSkillsFromPlan(plan: Plan): Promise<LearnedSkill[]> {
         extraction.description,
         extraction.trigger,
         extraction.steps,
-        true, // success
+        true // success
       );
       learnedSkills.push(skill);
 
       logger.info(
         { skillId: skill.id, name: skill.name },
-        "G-Agent: Skill extracted from plan execution",
+        'G-Agent: Skill extracted from plan execution'
       );
     } catch (e) {
       logger.warn(
         { error: (e as Error).message, skillName: extraction.name },
-        "G-Agent: Failed to learn skill",
+        'G-Agent: Failed to learn skill'
       );
     }
   }
@@ -140,9 +135,7 @@ export async function learnSkillsFromPlan(plan: Plan): Promise<LearnedSkill[]> {
 /**
  * Extract domain terminology from plan context
  */
-export async function extractTerminologyFromPlan(
-  plan: Plan,
-): Promise<LexiconExtraction[]> {
+export async function extractTerminologyFromPlan(plan: Plan): Promise<LexiconExtraction[]> {
   const terms: LexiconExtraction[] = [];
 
   // Extract tech stack terms
@@ -153,7 +146,7 @@ export async function extractTerminologyFromPlan(
         terms.push({
           term: tech,
           definition: `Technology used in this project: ${tech}`,
-          category: "technology",
+          category: 'technology',
           aliases: [],
         });
       }
@@ -161,15 +154,13 @@ export async function extractTerminologyFromPlan(
   }
 
   // Extract architecture pattern
-  if (plan.architecture_pattern && plan.architecture_pattern !== "unknown") {
-    const existing = gAgentMemoryService.getLexiconEntry(
-      plan.architecture_pattern,
-    );
+  if (plan.architecture_pattern && plan.architecture_pattern !== 'unknown') {
+    const existing = gAgentMemoryService.getLexiconEntry(plan.architecture_pattern);
     if (!existing) {
       terms.push({
         term: plan.architecture_pattern,
         definition: `Architecture pattern: ${plan.architecture_pattern}`,
-        category: "architecture",
+        category: 'architecture',
         aliases: [],
       });
     }
@@ -184,7 +175,7 @@ export async function extractTerminologyFromPlan(
         terms.push({
           term: feature,
           definition: `Feature in this project: ${feature}`,
-          category: "feature",
+          category: 'feature',
           aliases: [],
         });
       }
@@ -200,7 +191,7 @@ export async function extractTerminologyFromPlan(
         terms.push({
           term: action,
           definition: `Action type: ${action}`,
-          category: "action",
+          category: 'action',
           aliases: [],
         });
       }
@@ -213,9 +204,7 @@ export async function extractTerminologyFromPlan(
 /**
  * Learn extracted terminology and persist to memory
  */
-export async function learnTerminologyFromPlan(
-  plan: Plan,
-): Promise<LexiconEntry[]> {
+export async function learnTerminologyFromPlan(plan: Plan): Promise<LexiconEntry[]> {
   const extractions = await extractTerminologyFromPlan(plan);
   const learnedTerms: LexiconEntry[] = [];
 
@@ -234,16 +223,13 @@ export async function learnTerminologyFromPlan(
     } catch (e) {
       logger.debug(
         { error: (e as Error).message, term: extraction.term },
-        "G-Agent: Failed to add lexicon entry",
+        'G-Agent: Failed to add lexicon entry'
       );
     }
   }
 
   if (learnedTerms.length > 0) {
-    logger.info(
-      { count: learnedTerms.length },
-      "G-Agent: Terminology learned from plan execution",
-    );
+    logger.info({ count: learnedTerms.length }, 'G-Agent: Terminology learned from plan execution');
   }
 
   return learnedTerms;
@@ -256,18 +242,16 @@ export async function learnTerminologyFromPlan(
 /**
  * Analyze a completed plan and suggest improvements
  */
-export async function analyzeForImprovements(
-  plan: Plan,
-): Promise<ImprovementSuggestion[]> {
+export async function analyzeForImprovements(plan: Plan): Promise<ImprovementSuggestion[]> {
   const suggestions: ImprovementSuggestion[] = [];
 
   // Check for failed tasks
-  const failedTasks = plan.tasks.filter((t) => t.status === "failed");
+  const failedTasks = plan.tasks.filter((t) => t.status === 'failed');
   if (failedTasks.length > 0) {
     suggestions.push({
-      type: "learn",
+      type: 'learn',
       description: `Investigate why ${failedTasks.length} task(s) failed and learn prevention strategies`,
-      priority: "high",
+      priority: 'high',
       autoSchedule: false,
     });
   }
@@ -276,20 +260,20 @@ export async function analyzeForImprovements(
   const slowTasks = plan.tasks.filter((t) => t.estimated_seconds > 300);
   if (slowTasks.length > 0) {
     suggestions.push({
-      type: "optimize",
+      type: 'optimize',
       description: `Optimize ${slowTasks.length} slow task(s) that take >5 minutes`,
-      priority: "normal",
+      priority: 'normal',
       autoSchedule: false,
     });
   }
 
   // Check for risky tasks
-  const riskyTasks = plan.tasks.filter((t) => t.risk === "risky");
+  const riskyTasks = plan.tasks.filter((t) => t.risk === 'risky');
   if (riskyTasks.length > 0) {
     suggestions.push({
-      type: "document",
+      type: 'document',
       description: `Document safety procedures for ${riskyTasks.length} risky task(s)`,
-      priority: "normal",
+      priority: 'normal',
       autoSchedule: false,
     });
   }
@@ -297,14 +281,13 @@ export async function analyzeForImprovements(
   // Suggest testing if no tests were mentioned
   const hasTests = plan.tasks.some(
     (t) =>
-      t.description.toLowerCase().includes("test") ||
-      t.tools.some((tool) => tool.includes("test")),
+      t.description.toLowerCase().includes('test') || t.tools.some((tool) => tool.includes('test'))
   );
   if (!hasTests) {
     suggestions.push({
-      type: "test",
-      description: "Consider adding automated tests for this functionality",
-      priority: "low",
+      type: 'test',
+      description: 'Consider adding automated tests for this functionality',
+      priority: 'low',
       autoSchedule: false,
     });
   }
@@ -318,7 +301,7 @@ export async function analyzeForImprovements(
 export async function scheduleImprovementGoals(
   userId: string,
   planId: string,
-  suggestions: ImprovementSuggestion[],
+  suggestions: ImprovementSuggestion[]
 ): Promise<void> {
   for (const suggestion of suggestions) {
     if (!suggestion.autoSchedule) continue;
@@ -332,9 +315,9 @@ export async function scheduleImprovementGoals(
         userId,
         description: `[Self-improvement] ${suggestion.description}`,
         priority: suggestion.priority,
-        triggerType: "self_scheduled",
+        triggerType: 'self_scheduled',
         scheduledAt: scheduledAt.toISOString(),
-        tags: ["self-improvement", suggestion.type, `plan:${planId}`],
+        tags: ['self-improvement', suggestion.type, `plan:${planId}`],
       });
 
       logger.info(
@@ -342,13 +325,10 @@ export async function scheduleImprovementGoals(
           type: suggestion.type,
           description: suggestion.description.slice(0, 50),
         },
-        "G-Agent: Self-improvement goal scheduled",
+        'G-Agent: Self-improvement goal scheduled'
       );
     } catch (e) {
-      logger.warn(
-        { error: (e as Error).message },
-        "G-Agent: Failed to schedule improvement goal",
-      );
+      logger.warn({ error: (e as Error).message }, 'G-Agent: Failed to schedule improvement goal');
     }
   }
 }
@@ -362,16 +342,13 @@ export async function scheduleImprovementGoals(
  */
 export async function runSelfImprovementCycle(
   userId: string,
-  plan: Plan,
+  plan: Plan
 ): Promise<{
   skillsLearned: LearnedSkill[];
   termsLearned: LexiconEntry[];
   suggestions: ImprovementSuggestion[];
 }> {
-  logger.info(
-    { planId: plan.id, userId },
-    "G-Agent: Starting self-improvement cycle",
-  );
+  logger.info({ planId: plan.id, userId }, 'G-Agent: Starting self-improvement cycle');
 
   // 1. Extract and learn skills
   const skillsLearned = await learnSkillsFromPlan(plan);
@@ -392,7 +369,7 @@ export async function runSelfImprovementCycle(
       termsLearned: termsLearned.length,
       suggestions: suggestions.length,
     },
-    "G-Agent: Self-improvement cycle completed",
+    'G-Agent: Self-improvement cycle completed'
   );
 
   return { skillsLearned, termsLearned, suggestions };
@@ -405,27 +382,27 @@ export async function runSelfImprovementCycle(
 function detectTriggerPattern(tasks: Task[]): string {
   // Simple trigger detection based on first task
   const firstTask = tasks[0];
-  if (!firstTask) return "*";
+  if (!firstTask) return '*';
 
   const action = firstTask.action.toLowerCase();
   const feature = firstTask.feature.toLowerCase();
 
-  if (action.includes("create")) return `create ${feature}`;
-  if (action.includes("update")) return `update ${feature}`;
-  if (action.includes("delete")) return `delete ${feature}`;
-  if (action.includes("add")) return `add ${feature}`;
-  if (action.includes("implement")) return `implement ${feature}`;
+  if (action.includes('create')) return `create ${feature}`;
+  if (action.includes('update')) return `update ${feature}`;
+  if (action.includes('delete')) return `delete ${feature}`;
+  if (action.includes('add')) return `add ${feature}`;
+  if (action.includes('implement')) return `implement ${feature}`;
 
   return `${action} ${feature}`.trim();
 }
 
 function generateSkillName(feature: string, tasks: Task[]): string {
-  const action = tasks[0]?.action || "Handle";
+  const action = tasks[0]?.action || 'Handle';
   const words = `${action} ${feature}`.split(/\s+/);
   return words
     .slice(0, 4)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
+    .join(' ');
 }
 
 // ============================================================================

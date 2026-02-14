@@ -40,9 +40,8 @@ describe('touchGestures', () => {
   let mockElement: HTMLElement;
 
   // Helper to create mock touch
-  // eslint-disable-next-line no-undef
+
   function createMockTouch(clientX: number, clientY: number, target: HTMLElement): Touch {
-    // eslint-disable-next-line no-undef
     return { clientX, clientY, identifier: 0, target } as unknown as Touch;
   }
 

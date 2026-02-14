@@ -21,9 +21,9 @@ export class StreamBuffer {
 
   constructor(
     private onFlush: (chunk: string) => void,
-    options: { maxDelayMs?: number; maxBufferSize?: number; maxBufferChars?: number } = {},
+    options: { maxDelayMs?: number; maxBufferSize?: number; maxBufferChars?: number } = {}
   ) {
-    this.maxDelayMs = options.maxDelayMs ?? 4;   // SPEED: Reduced from 8ms — flush faster for perceived speed
+    this.maxDelayMs = options.maxDelayMs ?? 4; // SPEED: Reduced from 8ms — flush faster for perceived speed
     this.maxBufferSize = options.maxBufferSize ?? 2; // SPEED: Reduced from 3 — fewer chunks buffered before flush
     this.maxBufferChars = options.maxBufferChars ?? 4096; // Cap total buffered chars
   }
@@ -54,7 +54,7 @@ export class StreamBuffer {
   flush(): void {
     if (this.buffer.length === 0) return;
 
-    const combined = this.buffer.join("");
+    const combined = this.buffer.join('');
     this.buffer = [];
     this.bufferChars = 0;
 

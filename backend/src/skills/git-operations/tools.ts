@@ -7,90 +7,78 @@ export interface GitTool {
   name: string;
   description: string;
   input_schema: {
-    type: "object";
+    type: 'object';
     properties?: Record<string, unknown>;
     required?: string[];
   };
 }
 
 export const generateCommitMessageTool: GitTool = {
-  name: "generate_commit_message",
-  description: "Generate a conventional commit message based on staged changes",
+  name: 'generate_commit_message',
+  description: 'Generate a conventional commit message based on staged changes',
   input_schema: {
-    type: "object",
+    type: 'object',
     properties: {
       includeBody: {
-        type: "boolean",
-        description: "Include a detailed body in the commit message",
+        type: 'boolean',
+        description: 'Include a detailed body in the commit message',
         default: false,
       },
       type: {
-        type: "string",
-        enum: [
-          "feat",
-          "fix",
-          "docs",
-          "style",
-          "refactor",
-          "perf",
-          "test",
-          "build",
-          "ci",
-          "chore",
-        ],
-        description: "Override the commit type (auto-detected if not provided)",
+        type: 'string',
+        enum: ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore'],
+        description: 'Override the commit type (auto-detected if not provided)',
       },
       scope: {
-        type: "string",
-        description: "Scope of the commit (e.g., component name)",
+        type: 'string',
+        description: 'Scope of the commit (e.g., component name)',
       },
     },
   },
 };
 
 export const gitStatusTool: GitTool = {
-  name: "git_status",
-  description:
-    "Get the current git status including staged, unstaged, and untracked files",
+  name: 'git_status',
+  description: 'Get the current git status including staged, unstaged, and untracked files',
   input_schema: {
-    type: "object",
+    type: 'object',
     properties: {},
   },
 };
 
 export const gitDiffTool: GitTool = {
-  name: "git_diff",
-  description: "Get the diff of changes (staged or unstaged)",
+  name: 'git_diff',
+  description: 'Get the diff of changes (staged or unstaged)',
   input_schema: {
-    type: "object",
+    type: 'object',
     properties: {
       staged: {
-        type: "boolean",
-        description: "Show staged changes only",
+        type: 'boolean',
+        description: 'Show staged changes only',
         default: false,
       },
       file: {
-        type: "string",
-        description: "Show diff for a specific file",
+        type: 'string',
+        description: 'Show diff for a specific file',
       },
     },
   },
 };
 
 export const gitLogTool: GitTool = {
-  name: "git_log",
-  description: "Get recent commit history",
+  name: 'git_log',
+  description: 'Get recent commit history',
   input_schema: {
-    type: "object",
+    type: 'object',
     properties: {
       count: {
-        type: "number",
-        description: "Number of commits to show",
+        type: 'number',
+        description: 'Number of commits to show',
         default: 10,
       },
       oneline: {
-        type: "boolean",
-        description: "Show one line per commit",
+        type: 'boolean',
+        description: 'Show one line per commit',
         default: true,
       },
     },
@@ -98,64 +86,64 @@ export const gitLogTool: GitTool = {
 };
 
 export const suggestBranchNameTool: GitTool = {
-  name: "suggest_branch_name",
-  description: "Suggest a branch name based on a task description",
+  name: 'suggest_branch_name',
+  description: 'Suggest a branch name based on a task description',
   input_schema: {
-    type: "object",
+    type: 'object',
     properties: {
       task: {
-        type: "string",
-        description: "Description of the task or feature",
+        type: 'string',
+        description: 'Description of the task or feature',
       },
       type: {
-        type: "string",
-        enum: ["feature", "fix", "refactor", "docs", "test", "chore"],
-        description: "Type of branch",
-        default: "feature",
+        type: 'string',
+        enum: ['feature', 'fix', 'refactor', 'docs', 'test', 'chore'],
+        description: 'Type of branch',
+        default: 'feature',
       },
     },
-    required: ["task"],
+    required: ['task'],
   },
 };
 
 export const generatePRDescriptionTool: GitTool = {
-  name: "generate_pr_description",
-  description: "Generate a pull request description based on branch changes",
+  name: 'generate_pr_description',
+  description: 'Generate a pull request description based on branch changes',
   input_schema: {
-    type: "object",
+    type: 'object',
     properties: {
       baseBranch: {
-        type: "string",
-        description: "Target branch for the PR (default: main)",
-        default: "main",
+        type: 'string',
+        description: 'Target branch for the PR (default: main)',
+        default: 'main',
       },
       template: {
-        type: "string",
-        enum: ["default", "detailed", "minimal"],
-        description: "Template style for the description",
-        default: "default",
+        type: 'string',
+        enum: ['default', 'detailed', 'minimal'],
+        description: 'Template style for the description',
+        default: 'default',
       },
     },
   },
 };
 
 export const createCommitTool: GitTool = {
-  name: "create_commit",
-  description: "Create a git commit with the specified message",
+  name: 'create_commit',
+  description: 'Create a git commit with the specified message',
   input_schema: {
-    type: "object",
+    type: 'object',
     properties: {
       message: {
-        type: "string",
-        description: "The commit message",
+        type: 'string',
+        description: 'The commit message',
       },
       files: {
-        type: "array",
-        items: { type: "string" },
-        description: "Specific files to include (stages all if not provided)",
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Specific files to include (stages all if not provided)',
       },
     },
-    required: ["message"],
+    required: ['message'],
   },
 };
 

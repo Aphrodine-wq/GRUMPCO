@@ -1,41 +1,60 @@
 # G-Rump Integrations
 
+> **Version:** 2.1.0 | **Last Updated:** February 11, 2026
+
 G-Rump supports integrations with messaging platforms, version control, and productivity tools.
 
-## Messaging (Telegram, Discord, Twilio)
+## AI Providers
 
-See [MESSAGING_SETUP.md](MESSAGING_SETUP.md) for Telegram, Discord, and Twilio (SMS/WhatsApp) configuration.
+| Provider | Status | Configuration |
+|----------|--------|---------------|
+| **NVIDIA NIM** | ✅ Active | `NVIDIA_NIM_API_KEY`, `NVIDIA_NIM_URL` |
+| **Anthropic Claude** | ✅ Active | `ANTHROPIC_API_KEY` |
+| **OpenRouter** | ✅ Active | `OPENROUTER_API_KEY` |
+| **Ollama** (local) | ✅ Active | Auto-detected when running locally |
 
-## Slack (Planned)
+## Messaging
 
-Slack integration allows users to chat with G-Rump from Slack. To enable:
+| Platform | Status | Configuration |
+|----------|--------|---------------|
+| **Telegram** | ✅ Active | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_URL` |
+| **Discord** | ✅ Active | `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` |
+| **Twilio** (SMS/WhatsApp) | ✅ Active | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` |
+| **Slack** | 🔜 Planned | `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `SLACK_SIGNING_SECRET` |
 
-1. Create a Slack app at [api.slack.com/apps](https://api.slack.com/apps)
-2. Configure OAuth scopes: `chat:write`, `channels:history`, `im:history`, `commands`
-3. Set environment variables:
-   - `SLACK_CLIENT_ID`
-   - `SLACK_CLIENT_SECRET`
-   - `SLACK_SIGNING_SECRET`
-   - `SLACK_BOT_TOKEN`
-4. Set the Events API request URL to `https://your-domain/api/messaging/slack`
+## Version Control & Productivity
 
-## GitHub (Planned)
+| Platform | Status | Configuration |
+|----------|--------|---------------|
+| **GitHub** | ✅ Active | `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` |
+| **Notion** | 🔜 Planned | `NOTION_CLIENT_ID`, `NOTION_CLIENT_SECRET` |
+| **Jira** | 🔜 Planned | — |
 
-Beyond OAuth for pushing code, GitHub integration will support:
+## Authentication Providers
 
-- Repo events (PR created, issue commented)
-- Webhooks to trigger SHIP or chat from PR descriptions
-- Configure: `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`
+| Provider | Status |
+|----------|--------|
+| **Google OAuth** | ✅ Active |
+| **GitHub OAuth** | ✅ Active |
+| **Discord OAuth** | ✅ Active |
 
-## Notion (Planned)
+## Infrastructure
 
-Notion integration will support:
-
-- OAuth for read/write access
-- Sync PRD/specs to Notion pages
-- Pull context from Notion for AI
-- Configure: `NOTION_CLIENT_ID`, `NOTION_CLIENT_SECRET`, `NOTION_REDIRECT_URI`
+| Service | Status | Purpose |
+|---------|--------|---------|
+| **Supabase** | ✅ Active | Database + Auth (production) |
+| **Redis** | ✅ Active | Cache, rate limiting, job queue |
+| **Pinecone** | ✅ Active | Vector database for RAG |
+| **Stripe** | ✅ Active | Billing and subscriptions |
+| **Prometheus** | ✅ Active | Metrics collection |
+| **OpenTelemetry** | ✅ Active | Distributed tracing |
 
 ## MCP (Model Context Protocol)
 
-G-Rump consumes tools from external MCP servers. See [MCP_SETUP.md](MCP_SETUP.md).
+G-Rump consumes tools from external MCP servers. Configure via `MCP_SERVERS` environment variable. See backend `.env.example` for details.
+
+## See Also
+
+- [GETTING_STARTED.md](./GETTING_STARTED.md) — Setup instructions
+- [BACKENDS.md](./BACKENDS.md) — Backend configuration
+- [API.md](./API.md) — Complete API reference

@@ -3,17 +3,17 @@
  */
 
 export type DesignType =
-  | "component"
-  | "page"
-  | "layout"
-  | "section"
-  | "form"
-  | "modal"
-  | "card"
-  | "dashboard"
-  | "navigation";
+  | 'component'
+  | 'page'
+  | 'layout'
+  | 'section'
+  | 'form'
+  | 'modal'
+  | 'card'
+  | 'dashboard'
+  | 'navigation';
 
-export type DesignTier = "minimal" | "polished" | "premium";
+export type DesignTier = 'minimal' | 'polished' | 'premium';
 
 export interface DesignRequest {
   description: string;
@@ -36,14 +36,8 @@ export interface DesignResult {
 }
 
 export interface DesignReviewIssue {
-  severity: "critical" | "warning" | "suggestion";
-  category:
-    | "tokens"
-    | "accessibility"
-    | "responsive"
-    | "animation"
-    | "theme"
-    | "structure";
+  severity: 'critical' | 'warning' | 'suggestion';
+  category: 'tokens' | 'accessibility' | 'responsive' | 'animation' | 'theme' | 'structure';
   message: string;
   line?: number;
   fix?: string;

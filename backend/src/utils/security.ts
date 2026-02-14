@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "crypto";
+import { timingSafeEqual } from 'crypto';
 
 /**
  * Timing-safe string comparison to reduce secret leak timing variance.

@@ -500,6 +500,8 @@
             <!-- Nodes -->
             {#each nodes as node}
               {#if !searchQuery || filteredNodeIds.has(node.id)}
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <g
                   transform="translate({node.x}, {node.y})"
                   class="cursor-pointer transition-all duration-200"

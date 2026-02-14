@@ -378,49 +378,44 @@
 </div>
 
 <style>
-
-.tab-section {
+  .tab-section {
     max-width: 900px;
     display: flex;
     flex-direction: column;
     gap: 28px;
   }
 
-.tab-section :global(.card) {
+  .tab-section :global(.card) {
     border: 1px solid #e5e7eb;
   }
 
-.preset-option.selected {
+  .preset-option.selected {
     background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
     border-color: var(--color-primary, #7c3aed);
     color: var(--color-primary, #7c3aed);
   }
 
-.models-custom-inner .section-desc {
-    margin-bottom: 0.75rem;
-  }
-
-.section-desc {
+  .section-desc {
     font-size: 14px;
     color: var(--color-text-muted, #71717a);
     margin-bottom: 20px;
   }
 
-.field-group {
+  .field-group {
     margin-bottom: 20px;
   }
 
-.field-group:last-child {
+  .field-group:last-child {
     margin-bottom: 0;
   }
 
-.field-hint {
+  .field-hint {
     font-size: 12px;
     color: var(--color-text-muted, #a1a1aa);
     margin-top: 6px;
   }
 
-.radio-label {
+  .radio-label {
     display: block;
     font-size: 13px;
     font-weight: 600;
@@ -428,13 +423,13 @@
     margin-bottom: 8px;
   }
 
-.theme-cards {
+  .theme-cards {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
   }
 
-.theme-card {
+  .theme-card {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -454,41 +449,41 @@
     text-align: center;
   }
 
-.theme-card:hover {
+  .theme-card:hover {
     background: var(--color-bg-card-hover, #f9fafb);
     border-color: var(--color-border-highlight, #d1d5db);
   }
 
-.theme-card.selected {
+  .theme-card.selected {
     background: var(--color-primary-subtle, rgba(124, 58, 237, 0.1));
     border-color: var(--color-primary, #7c3aed);
     color: var(--color-primary, #7c3aed);
   }
 
-.theme-card-icon {
+  .theme-card-icon {
     display: flex;
     align-items: center;
     justify-content: center;
     color: inherit;
   }
 
-.theme-card-label {
+  .theme-card-label {
     font-weight: 600;
   }
 
-.theme-card-desc {
+  .theme-card-desc {
     font-size: 0.75rem;
     font-weight: 400;
     color: var(--color-text-muted, #6b7280);
   }
 
-.accent-row {
+  .accent-row {
     display: flex;
     gap: 0.75rem;
     align-items: center;
   }
 
-.accent-swatch {
+  .accent-swatch {
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -503,25 +498,25 @@
       box-shadow 0.15s;
   }
 
-.accent-swatch:hover {
+  .accent-swatch:hover {
     transform: scale(1.08);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
 
-.accent-swatch.selected {
+  .accent-swatch.selected {
     border-color: var(--color-text, #111827);
     box-shadow:
       0 0 0 2px white,
       0 0 0 4px var(--color-text, #111827);
   }
 
-.radio-row {
+  .radio-row {
     display: flex;
     gap: 20px;
     flex-wrap: wrap;
   }
 
-.radio-option {
+  .radio-option {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -530,18 +525,11 @@
     cursor: pointer;
   }
 
-.radio-option input {
+  .radio-option input {
     cursor: pointer;
   }
 
-.field-hint code {
-    font-size: 0.75em;
-    padding: 0.1em 0.35em;
-    background: var(--color-bg-card, #f4f4f5);
-    border-radius: 4px;
-  }
-
-.checkbox-field {
+  .checkbox-field {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -549,12 +537,12 @@
     user-select: none;
   }
 
-.checkbox-label-text {
+  .checkbox-label-text {
     font-size: 14px;
     color: var(--color-text-secondary, #3f3f46);
   }
 
-.shortcuts-list {
+  .shortcuts-list {
     list-style: none;
     padding: 0;
     margin: 0;
@@ -562,14 +550,14 @@
     color: var(--color-text-secondary, #3f3f46);
   }
 
-.shortcuts-list li {
+  .shortcuts-list li {
     padding: 8px 0;
     display: flex;
     align-items: center;
     gap: 8px;
   }
 
-.shortcuts-list kbd {
+  .shortcuts-list kbd {
     padding: 2px 6px;
     font-family: ui-monospace, monospace;
     font-size: 12px;
@@ -578,7 +566,7 @@
     border-radius: 4px;
   }
 
-.accent-row {
+  .accent-row {
     flex-wrap: wrap;
   }
 </style>

@@ -4,12 +4,12 @@
  * Used by agent tools for "schema from diagram/PRD" and ORM output.
  */
 
-import logger from "../../middleware/logger.js";
-import type { ArchitectureMetadata, DataModel } from "../../types/architecture.js";
-import { getCompletion } from "../ai-providers/llmGatewayHelper.js";
+import logger from '../../middleware/logger.js';
+import type { ArchitectureMetadata, DataModel } from '../../types/architecture.js';
+import { getCompletion } from '../ai-providers/llmGatewayHelper.js';
 
-export type SchemaTargetDb = "sqlite" | "postgres" | "mysql";
-export type SchemaFormat = "sql" | "drizzle";
+export type SchemaTargetDb = 'sqlite' | 'postgres' | 'mysql';
+export type SchemaFormat = 'sql' | 'drizzle';
 
 export interface GenerateSchemaResult {
   ddl: string;
@@ -28,45 +28,40 @@ Output only valid SQL and/or Drizzle. No prose outside code blocks.`;
  */
 export async function generateSchemaFromDescription(
   description: string,
-  options: { format?: SchemaFormat; targetDb?: SchemaTargetDb } = {},
+  options: { format?: SchemaFormat; targetDb?: SchemaTargetDb } = {}
 ): Promise<GenerateSchemaResult> {
-  const targetDb = options.targetDb ?? "sqlite";
-  const format = options.format ?? "sql";
+  const targetDb = options.targetDb ?? 'sqlite';
+  const format = options.format ?? 'sql';
 
-  const userMsg = `Target DB: ${targetDb}. Format: ${format}. Generate schema for:\n\n${description}\n\nRespond with a \`\`\`sql code block for DDL.${format === "drizzle" ? " Then a ```ts block for Drizzle schema." : ""}\`\`\``;
+  const userMsg = `Target DB: ${targetDb}. Format: ${format}. Generate schema for:\n\n${description}\n\nRespond with a \`\`\`sql code block for DDL.${format === 'drizzle' ? ' Then a ```ts block for Drizzle schema.' : ''}\`\`\``;
 
   try {
     const result = await getCompletion({
-      model: "claude-sonnet-4-20250514",
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: SCHEMA_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMsg }],
+      messages: [{ role: 'user', content: userMsg }],
     });
 
     if (result.error) {
-      logger.warn(
-        { err: result.error },
-        "dbSchemaService: generateSchemaFromDescription failed",
-      );
+      logger.warn({ err: result.error }, 'dbSchemaService: generateSchemaFromDescription failed');
       return { ddl: `-- Error: ${result.error}`, tables: [] };
     }
 
-    let ddl = "";
+    let ddl = '';
     let drizzle: string | undefined;
     const sqlMatch = result.text.match(/```sql\n?([\s\S]*?)\n?```/);
     if (sqlMatch) ddl = sqlMatch[1].trim();
-    const tsMatch = result.text.match(
-      /```(?:ts|typescript)\n?([\s\S]*?)\n?```/,
-    );
+    const tsMatch = result.text.match(/```(?:ts|typescript)\n?([\s\S]*?)\n?```/);
     if (tsMatch) drizzle = tsMatch[1].trim();
-    const tables = [
-      ...ddl.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?\s*["']?(\w+)["']?/gi),
-    ].map((m) => m[1]);
+    const tables = [...ddl.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?\s*["']?(\w+)["']?/gi)].map(
+      (m) => m[1]
+    );
     return { ddl, drizzle, tables };
   } catch (e) {
     logger.warn(
       { err: (e as Error).message },
-      "dbSchemaService: generateSchemaFromDescription failed",
+      'dbSchemaService: generateSchemaFromDescription failed'
     );
     return { ddl: `-- Error: ${(e as Error).message}`, tables: [] };
   }
@@ -76,37 +71,37 @@ export async function generateSchemaFromDescription(
  * Generate schema from structured architecture metadata (e.g. dataModels from architecture output).
  */
 export async function generateSchemaFromArchitecture(
-  architecture: ArchitectureMetadata | string,
+  architecture: ArchitectureMetadata | string
 ): Promise<GenerateSchemaResult> {
-  if (typeof architecture === "string") {
+  if (typeof architecture === 'string') {
     try {
       const parsed = JSON.parse(architecture) as ArchitectureMetadata;
       return generateSchemaFromArchitecture(parsed);
     } catch {
       return generateSchemaFromDescription(architecture, {
-        targetDb: "sqlite",
-        format: "sql",
+        targetDb: 'sqlite',
+        format: 'sql',
       });
     }
   }
   const dataModels = architecture.dataModels || [];
   if (dataModels.length === 0) {
     return generateSchemaFromDescription(
-      `Components: ${architecture.components?.map((c) => c.name).join(", ")}. Integrations and endpoints described in architecture.`,
-      { targetDb: "sqlite", format: "sql" },
+      `Components: ${architecture.components?.map((c) => c.name).join(', ')}. Integrations and endpoints described in architecture.`,
+      { targetDb: 'sqlite', format: 'sql' }
     );
   }
   const description = dataModels
     .map(
       (m: DataModel) =>
-        `Table ${m.name}: ${m.fields.map((f) => `${f.name} ${f.type}${f.required ? " NOT NULL" : ""}`).join(", ")}` +
+        `Table ${m.name}: ${m.fields.map((f) => `${f.name} ${f.type}${f.required ? ' NOT NULL' : ''}`).join(', ')}` +
         (m.relationships?.length
-          ? `; Relations: ${m.relationships.map((r) => `${r.field} -> ${r.references} (${r.type})`).join("; ")}`
-          : ""),
+          ? `; Relations: ${m.relationships.map((r) => `${r.field} -> ${r.references} (${r.type})`).join('; ')}`
+          : '')
     )
-    .join("\n");
+    .join('\n');
   return generateSchemaFromDescription(description, {
-    targetDb: "sqlite",
-    format: "sql",
+    targetDb: 'sqlite',
+    format: 'sql',
   });
 }

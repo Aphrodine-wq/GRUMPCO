@@ -114,7 +114,7 @@ cd ../frontend && npm run electron:dev
 
 **CLI (Global):**
 ```bash
-npm install -g @g-rump/cli
+npm install -g grump-cli
 grump ship "Create a React dashboard with real-time charts"
 ```
 
@@ -299,7 +299,7 @@ grump/
 ├── backend/               # Express 5 API server
 ├── packages/
 │   ├── ai-core/          # Model router & registry
-│   ├── cli/              # @g-rump/cli
+│   ├── cli/              # grump-cli
 │   ├── shared-types/     # Shared TypeScript types
 │   ├── rag/              # RAG engine
 │   ├── voice/            # Voice ASR/TTS
@@ -390,3 +390,4 @@ Made with ❤️ by the G-Rump Team
 [![GitHub Stars](https://img.shields.io/github/stars/Aphrodine-wq/GRUMPCO?style=social)](https://github.com/Aphrodine-wq/GRUMPCO)
 
 </div>
+

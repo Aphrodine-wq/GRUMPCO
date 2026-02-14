@@ -190,7 +190,7 @@ class StreamTimeoutError extends Error {
 
 function readWithTimeout(
   reader: ReadableStreamDefaultReader<Uint8Array>,
-  timeoutMs = STREAM_READ_TIMEOUT_MS,
+  timeoutMs = STREAM_READ_TIMEOUT_MS
 ): Promise<ReadableStreamReadResult<Uint8Array>> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
@@ -363,7 +363,12 @@ export async function streamChat(
   }
 
   if (blocks.length === 0) {
-    console.warn('[streamChat] Stream completed with 0 blocks. Mode:', mode, 'Messages sent:', apiMessages.length);
+    console.warn(
+      '[streamChat] Stream completed with 0 blocks. Mode:',
+      mode,
+      'Messages sent:',
+      apiMessages.length
+    );
   }
 
   return blocks;
@@ -376,7 +381,7 @@ export async function streamChat(
 export async function streamChatWithRetry(
   messages: Message[],
   options: ChatStreamOptions = {},
-  maxRetries = 2,
+  maxRetries = 2
 ): Promise<ContentBlock[]> {
   let lastError: Error | null = null;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -389,7 +394,7 @@ export async function streamChatWithRetry(
       // Exponential backoff: 2s, 4s
       const backoffMs = 2000 * Math.pow(2, attempt);
       console.warn(
-        `[streamChatWithRetry] Attempt ${attempt + 1} failed (${lastError.message}), retrying in ${backoffMs}ms...`,
+        `[streamChatWithRetry] Attempt ${attempt + 1} failed (${lastError.message}), retrying in ${backoffMs}ms...`
       );
       await new Promise((resolve) => setTimeout(resolve, backoffMs));
     }
@@ -438,7 +443,14 @@ function processStreamEvent(
       output: (event.output as string) ?? '',
       success: (event.success as boolean) ?? false,
       executionTime: event.executionTime as number | undefined,
-      diff: event.diff as { filePath: string; beforeContent: string; afterContent: string; changeType: 'created' | 'modified' | 'deleted' } | undefined,
+      diff: event.diff as
+        | {
+            filePath: string;
+            beforeContent: string;
+            afterContent: string;
+            changeType: 'created' | 'modified' | 'deleted';
+          }
+        | undefined,
     };
     blocks.push({
       type: 'tool_result',

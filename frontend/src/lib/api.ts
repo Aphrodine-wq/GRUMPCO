@@ -5,7 +5,21 @@
 
 /** Production backend URL – set VITE_API_URL to override */
 const REMOTE_BACKEND = 'https://grump-backend.onrender.com';
-const DEFAULT_BASE = import.meta.env?.PROD ? REMOTE_BACKEND : 'http://localhost:3000';
+
+/** Detect Electron environment (preload.cjs exposes window.grump.isElectron) */
+function isElectron(): boolean {
+  if (typeof window === 'undefined') return false;
+  const w = window as unknown as { grump?: { isElectron?: boolean } };
+  return w.grump?.isElectron === true;
+}
+
+// Electron ALWAYS talks to local sidecar backend (file I/O must be local).
+// Web browser in production talks to Render.
+const DEFAULT_BASE = isElectron()
+  ? 'http://localhost:3000'
+  : import.meta.env?.PROD
+    ? REMOTE_BACKEND
+    : 'http://localhost:3000';
 
 /** Normalize env to root URL (no trailing /api). */
 function normalizedBase(): string {
@@ -221,9 +235,7 @@ export async function setWorkspaceRoot(
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(
-      (data as { error?: string }).error ?? `Failed to set workspace: ${res.status}`
-    );
+    throw new Error((data as { error?: string }).error ?? `Failed to set workspace: ${res.status}`);
   }
   return res.json() as Promise<{ success: boolean; path: string }>;
 }
@@ -342,7 +354,12 @@ export async function approveDesignPhase(
   sessionId: string,
   approved: boolean,
   feedback?: string
-): Promise<{ success: boolean; message: string; workflowState: DesignWorkflowState; nextPhase?: string }> {
+): Promise<{
+  success: boolean;
+  message: string;
+  workflowState: DesignWorkflowState;
+  nextPhase?: string;
+}> {
   const res = await fetchApi('/api/chat/design/approve', {
     method: 'POST',
     body: JSON.stringify({ sessionId, approved, feedback }),

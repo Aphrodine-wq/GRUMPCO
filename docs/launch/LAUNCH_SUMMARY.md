@@ -164,7 +164,7 @@ L3: Disk (24 hour TTL, gzip compression, SHA-256 filenames)
 
 2. **Run final verification:**
    ```bash
-   cd G-rump.com
+   cd GRUMPCO
    npm run check-all
    npm test
    ```
@@ -200,3 +200,4 @@ L3: Disk (24 hour TTL, gzip compression, SHA-256 filenames)
 
 *Prepared by Subagent for Walton*  
 *February 3, 2026*
+

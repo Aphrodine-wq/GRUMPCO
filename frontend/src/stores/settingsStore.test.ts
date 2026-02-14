@@ -32,7 +32,7 @@ describe('settingsStore', () => {
     it('should load settings from API', async () => {
       const mockSettings: Settings = {
         user: { displayName: 'Test User', email: 'test@test.com' },
-        models: { defaultProvider: 'copilot', defaultModelId: 'claude-sonnet' },
+        models: { defaultProvider: 'nim', defaultModelId: 'claude-sonnet' },
       };
 
       mockFetchApi.mockResolvedValue({
@@ -90,7 +90,7 @@ describe('settingsStore', () => {
 
       const mockResponse: Settings = {
         user: { displayName: 'Updated Name', email: 'test@test.com' },
-        models: { defaultProvider: 'copilot' },
+        models: { defaultProvider: 'nim' },
       };
 
       mockFetchApi.mockResolvedValue({

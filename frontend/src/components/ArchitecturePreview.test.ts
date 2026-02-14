@@ -263,12 +263,7 @@ describe('ArchitecturePreview', () => {
   });
 
   it('should handle different arrow styles', async () => {
-    const arrowStyles = [
-      'A --> B',
-      'A -- --> B',
-      'A ==> B',
-      'A == ==> B',
-    ];
+    const arrowStyles = ['A --> B', 'A -- --> B', 'A ==> B', 'A == ==> B'];
 
     arrowStyles.forEach((arrow) => {
       const { container } = render(ArchitecturePreview, {

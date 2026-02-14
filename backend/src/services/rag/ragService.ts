@@ -3,34 +3,30 @@
  * Query → embed → vector + optional hybrid (keyword) → optional re-ranker → format context → generate.
  */
 
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { dirname } from "path";
-import { existsSync } from "fs";
-import logger from "../../middleware/logger.js";
-import {
-  getVectorStore,
-  type ChunkWithScore,
-  type VectorChunk,
-} from "./vectorStoreAdapter.js";
-import { chunkGrumpByAST } from "../intent/grumpParser.js";
-import { BM25ChunkIndex } from "./bm25Index.js";
-import { rerankWithCrossEncoder } from "./crossEncoderReranker.js";
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { dirname } from 'path';
+import { existsSync } from 'fs';
+import logger from '../../middleware/logger.js';
+import { getVectorStore, type ChunkWithScore, type VectorChunk } from './vectorStoreAdapter.js';
+import { chunkGrumpByAST } from '../intent/grumpParser.js';
+import { BM25ChunkIndex } from './bm25Index.js';
+import { rerankWithCrossEncoder } from './crossEncoderReranker.js';
 import {
   buildGraph,
   loadGraph,
   saveGraph,
   getRelatedChunkIds,
   clearGraphCache,
-} from "./graphRagService.js";
-import { getFromPrefetchCache } from "../caching/ragPrefetchCache.js";
-import { embed as embedViaService } from "../ai-providers/embeddingService.js";
-import { parseIntent, type StructuredIntent } from "../intent/intentCompilerService.js";
-import { getRAGModel } from "../ai-providers/modelRouter.js";
-import { getCompletion } from "../ai-providers/llmGatewayHelper.js";
-import type { LLMProvider } from "../ai-providers/llmGateway.js";
-const RAG_EMBED_MODEL_DEFAULT = "nvidia/nv-embedqa-e5-v5";
-const DEFAULT_INDEX_PATH = "./data/rag-index.json";
-const DEFAULT_BM25_INDEX_PATH = "./data/rag-bm25.json";
+} from './graphRagService.js';
+import { getFromPrefetchCache } from '../caching/ragPrefetchCache.js';
+import { embed as embedViaService } from '../ai-providers/embeddingService.js';
+import { parseIntent, type StructuredIntent } from '../intent/intentCompilerService.js';
+import { getRAGModel } from '../ai-providers/modelRouter.js';
+import { getCompletion } from '../ai-providers/llmGatewayHelper.js';
+import type { LLMProvider } from '../ai-providers/llmGateway.js';
+const RAG_EMBED_MODEL_DEFAULT = 'nvidia/nv-embedqa-e5-v5';
+const DEFAULT_INDEX_PATH = './data/rag-index.json';
+const DEFAULT_BM25_INDEX_PATH = './data/rag-bm25.json';
 const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 200;
 /** Small-to-big: small chunks for retrieval (~128 tokens ≈ 512 chars). */
@@ -43,7 +39,7 @@ const TOP_K = 6;
 const TOP_K_HYBRID = 12;
 const RRF_K = 60;
 
-export type DocType = "doc" | "code" | "spec" | "grump";
+export type DocType = 'doc' | 'code' | 'spec' | 'grump';
 
 export interface IndexChunk {
   id: string;
@@ -66,7 +62,7 @@ export interface RagCitation {
 }
 
 export interface RagQueryOptions {
-  outputFormat?: "natural" | "structured";
+  outputFormat?: 'natural' | 'structured';
   structuredSchema?: string;
   /** Filter by doc type(s). */
   types?: DocType | DocType[];
@@ -108,7 +104,7 @@ async function loadBm25Index(): Promise<BM25ChunkIndex | null> {
   const path = getBm25IndexPath();
   if (!existsSync(path)) return null;
   try {
-    const raw = await readFile(path, "utf8");
+    const raw = await readFile(path, 'utf8');
     const data = JSON.parse(raw) as {
       chunks?: Array<{
         id: string;
@@ -176,7 +172,7 @@ function rrfScore(rank: number): number {
 export function chunkText(
   text: string,
   source: string,
-  type: DocType,
+  type: DocType
 ): { content: string; source: string; type: DocType }[] {
   const chunks: { content: string; source: string; type: DocType }[] = [];
   const sep = /\n\n+/;
@@ -195,7 +191,7 @@ export function chunkText(
     }
   }
 
-  let acc = "";
+  let acc = '';
   for (const p of flat) {
     if (acc.length + p.length + 1 <= CHUNK_SIZE) {
       acc = acc ? `${acc}\n${p}` : p;
@@ -229,7 +225,7 @@ export interface SmallToBigChunk {
 export function chunkTextSmallToBig(
   text: string,
   source: string,
-  type: DocType,
+  type: DocType
 ): SmallToBigChunk[] {
   const sep = /\n\n+/;
   let parts = text.split(sep).filter(Boolean);
@@ -241,18 +237,14 @@ export function chunkTextSmallToBig(
     if (p.length <= PARENT_CHUNK_SIZE) {
       flat.push(p);
     } else {
-      for (
-        let i = 0;
-        i < p.length;
-        i += PARENT_CHUNK_SIZE - PARENT_CHUNK_OVERLAP
-      ) {
+      for (let i = 0; i < p.length; i += PARENT_CHUNK_SIZE - PARENT_CHUNK_OVERLAP) {
         flat.push(p.slice(i, i + PARENT_CHUNK_SIZE));
       }
     }
   }
 
   const parentChunks: string[] = [];
-  let acc = "";
+  let acc = '';
   for (const p of flat) {
     if (acc.length + p.length + 1 <= PARENT_CHUNK_SIZE) {
       acc = acc ? `${acc}\n${p}` : p;
@@ -269,7 +261,7 @@ export function chunkTextSmallToBig(
   }
   if (acc.trim()) parentChunks.push(acc.trim());
 
-  const baseId = `parent_${source.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
+  const baseId = `parent_${source.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
   const result: SmallToBigChunk[] = [];
 
   for (let pIdx = 0; pIdx < parentChunks.length; pIdx++) {
@@ -286,17 +278,13 @@ export function chunkTextSmallToBig(
       if (s.length <= SMALL_CHUNK_SIZE) {
         smallFlat.push(s);
       } else {
-        for (
-          let i = 0;
-          i < s.length;
-          i += SMALL_CHUNK_SIZE - SMALL_CHUNK_OVERLAP
-        ) {
+        for (let i = 0; i < s.length; i += SMALL_CHUNK_SIZE - SMALL_CHUNK_OVERLAP) {
           smallFlat.push(s.slice(i, i + SMALL_CHUNK_SIZE));
         }
       }
     }
 
-    let smallAcc = "";
+    let smallAcc = '';
     for (const s of smallFlat) {
       if (smallAcc.length + s.length + 1 <= SMALL_CHUNK_SIZE) {
         smallAcc = smallAcc ? `${smallAcc}\n${s}` : s;
@@ -347,7 +335,7 @@ export function chunkTextSmallToBig(
 export async function loadIndex(): Promise<RagIndex | null> {
   const path = getIndexPath();
   if (!existsSync(path)) return null;
-  const raw = await readFile(path, "utf8");
+  const raw = await readFile(path, 'utf8');
   return JSON.parse(raw) as RagIndex;
 }
 
@@ -363,14 +351,13 @@ export async function saveIndex(index: RagIndex): Promise<void> {
   const path = getIndexPath();
   const dir = dirname(path);
   if (!existsSync(dir)) await mkdir(dir, { recursive: true });
-  await writeFile(path, JSON.stringify(index), "utf8");
+  await writeFile(path, JSON.stringify(index), 'utf8');
 }
 
 const CONFIDENCE_LOW_THRESHOLD = 0.3;
-const FALLBACK_MESSAGE =
-  "Would you like to rephrase your question or contact support?";
+const FALLBACK_MESSAGE = 'Would you like to rephrase your question or contact support?';
 // Use Llama 3.1 405B as the fallback model for low-confidence RAG responses
-const RAG_FALLBACK_MODEL = "meta/llama-3.1-405b-instruct";
+const RAG_FALLBACK_MODEL = 'meta/llama-3.1-405b-instruct';
 
 function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length === 0) return 0;
@@ -394,13 +381,13 @@ function cosineSimilarity(a: number[], b: number[]): number {
 async function rerankViaNim(
   query: string,
   candidates: ChunkWithScore[],
-  topK: number,
+  topK: number
 ): Promise<ChunkWithScore[]> {
   if (candidates.length === 0) return [];
   try {
     const [queryEmb] = await embedViaService([query], {
       model: getRagEmbedModel(),
-      inputType: "query",
+      inputType: 'query',
     });
     const withScore = candidates.map((c) => ({
       ...c,
@@ -409,7 +396,7 @@ async function rerankViaNim(
     withScore.sort((a, b) => b.score - a.score);
     return withScore.slice(0, topK);
   } catch (e) {
-    logger.warn({ error: (e as Error).message }, "RAG NIM re-ranker failed");
+    logger.warn({ error: (e as Error).message }, 'RAG NIM re-ranker failed');
     return candidates.slice(0, topK);
   }
 }
@@ -421,25 +408,25 @@ async function rerankViaNim(
 async function rerank(
   query: string,
   candidates: ChunkWithScore[],
-  topK: number,
+  topK: number
 ): Promise<ChunkWithScore[]> {
   if (candidates.length === 0) return [];
   const rerankerKind = process.env.RAG_RERANKER;
-  if (rerankerKind === "cross-encoder" && process.env.RAG_CROSS_ENCODER_URL) {
+  if (rerankerKind === 'cross-encoder' && process.env.RAG_CROSS_ENCODER_URL) {
     return rerankWithCrossEncoder(query, candidates, topK, {
       url: process.env.RAG_CROSS_ENCODER_URL,
       timeoutMs: 10_000,
     });
   }
-  if (rerankerKind === "nim" && getApiKey()) {
+  if (rerankerKind === 'nim' && getApiKey()) {
     return rerankViaNim(query, candidates, topK);
   }
   const url = process.env.RAG_RERANKER_URL;
   if (!url) return candidates.slice(0, topK);
   try {
     const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         query,
         documents: candidates.map((c) => c.chunk.content),
@@ -452,9 +439,7 @@ async function rerank(
     const order =
       data.order ??
       (scores
-        ? scores
-            .map((_, i) => i)
-            .sort((a, b) => (scores[b] ?? 0) - (scores[a] ?? 0))
+        ? scores.map((_, i) => i).sort((a, b) => (scores[b] ?? 0) - (scores[a] ?? 0))
         : undefined);
     if (!order?.length) return candidates.slice(0, topK);
     const out: ChunkWithScore[] = order
@@ -508,31 +493,29 @@ export interface RagContextResult {
  */
 export async function getRagContextForPrompt(
   query: string,
-  options?: GetRagContextOptions,
+  options?: GetRagContextOptions
 ): Promise<RagContextResult | null> {
   if (!getApiKey()) return null;
 
-  if (process.env.RAG_PREDICTIVE_PREFETCH === "true") {
+  if (process.env.RAG_PREDICTIVE_PREFETCH === 'true') {
     // Convert options for cache lookup (normalize types to string[])
     const cacheOptions = options
       ? {
           namespace: options.namespace,
           types: options.types
-            ? ((Array.isArray(options.types)
-                ? options.types
-                : [options.types]) as string[])
+            ? ((Array.isArray(options.types) ? options.types : [options.types]) as string[])
             : undefined,
         }
       : undefined;
     const cached = getFromPrefetchCache(query, cacheOptions);
-    if (cached) return cached as import("./ragService.js").RagContextResult;
+    if (cached) return cached as import('./ragService.js').RagContextResult;
   }
 
   const maxChunks = options?.maxChunks ?? 6;
   try {
     const [queryEmb] = await embedViaService([query], {
       model: getRagEmbedModel(),
-      inputType: "query",
+      inputType: 'query',
     });
     const store = getVectorStore();
     const candidates = await store.query(queryEmb, {
@@ -545,21 +528,14 @@ export async function getRagContextForPrompt(
     const contentForContext = (chunk: (typeof top)[0]) =>
       (chunk.metadata?.parentContent as string | undefined) ?? chunk.content;
     const context = top
-      .map(
-        (c, i) => `[${i + 1}] ${c.source} (${c.type})\n${contentForContext(c)}`,
-      )
-      .join("\n\n---\n\n");
+      .map((c, i) => `[${i + 1}] ${c.source} (${c.type})\n${contentForContext(c)}`)
+      .join('\n\n---\n\n');
     const sources = [
-      ...new Map(
-        top.map((c) => [c.source, { source: c.source, type: c.type }]),
-      ).values(),
+      ...new Map(top.map((c) => [c.source, { source: c.source, type: c.type }])).values(),
     ];
     return { context, sources };
   } catch (e) {
-    logger.debug(
-      { error: (e as Error).message },
-      "getRagContextForPrompt failed",
-    );
+    logger.debug({ error: (e as Error).message }, 'getRagContextForPrompt failed');
     return null;
   }
 }
@@ -568,10 +544,7 @@ const INTENT_PARSE_TIMEOUT_MS = 3000;
 
 function isIntentGuidedEnabled(options?: GetRagContextOptions): boolean {
   if (options?.intentGuided === false) return false;
-  return (
-    process.env.RAG_INTENT_GUIDED !== "false" &&
-    process.env.RAG_INTENT_GUIDED !== "0"
-  );
+  return process.env.RAG_INTENT_GUIDED !== 'false' && process.env.RAG_INTENT_GUIDED !== '0';
 }
 
 /**
@@ -581,7 +554,7 @@ function isIntentGuidedEnabled(options?: GetRagContextOptions): boolean {
  */
 export async function getIntentGuidedRagContext(
   query: string,
-  options?: GetRagContextOptions,
+  options?: GetRagContextOptions
 ): Promise<RagContextResult | null> {
   if (!getApiKey()) return null;
   if (!isIntentGuidedEnabled(options)) {
@@ -593,16 +566,13 @@ export async function getIntentGuidedRagContext(
     intent = await Promise.race([
       parseIntent(query.trim()),
       new Promise<never>((_, rej) =>
-        setTimeout(
-          () => rej(new Error("Intent parse timeout")),
-          INTENT_PARSE_TIMEOUT_MS,
-        ),
+        setTimeout(() => rej(new Error('Intent parse timeout')), INTENT_PARSE_TIMEOUT_MS)
       ),
     ]);
   } catch (e) {
     logger.debug(
       { error: (e as Error).message },
-      "Intent-guided RAG: intent parse failed, using plain RAG",
+      'Intent-guided RAG: intent parse failed, using plain RAG'
     );
     return getRagContextForPrompt(query, options);
   }
@@ -616,17 +586,17 @@ export async function getIntentGuidedRagContext(
   }
 
   const parts: string[] = [query];
-  if (features.length) parts.push(`features: ${features.join(", ")}`);
-  if (tech.length) parts.push(`tech: ${tech.join(", ")}`);
-  if (flows.length) parts.push(`data flows: ${flows.join(", ")}`);
-  const expandedQuery = parts.join(" ");
+  if (features.length) parts.push(`features: ${features.join(', ')}`);
+  if (tech.length) parts.push(`tech: ${tech.join(', ')}`);
+  if (flows.length) parts.push(`data flows: ${flows.join(', ')}`);
+  const expandedQuery = parts.join(' ');
 
   const maxChunks = options?.maxChunks ?? 6;
   const fetchK = Math.max(maxChunks * 2, TOP_K_HYBRID);
   try {
     const [expandedEmb] = await embedViaService([expandedQuery], {
       model: getRagEmbedModel(),
-      inputType: "query",
+      inputType: 'query',
     });
     const store = getVectorStore();
     let candidates = await store.query(expandedEmb, {
@@ -640,20 +610,16 @@ export async function getIntentGuidedRagContext(
     const contentForContext = (chunk: (typeof top)[0]) =>
       (chunk.metadata?.parentContent as string | undefined) ?? chunk.content;
     const context = top
-      .map(
-        (c, i) => `[${i + 1}] ${c.source} (${c.type})\n${contentForContext(c)}`,
-      )
-      .join("\n\n---\n\n");
+      .map((c, i) => `[${i + 1}] ${c.source} (${c.type})\n${contentForContext(c)}`)
+      .join('\n\n---\n\n');
     const sources = [
-      ...new Map(
-        top.map((c) => [c.source, { source: c.source, type: c.type }]),
-      ).values(),
+      ...new Map(top.map((c) => [c.source, { source: c.source, type: c.type }])).values(),
     ];
     return { context, sources, intent };
   } catch (e) {
     logger.debug(
       { error: (e as Error).message },
-      "getIntentGuidedRagContext failed, falling back to plain RAG",
+      'getIntentGuidedRagContext failed, falling back to plain RAG'
     );
     return getRagContextForPrompt(query, options);
   }
@@ -691,12 +657,9 @@ export async function getIntentGuidedRagContext(
  * console.log(result.citations); // [{ id: 1, source: 'api.md', ... }]
  * ```
  */
-export async function ragQuery(
-  query: string,
-  options?: RagQueryOptions,
-): Promise<RagQueryResult> {
+export async function ragQuery(query: string, options?: RagQueryOptions): Promise<RagQueryResult> {
   const apiKey = getApiKey();
-  if (!apiKey) throw new Error("NVIDIA_NIM_API_KEY is not set");
+  if (!apiKey) throw new Error('NVIDIA_NIM_API_KEY is not set');
 
   const useIntentGuided = options?.intentGuided === true;
   if (useIntentGuided) {
@@ -706,13 +669,13 @@ export async function ragQuery(
       maxChunks: TOP_K,
     });
     if (irfResult?.context && irfResult.sources?.length) {
-      const outputFormat = options?.outputFormat ?? "natural";
+      const outputFormat = options?.outputFormat ?? 'natural';
       const structuredSchema = options?.structuredSchema;
       let sys: string;
-      if (outputFormat === "structured") {
+      if (outputFormat === 'structured') {
         const schemaDesc =
           structuredSchema ??
-          "tasks: string[] (list of action items), or endpoints: Array<{ method: string, path: string, description: string }>";
+          'tasks: string[] (list of action items), or endpoints: Array<{ method: string, path: string, description: string }>';
         sys = `You are a helpful assistant. Extract structured data from the provided context to answer the user's question. Return ONLY valid JSON matching this schema: ${schemaDesc}. No markdown code fence, no extra text. If the context does not contain relevant information, return {"error": "No relevant information found"}.`;
       } else {
         sys = `You are a helpful assistant. Answer the user's question using only the provided context. When you use information from a source, cite it with [1], [2], etc. corresponding to the numbered context. If the context does not contain relevant information, say so. Do not make up facts.`;
@@ -723,19 +686,16 @@ export async function ragQuery(
         model: ragModel.modelId,
         max_tokens: 1024,
         system: sys,
-        messages: [{ role: "user" as const, content: user }],
+        messages: [{ role: 'user' as const, content: user }],
       };
       const completionResult = await getCompletion(completionParams, {
         provider: ragModel.provider,
         modelId: ragModel.modelId,
       });
       if (completionResult.error) {
-        logger.warn(
-          { error: completionResult.error },
-          "RAG LLM (intent-guided) error",
-        );
+        logger.warn({ error: completionResult.error }, 'RAG LLM (intent-guided) error');
       }
-      const rawAnswer = (completionResult.text?.trim() ?? "") || "";
+      const rawAnswer = (completionResult.text?.trim() ?? '') || '';
       const citations: RagCitation[] = irfResult.sources.map((s, i) => ({
         id: i + 1,
         source: s.source,
@@ -744,21 +704,19 @@ export async function ragQuery(
       }));
       let structured: Record<string, unknown> | undefined;
       let answer = rawAnswer;
-      if (outputFormat === "structured" && rawAnswer) {
+      if (outputFormat === 'structured' && rawAnswer) {
         const jsonMatch = rawAnswer.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           try {
             structured = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-            if (!("error" in structured))
-              answer = JSON.stringify(structured, null, 2);
+            if (!('error' in structured)) answer = JSON.stringify(structured, null, 2);
           } catch {
             // keep raw answer
           }
         }
       }
       return {
-        answer:
-          answer || "No answer could be generated from the retrieved context.",
+        answer: answer || 'No answer could be generated from the retrieved context.',
         sources: irfResult.sources,
         confidence: 0.7,
         citations,
@@ -771,11 +729,11 @@ export async function ragQuery(
   const fetchK = options?.hybrid ? TOP_K_HYBRID : TOP_K;
   const queryEmbeddings = await embedViaService([query], {
     model: getRagEmbedModel(),
-    inputType: "query",
+    inputType: 'query',
   });
   const queryEmbedding = queryEmbeddings[0];
   if (!queryEmbedding) {
-    throw new Error("Failed to generate embedding for query");
+    throw new Error('Failed to generate embedding for query');
   }
   let candidates = await store.query(queryEmbedding, {
     topK: fetchK,
@@ -786,7 +744,7 @@ export async function ragQuery(
   if (candidates.length === 0) {
     return {
       answer:
-        "The knowledge base has not been indexed yet. Run the RAG indexer (e.g. `npm run rag:index` in backend) and ensure RAG_INDEX_PATH is set.",
+        'The knowledge base has not been indexed yet. Run the RAG indexer (e.g. `npm run rag:index` in backend) and ensure RAG_INDEX_PATH is set.',
       sources: [],
       confidence: 0,
       fallback: FALLBACK_MESSAGE,
@@ -800,21 +758,17 @@ export async function ragQuery(
       const bm25Results = bm25Idx.search(query, Math.max(TOP_K_HYBRID, 20));
       const bm25RankById = new Map(bm25Results.map((r, i) => [r.chunk.id, i]));
       const merged = candidates.map((c, vectorRank) => {
-        const bm25Rank =
-          bm25RankById.get(c.chunk.id) ?? TOP_K_HYBRID + vectorRank;
+        const bm25Rank = bm25RankById.get(c.chunk.id) ?? TOP_K_HYBRID + vectorRank;
         const rrf = rrfScore(vectorRank) + rrfScore(bm25Rank);
         return { ...c, rrf };
       });
-      const graph =
-        process.env.RAG_GRAPH_ENABLED !== "false" ? await loadGraph() : null;
+      const graph = process.env.RAG_GRAPH_ENABLED !== 'false' ? await loadGraph() : null;
       if (graph) {
         const queryTokens = query
           .toLowerCase()
           .split(/\s+/)
           .filter((t) => t.length > 2);
-        const graphChunkIds = new Set(
-          getRelatedChunkIds(graph, queryTokens, 50),
-        );
+        const graphChunkIds = new Set(getRelatedChunkIds(graph, queryTokens, 50));
         for (const m of merged) {
           if (graphChunkIds.has(m.chunk.id)) {
             m.rrf = (m.rrf ?? 0) + rrfScore(0) * 0.5;
@@ -822,9 +776,7 @@ export async function ragQuery(
         }
       }
       merged.sort((a, b) => (b.rrf ?? 0) - (a.rrf ?? 0));
-      candidates = merged
-        .slice(0, TOP_K)
-        .map(({ chunk, score }) => ({ chunk, score }));
+      candidates = merged.slice(0, TOP_K).map(({ chunk, score }) => ({ chunk, score }));
     } else {
       const withKwScore = candidates.map((c, i) => ({
         ...c,
@@ -839,9 +791,7 @@ export async function ragQuery(
         return { ...c, rrf: rrfScore(vectorRank) + rrfScore(kwRank) };
       });
       merged.sort((a, b) => b.rrf - a.rrf);
-      candidates = merged
-        .slice(0, TOP_K)
-        .map(({ chunk, score }) => ({ chunk, score }));
+      candidates = merged.slice(0, TOP_K).map(({ chunk, score }) => ({ chunk, score }));
     }
   } else if (candidates.length > TOP_K) {
     candidates = candidates.slice(0, TOP_K);
@@ -849,7 +799,7 @@ export async function ragQuery(
 
   candidates = await rerank(query, candidates, TOP_K);
 
-  const outputFormat = options?.outputFormat ?? "natural";
+  const outputFormat = options?.outputFormat ?? 'natural';
   const structuredSchema = options?.structuredSchema;
 
   const top = candidates.map((c) => c.chunk);
@@ -857,8 +807,7 @@ export async function ragQuery(
 
   // Confidence from max cosine similarity (Option B). Normalize to roughly 0–1 (cosine can be in [-1,1], typical for similar text ~0.3–0.9).
   const confidence = Math.max(0, Math.min(1, (maxScore + 0.2) / 1.1));
-  const fallback =
-    confidence < CONFIDENCE_LOW_THRESHOLD ? FALLBACK_MESSAGE : undefined;
+  const fallback = confidence < CONFIDENCE_LOW_THRESHOLD ? FALLBACK_MESSAGE : undefined;
 
   // Small-to-big: use parentContent for context when available
   const contentForContext = (chunk: (typeof top)[0]) =>
@@ -872,21 +821,17 @@ export async function ragQuery(
     url: `/docs/${encodeURIComponent(c.source)}`,
   }));
   const context = top
-    .map(
-      (c, i) => `[${i + 1}] ${c.source} (${c.type})\n${contentForContext(c)}`,
-    )
-    .join("\n\n---\n\n");
+    .map((c, i) => `[${i + 1}] ${c.source} (${c.type})\n${contentForContext(c)}`)
+    .join('\n\n---\n\n');
   const sources = [
-    ...new Map(
-      top.map((c) => [c.source, { source: c.source, type: c.type }]),
-    ).values(),
+    ...new Map(top.map((c) => [c.source, { source: c.source, type: c.type }])).values(),
   ];
 
   let sys: string;
-  if (outputFormat === "structured") {
+  if (outputFormat === 'structured') {
     const schemaDesc =
       structuredSchema ??
-      "tasks: string[] (list of action items), or endpoints: Array<{ method: string, path: string, description: string }>";
+      'tasks: string[] (list of action items), or endpoints: Array<{ method: string, path: string, description: string }>';
     sys = `You are a helpful assistant. Extract structured data from the provided context to answer the user's question. Return ONLY valid JSON matching this schema: ${schemaDesc}. No markdown code fence, no extra text. If the context does not contain relevant information, return {"error": "No relevant information found"}.`;
   } else {
     sys = `You are a helpful assistant. Answer the user's question using only the provided context. When you use information from a source, cite it with [1], [2], etc. corresponding to the numbered context. If the context does not contain relevant information, say so. Do not make up facts.`;
@@ -895,15 +840,15 @@ export async function ragQuery(
 
   const ragModel = getRAGModel();
   // Enable fallback to Llama 405B for low confidence responses
-  const canFallback = process.env.RAG_LLM_FALLBACK === "true";
-  let rawAnswer = "";
+  const canFallback = process.env.RAG_LLM_FALLBACK === 'true';
+  let rawAnswer = '';
   let primaryError: string | null = null;
 
   const completionParams = {
     model: ragModel.modelId,
     max_tokens: 1024,
     system: sys,
-    messages: [{ role: "user" as const, content: user }],
+    messages: [{ role: 'user' as const, content: user }],
   };
   const completionResult = await getCompletion(completionParams, {
     provider: ragModel.provider,
@@ -911,9 +856,9 @@ export async function ragQuery(
   });
   if (completionResult.error) {
     primaryError = completionResult.error;
-    logger.warn({ error: primaryError }, "RAG LLM (router) error");
+    logger.warn({ error: primaryError }, 'RAG LLM (router) error');
   } else {
-    rawAnswer = completionResult.text?.trim() ?? "";
+    rawAnswer = completionResult.text?.trim() ?? '';
   }
 
   if (primaryError && !canFallback) {
@@ -923,24 +868,19 @@ export async function ragQuery(
 
   const useFallback =
     canFallback &&
-    (Boolean(primaryError) ||
-      confidence < CONFIDENCE_LOW_THRESHOLD ||
-      !rawAnswer.trim());
+    (Boolean(primaryError) || confidence < CONFIDENCE_LOW_THRESHOLD || !rawAnswer.trim());
   if (useFallback) {
     try {
       const fallbackResult = await getCompletion(
         { ...completionParams, model: RAG_FALLBACK_MODEL },
-        { provider: "nim" as LLMProvider, modelId: RAG_FALLBACK_MODEL },
+        { provider: 'nim' as LLMProvider, modelId: RAG_FALLBACK_MODEL }
       );
       if (fallbackResult.text?.trim()) {
         rawAnswer = fallbackResult.text.trim();
-        fallbackProvider = "llama-405b";
+        fallbackProvider = 'llama-405b';
       }
     } catch (e) {
-      logger.warn(
-        { error: (e as Error).message },
-        "RAG Llama 405B fallback failed",
-      );
+      logger.warn({ error: (e as Error).message }, 'RAG Llama 405B fallback failed');
     }
   }
   if (primaryError && !fallbackProvider) {
@@ -949,12 +889,12 @@ export async function ragQuery(
 
   let structured: Record<string, unknown> | undefined;
   let answer = rawAnswer;
-  if (outputFormat === "structured") {
+  if (outputFormat === 'structured') {
     const jsonMatch = rawAnswer.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
         structured = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-        if (!("error" in structured)) {
+        if (!('error' in structured)) {
           answer = JSON.stringify(structured, null, 2);
         }
       } catch {
@@ -1006,15 +946,15 @@ export interface RunIndexerOptions {
  * ```
  */
 function useSmallToBig(): boolean {
-  return process.env.RAG_SMALL_TO_BIG === "true";
+  return process.env.RAG_SMALL_TO_BIG === 'true';
 }
 
 export async function runIndexer(
   docs: { content: string; source: string; type: DocType }[],
-  options?: RunIndexerOptions,
+  options?: RunIndexerOptions
 ): Promise<{ chunks: number }> {
   const apiKey = getApiKey();
-  if (!apiKey) throw new Error("NVIDIA_NIM_API_KEY is not set");
+  if (!apiKey) throw new Error('NVIDIA_NIM_API_KEY is not set');
 
   const smallToBig = useSmallToBig();
   const allChunks: {
@@ -1026,7 +966,7 @@ export async function runIndexer(
   }[] = [];
 
   for (const d of docs) {
-    if (d.type === "grump") {
+    if (d.type === 'grump') {
       const grumpChunks = chunkGrumpByAST(d.content, d.source);
       if (smallToBig) {
         for (const g of grumpChunks) {
@@ -1050,7 +990,7 @@ export async function runIndexer(
     const texts = batch.map((b) => b.content);
     const embeddings = await embedViaService(texts, {
       model: getRagEmbedModel(),
-      inputType: "passage",
+      inputType: 'passage',
     });
     for (let j = 0; j < batch.length; j++) {
       const batchItem = batch[j];
@@ -1091,7 +1031,7 @@ export async function runIndexer(
       })),
       indexedAt: new Date().toISOString(),
     }),
-    "utf8",
+    'utf8'
   );
   bm25IndexCache = null;
 
@@ -1101,7 +1041,7 @@ export async function runIndexer(
       content: c.content,
       source: c.source,
       type: c.type,
-    })),
+    }))
   );
   await saveGraph(graph);
   clearGraphCache();

@@ -3,10 +3,10 @@
  * Used after codegen to surface main chunk size (and optionally LCP / Core Web Vitals).
  */
 
-import { exec } from "child_process";
-import { promisify } from "util";
-import * as fs from "fs";
-import * as path from "path";
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const execAsync = promisify(exec);
 
@@ -27,27 +27,22 @@ export interface BundleReportResult {
  * Detect if workspace looks like a frontend project (has package.json with build script and typical deps).
  */
 function isFrontendProject(resolvedRoot: string): boolean {
-  const pkgPath = path.join(resolvedRoot, "package.json");
+  const pkgPath = path.join(resolvedRoot, 'package.json');
   if (!fs.existsSync(pkgPath)) return false;
   try {
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as {
       scripts?: Record<string, string>;
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
     const scripts = pkg?.scripts ?? {};
-    const hasBuild = "build" in scripts;
+    const hasBuild = 'build' in scripts;
     const deps = { ...pkg?.dependencies, ...pkg?.devDependencies };
     const hasFrontendTool =
-      deps["vite"] ||
-      deps["webpack"] ||
-      deps["@vitejs/plugin-react"] ||
-      deps["react-scripts"];
+      deps['vite'] || deps['webpack'] || deps['@vitejs/plugin-react'] || deps['react-scripts'];
     return Boolean(
       hasBuild &&
-      (hasFrontendTool ||
-        scripts.build?.includes("vite") ||
-        scripts.build?.includes("webpack")),
+      (hasFrontendTool || scripts.build?.includes('vite') || scripts.build?.includes('webpack'))
     );
   } catch {
     return false;
@@ -71,36 +66,33 @@ function dirSize(dir: string): number {
  */
 export async function runProjectBundleReport(
   workspaceRoot: string,
-  options: { timeoutMs?: number } = {},
+  options: { timeoutMs?: number } = {}
 ): Promise<BundleReportResult> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const resolvedRoot = path.resolve(workspaceRoot);
 
-  if (
-    !fs.existsSync(resolvedRoot) ||
-    !fs.statSync(resolvedRoot).isDirectory()
-  ) {
+  if (!fs.existsSync(resolvedRoot) || !fs.statSync(resolvedRoot).isDirectory()) {
     return {
       success: false,
-      summary: "Not a directory",
-      error: "Workspace root is not a directory",
+      summary: 'Not a directory',
+      error: 'Workspace root is not a directory',
     };
   }
 
   if (!isFrontendProject(resolvedRoot)) {
     return {
       success: false,
-      summary: "Not a frontend project",
-      error: "No frontend build detected; skipping",
+      summary: 'Not a frontend project',
+      error: 'No frontend build detected; skipping',
     };
   }
 
   try {
-    await execAsync("npm run build", {
+    await execAsync('npm run build', {
       cwd: resolvedRoot,
       timeout: timeoutMs,
       maxBuffer: 1024 * 1024,
-      env: { ...process.env, CI: "true", NODE_ENV: "production" },
+      env: { ...process.env, CI: 'true', NODE_ENV: 'production' },
     });
   } catch (err: unknown) {
     const execErr = err as {
@@ -110,15 +102,15 @@ export async function runProjectBundleReport(
     };
     return {
       success: false,
-      summary: "Build failed",
+      summary: 'Build failed',
       error: execErr.killed
-        ? "Build timed out"
-        : (execErr.message ?? execErr.stderr ?? "Build failed"),
+        ? 'Build timed out'
+        : (execErr.message ?? execErr.stderr ?? 'Build failed'),
     };
   }
 
-  const distPath = path.join(resolvedRoot, "dist");
-  const buildPath = path.join(resolvedRoot, "build");
+  const distPath = path.join(resolvedRoot, 'dist');
+  const buildPath = path.join(resolvedRoot, 'build');
   const outDir = fs.existsSync(distPath)
     ? distPath
     : fs.existsSync(buildPath)
@@ -127,7 +119,7 @@ export async function runProjectBundleReport(
   if (!outDir) {
     return {
       success: true,
-      summary: "Build succeeded; no dist/build folder found",
+      summary: 'Build succeeded; no dist/build folder found',
       outputDir: undefined,
     };
   }

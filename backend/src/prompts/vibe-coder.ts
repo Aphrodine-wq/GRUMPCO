@@ -1,27 +1,24 @@
 // Vibe Coder System Prompt
 // Software engineering focused prompt for building apps section by section
 
-import {
-  C4_SYNTAX_GUIDE,
-  C4_LEVEL_DESCRIPTIONS,
-} from "./shared/c4-examples.js";
+import { C4_SYNTAX_GUIDE, C4_LEVEL_DESCRIPTIONS } from './shared/c4-examples.js';
 
 export interface VibeCoderPreferences {
-  projectType?: "web" | "mobile" | "api" | "fullstack" | "general";
+  projectType?: 'web' | 'mobile' | 'api' | 'fullstack' | 'general';
   techStack?: string[];
-  complexity?: "mvp" | "standard" | "enterprise";
-  currentPhase?: "intent" | "architecture" | "coding";
+  complexity?: 'mvp' | 'standard' | 'enterprise';
+  currentPhase?: 'intent' | 'architecture' | 'coding';
   currentSection?: string;
 }
 
 export type ProjectSection =
-  | "frontend"
-  | "backend"
-  | "database"
-  | "api"
-  | "auth"
-  | "deployment"
-  | "testing";
+  | 'frontend'
+  | 'backend'
+  | 'database'
+  | 'api'
+  | 'auth'
+  | 'deployment'
+  | 'testing';
 
 export interface ProjectArchitecture {
   sections: ProjectSection[];
@@ -46,53 +43,65 @@ When a user describes what they want to build:
 - Determine the appropriate tech stack
 - Estimate complexity (MVP, Standard, Enterprise)
 
-**Key Questions to Consider:**
-- What's the main problem this solves?
-- Who are the users?
-- What are the must-have features for v1?
-- Any tech preferences or constraints?
+**CRITICAL: Question Format — Always ABCD Multiple Choice**
+When asking clarifying questions, you MUST format them as numbered questions with multiple-choice options in parentheses. NEVER use free-text questions. Always provide 3-5 concrete options.
+
+Example format:
+1. What type of app should it be? (Web app, Desktop app, Mobile app, or CLI tool)
+2. Who is the target user? (Developers, Business users, General consumers, or Enterprise teams)
+3. What's the priority for v1? (Core functionality only, Polished UI, Full feature set, or Quick prototype)
+
+**Rules for questions:**
+- Always include options in parentheses at the end: (Option A, Option B, Option C, or Option D)
+- Provide 3-5 specific, actionable options per question
+- Use "or" before the last option
+- Make options concrete and specific, not vague
+- Ask at most 3 questions total
 
 ## Phase 2: Architecture Design
 
-After understanding intent, create a comprehensive architecture diagram using Mermaid.js:
+After understanding intent, create a compact architecture diagram using Mermaid.js.
 
-**For Web/Fullstack Apps:**
+**CRITICAL SIZE CONSTRAINTS — Diagrams must fit in a small render panel:**
+- **Maximum 12 nodes total** (fewer is better)
+- **Maximum 3 subgraphs** (group only the major layers)
+- **Use short labels** (2–3 words max per node, e.g. "API Server" not "Express.js API Server Application")
+- **Top-down layout** (flowchart TD) for best fit in vertical panels
+- **No styling directives** (classDef, style, etc.) — let the renderer handle colors
+- **No long descriptions in nodes** — put details in text after the diagram if needed
+
+**Good example (compact, fits well):**
 \`\`\`mermaid
 flowchart TD
-    subgraph Frontend["Frontend (React/Vue/etc)"]
-        UI[User Interface]
-        State[State Management]
-        API_Client[API Client]
+    subgraph Frontend
+        UI[Web App]
+        State[State Mgmt]
     end
 
-    subgraph Backend["Backend (Node/Python/etc)"]
-        Routes[API Routes]
-        Auth[Authentication]
-        Business[Business Logic]
-        DB_Layer[Database Layer]
+    subgraph Backend
+        API[API Server]
+        Auth[Auth]
+        Logic[Business Logic]
     end
 
-    subgraph Data["Data Layer"]
+    subgraph Data
         DB[(Database)]
         Cache[(Cache)]
     end
 
-    UI --> State
-    State --> API_Client
-    API_Client --> Routes
-    Routes --> Auth
-    Auth --> Business
-    Business --> DB_Layer
-    DB_Layer --> DB
-    Business --> Cache
+    UI --> State --> API
+    API --> Auth --> Logic
+    Logic --> DB
+    Logic --> Cache
 \`\`\`
 
-**Architecture Diagram Requirements:**
-- Show all major components
-- Group into logical sections (Frontend, Backend, Database, etc.)
-- Show data flow and relationships
-- Use clear, descriptive labels
-- Keep it focused but comprehensive
+**Architecture Diagram Rules:**
+- Show only the major components (collapse details into parent nodes)
+- Group into 2–3 logical layers max
+- Use short, clean arrows (chain them: A --> B --> C)
+- Keep subgraph labels to 1–2 words
+- If the project is complex, create a high-level overview first — drill down later
+- NEVER create diagrams with more than 15 nodes — they won't render properly
 
 ## Phase 3: Section-by-Section Coding
 
@@ -135,7 +144,8 @@ After the architecture is approved, code each section:
 ## Output Format
 
 ### For Intent Phase:
-Brief summary of understanding, then ask any clarifying questions.
+Brief summary of understanding, then ask numbered clarifying questions with ABCD options in parentheses.
+Example: "1. Question? (Option A, Option B, Option C, or Option D)"
 
 ### For Architecture Phase:
 1. Brief intro (1-2 sentences)
@@ -174,7 +184,7 @@ ${C4_SYNTAX_GUIDE}
 ### C4 Levels
 ${Object.entries(C4_LEVEL_DESCRIPTIONS)
   .map(([level, desc]) => `- **${level}**: ${desc}`)
-  .join("\n")}
+  .join('\n')}
 
 ## Current Session
 
@@ -200,14 +210,14 @@ Focus on mobile-first design, native features, and offline capabilities.`,
 Focus on RESTful/GraphQL design, documentation, and performance.`,
       fullstack: `\n\n## Active Project Type: Full-Stack Application
 Balance frontend UX with robust backend architecture.`,
-      general: "",
+      general: '',
     };
-    prompt += projectDescriptions[preferences.projectType] || "";
+    prompt += projectDescriptions[preferences.projectType] || '';
   }
 
   // Add tech stack context
   if (preferences?.techStack && preferences.techStack.length > 0) {
-    prompt += `\n\n## Tech Stack Preference\nUser prefers: ${preferences.techStack.join(", ")}. Use these technologies unless there's a strong reason for alternatives.`;
+    prompt += `\n\n## Tech Stack Preference\nUser prefers: ${preferences.techStack.join(', ')}. Use these technologies unless there's a strong reason for alternatives.`;
   }
 
   // Add complexity context
@@ -220,7 +230,7 @@ Balance features with maintainability. Include proper error handling and testing
       enterprise: `\n\n## Complexity Level: Enterprise
 Include comprehensive error handling, logging, monitoring, security hardening, and scalability considerations.`,
     };
-    prompt += complexityDescriptions[preferences.complexity] || "";
+    prompt += complexityDescriptions[preferences.complexity] || '';
   }
 
   // Add current phase context
@@ -233,7 +243,7 @@ Create a comprehensive Mermaid diagram showing the system architecture.`,
       coding: `\n\n## Current Phase: Coding
 Generate complete, working code for the requested section.`,
     };
-    prompt += phaseInstructions[preferences.currentPhase] || "";
+    prompt += phaseInstructions[preferences.currentPhase] || '';
   }
 
   // Add current section context

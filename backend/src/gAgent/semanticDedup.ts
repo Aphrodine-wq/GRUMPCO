@@ -10,8 +10,8 @@
  * @module gAgent/semanticDedup
  */
 
-import { EventEmitter } from "events";
-import { HRRVector, HolographicMemory } from "../services/agents/holographicMemory.js";
+import { EventEmitter } from 'events';
+import { HRRVector, HolographicMemory } from '../services/agents/holographicMemory.js';
 
 // ============================================================================
 // TYPES
@@ -54,18 +54,18 @@ export interface SemanticPattern {
 }
 
 export type PatternType =
-  | "function"
-  | "class"
-  | "component"
-  | "api_endpoint"
-  | "test_case"
-  | "error_handler"
-  | "data_model"
-  | "config"
-  | "utility"
-  | "hook"
-  | "middleware"
-  | "decorator";
+  | 'function'
+  | 'class'
+  | 'component'
+  | 'api_endpoint'
+  | 'test_case'
+  | 'error_handler'
+  | 'data_model'
+  | 'config'
+  | 'utility'
+  | 'hook'
+  | 'middleware'
+  | 'decorator';
 
 /**
  * Pattern reference - lightweight pointer to a pattern
@@ -106,30 +106,29 @@ export interface LibraryStats {
 
 const BUILTIN_PATTERNS: Partial<SemanticPattern>[] = [
   {
-    id: "pattern_react_component",
+    id: 'pattern_react_component',
     content: {
-      abstract: "React functional component with props",
-      summary:
-        "A React functional component that accepts props and returns JSX",
+      abstract: 'React functional component with props',
+      summary: 'A React functional component that accepts props and returns JSX',
       template: `export function {{NAME}}({{ PROPS_TYPE }}) {
   {{HOOKS}}
   return ({{JSX}});
 }`,
-      parameters: ["NAME", "PROPS_TYPE", "HOOKS", "JSX"],
+      parameters: ['NAME', 'PROPS_TYPE', 'HOOKS', 'JSX'],
     },
     meta: {
-      type: "component",
-      language: "typescript",
-      framework: "react",
-      category: "ui",
-      tags: ["react", "component", "functional"],
+      type: 'component',
+      language: 'typescript',
+      framework: 'react',
+      category: 'ui',
+      tags: ['react', 'component', 'functional'],
     },
   },
   {
-    id: "pattern_express_endpoint",
+    id: 'pattern_express_endpoint',
     content: {
-      abstract: "Express REST API endpoint",
-      summary: "An Express.js route handler with request/response handling",
+      abstract: 'Express REST API endpoint',
+      summary: 'An Express.js route handler with request/response handling',
       template: `router.{{METHOD}}('{{PATH}}', async (req: Request, res: Response) => {
   try {
     {{BODY}}
@@ -138,43 +137,42 @@ const BUILTIN_PATTERNS: Partial<SemanticPattern>[] = [
     return res.status(500).json({ error: (error as Error).message });
   }
 });`,
-      parameters: ["METHOD", "PATH", "BODY", "RESPONSE"],
+      parameters: ['METHOD', 'PATH', 'BODY', 'RESPONSE'],
     },
     meta: {
-      type: "api_endpoint",
-      language: "typescript",
-      framework: "express",
-      category: "backend",
-      tags: ["express", "api", "rest", "endpoint"],
+      type: 'api_endpoint',
+      language: 'typescript',
+      framework: 'express',
+      category: 'backend',
+      tags: ['express', 'api', 'rest', 'endpoint'],
     },
   },
   {
-    id: "pattern_svelte_store",
+    id: 'pattern_svelte_store',
     content: {
-      abstract: "Svelte writable store with actions",
-      summary: "A Svelte store with state management and action methods",
+      abstract: 'Svelte writable store with actions',
+      summary: 'A Svelte store with state management and action methods',
       template: `const store = writable<{{STATE_TYPE}}>({{INITIAL_STATE}});
 
 export const {{NAME}} = {
   subscribe: store.subscribe,
   {{ACTIONS}}
 };`,
-      parameters: ["STATE_TYPE", "INITIAL_STATE", "NAME", "ACTIONS"],
+      parameters: ['STATE_TYPE', 'INITIAL_STATE', 'NAME', 'ACTIONS'],
     },
     meta: {
-      type: "utility",
-      language: "typescript",
-      framework: "svelte",
-      category: "state",
-      tags: ["svelte", "store", "state"],
+      type: 'utility',
+      language: 'typescript',
+      framework: 'svelte',
+      category: 'state',
+      tags: ['svelte', 'store', 'state'],
     },
   },
   {
-    id: "pattern_async_handler",
+    id: 'pattern_async_handler',
     content: {
-      abstract: "Async function with error handling",
-      summary:
-        "An async function with try-catch error handling and loading state",
+      abstract: 'Async function with error handling',
+      summary: 'An async function with try-catch error handling and loading state',
       template: `async function {{NAME}}({{PARAMS}}): Promise<{{RETURN_TYPE}}> {
   {{SET_LOADING}}
   try {
@@ -188,29 +186,29 @@ export const {{NAME}} = {
   }
 }`,
       parameters: [
-        "NAME",
-        "PARAMS",
-        "RETURN_TYPE",
-        "SET_LOADING",
-        "BODY",
-        "RESULT",
-        "HANDLE_ERROR",
-        "CLEAR_LOADING",
+        'NAME',
+        'PARAMS',
+        'RETURN_TYPE',
+        'SET_LOADING',
+        'BODY',
+        'RESULT',
+        'HANDLE_ERROR',
+        'CLEAR_LOADING',
       ],
     },
     meta: {
-      type: "function",
-      language: "typescript",
+      type: 'function',
+      language: 'typescript',
       framework: undefined,
-      category: "async",
-      tags: ["async", "error-handling", "loading"],
+      category: 'async',
+      tags: ['async', 'error-handling', 'loading'],
     },
   },
   {
-    id: "pattern_test_case",
+    id: 'pattern_test_case',
     content: {
-      abstract: "Unit test case with setup and assertions",
-      summary: "A test case with describe/it structure, setup, and assertions",
+      abstract: 'Unit test case with setup and assertions',
+      summary: 'A test case with describe/it structure, setup, and assertions',
       template: `describe('{{DESCRIBE}}', () => {
   {{BEFORE_EACH}}
   
@@ -225,14 +223,14 @@ export const {{NAME}} = {
     {{ASSERT}}
   });
 });`,
-      parameters: ["DESCRIBE", "BEFORE_EACH", "IT", "ARRANGE", "ACT", "ASSERT"],
+      parameters: ['DESCRIBE', 'BEFORE_EACH', 'IT', 'ARRANGE', 'ACT', 'ASSERT'],
     },
     meta: {
-      type: "test_case",
-      language: "typescript",
-      framework: "vitest",
-      category: "testing",
-      tags: ["test", "unit", "vitest"],
+      type: 'test_case',
+      language: 'typescript',
+      framework: 'vitest',
+      category: 'testing',
+      tags: ['test', 'unit', 'vitest'],
     },
   },
 ];
@@ -264,7 +262,7 @@ export class SemanticDeduplicationService extends EventEmitter {
     for (const pattern of BUILTIN_PATTERNS) {
       const fullPattern: SemanticPattern = {
         id: pattern.id!,
-        hash: this.hashContent(pattern.content?.template || ""),
+        hash: this.hashContent(pattern.content?.template || ''),
         content: pattern.content!,
         meta: pattern.meta!,
         stats: {
@@ -273,7 +271,7 @@ export class SemanticDeduplicationService extends EventEmitter {
           createdAt: new Date().toISOString(),
           sessions: new Set(),
         },
-        vector: this.computeVector(pattern.content?.template || ""),
+        vector: this.computeVector(pattern.content?.template || ''),
       };
 
       this.addPattern(fullPattern);
@@ -290,7 +288,7 @@ export class SemanticDeduplicationService extends EventEmitter {
       type?: PatternType;
       language?: string;
       framework?: string;
-    },
+    }
   ): DeduplicationResult {
     const contentHash = this.hashContent(content);
 
@@ -308,9 +306,7 @@ export class SemanticDeduplicationService extends EventEmitter {
           similarity: 1.0,
         },
         isNew: false,
-        savedTokens:
-          this.estimateTokens(content) -
-          this.estimateTokens(pattern.content.abstract),
+        savedTokens: this.estimateTokens(content) - this.estimateTokens(pattern.content.abstract),
       };
     }
 
@@ -373,11 +369,11 @@ export class SemanticDeduplicationService extends EventEmitter {
     // Fill in parameters
     let result = pattern.content.template;
     for (const [key, value] of Object.entries(ref.parameters)) {
-      result = result.replace(new RegExp(`{{${key}}}`, "g"), value);
+      result = result.replace(new RegExp(`{{${key}}}`, 'g'), value);
     }
 
     // Remove unfilled parameters
-    result = result.replace(/\{\{[^}]+\}\}/g, "");
+    result = result.replace(/\{\{[^}]+\}\}/g, '');
 
     return result;
   }
@@ -428,11 +424,9 @@ export class SemanticDeduplicationService extends EventEmitter {
       content: string;
       hints?: { type?: PatternType; language?: string };
     }>,
-    sessionId: string,
+    sessionId: string
   ): DeduplicationResult[] {
-    return items.map((item) =>
-      this.deduplicate(item.content, sessionId, item.hints),
-    );
+    return items.map((item) => this.deduplicate(item.content, sessionId, item.hints));
   }
 
   /**
@@ -447,7 +441,7 @@ export class SemanticDeduplicationService extends EventEmitter {
       framework?: string;
       category: string;
       tags: string[];
-    },
+    }
   ): SemanticPattern {
     // Auto-detect parameters (things in quotes, CamelCase names, etc.)
     const parameters = this.detectParameters(example);
@@ -459,10 +453,7 @@ export class SemanticDeduplicationService extends EventEmitter {
     for (let i = 0; i < parameters.length; i++) {
       const param = parameters[i];
       const placeholder = `PARAM_${i}`;
-      template = template.replace(
-        new RegExp(this.escapeRegex(param), "g"),
-        `{{${placeholder}}}`,
-      );
+      template = template.replace(new RegExp(this.escapeRegex(param), 'g'), `{{${placeholder}}}`);
       paramMap[placeholder] = param;
     }
 
@@ -486,7 +477,7 @@ export class SemanticDeduplicationService extends EventEmitter {
     };
 
     this.addPattern(pattern);
-    this.emit("pattern_learned", { pattern });
+    this.emit('pattern_learned', { pattern });
 
     return pattern;
   }
@@ -503,8 +494,7 @@ export class SemanticDeduplicationService extends EventEmitter {
     for (const pattern of this.patterns.values()) {
       byType[pattern.meta.type] = (byType[pattern.meta.type] || 0) + 1;
       if (pattern.meta.language) {
-        byLanguage[pattern.meta.language] =
-          (byLanguage[pattern.meta.language] || 0) + 1;
+        byLanguage[pattern.meta.language] = (byLanguage[pattern.meta.language] || 0) + 1;
       }
       totalUses += pattern.stats.useCount;
       for (const session of pattern.stats.sessions) {
@@ -533,7 +523,7 @@ export class SemanticDeduplicationService extends EventEmitter {
       maxAge?: number; // Max age in days
       minUseCount?: number; // Min uses to keep
       keepBuiltin?: boolean; // Keep built-in patterns
-    } = {},
+    } = {}
   ): number {
     const { maxAge = 30, minUseCount = 2, keepBuiltin = true } = options;
 
@@ -542,7 +532,7 @@ export class SemanticDeduplicationService extends EventEmitter {
     let removed = 0;
 
     for (const [id, pattern] of this.patterns) {
-      if (keepBuiltin && id.startsWith("pattern_")) continue;
+      if (keepBuiltin && id.startsWith('pattern_')) continue;
 
       const age = now - new Date(pattern.stats.lastUsed).getTime();
 
@@ -554,7 +544,7 @@ export class SemanticDeduplicationService extends EventEmitter {
     }
 
     if (removed > 0) {
-      this.emit("cleanup", { removed });
+      this.emit('cleanup', { removed });
     }
 
     return removed;
@@ -627,7 +617,7 @@ export class SemanticDeduplicationService extends EventEmitter {
   private createPattern(
     content: string,
     sessionId: string,
-    hints?: { type?: PatternType; language?: string; framework?: string },
+    hints?: { type?: PatternType; language?: string; framework?: string }
   ): SemanticPattern {
     const pattern: SemanticPattern = {
       id: `pattern_auto_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -642,7 +632,7 @@ export class SemanticDeduplicationService extends EventEmitter {
         type: hints?.type || this.inferType(content),
         language: hints?.language || this.inferLanguage(content),
         framework: hints?.framework,
-        category: "auto-detected",
+        category: 'auto-detected',
         tags: this.extractTags(content),
       },
       stats: {
@@ -655,7 +645,7 @@ export class SemanticDeduplicationService extends EventEmitter {
     };
 
     this.addPattern(pattern);
-    this.emit("pattern_created", { pattern });
+    this.emit('pattern_created', { pattern });
 
     return pattern;
   }
@@ -677,7 +667,7 @@ export class SemanticDeduplicationService extends EventEmitter {
 
   private findSimilar(
     vector: number[],
-    topK: number,
+    topK: number
   ): Array<{ patternId: string; similarity: number }> {
     const results: Array<{ patternId: string; similarity: number }> = [];
 
@@ -691,7 +681,7 @@ export class SemanticDeduplicationService extends EventEmitter {
 
   private extractParameters(
     content: string,
-    pattern: SemanticPattern,
+    pattern: SemanticPattern
   ): Record<string, string> | null {
     // Simple extraction: find what differs between content and template
     // This is a simplified version - production would use AST parsing
@@ -758,7 +748,7 @@ export class SemanticDeduplicationService extends EventEmitter {
 
   private evictLeastUsed(): void {
     const sorted = Array.from(this.patterns.entries())
-      .filter(([id]) => !id.startsWith("pattern_")) // Keep built-in
+      .filter(([id]) => !id.startsWith('pattern_')) // Keep built-in
       .sort(([, a], [, b]) => a.stats.useCount - b.stats.useCount);
 
     if (sorted.length > 0) {
@@ -835,69 +825,58 @@ export class SemanticDeduplicationService extends EventEmitter {
 
   private generateAbstract(content: string): string {
     // First line or first 50 chars
-    const firstLine = content.split("\n")[0].trim();
-    return firstLine.slice(0, 50) + (firstLine.length > 50 ? "..." : "");
+    const firstLine = content.split('\n')[0].trim();
+    return firstLine.slice(0, 50) + (firstLine.length > 50 ? '...' : '');
   }
 
   private generateSummary(content: string): string {
     // First 200 chars
-    return content.slice(0, 200) + (content.length > 200 ? "..." : "");
+    return content.slice(0, 200) + (content.length > 200 ? '...' : '');
   }
 
   private inferType(content: string): PatternType {
     const lower = content.toLowerCase();
 
-    if (
-      lower.includes("describe(") ||
-      lower.includes("it(") ||
-      lower.includes("test(")
-    ) {
-      return "test_case";
+    if (lower.includes('describe(') || lower.includes('it(') || lower.includes('test(')) {
+      return 'test_case';
     }
-    if (
-      lower.includes("router.") ||
-      lower.includes("app.get") ||
-      lower.includes("app.post")
-    ) {
-      return "api_endpoint";
+    if (lower.includes('router.') || lower.includes('app.get') || lower.includes('app.post')) {
+      return 'api_endpoint';
     }
-    if (lower.includes("class ")) {
-      return "class";
+    if (lower.includes('class ')) {
+      return 'class';
     }
-    if (lower.includes("usestate") || lower.includes("useeffect")) {
-      return "hook";
+    if (lower.includes('usestate') || lower.includes('useeffect')) {
+      return 'hook';
     }
-    if (lower.includes("<template>") || lower.includes("export default")) {
-      return "component";
+    if (lower.includes('<template>') || lower.includes('export default')) {
+      return 'component';
     }
-    if (lower.includes("catch") || lower.includes("error")) {
-      return "error_handler";
+    if (lower.includes('catch') || lower.includes('error')) {
+      return 'error_handler';
     }
-    if (lower.includes("interface ") || lower.includes("type ")) {
-      return "data_model";
+    if (lower.includes('interface ') || lower.includes('type ')) {
+      return 'data_model';
     }
 
-    return "function";
+    return 'function';
   }
 
   private inferLanguage(content: string): string {
     if (
-      content.includes("interface ") ||
-      content.includes(": string") ||
-      content.includes(": number")
+      content.includes('interface ') ||
+      content.includes(': string') ||
+      content.includes(': number')
     ) {
-      return "typescript";
+      return 'typescript';
     }
-    if (
-      content.includes("def ") ||
-      (content.includes("import ") && content.includes(":"))
-    ) {
-      return "python";
+    if (content.includes('def ') || (content.includes('import ') && content.includes(':'))) {
+      return 'python';
     }
-    if (content.includes("func ") || content.includes("package ")) {
-      return "go";
+    if (content.includes('func ') || content.includes('package ')) {
+      return 'go';
     }
-    return "javascript";
+    return 'javascript';
   }
 
   private extractTags(content: string): string[] {
@@ -905,23 +884,23 @@ export class SemanticDeduplicationService extends EventEmitter {
     const lower = content.toLowerCase();
 
     // Framework detection
-    if (lower.includes("react")) tags.push("react");
-    if (lower.includes("svelte")) tags.push("svelte");
-    if (lower.includes("vue")) tags.push("vue");
-    if (lower.includes("express")) tags.push("express");
-    if (lower.includes("next")) tags.push("nextjs");
+    if (lower.includes('react')) tags.push('react');
+    if (lower.includes('svelte')) tags.push('svelte');
+    if (lower.includes('vue')) tags.push('vue');
+    if (lower.includes('express')) tags.push('express');
+    if (lower.includes('next')) tags.push('nextjs');
 
     // Pattern detection
-    if (lower.includes("async")) tags.push("async");
-    if (lower.includes("await")) tags.push("await");
-    if (lower.includes("fetch")) tags.push("fetch");
-    if (lower.includes("state")) tags.push("state");
+    if (lower.includes('async')) tags.push('async');
+    if (lower.includes('await')) tags.push('await');
+    if (lower.includes('fetch')) tags.push('fetch');
+    if (lower.includes('state')) tags.push('state');
 
     return tags;
   }
 
   private escapeRegex(str: string): string {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 }
 

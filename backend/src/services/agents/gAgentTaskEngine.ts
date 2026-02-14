@@ -10,17 +10,10 @@
  * 6. Learning: Store patterns and improve over time
  */
 
-import logger from "../../middleware/logger.js";
-import type {
-  GAgentTask,
-  GAgentPlan,
-  GAgentCapabilityKey,
-} from "../../types/settings.js";
-import {
-  parseAndEnrichIntent,
-  type EnrichedIntent,
-} from "../intent/intentCompilerService.js";
-import { verifyIntentFeasibility } from "../intent/intentFeasibilityService.js";
+import logger from '../../middleware/logger.js';
+import type { GAgentTask, GAgentPlan, GAgentCapabilityKey } from '../../types/settings.js';
+import { parseAndEnrichIntent, type EnrichedIntent } from '../intent/intentCompilerService.js';
+import { verifyIntentFeasibility } from '../intent/intentFeasibilityService.js';
 
 export interface TaskDecompositionResult {
   tasks: GAgentTask[];
@@ -35,53 +28,53 @@ export interface PlanGenerationOptions {
   capabilities: GAgentCapabilityKey[];
   autoApprove?: boolean;
   maxTasks?: number;
-  riskTolerance?: "low" | "medium" | "high";
+  riskTolerance?: 'low' | 'medium' | 'high';
 }
 
 /**
  * Task risk levels based on tool categories
  */
-const TOOL_RISK_LEVELS: Record<string, "safe" | "moderate" | "risky"> = {
+const TOOL_RISK_LEVELS: Record<string, 'safe' | 'moderate' | 'risky'> = {
   // Safe: read-only operations
-  file_read: "safe",
-  list_directory: "safe",
-  codebase_search: "safe",
-  git_status: "safe",
-  git_diff: "safe",
-  git_log: "safe",
-  db_schema: "safe",
-  memory_recall: "safe",
-  memory_search: "safe",
-  plan_status: "safe",
+  file_read: 'safe',
+  list_directory: 'safe',
+  codebase_search: 'safe',
+  git_status: 'safe',
+  git_diff: 'safe',
+  git_log: 'safe',
+  db_schema: 'safe',
+  memory_recall: 'safe',
+  memory_search: 'safe',
+  plan_status: 'safe',
 
   // Moderate: reversible writes
-  file_write: "moderate",
-  file_edit: "moderate",
-  git_commit: "moderate",
-  git_branch: "moderate",
-  memory_store: "moderate",
-  skill_create: "moderate",
-  skill_edit: "moderate",
-  webhook_register: "moderate",
-  heartbeat_create: "moderate",
+  file_write: 'moderate',
+  file_edit: 'moderate',
+  git_commit: 'moderate',
+  git_branch: 'moderate',
+  memory_store: 'moderate',
+  skill_create: 'moderate',
+  skill_edit: 'moderate',
+  webhook_register: 'moderate',
+  heartbeat_create: 'moderate',
 
   // Risky: external effects or hard to reverse
-  git_push: "risky",
-  bash_execute: "risky",
-  terminal_execute: "risky",
-  docker_exec: "risky",
-  docker_compose_up: "risky",
-  docker_compose_down: "risky",
-  db_migrate_dryrun: "risky",
-  http_post: "risky",
-  http_put: "risky",
-  http_delete: "risky",
-  webhook_send: "risky",
-  k8s_deploy: "risky",
-  k8s_scale: "risky",
-  k8s_rollback: "risky",
-  pipeline_trigger: "risky",
-  release_create: "risky",
+  git_push: 'risky',
+  bash_execute: 'risky',
+  terminal_execute: 'risky',
+  docker_exec: 'risky',
+  docker_compose_up: 'risky',
+  docker_compose_down: 'risky',
+  db_migrate_dryrun: 'risky',
+  http_post: 'risky',
+  http_put: 'risky',
+  http_delete: 'risky',
+  webhook_send: 'risky',
+  k8s_deploy: 'risky',
+  k8s_scale: 'risky',
+  k8s_rollback: 'risky',
+  pipeline_trigger: 'risky',
+  release_create: 'risky',
 };
 
 /**
@@ -100,58 +93,44 @@ class GAgentTaskEngine {
     const startTime = Date.now();
     const planId = `plan_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-    logger.info(
-      { planId, goal: options.goal },
-      "G-Agent: Generating execution plan",
-    );
+    logger.info({ planId, goal: options.goal }, 'G-Agent: Generating execution plan');
 
     // Step 1: Use Rust Intent Compiler for fast parsing and enrichment
     let intentResult: EnrichedIntent | null = null;
     try {
       intentResult = await parseAndEnrichIntent(options.goal, undefined, {
-        mode: "hybrid",
+        mode: 'hybrid',
       });
       logger.debug(
         { planId, features: intentResult?.enriched?.features?.length ?? 0 },
-        "Rust parsing complete",
+        'Rust parsing complete'
       );
     } catch (err) {
-      logger.warn(
-        { planId, err },
-        "Intent parsing failed, will create default task",
-      );
+      logger.warn({ planId, err }, 'Intent parsing failed, will create default task');
     }
 
     // Step 2: Verify intent feasibility (map features to capabilities, check constraints)
     let feasibilityFeedback: string | undefined;
     if (intentResult) {
-      const feasibility = verifyIntentFeasibility(
-        intentResult,
-        options.capabilities,
-        "free",
-      );
+      const feasibility = verifyIntentFeasibility(intentResult, options.capabilities, 'free');
       feasibilityFeedback = feasibility.actionableFeedback;
       if (!feasibility.feasible) {
         logger.info(
           { planId, unsupported: feasibility.unsupportedFeatures },
-          "Intent has unsupported features",
+          'Intent has unsupported features'
         );
       }
     }
 
     // Step 3: Decompose into tasks
-    const decomposition = await this.decomposeGoal(
-      options.goal,
-      intentResult,
-      options,
-    );
+    const decomposition = await this.decomposeGoal(options.goal, intentResult, options);
 
     // Step 4: Build the plan
     const plan: GAgentPlan = {
       id: planId,
       goal: options.goal,
       tasks: decomposition.tasks,
-      status: "awaiting_approval",
+      status: 'awaiting_approval',
       confidence: decomposition.confidence,
       estimatedTotalDuration: decomposition.estimatedDuration,
       createdAt: new Date().toISOString(),
@@ -159,22 +138,16 @@ class GAgentTaskEngine {
     };
 
     // Auto-approve if all tasks are safe and autoApprove is enabled
-    if (
-      options.autoApprove &&
-      decomposition.tasks.every((t) => t.riskLevel === "safe")
-    ) {
-      plan.status = "executing";
+    if (options.autoApprove && decomposition.tasks.every((t) => t.riskLevel === 'safe')) {
+      plan.status = 'executing';
       plan.approvedAt = new Date().toISOString();
-      logger.info({ planId }, "G-Agent: Plan auto-approved (all tasks safe)");
+      logger.info({ planId }, 'G-Agent: Plan auto-approved (all tasks safe)');
     }
 
     this.activePlans.set(planId, plan);
 
     const duration = Date.now() - startTime;
-    logger.info(
-      { planId, taskCount: plan.tasks.length, duration },
-      "G-Agent: Plan generated",
-    );
+    logger.info({ planId, taskCount: plan.tasks.length, duration }, 'G-Agent: Plan generated');
 
     return plan;
   }
@@ -185,7 +158,7 @@ class GAgentTaskEngine {
   private async decomposeGoal(
     goal: string,
     intentResult: EnrichedIntent | null,
-    options: PlanGenerationOptions,
+    options: PlanGenerationOptions
   ): Promise<TaskDecompositionResult> {
     const tasks: GAgentTask[] = [];
     const dependencies = new Map<string, string[]>();
@@ -194,32 +167,25 @@ class GAgentTaskEngine {
     const cacheKey = this.generateCacheKey(goal);
     const cached = this.patternCache.get(cacheKey);
     if (cached && cached.confidence > 0.8) {
-      logger.debug({ cacheKey }, "Using cached task decomposition");
+      logger.debug({ cacheKey }, 'Using cached task decomposition');
       return cached;
     }
 
     // Extract features and actions from intent result
     // Use enriched features if available, otherwise fall back to base features
-    const featureStrings =
-      intentResult?.enriched?.features ?? intentResult?.features ?? [];
-    const techStack =
-      intentResult?.enriched?.tech_stack ??
-      intentResult?.tech_stack_hints ??
-      [];
+    const featureStrings = intentResult?.enriched?.features ?? intentResult?.features ?? [];
+    const techStack = intentResult?.enriched?.tech_stack ?? intentResult?.tech_stack_hints ?? [];
 
     // Build tasks from features
     let taskIndex = 0;
     for (const featureName of featureStrings) {
       const taskId = `task_${taskIndex++}`;
-      const tools = this.inferToolsForFeature(
-        featureName,
-        options.capabilities,
-      );
+      const tools = this.inferToolsForFeature(featureName, options.capabilities);
 
       const task: GAgentTask = {
         id: taskId,
         description: `Implement ${featureName}`,
-        status: "pending",
+        status: 'pending',
         priority: taskIndex, // Use index as priority for now
         dependencies: [],
         tools,
@@ -234,21 +200,21 @@ class GAgentTaskEngine {
     // For now, assume sequential dependencies for related tech (e.g., backend before frontend)
     const backendTasks = tasks.filter((t) =>
       techStack.some((tech) =>
-        ["node", "express", "api", "database", "backend"].some(
+        ['node', 'express', 'api', 'database', 'backend'].some(
           (kw) =>
             tech.toLowerCase().includes(kw) &&
-            t.description.toLowerCase().includes(tech.toLowerCase()),
-        ),
-      ),
+            t.description.toLowerCase().includes(tech.toLowerCase())
+        )
+      )
     );
     const frontendTasks = tasks.filter((t) =>
       techStack.some((tech) =>
-        ["react", "vue", "svelte", "frontend", "ui"].some(
+        ['react', 'vue', 'svelte', 'frontend', 'ui'].some(
           (kw) =>
             tech.toLowerCase().includes(kw) &&
-            t.description.toLowerCase().includes(tech.toLowerCase()),
-        ),
-      ),
+            t.description.toLowerCase().includes(tech.toLowerCase())
+        )
+      )
     );
 
     // Frontend tasks depend on backend tasks
@@ -267,21 +233,20 @@ class GAgentTaskEngine {
     // If no tasks from intent, create a single task
     if (tasks.length === 0) {
       tasks.push({
-        id: "task_0",
+        id: 'task_0',
         description: goal,
-        status: "pending",
+        status: 'pending',
         priority: 1,
         dependencies: [],
-        tools: ["file_read", "file_write", "bash_execute"],
-        riskLevel: "moderate",
+        tools: ['file_read', 'file_write', 'bash_execute'],
+        riskLevel: 'moderate',
         createdAt: new Date().toISOString(),
       });
     }
 
     // Calculate overall confidence based on intent analysis
     // If we have enriched data with ambiguity analysis, use that; otherwise estimate
-    const ambiguityScore =
-      intentResult?.enriched?.ambiguity_analysis?.score ?? 0;
+    const ambiguityScore = intentResult?.enriched?.ambiguity_analysis?.score ?? 0;
     const confidence = intentResult ? Math.max(0.3, 1 - ambiguityScore) : 0.5;
     const estimatedDuration = tasks.length * 30; // 30 seconds per task estimate
 
@@ -303,54 +268,51 @@ class GAgentTaskEngine {
   /**
    * Infer which tools are needed for a feature
    */
-  private inferToolsForFeature(
-    feature: string,
-    capabilities: GAgentCapabilityKey[],
-  ): string[] {
+  private inferToolsForFeature(feature: string, capabilities: GAgentCapabilityKey[]): string[] {
     const tools: string[] = [];
     const featureLower = feature.toLowerCase();
 
     // Map features to tools based on capabilities
-    if (capabilities.includes("file")) {
-      tools.push("file_read", "file_write", "file_edit");
+    if (capabilities.includes('file')) {
+      tools.push('file_read', 'file_write', 'file_edit');
     }
     if (
-      capabilities.includes("git") &&
-      (featureLower.includes("commit") || featureLower.includes("version"))
+      capabilities.includes('git') &&
+      (featureLower.includes('commit') || featureLower.includes('version'))
     ) {
-      tools.push("git_commit", "git_push");
+      tools.push('git_commit', 'git_push');
     }
     if (
-      capabilities.includes("bash") &&
-      (featureLower.includes("build") ||
-        featureLower.includes("test") ||
-        featureLower.includes("install"))
+      capabilities.includes('bash') &&
+      (featureLower.includes('build') ||
+        featureLower.includes('test') ||
+        featureLower.includes('install'))
     ) {
-      tools.push("bash_execute");
+      tools.push('bash_execute');
     }
-    if (capabilities.includes("docker") && featureLower.includes("container")) {
-      tools.push("docker_compose_up");
+    if (capabilities.includes('docker') && featureLower.includes('container')) {
+      tools.push('docker_compose_up');
     }
     if (
-      capabilities.includes("database") &&
-      (featureLower.includes("database") || featureLower.includes("schema"))
+      capabilities.includes('database') &&
+      (featureLower.includes('database') || featureLower.includes('schema'))
     ) {
-      tools.push("db_schema", "db_query");
+      tools.push('db_schema', 'db_query');
     }
 
-    return tools.length > 0 ? tools : ["file_read", "file_write"];
+    return tools.length > 0 ? tools : ['file_read', 'file_write'];
   }
 
   /**
    * Calculate risk level based on tools used
    */
-  private calculateRiskLevel(tools: string[]): "safe" | "moderate" | "risky" {
-    let maxRisk: "safe" | "moderate" | "risky" = "safe";
+  private calculateRiskLevel(tools: string[]): 'safe' | 'moderate' | 'risky' {
+    let maxRisk: 'safe' | 'moderate' | 'risky' = 'safe';
 
     for (const tool of tools) {
-      const risk = TOOL_RISK_LEVELS[tool] || "moderate";
-      if (risk === "risky") return "risky";
-      if (risk === "moderate") maxRisk = "moderate";
+      const risk = TOOL_RISK_LEVELS[tool] || 'moderate';
+      if (risk === 'risky') return 'risky';
+      if (risk === 'moderate') maxRisk = 'moderate';
     }
 
     return maxRisk;
@@ -363,10 +325,10 @@ class GAgentTaskEngine {
     // Simple normalization for caching
     return goal
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/[^a-z0-9\s]/g, '')
       .split(/\s+/)
       .sort()
-      .join("_")
+      .join('_')
       .slice(0, 100);
   }
 
@@ -377,17 +339,17 @@ class GAgentTaskEngine {
     const plan = this.activePlans.get(planId);
     if (!plan) return null;
 
-    plan.status = "executing";
+    plan.status = 'executing';
     plan.approvedAt = new Date().toISOString();
 
     // Mark first tasks (no dependencies) as ready
     for (const task of plan.tasks) {
       if (task.dependencies.length === 0) {
-        task.status = "approved";
+        task.status = 'approved';
       }
     }
 
-    logger.info({ planId }, "G-Agent: Plan approved for execution");
+    logger.info({ planId }, 'G-Agent: Plan approved for execution');
     return plan;
   }
 
@@ -396,25 +358,25 @@ class GAgentTaskEngine {
    */
   getNextTask(planId: string): GAgentTask | null {
     const plan = this.activePlans.get(planId);
-    if (!plan || plan.status !== "executing") return null;
+    if (!plan || plan.status !== 'executing') return null;
 
     // Find first approved task
-    const nextTask = plan.tasks.find((t) => t.status === "approved");
+    const nextTask = plan.tasks.find((t) => t.status === 'approved');
     if (nextTask) {
-      nextTask.status = "in_progress";
+      nextTask.status = 'in_progress';
       nextTask.startedAt = new Date().toISOString();
       return nextTask;
     }
 
     // Check if any pending tasks have all dependencies completed
     for (const task of plan.tasks) {
-      if (task.status === "pending") {
+      if (task.status === 'pending') {
         const allDepsComplete = task.dependencies.every((depId) => {
           const dep = plan.tasks.find((t) => t.id === depId);
-          return dep?.status === "completed";
+          return dep?.status === 'completed';
         });
         if (allDepsComplete) {
-          task.status = "in_progress";
+          task.status = 'in_progress';
           task.startedAt = new Date().toISOString();
           return task;
         }
@@ -434,7 +396,7 @@ class GAgentTaskEngine {
     const task = plan.tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    task.status = "completed";
+    task.status = 'completed';
     task.completedAt = new Date().toISOString();
     task.result = result;
 
@@ -442,10 +404,10 @@ class GAgentTaskEngine {
     this.taskHistory.push({ ...task });
 
     // Check if plan is complete
-    if (plan.tasks.every((t) => t.status === "completed")) {
-      plan.status = "completed";
+    if (plan.tasks.every((t) => t.status === 'completed')) {
+      plan.status = 'completed';
       plan.completedAt = new Date().toISOString();
-      logger.info({ planId }, "G-Agent: Plan completed successfully");
+      logger.info({ planId }, 'G-Agent: Plan completed successfully');
     }
   }
 
@@ -459,12 +421,12 @@ class GAgentTaskEngine {
     const task = plan.tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    task.status = "failed";
+    task.status = 'failed';
     task.completedAt = new Date().toISOString();
     task.error = error;
 
-    plan.status = "failed";
-    logger.error({ planId, taskId, error }, "G-Agent: Task failed");
+    plan.status = 'failed';
+    logger.error({ planId, taskId, error }, 'G-Agent: Task failed');
   }
 
   /**
@@ -487,9 +449,8 @@ class GAgentTaskEngine {
   getStats() {
     return {
       activePlans: this.activePlans.size,
-      completedTasks: this.taskHistory.filter((t) => t.status === "completed")
-        .length,
-      failedTasks: this.taskHistory.filter((t) => t.status === "failed").length,
+      completedTasks: this.taskHistory.filter((t) => t.status === 'completed').length,
+      failedTasks: this.taskHistory.filter((t) => t.status === 'failed').length,
       cachedPatterns: this.patternCache.size,
     };
   }

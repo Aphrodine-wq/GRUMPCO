@@ -18,7 +18,6 @@
   import { setCurrentView, settingsInitialTab } from '../stores/uiStore';
   import { newOnboardingStore } from '../stores/newOnboardingStore';
   import { user } from '../stores/authStore.js';
-  import { janBaseUrl } from '../stores/preferencesStore.js';
   import {
     getProviderIconPath,
     getProviderSvgPath,
@@ -128,6 +127,8 @@
     const configured = new Set<string>();
     // G-CompN1 is always configured (platform keys)
     configured.add('grump');
+    // Ollama is always user-configured (local, no API key needed)
+    configured.add('ollama');
     try {
       const data = newOnboardingStore.get();
       if (data?.aiProvider && data.aiProviderApiKey) {
@@ -138,9 +139,9 @@
         anthropic: 'g-rump-anthropic-key',
         google: 'g-rump-google-key',
         openrouter: 'g-rump-openrouter-key',
-        mistral: 'g-rump-mistral-key',
-        kimi: 'g-rump-kimi-key',
         'nvidia-nim': 'g-rump-nvidia-nim-key',
+        github_copilot: 'g-rump-github-copilot-key',
+        ollama: 'g-rump-ollama-key',
       };
       for (const [provider, storageKey] of Object.entries(PER_PROVIDER_KEYS)) {
         try {
@@ -177,10 +178,8 @@
     error = null;
     try {
       const userId = get(user)?.id;
-      const janUrl = get(janBaseUrl);
       const params = new URLSearchParams();
       if (userId) params.set('userId', userId);
-      if (janUrl) params.set('janBaseUrl', janUrl);
       const url = `/api/models/list${params.toString() ? `?${params.toString()}` : ''}`;
       const res = await fetchApi(url);
       if (!res.ok) throw new Error('Failed to fetch models');
@@ -202,8 +201,35 @@
               contextWindow: 200_000,
               costPerMillionInput: 0,
               costPerMillionOutput: 0,
-              description: 'Smart routing: Opus 4.6 + Kimi K2.5 + Gemini 3 Pro',
+              description: 'Smart routing: Opus 4.6 + Gemini 3 Pro & more',
               isRecommended: true,
+            },
+          ],
+        },
+        {
+          provider: 'ollama',
+          displayName: 'Ollama (Local)',
+          icon: '/icons/providers/ollama.svg',
+          configured: true,
+          configNote: 'Start Ollama locally to use',
+          models: [
+            {
+              id: 'llama3.1:latest',
+              provider: 'ollama',
+              capabilities: ['code', 'reasoning'],
+              contextWindow: 128_000,
+              costPerMillionInput: 0,
+              costPerMillionOutput: 0,
+              description: 'Llama 3.1 — Free, private, runs locally',
+            },
+            {
+              id: 'codellama:latest',
+              provider: 'ollama',
+              capabilities: ['code'],
+              contextWindow: 16_000,
+              costPerMillionInput: 0,
+              costPerMillionOutput: 0,
+              description: 'Code Llama — Optimized for code generation',
             },
           ],
         },
@@ -310,7 +336,7 @@
           class:spin={loading}
           onclick={() => loadModels()}
           disabled={loading}
-          title="Refresh model list (e.g. after starting Jan)"
+          title="Refresh model list"
           aria-label="Refresh model list"
         >
           <RefreshCw size={14} />

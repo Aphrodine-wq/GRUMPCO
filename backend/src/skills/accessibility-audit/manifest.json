@@ -1,43 +1,23 @@
 {
-    "id": "accessibility-audit",
-    "name": "Accessibility Audit",
-    "version": "1.0.0",
-    "description": "Audit web pages and UI components for WCAG compliance, color contrast issues, missing ARIA labels, keyboard navigation problems, and screen reader compatibility.",
-    "category": "quality",
-    "icon": "♿",
-    "tags": [
-        "accessibility",
-        "a11y",
-        "wcag",
-        "aria",
-        "screen-reader"
+  "id": "accessibility-audit",
+  "name": "Accessibility Audit",
+  "version": "1.0.0",
+  "description": "Audit web pages and UI components for WCAG compliance, color contrast issues, missing ARIA labels, keyboard navigation problems, and screen reader compatibility.",
+  "category": "quality",
+  "icon": "♿",
+  "tags": ["accessibility", "a11y", "wcag", "aria", "screen-reader"],
+  "capabilities": ["wcag-audit", "contrast-check", "aria-validation"],
+  "triggers": {
+    "keywords": [
+      "accessibility",
+      "a11y",
+      "wcag",
+      "aria",
+      "screen reader",
+      "contrast",
+      "accessible"
     ],
-    "capabilities": [
-        "wcag-audit",
-        "contrast-check",
-        "aria-validation"
-    ],
-    "triggers": {
-        "keywords": [
-            "accessibility",
-            "a11y",
-            "wcag",
-            "aria",
-            "screen reader",
-            "contrast",
-            "accessible"
-        ],
-        "commands": [
-            "/a11y",
-            "/accessibility",
-            "/wcag"
-        ],
-        "fileExtensions": [
-            ".html",
-            ".svelte",
-            ".tsx",
-            ".jsx",
-            ".vue"
-        ]
-    }
+    "commands": ["/a11y", "/accessibility", "/wcag"],
+    "fileExtensions": [".html", ".svelte", ".tsx", ".jsx", ".vue"]
+  }
 }

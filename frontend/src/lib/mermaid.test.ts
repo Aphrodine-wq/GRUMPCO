@@ -216,7 +216,6 @@ describe('mermaid', () => {
             getContext: () => mockContext,
             toBlob: (callback: (blob: Blob | null) => void) =>
               callback(new Blob(['png'], { type: 'image/png' })),
-            // eslint-disable-next-line no-undef
           } as unknown as HTMLCanvasElement;
         }
         return originalCreateElement(tag);
@@ -265,7 +264,6 @@ describe('mermaid', () => {
               drawImage: vi.fn(),
             }),
             toBlob: vi.fn(),
-            // eslint-disable-next-line no-undef
           } as unknown as HTMLCanvasElement;
         }
         return originalCreateElement(tag);
@@ -312,7 +310,6 @@ describe('mermaid', () => {
               drawImage: vi.fn(),
             }),
             toBlob: (callback: (blob: Blob | null) => void) => callback(null), // Return null blob
-            // eslint-disable-next-line no-undef
           } as unknown as HTMLCanvasElement;
         }
         return originalCreateElement(tag);
@@ -364,7 +361,6 @@ describe('mermaid', () => {
             height: 0,
             getContext: () => mockContext,
             toDataURL: () => 'data:image/png;base64,mock',
-            // eslint-disable-next-line no-undef
           } as unknown as HTMLCanvasElement;
         }
         return originalCreateElement(tag);
@@ -413,7 +409,6 @@ describe('mermaid', () => {
               drawImage: vi.fn(),
             }),
             toDataURL: () => 'data:image/png;base64,mock',
-            // eslint-disable-next-line no-undef
           } as unknown as HTMLCanvasElement;
         }
         return originalCreateElement(tag);
@@ -462,7 +457,6 @@ describe('mermaid', () => {
               drawImage: vi.fn(),
             }),
             toDataURL: () => 'data:image/png;base64,mock',
-            // eslint-disable-next-line no-undef
           } as unknown as HTMLCanvasElement;
         }
         return originalCreateElement(tag);
@@ -512,7 +506,6 @@ describe('mermaid', () => {
               drawImage: vi.fn(),
             }),
             toDataURL: () => 'data:image/png;base64,mock',
-            // eslint-disable-next-line no-undef
           } as unknown as HTMLCanvasElement;
         }
         return originalCreateElement(tag);

@@ -5,7 +5,7 @@
  * @module safeAsync
  */
 
-import { logger } from "../middleware/logger.js";
+import { logger } from '../middleware/logger.js';
 
 /**
  * Wraps a promise to log errors instead of silently swallowing them.
@@ -24,14 +24,11 @@ import { logger } from "../middleware/logger.js";
 export function logOnError<T>(
   promise: Promise<T>,
   context: string,
-  metadata?: Record<string, unknown>,
+  metadata?: Record<string, unknown>
 ): Promise<T | undefined> {
   return promise.catch((err: unknown) => {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    logger.warn(
-      { ...metadata, error: errorMessage, context },
-      `${context} failed`,
-    );
+    logger.warn({ ...metadata, error: errorMessage, context }, `${context} failed`);
     return undefined;
   });
 }
@@ -51,7 +48,7 @@ export function logOnError<T>(
 export function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
-  context: string,
+  context: string
 ): Promise<T> {
   let timeoutId: NodeJS.Timeout;
 
@@ -87,13 +84,13 @@ export async function retry<T>(
     maxDelayMs?: number;
     context?: string;
     shouldRetry?: (error: unknown, attempt: number) => boolean;
-  } = {},
+  } = {}
 ): Promise<T> {
   const {
     maxAttempts = 3,
     baseDelayMs = 1000,
     maxDelayMs = 30000,
-    context = "Operation",
+    context = 'Operation',
     shouldRetry = () => true,
   } = options;
 
@@ -109,15 +106,12 @@ export async function retry<T>(
       if (attempt === maxAttempts || !shouldRetry(err, attempt)) {
         logger.error(
           { error: errorMessage, attempt, maxAttempts, context },
-          `${context} failed after ${attempt} attempts`,
+          `${context} failed after ${attempt} attempts`
         );
         throw err;
       }
 
-      const delay = Math.min(
-        baseDelayMs * Math.pow(2, attempt - 1),
-        maxDelayMs,
-      );
+      const delay = Math.min(baseDelayMs * Math.pow(2, attempt - 1), maxDelayMs);
       logger.warn(
         {
           error: errorMessage,
@@ -126,7 +120,7 @@ export async function retry<T>(
           nextRetryMs: delay,
           context,
         },
-        `${context} failed, retrying...`,
+        `${context} failed, retrying...`
       );
 
       await new Promise((resolve) => setTimeout(resolve, delay));
@@ -154,7 +148,7 @@ export async function retry<T>(
 export async function parallelLimit<T, R>(
   items: T[],
   fn: (item: T, index: number) => Promise<R>,
-  concurrency: number,
+  concurrency: number
 ): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let currentIndex = 0;
@@ -166,10 +160,7 @@ export async function parallelLimit<T, R>(
     }
   }
 
-  const workers = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    () => worker(),
-  );
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
 
   await Promise.all(workers);
   return results;
@@ -189,10 +180,7 @@ export async function parallelLimit<T, R>(
  *   await safeCleanup(() => connection.close(), 'Close connection');
  * }
  */
-export async function safeCleanup(
-  fn: () => Promise<void> | void,
-  context: string,
-): Promise<void> {
+export async function safeCleanup(fn: () => Promise<void> | void, context: string): Promise<void> {
   try {
     await fn();
   } catch (err) {
@@ -211,7 +199,7 @@ export async function safeCleanup(
  */
 export function debounceAsync<TArgs extends unknown[], TResult>(
   fn: (...args: TArgs) => Promise<TResult>,
-  delayMs: number,
+  delayMs: number
 ): (...args: TArgs) => Promise<TResult | undefined> {
   let timeoutId: NodeJS.Timeout | null = null;
 
@@ -241,7 +229,7 @@ export function debounceAsync<TArgs extends unknown[], TResult>(
  * @returns Singleton-ified function
  */
 export function singleton<TArgs extends unknown[], TResult>(
-  fn: (...args: TArgs) => Promise<TResult>,
+  fn: (...args: TArgs) => Promise<TResult>
 ): (...args: TArgs) => Promise<TResult> {
   let pending: Promise<TResult> | null = null;
 

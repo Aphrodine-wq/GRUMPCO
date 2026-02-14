@@ -9,15 +9,15 @@
  * - Prompt optimization
  */
 
-import { type Request, type Response, type NextFunction } from "express";
+import { type Request, type Response, type NextFunction } from 'express';
 import {
   optimizePromptForKimi,
   estimateKimiSavings,
   KIMI_K25_CONFIG,
   getKimiRoutingDecision,
   type KimiRoutingInput,
-} from "../services/ai-providers/kimiOptimizer.js";
-import logger from "../middleware/logger.js";
+} from '../services/ai-providers/kimiOptimizer.js';
+import logger from '../middleware/logger.js';
 
 // Extend Express Request type to include Kimi optimization context
 declare global {
@@ -46,24 +46,24 @@ declare global {
  */
 function detectLanguage(text: string): string {
   // Chinese detection
-  if (/[\u4e00-\u9fff]/.test(text)) return "zh";
+  if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
 
   // Japanese detection
-  if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
+  if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return 'ja';
 
   // Korean detection
-  if (/[\uac00-\ud7af]/.test(text)) return "ko";
+  if (/[\uac00-\ud7af]/.test(text)) return 'ko';
 
   // Arabic detection
-  if (/[\u0600-\u06ff]/.test(text)) return "ar";
+  if (/[\u0600-\u06ff]/.test(text)) return 'ar';
 
   // Russian/Cyrillic detection
-  if (/[\u0400-\u04ff]/.test(text)) return "ru";
+  if (/[\u0400-\u04ff]/.test(text)) return 'ru';
 
   // Hindi detection
-  if (/[\u0900-\u097f]/.test(text)) return "hi";
+  if (/[\u0900-\u097f]/.test(text)) return 'hi';
 
-  return "en";
+  return 'en';
 }
 
 /**
@@ -77,9 +77,7 @@ function extractContent(req: Request): string {
 
   if (req.body.messages && Array.isArray(req.body.messages)) {
     // Concatenate all message contents
-    return req.body.messages
-      .map((m: { content?: string }) => m.content || "")
-      .join(" ");
+    return req.body.messages.map((m: { content?: string }) => m.content || '').join(' ');
   }
 
   if (req.body.prompt) {
@@ -94,7 +92,7 @@ function extractContent(req: Request): string {
     return req.body.text;
   }
 
-  return "";
+  return '';
 }
 
 /**
@@ -106,13 +104,9 @@ export function kimiOptimizationMiddleware(
     autoRoute?: boolean;
     trackSavings?: boolean;
     logDecisions?: boolean;
-  } = {},
+  } = {}
 ): (req: Request, res: Response, next: NextFunction) => void {
-  const {
-    autoRoute = true,
-    trackSavings = true,
-    logDecisions = true,
-  } = options;
+  const { autoRoute = true, trackSavings = true, logDecisions = true } = options;
 
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
@@ -125,21 +119,19 @@ export function kimiOptimizationMiddleware(
 
       // Language detection
       const detectedLanguage = detectLanguage(content);
-      const hasNonEnglish = detectedLanguage !== "en";
+      const hasNonEnglish = detectedLanguage !== 'en';
 
       // Prepare routing input
       const routingInput: KimiRoutingInput = {
         messageChars: content.length,
         messageCount: req.body.messages?.length || 1,
         mode: req.body.mode,
-        toolsRequested:
-          req.body.tools !== undefined && req.body.tools.length > 0,
-        multimodal:
-          req.body.multimodal === true || content.includes("image_url"),
+        toolsRequested: req.body.tools !== undefined && req.body.tools.length > 0,
+        multimodal: req.body.multimodal === true || content.includes('image_url'),
         isComplex: req.body.complex === true || content.length > 5000,
         detectedLanguage,
         hasCode:
-          content.includes("```") ||
+          content.includes('```') ||
           /\b(function|class|const|let|var|import|export)\b/.test(content),
         contextSize: req.body.contextTokens || content.length,
       };
@@ -149,7 +141,7 @@ export function kimiOptimizationMiddleware(
 
       // Calculate savings if routing to Kimi
       let estimatedSavings: number | undefined;
-      if (routingDecision.recommendedModel === "kimi" && trackSavings) {
+      if (routingDecision.recommendedModel === 'kimi' && trackSavings) {
         const inputTokens = Math.ceil(content.length * 0.25);
         const outputTokens = Math.ceil(inputTokens * 0.5);
         const savings = estimateKimiSavings(inputTokens, outputTokens);
@@ -160,19 +152,15 @@ export function kimiOptimizationMiddleware(
       const optimizations: string[] = [];
 
       if (hasNonEnglish) {
-        optimizations.push(
-          "Multilingual content detected - using Kimi optimization",
-        );
+        optimizations.push('Multilingual content detected - using Kimi optimization');
       }
 
-      if (routingDecision.recommendedModel === "kimi") {
+      if (routingDecision.recommendedModel === 'kimi') {
         optimizations.push(
-          `Kimi K2.5 recommended (confidence: ${(routingDecision.confidence * 100).toFixed(0)}%)`,
+          `Kimi K2.5 recommended (confidence: ${(routingDecision.confidence * 100).toFixed(0)}%)`
         );
         if (estimatedSavings) {
-          optimizations.push(
-            `Estimated savings: $${estimatedSavings.toFixed(4)} vs Claude`,
-          );
+          optimizations.push(`Estimated savings: $${estimatedSavings.toFixed(4)} vs Claude`);
         }
       }
 
@@ -185,7 +173,7 @@ export function kimiOptimizationMiddleware(
         estimatedSavings,
         optimizations,
         contextRetention:
-          routingDecision.recommendedModel === "kimi"
+          routingDecision.recommendedModel === 'kimi'
             ? {
                 retainTokens: KIMI_K25_CONFIG.maxInputTokens,
                 advantageUsed: KIMI_K25_CONFIG.contextAdvantage,
@@ -195,11 +183,11 @@ export function kimiOptimizationMiddleware(
       };
 
       // Auto-route if enabled
-      if (autoRoute && routingDecision.recommendedModel === "kimi") {
+      if (autoRoute && routingDecision.recommendedModel === 'kimi') {
         // Override model selection in request
-        if (!req.body.model || req.body.model === "claude-sonnet-4-20250514") {
+        if (!req.body.model || req.body.model === 'claude-sonnet-4-20250514') {
           req.body.model = KIMI_K25_CONFIG.modelId;
-          req.body.provider = "nim";
+          req.body.provider = 'nim';
           optimizations.push(`Auto-routed to ${KIMI_K25_CONFIG.modelId}`);
         }
       }
@@ -216,7 +204,7 @@ export function kimiOptimizationMiddleware(
             estimatedSavings,
             rationale: routingDecision.rationale,
           },
-          "Kimi optimization decision",
+          'Kimi optimization decision'
         );
       }
 
@@ -227,7 +215,7 @@ export function kimiOptimizationMiddleware(
           error: error instanceof Error ? error.message : String(error),
           path: req.path,
         },
-        "Error in Kimi optimization middleware",
+        'Error in Kimi optimization middleware'
       );
       // Continue without optimization on error
       next();
@@ -242,16 +230,16 @@ export function kimiPromptOptimizationMiddleware(
   options: {
     optimizeSystemPrompt?: boolean;
     optimizeUserContent?: boolean;
-  } = {},
+  } = {}
 ): (req: Request, res: Response, next: NextFunction) => void {
   const { optimizeSystemPrompt = true, optimizeUserContent = false } = options;
 
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
       const isKimiRequest =
-        req.body.model?.includes("kimi") ||
-        req.body.provider === "nim" ||
-        req.kimiOptimization?.recommendedModel === "kimi";
+        req.body.model?.includes('kimi') ||
+        req.body.provider === 'nim' ||
+        req.kimiOptimization?.recommendedModel === 'kimi';
 
       if (!isKimiRequest) {
         return next();
@@ -261,10 +249,7 @@ export function kimiPromptOptimizationMiddleware(
       const userContent = extractContent(req);
 
       if (systemPrompt || userContent) {
-        const optimized = optimizePromptForKimi(
-          systemPrompt || "",
-          userContent || "",
-        );
+        const optimized = optimizePromptForKimi(systemPrompt || '', userContent || '');
 
         if (optimizeSystemPrompt && optimized.optimizations.length > 0) {
           req.body.system = optimized.optimizedSystem;
@@ -272,7 +257,7 @@ export function kimiPromptOptimizationMiddleware(
 
           logger.debug(
             { optimizations: optimized.optimizations },
-            "System prompt optimized for Kimi",
+            'System prompt optimized for Kimi'
           );
         }
 
@@ -286,7 +271,7 @@ export function kimiPromptOptimizationMiddleware(
     } catch (error) {
       logger.error(
         { error: error instanceof Error ? error.message : String(error) },
-        "Error in Kimi prompt optimization middleware",
+        'Error in Kimi prompt optimization middleware'
       );
       next();
     }
@@ -299,7 +284,7 @@ export function kimiPromptOptimizationMiddleware(
 export function kimiAnalyticsMiddleware(): (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => void {
   return (req: Request, res: Response, next: NextFunction): void => {
     const startTime = Date.now();
@@ -329,7 +314,7 @@ export function kimiAnalyticsMiddleware(): (
             modelUsed: req.body.model,
             providerUsed: req.body.provider,
           },
-          "Kimi analytics",
+          'Kimi analytics'
         );
       }
 
@@ -351,7 +336,7 @@ export function createKimiOptimizationStack(
     logDecisions?: boolean;
     optimizePrompts?: boolean;
     trackAnalytics?: boolean;
-  } = {},
+  } = {}
 ): ((req: Request, res: Response, next: NextFunction) => void)[] {
   const {
     autoRoute = true,
@@ -361,13 +346,10 @@ export function createKimiOptimizationStack(
     trackAnalytics = true,
   } = options;
 
-  const stack: ((req: Request, res: Response, next: NextFunction) => void)[] =
-    [];
+  const stack: ((req: Request, res: Response, next: NextFunction) => void)[] = [];
 
   // Main optimization middleware
-  stack.push(
-    kimiOptimizationMiddleware({ autoRoute, trackSavings, logDecisions }),
-  );
+  stack.push(kimiOptimizationMiddleware({ autoRoute, trackSavings, logDecisions }));
 
   // Prompt optimization (if enabled)
   if (optimizePrompts) {
@@ -384,7 +366,7 @@ export function createKimiOptimizationStack(
 
 // Default export - combined middleware
 export default function kimiMiddleware(
-  options?: Parameters<typeof createKimiOptimizationStack>[0],
+  options?: Parameters<typeof createKimiOptimizationStack>[0]
 ): ((req: Request, res: Response, next: NextFunction) => void)[] {
   return createKimiOptimizationStack(options);
 }

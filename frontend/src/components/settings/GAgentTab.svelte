@@ -6,6 +6,7 @@
    * TODO: Replace `any` props with explicit types for full type safety.
    */
   import { Card, Badge } from '../../lib/design-system';
+  import type { Settings, SettingsPreferences } from '../../types/settings';
   import type { GAgentCapabilityKey } from '../../stores/preferencesStore';
 
   interface Props {
@@ -19,6 +20,8 @@
     gAgentPersona: any;
     gAgentPreferredModelSource: any;
     preferencesStore: any;
+    settings?: Settings | null;
+    savePreferences?: (next: SettingsPreferences) => Promise<void>;
   }
 
   let {
@@ -32,6 +35,8 @@
     gAgentPersona,
     gAgentPreferredModelSource,
     preferencesStore,
+    settings,
+    savePreferences,
   }: Props = $props();
 </script>
 
@@ -215,6 +220,88 @@
       </p>
     </div>
   </Card>
+
+  <Card title="Communication Channels" padding="md">
+    <p class="section-desc">
+      Choose how the agent notifies you about task progress, results, and errors.
+    </p>
+
+    <div class="channels-list">
+      <label class="channel-item">
+        <input
+          type="checkbox"
+          checked={settings?.preferences?.notifyDesktop ?? true}
+          onchange={(e) => {
+            savePreferences?.({ notifyDesktop: (e.target as HTMLInputElement).checked });
+          }}
+        />
+        <div class="channel-content">
+          <span class="channel-icon">🖥️</span>
+          <div class="channel-text">
+            <span class="channel-title">Desktop Notifications</span>
+            <span class="channel-desc"
+              >System notifications when tasks complete or need attention.</span
+            >
+          </div>
+        </div>
+      </label>
+
+      <label class="channel-item">
+        <input
+          type="checkbox"
+          checked={settings?.preferences?.notifySlack ?? false}
+          onchange={(e) => {
+            savePreferences?.({ notifySlack: (e.target as HTMLInputElement).checked });
+          }}
+        />
+        <div class="channel-content">
+          <span class="channel-icon">💬</span>
+          <div class="channel-text">
+            <span class="channel-title">Slack</span>
+            <span class="channel-desc"
+              >Send messages to a Slack channel. Configure webhook in Integrations.</span
+            >
+          </div>
+        </div>
+      </label>
+
+      <label class="channel-item">
+        <input
+          type="checkbox"
+          checked={settings?.preferences?.notifyEmail ?? false}
+          onchange={(e) => {
+            savePreferences?.({ notifyEmail: (e.target as HTMLInputElement).checked });
+          }}
+        />
+        <div class="channel-content">
+          <span class="channel-icon">📧</span>
+          <div class="channel-text">
+            <span class="channel-title">Email</span>
+            <span class="channel-desc">Receive email summaries for long-running agent tasks.</span>
+          </div>
+        </div>
+      </label>
+
+      <label class="channel-item">
+        <input
+          type="checkbox"
+          checked={settings?.preferences?.notifyWebhook ?? false}
+          onchange={(e) => {
+            savePreferences?.({ notifyWebhook: (e.target as HTMLInputElement).checked });
+          }}
+        />
+        <div class="channel-content">
+          <span class="channel-icon">🔗</span>
+          <div class="channel-text">
+            <span class="channel-title">Webhook</span>
+            <span class="channel-desc"
+              >POST to a custom URL. Configure the endpoint in Integrations.</span
+            >
+          </div>
+        </div>
+      </label>
+    </div>
+  </Card>
 </div>
 
 <style>
@@ -227,15 +314,6 @@
 
   .tab-section :global(.card) {
     border: 1px solid #e5e7eb;
-  }
-
-  .default-model-row .field-label {
-    flex-shrink: 0;
-  }
-
-  .advanced-finetuning .field-label {
-    display: block;
-    margin-bottom: 0.5rem;
   }
 
   .settings-number-input,
@@ -251,14 +329,6 @@
   .settings-text-input {
     width: 100%;
     max-width: 280px;
-  }
-
-  .inline-config-input-group .field-label {
-    margin-bottom: 0.5rem;
-  }
-
-  .models-custom-inner .section-desc {
-    margin-bottom: 0.75rem;
   }
 
   .section-desc {
@@ -283,10 +353,6 @@
     margin-bottom: 8px;
   }
 
-  .field-label-row .field-label {
-    margin-bottom: 0;
-  }
-
   .field-hint {
     font-size: 12px;
     color: var(--color-text-muted, #a1a1aa);
@@ -308,13 +374,6 @@
 
   .custom-select:focus {
     border-color: var(--color-primary, #7c3aed);
-  }
-
-  .field-hint code {
-    font-size: 0.75em;
-    padding: 0.1em 0.35em;
-    background: var(--color-bg-card, #f4f4f5);
-    border-radius: 4px;
   }
 
   .checkbox-field {
@@ -405,5 +464,63 @@
     outline: none;
     border-color: var(--color-primary, #7c3aed);
     box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+  }
+
+  /* Communication Channels */
+  .channels-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .channel-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+    background: var(--color-bg-secondary, #f9fafb);
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 150ms;
+  }
+
+  .channel-item:hover {
+    border-color: var(--color-primary, #7c3aed);
+  }
+
+  .channel-item input {
+    margin-top: 4px;
+    cursor: pointer;
+  }
+
+  .channel-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .channel-icon {
+    font-size: 1.125rem;
+    flex-shrink: 0;
+  }
+
+  .channel-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .channel-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text, #18181b);
+  }
+
+  .channel-desc {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #71717a);
+    line-height: 1.4;
   }
 </style>

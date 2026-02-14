@@ -3,7 +3,7 @@
  * Stub implementation for reminder functionality.
  */
 
-import logger from "../../middleware/logger.js";
+import logger from '../../middleware/logger.js';
 
 export interface Reminder {
   id: string;
@@ -13,7 +13,7 @@ export interface Reminder {
   message: string;
   triggerAt: Date;
   createdAt: Date;
-  status: "pending" | "triggered" | "cancelled";
+  status: 'pending' | 'triggered' | 'cancelled';
 }
 
 // In-memory store (replace with database in production)
@@ -32,7 +32,7 @@ export async function createReminder(
   message: string,
   triggerAt: Date,
   platform?: string,
-  platformUserId?: string,
+  platformUserId?: string
 ): Promise<Reminder> {
   const id = `reminder_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
@@ -44,11 +44,11 @@ export async function createReminder(
     message,
     triggerAt,
     createdAt: new Date(),
-    status: "pending",
+    status: 'pending',
   };
 
   reminders.set(id, reminder);
-  logger.info({ reminderId: id, triggerAt }, "Created reminder");
+  logger.info({ reminderId: id, triggerAt }, 'Created reminder');
 
   return reminder;
 }
@@ -59,7 +59,7 @@ export async function getReminder(id: string): Promise<Reminder | null> {
 
 export async function getUserReminders(userId: string): Promise<Reminder[]> {
   return Array.from(reminders.values()).filter(
-    (r) => r.userId === userId && r.status === "pending",
+    (r) => r.userId === userId && r.status === 'pending'
   );
 }
 
@@ -67,25 +67,23 @@ export async function cancelReminder(id: string): Promise<boolean> {
   const reminder = reminders.get(id);
   if (!reminder) return false;
 
-  reminder.status = "cancelled";
-  logger.info({ reminderId: id }, "Cancelled reminder");
+  reminder.status = 'cancelled';
+  logger.info({ reminderId: id }, 'Cancelled reminder');
   return true;
 }
 
 export async function triggerReminder(id: string): Promise<boolean> {
   const reminder = reminders.get(id);
-  if (!reminder || reminder.status !== "pending") return false;
+  if (!reminder || reminder.status !== 'pending') return false;
 
-  reminder.status = "triggered";
-  logger.info({ reminderId: id }, "Triggered reminder");
+  reminder.status = 'triggered';
+  logger.info({ reminderId: id }, 'Triggered reminder');
   return true;
 }
 
 export async function getPendingReminders(): Promise<Reminder[]> {
   const now = new Date();
-  return Array.from(reminders.values()).filter(
-    (r) => r.status === "pending" && r.triggerAt <= now,
-  );
+  return Array.from(reminders.values()).filter((r) => r.status === 'pending' && r.triggerAt <= now);
 }
 
 export async function deleteReminder(id: string): Promise<boolean> {

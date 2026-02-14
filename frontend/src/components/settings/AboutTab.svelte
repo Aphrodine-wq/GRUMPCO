@@ -96,54 +96,49 @@
 </div>
 
 <style>
-
-.tab-section {
+  .tab-section {
     max-width: 900px;
     display: flex;
     flex-direction: column;
     gap: 28px;
   }
 
-.tab-section :global(.card) {
+  .tab-section :global(.card) {
     border: 1px solid #e5e7eb;
   }
 
-.models-custom-inner .section-desc {
-    margin-bottom: 0.75rem;
-  }
-
-.section-desc {
+  .section-desc {
     font-size: 14px;
     color: var(--color-text-muted, #71717a);
     margin-bottom: 20px;
   }
 
-.docker-actions {
+  .docker-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 12px;
   }
 
-.legal-links {
+  .legal-links {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
   }
 
-.about-info {
+  .about-info {
     text-align: center;
     padding: 20px;
   }
 
-.about-version {
+  .about-version {
     font-size: 14px;
     font-weight: 600;
     color: var(--color-text-secondary, #3f3f46);
     margin-bottom: 8px;
   }
 
-.about-desc {
+  .about-desc {
     font-size: 14px;
     color: var(--color-text-muted, #71717a);
   }

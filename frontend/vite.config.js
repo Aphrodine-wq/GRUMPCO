@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => {
 
     server: {
       port: 5173,
+      strictPort: true, // Fail if port is occupied (prevents loading wrong project)
       // Faster dev server startup
       warmup: {
         clientFiles: [
@@ -195,7 +196,7 @@ export default defineConfig(({ mode }) => {
     },
 
     optimizeDeps: {
-      // Pre-bundle only truly critical dependencies
+      // Pre-bundle dependencies that need CJS→ESM interop or are critical
       include: [
         'svelte',
         'svelte/animate',
@@ -207,13 +208,15 @@ export default defineConfig(({ mode }) => {
         '@supabase/supabase-js',
         'lucide-svelte',
         'svelte-spa-router',
+        // Mermaid + dayjs need pre-bundling for CJS→ESM default export interop
+        'mermaid',
+        'dayjs',
       ],
-      // Exclude heavy libraries - they'll be loaded on demand
+      // Exclude heavy libraries that don't have CJS interop issues
       exclude: [
         'jspdf',
         'shiki',
         'diff',
-        'mermaid',
         'marked',
       ],
       // Use cache to avoid re-optimizing every dev startup

@@ -43,7 +43,7 @@ async function getDiffModule() {
 
 export async function computeLineDiff(before: string, after: string): Promise<DiffLine[]> {
   const Diff = await getDiffModule();
-  
+
   // Use diffArrays on split lines for newline-insensitive line comparison.
   // diffLines includes newlines in tokens, causing line2 vs line2\n to differ.
   const oldLines = before.split(/\r?\n/);

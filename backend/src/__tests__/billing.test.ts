@@ -21,7 +21,8 @@ vi.mock('../services/stripeService.js', () => ({
 }));
 
 vi.mock('../config/pricing.js', async () => {
-  const actual = await vi.importActual<typeof import('../config/pricing.js')>('../config/pricing.js');
+  const actual =
+    await vi.importActual<typeof import('../config/pricing.js')>('../config/pricing.js');
   return actual;
 });
 
@@ -38,7 +39,9 @@ function createApp(userId?: string) {
   app.use(express.json());
   // Inject fake user
   app.use((req, _res, next) => {
-    (req as AuthenticatedRequest).user = userId ? { id: userId, email: 'test@test.com' } : undefined;
+    (req as AuthenticatedRequest).user = userId
+      ? { id: userId, email: 'test@test.com' }
+      : undefined;
     next();
   });
   app.use('/api/billing', billingRoutes);

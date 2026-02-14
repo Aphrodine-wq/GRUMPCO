@@ -97,6 +97,7 @@
           onclick={toggleTelemetry}
           role="switch"
           aria-checked={telemetryOptIn}
+          aria-label="Toggle telemetry"
         >
           <span class="toggle-thumb"></span>
         </button>

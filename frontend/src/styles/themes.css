@@ -100,16 +100,40 @@
   --code-variable: #ffd866;
 
   /* Onboarding wizard – light */
-  --onboarding-bg-gradient: linear-gradient(165deg, #fafafa 0%, #f5f3ff 25%, #ede9fe 50%, #e9e5ff 75%, #ddd6fe 100%);
+  --onboarding-bg-gradient: linear-gradient(
+    165deg,
+    #fafafa 0%,
+    #f5f3ff 25%,
+    #ede9fe 50%,
+    #e9e5ff 75%,
+    #ddd6fe 100%
+  );
   --onboarding-dots-color: rgba(124, 58, 237, 0.12);
   --onboarding-cta-gradient: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-  --onboarding-card-bg: linear-gradient(135deg, rgba(124, 58, 237, 0.05) 0%, rgba(109, 40, 217, 0.05) 100%);
-  --onboarding-slide-default-bg: linear-gradient(165deg, #fafafa 0%, #f5f3ff 30%, #ede9fe 55%, #e9e5ff 80%, #ddd6fe 100%);
+  --onboarding-card-bg: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.05) 0%,
+    rgba(109, 40, 217, 0.05) 100%
+  );
+  --onboarding-slide-default-bg: linear-gradient(
+    165deg,
+    #fafafa 0%,
+    #f5f3ff 30%,
+    #ede9fe 55%,
+    #e9e5ff 80%,
+    #ddd6fe 100%
+  );
   --onboarding-slide-dots: rgba(124, 58, 237, 0.1);
   --onboarding-welcome-radial-1: rgba(124, 58, 237, 0.25);
   --onboarding-welcome-radial-2: rgba(139, 92, 246, 0.2);
   --onboarding-welcome-radial-3: rgba(196, 181, 253, 0.15);
-  --onboarding-welcome-linear: linear-gradient(135deg, rgba(249, 250, 251, 1) 0%, rgba(243, 232, 255, 0.5) 35%, rgba(237, 233, 254, 0.6) 65%, rgba(221, 214, 254, 0.4) 100%);
+  --onboarding-welcome-linear: linear-gradient(
+    135deg,
+    rgba(249, 250, 251, 1) 0%,
+    rgba(243, 232, 255, 0.5) 35%,
+    rgba(237, 233, 254, 0.6) 65%,
+    rgba(221, 214, 254, 0.4) 100%
+  );
   --onboarding-welcome-logo-glow: rgba(124, 58, 237, 0.45);
   --onboarding-welcome-title-brand: linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%);
 
@@ -214,16 +238,40 @@
   --code-variable: #ffd866;
 
   /* Onboarding wizard – dark */
-  --onboarding-bg-gradient: linear-gradient(165deg, #0f0a1a 0%, #1a1028 25%, #1e1433 50%, #231740 75%, #2a1b4d 100%);
+  --onboarding-bg-gradient: linear-gradient(
+    165deg,
+    #0f0a1a 0%,
+    #1a1028 25%,
+    #1e1433 50%,
+    #231740 75%,
+    #2a1b4d 100%
+  );
   --onboarding-dots-color: rgba(167, 139, 250, 0.15);
   --onboarding-cta-gradient: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  --onboarding-card-bg: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%);
-  --onboarding-slide-default-bg: linear-gradient(165deg, #0f0a1a 0%, #1a1028 30%, #1e1433 55%, #231740 80%, #2a1b4d 100%);
+  --onboarding-card-bg: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.08) 0%,
+    rgba(168, 85, 247, 0.08) 100%
+  );
+  --onboarding-slide-default-bg: linear-gradient(
+    165deg,
+    #0f0a1a 0%,
+    #1a1028 30%,
+    #1e1433 55%,
+    #231740 80%,
+    #2a1b4d 100%
+  );
   --onboarding-slide-dots: rgba(167, 139, 250, 0.12);
   --onboarding-welcome-radial-1: rgba(167, 139, 250, 0.2);
   --onboarding-welcome-radial-2: rgba(139, 92, 246, 0.15);
   --onboarding-welcome-radial-3: rgba(196, 181, 253, 0.1);
-  --onboarding-welcome-linear: linear-gradient(135deg, rgba(15, 10, 26, 0.98) 0%, rgba(26, 16, 40, 0.9) 35%, rgba(30, 20, 51, 0.95) 65%, rgba(35, 23, 64, 0.9) 100%);
+  --onboarding-welcome-linear: linear-gradient(
+    135deg,
+    rgba(15, 10, 26, 0.98) 0%,
+    rgba(26, 16, 40, 0.9) 35%,
+    rgba(30, 20, 51, 0.95) 65%,
+    rgba(35, 23, 64, 0.9) 100%
+  );
   --onboarding-welcome-logo-glow: rgba(167, 139, 250, 0.35);
   --onboarding-welcome-title-brand: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 50%, #7c3aed 100%);
 
@@ -236,20 +284,43 @@
   --spacing-2xl: 48px;
 }
 
-
 /* Dark theme via class (e.g. body.dark) – same as data-theme for onboarding */
 .dark,
 :global(.dark) {
-  --onboarding-bg-gradient: linear-gradient(165deg, #0f0a1a 0%, #1a1028 25%, #1e1433 50%, #231740 75%, #2a1b4d 100%);
+  --onboarding-bg-gradient: linear-gradient(
+    165deg,
+    #0f0a1a 0%,
+    #1a1028 25%,
+    #1e1433 50%,
+    #231740 75%,
+    #2a1b4d 100%
+  );
   --onboarding-dots-color: rgba(167, 139, 250, 0.15);
   --onboarding-cta-gradient: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  --onboarding-card-bg: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%);
-  --onboarding-slide-default-bg: linear-gradient(165deg, #0f0a1a 0%, #1a1028 30%, #1e1433 55%, #231740 80%, #2a1b4d 100%);
+  --onboarding-card-bg: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.08) 0%,
+    rgba(168, 85, 247, 0.08) 100%
+  );
+  --onboarding-slide-default-bg: linear-gradient(
+    165deg,
+    #0f0a1a 0%,
+    #1a1028 30%,
+    #1e1433 55%,
+    #231740 80%,
+    #2a1b4d 100%
+  );
   --onboarding-slide-dots: rgba(167, 139, 250, 0.12);
   --onboarding-welcome-radial-1: rgba(167, 139, 250, 0.2);
   --onboarding-welcome-radial-2: rgba(139, 92, 246, 0.15);
   --onboarding-welcome-radial-3: rgba(196, 181, 253, 0.1);
-  --onboarding-welcome-linear: linear-gradient(135deg, rgba(15, 10, 26, 0.98) 0%, rgba(26, 16, 40, 0.9) 35%, rgba(30, 20, 51, 0.95) 65%, rgba(35, 23, 64, 0.9) 100%);
+  --onboarding-welcome-linear: linear-gradient(
+    135deg,
+    rgba(15, 10, 26, 0.98) 0%,
+    rgba(26, 16, 40, 0.9) 35%,
+    rgba(30, 20, 51, 0.95) 65%,
+    rgba(35, 23, 64, 0.9) 100%
+  );
   --onboarding-welcome-logo-glow: rgba(167, 139, 250, 0.35);
   --onboarding-welcome-title-brand: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 50%, #7c3aed 100%);
 }

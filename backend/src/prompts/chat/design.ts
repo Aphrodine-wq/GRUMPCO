@@ -4,7 +4,7 @@
  * Now includes 4-phase workflow: Architecture → PRD → Plan → Code
  */
 
-import { getDesignTemplatesBlock } from "../design-templates.js";
+import { getDesignTemplatesBlock } from '../design-templates.js';
 
 export interface DesignPromptOptions {
   workspaceRoot?: string;

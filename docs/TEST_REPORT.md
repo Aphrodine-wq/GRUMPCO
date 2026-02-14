@@ -1,9 +1,11 @@
 # 🧪 G-Rump Intense Browser Testing Report
 ## ✅ All Issues Resolved (Feb 6, 2026)
 
+> Historical snapshot: this report reflects the test run performed on February 6, 2026 and is not a live status dashboard.
+
 **Date:** February 6, 2026, 3:48 PM CST  
 **Tester:** Antigravity AI Agent  
-**App Version:** 2.0.0 (Frontend) / 2.0.0 (Backend)  
+**App Version at Test Time:** 2.0.0 (Frontend) / 2.0.0 (Backend)  
 **Browser:** Chromium (Headless)  
 **Backend URL:** http://localhost:3000  
 **Frontend URL:** http://localhost:5173  

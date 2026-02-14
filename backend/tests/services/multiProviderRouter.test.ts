@@ -40,6 +40,7 @@ vi.mock('../../src/config/env.js', () => ({
     NVIDIA_NIM_API_KEY: 'test-nim-key',
     OPENROUTER_API_KEY: 'test-openrouter-key',
     ANTHROPIC_API_KEY: 'test-anthropic-key',
+    GOOGLE_AI_API_KEY: 'test-google-key',
     OLLAMA_BASE_URL: 'http://localhost:11434',
     PUBLIC_BASE_URL: 'https://test.example.com',
   },
@@ -48,17 +49,20 @@ vi.mock('../../src/config/env.js', () => ({
       nvidia_nim: 'test-nim-key',
       openrouter: 'test-openrouter-key',
       anthropic: 'test-anthropic-key',
+      google: 'test-google-key',
       ollama: undefined,
+      github_copilot: undefined,
     };
     return keys[provider];
   }),
   isProviderConfigured: vi.fn((provider: string) => {
-    return ['nvidia_nim', 'openrouter', 'anthropic', 'ollama'].includes(provider);
+    return ['nvidia_nim', 'openrouter', 'anthropic', 'google', 'ollama'].includes(provider);
   }),
   getConfiguredProviders: vi.fn().mockReturnValue([
     'nvidia_nim',
     'openrouter',
     'anthropic',
+    'google',
     'ollama',
   ]),
 }));
@@ -87,6 +91,8 @@ describe('Multi-Provider AI Router', () => {
         'nim',
         'openrouter',
         'ollama',
+        'google',
+        'github_copilot',
       ];
 
       for (const provider of providers) {
@@ -328,7 +334,7 @@ describe('Multi-Provider AI Router', () => {
 
   describe('Default Models', () => {
     it('should return default model for each provider', () => {
-      const providers: LLMProvider[] = ['anthropic', 'nim', 'openrouter', 'ollama'];
+      const providers: LLMProvider[] = ['anthropic', 'nim', 'openrouter', 'ollama', 'google', 'github_copilot'];
 
       for (const provider of providers) {
         const defaultModel = getDefaultModelId(provider);

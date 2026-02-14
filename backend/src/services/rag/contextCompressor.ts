@@ -15,7 +15,7 @@
  * semantic content without storing the full text.
  */
 
-import { HRRVector, HolographicMemory } from "../agents/holographicMemory.js";
+import { HRRVector, HolographicMemory } from '../agents/holographicMemory.js';
 
 /**
  * Token statistics for compression analysis
@@ -94,13 +94,13 @@ class LSHIndex {
       v[i] = vector[i];
     }
 
-    let signature = "";
+    let signature = '';
     for (const plane of this.hyperplanes) {
       let dot = 0;
       for (let i = 0; i < this.dimension; i++) {
         dot += v[i] * plane[i];
       }
-      signature += dot >= 0 ? "1" : "0";
+      signature += dot >= 0 ? '1' : '0';
     }
     return signature;
   }
@@ -168,8 +168,7 @@ class TextFeatureExtractor {
     }
 
     for (const [word, count] of wordCounts) {
-      const hash =
-        this.dimension / 2 + (this.hashString(word) % (this.dimension / 2));
+      const hash = this.dimension / 2 + (this.hashString(word) % (this.dimension / 2));
       // TF component (log-scaled)
       features[hash] += Math.log(1 + count);
     }
@@ -211,14 +210,14 @@ class TextFeatureExtractor {
   private tokenize(text: string): string[] {
     return text
       .toLowerCase()
-      .replace(/[^\w\s]/g, " ")
+      .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
       .filter((w) => w.length > 0);
   }
 
   private getCharNgrams(text: string, n: number): string[] {
     const ngrams: string[] = [];
-    const normalized = text.toLowerCase().replace(/\s+/g, " ");
+    const normalized = text.toLowerCase().replace(/\s+/g, ' ');
     for (let i = 0; i <= normalized.length - n; i++) {
       ngrams.push(normalized.slice(i, i + n));
     }
@@ -251,7 +250,7 @@ export class ContextCompressor {
       dimension?: number;
       chunkSize?: number;
       chunkOverlap?: number;
-    } = {},
+    } = {}
   ) {
     this.dimension = options.dimension || 4096;
     this.chunkSize = options.chunkSize || 512; // tokens/words per chunk
@@ -264,7 +263,7 @@ export class ContextCompressor {
   /**
    * Compress a long text into a fixed-dimension vector
    */
-  compress(text: string, source: string = "unknown"): CompressedContext {
+  compress(text: string, source: string = 'unknown'): CompressedContext {
     const startTime = Date.now();
 
     // Chunk the text
@@ -293,10 +292,7 @@ export class ContextCompressor {
 
     for (const chunk of semanticChunks) {
       // Create position-aware key
-      const positionKey = HRRVector.fromText(
-        `chunk_${chunk.position}`,
-        this.dimension,
-      );
+      const positionKey = HRRVector.fromText(`chunk_${chunk.position}`, this.dimension);
 
       // Create content vector from chunk
       const features = this.featureExtractor.extractFeatures(chunk.text);
@@ -399,7 +395,7 @@ export class ContextCompressor {
   retrieveRelevant(
     originalText: string,
     query: string,
-    topK: number = 3,
+    topK: number = 3
   ): { chunk: string; score: number; position: number }[] {
     const chunks = this.chunkText(originalText);
     const queryFeatures = this.featureExtractor.extractFeatures(query);
@@ -447,7 +443,7 @@ export class ContextCompressor {
     const chunks: string[] = [];
 
     for (let i = 0; i < words.length; i += this.chunkSize - this.chunkOverlap) {
-      const chunk = words.slice(i, i + this.chunkSize).join(" ");
+      const chunk = words.slice(i, i + this.chunkSize).join(' ');
       if (chunk.trim()) {
         chunks.push(chunk);
       }
@@ -456,11 +452,7 @@ export class ContextCompressor {
     return chunks;
   }
 
-  private computeImportance(
-    chunk: string,
-    position: number,
-    totalChunks: number,
-  ): number {
+  private computeImportance(chunk: string, position: number, totalChunks: number): number {
     // Factors: position (recent = more important), density, special markers
 
     // Position factor: more recent chunks get higher weight
@@ -472,14 +464,10 @@ export class ContextCompressor {
 
     // Special markers: code, questions, imperatives
     let markerWeight = 1.0;
-    if (
-      chunk.includes("```") ||
-      chunk.includes("function") ||
-      chunk.includes("class")
-    ) {
+    if (chunk.includes('```') || chunk.includes('function') || chunk.includes('class')) {
       markerWeight = 1.3; // Code is important
     }
-    if (chunk.includes("?")) {
+    if (chunk.includes('?')) {
       markerWeight = 1.2; // Questions are important
     }
     if (/\b(must|should|need|require|important)\b/i.test(chunk)) {
@@ -520,7 +508,7 @@ export class ContextCompressorService {
   /**
    * Compress text and cache the result
    */
-  compress(text: string, source: string = "unknown"): CompressedContext {
+  compress(text: string, source: string = 'unknown'): CompressedContext {
     const ctx = this.compressor.compress(text, source);
     this.cache.set(ctx.id, ctx);
     return ctx;
@@ -545,10 +533,7 @@ export class ContextCompressorService {
   /**
    * Find most similar cached contexts to a query
    */
-  findSimilar(
-    query: string,
-    topK: number = 5,
-  ): { id: string; similarity: number }[] {
+  findSimilar(query: string, topK: number = 5): { id: string; similarity: number }[] {
     const queryFeatures = new TextFeatureExtractor(512).extractFeatures(query);
     const queryVector = HRRVector.fromEmbedding(queryFeatures, 4096);
 
@@ -624,8 +609,7 @@ export class ContextCompressorService {
       cachedContexts: this.cache.size,
       totalOriginalTokens: totalTokens,
       totalCompressedBytes: totalBytes,
-      avgCompressionRatio:
-        this.cache.size > 0 ? totalRatio / this.cache.size : 0,
+      avgCompressionRatio: this.cache.size > 0 ? totalRatio / this.cache.size : 0,
     };
   }
 }

@@ -624,7 +624,7 @@ describe('advancedAiApi', () => {
               tasksByStatus: {},
               reviewStats: { totalReviews: 0, approved: 0, rejected: 0, revised: 0, avgScore: 0 },
             },
-            topology: { supervisor: { id: 'kimi', status: 'active' }, agents: [] },
+            topology: { supervisor: { id: 'supervisor', status: 'active' }, agents: [] },
           }),
       });
 
@@ -694,7 +694,7 @@ describe('advancedAiApi', () => {
               tasksByStatus: {},
               reviewStats: { totalReviews: 0, approved: 0, rejected: 0, revised: 0, avgScore: 0 },
             },
-            topology: { supervisor: { id: 'kimi', status: 'active' }, agents: [] },
+            topology: { supervisor: { id: 'supervisor', status: 'active' }, agents: [] },
             config: {
               maxAgentsPerRole: 3,
               maxRetries: 2,

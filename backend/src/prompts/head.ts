@@ -4,14 +4,16 @@
  * Uses XML-tagged composition when tier is provided for capability-aware prompts.
  */
 
-import { CLAUDE_CODE_QUALITY_BLOCK } from "./shared/claude-code-quality.js";
-import { composeHead, type ComposeHeadOptions } from "./compose.js";
+import { CLAUDE_CODE_QUALITY_BLOCK } from './shared/claude-code-quality.js';
+import { composeHead, type ComposeHeadOptions } from './compose.js';
 
 export interface HeadPromptOptions {
-  tier?: ComposeHeadOptions["tier"];
+  tier?: ComposeHeadOptions['tier'];
   userKey?: string;
   /** If false, head uses legacy flat format without XML. Default true for XML. */
   useXml?: boolean;
+  /** Workspace root — forwarded to environment block. */
+  workspaceRoot?: string;
 }
 
 export function getHeadSystemPrompt(opts?: HeadPromptOptions): string {
@@ -22,6 +24,7 @@ export function getHeadSystemPrompt(opts?: HeadPromptOptions): string {
     tier: opts?.tier,
     userKey: opts?.userKey,
     includeCapabilities: true,
+    workspaceRoot: opts?.workspaceRoot,
   });
 }
 
@@ -39,6 +42,6 @@ General rules
 - Prefer small, focused edits over large rewrites.
 - When using tools, paths are relative to the workspace root.
 - Explain briefly what you did after tool use.
-- If the request is ambiguous, ask one short clarifying question or pick a sensible default and say so.
+- If the request is ambiguous, ask numbered clarifying questions with multiple-choice options in parentheses, e.g. "1. Question? (Option A, Option B, or Option C)". Never ask open-ended questions.
 - Default to plain text responses. Do not use markdown headings (#, ##, ###) or bold markers (**) unless the user asks for markdown.`;
 }

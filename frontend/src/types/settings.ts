@@ -19,13 +19,13 @@ export interface CustomModelConfig {
 }
 
 export interface ModelsSettings {
-  defaultProvider?: 'nim' | 'zhipu' | 'copilot' | 'openrouter' | 'ollama' | 'mock';
+  defaultProvider?: 'nim' | 'zhipu' | 'openrouter' | 'ollama' | 'mock';
   defaultModelId?: string;
   /** Embedding model ID (e.g. BAAI/bge-small-en-v1.5, nvidia/nv-embed-v2) */
   embeddingModelId?: string;
   /** Custom / fine-tuned models (user-defined) */
   customModels?: CustomModelConfig[];
-  /** Quality vs speed: fast = NIM/Kimi, quality = Claude, balanced = router default */
+  /** Quality vs speed: fast = NIM, quality = Claude, balanced = router default */
   modelPreset?: ModelPreset;
   /** Advanced: temperature (0–2). Higher = more creative. */
   temperature?: number;
@@ -54,6 +54,10 @@ export interface McpSettings {
 export interface MemorySettings {
   /** Max number of memories to keep (optional cap for UI/recall). */
   maxMemoriesToKeep?: number;
+  /** Retention period in days; memories older than this are auto-removed. */
+  retentionDays?: number;
+  /** Auto-save key facts and decisions during conversations. */
+  autoSave?: boolean;
 }
 
 export interface GitSettings {
@@ -105,6 +109,14 @@ export interface SettingsPreferences {
   showLineNumbers?: boolean;
   /** Enable word-wrap in code editors/blocks. */
   wordWrap?: boolean;
+  /** Notification: Desktop system notifications. */
+  notifyDesktop?: boolean;
+  /** Notification: Slack channel messages. */
+  notifySlack?: boolean;
+  /** Notification: Email summaries. */
+  notifyEmail?: boolean;
+  /** Notification: Custom webhook POST. */
+  notifyWebhook?: boolean;
 }
 
 export interface Settings {

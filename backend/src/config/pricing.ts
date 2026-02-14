@@ -4,17 +4,17 @@
  * Hosted models are optional and billed via credits.
  */
 
-export type TierId = "free" | "starter" | "pro" | "team" | "enterprise";
+export type TierId = 'free' | 'starter' | 'pro' | 'team' | 'enterprise';
 
 /** Premium feature flags for gating capabilities */
 export type PremiumFeature =
-  | "cloud_tools"
-  | "cicd_tools"
-  | "large_swarm"
-  | "persistent_agent"
-  | "nvidia_advanced"
-  | "multi_platform_msg"
-  | "priority_routing";
+  | 'cloud_tools'
+  | 'cicd_tools'
+  | 'large_swarm'
+  | 'persistent_agent'
+  | 'nvidia_advanced'
+  | 'multi_platform_msg'
+  | 'priority_routing';
 
 export interface Tier {
   id: TierId;
@@ -53,9 +53,9 @@ export const CREDITS_PER_OPERATION: Record<string, number> = {
   codegen: 20,
   swarm_run: 15,
   // G-CompN1 Model Mix operations (internal billing)
-  grump_fast: 1,      // Kimi K2.5 route
-  grump_balanced: 2,  // Gemini 3 Pro route
-  grump_quality: 4,   // Opus 4.6 route
+  grump_fast: 1, // Kimi K2.5 route
+  grump_balanced: 2, // Gemini 3 Pro route
+  grump_quality: 4, // Opus 4.6 route
 };
 
 /** Overage rates for platform usage */
@@ -74,20 +74,20 @@ export const HOSTED_CREDITS = {
 
 export const TIERS: Record<TierId, Tier> = {
   free: {
-    id: "free",
-    name: "Free",
+    id: 'free',
+    name: 'Free',
     priceMonthlyCents: 0,
     creditsPerMonth: 10,
     apiCallsPerMonth: 10,
     monthlyBudgetUsd: 0.1,
     features: [
-      "10 credits/month (1 credit = 1 message)",
-      "G-CompN1 Model Mix (auto-routing)",
-      "BYOK for model costs",
-      "1 seat",
-      "1 GB storage",
-      "Up to 3 agents per swarm",
-      "Community support",
+      '10 credits/month (1 credit = 1 message)',
+      'G-CompN1 Model Mix (auto-routing)',
+      'BYOK for model costs',
+      '1 seat',
+      '1 GB storage',
+      'Up to 3 agents per swarm',
+      'Community support',
     ],
     premiumFeatures: [],
     seats: 1,
@@ -98,26 +98,26 @@ export const TIERS: Record<TierId, Tier> = {
     maxHeartbeats: 3,
   },
   starter: {
-    id: "starter",
-    name: "Starter",
+    id: 'starter',
+    name: 'Starter',
     priceMonthlyCents: 2000,
     priceYearlyCents: 20000,
     creditsPerMonth: 200,
     apiCallsPerMonth: 200,
     monthlyBudgetUsd: 2,
     features: [
-      "200 credits/month (platform usage)",
-      "G-CompN1 Model Mix (Opus 4.6 + Kimi K2.5 + Gemini 3 Pro)",
-      "BYOK for model costs",
-      "1 seat",
-      "5 GB storage",
-      "Cloud tools access",
-      "Up to 3 agents per swarm",
-      "Email support",
-      "Usage analytics",
-      "Custom skills",
+      '200 credits/month (platform usage)',
+      'G-CompN1 Model Mix (Opus 4.6 + Kimi K2.5 + Gemini 3 Pro)',
+      'BYOK for model costs',
+      '1 seat',
+      '5 GB storage',
+      'Cloud tools access',
+      'Up to 3 agents per swarm',
+      'Email support',
+      'Usage analytics',
+      'Custom skills',
     ],
-    premiumFeatures: ["cloud_tools"],
+    premiumFeatures: ['cloud_tools'],
     seats: 1,
     includedStorageGb: 5,
     includedComputeMinutes: 120,
@@ -126,29 +126,29 @@ export const TIERS: Record<TierId, Tier> = {
     maxHeartbeats: 5,
   },
   pro: {
-    id: "pro",
-    name: "Pro",
+    id: 'pro',
+    name: 'Pro',
     priceMonthlyCents: 4900,
     priceYearlyCents: 49000,
     creditsPerMonth: 1_000,
     apiCallsPerMonth: 1_000,
     monthlyBudgetUsd: 10,
     features: [
-      "1,000 credits/month (platform usage)",
-      "G-CompN1 Model Mix (priority routing)",
-      "Anthropic Opus 4.6 via Agent SDK",
-      "BYOK for model costs",
-      "1 seat",
-      "10 GB storage",
-      "Cloud & CI/CD tools",
-      "Up to 5 agents per swarm",
-      "Priority support",
-      "Usage analytics",
-      "Overage billing (storage/compute)",
-      "Advanced skills & workflows",
-      "Session messaging (SMS/WhatsApp)",
+      '1,000 credits/month (platform usage)',
+      'G-CompN1 Model Mix (priority routing)',
+      'Anthropic Opus 4.6 via Agent SDK',
+      'BYOK for model costs',
+      '1 seat',
+      '10 GB storage',
+      'Cloud & CI/CD tools',
+      'Up to 5 agents per swarm',
+      'Priority support',
+      'Usage analytics',
+      'Overage billing (storage/compute)',
+      'Advanced skills & workflows',
+      'Session messaging (SMS/WhatsApp)',
     ],
-    premiumFeatures: ["cloud_tools", "cicd_tools", "priority_routing"],
+    premiumFeatures: ['cloud_tools', 'cicd_tools', 'priority_routing'],
     seats: 1,
     includedStorageGb: 10,
     includedComputeMinutes: 300,
@@ -157,32 +157,32 @@ export const TIERS: Record<TierId, Tier> = {
     maxHeartbeats: 10,
   },
   team: {
-    id: "team",
-    name: "Team",
+    id: 'team',
+    name: 'Team',
     priceMonthlyCents: 14900,
     priceYearlyCents: 149000,
     creditsPerMonth: 5_000,
     apiCallsPerMonth: 5_000,
     monthlyBudgetUsd: 50,
     features: [
-      "5,000 credits/month (platform usage)",
-      "BYOK for model costs",
-      "5 seats",
-      "50 GB storage",
-      "All Pro features",
-      "Swarm premium included",
-      "Up to 10 agents per swarm",
-      "24/7 persistent agent",
-      "Team collaboration",
-      "Admin dashboard",
+      '5,000 credits/month (platform usage)',
+      'BYOK for model costs',
+      '5 seats',
+      '50 GB storage',
+      'All Pro features',
+      'Swarm premium included',
+      'Up to 10 agents per swarm',
+      '24/7 persistent agent',
+      'Team collaboration',
+      'Admin dashboard',
     ],
     premiumFeatures: [
-      "cloud_tools",
-      "cicd_tools",
-      "large_swarm",
-      "persistent_agent",
-      "multi_platform_msg",
-      "priority_routing",
+      'cloud_tools',
+      'cicd_tools',
+      'large_swarm',
+      'persistent_agent',
+      'multi_platform_msg',
+      'priority_routing',
     ],
     seats: 5,
     includedStorageGb: 50,
@@ -193,33 +193,33 @@ export const TIERS: Record<TierId, Tier> = {
     swarmAddOnCents: 1500,
   },
   enterprise: {
-    id: "enterprise",
-    name: "Enterprise",
+    id: 'enterprise',
+    name: 'Enterprise',
     priceMonthlyCents: 0,
     creditsPerMonth: Number.MAX_SAFE_INTEGER,
     apiCallsPerMonth: Number.MAX_SAFE_INTEGER,
     monthlyBudgetUsd: Number.MAX_SAFE_INTEGER,
     features: [
-      "Unlimited credits",
-      "BYOK or hosted models",
-      "Unlimited seats",
-      "100+ GB storage",
-      "All features unlocked",
-      "Swarm premium included",
-      "Up to 100 agents per swarm",
-      "Advanced NVIDIA features",
-      "Dedicated support",
-      "SLA",
-      "Custom integrations",
+      'Unlimited credits',
+      'BYOK or hosted models',
+      'Unlimited seats',
+      '100+ GB storage',
+      'All features unlocked',
+      'Swarm premium included',
+      'Up to 100 agents per swarm',
+      'Advanced NVIDIA features',
+      'Dedicated support',
+      'SLA',
+      'Custom integrations',
     ],
     premiumFeatures: [
-      "cloud_tools",
-      "cicd_tools",
-      "large_swarm",
-      "persistent_agent",
-      "nvidia_advanced",
-      "multi_platform_msg",
-      "priority_routing",
+      'cloud_tools',
+      'cicd_tools',
+      'large_swarm',
+      'persistent_agent',
+      'nvidia_advanced',
+      'multi_platform_msg',
+      'priority_routing',
     ],
     seats: Number.MAX_SAFE_INTEGER,
     includedStorageGb: 100,
@@ -235,10 +235,7 @@ export function getTier(id: TierId): Tier {
 }
 
 /** Check if a tier has a specific premium feature */
-export function hasPremiumFeature(
-  tierId: TierId,
-  feature: PremiumFeature,
-): boolean {
+export function hasPremiumFeature(tierId: TierId, feature: PremiumFeature): boolean {
   const tier = getTier(tierId);
   return tier.premiumFeatures.includes(feature);
 }

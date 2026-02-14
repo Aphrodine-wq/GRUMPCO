@@ -1,8 +1,10 @@
 # G-Rump End-to-End System Test Report
 
+> Historical snapshot: this report reflects the test run performed on 2026-02-03.
+
 **Test Date:** 2026-02-03  
 **Environment:** Development (MOCK_AI_MODE=true)  
-**Backend Version:** 2.0.0  
+**Backend Version at Test Time:** 2.0.0  
 **Test Duration:** ~15 minutes  
 
 ---

@@ -4,10 +4,10 @@
  * Also supports proactive push to user's messaging subscriptions (Telegram, Discord, Slack, Twilio).
  */
 
-import logger from "../../middleware/logger.js";
-import { getDatabase } from "../../db/database.js";
+import logger from '../../middleware/logger.js';
+import { getDatabase } from '../../db/database.js';
 
-export type MessagingPlatform = "telegram" | "discord" | "twilio" | "slack";
+export type MessagingPlatform = 'telegram' | 'discord' | 'twilio' | 'slack';
 
 interface Subscription {
   platform: MessagingPlatform;
@@ -17,76 +17,61 @@ interface Subscription {
 const subscriptions = new Map<string, Subscription>();
 
 /** Discord client for sending messages (set by discordBot when it starts). */
-let discordSendFn: ((channelId: string, text: string) => Promise<void>) | null =
-  null;
+let discordSendFn: ((channelId: string, text: string) => Promise<void>) | null = null;
 
 /** Slack send function for sending messages (set by slack route). */
-let slackSendFn: ((userId: string, text: string) => Promise<void>) | null =
-  null;
+let slackSendFn: ((userId: string, text: string) => Promise<void>) | null = null;
 
-export function setDiscordSendFn(
-  fn: (channelId: string, text: string) => Promise<void>,
-): void {
+export function setDiscordSendFn(fn: (channelId: string, text: string) => Promise<void>): void {
   discordSendFn = fn;
 }
 
-export function setSlackSendFn(
-  fn: (userId: string, text: string) => Promise<void>,
-): void {
+export function setSlackSendFn(fn: (userId: string, text: string) => Promise<void>): void {
   slackSendFn = fn;
 }
 
 export function subscribe(
   sessionId: string,
   platform: MessagingPlatform,
-  platformUserId: string,
+  platformUserId: string
 ): void {
   subscriptions.set(sessionId, { platform, platformUserId });
-  logger.debug(
-    { sessionId, platform, platformUserId },
-    "Messaging ship subscription added",
-  );
+  logger.debug({ sessionId, platform, platformUserId }, 'Messaging ship subscription added');
 }
 
-export async function notify(
-  sessionId: string,
-  message: string,
-): Promise<void> {
+export async function notify(sessionId: string, message: string): Promise<void> {
   const sub = subscriptions.get(sessionId);
   if (!sub) return;
   subscriptions.delete(sessionId);
 
   try {
-    if (sub.platform === "telegram") {
+    if (sub.platform === 'telegram') {
       await sendTelegram(sub.platformUserId, message);
-    } else if (sub.platform === "discord") {
+    } else if (sub.platform === 'discord') {
       await sendDiscord(sub.platformUserId, message);
-    } else if (sub.platform === "twilio") {
+    } else if (sub.platform === 'twilio') {
       await sendTwilio(sub.platformUserId, message);
-    } else if (sub.platform === "slack") {
+    } else if (sub.platform === 'slack') {
       await sendSlack(sub.platformUserId, message);
     }
   } catch (err) {
     logger.warn(
       { err: (err as Error).message, sessionId, platform: sub.platform },
-      "Messaging notify send failed",
+      'Messaging notify send failed'
     );
   }
 }
 
-export async function sendTelegram(
-  chatId: string,
-  text: string,
-): Promise<void> {
+export async function sendTelegram(chatId: string, text: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {
-    logger.warn("TELEGRAM_BOT_TOKEN not set, cannot send");
+    logger.warn('TELEGRAM_BOT_TOKEN not set, cannot send');
     return;
   }
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
   const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: chatId, text: text.slice(0, 4096) }),
   });
   if (!res.ok) {
@@ -95,12 +80,9 @@ export async function sendTelegram(
   }
 }
 
-export async function sendDiscord(
-  channelId: string,
-  text: string,
-): Promise<void> {
+export async function sendDiscord(channelId: string, text: string): Promise<void> {
   if (!discordSendFn) {
-    logger.warn("Discord send not configured, cannot send");
+    logger.warn('Discord send not configured, cannot send');
     return;
   }
   await discordSendFn(channelId, text.slice(0, 2000));
@@ -108,7 +90,7 @@ export async function sendDiscord(
 
 export async function sendSlack(userId: string, text: string): Promise<void> {
   if (!slackSendFn) {
-    logger.warn("Slack send not configured, cannot send");
+    logger.warn('Slack send not configured, cannot send');
     return;
   }
   await slackSendFn(userId, text.slice(0, 3000));
@@ -121,7 +103,7 @@ export async function sendSlack(userId: string, text: string): Promise<void> {
 export async function sendProactiveToUser(
   userId: string,
   message: string,
-  options?: { platforms?: MessagingPlatform[] },
+  options?: { platforms?: MessagingPlatform[] }
 ): Promise<void> {
   const db = getDatabase();
   const subs = await db.getMessagingSubscriptions(userId);
@@ -133,13 +115,13 @@ export async function sendProactiveToUser(
     if (allowedPlatforms && !allowedPlatforms.includes(platform)) continue;
 
     try {
-      if (platform === "telegram") {
+      if (platform === 'telegram') {
         await sendTelegram(sub.platform_user_id, message);
-      } else if (platform === "discord") {
+      } else if (platform === 'discord') {
         await sendDiscord(sub.platform_user_id, message);
-      } else if (platform === "slack") {
+      } else if (platform === 'slack') {
         await sendSlack(sub.platform_user_id, message);
-      } else if (platform === "twilio") {
+      } else if (platform === 'twilio') {
         await sendTwilio(sub.platform_user_id, message);
       }
     } catch (err) {
@@ -150,7 +132,7 @@ export async function sendProactiveToUser(
           platform,
           platformUserId: sub.platform_user_id,
         },
-        "Proactive notification send failed",
+        'Proactive notification send failed'
       );
     }
   }
@@ -159,16 +141,13 @@ export async function sendProactiveToUser(
 export async function sendTwilio(to: string, text: string): Promise<void> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const baseNum =
-    process.env.TWILIO_WHATSAPP_NUMBER ||
-    process.env.TWILIO_REPLY_TO_NUMBER ||
-    "";
-  const from = to.startsWith("whatsapp:")
-    ? `whatsapp:${baseNum.replace(/^whatsapp:/, "")}`
+  const baseNum = process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_REPLY_TO_NUMBER || '';
+  const from = to.startsWith('whatsapp:')
+    ? `whatsapp:${baseNum.replace(/^whatsapp:/, '')}`
     : process.env.TWILIO_REPLY_TO_NUMBER || baseNum;
 
   if (!accountSid || !authToken || !from) {
-    logger.warn("Twilio not configured, cannot send");
+    logger.warn('Twilio not configured, cannot send');
     return;
   }
 
@@ -179,11 +158,10 @@ export async function sendTwilio(to: string, text: string): Promise<void> {
     Body: text.slice(0, 1600),
   });
   const res = await fetch(twilioUrl, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization:
-        "Basic " + Buffer.from(`${accountSid}:${authToken}`).toString("base64"),
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
     },
     body: params.toString(),
   });

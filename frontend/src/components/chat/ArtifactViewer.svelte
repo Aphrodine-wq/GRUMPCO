@@ -21,7 +21,7 @@
 
   async function handleDownloadAll() {
     if (!phaseData.code?.files) return;
-    
+
     downloading = true;
     try {
       for (const file of phaseData.code.files) {
@@ -48,7 +48,7 @@
       showToast('Session ID required', 'error');
       return;
     }
-    
+
     try {
       const result = await completeDesignWorkflow(sessionId);
       if (result.success) {
@@ -61,17 +61,37 @@
     }
   }
 
-  const tabs = [
-    { id: 'architecture', label: 'Architecture', icon: LayoutGrid, available: !!phaseData.architecture },
-    { id: 'prd', label: 'PRD', icon: FileText, available: !!phaseData.prd },
-    { id: 'plan', label: 'Plan', icon: ListTodo, available: !!phaseData.plan },
-    { id: 'code', label: 'Code', icon: FileCode, available: !!phaseData.code },
-  ] as const;
+  const tabs = $derived([
+    {
+      id: 'architecture' as const,
+      label: 'Architecture',
+      icon: LayoutGrid,
+      available: !!phaseData.architecture,
+    },
+    { id: 'prd' as const, label: 'PRD', icon: FileText, available: !!phaseData.prd },
+    { id: 'plan' as const, label: 'Plan', icon: ListTodo, available: !!phaseData.plan },
+    { id: 'code' as const, label: 'Code', icon: FileCode, available: !!phaseData.code },
+  ]);
 </script>
 
 {#if open}
-  <div class="artifact-viewer-overlay" onclick={onClose}>
-    <div class="artifact-viewer" onclick={(e) => e.stopPropagation()}>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="artifact-viewer-overlay"
+    onclick={onClose}
+    onkeydown={(e) => e.key === 'Escape' && onClose()}
+    role="button"
+    tabindex="-1"
+  >
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="artifact-viewer"
+      onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-label="Design Workflow Artifacts"
+      tabindex="-1"
+    >
       <div class="viewer-header">
         <h2 class="viewer-title">Design Workflow Artifacts</h2>
         <button class="close-btn" onclick={onClose}>

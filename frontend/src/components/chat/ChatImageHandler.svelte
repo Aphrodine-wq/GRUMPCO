@@ -29,9 +29,9 @@
       showToast(`Maximum ${maxPendingImages} images allowed`, 'error');
       return false;
     }
-    
+
     if (!isNimProvider) {
-      showToast('Image support requires NIM provider', 'warning');
+      showToast('Image support requires NIM provider', 'error');
       return false;
     }
 
@@ -69,8 +69,8 @@
     {#each pendingImages as image, index}
       <div class="image-preview">
         <img src={image} alt="Pending attachment" />
-        <button 
-          type="button" 
+        <button
+          type="button"
           class="remove-image-btn"
           onclick={() => removeImage(index)}
           aria-label="Remove image"

@@ -105,7 +105,7 @@ VITE_POSTHOG_HOST=https://us.i.posthog.com
 
 ### 1. Install Dependencies
 ```bash
-cd /root/.openclaw/workspace/G-rump.com
+cd <repo-root>
 ./scripts/setup-analytics.sh
 ```
 
@@ -196,7 +196,7 @@ analytics.track('intent_submitted', {
 ## Files Created
 
 ```
-G-rump.com/
+GRUMPCO/
 ├── backend/src/
 │   ├── services/analytics.ts          # Core analytics service
 │   ├── middleware/analytics.ts        # Express middleware
@@ -221,3 +221,4 @@ G-rump.com/
 ```
 
 All files are ready to use!
+

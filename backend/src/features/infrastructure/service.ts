@@ -4,7 +4,7 @@
  * Generates Kubernetes, Terraform, Docker, and CI/CD configurations.
  */
 
-import { getStream, type StreamParams } from "../../services/ai-providers/llmGateway.js";
+import { getStream, type StreamParams } from '../../services/ai-providers/llmGateway.js';
 import {
   type K8sGenerationRequest,
   type K8sGenerationResult,
@@ -15,24 +15,21 @@ import {
   type DockerGenerationResult,
   type CICDGenerationRequest,
   type CICDGenerationResult,
-} from "./types.js";
+} from './types.js';
 
-const DEFAULT_MODEL = "moonshotai/kimi-k2.5";
+const DEFAULT_MODEL = 'moonshotai/kimi-k2.5';
 
 /**
  * Helper to call LLM via gateway and get complete response text
  */
 async function callLLM(params: StreamParams): Promise<string> {
   const stream = getStream(params, {
-    provider: "nim",
+    provider: 'nim',
     modelId: params.model || DEFAULT_MODEL,
   });
-  let responseText = "";
+  let responseText = '';
   for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
       responseText += event.delta.text;
     }
   }
@@ -60,14 +57,14 @@ Generate production-ready, well-documented infrastructure code.`;
  * Generate Kubernetes manifests
  */
 export async function generateK8sManifests(
-  request: K8sGenerationRequest,
+  request: K8sGenerationRequest
 ): Promise<K8sGenerationResult> {
   const {
     projectName,
     services,
     ingress,
-    namespace = "default",
-    environment = "production",
+    namespace = 'default',
+    environment = 'production',
   } = request;
 
   const prompt = `Generate Kubernetes manifests for the following application:
@@ -79,15 +76,13 @@ Namespace: ${namespace}
 Services:
 ${services
   .map(
-    (
-      s,
-    ) => `- ${s.name}: image=${s.image}, port=${s.port}, replicas=${s.replicas || 1}
-  Resources: CPU=${s.resources?.cpu || "100m"}, Memory=${s.resources?.memory || "128Mi"}
-  Env vars: ${s.env?.map((e) => e.name).join(", ") || "none"}`,
+    (s) => `- ${s.name}: image=${s.image}, port=${s.port}, replicas=${s.replicas || 1}
+  Resources: CPU=${s.resources?.cpu || '100m'}, Memory=${s.resources?.memory || '128Mi'}
+  Env vars: ${s.env?.map((e) => e.name).join(', ') || 'none'}`
   )
-  .join("\n")}
+  .join('\n')}
 
-${ingress ? `Ingress: host=${ingress.host}, tls=${ingress.tls}` : "No ingress required"}
+${ingress ? `Ingress: host=${ingress.host}, tls=${ingress.tls}` : 'No ingress required'}
 
 Generate the following Kubernetes resources as valid YAML:
 1. Namespace (if not default)
@@ -114,13 +109,13 @@ Respond with each manifest as a separate YAML block:
     model: DEFAULT_MODEL,
     max_tokens: 8192,
     system: INFRA_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
   });
 
   // Parse YAML blocks from response
   const yamlBlocks = responseText.match(/```yaml\n?([\s\S]*?)\n?```/g) || [];
   const manifests = yamlBlocks.map((block) =>
-    block.replace(/```yaml\n?/, "").replace(/\n?```/, ""),
+    block.replace(/```yaml\n?/, '').replace(/\n?```/, '')
   );
 
   // Categorize manifests
@@ -133,49 +128,49 @@ Respond with each manifest as a separate YAML block:
   let namespaceManifest: string | undefined;
 
   for (const manifest of manifests) {
-    if (manifest.includes("kind: Deployment")) {
+    if (manifest.includes('kind: Deployment')) {
       deployments.push({
-        kind: "Deployment",
-        apiVersion: "apps/v1",
-        metadata: { name: "" },
+        kind: 'Deployment',
+        apiVersion: 'apps/v1',
+        metadata: { name: '' },
         spec: {},
       });
-    } else if (manifest.includes("kind: Service")) {
+    } else if (manifest.includes('kind: Service')) {
       k8sServices.push({
-        kind: "Service",
-        apiVersion: "v1",
-        metadata: { name: "" },
+        kind: 'Service',
+        apiVersion: 'v1',
+        metadata: { name: '' },
         spec: {},
       });
-    } else if (manifest.includes("kind: ConfigMap")) {
+    } else if (manifest.includes('kind: ConfigMap')) {
       configMaps.push({
-        kind: "ConfigMap",
-        apiVersion: "v1",
-        metadata: { name: "" },
+        kind: 'ConfigMap',
+        apiVersion: 'v1',
+        metadata: { name: '' },
         spec: {},
       });
-    } else if (manifest.includes("kind: Secret")) {
+    } else if (manifest.includes('kind: Secret')) {
       secrets.push({
-        kind: "Secret",
-        apiVersion: "v1",
-        metadata: { name: "" },
+        kind: 'Secret',
+        apiVersion: 'v1',
+        metadata: { name: '' },
         spec: {},
       });
-    } else if (manifest.includes("kind: Ingress")) {
+    } else if (manifest.includes('kind: Ingress')) {
       ingressManifest = {
-        kind: "Ingress",
-        apiVersion: "networking.k8s.io/v1",
-        metadata: { name: "" },
+        kind: 'Ingress',
+        apiVersion: 'networking.k8s.io/v1',
+        metadata: { name: '' },
         spec: {},
       };
-    } else if (manifest.includes("kind: HorizontalPodAutoscaler")) {
+    } else if (manifest.includes('kind: HorizontalPodAutoscaler')) {
       hpas.push({
-        kind: "HorizontalPodAutoscaler",
-        apiVersion: "autoscaling/v2",
-        metadata: { name: "" },
+        kind: 'HorizontalPodAutoscaler',
+        apiVersion: 'autoscaling/v2',
+        metadata: { name: '' },
         spec: {},
       });
-    } else if (manifest.includes("kind: Namespace")) {
+    } else if (manifest.includes('kind: Namespace')) {
       namespaceManifest = manifest;
     }
   }
@@ -188,7 +183,7 @@ Respond with each manifest as a separate YAML block:
     secrets: secrets.length > 0 ? secrets : undefined,
     ingress: ingressManifest,
     hpa: hpas.length > 0 ? hpas : undefined,
-    combined: manifests.join("\n---\n"),
+    combined: manifests.join('\n---\n'),
   };
 }
 
@@ -196,21 +191,21 @@ Respond with each manifest as a separate YAML block:
  * Generate Terraform configuration
  */
 export async function generateTerraform(
-  request: TerraformGenerationRequest,
+  request: TerraformGenerationRequest
 ): Promise<TerraformGenerationResult> {
   const {
     provider,
     projectName,
     resources,
     region,
-    environment = "production",
+    environment = 'production',
     tags = {},
   } = request;
 
   const providerConfig: Record<string, string> = {
-    aws: "us-east-1",
-    gcp: "us-central1",
-    azure: "eastus",
+    aws: 'us-east-1',
+    gcp: 'us-central1',
+    azure: 'eastus',
   };
 
   const prompt = `Generate Terraform configuration for ${provider.toUpperCase()}:
@@ -220,9 +215,9 @@ Region: ${region || providerConfig[provider]}
 Environment: ${environment}
 
 Resources requested:
-${resources.map((r) => `- ${r.type}: ${r.name}${r.config ? ` (config: ${JSON.stringify(r.config)})` : ""}`).join("\n")}
+${resources.map((r) => `- ${r.type}: ${r.name}${r.config ? ` (config: ${JSON.stringify(r.config)})` : ''}`).join('\n')}
 
-Default tags: ${JSON.stringify({ ...tags, Environment: environment, Project: projectName, ManagedBy: "Terraform" })}
+Default tags: ${JSON.stringify({ ...tags, Environment: environment, Project: projectName, ManagedBy: 'Terraform' })}
 
 Generate the following Terraform files:
 
@@ -248,24 +243,21 @@ Respond with each file as a separate code block:
     model: DEFAULT_MODEL,
     max_tokens: 8192,
     system: INFRA_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
   });
 
   // Extract HCL blocks
   const extractFile = (filename: string): string => {
-    const pattern = new RegExp(
-      `# ${filename}[\\s\\S]*?\`\`\`hcl\\n?([\\s\\S]*?)\\n?\`\`\``,
-      "i",
-    );
+    const pattern = new RegExp(`# ${filename}[\\s\\S]*?\`\`\`hcl\\n?([\\s\\S]*?)\\n?\`\`\``, 'i');
     const match = responseText.match(pattern);
-    return match ? match[1].trim() : "";
+    return match ? match[1].trim() : '';
   };
 
   return {
-    mainTf: extractFile("main.tf") || responseText,
-    variablesTf: extractFile("variables.tf"),
-    outputsTf: extractFile("outputs.tf"),
-    providersTf: extractFile("providers.tf"),
+    mainTf: extractFile('main.tf') || responseText,
+    variablesTf: extractFile('variables.tf'),
+    outputsTf: extractFile('outputs.tf'),
+    providersTf: extractFile('providers.tf'),
   };
 }
 
@@ -273,7 +265,7 @@ Respond with each file as a separate code block:
  * Generate Docker configuration
  */
 export async function generateDocker(
-  request: DockerGenerationRequest,
+  request: DockerGenerationRequest
 ): Promise<DockerGenerationResult> {
   const {
     projectType,
@@ -288,12 +280,12 @@ export async function generateDocker(
   } = request;
 
   const baseImages: Record<string, string> = {
-    node: "node:20-alpine",
-    python: "python:3.11-slim",
-    go: "golang:1.21-alpine",
-    java: "eclipse-temurin:17-jdk-alpine",
-    rust: "rust:1.74-alpine",
-    custom: baseImage || "alpine:latest",
+    node: 'node:20-alpine',
+    python: 'python:3.11-slim',
+    go: 'golang:1.21-alpine',
+    java: 'eclipse-temurin:17-jdk-alpine',
+    rust: 'rust:1.74-alpine',
+    custom: baseImage || 'alpine:latest',
   };
 
   const prompt = `Generate Docker configuration for a ${projectType} application:
@@ -302,8 +294,8 @@ Project: ${projectName}
 Base Image: ${baseImages[projectType]}
 Port: ${port}
 Multi-stage: ${multiStage}
-${buildCommand ? `Build Command: ${buildCommand}` : ""}
-${startCommand ? `Start Command: ${startCommand}` : ""}
+${buildCommand ? `Build Command: ${buildCommand}` : ''}
+${startCommand ? `Start Command: ${startCommand}` : ''}
 
 Generate:
 
@@ -319,8 +311,8 @@ Generate:
 ${
   includeCompose
     ? `3. **docker-compose.yml** - Development setup
-${services ? `Services: ${services.map((s) => s.name).join(", ")}` : "Include main application service"}`
-    : ""
+${services ? `Services: ${services.map((s) => s.name).join(', ')}` : 'Include main application service'}`
+    : ''
 }
 
 Respond with each file as a separate code block:
@@ -340,32 +332,28 @@ ${
 # docker-compose.yml
 ...
 \`\`\``
-    : ""
+    : ''
 }`;
 
   const responseText = await callLLM({
     model: DEFAULT_MODEL,
     max_tokens: 4096,
     system: INFRA_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
   });
 
   // Extract files
-  const dockerfileMatch = responseText.match(
-    /```dockerfile\n?([\s\S]*?)\n?```/i,
-  );
-  const dockerignoreMatch = responseText.match(
-    /# \.dockerignore[\s\S]*?```\n?([\s\S]*?)\n?```/,
-  );
+  const dockerfileMatch = responseText.match(/```dockerfile\n?([\s\S]*?)\n?```/i);
+  const dockerignoreMatch = responseText.match(/# \.dockerignore[\s\S]*?```\n?([\s\S]*?)\n?```/);
   const composeMatch = responseText.match(
-    /# docker-compose\.yml[\s\S]*?```yaml\n?([\s\S]*?)\n?```/i,
+    /# docker-compose\.yml[\s\S]*?```yaml\n?([\s\S]*?)\n?```/i
   );
 
   return {
-    dockerfile: dockerfileMatch ? dockerfileMatch[1].trim() : "",
+    dockerfile: dockerfileMatch ? dockerfileMatch[1].trim() : '',
     dockerignore: dockerignoreMatch
       ? dockerignoreMatch[1].trim()
-      : "node_modules\n.git\n*.log\n.env*\ndist\ncoverage",
+      : 'node_modules\n.git\n*.log\n.env*\ndist\ncoverage',
     composeFile: composeMatch ? composeMatch[1].trim() : undefined,
   };
 }
@@ -373,44 +361,41 @@ ${
 /**
  * Generate CI/CD pipeline
  */
-export async function generateCICD(
-  request: CICDGenerationRequest,
-): Promise<CICDGenerationResult> {
+export async function generateCICD(request: CICDGenerationRequest): Promise<CICDGenerationResult> {
   const {
     platform,
     projectType,
     stages,
     deployTarget,
-    branches = { main: "main", develop: "develop" },
+    branches = { main: 'main', develop: 'develop' },
   } = request;
 
-  const platformConfigs: Record<string, { filename: string; format: string }> =
-    {
-      "github-actions": {
-        filename: ".github/workflows/ci.yml",
-        format: "yaml",
-      },
-      "gitlab-ci": { filename: ".gitlab-ci.yml", format: "yaml" },
-      jenkins: { filename: "Jenkinsfile", format: "groovy" },
-      circleci: { filename: ".circleci/config.yml", format: "yaml" },
-    };
+  const platformConfigs: Record<string, { filename: string; format: string }> = {
+    'github-actions': {
+      filename: '.github/workflows/ci.yml',
+      format: 'yaml',
+    },
+    'gitlab-ci': { filename: '.gitlab-ci.yml', format: 'yaml' },
+    jenkins: { filename: 'Jenkinsfile', format: 'groovy' },
+    circleci: { filename: '.circleci/config.yml', format: 'yaml' },
+  };
 
   const config = platformConfigs[platform];
 
   const prompt = `Generate a ${platform} CI/CD pipeline for a ${projectType} project:
 
-Stages: ${stages.join(", ")}
+Stages: ${stages.join(', ')}
 Main branch: ${branches.main}
 Develop branch: ${branches.develop}
-${deployTarget ? `Deploy target: ${deployTarget}` : ""}
+${deployTarget ? `Deploy target: ${deployTarget}` : ''}
 
 Requirements:
 - Run on push to main and develop branches
 - Run on pull requests
 - Cache dependencies for faster builds
 - Parallel jobs where possible
-- ${stages.includes("security-scan") ? "Include security scanning" : ""}
-- ${stages.includes("deploy") ? `Deploy to ${deployTarget} on main branch` : ""}
+- ${stages.includes('security-scan') ? 'Include security scanning' : ''}
+- ${stages.includes('deploy') ? `Deploy to ${deployTarget} on main branch` : ''}
 
 Generate a complete, production-ready pipeline configuration.
 
@@ -424,14 +409,11 @@ Respond with:
     model: DEFAULT_MODEL,
     max_tokens: 4096,
     system: INFRA_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
   });
 
   // Extract pipeline file
-  const pattern = new RegExp(
-    `\`\`\`${config.format}\\n?([\\s\\S]*?)\\n?\`\`\``,
-    "i",
-  );
+  const pattern = new RegExp(`\`\`\`${config.format}\\n?([\\s\\S]*?)\\n?\`\`\``, 'i');
   const match = responseText.match(pattern);
 
   return {

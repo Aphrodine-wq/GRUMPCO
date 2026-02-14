@@ -12,8 +12,8 @@
  * @module utils/sse
  */
 
-import type { Request, Response } from "express";
-import logger from "../middleware/logger.js";
+import type { Request, Response } from 'express';
+import logger from '../middleware/logger.js';
 
 /** SSE event data */
 export interface SSEEvent {
@@ -61,31 +61,22 @@ export interface SSEWriter {
  * sse.send({ event: 'done', data: {} });
  * sse.close();
  */
-export function initSSE(
-  req: Request,
-  res: Response,
-  config: SSEConfig = {},
-): SSEWriter {
-  const {
-    keepaliveMs = 15000,
-    batchMs = 0,
-    includeCorrelationId = false,
-  } = config;
+export function initSSE(req: Request, res: Response, config: SSEConfig = {}): SSEWriter {
+  const { keepaliveMs = 15000, batchMs = 0, includeCorrelationId = false } = config;
 
   // Set SSE headers
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache, no-transform");
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
 
   // Disable compression for SSE (already handled by app.ts but be explicit)
-  res.setHeader("Content-Encoding", "identity");
+  res.setHeader('Content-Encoding', 'identity');
 
   // Add correlation ID if available
-  const correlationId = (req as Request & { correlationId?: string })
-    .correlationId;
+  const correlationId = (req as Request & { correlationId?: string }).correlationId;
   if (correlationId) {
-    res.setHeader("X-Correlation-ID", correlationId);
+    res.setHeader('X-Correlation-ID', correlationId);
   }
 
   // Flush headers immediately
@@ -98,21 +89,18 @@ export function initSSE(
   let flushTimeout: NodeJS.Timeout | null = null;
 
   // Handle client disconnect
-  req.on("close", () => {
+  req.on('close', () => {
     connected = false;
     abortController.abort();
     cleanup();
-    logger.debug({ correlationId }, "SSE client disconnected");
+    logger.debug({ correlationId }, 'SSE client disconnected');
   });
 
-  req.on("error", (error) => {
+  req.on('error', (error) => {
     connected = false;
     abortController.abort();
     cleanup();
-    logger.warn(
-      { correlationId, error: (error as Error).message },
-      "SSE client error",
-    );
+    logger.warn({ correlationId, error: (error as Error).message }, 'SSE client error');
   });
 
   // Keepalive heartbeat
@@ -121,7 +109,7 @@ export function initSSE(
     keepaliveInterval = setInterval(() => {
       if (connected) {
         try {
-          res.write(": keepalive\n\n");
+          res.write(': keepalive\n\n');
         } catch {
           connected = false;
           cleanup();
@@ -144,7 +132,7 @@ export function initSSE(
 
   // Format event for SSE protocol
   function formatEvent(event: SSEEvent): string {
-    let output = "";
+    let output = '';
 
     if (event.id) {
       output += `id: ${event.id}\n`;
@@ -158,7 +146,7 @@ export function initSSE(
 
     // Format data
     let dataStr: string;
-    if (typeof event.data === "string") {
+    if (typeof event.data === 'string') {
       dataStr = event.data;
     } else {
       const payload =
@@ -169,11 +157,11 @@ export function initSSE(
     }
 
     // Split data by newlines (SSE requires each line prefixed with 'data: ')
-    for (const line of dataStr.split("\n")) {
+    for (const line of dataStr.split('\n')) {
       output += `data: ${line}\n`;
     }
 
-    output += "\n";
+    output += '\n';
     return output;
   }
 
@@ -182,16 +170,13 @@ export function initSSE(
     if (!connected || eventBuffer.length === 0) return;
 
     try {
-      const data = eventBuffer.join("");
+      const data = eventBuffer.join('');
       res.write(data);
       eventBuffer = [];
     } catch (error) {
       connected = false;
       cleanup();
-      logger.warn(
-        { correlationId, error: (error as Error).message },
-        "SSE write failed",
-      );
+      logger.warn({ correlationId, error: (error as Error).message }, 'SSE write failed');
     }
   }
 
@@ -217,10 +202,7 @@ export function initSSE(
         } catch (error) {
           connected = false;
           cleanup();
-          logger.warn(
-            { correlationId, error: (error as Error).message },
-            "SSE write failed",
-          );
+          logger.warn({ correlationId, error: (error as Error).message }, 'SSE write failed');
         }
       }
     },
@@ -262,20 +244,19 @@ export function initSSE(
  * Send a single SSE event (convenience function for simple use cases)
  */
 export function sendSSE(res: Response, event: SSEEvent): void {
-  let output = "";
+  let output = '';
 
   if (event.event) {
     output += `event: ${event.event}\n`;
   }
 
-  const dataStr =
-    typeof event.data === "string" ? event.data : JSON.stringify(event.data);
+  const dataStr = typeof event.data === 'string' ? event.data : JSON.stringify(event.data);
 
-  for (const line of dataStr.split("\n")) {
+  for (const line of dataStr.split('\n')) {
     output += `data: ${line}\n`;
   }
 
-  output += "\n";
+  output += '\n';
 
   try {
     res.write(output);
@@ -287,17 +268,13 @@ export function sendSSE(res: Response, event: SSEEvent): void {
 /**
  * Send an error event and close the SSE stream
  */
-export function sendSSEError(
-  res: Response,
-  error: Error | string,
-  code = "error",
-): void {
+export function sendSSEError(res: Response, error: Error | string, code = 'error'): void {
   const errorData = {
-    error: typeof error === "string" ? error : error.message,
+    error: typeof error === 'string' ? error : error.message,
     code,
   };
 
-  sendSSE(res, { event: "error", data: errorData });
+  sendSSE(res, { event: 'error', data: errorData });
 
   try {
     res.end();

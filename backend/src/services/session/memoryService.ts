@@ -3,14 +3,14 @@
  * Uses same embed + vector store; dedicated namespace for memory.
  */
 
-import { embed } from "../ai-providers/embeddingService.js";
-import { getMemoryStore, type VectorChunk } from "../rag/vectorStoreAdapter.js";
-import logger from "../../middleware/logger.js";
+import { embed } from '../ai-providers/embeddingService.js';
+import { getMemoryStore, type VectorChunk } from '../rag/vectorStoreAdapter.js';
+import logger from '../../middleware/logger.js';
 
-const MEMORY_NAMESPACE = "grump-memory";
+const MEMORY_NAMESPACE = 'grump-memory';
 const MEMORY_TOP_K = 5;
 
-export type MemoryType = "interaction" | "correction" | "preference";
+export type MemoryType = 'interaction' | 'correction' | 'preference';
 
 export interface MemoryRecord {
   id: string;
@@ -26,12 +26,12 @@ function memoryChunkToRecord(c: VectorChunk): MemoryRecord {
   const meta = (c.metadata ?? {}) as Record<string, unknown>;
   return {
     id: c.id,
-    userId: (meta.userId as string) ?? "",
-    type: (meta.memoryType as MemoryType) ?? "interaction",
+    userId: (meta.userId as string) ?? '',
+    type: (meta.memoryType as MemoryType) ?? 'interaction',
     content: c.content,
     summary: meta.summary as string | undefined,
     metadata: meta,
-    createdAt: (meta.createdAt as string) ?? "",
+    createdAt: (meta.createdAt as string) ?? '',
   };
 }
 
@@ -39,12 +39,10 @@ function memoryChunkToRecord(c: VectorChunk): MemoryRecord {
  * Store a significant interaction or correction. Embeds content and upserts into vector store.
  * Use a dedicated index/namespace via metadata filter (we use same store with metadata.userId and metadata.namespace = MEMORY_NAMESPACE).
  */
-export async function remember(
-  record: Omit<MemoryRecord, "id" | "createdAt">,
-): Promise<void> {
+export async function remember(record: Omit<MemoryRecord, 'id' | 'createdAt'>): Promise<void> {
   try {
     const store = getMemoryStore();
-    const [embedding] = await embed([record.content], { inputType: "passage" });
+    const [embedding] = await embed([record.content], { inputType: 'passage' });
     const id = `mem-${record.userId}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const createdAt = new Date().toISOString();
     const chunk: VectorChunk = {
@@ -52,7 +50,7 @@ export async function remember(
       content: record.summary ?? record.content,
       embedding,
       source: record.userId,
-      type: "doc",
+      type: 'doc',
       metadata: {
         namespace: MEMORY_NAMESPACE,
         userId: record.userId,
@@ -64,12 +62,9 @@ export async function remember(
       },
     };
     await store.upsert([chunk]);
-    logger.debug(
-      { id, userId: record.userId, type: record.type },
-      "Memory remembered",
-    );
+    logger.debug({ id, userId: record.userId, type: record.type }, 'Memory remembered');
   } catch (e) {
-    logger.warn({ error: (e as Error).message }, "Memory remember failed");
+    logger.warn({ error: (e as Error).message }, 'Memory remember failed');
     throw e;
   }
 }
@@ -77,22 +72,17 @@ export async function remember(
 /**
  * Recall relevant memories for a user and query. Returns top MEMORY_TOP_K by similarity.
  */
-export async function recall(
-  userId: string,
-  query: string,
-): Promise<MemoryRecord[]> {
+export async function recall(userId: string, query: string): Promise<MemoryRecord[]> {
   try {
     const store = getMemoryStore();
-    const [embedding] = await embed([query], { inputType: "query" });
+    const [embedding] = await embed([query], { inputType: 'query' });
     const results = await store.query(embedding, { topK: MEMORY_TOP_K * 2 });
     const filtered = results.filter(
-      (r) => (r.chunk.metadata as Record<string, unknown>)?.userId === userId,
+      (r) => (r.chunk.metadata as Record<string, unknown>)?.userId === userId
     );
-    return filtered
-      .slice(0, MEMORY_TOP_K)
-      .map((r) => memoryChunkToRecord(r.chunk));
+    return filtered.slice(0, MEMORY_TOP_K).map((r) => memoryChunkToRecord(r.chunk));
   } catch (e) {
-    logger.warn({ error: (e as Error).message }, "Memory recall failed");
+    logger.warn({ error: (e as Error).message }, 'Memory recall failed');
     return [];
   }
 }
@@ -108,7 +98,7 @@ export async function learnFromFeedback(feedback: {
 }): Promise<void> {
   await remember({
     userId: feedback.userId,
-    type: "correction",
+    type: 'correction',
     content: feedback.correctedResponse,
     summary: `Correction: ${feedback.originalResponse.slice(0, 100)} → ${feedback.correctedResponse.slice(0, 100)}`,
     metadata: {

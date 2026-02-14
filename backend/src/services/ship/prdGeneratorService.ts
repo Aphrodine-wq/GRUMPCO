@@ -3,16 +3,16 @@
  * Generates Product Requirements Documents from system architecture
  */
 
-import { getRequestLogger, default as logger } from "../../middleware/logger.js";
-import { createApiTimer } from "../../middleware/metrics.js";
-import { getPRDStructurePrompt } from "../../prompts/prd-writer.js";
-import type { PRDRequest, PRD, PRDResponse } from "../../types/prd.js";
-import type { SystemArchitecture } from "../../types/architecture.js";
-import type { ConversationMessage } from "../../types/index.js";
-import { withResilience } from "../infra/resilience.js";
-import { withCache } from "../caching/cacheService.js";
-import { getCompletion } from "../ai-providers/llmGatewayHelper.js";
-import { getStream, type LLMProvider } from "../ai-providers/llmGateway.js";
+import { getRequestLogger, default as logger } from '../../middleware/logger.js';
+import { createApiTimer } from '../../middleware/metrics.js';
+import { getPRDStructurePrompt } from '../../prompts/prd-writer.js';
+import type { PRDRequest, PRD, PRDResponse } from '../../types/prd.js';
+import type { SystemArchitecture } from '../../types/architecture.js';
+import type { ConversationMessage } from '../../types/index.js';
+import { withResilience } from '../infra/resilience.js';
+import { withCache } from '../caching/cacheService.js';
+import { getCompletion } from '../ai-providers/llmGatewayHelper.js';
+import { getStream, type LLMProvider } from '../ai-providers/llmGateway.js';
 
 // Create resilient wrapper for LLM gateway non-streaming calls
 const resilientLlmCall = withResilience(
@@ -20,11 +20,11 @@ const resilientLlmCall = withResilience(
     model: string;
     max_tokens: number;
     system: string;
-    messages: Array<{ role: "user" | "assistant"; content: string }>;
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
   }) => {
     return await getCompletion(params);
   },
-  "llm-prd",
+  'llm-prd'
 );
 
 // Create resilient wrapper for LLM gateway streaming calls
@@ -33,7 +33,7 @@ const resilientLlmStream = withResilience(
     model: string;
     max_tokens: number;
     system: string;
-    messages: Array<{ role: "user" | "assistant"; content: string }>;
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
     provider?: LLMProvider;
   }) => {
     return getStream(
@@ -43,10 +43,10 @@ const resilientLlmStream = withResilience(
         system: params.system,
         messages: params.messages,
       },
-      { provider: params.provider ?? "nim" },
+      { provider: params.provider ?? 'nim' }
     );
   },
-  "llm-prd-stream",
+  'llm-prd-stream'
 );
 
 /**
@@ -55,21 +55,18 @@ const resilientLlmStream = withResilience(
 async function _generatePRD(
   request: PRDRequest,
   architecture: SystemArchitecture,
-  conversationHistory?: ConversationMessage[],
+  conversationHistory?: ConversationMessage[]
 ): Promise<PRD> {
   const log = getRequestLogger();
-  const timer = createApiTimer("generate_prd");
+  const timer = createApiTimer('generate_prd');
 
   try {
     // Build system prompt with architecture context
     const architectureJson = JSON.stringify(architecture.metadata, null, 2);
-    const systemPrompt = getPRDStructurePrompt(
-      request.projectName,
-      architectureJson,
-    );
+    const systemPrompt = getPRDStructurePrompt(request.projectName, architectureJson);
 
     // Build conversation messages
-    const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
     if (conversationHistory && conversationHistory.length > 0) {
       for (const msg of conversationHistory.slice(-10)) {
@@ -84,22 +81,19 @@ async function _generatePRD(
     let userMessage = `Generate a comprehensive PRD for:\n\nProject: ${request.projectName}\nDescription: ${request.projectDescription}`;
 
     if (request.refinements && request.refinements.length > 0) {
-      userMessage += `\n\nRefinements requested:\n${request.refinements.map((r) => `- ${r}`).join("\n")}`;
+      userMessage += `\n\nRefinements requested:\n${request.refinements.map((r) => `- ${r}`).join('\n')}`;
     }
 
     messages.push({
-      role: "user",
+      role: 'user',
       content: userMessage,
     });
 
-    log.info(
-      { messageCount: messages.length },
-      "Calling LLM API for PRD generation",
-    );
+    log.info({ messageCount: messages.length }, 'Calling LLM API for PRD generation');
 
     // Call LLM API
     const result = await resilientLlmCall({
-      model: "claude-opus-4-5-20251101",
+      model: 'claude-opus-4-5-20251101',
       max_tokens: 6000,
       system: systemPrompt,
       messages,
@@ -112,12 +106,12 @@ async function _generatePRD(
     let jsonText = result.text;
 
     // Remove markdown code blocks if present
-    if (jsonText.includes("```json")) {
+    if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) {
         jsonText = match[1];
       }
-    } else if (jsonText.includes("```")) {
+    } else if (jsonText.includes('```')) {
       const match = jsonText.match(/```\n?([\s\S]*?)\n?```/);
       if (match) {
         jsonText = match[1];
@@ -131,32 +125,30 @@ async function _generatePRD(
     } catch (e) {
       log.error(
         { error: String(e), jsonText: jsonText.substring(0, 200) },
-        "Failed to parse PRD JSON",
+        'Failed to parse PRD JSON'
       );
-      throw new Error("Failed to parse PRD from Claude response");
+      throw new Error('Failed to parse PRD from Claude response');
     }
 
     // Construct PRD object
     const prd: PRD = {
       id: `prd_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       projectName: prdData.projectName || request.projectName,
-      projectDescription:
-        prdData.projectDescription || request.projectDescription,
-      version: prdData.version || "1.0.0",
+      projectDescription: prdData.projectDescription || request.projectDescription,
+      version: prdData.version || '1.0.0',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       sections: {
         overview: prdData.sections?.overview || {
-          vision: "",
-          problem: "",
-          solution: "",
-          targetMarket: "",
+          vision: '',
+          problem: '',
+          solution: '',
+          targetMarket: '',
         },
         personas: prdData.sections?.personas || [],
         features: prdData.sections?.features || [],
         userStories: prdData.sections?.userStories || [],
-        nonFunctionalRequirements:
-          prdData.sections?.nonFunctionalRequirements || [],
+        nonFunctionalRequirements: prdData.sections?.nonFunctionalRequirements || [],
         apis: prdData.sections?.apis || [],
         dataModels: prdData.sections?.dataModels || [],
         successMetrics: prdData.sections?.successMetrics || [],
@@ -170,7 +162,7 @@ async function _generatePRD(
         features: prd.sections.features.length,
         stories: prd.sections.userStories.length,
       },
-      "PRD generated successfully",
+      'PRD generated successfully'
     );
 
     timer.success();
@@ -178,10 +170,7 @@ async function _generatePRD(
   } catch (error) {
     timer.success();
     const err = error as Error;
-    log.error(
-      { error: err.message, stack: err.stack },
-      "PRD generation failed",
-    );
+    log.error({ error: err.message, stack: err.stack }, 'PRD generation failed');
     throw error;
   }
 }
@@ -192,7 +181,7 @@ async function _generatePRD(
 export async function generatePRD(
   request: PRDRequest,
   architecture: SystemArchitecture,
-  conversationHistory?: ConversationMessage[],
+  conversationHistory?: ConversationMessage[]
 ): Promise<PRDResponse> {
   try {
     // Create cache key from request and architecture
@@ -203,22 +192,22 @@ export async function generatePRD(
       refinements: request.refinements,
     });
 
-    const prd = await withCache("prd", cacheKey, async () => {
+    const prd = await withCache('prd', cacheKey, async () => {
       return await _generatePRD(request, architecture, conversationHistory);
     });
 
     return {
       id: prd.id,
-      status: "complete",
+      status: 'complete',
       prd,
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message }, "PRD generation error");
+    logger.error({ error: err.message }, 'PRD generation error');
     return {
       id: `err_${Date.now()}`,
-      status: "error",
+      status: 'error',
       error: err.message,
       timestamp: new Date().toISOString(),
     };
@@ -231,18 +220,15 @@ export async function generatePRD(
 export async function* generatePRDStream(
   request: PRDRequest,
   architecture: SystemArchitecture,
-  conversationHistory?: ConversationMessage[],
+  conversationHistory?: ConversationMessage[]
 ): AsyncGenerator<string> {
   const log = getRequestLogger();
 
   try {
     const architectureJson = JSON.stringify(architecture.metadata, null, 2);
-    const systemPrompt = getPRDStructurePrompt(
-      request.projectName,
-      architectureJson,
-    );
+    const systemPrompt = getPRDStructurePrompt(request.projectName, architectureJson);
 
-    const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
     if (conversationHistory && conversationHistory.length > 0) {
       for (const msg of conversationHistory.slice(-10)) {
@@ -256,43 +242,40 @@ export async function* generatePRDStream(
     let userMessage = `Generate a comprehensive PRD for:\n\nProject: ${request.projectName}\nDescription: ${request.projectDescription}`;
 
     if (request.refinements && request.refinements.length > 0) {
-      userMessage += `\n\nRefinements:\n${request.refinements.map((r) => `- ${r}`).join("\n")}`;
+      userMessage += `\n\nRefinements:\n${request.refinements.map((r) => `- ${r}`).join('\n')}`;
     }
 
     messages.push({
-      role: "user",
+      role: 'user',
       content: userMessage,
     });
 
-    log.info({}, "Starting PRD stream");
+    log.info({}, 'Starting PRD stream');
 
     // Create streaming response
     const stream = await resilientLlmStream({
-      model: "claude-opus-4-5-20251101",
+      model: 'claude-opus-4-5-20251101',
       max_tokens: 6000,
       system: systemPrompt,
       messages,
     });
 
-    let buffer = "";
+    let buffer = '';
     for await (const chunk of stream) {
-      if (
-        chunk.type === "content_block_delta" &&
-        chunk.delta.type === "text_delta"
-      ) {
+      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
         buffer += chunk.delta.text;
-        yield `data: ${JSON.stringify({ type: "text", content: chunk.delta.text })}\n\n`;
+        yield `data: ${JSON.stringify({ type: 'text', content: chunk.delta.text })}\n\n`;
       }
     }
 
     // Parse final JSON
     let jsonText = buffer;
-    if (jsonText.includes("```json")) {
+    if (jsonText.includes('```json')) {
       const match = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (match) {
         jsonText = match[1];
       }
-    } else if (jsonText.includes("```")) {
+    } else if (jsonText.includes('```')) {
       const match = jsonText.match(/```\n?([\s\S]*?)\n?```/);
       if (match) {
         jsonText = match[1];
@@ -303,13 +286,12 @@ export async function* generatePRDStream(
     const prd: PRD = {
       id: `prd_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       projectName: prdData.projectName || request.projectName,
-      projectDescription:
-        prdData.projectDescription || request.projectDescription,
-      version: prdData.version || "1.0.0",
+      projectDescription: prdData.projectDescription || request.projectDescription,
+      version: prdData.version || '1.0.0',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       sections: prdData.sections || {
-        overview: { vision: "", problem: "", solution: "", targetMarket: "" },
+        overview: { vision: '', problem: '', solution: '', targetMarket: '' },
         personas: [],
         features: [],
         userStories: [],
@@ -320,12 +302,12 @@ export async function* generatePRDStream(
       },
     };
 
-    yield `data: ${JSON.stringify({ type: "complete", prd })}\n\n`;
-    log.info({ prdId: prd.id }, "PRD stream completed");
+    yield `data: ${JSON.stringify({ type: 'complete', prd })}\n\n`;
+    log.info({ prdId: prd.id }, 'PRD stream completed');
   } catch (error) {
     const err = error as Error;
-    log.error({ error: err.message }, "PRD streaming failed");
-    yield `data: ${JSON.stringify({ type: "error", error: err.message })}\n\n`;
+    log.error({ error: err.message }, 'PRD streaming failed');
+    yield `data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`;
   }
 }
 
@@ -345,19 +327,19 @@ Respond with only the JSON array, no markdown.`;
  * Suggest major components from architecture for PRD-per-component.
  */
 export async function suggestComponentsFromArchitecture(
-  architecture: SystemArchitecture,
+  architecture: SystemArchitecture
 ): Promise<SuggestedComponent[]> {
   const log = getRequestLogger();
-  const timer = createApiTimer("suggest_components");
+  const timer = createApiTimer('suggest_components');
   try {
     const meta = JSON.stringify(architecture.metadata, null, 2);
     const result = await resilientLlmCall({
-      model: "claude-sonnet-4-20250514",
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
       system: COMPONENTS_PROMPT,
       messages: [
         {
-          role: "user",
+          role: 'user',
           content: `Architecture metadata:\n${meta}\n\nSuggest major components.`,
         },
       ],
@@ -371,7 +353,7 @@ export async function suggestComponentsFromArchitecture(
     return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
     timer.success();
-    log.error({ err: (e as Error).message }, "Suggest components failed");
+    log.error({ err: (e as Error).message }, 'Suggest components failed');
     return [];
   }
 }
@@ -388,26 +370,26 @@ export async function generatePRDForComponent(
   componentLabel: string | undefined,
   architecture: SystemArchitecture,
   projectName: string,
-  projectDescription: string,
+  projectDescription: string
 ): Promise<PRD> {
   const log = getRequestLogger();
-  const timer = createApiTimer("generate_prd_component");
+  const timer = createApiTimer('generate_prd_component');
   try {
     const meta = JSON.stringify(architecture.metadata, null, 2);
     const label = componentLabel || componentId;
     const userMsg = `Project: ${projectName}\nDescription: ${projectDescription}\n\nComponent: ${label} (id: ${componentId})\n\nArchitecture metadata:\n${meta}\n\nGenerate a PRD for this component only.`;
     const result = await resilientLlmCall({
-      model: "claude-opus-4-5-20251101",
+      model: 'claude-opus-4-5-20251101',
       max_tokens: 6000,
       system: COMPONENT_PRD_PROMPT,
-      messages: [{ role: "user", content: userMsg }],
+      messages: [{ role: 'user', content: userMsg }],
     });
     if (result.error) throw new Error(result.error);
     let jsonText = result.text.trim();
-    if (jsonText.includes("```json")) {
+    if (jsonText.includes('```json')) {
       const m = jsonText.match(/```json\n?([\s\S]*?)\n?```/);
       if (m) jsonText = m[1];
-    } else if (jsonText.includes("```")) {
+    } else if (jsonText.includes('```')) {
       const m = jsonText.match(/```\n?([\s\S]*?)\n?```/);
       if (m) jsonText = m[1];
     }
@@ -416,11 +398,11 @@ export async function generatePRDForComponent(
       id: `prd_${componentId}_${Date.now()}`,
       projectName: prdData.projectName ?? projectName,
       projectDescription: prdData.projectDescription ?? projectDescription,
-      version: prdData.version ?? "1.0.0",
+      version: prdData.version ?? '1.0.0',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       sections: prdData.sections ?? {
-        overview: { vision: "", problem: "", solution: "", targetMarket: "" },
+        overview: { vision: '', problem: '', solution: '', targetMarket: '' },
         personas: [],
         features: [],
         userStories: [],
@@ -434,10 +416,7 @@ export async function generatePRDForComponent(
     return prd;
   } catch (e) {
     timer.success();
-    log.error(
-      { err: (e as Error).message, componentId },
-      "Generate PRD for component failed",
-    );
+    log.error({ err: (e as Error).message, componentId }, 'Generate PRD for component failed');
     throw e;
   }
 }

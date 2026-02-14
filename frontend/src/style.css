@@ -180,7 +180,12 @@ pre {
 
 /* Lazy loading placeholder optimization */
 .lazy-placeholder {
-  background: linear-gradient(90deg, var(--color-bg-secondary) 25%, var(--color-bg-subtle) 50%, var(--color-bg-secondary) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 25%,
+    var(--color-bg-subtle) 50%,
+    var(--color-bg-secondary) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -212,7 +217,6 @@ img[loading='lazy'].loaded {
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {
@@ -247,7 +251,7 @@ img[loading='lazy'].loaded {
 
 /* Kill all backdrop-filter blur – massive GPU/CPU savings */
 .glass-panel,
-[style*="backdrop-filter"] {
+[style*='backdrop-filter'] {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
@@ -258,12 +262,12 @@ a,
 input,
 textarea,
 select,
-[role="button"],
-[role="tab"],
-[role="option"],
-[role="dialog"],
-[role="menu"],
-[role="listbox"],
+[role='button'],
+[role='tab'],
+[role='option'],
+[role='dialog'],
+[role='menu'],
+[role='listbox'],
 .command-item,
 .sidebar-item,
 .nav-item,
@@ -281,9 +285,9 @@ select,
 }
 
 /* Contain layout on all scrollable containers */
-[style*="overflow: auto"],
-[style*="overflow-y: auto"],
-[style*="overflow-x: auto"],
+[style*='overflow: auto'],
+[style*='overflow-y: auto'],
+[style*='overflow-x: auto'],
 .credit-body,
 .command-palette-list,
 .skills-screen .content,
@@ -333,8 +337,8 @@ button:hover,
 button:active,
 a:hover,
 a:active,
-[role="button"]:hover,
-[role="button"]:active {
+[role='button']:hover,
+[role='button']:active {
   transition-duration: 0ms !important;
 }
 

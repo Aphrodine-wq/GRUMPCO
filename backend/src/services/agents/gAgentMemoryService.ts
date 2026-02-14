@@ -10,16 +10,16 @@
  * Uses vector embeddings for semantic search and retrieval.
  */
 
-import { embed } from "../ai-providers/embeddingService.js";
-import { getMemoryStore, type VectorChunk } from "../rag/vectorStoreAdapter.js";
-import logger from "../../middleware/logger.js";
-import type { Task } from "../intent/intentCliRunner.js";
+import { embed } from '../ai-providers/embeddingService.js';
+import { getMemoryStore, type VectorChunk } from '../rag/vectorStoreAdapter.js';
+import logger from '../../middleware/logger.js';
+import type { Task } from '../intent/intentCliRunner.js';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type MemoryCategory = "pattern" | "context" | "skill" | "lexicon";
+export type MemoryCategory = 'pattern' | 'context' | 'skill' | 'lexicon';
 
 /**
  * A pattern is a successful task execution that can be reused
@@ -126,7 +126,7 @@ export interface LexiconEntry {
 // MEMORY SERVICE
 // ============================================================================
 
-const MEMORY_NAMESPACE = "gagent-memory";
+const MEMORY_NAMESPACE = 'gagent-memory';
 const DEFAULT_TOP_K = 10;
 
 /**
@@ -149,7 +149,7 @@ class GAgentMemoryService {
     goal: string,
     tasks: Task[],
     durationMs: number,
-    success: boolean,
+    success: boolean
   ): Promise<TaskPattern | null> {
     // Extract pattern key from goal
     const patternKey = this.normalizeGoal(goal);
@@ -160,9 +160,8 @@ class GAgentMemoryService {
       if (success) {
         existingPattern.successCount++;
         existingPattern.avgDurationMs = Math.round(
-          (existingPattern.avgDurationMs * (existingPattern.successCount - 1) +
-            durationMs) /
-          existingPattern.successCount,
+          (existingPattern.avgDurationMs * (existingPattern.successCount - 1) + durationMs) /
+            existingPattern.successCount
         );
       } else {
         existingPattern.failureCount++;
@@ -180,7 +179,7 @@ class GAgentMemoryService {
           patternId: existingPattern.id,
           confidence: existingPattern.confidence,
         },
-        "G-Agent: Pattern updated",
+        'G-Agent: Pattern updated'
       );
       return existingPattern;
     }
@@ -222,10 +221,7 @@ class GAgentMemoryService {
     this.patterns.set(patternKey, pattern);
     await this.persistPattern(pattern);
 
-    logger.info(
-      { patternId: pattern.id, name: pattern.name },
-      "G-Agent: New pattern learned",
-    );
+    logger.info({ patternId: pattern.id, name: pattern.name }, 'G-Agent: New pattern learned');
     return pattern;
   }
 
@@ -235,16 +231,13 @@ class GAgentMemoryService {
   async findPatterns(goal: string, limit: number = 5): Promise<TaskPattern[]> {
     try {
       const store = getMemoryStore();
-      const [embedding] = await embed([goal], { inputType: "query" });
+      const [embedding] = await embed([goal], { inputType: 'query' });
       const results = await store.query(embedding, { topK: limit * 2 });
 
       const patterns: TaskPattern[] = [];
       for (const r of results) {
         const meta = r.chunk.metadata as Record<string, unknown>;
-        if (
-          meta?.category === "pattern" &&
-          meta?.namespace === MEMORY_NAMESPACE
-        ) {
+        if (meta?.category === 'pattern' && meta?.namespace === MEMORY_NAMESPACE) {
           const pattern = this.chunkToPattern(r.chunk);
           if (pattern && pattern.confidence >= 0.5) {
             patterns.push(pattern);
@@ -254,10 +247,7 @@ class GAgentMemoryService {
 
       return patterns.slice(0, limit);
     } catch (e) {
-      logger.warn(
-        { error: (e as Error).message },
-        "G-Agent: Pattern search failed",
-      );
+      logger.warn({ error: (e as Error).message }, 'G-Agent: Pattern search failed');
       return [];
     }
   }
@@ -276,9 +266,7 @@ class GAgentMemoryService {
    * Get all patterns
    */
   getAllPatterns(): TaskPattern[] {
-    return Array.from(this.patterns.values()).sort(
-      (a, b) => b.confidence - a.confidence,
-    );
+    return Array.from(this.patterns.values()).sort((a, b) => b.confidence - a.confidence);
   }
 
   // ============================================================================
@@ -289,16 +277,14 @@ class GAgentMemoryService {
    * Store or update project context
    */
   async setProjectContext(
-    context: Omit<ProjectContext, "id" | "createdAt" | "updatedAt">,
+    context: Omit<ProjectContext, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<ProjectContext> {
     const existingContext = this.contexts.get(context.workspaceRoot);
 
     const now = new Date().toISOString();
     const fullContext: ProjectContext = {
       ...context,
-      id:
-        existingContext?.id ??
-        `ctx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: existingContext?.id ?? `ctx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       createdAt: existingContext?.createdAt ?? now,
       updatedAt: now,
     };
@@ -308,7 +294,7 @@ class GAgentMemoryService {
 
     logger.info(
       { contextId: fullContext.id, workspace: context.workspaceRoot },
-      "G-Agent: Project context updated",
+      'G-Agent: Project context updated'
     );
     return fullContext;
   }
@@ -316,9 +302,7 @@ class GAgentMemoryService {
   /**
    * Get project context by workspace root
    */
-  async getProjectContext(
-    workspaceRoot: string,
-  ): Promise<ProjectContext | null> {
+  async getProjectContext(workspaceRoot: string): Promise<ProjectContext | null> {
     // Check in-memory cache first
     const cached = this.contexts.get(workspaceRoot);
     if (cached) return cached;
@@ -326,15 +310,12 @@ class GAgentMemoryService {
     // Try to load from vector store
     try {
       const store = getMemoryStore();
-      const [embedding] = await embed([workspaceRoot], { inputType: "query" });
+      const [embedding] = await embed([workspaceRoot], { inputType: 'query' });
       const results = await store.query(embedding, { topK: 5 });
 
       for (const r of results) {
         const meta = r.chunk.metadata as Record<string, unknown>;
-        if (
-          meta?.category === "context" &&
-          meta?.workspaceRoot === workspaceRoot
-        ) {
+        if (meta?.category === 'context' && meta?.workspaceRoot === workspaceRoot) {
           const context = this.chunkToContext(r.chunk);
           if (context) {
             this.contexts.set(workspaceRoot, context);
@@ -343,10 +324,7 @@ class GAgentMemoryService {
         }
       }
     } catch (e) {
-      logger.warn(
-        { error: (e as Error).message },
-        "G-Agent: Context retrieval failed",
-      );
+      logger.warn({ error: (e as Error).message }, 'G-Agent: Context retrieval failed');
     }
 
     return null;
@@ -355,31 +333,22 @@ class GAgentMemoryService {
   /**
    * Add a convention to project context
    */
-  async addConvention(
-    workspaceRoot: string,
-    convention: ProjectConvention,
-  ): Promise<void> {
+  async addConvention(workspaceRoot: string, convention: ProjectConvention): Promise<void> {
     const context = await this.getProjectContext(workspaceRoot);
     if (!context) {
-      logger.warn(
-        { workspaceRoot },
-        "G-Agent: Cannot add convention - no context found",
-      );
+      logger.warn({ workspaceRoot }, 'G-Agent: Cannot add convention - no context found');
       return;
     }
 
     // Check for duplicate
     const existing = context.conventions.find(
-      (c) => c.type === convention.type && c.pattern === convention.pattern,
+      (c) => c.type === convention.type && c.pattern === convention.pattern
     );
     if (!existing) {
       context.conventions.push(convention);
       context.updatedAt = new Date().toISOString();
       await this.persistContext(context);
-      logger.debug(
-        { workspaceRoot, convention: convention.type },
-        "G-Agent: Convention added",
-      );
+      logger.debug({ workspaceRoot, convention: convention.type }, 'G-Agent: Convention added');
     }
   }
 
@@ -395,7 +364,7 @@ class GAgentMemoryService {
     description: string,
     trigger: string,
     steps: SkillStep[],
-    success: boolean,
+    success: boolean
   ): Promise<LearnedSkill> {
     const skillKey = this.normalizeSkillName(name);
     const existing = this.skills.get(skillKey);
@@ -404,12 +373,10 @@ class GAgentMemoryService {
       existing.usageCount++;
       if (success) {
         existing.successRate =
-          (existing.successRate * (existing.usageCount - 1) + 1) /
-          existing.usageCount;
+          (existing.successRate * (existing.usageCount - 1) + 1) / existing.usageCount;
       } else {
         existing.successRate =
-          (existing.successRate * (existing.usageCount - 1)) /
-          existing.usageCount;
+          (existing.successRate * (existing.usageCount - 1)) / existing.usageCount;
       }
       existing.updatedAt = new Date().toISOString();
       await this.persistSkill(existing);
@@ -423,9 +390,7 @@ class GAgentMemoryService {
       category: this.inferSkillCategory(steps),
       trigger,
       steps,
-      tools: [
-        ...new Set(steps.filter((s) => s.tool).map((s) => s.tool as string)),
-      ],
+      tools: [...new Set(steps.filter((s) => s.tool).map((s) => s.tool as string))],
       successRate: success ? 1.0 : 0.0,
       usageCount: 1,
       createdAt: new Date().toISOString(),
@@ -436,7 +401,7 @@ class GAgentMemoryService {
     this.skills.set(skillKey, skill);
     await this.persistSkill(skill);
 
-    logger.info({ skillId: skill.id, name }, "G-Agent: New skill learned");
+    logger.info({ skillId: skill.id, name }, 'G-Agent: New skill learned');
     return skill;
   }
 
@@ -446,29 +411,21 @@ class GAgentMemoryService {
   async findSkills(query: string, limit: number = 5): Promise<LearnedSkill[]> {
     try {
       const store = getMemoryStore();
-      const [embedding] = await embed([query], { inputType: "query" });
+      const [embedding] = await embed([query], { inputType: 'query' });
       const results = await store.query(embedding, { topK: limit * 2 });
 
       const skills: LearnedSkill[] = [];
       for (const r of results) {
         const meta = r.chunk.metadata as Record<string, unknown>;
-        if (
-          meta?.category === "skill" &&
-          meta?.namespace === MEMORY_NAMESPACE
-        ) {
+        if (meta?.category === 'skill' && meta?.namespace === MEMORY_NAMESPACE) {
           const skill = this.chunkToSkill(r.chunk);
           if (skill) skills.push(skill);
         }
       }
 
-      return skills
-        .sort((a, b) => b.successRate - a.successRate)
-        .slice(0, limit);
+      return skills.sort((a, b) => b.successRate - a.successRate).slice(0, limit);
     } catch (e) {
-      logger.warn(
-        { error: (e as Error).message },
-        "G-Agent: Skill search failed",
-      );
+      logger.warn({ error: (e as Error).message }, 'G-Agent: Skill search failed');
       return [];
     }
   }
@@ -477,9 +434,7 @@ class GAgentMemoryService {
    * Get all skills
    */
   getAllSkills(): LearnedSkill[] {
-    return Array.from(this.skills.values()).sort(
-      (a, b) => b.usageCount - a.usageCount,
-    );
+    return Array.from(this.skills.values()).sort((a, b) => b.usageCount - a.usageCount);
   }
 
   // ============================================================================
@@ -489,9 +444,7 @@ class GAgentMemoryService {
   /**
    * Add a term to the lexicon
    */
-  async addLexiconEntry(
-    entry: Omit<LexiconEntry, "id" | "createdAt">,
-  ): Promise<LexiconEntry> {
+  async addLexiconEntry(entry: Omit<LexiconEntry, 'id' | 'createdAt'>): Promise<LexiconEntry> {
     const termKey = entry.term.toLowerCase();
 
     const fullEntry: LexiconEntry = {
@@ -503,10 +456,7 @@ class GAgentMemoryService {
     this.lexicon.set(termKey, fullEntry);
     await this.persistLexiconEntry(fullEntry);
 
-    logger.debug(
-      { term: entry.term, category: entry.category },
-      "G-Agent: Lexicon entry added",
-    );
+    logger.debug({ term: entry.term, category: entry.category }, 'G-Agent: Lexicon entry added');
     return fullEntry;
   }
 
@@ -520,22 +470,16 @@ class GAgentMemoryService {
   /**
    * Search lexicon for related terms
    */
-  async searchLexicon(
-    query: string,
-    limit: number = 10,
-  ): Promise<LexiconEntry[]> {
+  async searchLexicon(query: string, limit: number = 10): Promise<LexiconEntry[]> {
     try {
       const store = getMemoryStore();
-      const [embedding] = await embed([query], { inputType: "query" });
+      const [embedding] = await embed([query], { inputType: 'query' });
       const results = await store.query(embedding, { topK: limit * 2 });
 
       const entries: LexiconEntry[] = [];
       for (const r of results) {
         const meta = r.chunk.metadata as Record<string, unknown>;
-        if (
-          meta?.category === "lexicon" &&
-          meta?.namespace === MEMORY_NAMESPACE
-        ) {
+        if (meta?.category === 'lexicon' && meta?.namespace === MEMORY_NAMESPACE) {
           const entry = this.chunkToLexiconEntry(r.chunk);
           if (entry) entries.push(entry);
         }
@@ -543,10 +487,7 @@ class GAgentMemoryService {
 
       return entries.slice(0, limit);
     } catch (e) {
-      logger.warn(
-        { error: (e as Error).message },
-        "G-Agent: Lexicon search failed",
-      );
+      logger.warn({ error: (e as Error).message }, 'G-Agent: Lexicon search failed');
       return [];
     }
   }
@@ -570,13 +511,13 @@ class GAgentMemoryService {
     options?: {
       categories?: MemoryCategory[];
       limit?: number;
-    },
+    }
   ): Promise<{
     patterns: TaskPattern[];
     skills: LearnedSkill[];
     lexicon: LexiconEntry[];
   }> {
-    const categories = options?.categories ?? ["pattern", "skill", "lexicon"];
+    const categories = options?.categories ?? ['pattern', 'skill', 'lexicon'];
     const limit = options?.limit ?? DEFAULT_TOP_K;
 
     const results = {
@@ -587,7 +528,7 @@ class GAgentMemoryService {
 
     try {
       const store = getMemoryStore();
-      const [embedding] = await embed([query], { inputType: "query" });
+      const [embedding] = await embed([query], { inputType: 'query' });
       const searchResults = await store.query(embedding, { topK: limit * 3 });
 
       for (const r of searchResults) {
@@ -598,17 +539,17 @@ class GAgentMemoryService {
         if (!categories.includes(category)) continue;
 
         switch (category) {
-          case "pattern": {
+          case 'pattern': {
             const pattern = this.chunkToPattern(r.chunk);
             if (pattern) results.patterns.push(pattern);
             break;
           }
-          case "skill": {
+          case 'skill': {
             const skill = this.chunkToSkill(r.chunk);
             if (skill) results.skills.push(skill);
             break;
           }
-          case "lexicon": {
+          case 'lexicon': {
             const entry = this.chunkToLexiconEntry(r.chunk);
             if (entry) results.lexicon.push(entry);
             break;
@@ -621,10 +562,7 @@ class GAgentMemoryService {
       results.skills = results.skills.slice(0, limit);
       results.lexicon = results.lexicon.slice(0, limit);
     } catch (e) {
-      logger.warn(
-        { error: (e as Error).message },
-        "G-Agent: Memory search failed",
-      );
+      logger.warn({ error: (e as Error).message }, 'G-Agent: Memory search failed');
     }
 
     return results;
@@ -668,109 +606,97 @@ class GAgentMemoryService {
   private async persistPattern(pattern: TaskPattern): Promise<void> {
     try {
       const store = getMemoryStore();
-      const content = `${pattern.name}: ${pattern.description}. Tools: ${pattern.tools.join(", ")}. Tags: ${pattern.tags.join(", ")}`;
-      const [embedding] = await embed([content], { inputType: "passage" });
+      const content = `${pattern.name}: ${pattern.description}. Tools: ${pattern.tools.join(', ')}. Tags: ${pattern.tags.join(', ')}`;
+      const [embedding] = await embed([content], { inputType: 'passage' });
 
       const chunk: VectorChunk = {
         id: pattern.id,
         content,
         embedding,
-        source: "gagent",
-        type: "doc",
+        source: 'gagent',
+        type: 'doc',
         metadata: {
           namespace: MEMORY_NAMESPACE,
-          category: "pattern",
+          category: 'pattern',
           data: JSON.stringify(pattern),
         },
       };
       await store.upsert([chunk]);
     } catch (e) {
-      logger.warn(
-        { error: (e as Error).message },
-        "G-Agent: Pattern persistence failed",
-      );
+      logger.warn({ error: (e as Error).message }, 'G-Agent: Pattern persistence failed');
     }
   }
 
   private async persistContext(context: ProjectContext): Promise<void> {
     try {
       const store = getMemoryStore();
-      const content = `Project: ${context.name}. Type: ${context.type}. Tech: ${context.techStack.join(", ")}. Path: ${context.workspaceRoot}`;
-      const [embedding] = await embed([content], { inputType: "passage" });
+      const content = `Project: ${context.name}. Type: ${context.type}. Tech: ${context.techStack.join(', ')}. Path: ${context.workspaceRoot}`;
+      const [embedding] = await embed([content], { inputType: 'passage' });
 
       const chunk: VectorChunk = {
         id: context.id,
         content,
         embedding,
-        source: "gagent",
-        type: "doc",
+        source: 'gagent',
+        type: 'doc',
         metadata: {
           namespace: MEMORY_NAMESPACE,
-          category: "context",
+          category: 'context',
           workspaceRoot: context.workspaceRoot,
           data: JSON.stringify(context),
         },
       };
       await store.upsert([chunk]);
     } catch (e) {
-      logger.warn(
-        { error: (e as Error).message },
-        "G-Agent: Context persistence failed",
-      );
+      logger.warn({ error: (e as Error).message }, 'G-Agent: Context persistence failed');
     }
   }
 
   private async persistSkill(skill: LearnedSkill): Promise<void> {
     try {
       const store = getMemoryStore();
-      const content = `Skill: ${skill.name}. ${skill.description}. Trigger: ${skill.trigger}. Tools: ${skill.tools.join(", ")}`;
-      const [embedding] = await embed([content], { inputType: "passage" });
+      const content = `Skill: ${skill.name}. ${skill.description}. Trigger: ${skill.trigger}. Tools: ${skill.tools.join(', ')}`;
+      const [embedding] = await embed([content], { inputType: 'passage' });
 
       const chunk: VectorChunk = {
         id: skill.id,
         content,
         embedding,
-        source: "gagent",
-        type: "doc",
+        source: 'gagent',
+        type: 'doc',
         metadata: {
           namespace: MEMORY_NAMESPACE,
-          category: "skill",
+          category: 'skill',
           data: JSON.stringify(skill),
         },
       };
       await store.upsert([chunk]);
     } catch (e) {
-      logger.warn(
-        { error: (e as Error).message },
-        "G-Agent: Skill persistence failed",
-      );
+      logger.warn({ error: (e as Error).message }, 'G-Agent: Skill persistence failed');
     }
   }
 
   private async persistLexiconEntry(entry: LexiconEntry): Promise<void> {
     try {
       const store = getMemoryStore();
-      const content = `${entry.term}: ${entry.definition}. Aliases: ${entry.aliases.join(", ")}. Related: ${entry.relatedTerms.join(", ")}`;
-      const [embedding] = await embed([content], { inputType: "passage" });
+      const content = `${entry.term}: ${entry.definition}. Aliases: ${entry.aliases.join(', ')}. Related: ${entry.relatedTerms.join(', ')}`;
+      const [embedding] = await embed([content], { inputType: 'passage' });
 
       const chunk: VectorChunk = {
         id: entry.id,
         content,
         embedding,
-        source: "gagent",
-        type: "doc",
+        source: 'gagent',
+        type: 'doc',
         metadata: {
           namespace: MEMORY_NAMESPACE,
-          category: "lexicon",
+          category: 'lexicon',
           data: JSON.stringify(entry),
         },
       };
       await store.upsert([chunk]);
     } catch (e) {
-      logger.warn(
-        { error: (e as Error).message },
-        "G-Agent: Lexicon persistence failed",
-      );
+      logger.warn({ error: (e as Error).message }, 'G-Agent: Lexicon persistence failed');
     }
   }
 
@@ -821,26 +747,24 @@ class GAgentMemoryService {
   private normalizeGoal(goal: string): string {
     return goal
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/[^a-z0-9\s]/g, '')
       .split(/\s+/)
       .sort()
-      .join("_")
+      .join('_')
       .slice(0, 100);
   }
 
   private normalizeSkillName(name: string): string {
     return name
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
-      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '_')
       .slice(0, 50);
   }
 
   private generatePatternName(goal: string): string {
     const words = goal.split(/\s+/).slice(0, 5);
-    return words
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(" ");
+    return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   }
 
   private extractTags(goal: string): string[] {
@@ -849,16 +773,16 @@ class GAgentMemoryService {
 
     // Extract common patterns
     const tagPatterns = [
-      { pattern: /auth|login|signup|register/i, tag: "authentication" },
-      { pattern: /api|rest|graphql|endpoint/i, tag: "api" },
-      { pattern: /database|db|sql|postgres|mongo/i, tag: "database" },
-      { pattern: /frontend|ui|react|vue|svelte/i, tag: "frontend" },
-      { pattern: /backend|server|node|express/i, tag: "backend" },
-      { pattern: /test|spec|jest|vitest/i, tag: "testing" },
-      { pattern: /deploy|docker|k8s|ci\/cd/i, tag: "devops" },
-      { pattern: /crud|create|read|update|delete/i, tag: "crud" },
-      { pattern: /file|upload|download|storage/i, tag: "files" },
-      { pattern: /websocket|realtime|socket/i, tag: "realtime" },
+      { pattern: /auth|login|signup|register/i, tag: 'authentication' },
+      { pattern: /api|rest|graphql|endpoint/i, tag: 'api' },
+      { pattern: /database|db|sql|postgres|mongo/i, tag: 'database' },
+      { pattern: /frontend|ui|react|vue|svelte/i, tag: 'frontend' },
+      { pattern: /backend|server|node|express/i, tag: 'backend' },
+      { pattern: /test|spec|jest|vitest/i, tag: 'testing' },
+      { pattern: /deploy|docker|k8s|ci\/cd/i, tag: 'devops' },
+      { pattern: /crud|create|read|update|delete/i, tag: 'crud' },
+      { pattern: /file|upload|download|storage/i, tag: 'files' },
+      { pattern: /websocket|realtime|socket/i, tag: 'realtime' },
     ];
 
     for (const { pattern, tag } of tagPatterns) {
@@ -873,33 +797,32 @@ class GAgentMemoryService {
   private inferCategory(goal: string, tasks: Task[]): string {
     const lowered = goal.toLowerCase();
 
-    if (/auth|login|signup/i.test(lowered)) return "authentication";
-    if (/api|endpoint|route/i.test(lowered)) return "api";
-    if (/component|page|screen/i.test(lowered)) return "ui";
-    if (/database|schema|migration/i.test(lowered)) return "database";
-    if (/test|spec/i.test(lowered)) return "testing";
-    if (/deploy|docker|ci/i.test(lowered)) return "devops";
+    if (/auth|login|signup/i.test(lowered)) return 'authentication';
+    if (/api|endpoint|route/i.test(lowered)) return 'api';
+    if (/component|page|screen/i.test(lowered)) return 'ui';
+    if (/database|schema|migration/i.test(lowered)) return 'database';
+    if (/test|spec/i.test(lowered)) return 'testing';
+    if (/deploy|docker|ci/i.test(lowered)) return 'devops';
 
     // Infer from tools
     const tools = tasks.flatMap((t) => t.tools);
-    if (tools.some((t) => t.includes("git"))) return "version-control";
-    if (tools.some((t) => t.includes("db"))) return "database";
-    if (tools.some((t) => t.includes("test"))) return "testing";
+    if (tools.some((t) => t.includes('git'))) return 'version-control';
+    if (tools.some((t) => t.includes('db'))) return 'database';
+    if (tools.some((t) => t.includes('test'))) return 'testing';
 
-    return "general";
+    return 'general';
   }
 
   private inferSkillCategory(steps: SkillStep[]): string {
     const tools = steps.filter((s) => s.tool).map((s) => s.tool as string);
 
-    if (tools.some((t) => t.includes("file"))) return "file-operations";
-    if (tools.some((t) => t.includes("git"))) return "version-control";
-    if (tools.some((t) => t.includes("bash") || t.includes("terminal")))
-      return "shell";
-    if (tools.some((t) => t.includes("db"))) return "database";
-    if (tools.some((t) => t.includes("browser"))) return "browser-automation";
+    if (tools.some((t) => t.includes('file'))) return 'file-operations';
+    if (tools.some((t) => t.includes('git'))) return 'version-control';
+    if (tools.some((t) => t.includes('bash') || t.includes('terminal'))) return 'shell';
+    if (tools.some((t) => t.includes('db'))) return 'database';
+    if (tools.some((t) => t.includes('browser'))) return 'browser-automation';
 
-    return "general";
+    return 'general';
   }
 }
 

@@ -7,14 +7,14 @@
  * - Multi-platform notification delivery
  */
 
-import logger from "../../middleware/logger.js";
-import { getDatabase } from "../../db/database.js";
-import { writeAuditLog } from "../security/auditLogService.js";
-import { hasPremiumFeature, type TierId } from "../../config/pricing.js";
-import { dispatchWebhook, type WebhookEvent } from "../integrations/webhookService.js";
-import { getDueHeartbeats, markHeartbeatExecuted } from "../infra/heartbeatService.js";
-import { sendProactiveToUser } from "../integrations/messagingShipNotifier.js";
-import type { HeartbeatRecord } from "../../types/integrations.js";
+import logger from '../../middleware/logger.js';
+import { getDatabase } from '../../db/database.js';
+import { writeAuditLog } from '../security/auditLogService.js';
+import { hasPremiumFeature, type TierId } from '../../config/pricing.js';
+import { dispatchWebhook, type WebhookEvent } from '../integrations/webhookService.js';
+import { getDueHeartbeats, markHeartbeatExecuted } from '../infra/heartbeatService.js';
+import { sendProactiveToUser } from '../integrations/messagingShipNotifier.js';
+import type { HeartbeatRecord } from '../../types/integrations.js';
 
 // ========== Types ==========
 
@@ -39,8 +39,8 @@ export interface PersistentAgentConfig {
 export interface AgentTask {
   id: string;
   userId: string;
-  type: "heartbeat" | "webhook" | "queue" | "anticipatory";
-  status: "pending" | "running" | "completed" | "failed";
+  type: 'heartbeat' | 'webhook' | 'queue' | 'anticipatory';
+  status: 'pending' | 'running' | 'completed' | 'failed';
   payload: Record<string, unknown>;
   result?: unknown;
   error?: string;
@@ -82,27 +82,23 @@ const taskQueue = new Map<string, AgentTask[]>();
  */
 export async function startPersistentAgent(
   userId: string,
-  config: Partial<PersistentAgentConfig>,
+  config: Partial<PersistentAgentConfig>
 ): Promise<{ success: boolean; message: string }> {
   // Check tier permissions
   const db = getDatabase();
   const userSettings = await db.getSettings(userId);
-  const tier = (userSettings?.tier || "free") as TierId;
+  const tier = (userSettings?.tier || 'free') as TierId;
 
-  if (
-    !hasPremiumFeature(tier, "persistent_agent") &&
-    tier !== "team" &&
-    tier !== "enterprise"
-  ) {
+  if (!hasPremiumFeature(tier, 'persistent_agent') && tier !== 'team' && tier !== 'enterprise') {
     return {
       success: false,
-      message: "Persistent agent requires Team tier or higher",
+      message: 'Persistent agent requires Team tier or higher',
     };
   }
 
   // Check if already running
   if (activeAgents.has(userId)) {
-    return { success: false, message: "Agent already running" };
+    return { success: false, message: 'Agent already running' };
   }
 
   const fullConfig: PersistentAgentConfig = {
@@ -126,23 +122,23 @@ export async function startPersistentAgent(
   // Start cron for heartbeat processing
   const cronHandle = setInterval(() => processHeartbeats(userId), 60_000);
   const agent = activeAgents.get(userId);
-  if (!agent) return { success: false, message: "Failed to initialize agent" };
+  if (!agent) return { success: false, message: 'Failed to initialize agent' };
   agent.cronHandle = cronHandle;
 
   await writeAuditLog({
     userId,
-    action: "persistent_agent.started",
-    category: "agent",
-    target: "persistent_agent",
+    action: 'persistent_agent.started',
+    category: 'agent',
+    target: 'persistent_agent',
     metadata: { capabilities: fullConfig.capabilities },
   });
 
-  logger.info({ userId }, "Persistent agent started");
+  logger.info({ userId }, 'Persistent agent started');
 
   // Process any immediately due tasks
   await processHeartbeats(userId);
 
-  return { success: true, message: "Persistent agent started" };
+  return { success: true, message: 'Persistent agent started' };
 }
 
 /**
@@ -161,16 +157,13 @@ export async function stopPersistentAgent(userId: string): Promise<void> {
 
   await writeAuditLog({
     userId,
-    action: "persistent_agent.stopped",
-    category: "agent",
-    target: "persistent_agent",
+    action: 'persistent_agent.stopped',
+    category: 'agent',
+    target: 'persistent_agent',
     metadata: { tasksProcessed: agent.tasksProcessed },
   });
 
-  logger.info(
-    { userId, tasksProcessed: agent.tasksProcessed },
-    "Persistent agent stopped",
-  );
+  logger.info({ userId, tasksProcessed: agent.tasksProcessed }, 'Persistent agent stopped');
 }
 
 /**
@@ -181,7 +174,7 @@ export function getAgentStatus(userId: string): PersistentAgentStatus | null {
   if (!agent) return null;
 
   const queue = taskQueue.get(userId) || [];
-  const pendingTasks = queue.filter((t) => t.status === "pending").length;
+  const pendingTasks = queue.filter((t) => t.status === 'pending').length;
 
   return {
     userId,
@@ -218,7 +211,7 @@ async function processHeartbeats(userId: string): Promise<void> {
       await executeHeartbeatTask(userId, heartbeat);
     }
   } catch (err) {
-    logger.error({ userId, err }, "Error processing heartbeats");
+    logger.error({ userId, err }, 'Error processing heartbeats');
     agent.lastError = (err as Error).message;
   }
 }
@@ -226,18 +219,15 @@ async function processHeartbeats(userId: string): Promise<void> {
 /**
  * Execute a heartbeat task
  */
-async function executeHeartbeatTask(
-  userId: string,
-  heartbeat: HeartbeatRecord,
-): Promise<void> {
+async function executeHeartbeatTask(userId: string, heartbeat: HeartbeatRecord): Promise<void> {
   const agent = activeAgents.get(userId);
   if (!agent) return;
 
   const task: AgentTask = {
     id: `task_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     userId,
-    type: "heartbeat",
-    status: "running",
+    type: 'heartbeat',
+    status: 'running',
     payload: {
       heartbeatId: heartbeat.id,
       name: heartbeat.name,
@@ -255,35 +245,35 @@ async function executeHeartbeatTask(
 
     let result: unknown;
     switch (template) {
-      case "HEALTH_CHECK":
+      case 'HEALTH_CHECK':
         result = await runHealthCheck(userId);
         break;
-      case "HOURLY_SUMMARY":
+      case 'HOURLY_SUMMARY':
         result = await generateHourlySummary(userId);
         break;
-      case "DAILY_DIGEST":
+      case 'DAILY_DIGEST':
         result = await generateDailyDigest(userId);
         break;
-      case "MEMORY_CLEANUP":
+      case 'MEMORY_CLEANUP':
         result = await runMemoryCleanup(userId);
         break;
-      case "REMINDER_CHECK":
+      case 'REMINDER_CHECK':
         result = await runReminderCheck();
         break;
-      case "INBOX_SUMMARY":
+      case 'INBOX_SUMMARY':
         result = await runInboxSummary(userId);
         break;
-      case "CALENDAR_REMINDER":
+      case 'CALENDAR_REMINDER':
         result = await runCalendarReminder(userId);
         break;
-      case "CUSTOM_REMINDER":
-        result = { message: "Custom reminder executed", payload };
+      case 'CUSTOM_REMINDER':
+        result = { message: 'Custom reminder executed', payload };
         break;
       default:
-        result = { message: "Custom heartbeat executed", payload };
+        result = { message: 'Custom heartbeat executed', payload };
     }
 
-    task.status = "completed";
+    task.status = 'completed';
     task.result = result;
     task.completedAt = new Date().toISOString();
 
@@ -298,15 +288,15 @@ async function executeHeartbeatTask(
 
     logger.info(
       { userId, taskId: task.id, heartbeatName: heartbeat.name },
-      "Heartbeat task completed",
+      'Heartbeat task completed'
     );
   } catch (err) {
-    task.status = "failed";
+    task.status = 'failed';
     task.error = (err as Error).message;
     task.completedAt = new Date().toISOString();
     agent.lastError = task.error;
 
-    logger.error({ userId, taskId: task.id, err }, "Heartbeat task failed");
+    logger.error({ userId, taskId: task.id, err }, 'Heartbeat task failed');
   }
 }
 
@@ -315,8 +305,8 @@ async function executeHeartbeatTask(
  */
 export async function queueAgentTask(
   userId: string,
-  type: AgentTask["type"],
-  payload: Record<string, unknown>,
+  type: AgentTask['type'],
+  payload: Record<string, unknown>
 ): Promise<AgentTask | null> {
   const agent = activeAgents.get(userId);
   if (!agent) {
@@ -327,7 +317,7 @@ export async function queueAgentTask(
     id: `task_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     userId,
     type,
-    status: "pending",
+    status: 'pending',
     payload,
     createdAt: new Date().toISOString(),
   };
@@ -354,29 +344,29 @@ async function processTaskQueue(userId: string): Promise<void> {
 
   while (queue.length > 0) {
     const task = queue[0];
-    if (task.status !== "pending") {
+    if (task.status !== 'pending') {
       queue.shift();
       continue;
     }
 
-    task.status = "running";
+    task.status = 'running';
     task.startedAt = new Date().toISOString();
 
     try {
       // Execute based on task type
       let result: unknown;
       switch (task.type) {
-        case "webhook":
+        case 'webhook':
           result = await handleWebhookTask(userId, task.payload);
           break;
-        case "anticipatory":
+        case 'anticipatory':
           result = await handleAnticipatoryTask(userId, task.payload);
           break;
         default:
-          result = { message: "Task processed", type: task.type };
+          result = { message: 'Task processed', type: task.type };
       }
 
-      task.status = "completed";
+      task.status = 'completed';
       task.result = result;
       task.completedAt = new Date().toISOString();
       agent.tasksProcessed++;
@@ -384,7 +374,7 @@ async function processTaskQueue(userId: string): Promise<void> {
 
       await notifyTaskComplete(userId, task, agent.config);
     } catch (err) {
-      task.status = "failed";
+      task.status = 'failed';
       task.error = (err as Error).message;
       task.completedAt = new Date().toISOString();
       agent.lastError = task.error;
@@ -398,12 +388,12 @@ async function processTaskQueue(userId: string): Promise<void> {
 
 async function runHealthCheck(_userId: string): Promise<unknown> {
   return {
-    status: "healthy",
+    status: 'healthy',
     checkedAt: new Date().toISOString(),
     services: {
-      database: "ok",
-      redis: process.env.REDIS_HOST ? "ok" : "not_configured",
-      nvidia: process.env.NVIDIA_NIM_API_KEY ? "ok" : "not_configured",
+      database: 'ok',
+      redis: process.env.REDIS_HOST ? 'ok' : 'not_configured',
+      nvidia: process.env.NVIDIA_NIM_API_KEY ? 'ok' : 'not_configured',
     },
   };
 }
@@ -417,22 +407,18 @@ async function generateHourlySummary(userId: string): Promise<unknown> {
     `- SHIP sessions: ${shipSessions.length}`,
   ];
   if (auditLogs.length > 0) {
-    const actions = auditLogs
-      .slice(0, 5)
-      .map((a) => `${a.action} (${a.category})`);
-    lines.push(`- Recent: ${actions.join(", ")}`);
+    const actions = auditLogs.slice(0, 5).map((a) => `${a.action} (${a.category})`);
+    lines.push(`- Recent: ${actions.join(', ')}`);
   }
   if (shipSessions.length > 0) {
-    const phases = shipSessions
-      .slice(0, 3)
-      .map((s) => `${s.phase}: ${s.status}`);
-    lines.push(`- SHIP: ${phases.join("; ")}`);
+    const phases = shipSessions.slice(0, 3).map((s) => `${s.phase}: ${s.status}`);
+    lines.push(`- SHIP: ${phases.join('; ')}`);
   }
   return {
-    type: "hourly_summary",
+    type: 'hourly_summary',
     generatedAt: new Date().toISOString(),
-    period: "1 hour",
-    summary: lines.join("\n"),
+    period: '1 hour',
+    summary: lines.join('\n'),
     auditCount: auditLogs.length,
     shipCount: shipSessions.length,
   };
@@ -452,21 +438,19 @@ async function generateDailyDigest(userId: string): Promise<unknown> {
         acc[a.category] = (acc[a.category] || 0) + 1;
         return acc;
       },
-      {} as Record<string, number>,
+      {} as Record<string, number>
     );
     lines.push(`- By category: ${JSON.stringify(byCategory)}`);
   }
   if (shipSessions.length > 0) {
-    const completed = shipSessions.filter(
-      (s) => s.status === "completed",
-    ).length;
+    const completed = shipSessions.filter((s) => s.status === 'completed').length;
     lines.push(`- SHIP completed: ${completed}`);
   }
   return {
-    type: "daily_digest",
+    type: 'daily_digest',
     generatedAt: new Date().toISOString(),
-    period: "24 hours",
-    summary: lines.join("\n"),
+    period: '24 hours',
+    summary: lines.join('\n'),
     auditCount: auditLogs.length,
     shipCount: shipSessions.length,
   };
@@ -475,13 +459,13 @@ async function generateDailyDigest(userId: string): Promise<unknown> {
 /** Gather recent audit logs and ship sessions for a user since a given time */
 async function gatherActivity(
   userId: string,
-  since: string,
+  since: string
 ): Promise<{
   auditLogs: { action: string; category: string; created_at: string }[];
   shipSessions: { phase: string; status: string }[];
 }> {
   const db = getDatabase();
-  const { queryAuditLogs } = await import("../security/auditLogService.js");
+  const { queryAuditLogs } = await import('../security/auditLogService.js');
   const auditLogs = await queryAuditLogs({ userId, limit: 200 });
   const filtered = auditLogs.filter((a) => a.created_at >= since);
 
@@ -503,7 +487,7 @@ async function gatherActivity(
 async function runMemoryCleanup(_userId: string): Promise<unknown> {
   // This would clean up expired memories, old sessions, etc.
   return {
-    type: "memory_cleanup",
+    type: 'memory_cleanup',
     cleanedAt: new Date().toISOString(),
     freedBytes: 0,
     expiredRecords: 0,
@@ -511,10 +495,10 @@ async function runMemoryCleanup(_userId: string): Promise<unknown> {
 }
 
 async function runReminderCheck(): Promise<unknown> {
-  const { processDueReminders } = await import("../platform/reminderService.js");
+  const { processDueReminders } = await import('../platform/reminderService.js');
   const reminders = await processDueReminders();
   return {
-    type: "reminder_check",
+    type: 'reminder_check',
     processedAt: new Date().toISOString(),
     processed: reminders.length,
     notified: reminders.length,
@@ -524,26 +508,26 @@ async function runReminderCheck(): Promise<unknown> {
 async function runInboxSummary(_userId: string): Promise<unknown> {
   // Stub: requires Gmail OAuth. Configure in Settings > Integrations.
   return {
-    type: "inbox_summary",
+    type: 'inbox_summary',
     generatedAt: new Date().toISOString(),
     message:
-      "Gmail integration not configured. Connect Gmail in Settings > Integrations for inbox summaries.",
+      'Gmail integration not configured. Connect Gmail in Settings > Integrations for inbox summaries.',
   };
 }
 
 async function runCalendarReminder(_userId: string): Promise<unknown> {
   // Stub: requires Google Calendar OAuth. Configure in Settings > Integrations.
   return {
-    type: "calendar_reminder",
+    type: 'calendar_reminder',
     generatedAt: new Date().toISOString(),
     message:
-      "Google Calendar not configured. Connect Calendar in Settings > Integrations for event reminders.",
+      'Google Calendar not configured. Connect Calendar in Settings > Integrations for event reminders.',
   };
 }
 
 async function handleWebhookTask(
   userId: string,
-  payload: Record<string, unknown>,
+  payload: Record<string, unknown>
 ): Promise<unknown> {
   // Process incoming webhook trigger
   return {
@@ -555,7 +539,7 @@ async function handleWebhookTask(
 
 async function handleAnticipatoryTask(
   userId: string,
-  payload: Record<string, unknown>,
+  payload: Record<string, unknown>
 ): Promise<unknown> {
   // Handle anticipatory task from the anticipatory service
   return {
@@ -570,10 +554,9 @@ async function handleAnticipatoryTask(
 async function notifyTaskComplete(
   userId: string,
   task: AgentTask,
-  config: PersistentAgentConfig,
+  config: PersistentAgentConfig
 ): Promise<void> {
-  const event: WebhookEvent =
-    task.status === "completed" ? "ship.completed" : "ship.failed";
+  const event: WebhookEvent = task.status === 'completed' ? 'ship.completed' : 'ship.failed';
 
   // Dispatch webhook notification
   await dispatchWebhook(event, {
@@ -591,17 +574,17 @@ async function notifyTaskComplete(
   }
 
   // Proactive push to Telegram, Discord, Slack per user subscriptions
-  const platforms: Array<"telegram" | "discord" | "slack"> = [];
-  if (config.notifications.telegram) platforms.push("telegram");
-  if (config.notifications.discord) platforms.push("discord");
+  const platforms: Array<'telegram' | 'discord' | 'slack'> = [];
+  if (config.notifications.telegram) platforms.push('telegram');
+  if (config.notifications.discord) platforms.push('discord');
   if (platforms.length > 0) {
-    const status = task.status === "completed" ? "Completed" : "Failed";
-    const taskType = task.type === "heartbeat" ? "Scheduled task" : task.type;
+    const status = task.status === 'completed' ? 'Completed' : 'Failed';
+    const taskType = task.type === 'heartbeat' ? 'Scheduled task' : task.type;
     const resultStr =
-      typeof task.result === "object" && task.result !== null
+      typeof task.result === 'object' && task.result !== null
         ? JSON.stringify(task.result).slice(0, 500)
-        : String(task.result ?? "");
-    const msg = `[G-Rump] ${taskType} ${status}${task.error ? `: ${task.error}` : ""}${resultStr ? `\n${resultStr}` : ""}`;
+        : String(task.result ?? '');
+    const msg = `[G-Rump] ${taskType} ${status}${task.error ? `: ${task.error}` : ''}${resultStr ? `\n${resultStr}` : ''}`;
     await sendProactiveToUser(userId, msg.slice(0, 1500), { platforms });
   }
 }
@@ -616,9 +599,9 @@ export async function loadAutoStartAgents(): Promise<void> {
     const _db = getDatabase();
     // This would query a persistent_agent_configs table
     // For now, we just log that the capability exists
-    logger.info("Persistent agent auto-start capability ready");
+    logger.info('Persistent agent auto-start capability ready');
   } catch (err) {
-    logger.error({ err }, "Failed to load auto-start agents");
+    logger.error({ err }, 'Failed to load auto-start agents');
   }
 }
 

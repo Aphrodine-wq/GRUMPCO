@@ -9,7 +9,7 @@ For installation instructions, please see the [Installation](./installation.md) 
 Your GRUMPCO project has been optimized with:
 
 1. ✅ **38% faster compilation** - Optimized SWC and TypeScript configurations
-2. ✅ **7 AI providers** - Removed OpenAI/Grok, added GitHub Copilot, Kimi K2.5, Anthropic, Mistral AI
+2. ✅ **4 AI providers** - NVIDIA NIM, Anthropic, OpenRouter, Ollama + G-CompN1 smart routing
 3. ✅ **Intelligent routing** - Automatic provider selection based on request type
 4. ✅ **25% smaller bundle** - Minification and dead code elimination
 
@@ -18,11 +18,8 @@ Your GRUMPCO project has been optimized with:
 | Provider | Purpose | When to Use |
 |----------|---------|-------------|
 | **NVIDIA NIM** | Primary, balanced | Default for most requests |
-| **Anthropic** | Best quality (Claude) | Complex reasoning, creative writing |
+| **Anthropic** | Best quality (Claude) | Complex reasoning, code generation |
 | **OpenRouter** | Multi-model gateway | Access to GPT-4, Claude, Gemini |
-| **GitHub Copilot** | Code generation | Writing code, APIs, functions |
-| **Kimi K2.5** | Long context (128k) | Large documents, long conversations |
-| **Mistral AI** | European, multilingual | Codestral for coding, multilingual |
 | **Ollama** | Local/self-hosted | Enterprise, offline, free |
 
 ## Usage Examples
@@ -42,7 +39,7 @@ const stream = routeStream({
   messages: [{ role: 'user', content: 'What is TypeScript?' }]
 });
 
-// Coding request -> routed to GitHub Copilot
+// Coding request -> routed to Anthropic
 const stream = routeStream({
   model: '',
   max_tokens: 2048,
@@ -87,30 +84,6 @@ const stream = getStream({
   system: 'You are an expert analyst',
   messages: [{ role: 'user', content: 'Analyze this data' }]
 }, { provider: 'anthropic' });
-
-// Use GitHub Copilot for code
-const stream = getStream({
-  model: 'gpt-4',
-  max_tokens: 2048,
-  system: 'You are a coding assistant',
-  messages: [{ role: 'user', content: 'Write a function' }]
-}, { provider: 'github-copilot' });
-
-// Use Kimi for long context
-const stream = getStream({
-  model: 'moonshot-v1-128k',
-  max_tokens: 8192,
-  system: 'Summarize this document',
-  messages: [{ role: 'user', content: longDocument }]
-}, { provider: 'kimi' });
-
-// Use Mistral for coding
-const stream = getStream({
-  model: 'codestral-latest',
-  max_tokens: 2048,
-  system: 'You are a coding assistant',
-  messages: [{ role: 'user', content: 'Refactor this code' }]
-}, { provider: 'mistral' });
 
 // Use OpenRouter for GPT-4
 const stream = getStream({

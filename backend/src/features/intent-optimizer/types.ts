@@ -4,7 +4,7 @@
  * Type definitions for intent optimization service
  */
 
-export type OptimizationMode = "codegen" | "architecture";
+export type OptimizationMode = 'codegen' | 'architecture';
 
 export interface OptimizationOptions {
   /** Include implementation details for codegen mode */
@@ -27,7 +27,7 @@ export interface ProjectContext {
   /** Existing tech stack */
   existingTechStack?: string[];
   /** Project phase (greenfield, maintenance, migration) */
-  phase?: "greenfield" | "maintenance" | "migration";
+  phase?: 'greenfield' | 'maintenance' | 'migration';
   /** Team size */
   teamSize?: number;
   /** Timeline constraints */
@@ -61,11 +61,11 @@ export interface OptimizedIntent {
 
 export interface Constraint {
   /** Type of constraint */
-  type: "technical" | "business" | "regulatory" | "resource";
+  type: 'technical' | 'business' | 'regulatory' | 'resource';
   /** Constraint description */
   description: string;
   /** Constraint priority */
-  priority: "must" | "should" | "nice_to_have";
+  priority: 'must' | 'should' | 'nice_to_have';
   /** How this affects implementation */
   impact: string;
 }
@@ -73,18 +73,18 @@ export interface Constraint {
 export interface NonFunctionalRequirement {
   /** NFR category */
   category:
-    | "performance"
-    | "security"
-    | "scalability"
-    | "reliability"
-    | "usability"
-    | "maintainability";
+    | 'performance'
+    | 'security'
+    | 'scalability'
+    | 'reliability'
+    | 'usability'
+    | 'maintainability';
   /** Specific requirement */
   requirement: string;
   /** Target metric if applicable */
   metric?: string;
   /** Priority level */
-  priority: "critical" | "high" | "medium" | "low";
+  priority: 'critical' | 'high' | 'medium' | 'low';
 }
 
 export interface TechStackHint {
@@ -104,11 +104,11 @@ export interface ActorDefinition {
   /** Actor name */
   name: string;
   /** Actor type */
-  type: "human" | "system" | "external_service";
+  type: 'human' | 'system' | 'external_service';
   /** Actor responsibilities */
   responsibilities: string[];
   /** Stakeholder priority */
-  priority: "primary" | "secondary" | "tertiary";
+  priority: 'primary' | 'secondary' | 'tertiary';
 }
 
 export interface DataFlowSummary {
@@ -121,7 +121,7 @@ export interface DataFlowSummary {
   /** Data description */
   data: string;
   /** Flow direction */
-  direction: "inbound" | "outbound" | "bidirectional";
+  direction: 'inbound' | 'outbound' | 'bidirectional';
 }
 
 export interface AmbiguityAnalysis {

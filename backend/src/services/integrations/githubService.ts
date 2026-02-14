@@ -3,24 +3,16 @@
  * Uses fetch + child_process for git. Env: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET.
  */
 
-import { spawn } from "child_process";
-import {
-  existsSync,
-  readFileSync,
-  writeFileSync,
-  promises as fs,
-} from "fs";
-import { tmpdir } from "os";
-import { dirname, join } from "path";
-import { getRequestLogger, default as logger } from "../../middleware/logger.js";
-import { getSession } from "../agentOrchestrator.js";
+import { spawn } from 'child_process';
+import { existsSync, readFileSync, writeFileSync, promises as fs } from 'fs';
+import { tmpdir } from 'os';
+import { dirname, join } from 'path';
+import { getRequestLogger, default as logger } from '../../middleware/logger.js';
+import { getSession } from '../agentOrchestrator.js';
 
-const REDIRECT_URI =
-  process.env.GITHUB_REDIRECT_URI ||
-  "http://localhost:3000/api/github/callback";
-const FRONTEND_REDIRECT =
-  process.env.GITHUB_FRONTEND_REDIRECT || "http://localhost:5178";
-const TOKEN_FILE = join(process.cwd(), ".github-token");
+const REDIRECT_URI = process.env.GITHUB_REDIRECT_URI || 'http://localhost:3000/api/github/callback';
+const FRONTEND_REDIRECT = process.env.GITHUB_FRONTEND_REDIRECT || 'http://localhost:5178';
+const TOKEN_FILE = join(process.cwd(), '.github-token');
 
 export function getCallbackRedirectSuccess(): string {
   return `${FRONTEND_REDIRECT}/?github=ok`;
@@ -33,7 +25,7 @@ export function getCallbackRedirectError(message: string): string {
 function getStoredToken(): string | null {
   try {
     if (existsSync(TOKEN_FILE)) {
-      return readFileSync(TOKEN_FILE, "utf8").trim();
+      return readFileSync(TOKEN_FILE, 'utf8').trim();
     }
   } catch {
     /* ignore */
@@ -42,8 +34,8 @@ function getStoredToken(): string | null {
 }
 
 function storeToken(token: string): void {
-  writeFileSync(TOKEN_FILE, token, "utf8");
-  logger.info("GitHub token stored");
+  writeFileSync(TOKEN_FILE, token, 'utf8');
+  logger.info('GitHub token stored');
 }
 
 /**
@@ -52,9 +44,9 @@ function storeToken(token: string): void {
 export function getAuthUrl(): string {
   const clientId = process.env.GITHUB_CLIENT_ID;
   if (!clientId) {
-    throw new Error("GITHUB_CLIENT_ID not set");
+    throw new Error('GITHUB_CLIENT_ID not set');
   }
-  const scope = "repo";
+  const scope = 'repo';
   return `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scope)}`;
 }
 
@@ -66,12 +58,12 @@ export async function exchangeCodeForToken(code: string): Promise<string> {
   const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    throw new Error("GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET not set");
+    throw new Error('GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET not set');
   }
 
-  const res = await fetch("https://github.com/login/oauth/access_token", {
-    method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
+  const res = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     body: JSON.stringify({
       client_id: clientId,
       client_secret: clientSecret,
@@ -86,11 +78,11 @@ export async function exchangeCodeForToken(code: string): Promise<string> {
 
   const data = (await res.json()) as { access_token?: string; error?: string };
   if (data.error || !data.access_token) {
-    throw new Error(data.error || "No access_token in response");
+    throw new Error(data.error || 'No access_token in response');
   }
 
   storeToken(data.access_token);
-  log.info("GitHub token exchanged and stored");
+  log.info('GitHub token exchanged and stored');
   return data.access_token;
 }
 
@@ -104,18 +96,15 @@ export function getToken(): string | null {
 /**
  * Create a GitHub repo. Returns clone URL.
  */
-export async function createRepo(
-  repoName: string,
-  token: string,
-): Promise<string> {
+export async function createRepo(repoName: string, token: string): Promise<string> {
   const log = getRequestLogger();
-  const res = await fetch("https://api.github.com/user/repos", {
-    method: "POST",
+  const res = await fetch('https://api.github.com/user/repos', {
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "Content-Type": "application/json",
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       name: repoName,
@@ -130,20 +119,24 @@ export async function createRepo(
   }
 
   const repo = (await res.json()) as { clone_url: string; html_url?: string };
-  log.info({ repoName, url: repo.clone_url }, "GitHub repo created");
+  log.info({ repoName, url: repo.clone_url }, 'GitHub repo created');
   return repo.clone_url;
 }
 
 /**
  * Helper to spawn a child process as a promise.
  */
-function spawnAsync(command: string, args: string[], options: { cwd?: string } = {}): Promise<void> {
+function spawnAsync(
+  command: string,
+  args: string[],
+  options: { cwd?: string } = {}
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { ...options, stdio: "inherit" });
-    child.on("error", reject);
-    child.on("close", (code) => {
+    const child = spawn(command, args, { ...options, stdio: 'inherit' });
+    child.on('error', reject);
+    child.on('close', (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`${command} ${args.join(" ")} failed with code ${code}`));
+      else reject(new Error(`${command} ${args.join(' ')} failed with code ${code}`));
     });
   });
 }
@@ -152,15 +145,15 @@ function spawnAsync(command: string, args: string[], options: { cwd?: string } =
  * Write generated files to dir, git init, add, commit, remote add, push.
  */
 async function pushToRepo(dir: string, cloneUrl: string, token: string): Promise<void> {
-  const authUrl = cloneUrl.replace("https://", `https://${token}@`);
-  await spawnAsync("git", ["init"], { cwd: dir });
-  await spawnAsync("git", ["config", "user.email", "grump@local"], { cwd: dir });
-  await spawnAsync("git", ["config", "user.name", "G-Rump"], { cwd: dir });
-  await spawnAsync("git", ["add", "-A"], { cwd: dir });
-  await spawnAsync("git", ["commit", "-m", "Initial commit from G-Rump"], { cwd: dir });
-  await spawnAsync("git", ["remote", "add", "origin", authUrl], { cwd: dir });
-  await spawnAsync("git", ["branch", "-M", "main"], { cwd: dir });
-  await spawnAsync("git", ["push", "-u", "origin", "main"], { cwd: dir });
+  const authUrl = cloneUrl.replace('https://', `https://${token}@`);
+  await spawnAsync('git', ['init'], { cwd: dir });
+  await spawnAsync('git', ['config', 'user.email', 'grump@local'], { cwd: dir });
+  await spawnAsync('git', ['config', 'user.name', 'G-Rump'], { cwd: dir });
+  await spawnAsync('git', ['add', '-A'], { cwd: dir });
+  await spawnAsync('git', ['commit', '-m', 'Initial commit from G-Rump'], { cwd: dir });
+  await spawnAsync('git', ['remote', 'add', 'origin', authUrl], { cwd: dir });
+  await spawnAsync('git', ['branch', '-M', 'main'], { cwd: dir });
+  await spawnAsync('git', ['push', '-u', 'origin', 'main'], { cwd: dir });
 }
 
 /**
@@ -169,37 +162,36 @@ async function pushToRepo(dir: string, cloneUrl: string, token: string): Promise
 export async function createAndPush(
   sessionId: string,
   repoName: string,
-  tokenOverride?: string,
+  tokenOverride?: string
 ): Promise<{ repoUrl: string; pushed: boolean }> {
   const log = getRequestLogger();
   const token = tokenOverride ?? getStoredToken();
   if (!token) {
-    throw new Error("No GitHub token. Complete OAuth first.");
+    throw new Error('No GitHub token. Complete OAuth first.');
   }
 
   const session = await getSession(sessionId);
   if (!session) {
-    throw new Error("Session not found");
+    throw new Error('Session not found');
   }
-  if (session.status !== "completed" || !session.generatedFiles?.length) {
-    throw new Error("Code generation not complete or no files");
+  if (session.status !== 'completed' || !session.generatedFiles?.length) {
+    throw new Error('Code generation not complete or no files');
   }
 
-  const projectName =
-    session.architecture?.projectName ?? session.prdId ?? "generated-project";
+  const projectName = session.architecture?.projectName ?? session.prdId ?? 'generated-project';
   const cloneUrl = await createRepo(repoName, token);
 
-  const tmp = await fs.mkdtemp(join(tmpdir(), "grump-"));
+  const tmp = await fs.mkdtemp(join(tmpdir(), 'grump-'));
   try {
     for (const f of session.generatedFiles) {
       const full = join(tmp, projectName, f.path);
       await fs.mkdir(dirname(full), { recursive: true });
-      await fs.writeFile(full, f.content, "utf8");
+      await fs.writeFile(full, f.content, 'utf8');
     }
     const projectDir = join(tmp, projectName);
     await pushToRepo(projectDir, cloneUrl, token);
-    log.info({ sessionId, repoName, cloneUrl }, "Pushed to GitHub");
-    return { repoUrl: cloneUrl.replace(/\.git$/, ""), pushed: true };
+    log.info({ sessionId, repoName, cloneUrl }, 'Pushed to GitHub');
+    return { repoUrl: cloneUrl.replace(/\.git$/, ''), pushed: true };
   } finally {
     try {
       await fs.rm(tmp, { recursive: true, force: true });

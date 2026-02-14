@@ -2,12 +2,12 @@
  * Template marketplace routes.
  */
 
-import { Router, type Request, type Response } from "express";
-import { listTemplates, getTemplate } from "../services/ship/templateService.js";
+import { Router, type Request, type Response } from 'express';
+import { listTemplates, getTemplate } from '../services/ship/templateService.js';
 
 const router = Router();
 
-router.get("/", (req: Request, res: Response) => {
+router.get('/', (req: Request, res: Response) => {
   const q = (req.query.q as string)?.trim();
   const tagsParam = req.query.tags;
   const tags = Array.isArray(tagsParam)
@@ -19,11 +19,11 @@ router.get("/", (req: Request, res: Response) => {
   res.json({ templates: list });
 });
 
-router.get("/:id", (req: Request, res: Response) => {
+router.get('/:id', (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const t = getTemplate(id);
   if (!t) {
-    res.status(404).json({ error: "Template not found" });
+    res.status(404).json({ error: 'Template not found' });
     return;
   }
   res.json(t);

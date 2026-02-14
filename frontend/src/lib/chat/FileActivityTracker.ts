@@ -1,6 +1,6 @@
 /**
  * File Activity Tracker
- * 
+ *
  * Claude Code-style file tracking for streaming tool calls
  */
 
@@ -39,7 +39,12 @@ export const SEARCH_TOOLS_SET = new Set([
   'search_web',
 ]);
 
-export const EXEC_TOOLS_SET = new Set(['bash_execute', 'run_command', 'execute_command', 'terminal']);
+export const EXEC_TOOLS_SET = new Set([
+  'bash_execute',
+  'run_command',
+  'execute_command',
+  'terminal',
+]);
 
 export function getShortFilePath(fullPath: string): string {
   const segments = fullPath.replace(/\\/g, '/').split('/');

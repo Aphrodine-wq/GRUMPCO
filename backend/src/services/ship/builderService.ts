@@ -3,22 +3,22 @@
  * section-aware codegen stream, file writes, git init/commit and optional create-remote+push.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { dirname, join } from "path";
-import { execSync } from "child_process";
-import { randomUUID } from "crypto";
-import { getRequestLogger } from "../../middleware/logger.js";
-import { generateDiagram } from "../ai-providers/claudeService.js";
-import { getStream } from "../ai-providers/llmGateway.js";
-import { getToken, createRepo } from "../integrations/githubService.js";
-import type { UserPreferences } from "../../prompts/index.js";
-import type { ConversationMessage, RefinementContext } from "../../types/index.js";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { execSync } from 'child_process';
+import { randomUUID } from 'crypto';
+import { getRequestLogger } from '../../middleware/logger.js';
+import { generateDiagram } from '../ai-providers/claudeService.js';
+import { getStream } from '../ai-providers/llmGateway.js';
+import { getToken, createRepo } from '../integrations/githubService.js';
+import type { UserPreferences } from '../../prompts/index.js';
+import type { ConversationMessage, RefinementContext } from '../../types/index.js';
 
-const BUILDER_DIR = ".builder";
-const SESSION_FILE = "session.json";
-const LIST_FILE = "builder-sessions.json";
+const BUILDER_DIR = '.builder';
+const SESSION_FILE = 'session.json';
+const LIST_FILE = 'builder-sessions.json';
 
-export type BuilderDestination = "local" | "git";
+export type BuilderDestination = 'local' | 'git';
 
 export interface BuilderSessionData {
   id: string;
@@ -38,14 +38,14 @@ export interface BuilderSessionData {
 const sessions = new Map<string, BuilderSessionData>();
 
 function listFilePath(): string {
-  return join(process.cwd(), "data", LIST_FILE);
+  return join(process.cwd(), 'data', LIST_FILE);
 }
 
 function loadSessionList(): void {
   try {
     const p = listFilePath();
     if (!existsSync(p)) return;
-    const raw = readFileSync(p, "utf8");
+    const raw = readFileSync(p, 'utf8');
     const arr = JSON.parse(raw) as BuilderSessionData[];
     for (const s of arr) sessions.set(s.id, s);
   } catch {
@@ -58,7 +58,7 @@ function saveSessionList(): void {
     const dir = dirname(listFilePath());
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     const arr = Array.from(sessions.values());
-    writeFileSync(listFilePath(), JSON.stringify(arr, null, 2), "utf8");
+    writeFileSync(listFilePath(), JSON.stringify(arr, null, 2), 'utf8');
   } catch {
     /* ignore */
   }
@@ -70,7 +70,7 @@ function loadSessionFromDisk(sessionPath: string): BuilderSessionData | null {
   try {
     const p = join(sessionPath, BUILDER_DIR, SESSION_FILE);
     if (!existsSync(p)) return null;
-    const raw = readFileSync(p, "utf8");
+    const raw = readFileSync(p, 'utf8');
     return JSON.parse(raw) as BuilderSessionData;
   } catch {
     return null;
@@ -82,7 +82,7 @@ function saveSessionToDisk(session: BuilderSessionData): void {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   const p = join(dir, SESSION_FILE);
   const updated = { ...session, updatedAt: new Date().toISOString() };
-  writeFileSync(p, JSON.stringify(updated, null, 2), "utf8");
+  writeFileSync(p, JSON.stringify(updated, null, 2), 'utf8');
   saveSessionList();
 }
 
@@ -125,7 +125,7 @@ export function createSession(params: {
     projectName,
     path,
     destination,
-    status: "created",
+    status: 'created',
     completedSectionIds: [],
     defaultProvider,
     defaultModelId,
@@ -133,7 +133,7 @@ export function createSession(params: {
   };
   sessions.set(id, session);
   saveSessionToDisk(session);
-  log.info({ sessionId: id, path }, "Builder session created");
+  log.info({ sessionId: id, path }, 'Builder session created');
   return session;
 }
 
@@ -157,7 +157,7 @@ export function getSession(sessionId: string): BuilderSessionData | null {
  */
 export function getSessionOrThrow(sessionId: string): BuilderSessionData {
   const session = getSession(sessionId);
-  if (!session) throw new Error("Builder session not found");
+  if (!session) throw new Error('Builder session not found');
   return session;
 }
 
@@ -178,17 +178,17 @@ export async function generateMermaid(
   if (session.mermaid && refinementMessages.length > 0) {
     refinementContext = { baseDiagram: session.mermaid };
     refinementMessages.forEach((msg, i) => {
-      conversationHistory.push({ role: "user", content: msg });
+      conversationHistory.push({ role: 'user', content: msg });
       conversationHistory.push({
-        role: "assistant",
+        role: 'assistant',
         content: `Refinement ${i + 1} applied. Updated diagram follows.`,
       });
     });
   }
 
   const preferences: UserPreferences = {
-    promptMode: "builder",
-    complexity: "detailed",
+    promptMode: 'builder',
+    complexity: 'detailed',
   };
   const mermaid = await generateDiagram(
     prompt,
@@ -198,16 +198,16 @@ export async function generateMermaid(
   );
 
   session.mermaid = mermaid;
-  session.status = "mermaid_ready";
+  session.status = 'mermaid_ready';
   session.updatedAt = new Date().toISOString();
   sessions.set(sessionId, session);
   saveSessionToDisk(session);
-  log.info({ sessionId }, "Builder Mermaid generated");
+  log.info({ sessionId }, 'Builder Mermaid generated');
   return mermaid;
 }
 
 /** Fallback model for Builder codegen when none specified */
-const CODGEN_MODEL = "moonshotai/kimi-k2.5";
+const CODGEN_MODEL = 'moonshotai/kimi-k2.5';
 
 /**
  * Stream codegen for one section: narrative + file events (NDJSON), write files to session path.
@@ -218,7 +218,12 @@ export async function streamBuildSection(
   sectionId: string,
   sections: Array<{ id: string; title: string }>,
   mermaid: string,
-  onEvent: (event: { type: "narrative" | "file"; text?: string; path?: string; snippet?: string }) => void,
+  onEvent: (event: {
+    type: 'narrative' | 'file';
+    text?: string;
+    path?: string;
+    snippet?: string;
+  }) => void,
   options?: { provider?: string; modelId?: string }
 ): Promise<void> {
   const session = getSessionOrThrow(sessionId);
@@ -226,7 +231,7 @@ export async function streamBuildSection(
   const section = sections.find((s) => s.id === sectionId);
   const sectionTitle = section?.title ?? sectionId;
 
-  const provider = options?.provider ?? session.defaultProvider ?? "nim";
+  const provider = options?.provider ?? session.defaultProvider ?? 'nim';
   const modelId = options?.modelId ?? session.defaultModelId ?? CODGEN_MODEL;
 
   const systemPrompt = `You are a senior software engineer. Given a Mermaid architecture diagram and a section to implement, generate only the code for that section. Output exactly in this format:
@@ -246,58 +251,58 @@ Implement only the section: ${sectionTitle} (id: ${sectionId}). Output NARRATIVE
       model: modelId,
       max_tokens: 16384,
       system: systemPrompt,
-      messages: [{ role: "user", content: userMessage }],
+      messages: [{ role: 'user', content: userMessage }],
     },
     { provider: provider as any, modelId }
   );
 
-  let buffer = "";
+  let buffer = '';
   let currentPath: string | null = null;
   let inBlock = false;
-  let blockContent = "";
+  let blockContent = '';
 
   for await (const event of stream) {
     if (
-      event.type === "content_block_delta" &&
-      event.delta?.type === "text_delta" &&
-      typeof event.delta.text === "string"
+      event.type === 'content_block_delta' &&
+      event.delta?.type === 'text_delta' &&
+      typeof event.delta.text === 'string'
     ) {
       const text = event.delta.text;
       buffer += text;
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
 
       for (const line of lines) {
-        if (line.startsWith("NARRATIVE:")) {
-          const text = line.slice("NARRATIVE:".length).trim();
-          if (text) onEvent({ type: "narrative", text });
+        if (line.startsWith('NARRATIVE:')) {
+          const text = line.slice('NARRATIVE:'.length).trim();
+          if (text) onEvent({ type: 'narrative', text });
           continue;
         }
-        if (line.startsWith("FILE:")) {
+        if (line.startsWith('FILE:')) {
           if (currentPath && blockContent) {
             const fullPath = join(session.path, currentPath);
             mkdirSync(dirname(fullPath), { recursive: true });
-            writeFileSync(fullPath, blockContent, "utf8");
-            onEvent({ type: "file", path: currentPath, snippet: blockContent.slice(0, 200) });
+            writeFileSync(fullPath, blockContent, 'utf8');
+            onEvent({ type: 'file', path: currentPath, snippet: blockContent.slice(0, 200) });
           }
-          currentPath = line.slice("FILE:".length).trim();
-          blockContent = "";
+          currentPath = line.slice('FILE:'.length).trim();
+          blockContent = '';
           inBlock = false;
           continue;
         }
         if (currentPath !== null) {
-          if (line.trim() === "```") {
+          if (line.trim() === '```') {
             if (inBlock) {
               const fullPath = join(session.path, currentPath);
               mkdirSync(dirname(fullPath), { recursive: true });
-              writeFileSync(fullPath, blockContent, "utf8");
-              onEvent({ type: "file", path: currentPath, snippet: blockContent.slice(0, 200) });
+              writeFileSync(fullPath, blockContent, 'utf8');
+              onEvent({ type: 'file', path: currentPath, snippet: blockContent.slice(0, 200) });
               currentPath = null;
             }
             inBlock = !inBlock;
-            blockContent = "";
+            blockContent = '';
           } else if (inBlock) {
-            blockContent += line + "\n";
+            blockContent += line + '\n';
           }
         }
       }
@@ -305,17 +310,17 @@ Implement only the section: ${sectionTitle} (id: ${sectionId}). Output NARRATIVE
   }
 
   if (buffer.trim()) {
-    if (currentPath !== null && inBlock) blockContent += buffer + "\n";
-    else if (buffer.startsWith("NARRATIVE:")) {
-      const text = buffer.slice("NARRATIVE:".length).trim();
-      if (text) onEvent({ type: "narrative", text });
+    if (currentPath !== null && inBlock) blockContent += buffer + '\n';
+    else if (buffer.startsWith('NARRATIVE:')) {
+      const text = buffer.slice('NARRATIVE:'.length).trim();
+      if (text) onEvent({ type: 'narrative', text });
     }
   }
   if (currentPath && blockContent) {
     const fullPath = join(session.path, currentPath);
     mkdirSync(dirname(fullPath), { recursive: true });
-    writeFileSync(fullPath, blockContent, "utf8");
-    onEvent({ type: "file", path: currentPath, snippet: blockContent.slice(0, 200) });
+    writeFileSync(fullPath, blockContent, 'utf8');
+    onEvent({ type: 'file', path: currentPath, snippet: blockContent.slice(0, 200) });
   }
 
   const completed = [...(session.completedSectionIds ?? []), sectionId];
@@ -323,7 +328,7 @@ Implement only the section: ${sectionTitle} (id: ${sectionId}). Output NARRATIVE
   session.updatedAt = new Date().toISOString();
   sessions.set(sessionId, session);
   saveSessionToDisk(session);
-  log.info({ sessionId, sectionId }, "Builder section build completed");
+  log.info({ sessionId, sectionId }, 'Builder section build completed');
 }
 
 /**
@@ -337,25 +342,25 @@ export async function runGit(
   const log = getRequestLogger();
   const { path, projectName } = session;
 
-  if (!existsSync(join(path, ".git"))) {
-    execSync("git init", { cwd: path });
+  if (!existsSync(join(path, '.git'))) {
+    execSync('git init', { cwd: path });
     execSync('git config user.email "grump@local"', { cwd: path });
     execSync('git config user.name "G-Rump"', { cwd: path });
-    execSync("git add -A", { cwd: path });
+    execSync('git add -A', { cwd: path });
     execSync('git commit -m "Initial commit from G-Rump Builder"', { cwd: path });
-    log.info({ sessionId, path }, "Git initialized and first commit created");
+    log.info({ sessionId, path }, 'Git initialized and first commit created');
   }
 
   if (options.createRemote) {
     const token = getToken();
-    if (!token) throw new Error("No GitHub token. Complete OAuth first.");
+    if (!token) throw new Error('No GitHub token. Complete OAuth first.');
     const cloneUrl = await createRepo(projectName, token);
-    const authUrl = cloneUrl.replace("https://", `https://${token}@`);
+    const authUrl = cloneUrl.replace('https://', `https://${token}@`);
     execSync(`git remote add origin ${authUrl}`, { cwd: path });
-    execSync("git branch -M main", { cwd: path });
-    execSync("git push -u origin main", { cwd: path });
-    log.info({ sessionId, cloneUrl }, "Pushed to GitHub");
-    return { repoUrl: cloneUrl.replace(/\.git$/, ""), pushed: true };
+    execSync('git branch -M main', { cwd: path });
+    execSync('git push -u origin main', { cwd: path });
+    log.info({ sessionId, cloneUrl }, 'Pushed to GitHub');
+    return { repoUrl: cloneUrl.replace(/\.git$/, ''), pushed: true };
   }
 
   return { pushed: false };

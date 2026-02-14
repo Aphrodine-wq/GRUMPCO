@@ -13,8 +13,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/Aphrodine-wq/G-rump.com.git
-cd G-rump.com
+git clone https://github.com/Aphrodine-wq/GRUMPCO.git
+cd GRUMPCO
 
 # Install all dependencies (monorepo)
 npm install
@@ -161,22 +161,16 @@ cd frontend && npm run test:e2e
 
 ### Build & Run
 ```bash
-cd electron
+cd frontend
 
 # Install dependencies
 npm install
 
-# Generate icons (if needed)
-npm run generate-icons
-
 # Development
-npm run dev
+npm run electron:dev
 
 # Build for distribution
-npm run build           # Current platform
-npm run build:mac       # macOS
-npm run build:win       # Windows
-npm run build:linux     # Linux
+npm run electron:build
 ```
 
 ### Test Checklist
@@ -345,5 +339,6 @@ Before deploying to production:
 
 ## Support
 
-- **Issues**: https://github.com/Aphrodine-wq/G-rump.com/issues
+- **Issues**: https://github.com/Aphrodine-wq/GRUMPCO/issues
 - **Docs**: See `/docs` folder in repository
+

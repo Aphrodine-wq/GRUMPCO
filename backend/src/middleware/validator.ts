@@ -1,10 +1,6 @@
-import {
-  body,
-  validationResult,
-  type ValidationChain,
-} from "express-validator";
-import type { Request, Response, NextFunction } from "express";
-import { getRequestLogger } from "./logger.js";
+import { body, validationResult, type ValidationChain } from 'express-validator';
+import type { Request, Response, NextFunction } from 'express';
+import { getRequestLogger } from './logger.js';
 
 // Maximum message length (prevent abuse)
 export const MAX_MESSAGE_LENGTH = 4000;
@@ -87,7 +83,7 @@ const SUSPICIOUS_PATTERNS: RegExp[] = [
 
 function sanitizeControlChars(value: string): string {
   // eslint-disable-next-line no-control-regex -- intentional: strip control chars for security
-  return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
 
 /** Check for suspicious patterns. Returns list of matching pattern strings. */
@@ -104,15 +100,13 @@ export function checkSuspiciousPatterns(text: string): string[] {
 /** Run suspicious-pattern check on body keys. If BLOCK_SUSPICIOUS_PROMPTS, returns { block: true, patterns, key }. */
 export function checkSuspiciousInBody(
   body: Record<string, unknown>,
-  keys: string[],
-):
-  | { block: false }
-  | { block: true; patterns: string[]; key: string; preview: string } {
+  keys: string[]
+): { block: false } | { block: true; patterns: string[]; key: string; preview: string } {
   for (const key of keys) {
     const val = body[key];
-    const text = typeof val === "string" ? val : "";
+    const text = typeof val === 'string' ? val : '';
     const matches = checkSuspiciousPatterns(text);
-    if (matches.length > 0 && process.env.BLOCK_SUSPICIOUS_PROMPTS === "true") {
+    if (matches.length > 0 && process.env.BLOCK_SUSPICIOUS_PROMPTS === 'true') {
       return {
         block: true,
         patterns: matches,
@@ -127,11 +121,11 @@ export function checkSuspiciousInBody(
 /** Chat messages: get all user-facing text from a message for suspicious-pattern check. */
 function getTextsFromMessage(msg: { content?: unknown }): string[] {
   const content = msg.content;
-  if (typeof content === "string") return [content];
+  if (typeof content === 'string') return [content];
   if (Array.isArray(content)) {
     const texts: string[] = [];
     for (const p of content as { type?: string; text?: string }[]) {
-      if (p?.type === "text" && typeof p.text === "string") texts.push(p.text);
+      if (p?.type === 'text' && typeof p.text === 'string') texts.push(p.text);
     }
     return texts;
   }
@@ -143,16 +137,14 @@ function getTextsFromMessage(msg: { content?: unknown }): string[] {
  * When BLOCK_SUSPICIOUS_PROMPTS=true, returns { block: true, key, preview }; otherwise { block: false }.
  */
 export function checkSuspiciousInMessages(
-  messages: Array<{ content?: unknown }>,
-):
-  | { block: false }
-  | { block: true; patterns: string[]; key: string; preview: string } {
+  messages: Array<{ content?: unknown }>
+): { block: false } | { block: true; patterns: string[]; key: string; preview: string } {
   for (let i = 0; i < messages.length; i++) {
     const texts = getTextsFromMessage(messages[i]);
     for (const text of texts) {
       const matches = checkSuspiciousPatterns(text);
       if (matches.length > 0) {
-        if (process.env.BLOCK_SUSPICIOUS_PROMPTS === "true") {
+        if (process.env.BLOCK_SUSPICIOUS_PROMPTS === 'true') {
           return {
             block: true,
             patterns: matches,
@@ -167,7 +159,7 @@ export function checkSuspiciousInMessages(
             key: `messages[${i}].content`,
             messagePreview: text.substring(0, 100),
           },
-          "Suspicious prompt patterns detected in chat",
+          'Suspicious prompt patterns detected in chat'
         );
       }
     }
@@ -177,29 +169,27 @@ export function checkSuspiciousInMessages(
 
 // Validation rules for diagram generation
 export const validateDiagramRequest: ValidationChain[] = [
-  body("message")
+  body('message')
     .exists({ checkNull: true, checkFalsy: true })
-    .withMessage("Message is required")
+    .withMessage('Message is required')
     .isString()
-    .withMessage("Message must be a string")
+    .withMessage('Message must be a string')
     .isLength({ min: 1, max: MAX_MESSAGE_LENGTH })
-    .withMessage(
-      `Message must be between 1 and ${MAX_MESSAGE_LENGTH} characters`,
-    )
+    .withMessage(`Message must be between 1 and ${MAX_MESSAGE_LENGTH} characters`)
     .trim()
     .customSanitizer((value: string) => sanitizeControlChars(value)),
 ];
 
 // Validation rules for ship /start
 export const validateShipRequest: ValidationChain[] = [
-  body("projectDescription")
+  body('projectDescription')
     .exists({ checkNull: true, checkFalsy: true })
-    .withMessage("projectDescription is required")
+    .withMessage('projectDescription is required')
     .isString()
-    .withMessage("projectDescription must be a string")
+    .withMessage('projectDescription must be a string')
     .isLength({ min: 1, max: MAX_SHIP_PROJECT_DESCRIPTION_LENGTH })
     .withMessage(
-      `projectDescription must be between 1 and ${MAX_SHIP_PROJECT_DESCRIPTION_LENGTH} characters`,
+      `projectDescription must be between 1 and ${MAX_SHIP_PROJECT_DESCRIPTION_LENGTH} characters`
     )
     .trim()
     .customSanitizer((value: string) => sanitizeControlChars(value)),
@@ -207,22 +197,21 @@ export const validateShipRequest: ValidationChain[] = [
 
 // Validation rules for codegen /start (legacy: prdId, architectureId, prd, architecture | multi: prds, architecture)
 export const validateCodegenRequest: ValidationChain[] = [
-  body("prdId").optional().isString().trim(),
-  body("architectureId").optional().isString().trim(),
-  body("prd").optional().isObject(),
-  body("architecture").optional().isObject(),
-  body("prds").optional().isArray(),
-  body("preferences").optional().isObject(),
-  body("componentMapping").optional().isObject(),
-  body("projectId").optional().isString().trim(),
+  body('prdId').optional().isString().trim(),
+  body('architectureId').optional().isString().trim(),
+  body('prd').optional().isObject(),
+  body('architecture').optional().isObject(),
+  body('prds').optional().isArray(),
+  body('preferences').optional().isObject(),
+  body('componentMapping').optional().isObject(),
+  body('projectId').optional().isString().trim(),
   body().custom((_val, { req }) => {
     const b = (req as RequestWithBody).body as Record<string, unknown>;
-    const multi =
-      Array.isArray(b?.prds) && b?.prds.length > 0 && b?.architecture;
+    const multi = Array.isArray(b?.prds) && b?.prds.length > 0 && b?.architecture;
     const legacy = b?.prdId && b?.architectureId && b?.prd && b?.architecture;
     if (!multi && !legacy)
       throw new Error(
-        "Either (prds array + architecture) or (prdId, architectureId, prd, architecture) is required",
+        'Either (prds array + architecture) or (prdId, architectureId, prd, architecture) is required'
       );
     return true;
   }),
@@ -230,64 +219,62 @@ export const validateCodegenRequest: ValidationChain[] = [
 
 // Validation rules for PRD generate / generate-stream
 export const validatePrdGenerateRequest: ValidationChain[] = [
-  body("projectName")
+  body('projectName')
     .exists({ checkNull: true, checkFalsy: true })
-    .withMessage("projectName is required")
+    .withMessage('projectName is required')
     .isString()
-    .withMessage("projectName must be a string")
+    .withMessage('projectName must be a string')
     .isLength({ min: 1, max: MAX_PROJECT_NAME_LENGTH })
-    .withMessage(
-      `projectName must be between 1 and ${MAX_PROJECT_NAME_LENGTH} characters`,
-    )
+    .withMessage(`projectName must be between 1 and ${MAX_PROJECT_NAME_LENGTH} characters`)
     .trim()
     .customSanitizer((value: string) => sanitizeControlChars(value)),
-  body("projectDescription")
+  body('projectDescription')
     .exists({ checkNull: true, checkFalsy: true })
-    .withMessage("projectDescription is required")
+    .withMessage('projectDescription is required')
     .isString()
-    .withMessage("projectDescription must be a string")
+    .withMessage('projectDescription must be a string')
     .isLength({ min: 1, max: MAX_ARCHITECTURE_DESCRIPTION_LENGTH })
     .withMessage(
-      `projectDescription must be between 1 and ${MAX_ARCHITECTURE_DESCRIPTION_LENGTH} characters`,
+      `projectDescription must be between 1 and ${MAX_ARCHITECTURE_DESCRIPTION_LENGTH} characters`
     )
     .trim()
     .customSanitizer((value: string) => sanitizeControlChars(value)),
-  body("architecture")
+  body('architecture')
     .exists({ checkNull: true })
-    .withMessage("architecture is required")
+    .withMessage('architecture is required')
     .isObject()
-    .withMessage("architecture must be an object"),
+    .withMessage('architecture must be an object'),
 ];
 
 // Validation rules for architecture generate / generate-stream
 export const validateArchitectureRequest: ValidationChain[] = [
-  body("projectDescription")
+  body('projectDescription')
     .optional()
     .isString()
     .trim()
     .customSanitizer((value: string) =>
-      typeof value === "string" ? sanitizeControlChars(value) : "",
+      typeof value === 'string' ? sanitizeControlChars(value) : ''
     ),
-  body("enrichedIntent").optional().isObject(),
-  body("projectType").optional().isString().trim(),
-  body("techStack").optional().isArray(),
-  body("complexity").optional().isString().trim(),
-  body("refinements").optional().isArray(),
-  body("conversationHistory").optional().isArray(),
+  body('enrichedIntent').optional().isObject(),
+  body('projectType').optional().isString().trim(),
+  body('techStack').optional().isArray(),
+  body('complexity').optional().isString().trim(),
+  body('refinements').optional().isArray(),
+  body('conversationHistory').optional().isArray(),
   body().custom((_val, { req }) => {
     const b = (req as RequestWithBody).body as Record<string, unknown>;
     const pd = b?.projectDescription;
     const raw = (b?.enrichedIntent as { raw?: string } | undefined)?.raw;
-    const spd = typeof pd === "string" ? pd.trim() : "";
-    const sraw = typeof raw === "string" ? raw.trim() : "";
+    const spd = typeof pd === 'string' ? pd.trim() : '';
+    const sraw = typeof raw === 'string' ? raw.trim() : '';
     if (!spd.length && !sraw.length)
-      throw new Error("projectDescription or enrichedIntent.raw is required");
+      throw new Error('projectDescription or enrichedIntent.raw is required');
     if (spd.length > MAX_ARCHITECTURE_DESCRIPTION_LENGTH)
       throw new Error(
-        `projectDescription exceeds ${MAX_ARCHITECTURE_DESCRIPTION_LENGTH} characters`,
+        `projectDescription exceeds ${MAX_ARCHITECTURE_DESCRIPTION_LENGTH} characters`
       );
     if (sraw.length > MAX_ARCHITECTURE_DESCRIPTION_LENGTH)
-      throw new Error("enrichedIntent.raw exceeds maximum length");
+      throw new Error('enrichedIntent.raw exceeds maximum length');
     return true;
   }),
 ];
@@ -304,19 +291,19 @@ export function handleValidationErrors(
   req: RequestWithBody,
   res: Response,
   next: NextFunction,
-  suspiciousPatternKeys: string[] = ["message"],
+  suspiciousPatternKeys: string[] = ['message']
 ): void {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
     const logger = getRequestLogger();
-    logger.warn({ errors: errors.array() }, "Validation failed");
+    logger.warn({ errors: errors.array() }, 'Validation failed');
 
     res.status(400).json({
-      error: "Validation failed",
-      type: "validation_error",
+      error: 'Validation failed',
+      type: 'validation_error',
       details: errors.array().map((e) => ({
-        field: "path" in e ? e.path : "unknown",
+        field: 'path' in e ? e.path : 'unknown',
         message: e.msg,
       })),
     });
@@ -328,14 +315,12 @@ export function handleValidationErrors(
     const logger = getRequestLogger();
     logger.warn(
       { patterns: check.patterns, key: check.key, preview: check.preview },
-      "Suspicious prompt patterns detected; blocking (BLOCK_SUSPICIOUS_PROMPTS=true)",
+      'Suspicious prompt patterns detected; blocking (BLOCK_SUSPICIOUS_PROMPTS=true)'
     );
     res.status(400).json({
-      error: "Request blocked: suspicious prompt patterns detected",
-      type: "validation_error",
-      details: [
-        { field: check.key, message: "Content matches blocked patterns." },
-      ],
+      error: 'Request blocked: suspicious prompt patterns detected',
+      type: 'validation_error',
+      details: [{ field: check.key, message: 'Content matches blocked patterns.' }],
     });
     return;
   }
@@ -343,13 +328,13 @@ export function handleValidationErrors(
   // Log only (when not blocking)
   for (const key of suspiciousPatternKeys) {
     const val = req.body[key];
-    const text = typeof val === "string" ? val : "";
+    const text = typeof val === 'string' ? val : '';
     const matches = checkSuspiciousPatterns(text);
     if (matches.length > 0) {
       const logger = getRequestLogger();
       logger.warn(
         { patterns: matches, key, messagePreview: text.substring(0, 100) },
-        "Suspicious prompt patterns detected",
+        'Suspicious prompt patterns detected'
       );
     }
   }
@@ -361,52 +346,52 @@ export function handleValidationErrors(
 export function handleDiagramValidationErrors(
   req: RequestWithBody,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): void {
-  handleValidationErrors(req, res, next, ["message"]);
+  handleValidationErrors(req, res, next, ['message']);
 }
 
 /** Wrapper for ship (projectDescription). */
 export function handleShipValidationErrors(
   req: RequestWithBody,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): void {
-  handleValidationErrors(req, res, next, ["projectDescription"]);
+  handleValidationErrors(req, res, next, ['projectDescription']);
 }
 
 /** Wrapper for PRD generate (projectName, projectDescription). */
 export function handlePrdValidationErrors(
   req: RequestWithBody,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): void {
-  handleValidationErrors(req, res, next, ["projectName", "projectDescription"]);
+  handleValidationErrors(req, res, next, ['projectName', 'projectDescription']);
 }
 
 /** Wrapper for architecture (projectDescription; enrichedIntent.raw checked manually). */
 export function handleArchitectureValidationErrors(
   req: RequestWithBody,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): void {
-  const keys = ["projectDescription"];
+  const keys = ['projectDescription'];
   const b = req.body as { enrichedIntent?: { raw?: string } };
-  if (typeof b?.enrichedIntent?.raw === "string") {
+  if (typeof b?.enrichedIntent?.raw === 'string') {
     const m = checkSuspiciousPatterns(b.enrichedIntent.raw);
-    if (m.length > 0 && process.env.BLOCK_SUSPICIOUS_PROMPTS === "true") {
+    if (m.length > 0 && process.env.BLOCK_SUSPICIOUS_PROMPTS === 'true') {
       const logger = getRequestLogger();
       logger.warn(
-        { patterns: m, key: "enrichedIntent.raw" },
-        "Suspicious prompt patterns detected; blocking",
+        { patterns: m, key: 'enrichedIntent.raw' },
+        'Suspicious prompt patterns detected; blocking'
       );
       res.status(400).json({
-        error: "Request blocked: suspicious prompt patterns detected",
-        type: "validation_error",
+        error: 'Request blocked: suspicious prompt patterns detected',
+        type: 'validation_error',
         details: [
           {
-            field: "enrichedIntent.raw",
-            message: "Content matches blocked patterns.",
+            field: 'enrichedIntent.raw',
+            message: 'Content matches blocked patterns.',
           },
         ],
       });
@@ -417,10 +402,10 @@ export function handleArchitectureValidationErrors(
       logger.warn(
         {
           patterns: m,
-          key: "enrichedIntent.raw",
+          key: 'enrichedIntent.raw',
           messagePreview: b.enrichedIntent.raw.substring(0, 100),
         },
-        "Suspicious prompt patterns detected",
+        'Suspicious prompt patterns detected'
       );
     }
   }
@@ -431,7 +416,7 @@ export function handleArchitectureValidationErrors(
 export function handleCodegenValidationErrors(
   req: RequestWithBody,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): void {
   handleValidationErrors(req, res, next, []);
 }

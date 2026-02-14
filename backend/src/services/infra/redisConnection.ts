@@ -12,7 +12,7 @@ export interface RedisConnectionConfig {
 
 /** BullMQ queue names cannot contain ':'. Sanitize any name. */
 export function sanitizeQueueName(name: string): string {
-  return String(name).replace(/:/g, "-");
+  return String(name).replace(/:/g, '-');
 }
 
 /**
@@ -25,9 +25,9 @@ export function getRedisConnectionConfig(): RedisConnectionConfig {
   if (url) {
     try {
       const parsed = new URL(url);
-      if (parsed.protocol === "redis:" || parsed.protocol === "rediss:") {
+      if (parsed.protocol === 'redis:' || parsed.protocol === 'rediss:') {
         const password =
-          parsed.password && parsed.password !== ""
+          parsed.password && parsed.password !== ''
             ? decodeURIComponent(parsed.password)
             : undefined;
         return {
@@ -41,8 +41,8 @@ export function getRedisConnectionConfig(): RedisConnectionConfig {
     }
   }
 
-  let host = (process.env.REDIS_HOST || "localhost").trim();
-  let port = parseInt(process.env.REDIS_PORT || "6379", 10);
+  let host = (process.env.REDIS_HOST || 'localhost').trim();
+  let port = parseInt(process.env.REDIS_PORT || '6379', 10);
 
   // REDIS_HOST may be "host:port"
   const match = host.match(/^(.+):(\d+)$/);
@@ -60,7 +60,7 @@ export function getRedisConnectionConfig(): RedisConnectionConfig {
 
 export function useRedis(): boolean {
   return !!(
-    (process.env.REDIS_URL && process.env.REDIS_URL.trim() !== "") ||
-    (process.env.REDIS_HOST && process.env.REDIS_HOST.trim() !== "")
+    (process.env.REDIS_URL && process.env.REDIS_URL.trim() !== '') ||
+    (process.env.REDIS_HOST && process.env.REDIS_HOST.trim() !== '')
   );
 }

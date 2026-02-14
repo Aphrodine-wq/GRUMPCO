@@ -17,41 +17,36 @@
  * UPDATED: Now uses database persistence via goalRepository
  */
 
-import logger from "../../middleware/logger.js";
-import { writeAuditLog } from "../security/auditLogService.js";
-import { runPlanCli, type Plan } from "../intent/intentCliRunner.js";
-import { gAgentTaskExecutor } from "./gAgentTaskExecutor.js";
-import { gAgentMemoryService } from "./gAgentMemoryService.js";
-import { dispatchWebhook } from "../integrations/webhookService.js";
+import logger from '../../middleware/logger.js';
+import { writeAuditLog } from '../security/auditLogService.js';
+import { runPlanCli, type Plan } from '../intent/intentCliRunner.js';
+import { gAgentTaskExecutor } from './gAgentTaskExecutor.js';
+import { gAgentMemoryService } from './gAgentMemoryService.js';
+import { dispatchWebhook } from '../integrations/webhookService.js';
 import {
   goalRepository,
   type GoalCreateInput as RepoCreateInput,
-} from "../../gAgent/goalRepository.js";
-import { messageBus } from "../../gAgent/messageBus.js";
-import { supervisor } from "../../gAgent/supervisor.js";
-import type {
-  Goal,
-  GoalStatus,
-  GoalPriority,
-  GoalTrigger,
-} from "../../gAgent/types.js";
+} from '../../gAgent/goalRepository.js';
+import { messageBus } from '../../gAgent/messageBus.js';
+import { supervisor } from '../../gAgent/supervisor.js';
+import type { Goal, GoalStatus, GoalPriority, GoalTrigger } from '../../gAgent/types.js';
 import {
   sanitizeGoalDescription,
   sanitizePath,
   sanitizeTags,
   checkGAgentSuspiciousPatterns,
   GAGENT_MAX_DESCRIPTION_LENGTH,
-} from "../../gAgent/security.js";
+} from '../../gAgent/security.js';
 
 // ============================================================================
 // TYPES (re-export from gAgent types for backward compatibility)
 // ============================================================================
 
-export type { GoalStatus, GoalPriority } from "../../gAgent/types.js";
+export type { GoalStatus, GoalPriority } from '../../gAgent/types.js';
 export type GoalTriggerType = GoalTrigger; // Alias for backward compatibility
 
 // Re-export Goal type
-export type { Goal } from "../../gAgent/types.js";
+export type { Goal } from '../../gAgent/types.js';
 
 export interface GoalCreateInput {
   userId: string;
@@ -125,12 +120,10 @@ export async function createGoal(input: GoalCreateInput): Promise<Goal> {
 
   // Validate description length
   if (!sanitizedDescription || sanitizedDescription.length === 0) {
-    throw new Error("Goal description is required");
+    throw new Error('Goal description is required');
   }
   if (sanitizedDescription.length > GAGENT_MAX_DESCRIPTION_LENGTH) {
-    throw new Error(
-      `Goal description exceeds maximum length of ${GAGENT_MAX_DESCRIPTION_LENGTH}`,
-    );
+    throw new Error(`Goal description exceeds maximum length of ${GAGENT_MAX_DESCRIPTION_LENGTH}`);
   }
 
   // Check for suspicious patterns (log only at this layer, blocking happens at route)
@@ -141,14 +134,14 @@ export async function createGoal(input: GoalCreateInput): Promise<Goal> {
         userId: input.userId,
         patterns: suspiciousMatches,
         preview: input.description.substring(0, 100),
-        source: "gAgentGoalQueue",
+        source: 'gAgentGoalQueue',
       },
-      "G-Agent: Suspicious patterns detected in goal description (internal check)",
+      'G-Agent: Suspicious patterns detected in goal description (internal check)'
     );
 
     // Block if env var is set (defense in depth - route should have caught this)
-    if (process.env.BLOCK_SUSPICIOUS_PROMPTS === "true") {
-      throw new Error("Goal description contains blocked patterns");
+    if (process.env.BLOCK_SUSPICIOUS_PROMPTS === 'true') {
+      throw new Error('Goal description contains blocked patterns');
     }
   }
 
@@ -185,7 +178,7 @@ export async function createGoal(input: GoalCreateInput): Promise<Goal> {
       userId: input.userId,
       description: sanitizedDescription.slice(0, 50),
     },
-    "G-Agent: Goal created",
+    'G-Agent: Goal created'
   );
 
   // Publish to MessageBus for unified tracking
@@ -193,8 +186,8 @@ export async function createGoal(input: GoalCreateInput): Promise<Goal> {
 
   await writeAuditLog({
     userId: input.userId,
-    action: "gagent.goal.created",
-    category: "agent",
+    action: 'gagent.goal.created',
+    category: 'agent',
     target: goal.id,
     metadata: {
       description: sanitizedDescription.slice(0, 100),
@@ -203,7 +196,7 @@ export async function createGoal(input: GoalCreateInput): Promise<Goal> {
   });
 
   // If immediate and no processing is running, start processing
-  if (goal.status === "pending" && !processingIntervals.has(input.userId)) {
+  if (goal.status === 'pending' && !processingIntervals.has(input.userId)) {
     processNextGoal(input.userId);
   }
 
@@ -251,14 +244,14 @@ export async function getUserGoals(
   options?: {
     status?: GoalStatus[];
     limit?: number;
-  },
+  }
 ): Promise<Goal[]> {
   return goalRepository.list({
     userId,
     status: options?.status,
     limit: options?.limit,
-    orderBy: "priority",
-    orderDir: "asc",
+    orderBy: 'priority',
+    orderDir: 'asc',
   });
 }
 
@@ -283,17 +276,17 @@ export async function cancelGoal(goalId: string): Promise<Goal | null> {
   const goal = await goalRepository.getById(goalId);
   if (!goal) return null;
 
-  if (goal.status === "executing") {
+  if (goal.status === 'executing') {
     // Try to cancel execution
     gAgentTaskExecutor.cancelExecution(goal.planId || goalId);
   }
 
   const updated = await goalRepository.update(goalId, {
-    status: "cancelled",
+    status: 'cancelled',
     completedAt: new Date().toISOString(),
   });
 
-  logger.info({ goalId, userId: goal.userId }, "G-Agent: Goal cancelled");
+  logger.info({ goalId, userId: goal.userId }, 'G-Agent: Goal cancelled');
 
   return updated;
 }
@@ -317,20 +310,17 @@ export async function cancelGoal(goalId: string): Promise<Goal | null> {
  */
 export async function retryGoal(goalId: string): Promise<Goal | null> {
   const goal = await goalRepository.getById(goalId);
-  if (!goal || goal.status !== "failed") return null;
+  if (!goal || goal.status !== 'failed') return null;
 
   const updated = await goalRepository.update(goalId, {
-    status: "pending",
+    status: 'pending',
     retryCount: goal.retryCount + 1,
     error: undefined,
     startedAt: undefined,
     completedAt: undefined,
   });
 
-  logger.info(
-    { goalId, retryCount: goal.retryCount + 1 },
-    "G-Agent: Goal queued for retry",
-  );
+  logger.info({ goalId, retryCount: goal.retryCount + 1 }, 'G-Agent: Goal queued for retry');
 
   // Trigger processing
   if (updated) {
@@ -349,37 +339,33 @@ export async function retryGoal(goalId: string): Promise<Goal | null> {
  *
  * This routes the goal to the Agent Lightning bridge for full code generation.
  */
-async function executeCodeGenGoal(
-  goal: Goal,
-  startTime: number,
-): Promise<void> {
-  const { generateCodeFromGoal } =
-    await import("../../gAgent/agentLightningBridge.js");
+async function executeCodeGenGoal(goal: Goal, startTime: number): Promise<void> {
+  const { generateCodeFromGoal } = await import('../../gAgent/agentLightningBridge.js');
 
   await goalRepository.update(goal.id, {
-    status: "executing",
+    status: 'executing',
     startedAt: new Date().toISOString(),
   });
 
-  messageBus.goalUpdated(goal.id, { status: "executing" });
+  messageBus.goalUpdated(goal.id, { status: 'executing' });
 
   logger.info(
     { goalId: goal.id, description: goal.description.slice(0, 50) },
-    "G-Agent: Routing goal to Agent Lightning for code generation",
+    'G-Agent: Routing goal to Agent Lightning for code generation'
   );
 
   try {
     const result = await generateCodeFromGoal(goal.description, {
       goalId: goal.id,
       userId: goal.userId,
-      userTier: "pro", // Default tier for goal queue
+      userTier: 'pro', // Default tier for goal queue
       workspaceRoot: goal.workspaceRoot,
       autonomous: true, // Goals are autonomous by default
       onProgress: (event) => {
         // Update goal checkpoints based on progress
         if (event.progress !== undefined) {
           goalRepository.addCheckpoint(goal.id, {
-            phase: event.phase || "codegen",
+            phase: event.phase || 'codegen',
             progress: event.progress,
             state: {
               type: event.type,
@@ -396,7 +382,7 @@ async function executeCodeGenGoal(
 
     if (result.success) {
       await goalRepository.update(goal.id, {
-        status: "completed",
+        status: 'completed',
         result: result.summary,
         completedAt: new Date().toISOString(),
       });
@@ -410,12 +396,12 @@ async function executeCodeGenGoal(
           agents: result.agents.length,
           durationMs: executionTime,
         },
-        "G-Agent: Agent Lightning code generation completed",
+        'G-Agent: Agent Lightning code generation completed'
       );
 
       // Dispatch webhook
-      await dispatchWebhook("ship.completed", {
-        type: "codegen-goal",
+      await dispatchWebhook('ship.completed', {
+        type: 'codegen-goal',
         goalId: goal.id,
         projectName: result.projectName,
         filesGenerated: result.files.length,
@@ -424,14 +410,14 @@ async function executeCodeGenGoal(
       });
     } else {
       await goalRepository.update(goal.id, {
-        status: "failed",
+        status: 'failed',
         error: result.error,
         result: result.summary,
         completedAt: new Date().toISOString(),
       });
 
       messageBus.goalUpdated(goal.id, {
-        status: "failed",
+        status: 'failed',
         error: result.error,
       });
 
@@ -440,16 +426,14 @@ async function executeCodeGenGoal(
           goalId: goal.id,
           error: result.error,
         },
-        "G-Agent: Agent Lightning code generation failed",
+        'G-Agent: Agent Lightning code generation failed'
       );
     }
 
     await writeAuditLog({
       userId: goal.userId,
-      action: result.success
-        ? "gagent.codegen.completed"
-        : "gagent.codegen.failed",
-      category: "agent",
+      action: result.success ? 'gagent.codegen.completed' : 'gagent.codegen.failed',
+      category: 'agent',
       target: goal.id,
       metadata: {
         projectName: result.projectName,
@@ -461,12 +445,12 @@ async function executeCodeGenGoal(
     const errorMsg = (err as Error).message;
 
     await goalRepository.update(goal.id, {
-      status: "failed",
+      status: 'failed',
       error: errorMsg,
       completedAt: new Date().toISOString(),
     });
 
-    messageBus.goalUpdated(goal.id, { status: "failed", error: errorMsg });
+    messageBus.goalUpdated(goal.id, { status: 'failed', error: errorMsg });
 
     throw err; // Re-throw for retry handling
   }
@@ -486,7 +470,7 @@ async function processNextGoal(userId: string): Promise<void> {
 
     if (userDueGoal) {
       // Convert scheduled goal to pending
-      await goalRepository.update(userDueGoal.id, { status: "pending" });
+      await goalRepository.update(userDueGoal.id, { status: 'pending' });
       goal = await goalRepository.getById(userDueGoal.id);
     }
 
@@ -499,14 +483,14 @@ async function processNextGoal(userId: string): Promise<void> {
     await executeGoal(goal);
   } catch (err) {
     await goalRepository.update(goal.id, {
-      status: "failed",
+      status: 'failed',
       error: (err as Error).message,
       completedAt: new Date().toISOString(),
     });
 
     logger.error(
       { goalId: goal.id, error: (err as Error).message },
-      "G-Agent: Goal execution failed",
+      'G-Agent: Goal execution failed'
     );
 
     // Retry if within limits
@@ -530,10 +514,10 @@ async function executeGoal(goal: Goal): Promise<void> {
 
   // Check if this is a code generation goal - route to Agent Lightning
   const isCodeGenGoal =
-    goal.tags?.includes("codegen") ||
-    goal.tags?.includes("agent-lightning") ||
+    goal.tags?.includes('codegen') ||
+    goal.tags?.includes('agent-lightning') ||
     /\b(generate|create|build|implement)\b.*\b(app|application|project|api|frontend|backend)\b/i.test(
-      goal.description,
+      goal.description
     );
 
   if (isCodeGenGoal) {
@@ -542,56 +526,49 @@ async function executeGoal(goal: Goal): Promise<void> {
   }
 
   await goalRepository.update(goal.id, {
-    status: "planning",
+    status: 'planning',
     startedAt: new Date().toISOString(),
   });
 
   // Publish planning status to MessageBus
-  messageBus.goalUpdated(goal.id, { status: "planning" });
+  messageBus.goalUpdated(goal.id, { status: 'planning' });
 
   logger.info(
     { goalId: goal.id, description: goal.description.slice(0, 50) },
-    "G-Agent: Starting goal execution",
+    'G-Agent: Starting goal execution'
   );
 
   // Spawn a planner agent via Supervisor for tracking
   let plannerInstanceId: string | undefined;
   try {
-    const plannerInstance = await supervisor.spawn("planner", {
+    const plannerInstance = await supervisor.spawn('planner', {
       taskId: `plan_${goal.id}`,
       goalId: goal.id,
       priority:
-        goal.priority === "urgent"
-          ? "urgent"
-          : goal.priority === "high"
-            ? "high"
-            : "normal",
+        goal.priority === 'urgent' ? 'urgent' : goal.priority === 'high' ? 'high' : 'normal',
       context: {
         description: goal.description,
         workspaceRoot: goal.workspaceRoot,
       },
     });
     plannerInstanceId = plannerInstance.id;
-    supervisor.updateInstanceStatus(plannerInstanceId, "running");
+    supervisor.updateInstanceStatus(plannerInstanceId, 'running');
   } catch (err) {
     // Non-fatal - continue without tracking
     logger.debug(
       { goalId: goal.id, error: (err as Error).message },
-      "Planner agent spawn failed, continuing without tracking",
+      'Planner agent spawn failed, continuing without tracking'
     );
   }
 
   // Check for matching patterns in memory first
   let plan: Plan;
   try {
-    const patterns = await gAgentMemoryService.findPatterns(
-      goal.description,
-      1,
-    );
+    const patterns = await gAgentMemoryService.findPatterns(goal.description, 1);
     if (patterns.length > 0 && patterns[0].confidence >= 0.8) {
       logger.info(
         { goalId: goal.id, patternId: patterns[0].id },
-        "G-Agent: Reusing pattern from memory",
+        'G-Agent: Reusing pattern from memory'
       );
       // Convert pattern to plan (simplified)
       plan = await runPlanCli(goal.description);
@@ -601,7 +578,7 @@ async function executeGoal(goal: Goal): Promise<void> {
 
     // Mark planner as completed
     if (plannerInstanceId) {
-      supervisor.updateInstanceStatus(plannerInstanceId, "completed", {
+      supervisor.updateInstanceStatus(plannerInstanceId, 'completed', {
         progress: 100,
         result: {
           success: true,
@@ -613,10 +590,10 @@ async function executeGoal(goal: Goal): Promise<void> {
   } catch (planErr) {
     // Mark planner as failed
     if (plannerInstanceId) {
-      supervisor.updateInstanceStatus(plannerInstanceId, "failed", {
+      supervisor.updateInstanceStatus(plannerInstanceId, 'failed', {
         result: {
           success: false,
-          output: "",
+          output: '',
           error: (planErr as Error).message,
           durationMs: Date.now() - startTime,
         },
@@ -627,57 +604,50 @@ async function executeGoal(goal: Goal): Promise<void> {
 
   await goalRepository.update(goal.id, {
     planId: plan.id,
-    status: "executing",
+    status: 'executing',
   });
 
   // Publish executing status to MessageBus
-  messageBus.goalUpdated(goal.id, { status: "executing", planId: plan.id });
+  messageBus.goalUpdated(goal.id, { status: 'executing', planId: plan.id });
 
   logger.info(
     { goalId: goal.id, planId: plan.id, taskCount: plan.tasks.length },
-    "G-Agent: Plan generated, starting execution",
+    'G-Agent: Plan generated, starting execution'
   );
 
   // Spawn an executor agent via Supervisor for tracking
   let executorInstanceId: string | undefined;
   try {
-    const executorInstance = await supervisor.spawn("executor", {
+    const executorInstance = await supervisor.spawn('executor', {
       taskId: `exec_${goal.id}`,
       goalId: goal.id,
       priority:
-        goal.priority === "urgent"
-          ? "urgent"
-          : goal.priority === "high"
-            ? "high"
-            : "normal",
+        goal.priority === 'urgent' ? 'urgent' : goal.priority === 'high' ? 'high' : 'normal',
       context: { planId: plan.id, taskCount: plan.tasks.length },
     });
     executorInstanceId = executorInstance.id;
-    supervisor.updateInstanceStatus(executorInstanceId, "running");
+    supervisor.updateInstanceStatus(executorInstanceId, 'running');
   } catch (err) {
     // Non-fatal - continue without tracking
     logger.debug(
       { goalId: goal.id, error: (err as Error).message },
-      "Executor agent spawn failed, continuing without tracking",
+      'Executor agent spawn failed, continuing without tracking'
     );
   }
 
   // Execute the plan
-  let finalStatus: "completed" | "failed" = "completed";
-  let resultOutput = "";
+  let finalStatus: 'completed' | 'failed' = 'completed';
+  let resultOutput = '';
 
   let taskIndex = 0;
   const totalTasks = plan.tasks.length;
 
   try {
-    for await (const event of gAgentTaskExecutor.executePlan(
-      plan,
-      goal.workspaceRoot,
-    )) {
+    for await (const event of gAgentTaskExecutor.executePlan(plan, goal.workspaceRoot)) {
       switch (event.type) {
-        case "task_completed":
+        case 'task_completed':
           taskIndex++;
-          resultOutput += `\n[${event.taskId}] Completed: ${event.output?.slice(0, 200) ?? ""}`;
+          resultOutput += `\n[${event.taskId}] Completed: ${event.output?.slice(0, 200) ?? ''}`;
 
           // Update executor progress
           if (executorInstanceId) {
@@ -685,7 +655,7 @@ async function executeGoal(goal: Goal): Promise<void> {
               executorInstanceId,
               `task_${taskIndex}`,
               Math.round((taskIndex / totalTasks) * 100),
-              { taskId: event.taskId },
+              { taskId: event.taskId }
             );
           }
 
@@ -694,12 +664,12 @@ async function executeGoal(goal: Goal): Promise<void> {
             `exec_${goal.id}`,
             executorInstanceId || goal.id,
             Math.round((taskIndex / totalTasks) * 100),
-            `Completed task ${taskIndex}/${totalTasks}`,
+            `Completed task ${taskIndex}/${totalTasks}`
           );
 
           // Save checkpoint
           await goalRepository.addCheckpoint(goal.id, {
-            phase: "task_completed",
+            phase: 'task_completed',
             progress: Math.round((taskIndex / totalTasks) * 100),
             state: {
               taskId: event.taskId,
@@ -707,11 +677,11 @@ async function executeGoal(goal: Goal): Promise<void> {
             },
           });
           break;
-        case "task_failed":
+        case 'task_failed':
           resultOutput += `\n[${event.taskId}] Failed: ${event.error}`;
           break;
-        case "plan_completed":
-          finalStatus = event.status === "completed" ? "completed" : "failed";
+        case 'plan_completed':
+          finalStatus = event.status === 'completed' ? 'completed' : 'failed';
           break;
       }
     }
@@ -720,26 +690,25 @@ async function executeGoal(goal: Goal): Promise<void> {
     if (executorInstanceId) {
       supervisor.updateInstanceStatus(
         executorInstanceId,
-        finalStatus === "completed" ? "completed" : "failed",
+        finalStatus === 'completed' ? 'completed' : 'failed',
         {
           progress: 100,
           result: {
-            success: finalStatus === "completed",
+            success: finalStatus === 'completed',
             output: resultOutput.slice(0, 1000),
             durationMs: Date.now() - startTime,
-            error:
-              finalStatus === "failed" ? "One or more tasks failed" : undefined,
+            error: finalStatus === 'failed' ? 'One or more tasks failed' : undefined,
           },
-        },
+        }
       );
     }
   } catch (execErr) {
     // Mark executor as failed
     if (executorInstanceId) {
-      supervisor.updateInstanceStatus(executorInstanceId, "failed", {
+      supervisor.updateInstanceStatus(executorInstanceId, 'failed', {
         result: {
           success: false,
-          output: "",
+          output: '',
           error: (execErr as Error).message,
           durationMs: Date.now() - startTime,
         },
@@ -752,9 +721,9 @@ async function executeGoal(goal: Goal): Promise<void> {
   executionTimes.push(executionTime);
 
   // For recurring goals, schedule next run
-  if (goal.cronExpression && finalStatus === "completed") {
+  if (goal.cronExpression && finalStatus === 'completed') {
     await goalRepository.update(goal.id, {
-      status: "scheduled",
+      status: 'scheduled',
       result: resultOutput.trim(),
       nextRunAt: calculateNextCronRun(goal.cronExpression),
       startedAt: undefined,
@@ -763,11 +732,11 @@ async function executeGoal(goal: Goal): Promise<void> {
 
     // Publish rescheduled status to MessageBus
     messageBus.goalUpdated(goal.id, {
-      status: "scheduled",
+      status: 'scheduled',
       result: resultOutput.trim(),
     });
 
-    logger.info({ goalId: goal.id }, "G-Agent: Recurring goal rescheduled");
+    logger.info({ goalId: goal.id }, 'G-Agent: Recurring goal rescheduled');
   } else {
     await goalRepository.update(goal.id, {
       status: finalStatus,
@@ -776,38 +745,35 @@ async function executeGoal(goal: Goal): Promise<void> {
     });
 
     // Publish final status to MessageBus
-    if (finalStatus === "completed") {
+    if (finalStatus === 'completed') {
       messageBus.goalCompleted(goal.id, resultOutput.trim());
     } else {
       messageBus.goalUpdated(goal.id, {
-        status: "failed",
-        error: "One or more tasks failed",
+        status: 'failed',
+        error: 'One or more tasks failed',
       });
     }
   }
 
   // Notify completion
-  await dispatchWebhook(
-    finalStatus === "completed" ? "ship.completed" : "ship.failed",
-    {
-      type: "goal",
-      goalId: goal.id,
-      description: goal.description,
-      status: finalStatus,
-      executionTimeMs: executionTime,
-      result: resultOutput.slice(0, 500),
-    },
-  );
+  await dispatchWebhook(finalStatus === 'completed' ? 'ship.completed' : 'ship.failed', {
+    type: 'goal',
+    goalId: goal.id,
+    description: goal.description,
+    status: finalStatus,
+    executionTimeMs: executionTime,
+    result: resultOutput.slice(0, 500),
+  });
 
   logger.info(
     { goalId: goal.id, status: finalStatus, executionTimeMs: executionTime },
-    "G-Agent: Goal execution finished",
+    'G-Agent: Goal execution finished'
   );
 
   await writeAuditLog({
     userId: goal.userId,
     action: `gagent.goal.${finalStatus}`,
-    category: "agent",
+    category: 'agent',
     target: goal.id,
     metadata: { executionTimeMs: executionTime, taskCount: plan.tasks.length },
   });
@@ -853,7 +819,7 @@ export async function createFollowUpGoal(
     scheduledAt?: string;
     priority?: GoalPriority;
     tags?: string[];
-  },
+  }
 ): Promise<Goal | null> {
   const parentGoal = await goalRepository.getById(parentGoalId);
   if (!parentGoal) return null;
@@ -869,29 +835,25 @@ export async function createFollowUpGoal(
         parentGoalId,
         patterns: suspiciousMatches,
         preview: description.substring(0, 100),
-        source: "gAgentGoalQueue.createFollowUpGoal",
+        source: 'gAgentGoalQueue.createFollowUpGoal',
       },
-      "G-Agent: Suspicious patterns detected in follow-up goal (self-scheduled)",
+      'G-Agent: Suspicious patterns detected in follow-up goal (self-scheduled)'
     );
 
-    if (process.env.BLOCK_SUSPICIOUS_PROMPTS === "true") {
-      throw new Error("Follow-up goal description contains blocked patterns");
+    if (process.env.BLOCK_SUSPICIOUS_PROMPTS === 'true') {
+      throw new Error('Follow-up goal description contains blocked patterns');
     }
   }
 
   const goal = await createGoal({
     userId: parentGoal.userId,
     description: sanitizedDescription,
-    priority: options?.priority ?? "normal",
-    triggerType: options?.scheduledAt ? "scheduled" : "self_scheduled",
+    priority: options?.priority ?? 'normal',
+    triggerType: options?.scheduledAt ? 'scheduled' : 'self_scheduled',
     scheduledAt: options?.scheduledAt,
     workspaceRoot: parentGoal.workspaceRoot,
     parentGoalId,
-    tags: [
-      ...(parentGoal.tags || []),
-      ...(options?.tags || []),
-      "self-scheduled",
-    ],
+    tags: [...(parentGoal.tags || []), ...(options?.tags || []), 'self-scheduled'],
   });
 
   logger.info(
@@ -900,7 +862,7 @@ export async function createFollowUpGoal(
       parentGoalId,
       description: sanitizedDescription.slice(0, 50),
     },
-    "G-Agent: Follow-up goal created",
+    'G-Agent: Follow-up goal created'
   );
 
   return goal;
@@ -943,7 +905,7 @@ export async function scheduleRecurringGoal(
     workspaceRoot?: string;
     priority?: GoalPriority;
     tags?: string[];
-  },
+  }
 ): Promise<Goal> {
   // Sanitize description
   const sanitizedDescription = sanitizeGoalDescription(description);
@@ -951,11 +913,11 @@ export async function scheduleRecurringGoal(
   return createGoal({
     userId,
     description: sanitizedDescription,
-    priority: options?.priority ?? "normal",
-    triggerType: "cron",
+    priority: options?.priority ?? 'normal',
+    triggerType: 'cron',
     cronExpression,
     workspaceRoot: options?.workspaceRoot,
-    tags: [...(options?.tags || []), "recurring"],
+    tags: [...(options?.tags || []), 'recurring'],
   });
 }
 
@@ -994,7 +956,7 @@ export function startGoalQueue(userId: string): void {
   // Process immediately
   processNextGoal(userId);
 
-  logger.info({ userId }, "G-Agent: Goal queue started");
+  logger.info({ userId }, 'G-Agent: Goal queue started');
 }
 
 /**
@@ -1012,7 +974,7 @@ export function stopGoalQueue(userId: string): void {
     processingIntervals.delete(userId);
   }
 
-  logger.info({ userId }, "G-Agent: Goal queue stopped");
+  logger.info({ userId }, 'G-Agent: Goal queue stopped');
 }
 
 /**
@@ -1043,9 +1005,7 @@ export async function getQueueStats(userId?: string): Promise<GoalQueueStats> {
     totalProcessed: dbStats.completed + dbStats.failed,
     avgExecutionTimeMs:
       executionTimes.length > 0
-        ? Math.round(
-          executionTimes.reduce((a, b) => a + b, 0) / executionTimes.length,
-        )
+        ? Math.round(executionTimes.reduce((a, b) => a + b, 0) / executionTimes.length)
         : 0,
   };
 

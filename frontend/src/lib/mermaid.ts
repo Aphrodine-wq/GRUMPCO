@@ -76,7 +76,8 @@ export async function initializeMermaid(config?: MermaidConfig): Promise<void> {
   const mermaid = await getMermaid();
 
   // Auto-detect theme from the DOM
-  const isDark = typeof document !== 'undefined' &&
+  const isDark =
+    typeof document !== 'undefined' &&
     document.documentElement.getAttribute('data-theme') === 'dark';
   const theme = config?.theme || (isDark ? 'dark' : 'default');
 
@@ -92,38 +93,40 @@ export async function initializeMermaid(config?: MermaidConfig): Promise<void> {
       useMaxWidth: true,
       curve: 'basis',
     },
-    themeVariables: isDark ? {
-      // Dark mode friendly colors
-      primaryColor: '#7c3aed',
-      primaryTextColor: '#ffffff',
-      primaryBorderColor: '#a78bfa',
-      lineColor: '#a78bfa',
-      secondaryColor: '#1e1e3f',
-      tertiaryColor: '#2d2d4a',
-      mainBkg: '#1e1e3f',
-      nodeBorder: '#a78bfa',
-      clusterBkg: 'rgba(30, 30, 63, 0.6)',
-      clusterBorder: '#a78bfa',
-      titleColor: '#ffffff',
-      edgeLabelBackground: '#1a1a2e',
-      textColor: '#e2e8f0',
-      nodeTextColor: '#ffffff',
-    } : {
-      // Light mode colors
-      primaryColor: '#7c3aed',
-      primaryTextColor: '#ffffff',
-      primaryBorderColor: '#6d28d9',
-      lineColor: '#7c3aed',
-      secondaryColor: '#f5f3ff',
-      tertiaryColor: '#ede9fe',
-      mainBkg: '#f5f3ff',
-      nodeBorder: '#7c3aed',
-      clusterBkg: '#f5f3ff',
-      titleColor: '#1f1147',
-      edgeLabelBackground: '#ffffff',
-      textColor: '#1f1147',
-      nodeTextColor: '#1f1147',
-    },
+    themeVariables: isDark
+      ? {
+          // Dark mode friendly colors
+          primaryColor: '#7c3aed',
+          primaryTextColor: '#ffffff',
+          primaryBorderColor: '#a78bfa',
+          lineColor: '#a78bfa',
+          secondaryColor: '#1e1e3f',
+          tertiaryColor: '#2d2d4a',
+          mainBkg: '#1e1e3f',
+          nodeBorder: '#a78bfa',
+          clusterBkg: 'rgba(30, 30, 63, 0.6)',
+          clusterBorder: '#a78bfa',
+          titleColor: '#ffffff',
+          edgeLabelBackground: '#1a1a2e',
+          textColor: '#e2e8f0',
+          nodeTextColor: '#ffffff',
+        }
+      : {
+          // Light mode colors
+          primaryColor: '#7c3aed',
+          primaryTextColor: '#ffffff',
+          primaryBorderColor: '#6d28d9',
+          lineColor: '#7c3aed',
+          secondaryColor: '#f5f3ff',
+          tertiaryColor: '#ede9fe',
+          mainBkg: '#f5f3ff',
+          nodeBorder: '#7c3aed',
+          clusterBkg: '#f5f3ff',
+          titleColor: '#1f1147',
+          edgeLabelBackground: '#ffffff',
+          textColor: '#1f1147',
+          nodeTextColor: '#1f1147',
+        },
     ...config,
   });
 

@@ -218,23 +218,6 @@
     border: 1px solid #e5e7eb;
   }
 
-  .default-model-row .field-label {
-    flex-shrink: 0;
-  }
-
-  .advanced-finetuning .field-label {
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
-  .inline-config-input-group .field-label {
-    margin-bottom: 0.5rem;
-  }
-
-  .models-custom-inner .section-desc {
-    margin-bottom: 0.75rem;
-  }
-
   .section-desc {
     font-size: 14px;
     color: var(--color-text-muted, #71717a);
@@ -262,10 +245,6 @@
     align-items: center;
     gap: 0.75rem;
     margin-bottom: 8px;
-  }
-
-  .field-label-row .field-label {
-    margin-bottom: 0;
   }
 
   .field-hint {
@@ -299,13 +278,6 @@
   .security-textarea {
     min-height: 120px;
     font-family: ui-monospace, monospace;
-  }
-
-  .field-hint code {
-    font-size: 0.75em;
-    padding: 0.1em 0.35em;
-    background: var(--color-bg-card, #f4f4f5);
-    border-radius: 4px;
   }
 
   .guard-rail-options {

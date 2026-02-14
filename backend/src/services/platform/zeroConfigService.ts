@@ -9,13 +9,9 @@
  * - Quick-start templates
  */
 
-import logger from "../../middleware/logger.js";
-import { getDatabase } from "../../db/database.js";
-import type {
-  Settings,
-  UserPreferences,
-  ModelsSettings,
-} from "../../types/settings.js";
+import logger from '../../middleware/logger.js';
+import { getDatabase } from '../../db/database.js';
+import type { Settings, UserPreferences, ModelsSettings } from '../../types/settings.js';
 
 // ========== Types ==========
 
@@ -32,7 +28,7 @@ export interface QuickStartTemplate {
   name: string;
   description: string;
   techStack: string[];
-  diagramStyle: "minimal" | "detailed" | "comprehensive";
+  diagramStyle: 'minimal' | 'detailed' | 'comprehensive';
   gAgentCapabilities: string[];
 }
 
@@ -47,9 +43,7 @@ export function detectProviders(): {
   configured: boolean;
   envVar: string;
 }[] {
-  const providers = [
-    { provider: "nim", envVar: "NVIDIA_NIM_API_KEY", name: "NVIDIA NIM" },
-  ];
+  const providers = [{ provider: 'nim', envVar: 'NVIDIA_NIM_API_KEY', name: 'NVIDIA NIM' }];
 
   return providers.map((p) => ({
     provider: p.provider,
@@ -74,11 +68,11 @@ export function getBestProvider(): {
   }
 
   // NVIDIA NIM is the only provider - use Llama 3.1 70B as default
-  const nimProvider = configured.find((c) => c.provider === "nim");
+  const nimProvider = configured.find((c) => c.provider === 'nim');
   if (nimProvider) {
     return {
-      provider: "nim",
-      modelId: "meta/llama-3.1-70b-instruct",
+      provider: 'nim',
+      modelId: 'meta/llama-3.1-70b-instruct',
     };
   }
 
@@ -93,43 +87,43 @@ export function detectFeatures(): string[] {
 
   // Redis
   if (process.env.REDIS_HOST) {
-    features.push("redis_cache");
-    features.push("redis_sessions");
+    features.push('redis_cache');
+    features.push('redis_sessions');
   }
 
   // Database
   if (process.env.DATABASE_URL) {
-    features.push("postgres_storage");
+    features.push('postgres_storage');
   }
 
   // Supabase
   if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
-    features.push("supabase_auth");
-    features.push("supabase_storage");
+    features.push('supabase_auth');
+    features.push('supabase_storage');
   }
 
   // NVIDIA advanced
   if (process.env.NVIDIA_RIVA_URL || process.env.NVIDIA_RIVA_API_KEY) {
-    features.push("nvidia_riva_speech");
+    features.push('nvidia_riva_speech');
   }
   if (process.env.NVIDIA_NEMO_GUARDRAILS_URL) {
-    features.push("nvidia_guardrails");
+    features.push('nvidia_guardrails');
   }
 
   // Messaging
   if (process.env.TELEGRAM_BOT_TOKEN) {
-    features.push("telegram_bot");
+    features.push('telegram_bot');
   }
   if (process.env.DISCORD_BOT_TOKEN) {
-    features.push("discord_bot");
+    features.push('discord_bot');
   }
   if (process.env.TWILIO_ACCOUNT_SID) {
-    features.push("twilio_sms");
+    features.push('twilio_sms');
   }
 
   // GitHub
   if (process.env.GITHUB_TOKEN) {
-    features.push("github_integration");
+    features.push('github_integration');
   }
 
   return features;
@@ -140,9 +134,7 @@ export function detectFeatures(): string[] {
 /**
  * Perform zero-config setup for a new user
  */
-export async function performZeroConfig(
-  userId: string,
-): Promise<ZeroConfigResult> {
+export async function performZeroConfig(userId: string): Promise<ZeroConfigResult> {
   const _providers = detectProviders();
   const features = detectFeatures();
   const warnings: string[] = [];
@@ -153,14 +145,14 @@ export async function performZeroConfig(
 
   if (!bestProvider) {
     warnings.push(
-      "No API provider configured. Add NVIDIA_NIM_API_KEY or another provider key to enable AI features.",
+      'No API provider configured. Add NVIDIA_NIM_API_KEY or another provider key to enable AI features.'
     );
-    suggestions.push("Get a free NVIDIA NIM API key at build.nvidia.com");
+    suggestions.push('Get a free NVIDIA NIM API key at build.nvidia.com');
   }
 
   // Check for recommended features
-  if (!features.includes("redis_cache")) {
-    suggestions.push("Add Redis for improved caching and session persistence");
+  if (!features.includes('redis_cache')) {
+    suggestions.push('Add Redis for improved caching and session persistence');
   }
 
   // Create default settings
@@ -173,10 +165,10 @@ export async function performZeroConfig(
     if (!existing) {
       // First-time user, apply defaults
       await db.saveSettings(userId, defaultSettings);
-      logger.info({ userId }, "Zero-config settings applied");
+      logger.info({ userId }, 'Zero-config settings applied');
     }
   } catch (err) {
-    logger.error({ err, userId }, "Failed to apply zero-config settings");
+    logger.error({ err, userId }, 'Failed to apply zero-config settings');
   }
 
   return {
@@ -191,38 +183,36 @@ export async function performZeroConfig(
 /**
  * Get default settings for a provider
  */
-function getDefaultSettings(
-  provider: { provider: string; modelId: string } | null,
-): Settings {
+function getDefaultSettings(provider: { provider: string; modelId: string } | null): Settings {
   const modelSettings: ModelsSettings = provider
     ? {
-        defaultProvider: provider.provider as "nim",
+        defaultProvider: provider.provider as 'nim',
         defaultModelId: provider.modelId,
-        modelPreset: "balanced",
+        modelPreset: 'balanced',
       }
     : {
-        modelPreset: "balanced",
+        modelPreset: 'balanced',
       };
 
   const defaultPreferences: UserPreferences = {
-    diagramStyle: "detailed",
-    primaryTechStack: ["React", "Node.js", "PostgreSQL"],
-    theme: "auto",
+    diagramStyle: 'detailed',
+    primaryTechStack: ['React', 'Node.js', 'PostgreSQL'],
+    theme: 'auto',
     analyticsOptIn: true,
     setupComplete: false,
-    density: "comfortable",
+    density: 'comfortable',
     gAgentCapabilities: [
-      "file",
-      "git",
-      "bash",
-      "npm",
-      "docker",
-      "webhooks",
-      "heartbeats",
-      "internet_search",
-      "database",
-      "api_call",
-      "monitoring",
+      'file',
+      'git',
+      'bash',
+      'npm',
+      'docker',
+      'webhooks',
+      'heartbeats',
+      'internet_search',
+      'database',
+      'api_call',
+      'monitoring',
     ],
     gAgentExternalAllowlist: [],
   };
@@ -243,67 +233,52 @@ function getDefaultSettings(
 
 export const QUICK_START_TEMPLATES: QuickStartTemplate[] = [
   {
-    id: "fullstack-react",
-    name: "Full-Stack React App",
-    description: "React + Node.js + PostgreSQL with authentication and API",
-    techStack: ["React", "Node.js", "PostgreSQL", "Docker"],
-    diagramStyle: "detailed",
-    gAgentCapabilities: ["file", "git", "bash", "npm", "docker"],
+    id: 'fullstack-react',
+    name: 'Full-Stack React App',
+    description: 'React + Node.js + PostgreSQL with authentication and API',
+    techStack: ['React', 'Node.js', 'PostgreSQL', 'Docker'],
+    diagramStyle: 'detailed',
+    gAgentCapabilities: ['file', 'git', 'bash', 'npm', 'docker'],
   },
   {
-    id: "python-api",
-    name: "Python API Service",
-    description: "FastAPI + SQLAlchemy + Redis for a scalable API",
-    techStack: ["Python", "PostgreSQL", "Redis", "Docker"],
-    diagramStyle: "detailed",
-    gAgentCapabilities: ["file", "git", "bash", "docker"],
+    id: 'python-api',
+    name: 'Python API Service',
+    description: 'FastAPI + SQLAlchemy + Redis for a scalable API',
+    techStack: ['Python', 'PostgreSQL', 'Redis', 'Docker'],
+    diagramStyle: 'detailed',
+    gAgentCapabilities: ['file', 'git', 'bash', 'docker'],
   },
   {
-    id: "static-site",
-    name: "Static Website",
-    description: "Simple static site with modern tooling",
-    techStack: ["Svelte", "Vercel"],
-    diagramStyle: "minimal",
-    gAgentCapabilities: ["file", "git", "npm"],
+    id: 'static-site',
+    name: 'Static Website',
+    description: 'Simple static site with modern tooling',
+    techStack: ['Svelte', 'Vercel'],
+    diagramStyle: 'minimal',
+    gAgentCapabilities: ['file', 'git', 'npm'],
   },
   {
-    id: "microservices",
-    name: "Microservices Architecture",
-    description: "Kubernetes-ready microservices with observability",
-    techStack: ["Go", "PostgreSQL", "Redis", "Docker", "AWS"],
-    diagramStyle: "comprehensive",
-    gAgentCapabilities: [
-      "file",
-      "git",
-      "bash",
-      "docker",
-      "cloud",
-      "monitoring",
-    ],
+    id: 'microservices',
+    name: 'Microservices Architecture',
+    description: 'Kubernetes-ready microservices with observability',
+    techStack: ['Go', 'PostgreSQL', 'Redis', 'Docker', 'AWS'],
+    diagramStyle: 'comprehensive',
+    gAgentCapabilities: ['file', 'git', 'bash', 'docker', 'cloud', 'monitoring'],
   },
   {
-    id: "mobile-backend",
-    name: "Mobile App Backend",
-    description: "Backend for iOS/Android apps with push notifications",
-    techStack: ["Node.js", "PostgreSQL", "Redis", "GCP"],
-    diagramStyle: "detailed",
-    gAgentCapabilities: ["file", "git", "bash", "npm", "docker", "api_call"],
+    id: 'mobile-backend',
+    name: 'Mobile App Backend',
+    description: 'Backend for iOS/Android apps with push notifications',
+    techStack: ['Node.js', 'PostgreSQL', 'Redis', 'GCP'],
+    diagramStyle: 'detailed',
+    gAgentCapabilities: ['file', 'git', 'bash', 'npm', 'docker', 'api_call'],
   },
   {
-    id: "ai-agent",
-    name: "AI Agent Project",
-    description: "LLM-powered agent with tool use and memory",
-    techStack: ["Python", "Redis", "Docker"],
-    diagramStyle: "comprehensive",
-    gAgentCapabilities: [
-      "file",
-      "git",
-      "bash",
-      "docker",
-      "api_call",
-      "webhooks",
-      "heartbeats",
-    ],
+    id: 'ai-agent',
+    name: 'AI Agent Project',
+    description: 'LLM-powered agent with tool use and memory',
+    techStack: ['Python', 'Redis', 'Docker'],
+    diagramStyle: 'comprehensive',
+    gAgentCapabilities: ['file', 'git', 'bash', 'docker', 'api_call', 'webhooks', 'heartbeats'],
   },
 ];
 
@@ -312,11 +287,11 @@ export const QUICK_START_TEMPLATES: QuickStartTemplate[] = [
  */
 export async function applyQuickStartTemplate(
   userId: string,
-  templateId: string,
+  templateId: string
 ): Promise<boolean> {
   const template = QUICK_START_TEMPLATES.find((t) => t.id === templateId);
   if (!template) {
-    logger.warn({ userId, templateId }, "Template not found");
+    logger.warn({ userId, templateId }, 'Template not found');
     return false;
   }
 
@@ -328,23 +303,19 @@ export async function applyQuickStartTemplate(
       ...settings.preferences,
       diagramStyle: template.diagramStyle,
       primaryTechStack: template.techStack,
-      gAgentCapabilities:
-        template.gAgentCapabilities as UserPreferences["gAgentCapabilities"],
-      theme: (settings.preferences?.theme ?? "auto") as
-        | "auto"
-        | "light"
-        | "dark",
+      gAgentCapabilities: template.gAgentCapabilities as UserPreferences['gAgentCapabilities'],
+      theme: (settings.preferences?.theme ?? 'auto') as 'auto' | 'light' | 'dark',
       analyticsOptIn: settings.preferences?.analyticsOptIn ?? false,
       setupComplete: settings.preferences?.setupComplete ?? false,
     };
     settings.updatedAt = new Date().toISOString();
 
     await db.saveSettings(userId, settings);
-    logger.info({ userId, templateId }, "Quick-start template applied");
+    logger.info({ userId, templateId }, 'Quick-start template applied');
 
     return true;
   } catch (err) {
-    logger.error({ err, userId, templateId }, "Failed to apply template");
+    logger.error({ err, userId, templateId }, 'Failed to apply template');
     return false;
   }
 }
@@ -359,51 +330,41 @@ export interface ProgressiveConfig {
   /** Features that are shown but disabled with upgrade prompt */
   premiumFeatures: string[];
   /** User's current experience level */
-  experienceLevel: "beginner" | "intermediate" | "advanced";
+  experienceLevel: 'beginner' | 'intermediate' | 'advanced';
 }
 
 /**
  * Get progressive disclosure config for a user
  */
-export async function getProgressiveConfig(
-  userId: string,
-): Promise<ProgressiveConfig> {
+export async function getProgressiveConfig(userId: string): Promise<ProgressiveConfig> {
   try {
     const db = getDatabase();
     const settings = await db.getSettings(userId);
-    const tier = settings?.tier || "free";
+    const tier = settings?.tier || 'free';
 
     // Determine experience level based on usage patterns
     // This would ideally be based on actual usage metrics
-    const experienceLevel = settings?.preferences?.setupComplete
-      ? "intermediate"
-      : "beginner";
+    const experienceLevel = settings?.preferences?.setupComplete ? 'intermediate' : 'beginner';
 
     // Features hidden for beginners
-    const beginnerHidden = [
-      "agent_swarm",
-      "multi_platform_msg",
-      "cicd",
-      "cloud",
-    ];
+    const beginnerHidden = ['agent_swarm', 'multi_platform_msg', 'cicd', 'cloud'];
 
     // Premium features (shown but gated)
-    const premiumFeatures =
-      tier === "free" ? ["cloud", "cicd", "large_swarm"] : [];
+    const premiumFeatures = tier === 'free' ? ['cloud', 'cicd', 'large_swarm'] : [];
 
     return {
-      basicMode: experienceLevel === "beginner",
-      hiddenFeatures: experienceLevel === "beginner" ? beginnerHidden : [],
+      basicMode: experienceLevel === 'beginner',
+      hiddenFeatures: experienceLevel === 'beginner' ? beginnerHidden : [],
       premiumFeatures,
       experienceLevel,
     };
   } catch (err) {
-    logger.error({ err, userId }, "Failed to get progressive config");
+    logger.error({ err, userId }, 'Failed to get progressive config');
     return {
       basicMode: true,
       hiddenFeatures: [],
       premiumFeatures: [],
-      experienceLevel: "beginner",
+      experienceLevel: 'beginner',
     };
   }
 }
@@ -413,10 +374,10 @@ export async function getProgressiveConfig(
  */
 export async function updateExperienceLevel(
   userId: string,
-  level: "beginner" | "intermediate" | "advanced",
+  level: 'beginner' | 'intermediate' | 'advanced'
 ): Promise<void> {
   // This would store in a user_metadata table or similar
-  logger.info({ userId, level }, "Experience level updated");
+  logger.info({ userId, level }, 'Experience level updated');
 }
 
 // ========== Health Check ==========

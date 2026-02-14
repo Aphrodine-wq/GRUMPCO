@@ -23,7 +23,7 @@
       compact={false}
       showAuto={true}
       embedded={true}
-      onSelect={onSelect}
+      {onSelect}
     />
   </div>
 {/if}

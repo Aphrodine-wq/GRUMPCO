@@ -23,8 +23,6 @@ export type GAgentCapabilityKey =
   | 'memory'
   | 'self_improve';
 
-
-
 /** Capabilities that require PRO+ tier */
 export const PREMIUM_CAPABILITIES: GAgentCapabilityKey[] = [
   'cloud',
@@ -61,15 +59,11 @@ export interface GAgentModelPreference {
   modelId?: string;
 }
 
-
-
 export interface GAgentPersona {
   tone?: string;
   style?: string;
   expertise?: string[];
 }
-
-
 
 export interface UserPreferences {
   diagramStyle: 'minimal' | 'detailed' | 'comprehensive';
@@ -92,9 +86,6 @@ export interface UserPreferences {
 
   /** When true, inject RAG context into chat for more tailored answers from indexed docs. */
   includeRagContext?: boolean;
-
-  /** Override URL for Jan local AI (e.g. http://localhost:1337). Used when listing models and streaming. */
-  janBaseUrl?: string;
 }
 
 const DEFAULT_G_AGENT_CAPABILITIES: GAgentCapabilityKey[] = [
@@ -116,8 +107,6 @@ const DEFAULT_G_AGENT_CAPABILITIES: GAgentCapabilityKey[] = [
   // 'memory',
   // 'self_improve',
 ];
-
-
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   diagramStyle: 'detailed',
@@ -252,33 +241,22 @@ export const density = derived(
 
 export const includeRagContext = derived(preferences, (p) => p.includeRagContext ?? false);
 
-export const janBaseUrl = derived(preferences, (p) => p.janBaseUrl ?? '');
-
 // Agent derived stores (new naming)
 export const gAgentCapabilities = derived(
   preferences,
   (p) => p.gAgentCapabilities ?? DEFAULT_G_AGENT_CAPABILITIES
 );
 
-export const gAgentExternalAllowlist = derived(
-  preferences,
-  (p) => p.gAgentExternalAllowlist ?? []
-);
+export const gAgentExternalAllowlist = derived(preferences, (p) => p.gAgentExternalAllowlist ?? []);
 
 export const gAgentPreferredModelSource = derived(
   preferences,
   (p) => p.gAgentPreferredModelSource ?? 'auto'
 );
 
-export const gAgentOllamaModel = derived(
-  preferences,
-  (p) => p.gAgentOllamaModel ?? 'glm4'
-);
+export const gAgentOllamaModel = derived(preferences, (p) => p.gAgentOllamaModel ?? 'glm4');
 
-export const gAgentPersona = derived(
-  preferences,
-  (p) => p.gAgentPersona ?? {}
-);
+export const gAgentPersona = derived(preferences, (p) => p.gAgentPersona ?? {});
 
 export const gAgentGoals = derived(preferences, (p) => p.gAgentGoals ?? []);
 
@@ -318,11 +296,6 @@ export const preferencesStore = {
     preferences.update((p) => ({ ...p, includeRagContext: enabled }));
   },
 
-  setJanBaseUrl: (url: string) => {
-    const trimmed = url.trim();
-    preferences.update((p) => ({ ...p, janBaseUrl: trimmed || undefined }));
-  },
-
   // Agent methods (new naming)
   setGAgentCapabilities: (capabilities: GAgentCapabilityKey[]) => {
     preferences.update((p) => ({
@@ -338,9 +311,10 @@ export const preferencesStore = {
   },
   toggleGAgentCapability: (key: GAgentCapabilityKey) => {
     preferences.update((p) => {
-      const current =
-        p.gAgentCapabilities ?? DEFAULT_G_AGENT_CAPABILITIES;
-      const next = current.includes(key) ? current.filter((k: GAgentCapabilityKey) => k !== key) : [...current, key];
+      const current = p.gAgentCapabilities ?? DEFAULT_G_AGENT_CAPABILITIES;
+      const next = current.includes(key)
+        ? current.filter((k: GAgentCapabilityKey) => k !== key)
+        : [...current, key];
       return {
         ...p,
         gAgentCapabilities: next,
@@ -375,10 +349,10 @@ export const preferencesStore = {
       const modelPref =
         source === 'ollama'
           ? {
-            source: 'ollama' as const,
-            provider: 'ollama',
-            modelId: p.gAgentOllamaModel ?? 'glm4',
-          }
+              source: 'ollama' as const,
+              provider: 'ollama',
+              modelId: p.gAgentOllamaModel ?? 'glm4',
+            }
           : source === 'cloud'
             ? { source: 'cloud' as const }
             : { source: 'auto' as const };

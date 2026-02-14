@@ -14,14 +14,14 @@
  * - Knowledge graph building
  */
 
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 
 // ============================================================================
 // Types and Interfaces
 // ============================================================================
 
 export interface ConversationTurn {
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
   timestamp: number;
   sessionId: string;
@@ -30,13 +30,7 @@ export interface ConversationTurn {
 
 export interface ExtractedPattern {
   id: string;
-  type:
-    | "preference"
-    | "constraint"
-    | "style"
-    | "topic"
-    | "workflow"
-    | "correction";
+  type: 'preference' | 'constraint' | 'style' | 'topic' | 'workflow' | 'correction';
   pattern: string;
   examples: string[];
   confidence: number;
@@ -73,7 +67,7 @@ export interface StyleProfile {
 
 export interface KnowledgeNode {
   id: string;
-  type: "concept" | "entity" | "action" | "preference";
+  type: 'concept' | 'entity' | 'action' | 'preference';
   label: string;
   properties: Record<string, unknown>;
   mentions: number;
@@ -147,9 +141,7 @@ export class PatternExtractor {
   /**
    * Extract preference patterns ("I prefer...", "I like...", "Don't use...")
    */
-  private extractPreferencePatterns(
-    turns: ConversationTurn[],
-  ): ExtractedPattern[] {
+  private extractPreferencePatterns(turns: ConversationTurn[]): ExtractedPattern[] {
     const patterns: ExtractedPattern[] = [];
     const prefRegexes = [
       /i (?:prefer|like|want|need|love)\s+(.+?)(?:\.|$)/gi,
@@ -160,7 +152,7 @@ export class PatternExtractor {
     ];
 
     for (const turn of turns) {
-      if (turn.role !== "user") continue;
+      if (turn.role !== 'user') continue;
 
       for (const regex of prefRegexes) {
         const matches = turn.content.matchAll(new RegExp(regex));
@@ -180,7 +172,7 @@ export class PatternExtractor {
 
             patterns.push({
               id: `pref_${this.hashString(pattern)}`,
-              type: "preference",
+              type: 'preference',
               pattern,
               examples: [turn.content.slice(0, 200)],
               confidence: Math.min(0.9, 0.3 + count * 0.1),
@@ -199,9 +191,7 @@ export class PatternExtractor {
   /**
    * Extract correction patterns (when user corrects assistant)
    */
-  private extractCorrectionPatterns(
-    turns: ConversationTurn[],
-  ): ExtractedPattern[] {
+  private extractCorrectionPatterns(turns: ConversationTurn[]): ExtractedPattern[] {
     const patterns: ExtractedPattern[] = [];
     const correctionIndicators = [
       /(?:no,?\s+)?(?:that's|that is)\s+(?:not|wrong)/i,
@@ -213,7 +203,7 @@ export class PatternExtractor {
 
     for (let i = 1; i < turns.length; i++) {
       const turn = turns[i];
-      if (turn.role !== "user") continue;
+      if (turn.role !== 'user') continue;
 
       // Check if this looks like a correction
       let isCorrection = false;
@@ -227,14 +217,14 @@ export class PatternExtractor {
       if (isCorrection) {
         // Extract what should be done instead
         const correctionMatch = turn.content.match(
-          /(?:should|must|need to|have to)\s+(.+?)(?:\.|$)/i,
+          /(?:should|must|need to|have to)\s+(.+?)(?:\.|$)/i
         );
 
         const pattern = correctionMatch?.[1] || turn.content.slice(0, 100);
 
         patterns.push({
           id: `corr_${this.hashString(pattern)}`,
-          type: "correction",
+          type: 'correction',
           pattern,
           examples: [turn.content],
           confidence: 0.7,
@@ -251,9 +241,7 @@ export class PatternExtractor {
   /**
    * Extract workflow patterns (sequence of actions)
    */
-  private extractWorkflowPatterns(
-    turns: ConversationTurn[],
-  ): ExtractedPattern[] {
+  private extractWorkflowPatterns(turns: ConversationTurn[]): ExtractedPattern[] {
     const patterns: ExtractedPattern[] = [];
     const workflowIndicators = [
       /(?:first|then|next|after that|finally)\s+/i,
@@ -262,7 +250,7 @@ export class PatternExtractor {
     ];
 
     for (const turn of turns) {
-      if (turn.role !== "user") continue;
+      if (turn.role !== 'user') continue;
 
       let hasWorkflow = false;
       for (const regex of workflowIndicators) {
@@ -276,11 +264,11 @@ export class PatternExtractor {
         // Extract the workflow description
         const steps = turn.content.split(/(?:then|next|after that|finally)/i);
         if (steps.length > 1) {
-          const pattern = steps.map((s) => s.trim().slice(0, 50)).join(" → ");
+          const pattern = steps.map((s) => s.trim().slice(0, 50)).join(' → ');
 
           patterns.push({
             id: `wf_${this.hashString(pattern)}`,
-            type: "workflow",
+            type: 'workflow',
             pattern,
             examples: [turn.content],
             confidence: 0.6,
@@ -300,8 +288,7 @@ export class PatternExtractor {
    */
   private extractTopicPatterns(turns: ConversationTurn[]): ExtractedPattern[] {
     const patterns: ExtractedPattern[] = [];
-    const topicCounts: Map<string, { count: number; examples: string[] }> =
-      new Map();
+    const topicCounts: Map<string, { count: number; examples: string[] }> = new Map();
 
     // Simple keyword extraction (could be replaced with NER or more sophisticated NLP)
     const topicRegexes = [
@@ -311,7 +298,7 @@ export class PatternExtractor {
     ];
 
     for (const turn of turns) {
-      if (turn.role !== "user") continue;
+      if (turn.role !== 'user') continue;
 
       for (const regex of topicRegexes) {
         const matches = turn.content.matchAll(new RegExp(regex));
@@ -338,7 +325,7 @@ export class PatternExtractor {
       if (data.count >= 2) {
         patterns.push({
           id: `topic_${this.hashString(topic)}`,
-          type: "topic",
+          type: 'topic',
           pattern: topic,
           examples: data.examples,
           confidence: Math.min(0.9, 0.4 + data.count * 0.1),
@@ -355,9 +342,7 @@ export class PatternExtractor {
   /**
    * Deduplicate and merge similar patterns
    */
-  private deduplicatePatterns(
-    patterns: ExtractedPattern[],
-  ): ExtractedPattern[] {
+  private deduplicatePatterns(patterns: ExtractedPattern[]): ExtractedPattern[] {
     const merged: Map<string, ExtractedPattern> = new Map();
 
     for (const pattern of patterns) {
@@ -580,7 +565,7 @@ export class KnowledgeGraphBuilder {
    */
   buildFromConversation(turns: ConversationTurn[]): void {
     for (const turn of turns) {
-      if (turn.role !== "user") continue;
+      if (turn.role !== 'user') continue;
 
       // Extract entities and concepts
       this.extractEntities(turn.content, turn.timestamp);
@@ -593,32 +578,30 @@ export class KnowledgeGraphBuilder {
    */
   private extractEntities(text: string, timestamp: number): void {
     // Technology/tool names
-    const techPattern =
-      /\b([A-Z][a-z]+(?:\.js|\.ts|\.py)?|[a-z]+(?:\.js|\.ts|\.py))\b/g;
+    const techPattern = /\b([A-Z][a-z]+(?:\.js|\.ts|\.py)?|[a-z]+(?:\.js|\.ts|\.py))\b/g;
     const techs = text.match(techPattern) || [];
 
     for (const tech of techs) {
       this.addOrUpdateNode({
         id: `tech_${tech.toLowerCase()}`,
-        type: "entity",
+        type: 'entity',
         label: tech,
-        properties: { category: "technology" },
+        properties: { category: 'technology' },
         mentions: 1,
         lastMentioned: timestamp,
       });
     }
 
     // Project/file names
-    const filePattern =
-      /\b([\w-]+\.(js|ts|py|css|html|json|yaml|yml|md|txt))\b/gi;
+    const filePattern = /\b([\w-]+\.(js|ts|py|css|html|json|yaml|yml|md|txt))\b/gi;
     const files = text.match(filePattern) || [];
 
     for (const file of files) {
       this.addOrUpdateNode({
         id: `file_${file.toLowerCase()}`,
-        type: "entity",
+        type: 'entity',
         label: file,
-        properties: { category: "file" },
+        properties: { category: 'file' },
         mentions: 1,
         lastMentioned: timestamp,
       });
@@ -634,7 +617,7 @@ export class KnowledgeGraphBuilder {
 
       this.addOrUpdateNode({
         id: `action_${action}`,
-        type: "action",
+        type: 'action',
         label: action,
         properties: {},
         mentions: 1,
@@ -642,12 +625,7 @@ export class KnowledgeGraphBuilder {
       });
 
       // Add edge: action -> target
-      this.addEdge(
-        `action_${action}`,
-        `concept_${target}`,
-        "targets",
-        text.slice(0, 100),
-      );
+      this.addEdge(`action_${action}`, `concept_${target}`, 'targets', text.slice(0, 100));
     }
   }
 
@@ -662,8 +640,8 @@ export class KnowledgeGraphBuilder {
       this.addEdge(
         `concept_${match[1].toLowerCase()}`,
         `concept_${match[2].toLowerCase()}`,
-        "uses",
-        text.slice(0, 100),
+        'uses',
+        text.slice(0, 100)
       );
     }
 
@@ -673,8 +651,8 @@ export class KnowledgeGraphBuilder {
       this.addEdge(
         `concept_${match[1].toLowerCase()}`,
         `concept_${match[2].toLowerCase()}`,
-        "depends_on",
-        text.slice(0, 100),
+        'depends_on',
+        text.slice(0, 100)
       );
     }
   }
@@ -686,10 +664,7 @@ export class KnowledgeGraphBuilder {
     const existing = this.nodes.get(node.id);
     if (existing) {
       existing.mentions += node.mentions;
-      existing.lastMentioned = Math.max(
-        existing.lastMentioned,
-        node.lastMentioned,
-      );
+      existing.lastMentioned = Math.max(existing.lastMentioned, node.lastMentioned);
     } else {
       this.nodes.set(node.id, { ...node });
     }
@@ -698,18 +673,13 @@ export class KnowledgeGraphBuilder {
   /**
    * Add an edge
    */
-  private addEdge(
-    from: string,
-    to: string,
-    relation: string,
-    evidence: string,
-  ): void {
+  private addEdge(from: string, to: string, relation: string, evidence: string): void {
     // Ensure nodes exist
     if (!this.nodes.has(from)) {
       this.nodes.set(from, {
         id: from,
-        type: "concept",
-        label: from.replace(/^\w+_/, ""),
+        type: 'concept',
+        label: from.replace(/^\w+_/, ''),
         properties: {},
         mentions: 1,
         lastMentioned: Date.now(),
@@ -718,8 +688,8 @@ export class KnowledgeGraphBuilder {
     if (!this.nodes.has(to)) {
       this.nodes.set(to, {
         id: to,
-        type: "concept",
-        label: to.replace(/^\w+_/, ""),
+        type: 'concept',
+        label: to.replace(/^\w+_/, ''),
         properties: {},
         mentions: 1,
         lastMentioned: Date.now(),
@@ -728,7 +698,7 @@ export class KnowledgeGraphBuilder {
 
     // Check for existing edge
     const existing = this.edges.find(
-      (e) => e.from === from && e.to === to && e.relation === relation,
+      (e) => e.from === from && e.to === to && e.relation === relation
     );
     if (existing) {
       existing.weight += 1;
@@ -765,7 +735,7 @@ export class KnowledgeGraphBuilder {
    */
   getSubgraph(
     nodeId: string,
-    depth: number = 2,
+    depth: number = 2
   ): { nodes: KnowledgeNode[]; edges: KnowledgeEdge[] } {
     const visited = new Set<string>();
     const resultNodes: KnowledgeNode[] = [];
@@ -851,11 +821,7 @@ export class ModelCompressor {
   /**
    * Encode style profile
    */
-  private encodeStyle(
-    style: StyleProfile,
-    embedding: Float64Array,
-    offset: number,
-  ): void {
+  private encodeStyle(style: StyleProfile, embedding: Float64Array, offset: number): void {
     embedding[offset] = style.formality;
     embedding[offset + 1] = style.verbosity;
     embedding[offset + 2] = style.technicality;
@@ -869,7 +835,7 @@ export class ModelCompressor {
   private encodePreferences(
     prefs: UserPreference[],
     embedding: Float64Array,
-    offset: number,
+    offset: number
   ): void {
     for (let i = 0; i < Math.min(prefs.length, 45); i++) {
       const pref = prefs[i];
@@ -887,7 +853,7 @@ export class ModelCompressor {
   private encodeConstraints(
     constraints: Constraint[],
     embedding: Float64Array,
-    offset: number,
+    offset: number
   ): void {
     for (let i = 0; i < Math.min(constraints.length, 50); i++) {
       const constraint = constraints[i];
@@ -904,7 +870,7 @@ export class ModelCompressor {
   private encodePatterns(
     patterns: ExtractedPattern[],
     embedding: Float64Array,
-    offset: number,
+    offset: number
   ): void {
     for (let i = 0; i < Math.min(patterns.length, 150); i++) {
       const pattern = patterns[i];
@@ -936,27 +902,27 @@ export class ModelCompressor {
 
     // Style summary
     const styleDesc = [];
-    if (model.styleProfile.formality > 0.7) styleDesc.push("formal");
-    else if (model.styleProfile.formality < 0.3) styleDesc.push("casual");
+    if (model.styleProfile.formality > 0.7) styleDesc.push('formal');
+    else if (model.styleProfile.formality < 0.3) styleDesc.push('casual');
 
-    if (model.styleProfile.verbosity > 0.7) styleDesc.push("verbose");
-    else if (model.styleProfile.verbosity < 0.3) styleDesc.push("concise");
+    if (model.styleProfile.verbosity > 0.7) styleDesc.push('verbose');
+    else if (model.styleProfile.verbosity < 0.3) styleDesc.push('concise');
 
-    if (model.styleProfile.technicality > 0.7) styleDesc.push("technical");
-    if (model.styleProfile.directness > 0.7) styleDesc.push("direct");
+    if (model.styleProfile.technicality > 0.7) styleDesc.push('technical');
+    if (model.styleProfile.directness > 0.7) styleDesc.push('direct');
 
     if (styleDesc.length > 0) {
-      parts.push(`Communication style: ${styleDesc.join(", ")}`);
+      parts.push(`Communication style: ${styleDesc.join(', ')}`);
     }
 
     // Top preferences
     const topPrefs = model.preferences
       .filter((p) => p.confidence > 0.5)
       .slice(0, 5)
-      .map((p) => `${p.positive ? "Prefers" : "Avoids"}: ${p.preference}`);
+      .map((p) => `${p.positive ? 'Prefers' : 'Avoids'}: ${p.preference}`);
 
     if (topPrefs.length > 0) {
-      parts.push(`Key preferences: ${topPrefs.join("; ")}`);
+      parts.push(`Key preferences: ${topPrefs.join('; ')}`);
     }
 
     // Top patterns
@@ -966,7 +932,7 @@ export class ModelCompressor {
       .map((p) => `${p.type}: ${p.pattern}`);
 
     if (topPatterns.length > 0) {
-      parts.push(`Common patterns: ${topPatterns.join("; ")}`);
+      parts.push(`Common patterns: ${topPatterns.join('; ')}`);
     }
 
     // Constraints
@@ -976,10 +942,10 @@ export class ModelCompressor {
       .map((c) => c.rule);
 
     if (hardConstraints.length > 0) {
-      parts.push(`Constraints: ${hardConstraints.join("; ")}`);
+      parts.push(`Constraints: ${hardConstraints.join('; ')}`);
     }
 
-    return parts.join("\n");
+    return parts.join('\n');
   }
 }
 
@@ -1013,13 +979,10 @@ export class RecursiveDistiller extends EventEmitter {
    */
   addTurn(turn: ConversationTurn): void {
     this.conversationBuffer.push(turn);
-    this.emit("turnAdded", turn);
+    this.emit('turnAdded', turn);
 
     // Auto-distill if buffer exceeds threshold
-    if (
-      this.autoDistill &&
-      this.conversationBuffer.length >= this.bufferThreshold
-    ) {
+    if (this.autoDistill && this.conversationBuffer.length >= this.bufferThreshold) {
       this.distill(turn.sessionId);
     }
   }
@@ -1031,13 +994,13 @@ export class RecursiveDistiller extends EventEmitter {
     for (const turn of turns) {
       this.conversationBuffer.push(turn);
     }
-    this.emit("conversationAdded", { count: turns.length });
+    this.emit('conversationAdded', { count: turns.length });
   }
 
   /**
    * Run distillation cycle
    */
-  distill(userId: string = "default"): DistillationResult {
+  distill(userId: string = 'default'): DistillationResult {
     // Get or create user model
     let model = this.userModels.get(userId);
     if (!model) {
@@ -1050,7 +1013,7 @@ export class RecursiveDistiller extends EventEmitter {
 
     // Get user turns from buffer
     const userTurns = this.conversationBuffer.filter(
-      (t) => t.sessionId.startsWith(userId) || userId === "default",
+      (t) => t.sessionId.startsWith(userId) || userId === 'default'
     );
 
     // Extract patterns
@@ -1058,9 +1021,7 @@ export class RecursiveDistiller extends EventEmitter {
     this.mergePatterns(model, newPatterns);
 
     // Analyze and update style
-    const userMessages = userTurns
-      .filter((t) => t.role === "user")
-      .map((t) => t.content);
+    const userMessages = userTurns.filter((t) => t.role === 'user').map((t) => t.content);
 
     const newStyle = this.styleAnalyzer.analyzeStyle(userMessages);
     this.mergeStyle(model, newStyle);
@@ -1090,7 +1051,7 @@ export class RecursiveDistiller extends EventEmitter {
 
     // Clear processed turns from buffer
     this.conversationBuffer = this.conversationBuffer.filter(
-      (t) => !(t.sessionId.startsWith(userId) || userId === "default"),
+      (t) => !(t.sessionId.startsWith(userId) || userId === 'default')
     );
 
     const result: DistillationResult = {
@@ -1103,7 +1064,7 @@ export class RecursiveDistiller extends EventEmitter {
       modelVersion: model.version,
     };
 
-    this.emit("distillationComplete", { userId, result });
+    this.emit('distillationComplete', { userId, result });
     return result;
   }
 
@@ -1147,7 +1108,7 @@ export class RecursiveDistiller extends EventEmitter {
     ];
 
     for (const turn of turns) {
-      if (turn.role !== "user") continue;
+      if (turn.role !== 'user') continue;
 
       for (const pattern of constraintPatterns) {
         const matches = turn.content.matchAll(new RegExp(pattern));
@@ -1177,16 +1138,12 @@ export class RecursiveDistiller extends EventEmitter {
   private extractPreferences(turns: ConversationTurn[]): UserPreference[] {
     const prefs: UserPreference[] = [];
 
-    const positivePatterns = [
-      /i (?:prefer|like|love|want)\s+(.+?)(?:\.|,|$)/gi,
-    ];
+    const positivePatterns = [/i (?:prefer|like|love|want)\s+(.+?)(?:\.|,|$)/gi];
 
-    const negativePatterns = [
-      /i (?:don't like|hate|dislike|don't want)\s+(.+?)(?:\.|,|$)/gi,
-    ];
+    const negativePatterns = [/i (?:don't like|hate|dislike|don't want)\s+(.+?)(?:\.|,|$)/gi];
 
     for (const turn of turns) {
-      if (turn.role !== "user") continue;
+      if (turn.role !== 'user') continue;
 
       // Positive preferences
       for (const pattern of positivePatterns) {
@@ -1232,24 +1189,24 @@ export class RecursiveDistiller extends EventEmitter {
   private categorizePreference(pref: string): string {
     const categories: Array<{ name: string; keywords: string[] }> = [
       {
-        name: "code_style",
-        keywords: ["tabs", "spaces", "indent", "format", "style", "naming"],
+        name: 'code_style',
+        keywords: ['tabs', 'spaces', 'indent', 'format', 'style', 'naming'],
       },
       {
-        name: "technology",
-        keywords: ["framework", "library", "tool", "language", "database"],
+        name: 'technology',
+        keywords: ['framework', 'library', 'tool', 'language', 'database'],
       },
       {
-        name: "workflow",
-        keywords: ["process", "step", "first", "before", "after"],
+        name: 'workflow',
+        keywords: ['process', 'step', 'first', 'before', 'after'],
       },
       {
-        name: "communication",
-        keywords: ["explain", "verbose", "brief", "detailed", "simple"],
+        name: 'communication',
+        keywords: ['explain', 'verbose', 'brief', 'detailed', 'simple'],
       },
       {
-        name: "output",
-        keywords: ["output", "return", "result", "response", "format"],
+        name: 'output',
+        keywords: ['output', 'return', 'result', 'response', 'format'],
       },
     ];
 
@@ -1262,24 +1219,18 @@ export class RecursiveDistiller extends EventEmitter {
       }
     }
 
-    return "general";
+    return 'general';
   }
 
   /**
    * Merge new patterns into model
    */
-  private mergePatterns(
-    model: UserModel,
-    newPatterns: ExtractedPattern[],
-  ): void {
+  private mergePatterns(model: UserModel, newPatterns: ExtractedPattern[]): void {
     for (const newPattern of newPatterns) {
       const existing = model.patterns.find((p) => p.id === newPattern.id);
       if (existing) {
         existing.frequency += newPattern.frequency;
-        existing.confidence = Math.max(
-          existing.confidence,
-          newPattern.confidence,
-        );
+        existing.confidence = Math.max(existing.confidence, newPattern.confidence);
         existing.lastSeen = Math.max(existing.lastSeen, newPattern.lastSeen);
         existing.examples.push(...newPattern.examples);
         if (existing.examples.length > 10) {
@@ -1291,9 +1242,7 @@ export class RecursiveDistiller extends EventEmitter {
     }
 
     // Sort by confidence * frequency
-    model.patterns.sort(
-      (a, b) => b.confidence * b.frequency - a.confidence * a.frequency,
-    );
+    model.patterns.sort((a, b) => b.confidence * b.frequency - a.confidence * a.frequency);
 
     // Keep top patterns
     if (model.patterns.length > 200) {
@@ -1312,11 +1261,9 @@ export class RecursiveDistiller extends EventEmitter {
     model.styleProfile.verbosity =
       (1 - alpha) * model.styleProfile.verbosity + alpha * newStyle.verbosity;
     model.styleProfile.technicality =
-      (1 - alpha) * model.styleProfile.technicality +
-      alpha * newStyle.technicality;
+      (1 - alpha) * model.styleProfile.technicality + alpha * newStyle.technicality;
     model.styleProfile.emotiveness =
-      (1 - alpha) * model.styleProfile.emotiveness +
-      alpha * newStyle.emotiveness;
+      (1 - alpha) * model.styleProfile.emotiveness + alpha * newStyle.emotiveness;
     model.styleProfile.directness =
       (1 - alpha) * model.styleProfile.directness + alpha * newStyle.directness;
 
@@ -1330,10 +1277,7 @@ export class RecursiveDistiller extends EventEmitter {
   /**
    * Merge constraints
    */
-  private mergeConstraints(
-    model: UserModel,
-    newConstraints: Constraint[],
-  ): void {
+  private mergeConstraints(model: UserModel, newConstraints: Constraint[]): void {
     for (const newConstraint of newConstraints) {
       const existing = model.constraints.find((c) => c.id === newConstraint.id);
       if (existing) {
@@ -1364,7 +1308,7 @@ export class RecursiveDistiller extends EventEmitter {
       const existing = model.preferences.find(
         (p) =>
           p.category === newPref.category &&
-          p.preference.toLowerCase() === newPref.preference.toLowerCase(),
+          p.preference.toLowerCase() === newPref.preference.toLowerCase()
       );
 
       if (existing) {
@@ -1434,20 +1378,15 @@ export class RecursiveDistiller extends EventEmitter {
 
     this.distillationInterval = setInterval(() => {
       // Distill for each active user
-      const sessions = new Set(
-        this.conversationBuffer.map((t) => t.sessionId.split("_")[0]),
-      );
+      const sessions = new Set(this.conversationBuffer.map((t) => t.sessionId.split('_')[0]));
       for (const userId of sessions) {
-        if (
-          this.conversationBuffer.filter((t) => t.sessionId.startsWith(userId))
-            .length >= 10
-        ) {
+        if (this.conversationBuffer.filter((t) => t.sessionId.startsWith(userId)).length >= 10) {
           this.distill(userId);
         }
       }
     }, intervalMs);
 
-    this.emit("autoDistillStarted", { intervalMs });
+    this.emit('autoDistillStarted', { intervalMs });
   }
 
   /**
@@ -1459,7 +1398,7 @@ export class RecursiveDistiller extends EventEmitter {
       clearInterval(this.distillationInterval);
       this.distillationInterval = null;
     }
-    this.emit("autoDistillStopped");
+    this.emit('autoDistillStopped');
   }
 
   /**
@@ -1473,7 +1412,7 @@ export class RecursiveDistiller extends EventEmitter {
    * Get knowledge graph for user
    */
   getKnowledgeGraph(
-    userId: string,
+    userId: string
   ): { nodes: KnowledgeNode[]; edges: KnowledgeEdge[] } | undefined {
     const model = this.userModels.get(userId);
     if (!model) return undefined;
@@ -1518,7 +1457,7 @@ export class RecursiveDistiller extends EventEmitter {
    */
   exportModel(userId: string):
     | {
-        model: Omit<UserModel, "nodes" | "edges"> & {
+        model: Omit<UserModel, 'nodes' | 'edges'> & {
           nodes: Array<[string, KnowledgeNode]>;
           edges: KnowledgeEdge[];
         };
@@ -1543,7 +1482,7 @@ export class RecursiveDistiller extends EventEmitter {
    * Import model from persistence
    */
   importModel(data: {
-    model: Omit<UserModel, "nodes" | "edges" | "embedding"> & {
+    model: Omit<UserModel, 'nodes' | 'edges' | 'embedding'> & {
       nodes: Array<[string, KnowledgeNode]>;
       edges: KnowledgeEdge[];
       embedding?: number[] | Float64Array;
@@ -1561,7 +1500,7 @@ export class RecursiveDistiller extends EventEmitter {
     };
 
     this.userModels.set(model.userId, model);
-    this.emit("modelImported", { userId: model.userId });
+    this.emit('modelImported', { userId: model.userId });
   }
 
   /**
@@ -1571,7 +1510,7 @@ export class RecursiveDistiller extends EventEmitter {
     this.conversationBuffer = [];
     this.userModels.clear();
     this.knowledgeBuilder.clear();
-    this.emit("cleared");
+    this.emit('cleared');
   }
 }
 
@@ -1589,8 +1528,7 @@ export class RecursiveDistillationService {
 
   static getInstance(): RecursiveDistillationService {
     if (!RecursiveDistillationService.instance) {
-      RecursiveDistillationService.instance =
-        new RecursiveDistillationService();
+      RecursiveDistillationService.instance = new RecursiveDistillationService();
     }
     return RecursiveDistillationService.instance;
   }

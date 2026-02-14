@@ -42,7 +42,15 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
     logger.warn('Stripe not configured');
     return { error: 'Billing not configured' };
   }
-  const { userId, priceId, successUrl, cancelUrl, customerId, customerEmail, metadata = {} } = params;
+  const {
+    userId,
+    priceId,
+    successUrl,
+    cancelUrl,
+    customerId,
+    customerEmail,
+    metadata = {},
+  } = params;
   const meta: Record<string, string> = { userId, priceId, ...metadata };
   try {
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -92,8 +100,10 @@ export async function handleWebhook(
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.metadata?.userId;
-      const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
-      const subId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+      const customerId =
+        typeof session.customer === 'string' ? session.customer : session.customer?.id;
+      const subId =
+        typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
       const tier = tierFromPriceId(session.metadata?.priceId);
       logger.info({ userId, customerId, subscriptionId: subId, tier }, 'Checkout completed');
       if (userId && (customerId || subId)) {
@@ -105,12 +115,16 @@ export async function handleWebhook(
       }
       return { handled: true };
     }
-    if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+    if (
+      event.type === 'customer.subscription.updated' ||
+      event.type === 'customer.subscription.deleted'
+    ) {
       const sub = event.data.object as Stripe.Subscription;
       const userId = sub.metadata?.userId;
       const price = sub.items?.data?.[0]?.price;
       const priceId = typeof price?.id === 'string' ? price.id : undefined;
-      const tier = event.type === 'customer.subscription.deleted' ? 'free' : tierFromPriceId(priceId);
+      const tier =
+        event.type === 'customer.subscription.deleted' ? 'free' : tierFromPriceId(priceId);
       logger.info({ userId, subscriptionId: sub.id, tier }, 'Subscription updated');
       if (userId) {
         await updateUserBillingMetadata(userId, {
@@ -131,8 +145,12 @@ export async function handleWebhook(
 
 function tierFromPriceId(priceId?: string): TierId {
   if (!priceId) return 'free';
-  const pro = [process.env.STRIPE_PRICE_PRO_MONTHLY, process.env.STRIPE_PRICE_PRO_YEARLY].filter(Boolean);
-  const team = [process.env.STRIPE_PRICE_TEAM_MONTHLY, process.env.STRIPE_PRICE_TEAM_YEARLY].filter(Boolean);
+  const pro = [process.env.STRIPE_PRICE_PRO_MONTHLY, process.env.STRIPE_PRICE_PRO_YEARLY].filter(
+    Boolean
+  );
+  const team = [process.env.STRIPE_PRICE_TEAM_MONTHLY, process.env.STRIPE_PRICE_TEAM_YEARLY].filter(
+    Boolean
+  );
   if (pro.includes(priceId)) return 'pro';
   if (team.includes(priceId)) return 'team';
   return 'free';
@@ -150,9 +168,11 @@ async function updateUserBillingMetadata(userId: string, updates: BillingMetadat
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_KEY;
     if (!url || !key || url === 'https://your-project.supabase.co') return;
-    const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+    const supabase = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
     const { data } = await supabase.auth.admin.getUserById(userId);
-    const existing = ((data?.user?.user_metadata) as Record<string, unknown>) ?? {};
+    const existing = (data?.user?.user_metadata as Record<string, unknown>) ?? {};
     const next = { ...existing, ...updates };
     await supabase.auth.admin.updateUserById(userId, { user_metadata: next });
     logger.info({ userId }, 'Updated user billing metadata');

@@ -10,4 +10,4 @@ export {
   type ModelConfig,
   type ModelCapability,
   type LLMProvider,
-} from "@grump/ai-core";
+} from '@grump/ai-core';

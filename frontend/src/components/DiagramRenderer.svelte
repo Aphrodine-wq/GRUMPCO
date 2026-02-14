@@ -150,7 +150,7 @@
         onRendered?.();
       } catch (err: any) {
         error = err.message || 'Failed to render diagram';
-        onError?.(error);
+        onError?.(error!);
       }
     }
 

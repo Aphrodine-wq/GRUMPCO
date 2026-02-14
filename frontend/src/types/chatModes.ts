@@ -76,7 +76,6 @@ export const SlashCommands = {
  * Model shortcuts for /use command
  */
 export const ModelShortcuts: Record<string, { provider: string; modelId: string }> = {
-  kimi: { provider: 'nim', modelId: 'moonshotai/kimi-k2.5' },
   'nemotron-ultra': { provider: 'nim', modelId: 'nvidia/llama-3.1-nemotron-ultra-253b-v1' },
   'nemotron-super': { provider: 'nim', modelId: 'nvidia/llama-3.3-nemotron-super-49b-v1.5' },
   auto: { provider: 'nim', modelId: '' },

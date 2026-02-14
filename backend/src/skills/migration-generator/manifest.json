@@ -1,49 +1,32 @@
 {
-    "id": "migration-generator",
-    "name": "Migration Generator",
-    "version": "1.0.0",
-    "description": "Generate database migration files for schema changes with up/down support",
-    "author": "G-Rump Team",
-    "category": "database",
-    "icon": "database",
-    "tags": [
-        "migration",
-        "database",
-        "schema",
-        "sql",
-        "orm"
+  "id": "migration-generator",
+  "name": "Migration Generator",
+  "version": "1.0.0",
+  "description": "Generate database migration files for schema changes with up/down support",
+  "author": "G-Rump Team",
+  "category": "database",
+  "icon": "database",
+  "tags": ["migration", "database", "schema", "sql", "orm"],
+  "capabilities": {
+    "providesTools": true,
+    "providesRoutes": false,
+    "providesPrompts": true,
+    "requiresWorkspace": true,
+    "supportsStreaming": false,
+    "supportsBackground": false
+  },
+  "permissions": ["file_read", "file_write"],
+  "triggers": {
+    "keywords": [
+      "migration",
+      "schema change",
+      "add column",
+      "create table",
+      "alter table",
+      "database migration"
     ],
-    "capabilities": {
-        "providesTools": true,
-        "providesRoutes": false,
-        "providesPrompts": true,
-        "requiresWorkspace": true,
-        "supportsStreaming": false,
-        "supportsBackground": false
-    },
-    "permissions": [
-        "file_read",
-        "file_write"
-    ],
-    "triggers": {
-        "keywords": [
-            "migration",
-            "schema change",
-            "add column",
-            "create table",
-            "alter table",
-            "database migration"
-        ],
-        "patterns": [
-            "(create|generate|add)\\s+migration",
-            "schema\\s+(change|update)"
-        ],
-        "commands": [
-            "/migrate",
-            "/migration"
-        ],
-        "fileExtensions": [
-            ".sql"
-        ]
-    }
+    "patterns": ["(create|generate|add)\\s+migration", "schema\\s+(change|update)"],
+    "commands": ["/migrate", "/migration"],
+    "fileExtensions": [".sql"]
+  }
 }

@@ -1,40 +1,15 @@
 {
-    "id": "database-helper",
-    "name": "Database Helper",
-    "version": "1.0.0",
-    "description": "Generate SQL queries, migrations, seed data, and schema diagrams. Supports PostgreSQL, MySQL, SQLite, and MongoDB.",
-    "category": "data",
-    "icon": "🗄️",
-    "tags": [
-        "database",
-        "sql",
-        "migration",
-        "schema",
-        "seed",
-        "orm"
-    ],
-    "capabilities": [
-        "query-generation",
-        "migration-creation",
-        "schema-analysis"
-    ],
-    "triggers": {
-        "keywords": [
-            "database",
-            "sql",
-            "migration",
-            "schema",
-            "query",
-            "seed data"
-        ],
-        "commands": [
-            "/sql",
-            "/migration",
-            "/schema"
-        ],
-        "fileExtensions": [
-            ".sql",
-            ".prisma"
-        ]
-    }
+  "id": "database-helper",
+  "name": "Database Helper",
+  "version": "1.0.0",
+  "description": "Generate SQL queries, migrations, seed data, and schema diagrams. Supports PostgreSQL, MySQL, SQLite, and MongoDB.",
+  "category": "data",
+  "icon": "🗄️",
+  "tags": ["database", "sql", "migration", "schema", "seed", "orm"],
+  "capabilities": ["query-generation", "migration-creation", "schema-analysis"],
+  "triggers": {
+    "keywords": ["database", "sql", "migration", "schema", "query", "seed data"],
+    "commands": ["/sql", "/migration", "/schema"],
+    "fileExtensions": [".sql", ".prisma"]
+  }
 }

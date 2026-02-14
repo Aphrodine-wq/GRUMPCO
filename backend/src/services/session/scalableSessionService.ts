@@ -9,18 +9,18 @@
  * - Instance health tracking
  */
 
-import { getRedisClient, isRedisConnected } from "../infra/redis.js";
-import logger from "../../middleware/logger.js";
+import { getRedisClient, isRedisConnected } from '../infra/redis.js';
+import logger from '../../middleware/logger.js';
 
 // ========== Configuration ==========
 
 const INSTANCE_ID = process.env.INSTANCE_ID || `instance_${process.pid}`;
-const CLUSTER_MODE = process.env.CLUSTER_MODE === "true";
+const CLUSTER_MODE = process.env.CLUSTER_MODE === 'true';
 
-const LOCK_PREFIX = "lock:";
-const RATE_LIMIT_PREFIX = "ratelimit:";
-const INSTANCE_PREFIX = "instance:";
-const SESSION_PREFIX = "session:";
+const LOCK_PREFIX = 'lock:';
+const RATE_LIMIT_PREFIX = 'ratelimit:';
+const INSTANCE_PREFIX = 'instance:';
+const SESSION_PREFIX = 'session:';
 
 // ========== Types ==========
 
@@ -63,17 +63,17 @@ export interface SessionInfo {
  */
 export async function acquireLock(
   resource: string,
-  ttlMs: number = 10000,
+  ttlMs: number = 10000
 ): Promise<DistributedLock | null> {
   const redis = getRedisClient();
   const key = `${LOCK_PREFIX}${resource}`;
   const token = `${INSTANCE_ID}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
   try {
-    const result = await redis.set(key, token, "PX", ttlMs, "NX");
+    const result = await redis.set(key, token, 'PX', ttlMs, 'NX');
 
-    if (result === "OK") {
-      logger.debug({ resource, token, ttlMs }, "Lock acquired");
+    if (result === 'OK') {
+      logger.debug({ resource, token, ttlMs }, 'Lock acquired');
       return {
         key,
         token,
@@ -83,7 +83,7 @@ export async function acquireLock(
 
     return null;
   } catch (err) {
-    logger.error({ err, resource }, "Failed to acquire lock");
+    logger.error({ err, resource }, 'Failed to acquire lock');
     return null;
   }
 }
@@ -109,14 +109,14 @@ export async function releaseLock(lock: DistributedLock): Promise<boolean> {
     const released = result === 1;
 
     if (released) {
-      logger.debug({ key: lock.key }, "Lock released");
+      logger.debug({ key: lock.key }, 'Lock released');
     } else {
-      logger.warn({ key: lock.key }, "Lock not owned or expired");
+      logger.warn({ key: lock.key }, 'Lock not owned or expired');
     }
 
     return released;
   } catch (err) {
-    logger.error({ err, key: lock.key }, "Failed to release lock");
+    logger.error({ err, key: lock.key }, 'Failed to release lock');
     return false;
   }
 }
@@ -124,10 +124,7 @@ export async function releaseLock(lock: DistributedLock): Promise<boolean> {
 /**
  * Extend a lock's TTL
  */
-export async function extendLock(
-  lock: DistributedLock,
-  ttlMs: number,
-): Promise<boolean> {
+export async function extendLock(lock: DistributedLock, ttlMs: number): Promise<boolean> {
   const redis = getRedisClient();
 
   const script = `
@@ -139,16 +136,10 @@ export async function extendLock(
   `;
 
   try {
-    const result = await redis.eval(
-      script,
-      1,
-      lock.key,
-      lock.token,
-      ttlMs.toString(),
-    );
+    const result = await redis.eval(script, 1, lock.key, lock.token, ttlMs.toString());
     return result === 1;
   } catch (err) {
-    logger.error({ err, key: lock.key }, "Failed to extend lock");
+    logger.error({ err, key: lock.key }, 'Failed to extend lock');
     return false;
   }
 }
@@ -159,7 +150,7 @@ export async function extendLock(
 export async function withLock<T>(
   resource: string,
   fn: () => Promise<T>,
-  options: { ttlMs?: number; retryMs?: number; maxRetries?: number } = {},
+  options: { ttlMs?: number; retryMs?: number; maxRetries?: number } = {}
 ): Promise<T | null> {
   const { ttlMs = 10000, retryMs = 100, maxRetries = 50 } = options;
 
@@ -176,7 +167,7 @@ export async function withLock<T>(
   }
 
   if (!lock) {
-    logger.warn({ resource, retries }, "Failed to acquire lock after retries");
+    logger.warn({ resource, retries }, 'Failed to acquire lock after retries');
     return null;
   }
 
@@ -195,7 +186,7 @@ export async function withLock<T>(
 export async function checkRateLimit(
   key: string,
   limit: number,
-  windowMs: number,
+  windowMs: number
 ): Promise<RateLimitResult> {
   const redis = getRedisClient();
   const now = Date.now();
@@ -223,7 +214,7 @@ export async function checkRateLimit(
 
     if (currentCount >= limit) {
       // Get oldest entry to calculate retry-after
-      const oldest = await redis.zrange(redisKey, 0, 0, "WITHSCORES");
+      const oldest = await redis.zrange(redisKey, 0, 0, 'WITHSCORES');
       const oldestTime = oldest.length >= 2 ? parseInt(oldest[1], 10) : now;
       const retryAfter = Math.max(0, oldestTime + windowMs - now);
 
@@ -241,7 +232,7 @@ export async function checkRateLimit(
       resetAt: now + windowMs,
     };
   } catch (err) {
-    logger.error({ err, key }, "Rate limit check failed");
+    logger.error({ err, key }, 'Rate limit check failed');
     // Fail open
     return { allowed: true, remaining: limit, resetAt: now + windowMs };
   }
@@ -253,7 +244,7 @@ export async function checkRateLimit(
 export async function checkUserRateLimit(
   userId: string,
   limit: number = 100,
-  windowMs: number = 60000,
+  windowMs: number = 60000
 ): Promise<RateLimitResult> {
   return checkRateLimit(`user:${userId}`, limit, windowMs);
 }
@@ -264,7 +255,7 @@ export async function checkUserRateLimit(
 export async function checkIpRateLimit(
   ip: string,
   limit: number = 200,
-  windowMs: number = 60000,
+  windowMs: number = 60000
 ): Promise<RateLimitResult> {
   return checkRateLimit(`ip:${ip}`, limit, windowMs);
 }
@@ -291,12 +282,12 @@ export async function registerInstance(): Promise<void> {
 
   try {
     await redis.setex(key, 60, JSON.stringify(info));
-    logger.info({ instanceId: INSTANCE_ID }, "Instance registered");
+    logger.info({ instanceId: INSTANCE_ID }, 'Instance registered');
 
     // Start heartbeat
     startHeartbeat();
   } catch (err) {
-    logger.error({ err }, "Failed to register instance");
+    logger.error({ err }, 'Failed to register instance');
   }
 }
 
@@ -320,7 +311,7 @@ function startHeartbeat(): void {
         await redis.setex(key, 60, JSON.stringify(info));
       }
     } catch (err) {
-      logger.error({ err }, "Heartbeat failed");
+      logger.error({ err }, 'Heartbeat failed');
     }
   }, 30000);
 }
@@ -341,9 +332,9 @@ export async function deregisterInstance(): Promise<void> {
 
   try {
     await redis.del(key);
-    logger.info({ instanceId: INSTANCE_ID }, "Instance deregistered");
+    logger.info({ instanceId: INSTANCE_ID }, 'Instance deregistered');
   } catch (err) {
-    logger.error({ err }, "Failed to deregister instance");
+    logger.error({ err }, 'Failed to deregister instance');
   }
 }
 
@@ -358,11 +349,9 @@ export async function getInstances(): Promise<InstanceInfo[]> {
     if (keys.length === 0) return [];
 
     const values = await redis.mget(keys);
-    return values
-      .filter(Boolean)
-      .map((v) => JSON.parse(v as string) as InstanceInfo);
+    return values.filter(Boolean).map((v) => JSON.parse(v as string) as InstanceInfo);
   } catch (err) {
-    logger.error({ err }, "Failed to get instances");
+    logger.error({ err }, 'Failed to get instances');
     return [];
   }
 }
@@ -372,9 +361,7 @@ export async function getInstances(): Promise<InstanceInfo[]> {
 /**
  * Get session with instance affinity
  */
-export async function getSessionWithAffinity(
-  sessionId: string,
-): Promise<SessionInfo | null> {
+export async function getSessionWithAffinity(sessionId: string): Promise<SessionInfo | null> {
   const redis = getRedisClient();
   const key = `${SESSION_PREFIX}${sessionId}`;
 
@@ -383,7 +370,7 @@ export async function getSessionWithAffinity(
     if (!data) return null;
     return JSON.parse(data) as SessionInfo;
   } catch (err) {
-    logger.error({ err, sessionId }, "Failed to get session");
+    logger.error({ err, sessionId }, 'Failed to get session');
     return null;
   }
 }
@@ -395,7 +382,7 @@ export async function setSession(
   sessionId: string,
   userId: string,
   data: Record<string, unknown>,
-  ttlSeconds: number = 86400,
+  ttlSeconds: number = 86400
 ): Promise<void> {
   const redis = getRedisClient();
   const key = `${SESSION_PREFIX}${sessionId}`;
@@ -412,7 +399,7 @@ export async function setSession(
   try {
     await redis.setex(key, ttlSeconds, JSON.stringify(session));
   } catch (err) {
-    logger.error({ err, sessionId }, "Failed to set session");
+    logger.error({ err, sessionId }, 'Failed to set session');
     throw err;
   }
 }
@@ -433,7 +420,7 @@ export async function touchSession(sessionId: string): Promise<void> {
       await redis.setex(key, 86400, JSON.stringify(session));
     }
   } catch (err) {
-    logger.error({ err, sessionId }, "Failed to touch session");
+    logger.error({ err, sessionId }, 'Failed to touch session');
   }
 }
 
@@ -447,7 +434,7 @@ export async function deleteSession(sessionId: string): Promise<void> {
   try {
     await redis.del(key);
   } catch (err) {
-    logger.error({ err, sessionId }, "Failed to delete session");
+    logger.error({ err, sessionId }, 'Failed to delete session');
   }
 }
 

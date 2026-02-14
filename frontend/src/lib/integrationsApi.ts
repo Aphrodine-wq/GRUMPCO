@@ -44,9 +44,6 @@ export type IntegrationProvider =
   | 'anthropic'
   | 'openrouter'
   | 'google'
-  | 'kimi'
-  | 'mistral'
-  | 'jan'
   | 'custom';
 
 export type IntegrationStatus = 'active' | 'disabled' | 'error' | 'pending';
@@ -754,27 +751,7 @@ export const PROVIDER_METADATA: Record<
     description: 'Gemini AI models — fast and versatile',
     authType: 'api_key',
   },
-  kimi: {
-    name: 'Kimi',
-    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z',
-    color: '#00C9A7',
-    description: 'Moonshot AI Kimi — great balance of speed and quality',
-    authType: 'api_key',
-  },
-  mistral: {
-    name: 'Mistral AI',
-    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z',
-    color: '#FF7000',
-    description: 'Efficient open AI models',
-    authType: 'api_key',
-  },
-  jan: {
-    name: 'Jan',
-    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z',
-    color: '#1E88E5',
-    description: 'Run AI models locally via Jan',
-    authType: 'local',
-  },
+
   custom: {
     name: 'Custom Integration',
     icon: 'M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 4a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5a1 1 0 0 1 1-1z',
