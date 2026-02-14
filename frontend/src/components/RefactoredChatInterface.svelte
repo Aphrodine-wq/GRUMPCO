@@ -99,7 +99,19 @@
   // Utilities
   import { processError, logError } from '../utils/errorHandler';
   import { trackMessageSent, trackError } from '../lib/analytics';
-  import { Mic, BookOpen, LayoutGrid, MessageCircle, Sparkles, FolderOpen, X } from 'lucide-svelte';
+  import {
+    Mic,
+    BookOpen,
+    LayoutGrid,
+    MessageCircle,
+    Sparkles,
+    FolderOpen,
+    X,
+    Building2,
+    Code2,
+    Plug,
+    Palette,
+  } from 'lucide-svelte';
 
   import type { Message, ContentBlock } from '../types';
 
@@ -188,6 +200,34 @@
   let showApprovalModal = $state(false);
   let showSectionPicker = $state(false);
   let lastMermaidCode = $state('');
+
+  const SUGGESTIONS = [
+    {
+      icon: Building2,
+      label: 'Design microservices',
+      text: 'Design a microservices architecture for an e-commerce platform',
+    },
+    {
+      icon: Code2,
+      label: 'Build full-stack app',
+      text: 'Build a task management app with React, Node.js, and PostgreSQL',
+    },
+    {
+      icon: Plug,
+      label: 'Create REST API',
+      text: 'Create a RESTful API with user authentication using JWT',
+    },
+    {
+      icon: Palette,
+      label: 'Design system',
+      text: 'Build a component library with React and Storybook',
+    },
+  ];
+
+  function handleSuggestionClick(text: string) {
+    inputText = text;
+    inputRef?.focus();
+  }
 
   // Chat Question Modal -- auto-detect numbered questions from AI
   let showChatQuestionModal = $state(false);
@@ -917,6 +957,18 @@
                   <p class="empty-subtitle">
                     Describe your project and I'll help design the architecture
                   </p>
+
+                  <div class="mt-6 flex max-w-2xl flex-wrap justify-center gap-2">
+                    {#each SUGGESTIONS as s}
+                      <button
+                        class="flex items-center gap-2 rounded-full border border-border bg-subtle px-3 py-2 text-sm text-secondary transition-all hover:-translate-y-0.5 hover:border-electric hover:bg-surface hover:text-electric"
+                        onclick={() => handleSuggestionClick(s.text)}
+                      >
+                        <s.icon size={16} />
+                        <span>{s.label}</span>
+                      </button>
+                    {/each}
+                  </div>
                 </div>
               {:else}
                 {#if hiddenMessageCount > 0}
