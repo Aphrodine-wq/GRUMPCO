@@ -10003,6 +10003,20 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@electron/get@3.1.0':
+    dependencies:
+      debug: 4.4.3
+      env-paths: 2.2.1
+      fs-extra: 8.1.0
+      got: 11.8.6
+      progress: 2.0.3
+      semver: 6.3.1
+      sumchecker: 3.0.1
+    optionalDependencies:
+      global-agent: 3.0.0
+    transitivePeerDependencies:
+      - supports-color
+
   '@electron/notarize@2.2.1':
     dependencies:
       debug: 4.4.3
