@@ -468,8 +468,7 @@
   >
     <div
       class="command-palette"
-      role="none"
-      tabindex="-1"
+      tabindex="0"
       onclick={(e) => e.stopPropagation()}
       onkeydown={handleKeydown}
     >
@@ -485,9 +484,7 @@
           aria-expanded="true"
           aria-autocomplete="list"
           aria-controls="command-list"
-          aria-activedescendant={filteredCommands.length > 0
-            ? `command-item-${selectedIndex}`
-            : undefined}
+          aria-activedescendant="command-item-{selectedIndex}"
         />
       </div>
       <div class="command-palette-list" role="listbox" id="command-list">
@@ -503,7 +500,7 @@
               <button
                 class="command-item"
                 class:selected={item.index === selectedIndex}
-                id={`command-item-${item.index}`}
+                id="command-item-{item.index}"
                 onclick={() => executeCommand(item.command)}
                 onmouseenter={() => (selectedIndex = item.index)}
                 role="option"
@@ -652,6 +649,7 @@
   .command-item:hover,
   .command-item.selected {
     background: var(--color-bg-subtle);
+    box-shadow: inset 3px 0 0 var(--color-primary);
   }
 
   .command-item .command-icon {
