@@ -90,7 +90,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "bullmq": "^5.67.3",
+    "bullmq": "^5.69.2",
     "chokidar": "^5.0.0",
     "ioredis": "^5.3.0",
     "ws": "^8.18.0",
