@@ -375,21 +375,19 @@
     filteredCommands.length > 0 ? `command-item-${selectedIndex}` : undefined
   );
 
-  type ListItem =
-    | { type: 'header'; category: CommandCategory }
-    | { type: 'command'; command: Command; index: number };
-  const listItems = $derived.by(() => {
-    const items: ListItem[] = [];
-    const seen = new Set<CommandCategory>();
-    let idx = 0;
-    for (const cmd of filteredCommands) {
-      if (!seen.has(cmd.category)) {
-        seen.add(cmd.category);
-        items.push({ type: 'header', category: cmd.category });
+  const groupedCommands = $derived.by(() => {
+    const groups: { category: CommandCategory; commands: { cmd: Command; globalIndex: number }[] }[] =
+      [];
+    let currentCategory: CommandCategory | null = null;
+
+    filteredCommands.forEach((cmd, index) => {
+      if (cmd.category !== currentCategory) {
+        currentCategory = cmd.category;
+        groups.push({ category: currentCategory, commands: [] });
       }
-      items.push({ type: 'command', command: cmd, index: idx++ });
-    }
-    return items;
+      groups[groups.length - 1].commands.push({ cmd, globalIndex: index });
+    });
+    return groups;
   });
 
   function close() {
@@ -494,35 +492,39 @@
         {#if filteredCommands.length === 0}
           <div class="command-palette-empty">No commands found</div>
         {:else}
-          {#each listItems as item}
-            {#if item.type === 'header'}
-              <div class="command-category-header" role="presentation">
-                {categoryLabels[item.category]}
-              </div>
-            {:else}
-              <button
-                id="command-item-{item.index}"
-                class="command-item"
-                class:selected={item.index === selectedIndex}
-                id="command-item-{item.index}"
-                onclick={() => executeCommand(item.command)}
-                onmouseenter={() => (selectedIndex = item.index)}
-                role="option"
-                aria-selected={item.index === selectedIndex}
-                tabindex="-1"
+          {#each groupedCommands as group}
+            <div role="group" aria-labelledby="header-{group.category}">
+              <div
+                id="header-{group.category}"
+                class="command-category-header"
+                role="presentation"
               >
-                <span class="command-icon">
-                  {#if item.command.icon}
-                    {@const IconC = item.command.icon}
-                    <IconC size={18} />
+                {categoryLabels[group.category]}
+              </div>
+              {#each group.commands as { cmd, globalIndex }}
+                <button
+                  id="command-item-{globalIndex}"
+                  class="command-item"
+                  class:selected={globalIndex === selectedIndex}
+                  onclick={() => executeCommand(cmd)}
+                  onmouseenter={() => (selectedIndex = globalIndex)}
+                  role="option"
+                  aria-selected={globalIndex === selectedIndex}
+                  tabindex="-1"
+                >
+                  <span class="command-icon">
+                    {#if cmd.icon}
+                      {@const IconC = cmd.icon}
+                      <IconC size={18} />
+                    {/if}
+                  </span>
+                  <span class="command-label">{cmd.label}</span>
+                  {#if cmd.shortcut}
+                    <span class="command-shortcut">{cmd.shortcut}</span>
                   {/if}
-                </span>
-                <span class="command-label">{item.command.label}</span>
-                {#if item.command.shortcut}
-                  <span class="command-shortcut">{item.command.shortcut}</span>
-                {/if}
-              </button>
-            {/if}
+                </button>
+              {/each}
+            </div>
           {/each}
         {/if}
       </div>
