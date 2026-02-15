@@ -375,21 +375,28 @@
     filteredCommands.length > 0 ? `command-item-${selectedIndex}` : undefined
   );
 
-  type ListItem =
-    | { type: 'header'; category: CommandCategory }
-    | { type: 'command'; command: Command; index: number };
-  const listItems = $derived.by(() => {
-    const items: ListItem[] = [];
-    const seen = new Set<CommandCategory>();
+  type GroupedItems = {
+    category: CommandCategory;
+    commands: { command: Command; index: number }[];
+  }[];
+
+  const groupedItems = $derived.by(() => {
+    const groups: GroupedItems = [];
+    let currentCategory: CommandCategory | null = null;
+    let currentGroup: GroupedItems[0] | null = null;
     let idx = 0;
+
     for (const cmd of filteredCommands) {
-      if (!seen.has(cmd.category)) {
-        seen.add(cmd.category);
-        items.push({ type: 'header', category: cmd.category });
+      if (cmd.category !== currentCategory) {
+        currentCategory = cmd.category;
+        currentGroup = { category: currentCategory, commands: [] };
+        groups.push(currentGroup);
       }
-      items.push({ type: 'command', command: cmd, index: idx++ });
+      if (currentGroup) {
+        currentGroup.commands.push({ command: cmd, index: idx++ });
+      }
     }
-    return items;
+    return groups;
   });
 
   function close() {
@@ -470,11 +477,7 @@
     onclick={close}
     onkeydown={(e) => e.key === 'Escape' && close()}
   >
-    <div
-      class="command-palette"
-      role="none"
-      onclick={(e) => e.stopPropagation()}
-    >
+    <div class="command-palette" role="none" onclick={(e) => e.stopPropagation()}>
       <div class="command-palette-header">
         <input
           bind:this={searchInput}
@@ -494,35 +497,35 @@
         {#if filteredCommands.length === 0}
           <div class="command-palette-empty">No commands found</div>
         {:else}
-          {#each listItems as item}
-            {#if item.type === 'header'}
-              <div class="command-category-header" role="presentation">
-                {categoryLabels[item.category]}
+          {#each groupedItems as group}
+            <div role="group" aria-label={categoryLabels[group.category]}>
+              <div class="command-category-header" aria-hidden="true">
+                {categoryLabels[group.category]}
               </div>
-            {:else}
-              <button
-                id="command-item-{item.index}"
-                class="command-item"
-                class:selected={item.index === selectedIndex}
-                id="command-item-{item.index}"
-                onclick={() => executeCommand(item.command)}
-                onmouseenter={() => (selectedIndex = item.index)}
-                role="option"
-                aria-selected={item.index === selectedIndex}
-                tabindex="-1"
-              >
-                <span class="command-icon">
-                  {#if item.command.icon}
-                    {@const IconC = item.command.icon}
-                    <IconC size={18} />
+              {#each group.commands as { command, index }}
+                <button
+                  id="command-item-{index}"
+                  class="command-item"
+                  class:selected={index === selectedIndex}
+                  onclick={() => executeCommand(command)}
+                  onmouseenter={() => (selectedIndex = index)}
+                  role="option"
+                  aria-selected={index === selectedIndex}
+                  tabindex="-1"
+                >
+                  <span class="command-icon">
+                    {#if command.icon}
+                      {@const IconC = command.icon}
+                      <IconC size={18} />
+                    {/if}
+                  </span>
+                  <span class="command-label">{command.label}</span>
+                  {#if command.shortcut}
+                    <span class="command-shortcut">{command.shortcut}</span>
                   {/if}
-                </span>
-                <span class="command-label">{item.command.label}</span>
-                {#if item.command.shortcut}
-                  <span class="command-shortcut">{item.command.shortcut}</span>
-                {/if}
-              </button>
-            {/if}
+                </button>
+              {/each}
+            </div>
           {/each}
         {/if}
       </div>
